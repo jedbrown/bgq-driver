@@ -873,7 +873,9 @@ void IPI_DeadlockAvoidance(int targetProcessorID)
             (pIPImsg->fcn == IPI_handler_upcp_disable) ||
             (pIPImsg->fcn == IPI_handler_upcp_init) ||
             (pIPImsg->fcn == IPI_handler_upc_attach) ||
-            (pIPImsg->fcn == IPI_handler_tool_suspend))
+            (pIPImsg->fcn == IPI_handler_tool_suspend) ||
+            (pIPImsg->fcn == IPI_handler_complete_migration) // note: this does not require an ack but may be stacked with another IPI
+            )
         {
             IPI_Message_t IPImsg_local = *pIPImsg;
             BIC_WriteClearExternalRegister0(myProcessorThreadID, mask);                    

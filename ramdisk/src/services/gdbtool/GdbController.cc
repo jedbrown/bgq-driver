@@ -120,6 +120,14 @@ int
 GdbController::startup(in_addr_t gdbChannelAddr, in_port_t gdbChannelPort, uint32_t rank)
 {
    _rank = rank;
+   if ( !getenv("BG_JOBID") ) {
+       LOG_FATAL_MSG("could not find BG_JOBID");
+       exit(EXIT_FAILURE);
+   } else if ( !getenv("BG_TOOLID") ) {
+       LOG_FATAL_MSG("could not find BG_TOOLID");
+       exit(EXIT_FAILURE);
+   }
+
    _jobId = boost::lexical_cast<uint64_t>(getenv("BG_JOBID"));
    _toolId = boost::lexical_cast<uint32_t>(getenv("BG_TOOLID"));
 

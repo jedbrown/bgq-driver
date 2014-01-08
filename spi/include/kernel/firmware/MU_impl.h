@@ -1865,8 +1865,6 @@ int32_t Kernel_GetNDExpectedTokensDCR (uint32_t  link_id,
   uint64_t expected_tokens =0;
   uint32_t tokens;
   int32_t  rc=0;
-  *token_ptr = tokens;
-  
   
   rc = Kernel_GetNDExpectedTokens (link_id,0,&tokens);
   if ( rc) return rc;

@@ -37,7 +37,7 @@
 // this class handles mutex initialization, destruction, lock 
 // unlock and trylock.
 //
-// The There is also an PthreadAutoMutex class which is intended
+// The There is also an PthreadMutexHolder class which is intended
 // to be implemted either as an automatic variable or an std::auto_ptr class
 // 
 // This class handles unlocking the mutex should the application exit 
@@ -187,7 +187,6 @@ public:
     */
     pthread_mutex_t &GetRawMutex() {
         return(m_Mutex); };
-protected:
 
 private:
     pthread_mutex_t m_Mutex;                        // actual mutex structure...
@@ -257,8 +256,6 @@ public:
         
         return(nRet);
     };
-
-protected:
 
 private:
     PthreadMutex *m_pMutex;

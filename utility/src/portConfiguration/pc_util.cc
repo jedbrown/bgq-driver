@@ -25,6 +25,8 @@
 
 #include "Log.h"
 
+#include <boost/bind.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/throw_exception.hpp>
 
 #include <stdexcept>
@@ -46,13 +48,16 @@ boost::shared_ptr<std::string> extractPeerCn(
         portConfig::Socket& ssl_stream
     )
 {
-    X509 *cert(SSL_get_peer_certificate( ssl_stream.impl()->ssl ));
+    const boost::shared_ptr<X509> cert(
+            SSL_get_peer_certificate( ssl_stream.impl()->ssl ),
+            boost::bind( &X509_free, _1)
+            );
 
     if ( ! cert ) {
         return boost::shared_ptr<std::string>();
     }
 
-    X509_NAME *subject_name(X509_get_subject_name( cert ));
+    X509_NAME *subject_name(X509_get_subject_name( cert.get() ));
 
     if ( ! subject_name ) {
         BOOST_THROW_EXCEPTION( runtime_error( "failed to get peer subject name" ) );

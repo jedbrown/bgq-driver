@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_DUMP_BLOCK_H_
 #define MMCS_SERVER_COMMAND_DUMP_BLOCK_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*
 ** dump_block <file.xml> <blockId>
@@ -42,9 +38,8 @@ class DumpBlock : public common::AbstractCommand
 {
 public:
     DumpBlock(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "dump_block <file.xml> <blockId>"; }
+      : AbstractCommand(name,description,attributes) { _usage = "dump_block <file.xml> <blockId>"; }
     static  DumpBlock* build();    // factory method
-    static  std::string cmdname() { return "dump_block"; }
     void execute(std::deque<std::string> args,
                  mmcs_client::CommandReply& reply,
                  common::ConsoleController* pController,
@@ -55,11 +50,10 @@ public:
              BlockControllerTarget* pTarget,
              std::vector<std::string>* validnames);
     virtual std::vector<std::string> getBlockObjects(std::deque<std::string>& cmdString, DBConsoleController* pController);
-    bool checkArgs(std::deque<std::string>& args) { if(args.size() != 1) return false; else return true;}
+    bool checkArgs(std::deque<std::string>& args) { if (args.size() != 1) return false; else return true;}
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };
-
 
 } } } // namespace mmcs::server::command
 

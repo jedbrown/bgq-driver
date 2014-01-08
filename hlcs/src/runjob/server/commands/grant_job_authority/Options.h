@@ -27,6 +27,7 @@
 
 #include "common/MaximumLengthString.h"
 
+#include <db/include/api/tableapi/gensrc/DBTJobsecurity.h>
 #include <hlcs/include/security/Types.h>
 
 #include <vector>
@@ -65,7 +66,7 @@ private:
 
 private:
     boost::program_options::options_description _options;   //!<
-    runjob::MaximumLengthString<AUTHID_SIZE - 1> _user;
+    runjob::MaximumLengthString<BGQDB::DBTJobsecurity::AUTHID_SIZE> _user;
     hlcs::security::Action::Type _action;
 };
 

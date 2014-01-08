@@ -74,5 +74,5 @@ endif
 
 
 define cxxlink
-$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
+$(CXX) $^ $(LOADLIBES) $(LDLIBS) -o $@ $(LDFLAGS)
 endef

@@ -45,9 +45,11 @@ namespace server {
 namespace database {
 
 Delete::Delete(
+        boost::asio::io_service& io_service,
         const boost::shared_ptr<BGQDB::job::Operations>& operations
         ) :
-    _operations( operations )
+    _operations( operations ),
+    _strand( io_service )
 {
 
 }
@@ -55,10 +57,29 @@ Delete::Delete(
 void
 Delete::execute(
         const BGQDB::job::Id id,
-        const job::ExitStatus& exit
+        const job::ExitStatus& exit,
+        const Callback& callback
         )
 {
-    LOG_TRACE_MSG( "execute" );
+    _strand.post(
+            boost::bind(
+                &Delete::executeImpl,
+                this,
+                id,
+                exit,
+                callback
+                )
+            );
+}
+
+void
+Delete::executeImpl(
+        const BGQDB::job::Id id,
+        const job::ExitStatus& exit,
+        const Callback& callback
+        )
+{
+    LOG_TRACE_MSG( __FUNCTION__ );
 
     boost::scoped_ptr<BGQDB::job::RemoveInfo> info;
     if ( exit.getError() ) {
@@ -83,6 +104,8 @@ Delete::execute(
     } catch ( const std::exception& e ) {
         LOG_WARN_MSG( e.what() );
     }
+
+    if ( callback ) callback();
 }
 
 } // database

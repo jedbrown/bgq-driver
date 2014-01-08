@@ -21,26 +21,21 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_MCSERVER_STATUS_H_
 #define MMCS_SERVER_COMMAND_MCSERVER_STATUS_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 class McserverStatus : public common::AbstractCommand
 {
 public:
     McserverStatus(const char* name, const char* description, const Attributes& attributes)
-        : AbstractCommand(name,description,attributes) { usage = "mcserver_status [<regexp>]";}
+        : AbstractCommand(name,description,attributes) { _usage = "mcserver_status [<regexp>]";}
     static McserverStatus* build();
-    static std::string cmdname() { return "mcserver_status"; }
     void execute(std::deque<std::string> args,
             mmcs_client::CommandReply& reply,
             common::ConsoleController* pController,

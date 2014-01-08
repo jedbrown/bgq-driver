@@ -166,46 +166,51 @@ config_net_dev()
 
 # Create the necessary config file in /etc/sysconfig/network-scripts so that ifup/ifdown will work.
 # Add the file to /etc/bgfs.files so it get pushed forward into the NFS root space.
-# $1=DEVICE,$2=IPv4ADDR,$3=NETMASK,$4=BROADCAST,$5=MTU,$6=IPv6ADDR,$7=PREFIX
+# $1=DEVICE
 write_ifcfg()
 {
     IFCFG_FILE=/etc/sysconfig/network-scripts/ifcfg-$1
 
-    if [ ! -d /etc/sysconfig/network-scripts ] ; then mkdir -p /etc/sysconfig/network-scripts ; fi
-
+    mkdir -p /etc/sysconfig/network-scripts
     touch $IFCFG_FILE
     if [ ! -e $IFCFG_FILE ] ; then
 	bgras $BGRAS_ID_SCRIPT_FAILURE \
 	      "network - WARNING: unable to create ifcfg script $IFCFG_FILE. The ifup and ifdown commands will not work."
     fi
 
-    cat $IFCFG_FILE | grep "DEVICE" &> /dev/null
-    if [ $? -ne 0 ] ; then /bin/echo "DEVICE=$1" >> $IFCFG_FILE ; fi
-    cat $IFCFG_FILE | grep "BOOTPROTO" &> /dev/null
-    if [ $? -ne 0 ] ; then /bin/echo "BOOTPROTO=none" >> $IFCFG_FILE ; fi
-    if [ ! -z $2 ] ; then /bin/echo "IPADDR=$2" >> $IFCFG_FILE ; fi
-    if [ ! -z $3 ] ; then /bin/echo "NETMASK=$3" >> $IFCFG_FILE ; fi
-    if [ ! -z $4 ] ; then /bin/echo "BROADCAST=$4" >> $IFCFG_FILE ; fi
-    cat $IFCFG_FILE | grep "ONBOOT" &> /dev/null
-    if [ $? -ne 0 ] ; then /bin/echo "ONBOOT=yes" >> $IFCFG_FILE; fi
-    cat $IFCFG_FILE | grep "USERCTL" &> /dev/null
-    if [ $? -ne 0 ] ; then /bin/echo "USERCTL=no" >> $IFCFG_FILE ; fi
-    cat $IFCFG_FILE | grep "TYPE" &> /dev/null
-    if [ $? -ne 0 ] ; then
-	if [[ "$1" =~ "ib" ]] ; then
-	    /bin/echo "TYPE=Infiniband" >> $IFCFG_FILE
-	    /bin/echo "CONNECTED_MODE=yes" >> $IFCFG_FILE
-	else
-	    /bin/echo "TYPE=Ethernet" >> $IFCFG_FILE
-	fi
+    echo DEVICE=$1 >> $IFCFG_FILE
+    echo IPADDR=`ip -4 -o addr show $1 | awk '{ print $4 }' | awk -F/ '{ print $1 }'` >> $IFCFG_FILE
+    echo NETMASK=`ifconfig $1 2>&1 | grep Mask | awk -F"Mask:" '{print $2}'` >> $IFCFG_FILE
+    echo BROADCAST=`ip -4 -o addr show $1 | awk -F"brd |scope" '{ print $2 }'` >> $IFCFG_FILE
+    echo MTU=`cat /sys/class/net/$1/mtu` >> $IFCFG_FILE
+    if ( [ "$1" == "$BG_INTF0_NAME" ] || [ "$1" == "bond0" ] ) && [ ! -z $BG_INTF0_IPV6 ] && [ $BG_INTF0_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+	echo IPV6INIT=yes >> $IFCFG_FILE
+	echo IPV6ADDR=`ip -6 -o addr show $1 | awk -F"inet6 |scope" '{ print $2}'` >> $IFCFG_FILE
     fi
-    if [ ! -z $5 ] ; then /bin/echo "MTU=$5" >> $IFCFG_FILE ; fi
-    if [ ! -z $6 ] ; then
-	/bin/echo "IPV6INIT=yes" >> $IFCFG_FILE
-	/bin/echo "IPV6ADDR='$6'" >> $IFCFG_FILE
-	if [ ! -z $7 ] ; then /bin/echo "IPV6PREFIX=$7" >> $IFCFG_FILE ; fi
+    if [ "$1" == "$BG_INTF1_NAME" ] && [ ! -z $BG_INTF1_IPV6 ] && [ $BG_INTF1_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+	echo IPV6INIT=yes >> $IFCFG_FILE
+	echo IPV6ADDR=`ip -6 -o addr show $1 | awk -F"inet6 |scope" '{ print $2}'` >> $IFCFG_FILE
+    fi	
+    echo BOOTPROTO=none >> $IFCFG_FILE
+    echo ONBOOT=yes >> $IFCFG_FILE
+    echo USERCTL=no >> $IFCFG_FILE
+    echo NM_CONTROLLED=no >> $IFCFG_FILE
+    if [[ "$1" =~ "ib" ]] ; then
+	echo TYPE=Infiniband >> $IFCFG_FILE
+	if [ -e /sys/class/net/$1/mode ] && [ "`cat /sys/class/net/$1/mode`" == "connected" ]; then
+		echo CONNECTED_MODE=yes >> $IFCFG_FILE
+	else
+		echo CONNECTED_MODE=no >> $IFCFG_FILE
+	fi
     else
-	/bin/echo "IPV6INIT=no" >> $IFCFG_FILE
+	echo TYPE=Ethernet >> $IFCFG_FILE 
+    fi
+    if [ "$1" == "bond0" ]; then
+	echo BONDING_MASTER=yes >> $IFCFG_FILE
+	echo BONDING_MODULE_OPTS="$BONDINGOPTS" >> $IFCFG_FILE
+    elif [ ! -z "$BONDINGOPTS" ]; then
+	echo MASTER=bond0 >> $IFCFG_FILE
+	echo SLAVE=yes >> $IFCFG_FILE
     fi
 
     # Add to /etc/bgfs.files
@@ -213,14 +218,11 @@ write_ifcfg()
     if [ $? -ne 0 ] ; then /bin/echo "/etc/sysconfig/network-scripts/" >> /etc/bgfs.files ; fi
     cat /etc/bgfs.files | grep "$IFCFG_FILE" &> /dev/null
     if [ $? -ne 0 ] ; then /bin/echo "$IFCFG_FILE" >> /etc/bgfs.files ; fi
-
 }
 
 case "$1" in
     start)
 
-	START=`date +%s`
-	let RUNTIME=0
 	let IB_LINK_TIMEOUT=60
 	let ETH_LINK_TIMEOUT=60
 
@@ -330,7 +332,7 @@ case "$1" in
 
 	# Set up the loopback device.
 	ifconfig lo 127.0.0.1 netmask 255.0.0.0 broadcast 127.255.255.255
-	
+
 	#######################################################################################################################
 	# Interface0 and Interface1 configuration ....
 	#
@@ -358,23 +360,31 @@ case "$1" in
 		if [ $BG_INTF0_NAME == "ib0" ] && [ $CONFIGURED -eq 0 ] ; then
 
 			echo -en $"\n\tWaiting for $BG_INTF0_NAME link ...\n"
-
-			#Might need to change this for multiport IB cards.
+			let START=`date +%s`
+			let RUNTIME=0
 			until [ ! -z "`cat /sys/class/infiniband/mlx4_0/ports/1/state | grep ACTIVE`" ] || [ $RUNTIME -gt $IB_LINK_TIMEOUT ]; do
                             sleep 1;
 			    let RUNTIME=$((`date +%s`))-$START
                         done
 			if [ $RUNTIME -gt $IB_LINK_TIMEOUT ] ; then
-			    bgras $BGRAS_ID_IB_LINK_TIMEOUT \
-				"network - IB link timeout is $IB_LINK_TIMEOUT seconds."	
-			    exit 1
+			    if [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 0 ] ; then
+			    	bgras $BGRAS_ID_IB_LINK_TIMEOUT \
+					"network - IB link timeout is $IB_LINK_TIMEOUT seconds."	
+			    	exit 1
+			    else
+				echo "Ignoring network link timeout because we are in diagnostics mode."
+			    fi
 			else
 			    echo -en "\tIB link took $RUNTIME seconds to come up.\n"
 			fi
 			
-			# Setting the device to run in connected mode.
+			# Setting the device to run in connected mode unless specified otherwise by configuration data.
 			if [ -e /sys/class/net/$BG_INTF0_NAME/mode ] ; then
-				echo "connected" > /sys/class/net/$BG_INTF0_NAME/mode
+				if [ ! -z "$IB_MODE" ]; then
+					echo $IB_MODE > /sys/class/net/$BG_INTF0_NAME/mode
+				else
+					echo "connected" > /sys/class/net/$BG_INTF0_NAME/mode
+				fi
 			else
 				bgras $BGRAS_ID_SCRIPT_FAILURE \
 					"network - Failure to set ib connected mode: Unable to find /sys/class/net/$BG_INTF0_NAME/mode ."
@@ -387,7 +397,6 @@ case "$1" in
                                       "network - Failure configuring device $BG_INTF0_NAME. ifconfig returned: '$RC' ."
 			    else
 				config_net_dev $BG_INTF0_NAME $BG_INTF0_NETMASK $BG_INTF0_BROADCAST $BG_INTF0_MTU
-				write_ifcfg $BG_INTF0_NAME $BG_INTF0_IPV4 $BG_INTF0_NETMASK $BG_INTF0_BROADCAST $BG_INTF0_MTU '' ''
 			    fi
 			fi
 			
@@ -398,11 +407,9 @@ case "$1" in
 			    if [ -z $BG_INTF0_IPV6_PREFIX ] ; then
 				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/64 ...\n"
 				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/64 up 2>&1 )
-				write_ifcfg $BG_INTF0_NAME '' '' '' '' $BG_INTF0_IPV6 64
 			    else
 				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX ...\n"
 				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX up 2>&1 )
-				write_ifcfg $BG_INTF0_NAME '' '' '' '' $BG_INTF0_IPV6 $BG_INTF0_IPV6_PREFIX
 			    fi
 
 			    if [ ! -z "$RC" ] ; then
@@ -413,7 +420,6 @@ case "$1" in
 			        # to get an MTU configured.  
 				if [ -z $BG_INTF0_IPV4 ] || [ $BG_INTF0_IPV4 == "0.0.0.0" ] && [ ! -z $BG_INTF0_MTU ] ; then
 					RC=$( ifconfig $BG_INTF0_NAME mtu $BG_INTF0_MTU )
-					write_ifcfg $BG_INTF0_NAME '' '' '' $BG_INTF0_MTU '' ''
 				    	if [ ! -z "$RC" ] ; then
 						bgras $BGRAS_ID_SCRIPT_FAILURE \
 					      	      "network - Failure configure MTU for device $BG_INTF0_NAME. ifconfig returned: '$RC' ."
@@ -421,7 +427,6 @@ case "$1" in
 				fi
 			    fi
 			fi
-
 		fi
 
 		# eth0/1 configuration
@@ -436,7 +441,6 @@ case "$1" in
 				      "network - Failure setting default mtu for $BG_INTF0_NAME. ifconfig returned: '$RC' ."
 			    else
                        		config_net_dev $BG_INTF0_NAME $BG_INTF0_NETMASK $BG_INTF0_BROADCAST $BG_INTF0_MTU
-				write_ifcfg $BG_INTF0_NAME $BG_INTF0_IPV4 $BG_INTF0_NETMASK $BG_INTF0_BROADCAST $BG_INTF0_MTU '' ''
 			    fi
 			fi
 
@@ -447,11 +451,9 @@ case "$1" in
 			    if [ -z $BG_INTF0_IPV6_PREFIX ] ; then
 				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/64 ...\n"
 				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/64 up 2>&1 )
-				write_ifcfg $BG_INTF0_NAME '' '' '' '' $BG_INTF0_IPV6 64
 			    else
 				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX ...\n"
 				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX up 2>&1 )
-				write_ifcfg $BG_INTF0_NAME '' '' '' '' $BG_INTF0_IPV6 $BG_INTF0_IPV6_PREFIX
 			    fi
 
 			    if [ ! -z "$RC" ] ; then
@@ -469,8 +471,8 @@ case "$1" in
 			    fi
 			fi
 
-			START=`date +%s`
-			RUNTIME=0			
+			let START=`date +%s`
+			let RUNTIME=0			
 			echo -en $"\n\tWaiting for $BG_INTF0_NAME link ...\n"
 
 			until [ ! -z "`cat /sys/class/net/$BG_INTF0_NAME/operstate | grep up`" ] ||
@@ -480,14 +482,11 @@ case "$1" in
 			done
 			
 			if [ $RUNTIME -gt $ETH_LINK_TIMEOUT ] ; then
-			    bgras $BGRAS_ID_ETHERNET_LINK_TIMEOUT \
-				"Ethernet link timeout is $ETH_LINK_TIMEOUT seconds."
-			    exit 1
-			else
-			    if [ $RUNTIME -eq 0 ] ; then
-				echo -en "\tEthernet link took less than 1 second to come up.\n"
+			    if [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 0 ] ; then
+				bgras $BGRAS_ID_ETHERNET_LINK_TIMEOUT "network - link timeout is $ETH_LINK_TIMEOUT seconds."
+				exit 1
 			    else
-				echo -en "\tEthernet link took $RUNTIME seconds to come up.\n"
+				echo "Ignoring network link timeout because we are in diagnostics mode."
 			    fi
 			fi
 			
@@ -514,15 +513,19 @@ case "$1" in
                 if [ $BG_INTF1_NAME == "ib0" ] && [ $CONFIGURED -eq 0 ] ; then
 
 		    echo -en $"\n\tWaiting for $BG_INTF1_NAME link ...\n"
-
-                    #Might need to change this for multiport IB cards.
+		    let START=`date +%s`
+		    let RUNTIME=0
 		    until [ ! -z "`cat /sys/class/infiniband/mlx4_0/ports/1/state | grep ACTIVE`" ] || [ $RUNTIME -gt $IB_LINK_TIMEOUT ]; do
 			sleep 1;
 			let RUNTIME=$((`date +%s`))-$START
                     done
 		    if [ $RUNTIME -gt $IB_LINK_TIMEOUT ] ; then
-			bgras $BGRAS_ID_IB_LINK_TIMEOUT "IB link timeout is $IB_LINK_TIMEOUT seconds."
-			exit 1
+			if [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 0 ] ; then
+			    bgras $BGRAS_ID_IB_LINK_TIMEOUT "IB link timeout is $IB_LINK_TIMEOUT seconds."
+			    exit 1
+			else
+			    echo "Ignoring network link timeout because we are in diagnostics mode."
+			fi
 		    else
                         echo -en "\tIB link took $RUNTIME seconds to come up.\n"
 		    fi
@@ -545,7 +548,6 @@ case "$1" in
 					"network - Failure configuring $BG_INTF1_NAME. ifconfig retured: '$RC' ."
 			else
                       		config_net_dev $BG_INTF1_NAME $BG_INTF1_NETMASK $BG_INTF1_BROADCAST $BG_INTF1_MTU
-				write_ifcfg $BG_INTF1_NAME $BG_INTF1_IPV4 $BG_INTF1_NETMASK $BG_INTF1_BROADCAST $BG_INTF1_MTU '' ''
 			fi
 		    fi
 
@@ -556,11 +558,9 @@ case "$1" in
 			if [ -z $BG_INTF1_IPV6_PREFIX ] ; then
 			    echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/64 ...\n"
 			    RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/64 up 2>&1 )
-			    write_ifcfg $BG_INTF1_NAME '' '' '' '' $BG_INTF1_IPV6 64
 			else
 			    echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX ...\n"
 			    RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX up 2>&1 )
-			    write_ifcfg $BG_INTF1_NAME '' '' '' '' $BG_INTF1_IPV6 $BG_INTF1_IPV6_PREFIX
 			fi
 
 			if [ ! -z "$RC" ] ; then
@@ -594,7 +594,6 @@ case "$1" in
 				      "network - Failure configuring $BG_INTF1_NAME. ifconfig returned: '$RC' ."
 			    else
                         	config_net_dev $BG_INTF1_NAME $BG_INTF1_NETMASK $BG_INTF1_BROADCAST $BG_INTF1_MTU
-				write_ifcfg $BG_INTF1_NAME $BG_INTF1_IPV4 $BG_INTF1_NETMASK $BG_INTF1_BROADCAST $BG_INTF1_MTU '' ''
 			    fi
 			fi
 			
@@ -605,11 +604,9 @@ case "$1" in
 			    if [ -z $BG_INTF1_IPV6_PREFIX ] ; then
 				echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/64 ...\n"
 				RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/64 up 2>&1 )
-				write_ifcfg $BG_INTF1_NAME '' '' '' '' $BG_INTF1_IPV6 64
 			    else
 				echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX ...\n"
 				RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX up 2>&1 )
-				write_ifcfg $BG_INTF1_NAME '' '' '' '' $BG_INTF1_IPV6 $BG_INTF1_IPV6_PREFIX
 			    fi
 
 			    if [ ! -z "$RC" ] ; then
@@ -627,8 +624,8 @@ case "$1" in
 			    fi
 			fi
 
-			START=`date +%s`
-			RUNTIME=0
+			let START=`date +%s`
+			let RUNTIME=0
 			echo -en $"\n\tWaiting for $BG_INTF1_NAME link ...\n"
 
 			until [ ! -z "`cat /sys/class/net/$BG_INTF1_NAME/operstate | grep up`" ] ||
@@ -638,14 +635,11 @@ case "$1" in
 			done
 			
 			if [ $RUNTIME -gt $ETH_LINK_TIMEOUT ] ; then
-			    bgras $BGRAS_ID_ETHERNET_LINK_TIMEOUT \
-				"Ethernet link timeout is $ETH_LINK_TIMEOUT seconds."
-			    exit 1
-			else
-			    if [ $RUNTIME -eq 0 ] ; then
-				echo -en "\tEthernet link took less than 1 second to come up.\n"
+			    if [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 0 ] ; then
+			    	bgras $BGRAS_ID_ETHERNET_LINK_TIMEOUT "Network link timeout is $ETH_LINK_TIMEOUT seconds."
+			    	exit 1
 			    else
-				echo -en "\tEthernet link took $RUNTIME seconds to come up.\n"
+				echo "Ignoring network link timeout because we are in diagnostics mode."
 			    fi
 			fi
 
@@ -657,7 +651,6 @@ case "$1" in
 	# Set up the default gateway
 	# If the customer has a BG_ALT_GATEWAY in the config service we want to use that.
 	if [ ! -z $BG_ALT_GATEWAY ] ; then
-
                 # Make sure that the gateway has not already been set.  Just to be safe
                 # in the case a customer adds their own script.
                 route -n | grep $BG_ALT_GATEWAY &> /dev/null
@@ -670,9 +663,7 @@ case "$1" in
                 fi
 
 	else
-		 
 		if [ ! -z $BG_GATEWAY ] && [ $BG_GATEWAY != "0.0.0.0" ] ; then
-
 			# Make sure that the gateway has not already been set.  Just to be safe
 			# in the case a customer adds their own script.
 			route -n | grep $BG_GATEWAY &> /dev/null
@@ -715,6 +706,60 @@ case "$1" in
 	    fi
 	fi
 
+	# If bonding is indicated then configure the bonding interface and enslave the Ethernet devices.
+	if [ ! -z "$BONDINGOPTS" ] ; then
+		# Add the bonding module information to /etc/modprobe.conf so that the modules(s) 
+		# are loaded when bond0 is created.
+		echo "alias netdev-bond0 bonding" >> /etc/modprobe.conf
+		echo "options bonding $BONDINGOPTS" >> /etc/modprobe.conf
+		
+		if [ ! -e /sys/class/net/bond0 ]; then
+			# Create the bond0 interface and enslave the Ethernet devices.
+			ifconfig bond0 $BG_INTF0_IPV4 netmask $BG_INTF0_NETMASK mtu $BG_INTF0_MTU up
+			ifenslave -v bond0 eth0 eth1
+			sleep 4
+
+			# Set up the default gateway. If the customer has a BG_ALT_GATEWAY in the config 
+			# service we want to use that.
+			if [ ! -z $BG_ALT_GATEWAY ] ; then
+				# Make sure that the gateway has not already been set.  Just to be safe
+				# in the case a customer adds their own script.
+				route -n | grep $BG_ALT_GATEWAY &> /dev/null
+				if [ $? -ne 0 ] ; then
+					RC=$( route add default gw $BG_ALT_GATEWAY 2>&1 )
+					if [ ! -z "$RC" ] ; then
+						bgras $BGRAS_ID_SCRIPT_FAILURE \
+							"Failure setting a default gateway. route returned: '$RC' .  Ensure the appropriate gateway has been set for the node via dbNetConfig.pl."
+					fi
+				fi
+			else
+				if [ ! -z $BG_GATEWAY ] && [ $BG_GATEWAY != "0.0.0.0" ] ; then
+					# Make sure that the gateway has not already been set.  Just to be safe
+					# in the case a customer adds their own script.
+					route -n | grep $BG_GATEWAY &> /dev/null
+					if [ $? -ne 0 ] ; then
+						RC=$( route add default gw $BG_GATEWAY 2>&1 )
+						if [ ! -z "$RC" ] ; then
+							bgras $BGRAS_ID_SCRIPT_FAILURE \
+							" Failure setting a default gateway. route returned: '$RC' .  Ensure the appropriate gateway has been set in the BGQETHGATEWAY table."
+						fi
+					fi
+				fi
+			fi
+		fi
+	fi
+
+	# Enable Rx and Tx packet steering.
+	for dev in `ls -1 /sys/class/net | grep -e "bond0" -e "eth"` ; do
+		for q in `ls -1 /sys/class/net/$dev/queues/?x*/?ps_cpus` ; do
+			echo 0,ffffffff,fffffff0 > $q
+		done
+	done
+
+	# Create network scripts for each network device.
+	for intf in `ls -1 /sys/class/net | grep -e "bond0" -e "eth" -e "ib0"` ; do
+		write_ifcfg $intf
+	done
 
 	if [ $CONFIGURED -eq 0 ] ; then
 		echo -n $"Network configuration completed: "
@@ -728,7 +773,11 @@ case "$1" in
 	
     stop)
 	# Stop all network interfaces.
-	echo -n $"Stopping network interfaces... "
+	echo -n "Stopping network interfaces... "
+	if [ ! -z "$BONDINGOPTS" ] ; then
+		ifconfig bond0 down
+		modprobe -r bonding
+	fi
 	[ ! -z $BG_INTF1_NAME ] && ifconfig $BG_INTF1_NAME down
 	[ ! -z $BG_INTF0_NAME ] && ifconfig $BG_INTF0_NAME down
 	ifconfig lo down

@@ -195,14 +195,7 @@ case "$1" in
 		# cores because interrupts are going to the first core and all MU activity is 
 		# on the last core. 
 		rm -f $upfile
-		NUM_CPUS=`grep -c processor /proc/cpuinfo`
-		if [ $NUM_CPUS -le 17 ]; then
-			taskset -c 1-15 /usr/lpp/mmfs/bin/mmautoload
-		elif [ $NUM_CPUS -le 34 ]; then
-			taskset -c 2-31 /usr/lpp/mmfs/bin/mmautoload
-		else
-			taskset -c 4-63 /usr/lpp/mmfs/bin/mmautoload
-		fi
+		taskset -c 1-3 /usr/lpp/mmfs/bin/mmautoload
 
 		retries=300
 		until test -e $upfile

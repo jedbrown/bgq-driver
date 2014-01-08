@@ -4,4 +4,5 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:DRIVER_INSTALL_DIR/ramdisk/distrofs/cios
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:DRIVER_INSTALL_DIR/utility/lib
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:DRIVER_INSTALL_DIR/extlib/lib
 
-DRIVER_INSTALL_DIR/ramdisk/distrofs/cios/sbin/iosd --jobctl_daemon_path DRIVER_INSTALL_DIR/ramdisk/distrofs/cios/sbin/jobctld --stdio_daemon_path DRIVER_INSTALL_DIR/ramdisk/distrofs/cios/sbin/stdiod $@
+# use exec so we don't have a new process
+exec DRIVER_INSTALL_DIR/ramdisk/distrofs/cios/sbin/iosd --jobctl_daemon_path DRIVER_INSTALL_DIR/ramdisk/distrofs/cios/sbin/jobctld --stdio_daemon_path DRIVER_INSTALL_DIR/ramdisk/distrofs/cios/sbin/stdiod $@

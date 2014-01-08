@@ -85,16 +85,16 @@ __INLINE__ int L1P_SetStreamPolicy(L1P_StreamPolicy_t policy)
     switch(policy)
     {
         case L1P_stream_disable:
-            *((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) = (*((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) & ~(L1P_CFG_PF_USR_pf_stream_prefetch_enable));
+            *((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) = (*((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) & ~(L1P_CFG_PF_USR_pf_stream_prefetch_enable | L1P_CFG_PF_USR_pf_stream_establish_enable));
             break;
         case L1P_stream_optimistic:
-            *((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) = (*((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) & ~(L1P_CFG_PF_USR_pf_stream_optimistic | L1P_CFG_PF_USR_pf_stream_est_on_dcbt)) | L1P_CFG_PF_USR_pf_stream_optimistic | L1P_CFG_PF_USR_pf_stream_prefetch_enable;
+            *((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) = (*((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) & ~(L1P_CFG_PF_USR_pf_stream_optimistic | L1P_CFG_PF_USR_pf_stream_est_on_dcbt)) | L1P_CFG_PF_USR_pf_stream_optimistic | L1P_CFG_PF_USR_pf_stream_prefetch_enable | L1P_CFG_PF_USR_pf_stream_establish_enable;
             break;
         case L1P_stream_confirmed:
-            *((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) = (*((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) & ~(L1P_CFG_PF_USR_pf_stream_optimistic | L1P_CFG_PF_USR_pf_stream_est_on_dcbt)) | L1P_CFG_PF_USR_pf_stream_prefetch_enable;
+            *((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) = (*((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) & ~(L1P_CFG_PF_USR_pf_stream_optimistic | L1P_CFG_PF_USR_pf_stream_est_on_dcbt)) | L1P_CFG_PF_USR_pf_stream_prefetch_enable | L1P_CFG_PF_USR_pf_stream_establish_enable;
             break;
         case L1P_confirmed_or_dcbt:
-            *((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) = (*((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) & ~(L1P_CFG_PF_USR_pf_stream_optimistic | L1P_CFG_PF_USR_pf_stream_est_on_dcbt)) | L1P_CFG_PF_USR_pf_stream_est_on_dcbt | L1P_CFG_PF_USR_pf_stream_prefetch_enable;
+            *((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) = (*((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)) & ~(L1P_CFG_PF_USR_pf_stream_optimistic | L1P_CFG_PF_USR_pf_stream_est_on_dcbt)) | L1P_CFG_PF_USR_pf_stream_est_on_dcbt | L1P_CFG_PF_USR_pf_stream_prefetch_enable | L1P_CFG_PF_USR_pf_stream_establish_enable;
             break;
         default:
             return L1P_PARMRANGE;

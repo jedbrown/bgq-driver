@@ -30,6 +30,7 @@
 
 #include "test/make_argv.h"
 
+#include <db/include/api/tableapi/gensrc/DBTJobsecurity.h>
 #include <boost/assign/list_of.hpp>
 
 #include <boost/program_options/errors.hpp>
@@ -56,7 +57,7 @@ BOOST_AUTO_TEST_CASE( positional )
 
 BOOST_AUTO_TEST_CASE( authid_too_large )
 {
-    const std::string authid( AUTHID_SIZE, 'a' );
+    const std::string authid( BGQDB::DBTJobsecurity::AUTHID_SIZE + 1, 'a' );
     _argv = make_argv( "1 " + authid + " read", _argc );
 
     BOOST_CHECK_THROW(

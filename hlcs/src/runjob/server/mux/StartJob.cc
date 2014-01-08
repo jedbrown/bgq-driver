@@ -83,7 +83,13 @@ StartJob::findJobHandler(
         return;
     }
 
-    job::Start::create( job, bgcios::StdioService  );
+    job->strand().post(
+            boost::bind(
+                &job::Start::create,
+                job,
+                bgcios::StdioService
+                )
+            );
 }
 
 } // mux

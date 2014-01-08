@@ -31,40 +31,38 @@
 
 #include <utility/include/cxxsockets/types.h>
 
+#include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/utility.hpp>
 
 namespace CxxSockets {
 
-class SocketReceiveSide;
-class SocketSendSide;
-
-class File
+class File : boost::noncopyable
 {
+private:
+    mutable PthreadMutex _fileLock;
+
 protected:
     int _fileDescriptor;
-    PthreadMutex _fileLock;
-    boost::shared_ptr<SocketReceiveSide> _receiver;
-    boost::shared_ptr<SocketSendSide> _sender;
+    boost::scoped_ptr<PthreadMutex> _receiver;
+    boost::scoped_ptr<PthreadMutex> _sender;
 
     //! \brief Mutual exclusion for all operations on this file.
-    int LockFile(FileLocker& locker);
+    void LockFile(FileLocker& locker) const;
     //! \brief Lock send side only
-    int LockSend(PthreadMutexHolder& mutex); 
+    int __attribute__((warn_unused_result)) LockSend(PthreadMutexHolder& mutex); 
     //! \brief Lock receive side only
-    int LockReceive(PthreadMutexHolder& mutex);
+    int __attribute__((warn_unused_result)) LockReceive(PthreadMutexHolder& mutex);
 
-    //! construct object with pre-existing descriptor
-    File(int descriptor);
-
-public:
     File();
-
-    int getFileDescriptor() const { return _fileDescriptor; }
-
-    virtual ~File() = 0;
 
     //! \brief Close the file
     int Close();
+
+public:
+    int getFileDescriptor() const { return _fileDescriptor; }
+
+    virtual ~File() = 0;
 };
 
 }

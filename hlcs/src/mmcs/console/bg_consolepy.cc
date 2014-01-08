@@ -70,11 +70,8 @@ using mmcs::console::Options;
 
 using mmcs::console::command::MmcsServerCmd;
 
-
-
-
 void reg_pyconsole ();
-int     seteuid(uid_t __uid );
+int     seteuid(uid_t __uid ) throw();
 int     (*os_seteuid)(uid_t __uid );
 typedef int     (*os_seteuid_fn)(uid_t __uid );
 
@@ -94,8 +91,7 @@ static bool ena_seteuid = false;
 void
 signal_handler(int signum)
 {
-    if (signum == SIGUSR1)
-    {
+    if (signum == SIGUSR1) {
         return;
     }
 }
@@ -156,7 +152,7 @@ PyConsoleCommandReply::push_buffered_data()
 
     _overflowdata.append(pbase(), len);        // append the overflow data...
     setp(pbase(), epptr());      // reset the pcurr() ptr...
-    return(0);      // reutrn success
+    return(0);      // return success
 }
 
 /*!
@@ -182,9 +178,9 @@ PyConsoleCommandReply::overflow (int c)
 {
     push_buffered_data();
     if (c != EOF)
-	return sputc(c);
+        return sputc(c);
     else
-	return std::streambuf::traits_type::not_eof(c); // don't return eof, it indicates an error
+        return std::streambuf::traits_type::not_eof(c); // don't return eof, it indicates an error
 
 }
 
@@ -208,9 +204,9 @@ void dropeuid()
         LOG_TRACE_MSG( "euid : " << geteuid() );
         LOG_TRACE_MSG( "uid  : " << getuid() );
         if ( seteuid(getuid()) ) {
-            LOG_WARN_MSG( "could not seteuid(" << getuid() << ") " << strerror(errno) );
+            LOG_WARN_MSG( "Could not seteuid(" << getuid() << ") " << strerror(errno) );
         } else {
-            LOG_TRACE_MSG( "dropped euid to " << geteuid() );
+            LOG_TRACE_MSG( "Dropped euid to " << geteuid() );
         }
     } else {
         LOG_TRACE_MSG( "euid and uid match" );
@@ -234,9 +230,9 @@ void raiseeuid()
     // raise priviliges to read private key
     if ( effective != saved ) {
         if ( seteuid(saved) ) {
-            LOG_WARN_MSG( "could not seteuid(" << saved << ") " << strerror(errno) );
+            LOG_WARN_MSG( "Could not seteuid(" << saved << ") " << strerror(errno) );
         } else {
-            LOG_TRACE_MSG( "raised euid to " << geteuid() );
+            LOG_TRACE_MSG( "Raised euid to " << geteuid() );
         }
     }
 }
@@ -248,14 +244,12 @@ BgConsole::BgConsole(const string args)
     // tokenize the arguments, allowing for quoted strings.
     vector<string> arg_v;
     arg_v.push_back("pybg_console");       // app name is always the first parameter.
-    if (args.size())
-    {
+    if (args.size()) {
         boost::regex re("(\".*\")|(\'.*\')|([^\\s]+)");
         boost::sregex_iterator i(args.begin(), args.end(), re, boost::match_default);
         boost::sregex_iterator j;
 
-        while (i != j)
-        {
+        while (i != j) {
             arg_v.push_back(i->str());
             i++;
         }
@@ -270,8 +264,7 @@ BgConsole::BgConsole(const string args)
     argv_buffer[0] = 0;
     char *p = argv_buffer;
 
-    for (unsigned n = 0; n < arg_v.size(); n++)
-    {
+    for (unsigned n = 0; n < arg_v.size(); n++) {
         strcpy(p, arg_v[n].c_str());
         argv.push_back(p);
         p += strlen(p)+1;
@@ -281,10 +274,7 @@ BgConsole::BgConsole(const string args)
     //for (unsigned n = 0; n < argc; n++)
     //    cout << "argv[" << n << "] = " << argv[n] << endl;
 
-
-
     _options.reset(new Options( argc, &argv[0] ));
-
 
     //_pConsolePort.reset(new
     // give it the name of the app
@@ -295,14 +285,14 @@ BgConsole::BgConsole(const string args)
     Properties::setProperty(MMCS_VERSION, version.str());
     Properties::setProperty(MMCS_PROCESS, basename);
 
-    // create the list of mmcs_console commands
-    AbstractCommand::Attributes attr;  attr.mmcsConsoleCommand(true); attr.externalCommand(true);
-    AbstractCommand::Attributes mask;  mask.mmcsConsoleCommand(true); mask.externalCommand(true);
+    // create the list of bg_console commands
+    AbstractCommand::Attributes attr;  attr.bgConsoleCommand(true); attr.externalCommand(true);
+    AbstractCommand::Attributes mask;  mask.bgConsoleCommand(true); mask.externalCommand(true);
     MMCSCommandMap* mmcsCommands(
             MMCSCommandProcessor::createCommandMap(attr, mask, Properties::getExternalCmds())
             );
 
-    // Create the mmcs_console command processor
+    // Create the bg_console command processor
     _commandProcessor.reset( new mmcs::console::CommandProcessor(mmcsCommands) );
 
 
@@ -318,30 +308,24 @@ BgConsole::BgConsole(const string args)
 void BgConsole::connect()
 {
     // connect to the mmcs server
-    {
-        raiseeuid();
-        LOG_INFO_MSG("connecting to mmcs_server");
-        deque<string> mmcs_connect = MMCSCommandProcessor::parseCommand("mmcs_server_connect");
-        PyConsoleCommandReply reply;
-        //mmcs_client::CommandReply reply(1, 0 /*_pController->getReplyFormat()*/, false);
-        _commandProcessor->execute(mmcs_connect, reply, _pController.get());
-        dropeuid();
-        if (reply.getStatus() == 0) {
-            LOG_INFO_MSG("connected to mmcs_server");
-        } else {
-            // we are running disconnected from the server
-            LOG_ERROR_MSG(reply.str());
-            LOG_ERROR_MSG("server down or still initializing. try again in a few minutes. if the problem persists, contact the system administrator. ");
-            ostringstream err;
-            cerr << "server may be down or still initializing. try again in a few minutes. if the problem persists, contact the system administrator. " << endl;
-            throw runtime_error(reply.str());
-        }
+    raiseeuid();
+    LOG_INFO_MSG("Connecting to mmcs_server");
+    deque<string> mmcs_connect = MMCSCommandProcessor::parseCommand("mmcs_server_connect");
+    PyConsoleCommandReply reply;
+    //mmcs_client::CommandReply reply(1, 0 /*_pController->getReplyFormat()*/, false);
+    _commandProcessor->execute(mmcs_connect, reply, _pController.get());
+    dropeuid();
+    if (reply.getStatus() == 0) {
+        LOG_INFO_MSG("Connected to mmcs_server");
+    } else {
+        // we are running disconnected from the server
+        LOG_ERROR_MSG(reply.str());
+        LOG_ERROR_MSG("The mmcs_server is down or still initializing, try again in a few minutes. If the problem persists, contact the system administrator.");
+        ostringstream err;
+        cerr << "The mmcs_server is down or still initializing, try again in a few minutes. If the problem persists, contact the system administrator." << endl;
+        throw runtime_error(reply.str());
     }
-
-
 }
-
-
 
 string BgConsole::cmd(const string args)
 {
@@ -361,7 +345,6 @@ int
 main(int argc, char *argv[])
 {
     try {
-
         // install an interposer in the seteuid funciton.
         os_seteuid = (os_seteuid_fn)dlsym(RTLD_NEXT, "seteuid");
         os_setreuid = (os_setreuid_fn)dlsym(RTLD_NEXT, "__setreuid");
@@ -371,18 +354,15 @@ main(int argc, char *argv[])
         memset( &sa, 0, sizeof(sa) );
         sa.sa_handler = SIG_IGN;
         if ( sigaction( SIGPIPE, &sa, NULL ) != 0 ) {
-            LOG_WARN_MSG( "could not ignore SIGPIPE" );
+            LOG_WARN_MSG( "Could not ignore SIGPIPE" );
         }
 
         // install handler for SIGUSR1
         sa.sa_handler = &signal_handler;
         if ( sigaction( SIGUSR1, &sa, NULL ) != 0 ) {
-            LOG_WARN_MSG( "could not install SIGUSR1 handler" );
+            LOG_WARN_MSG( "Could not install SIGUSR1 handler" );
         }
 
-
-
-        //
         // any call after here to seteuid came from the python application
         // turn it off.
         dropeuid();
@@ -390,15 +370,12 @@ main(int argc, char *argv[])
         Py_Initialize(); // python stuff
 
         //boost::python::detail::init_module((char*)"pybg_console", &init_module_pybg_console);
-	char module_name[] = "pybg_console";
+	    char module_name[] = "pybg_console";
         if (PyImport_AppendInittab(module_name, initpybg_console) == -1) {
             cerr << "PyImport_AppendInittab failed" << endl;
         }
 
-
         Py_Main(argc, argv);
-
-
 
         // loop reading and processing commands
         //pController->run();
@@ -413,8 +390,8 @@ main(int argc, char *argv[])
     }
 }
 
-
-int     seteuid(uid_t __uid )
+int
+seteuid(uid_t __uid ) throw()
 {
     if (ena_seteuid)
         return((*os_seteuid)(__uid));
@@ -422,7 +399,9 @@ int     seteuid(uid_t __uid )
         return(EPERM);
 
 }
-int     __setreuid(uid_t ruid, uid_t euid )
+
+int
+__setreuid(uid_t ruid, uid_t euid )
 {
     if (ena_seteuid)
         return((*os_setreuid)(ruid, euid));
@@ -430,7 +409,6 @@ int     __setreuid(uid_t ruid, uid_t euid )
         return(EPERM);
 
 }
-
 
 using namespace boost::python;
 BOOST_PYTHON_MODULE(pybg_console)

@@ -231,14 +231,18 @@ create trigger machine_history_d
 
 create trigger midplane_history_u
   after update on tbgqmidplane
-  referencing new as n  old as o
+  referencing new as n old as o
   for each row mode db2sql
 
   begin atomic 
 
-    if (o.posinmachine = n.posinmachine)  then
+    if (o.posinmachine = n.posinmachine) then
 
-     insert into tbgqmidplane_history 
+    if ((n.status = 'F') or (o.status = 'F' and n.status = 'A') or (o.seqid <> n.seqid)) then
+      -- omit insertions for Software Failure transitions
+      -- or when sequence ID has changed from another trigger
+    else
+    insert into tbgqmidplane_history 
       (serialNumber, productId, machineSerialNumber, posInMachine, status, ismaster, vpd)
      values
       (n.serialNumber, n.productId, n.machineSerialNumber, n.posInMachine, n.status, n.ismaster, n.vpd);
@@ -251,8 +255,7 @@ create trigger midplane_history_u
       ('Midplane', n.posInMachine,o.serialnumber,n.serialNumber, o.status, n.status);
         
      end if;
-
-
+     end if;
 
     else
 

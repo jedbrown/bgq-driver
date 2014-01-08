@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "ListBlockAuthority.h"
 
 #include "common/Properties.h"
@@ -29,14 +28,11 @@
 #include "security/privileges.h"
 #include "security/exception.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 ListBlockAuthority*
 ListBlockAuthority::build()
@@ -55,14 +51,31 @@ ListBlockAuthority::build()
 }
 
 void
-ListBlockAuthority::execute(deque<string> args,
-                  mmcs_client::CommandReply& reply,
-                  DBConsoleController* pController,
-                              BlockControllerTarget* pTarget,
-                              std::vector<std::string>* validnames)
+ListBlockAuthority::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        DBConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
-    if(!validnames) {
-        reply << mmcs_client::FAIL << "Internal error.  Invalid command." << mmcs_client::DONE;
+    std::vector<std::string> validnames;
+    if ( !args.empty() ) {
+        validnames.push_back( args[0] );
+    }
+    this->execute( args, reply, pController, pTarget, &validnames );
+}
+
+void
+ListBlockAuthority::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        DBConsoleController* pController,
+        BlockControllerTarget* pTarget,
+        std::vector<std::string>* validnames
+)
+{
+    if (!validnames) {
+        reply << mmcs_client::FAIL << "Internal error, invalid command." << mmcs_client::DONE;
         return;
     }
 
@@ -75,24 +88,22 @@ ListBlockAuthority::execute(deque<string> args,
     reply << mmcs_client::OK;
     std::string lastuser;
     bool first = true;
-    for(Authority::Container::iterator it = authcont.begin();
-        it != authcont.end(); ++it) {
+    for (Authority::Container::iterator it = authcont.begin(); it != authcont.end(); ++it) {
         std::string curuser = it->user();
-        if(curuser == lastuser) {
+        if (curuser == lastuser) {
             reply << ", " << it->action();
-        }
-        else {
-            if(!first)
+        } else {
+            if (!first)
                 reply << std::endl;
             reply << curuser << ": " << it->action();
         }
         std::string source;
-        if(it->source() == Authority::Source::Granted)
+        if (it->source() == Authority::Source::Granted)
             source = "granted";
-        else if(it->source() == Authority::Source::Properties)
+        else if (it->source() == Authority::Source::Properties)
             source = "properties";
         else {
-            reply << mmcs_client::ABORT << "Internal security error.  Invalid authorization type." << mmcs_client::DONE;
+            reply << mmcs_client::ABORT << "Internal security error, invalid authorization type." << mmcs_client::DONE;
             return;
         }
         reply << ":" << source;
@@ -104,8 +115,10 @@ ListBlockAuthority::execute(deque<string> args,
 }
 
 void
-ListBlockAuthority::help(deque<string> args,
-                                       mmcs_client::CommandReply& reply)
+ListBlockAuthority::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
           << ";Shows authorities associated with specified < blockid > object"

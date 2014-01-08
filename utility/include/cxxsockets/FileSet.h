@@ -37,20 +37,28 @@ namespace CxxSockets {
     
 class FileSet
 {
-protected:
-    std::vector<FilePtr> _filevec;
-    PthreadMutex _setLock;
-    bool LockSet(PthreadMutexHolder& mutex);
-    virtual void pAddFile(FilePtr file);
-    void RemoveInternal(FilePtr file);
 public:
+    virtual ~FileSet() = 0;
+    void AddFile(FilePtr file);
+    void RemoveFile(FilePtr file);
+    const FilePtr& front() const { return _filevec.front(); }
+
+protected:
+    FileSet();
+    void LockSet(PthreadMutexHolder& mutex);
+
+protected:
     typedef std::vector<FilePtr>::iterator iterator;
     typedef std::vector<FilePtr>::const_iterator const_iterator; 
-    FileSet() {};
-    virtual ~FileSet() {}
-    virtual void AddFile(FilePtr file);
-    virtual void RemoveFile(FilePtr file);
-    FilePtr& front() { return _filevec.front(); }
+
+private:
+    void pAddFile(FilePtr file);
+
+protected:
+    std::vector<FilePtr> _filevec;
+
+private:
+    PthreadMutex _setLock;
 };
 
 }

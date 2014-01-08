@@ -84,7 +84,8 @@ public:
      * \brief
      */
     void start(
-            const ConnectCallback& callback //!< [in]A
+            const std::string& user,        //!< [in]
+            const ConnectCallback& callback //!< [in] callback
             );
 
     const bgq::utility::portConfig::SocketPtr& getSocket() const { return _socket; }
@@ -97,6 +98,12 @@ private:
     void connectHandler(
             const bgq::utility::Connector::ConnectResult& result,
             const boost::shared_ptr<bgq::utility::Connector>& connector,
+            const ConnectCallback& callback,
+            const std::string& user
+            );
+
+    void connectRequestHandler(
+            std::istream& response,
             const ConnectCallback& callback
             );
 

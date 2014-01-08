@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "cxxsockets/Host.h"
 #include "cxxsockets/exception.h"
 #include "cxxsockets/SockAddr.h"
@@ -32,9 +31,7 @@
 
 #include <sstream>
 
-
 LOG_DECLARE_FILE( "utility.cxxsockets" );
-
 
 namespace CxxSockets {
 
@@ -47,23 +44,22 @@ Host::build(
         SockAddr sa(AF_UNSPEC, identifier, "");
         _ip = sa.getHostAddr();
         _name = sa.getHostName();
-        if(_name == _ip) {
-            LOG_DEBUG_MSG( "unresolved IP: " << _ip );
+        if (_name == _ip) {
+            LOG_DEBUG_MSG( "Unresolved IP: " << _ip );
             _name = _ip;
         }
-    } catch(const SoftError& e) {
-        LOG_WARN_MSG(e.what() << " Will use IP address instead of name.");
-    } catch(const Error& e) {
+    } catch (const SoftError& e) {
+        LOG_DEBUG_MSG(e.what() << " Will use IP address instead of name.");
+    } catch (const Error& e) {
         std::ostringstream errormsg;
         errormsg << "Invalid host specification " << identifier
-                 << ".  Not resolvable on local network. "
-                 << "Check DNS, hostname and local network settings."
+                 << ". Not resolvable on local network. "
+                 << "Check DNS, hostname and local network settings. "
                  << e.what();
-        LOG_WARN_MSG( errormsg.str() );
+        LOG_DEBUG_MSG( errormsg.str() );
         throw Error( e.errcode, errormsg.str() );
     }
 }
-
 
 const std::string&
 Host::fqhn() const
@@ -74,7 +70,7 @@ Host::fqhn() const
 std::string
 Host::uhn() const
 {
-    if(_name == _ip) {
+    if (_name == _ip) {
         return _ip;
     }
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;

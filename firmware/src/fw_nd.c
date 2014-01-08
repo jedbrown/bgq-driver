@@ -1112,7 +1112,7 @@ int fw_nd_handleReseCorrectables( uint64_t* details, unsigned* n, ND_MachineChec
 
   int i;
   int diagsMode = PERS_ENABLED( PERS_ENABLE_DiagnosticsMode );
-
+  Personality_t* personality = FW_PERSONALITY_PTR();
 
   if ( diagsMode ) {
       details[(*n)++] = dcr;
@@ -1141,11 +1141,13 @@ int fw_nd_handleReseCorrectables( uint64_t* details, unsigned* n, ND_MachineChec
 	    details[ (*n)++ ] = DCRReadPriv( dcrBase + ND_RESE_CORRECTABLES[i].counter );
 	}
 	else {
-	    fw_uint64_t ceDetails[4];
+	    fw_uint64_t ceDetails[5];
+	    int dimension = unit/2;
 	    ceDetails[0] = unit;
 	    ceDetails[1] = DCRReadPriv( dcrBase + ND_RESE_CORRECTABLES[i].counter );
-	    ceDetails[2] = ND_RESE_DCR(unit,FATAL_ERR);
-	    ceDetails[3] = fatalErr & ND_RESE_CORRECTABLES[i].statusMask;
+	    ceDetails[2] = (dimension < 5) ? TI_GET_TORUS_DIM_REVERSED(dimension,personality->Network_Config.NetFlags2) : 0;
+	    ceDetails[3] = ND_RESE_DCR(unit,FATAL_ERR);
+	    ceDetails[4] = fatalErr & ND_RESE_CORRECTABLES[i].statusMask;
 	    fw_machineCheckRas( ND_RESE_CORRECTABLES[i].rasMsgId, ceDetails, sizeof(ceDetails)/sizeof(ceDetails[0]), __FILE__, __LINE__ );
 	}
       
@@ -1599,6 +1601,7 @@ int  fw_nd_is_multinode(Personality_t *p)
 }
 
 
+//#define SIMULATE_ERR
 
 void fw_nd_flushCorrectables( void ) {
 
@@ -1609,19 +1612,24 @@ void fw_nd_flushCorrectables( void ) {
 
     int i, j;
     fw_uint64_t details[8];
+    Personality_t* personality = FW_PERSONALITY_PTR();
 
     for ( i = 0; i < ND_RESE_DCR_num; i++ ) {
 
 	details[1] = DCRReadPriv( ND_RESE_DCR(i, RE_LINK_ERR_CNT) );
+
 	if ( details[1] > 0 ) {
 	    details[0] = i;
-	    fw_writeRASEvent( FW_RAS_ND_RE_LINK_ERROR, 2, details );
+	    details[2] = ( (i/2) < 5 ) ? TI_GET_TORUS_DIM_REVERSED( (i/2),personality->Network_Config.NetFlags2) : 0;
+	    fw_writeRASEvent( FW_RAS_ND_RE_LINK_ERROR, 3, details );
 	}
 	
 	details[1] = DCRReadPriv( ND_RESE_DCR(i, SE_RETRANS_CNT) );
+
 	if ( details[1] > 0 ) {
 	    details[0] = i;
-	    fw_writeRASEvent( FW_RAS_ND_SE_RETRANS_ERROR, 2, details );
+	    details[2] = ( (i/2) < 5 ) ? TI_GET_TORUS_DIM_REVERSED( (i/2),personality->Network_Config.NetFlags2) : 0;
+	    fw_writeRASEvent( FW_RAS_ND_SE_RETRANS_ERROR, 3, details );
 	}
 
 	for ( j = 0; j < ND_RESE_DCR__CE_COUNT_range; j++ ) {
@@ -1630,8 +1638,9 @@ void fw_nd_flushCorrectables( void ) {
 
 	    if ( details[1] > 0 ) {
 		details[0] = i;
-		details[2] = ND_RESE_DCR(i, CE_COUNT) + j;
-		fw_writeRASEvent( FW_RAS_ND_RE_CE_ERROR, 3, details );
+		details[2] = ( (i/2) < 5 ) ? TI_GET_TORUS_DIM_REVERSED( (i/2),personality->Network_Config.NetFlags2) : 0;
+		details[3] = ND_RESE_DCR(i, CE_COUNT) + j;
+		fw_writeRASEvent( FW_RAS_ND_RE_CE_ERROR, 4, details );
 	    }
 	}
 

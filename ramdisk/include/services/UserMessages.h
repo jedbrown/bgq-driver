@@ -31,24 +31,32 @@
 #include <ramdisk/include/services/MessageHeader.h>
 #include <inttypes.h>
 
+#ifdef __cplusplus
 namespace bgcios
 {
+#endif
 
-const int UserMessageDataSize = 480;
+#define UserMessageDataSize  480
 struct UserMessage
 {
    struct MessageHeader header;                    //!< Message header 
    char MessageData[UserMessageDataSize];          //!< Message data, length in header = sizeof(struct MessageHeader) + amount of data
 };
 
+struct UserMessageRDMAxferBytes
+{
+   struct MessageHeader header;                    //!< Message header 
+   uint64_t bytesXfer;                             //!< Bytes transferred in RDMA operation
+};
+
 struct UserRDMA {
   uint64_t cnk_address;                           //!< CNK memory address of a memory region within user CNK process space
-  uint32_t cnk_bytes;                             //!< Number of byes to CNK memory region in CNK user process space to apply operations
+  uint32_t cnk_bytes;                             //!< Number of bytes to CNK memory region in CNK user process space to apply operations
   uint32_t cnk_memkey;                            //!< CNK kernel key for RDMA
 };
 
-const int MostRdmaRegions = 8;
-const int UserMessageFdRDMADataSize = 340;
+#define MostRdmaRegions  8
+#define UserMessageFdRDMADataSize  340
 struct UserMessageFdRDMA
 {
    struct MessageHeader header;                    //!< Message header 
@@ -58,7 +66,9 @@ struct UserMessageFdRDMA
    char MessageData[UserMessageFdRDMADataSize];    //!< Message data, remainder of the 512 bytes
 };
 
+#ifdef __cplusplus
 } // namespace bgcios
+#endif
 
 #endif // USERMESSAGES_H
 

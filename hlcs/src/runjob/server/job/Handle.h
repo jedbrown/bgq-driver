@@ -31,6 +31,8 @@
 
 #include "server/fwd.h"
 
+#include <ramdisk/include/services/MessageHeader.h>
+
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 
@@ -67,10 +69,19 @@ public:
 private:
     friend class cios::Connection;
     
-    void impl(
+    void control(
+            const Uci& location,
+            const boost::shared_ptr<cios::Message>& message
+            );
+ 
+    void data(
             const Uci& location,
             const boost::shared_ptr<cios::Message>& message,
             const Callback& callback
+            );
+
+    void transition(
+            const bgcios::MessageHeader* header
             );
 
 private:

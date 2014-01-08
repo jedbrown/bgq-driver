@@ -151,10 +151,11 @@ bool testbadwiremask(
 		cout << "linkChipLocation=" << linkChipLocation << " reg=" << hex << reg << " fiberMask=" << hex << fiberMask
 				<< " (exp-port=" << expPortLocation << " exp-wiremask=" << hex << expWireMask << ")" << endl;
 		bgq::utility::CableBadWires badWireMask(linkChipLocation, reg, fiberMask);
+		string cableStatus = badWireMask.cableInError() ? "ok" : "bad";
 		string port = badWireMask.getPortLocation();
 		long int wireMask = badWireMask.getBadWireMask();
 		cout << "linkChipLocation=" << linkChipLocation << " reg=" << hex << reg << " fiberMask=" << hex << fiberMask
-				<< " --> port=" << port << " wiremask=" << hex << wireMask << endl;
+				<< " --> port=" << port << " wiremask=" << hex << wireMask << " cable=" << cableStatus << endl;
 		if (samelocation(port, expPortLocation) && wireMask == expWireMask) {
 			match = true;
 			cout << "  >>> PASS" << endl;
@@ -296,6 +297,11 @@ int main(int argc, char **argv)
 	++tests; if (testbadwiremask("RB5-M0-N13", "U03", "C01", 0x03f, "T11", 0x00003f000000, false)) ++pass;
 	++tests; if (testbadwiremask("RB6-M1-N14", "U05", "C01", 0x03f, "T11", 0x00000003f000, false)) ++pass;
 	++tests; if (testbadwiremask("RB7-M0-N15", "U08", "C01", 0xfc0, "T11", 0x000000000fc0, false)) ++pass;
+
+	++tests; if (testbadwiremask("RC0-M1-N08", "U00", "C23", 0x020, "T08", 0x020000000000, false)) ++pass;
+	++tests; if (testbadwiremask("RC1-M0-N09", "U03", "C23", 0x400, "T08", 0x000400000000, false)) ++pass;
+	++tests; if (testbadwiremask("RC2-M1-N10", "U05", "C23", 0x200, "T08", 0x000000200000, false)) ++pass;
+	++tests; if (testbadwiremask("RC3-M0-N11", "U08", "C23", 0x004, "T08", 0x000000000004, false)) ++pass;
 
 	/*
 	string board, 			// Node board or IO drawer location ("Rxx-Mx-Nxx", "R/Qxx-Ix")

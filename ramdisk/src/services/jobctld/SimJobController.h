@@ -155,7 +155,7 @@ private:
    //! \return 0 when successful, errno when unsuccessful.
 
    int reconnect(void);
-
+   
    //! Simulation manager object.
    SimulationManagerPtr _sim;
 

@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_REDIRECT_BLOCK_H_
 #define MMCS_SERVER_COMMAND_REDIRECT_BLOCK_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
 ** redirect_block on|off
@@ -44,9 +40,8 @@ class RedirectBlock : public common::AbstractCommand
 {
 public:
     RedirectBlock(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "redirect_block on|off";}
-    static  RedirectBlock* build();    // factory method
-    static  std::string cmdname() { return "redirect_block"; }
+      : AbstractCommand(name,description,attributes) { _usage = "redirect_block on|off";}
+    static RedirectBlock* build();    // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              DBConsoleController* pController,

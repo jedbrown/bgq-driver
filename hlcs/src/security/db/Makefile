@@ -60,7 +60,7 @@ all: $(lib_short)
 
 
 $(lib_full): $(SRCS:%.cc=%.o) Makefile
-	$(CXX) $(LDFLAGS) $(filter-out Makefile, $^) -o $@
+	$(CXX) $(filter-out Makefile, $^) -o $@ $(LDFLAGS)
 
 
 $(lib_vers): $(lib_full)

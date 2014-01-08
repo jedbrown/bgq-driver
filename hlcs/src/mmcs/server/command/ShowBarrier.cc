@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "ShowBarrier.h"
 
 #include "../BlockControllerBase.h"
@@ -33,17 +32,13 @@
 
 #include <utility/include/Log.h>
 
-
 using namespace std;
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 ShowBarrier*
 ShowBarrier::build()
@@ -60,27 +55,30 @@ ShowBarrier::build()
     return new ShowBarrier("show_barrier", "show_barrier", commandAttributes);
 }
 
-
 void
-ShowBarrier::execute(deque<string> args,
-				  mmcs_client::CommandReply& reply,
-				  common::ConsoleController* pController,
-				  BlockControllerTarget* pTarget)
+ShowBarrier::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        common::ConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
     BlockPtr pBlock = pController->getBlockHelper()->getBase();	// get selected block
     pBlock->show_barrier(reply);
-    if(reply.str() == "args?")
-      reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+    if (reply.str() == "args?") {
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
+    }
 }
 
 void
-ShowBarrier::help(deque<string> args,
-			       mmcs_client::CommandReply& reply)
+ShowBarrier::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
     reply << mmcs_client::OK << description()
-	  << ";show nodes with unsatisfied control system barrier bits in the selected block"
-	  << mmcs_client::DONE;
+          << ";Show nodes with unsatisfied Control System barrier bits in the selected block"
+          << mmcs_client::DONE;
 }
 
 

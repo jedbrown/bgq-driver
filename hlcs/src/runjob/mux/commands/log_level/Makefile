@@ -27,6 +27,10 @@ include ../../../../../../Make.rules
 
 .PHONY: clean
 
+LDFLAGS += -lrunjob_common
+LDFLAGS += -lboost_program_options-mt
+LDFLAGS += -lboost_date_time-mt
+LDFLAGS += -llog4cxx
 
 COMMAND              = runjob_mux_log_level
 COMMAND_SRC          = main.cc

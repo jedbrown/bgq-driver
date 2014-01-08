@@ -21,34 +21,25 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_ALLOCATE_BLOCK_H_
 #define MMCS_SERVER_COMMAND_ALLOCATE_BLOCK_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 /*!
 ** For specified <blockId>, marks block as allocated but does not boot the block.
-** Ido connections are established through the proxy.
 ** The block is marked as allocated in the database and owner is changed to issuer of the allocate_block.
-** The command completes as soon as the proxy connections are established.
-** If virtual_node_mode is not specified, mode will default to coprocessor.
-** Block will revert to coprocessor mode each time it is freed.
 */
 class AllocateBlock: public common::AbstractCommand
 {
 public:
     AllocateBlock(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "allocate_block <blockId> [ options ]";}
+      : AbstractCommand(name,description,attributes) { _usage = "allocate_block <blockId> [ options ]";}
     static  AllocateBlock* build();    // factory method
-    static  std::string cmdname() { return "allocate_block"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              DBConsoleController* pController,

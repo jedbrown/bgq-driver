@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_CONSOLE_COMMAND_DUMP_BLOCK_H_
 #define MMCS_CONSOLE_COMMAND_DUMP_BLOCK_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 /*
 ** dump_block <file.xml> <blockId>
@@ -42,9 +38,8 @@ class DumpBlock : public common::AbstractCommand
 {
 public:
     DumpBlock(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "dump_block <file.xml> <blockId>"; }
+      : AbstractCommand(name,description,attributes) { _usage = "dump_block <file.xml> <blockId>"; }
     static  DumpBlock* build();    // factory method
-    static  std::string cmdname() { return "dump_block"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -54,7 +49,6 @@ public:
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };
-
 
 } } } // namespace mmcs::console::command
 

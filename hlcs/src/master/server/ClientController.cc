@@ -33,25 +33,12 @@
 #include "../lib/exceptions.h"
 
 #include "common/BinaryController.h"
-#include "common/Ids.h"
 
-#include <utility/include/Log.h>
 #include <utility/include/LoggingProgramOptions.h>
-#include <utility/include/Properties.h>
 
-#include <xml/include/library/XML.h>
 
-#include <boost/date_time.hpp>
-#include <boost/foreach.hpp>
-#include <boost/thread.hpp>
 
-#include <map>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <vector>
 
-#include <errno.h>
 #include <pthread.h>
 #include <signal.h>
 #include <unistd.h>
@@ -79,7 +66,7 @@ ClientController::ClientController(
     LOG_TRACE_MSG(__FUNCTION__);
 
     // Send a Join reply indicating that we are satisfied the handshaking is complete.
-    BGMasterAgentProtocolSpec::JoinReply rep(exceptions::OK, "join successful", "", "", "");
+    const BGMasterAgentProtocolSpec::JoinReply rep(exceptions::OK, "join successful", "", "", "");
     _prot->sendReply(rep.getClassName(), rep);
     LOG_DEBUG_MSG("Sent join reply to " << ipaddr << ":" << port);
 }
@@ -89,7 +76,6 @@ ClientController::doStartRequest(
         const BGMasterClientProtocolSpec::StartRequest& startreq
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     BinaryId id;
     BGMasterClientProtocolSpec::StartReply clientrep(exceptions::OK, "started servers", id);
@@ -115,7 +101,7 @@ ClientController::doStartRequest(
                 } else {
                     failure << "Aliases ";
                 }
-                for (std::map<std::string, std::string>::iterator i = failed_aliases.begin(); i != failed_aliases.end(); ++i) {
+                for (std::map<std::string, std::string>::const_iterator i = failed_aliases.begin(); i != failed_aliases.end(); ++i) {
                     failure << i->first << " ";
                 }
 
@@ -124,9 +110,9 @@ ClientController::doStartRequest(
             }
             try {
                 _prot->sendReply(clientrep.getClassName(), clientrep);
-            } catch(const CxxSockets::SoftError& err) {
+            } catch (const CxxSockets::SoftError& err) {
                 LOG_ERROR_MSG("Client connection error during start reply.");
-            } catch(const CxxSockets::Error& err) {
+            } catch (const CxxSockets::Error& err) {
                 // Client aborted with an incomplete transmission
                 LOG_ERROR_MSG("Client connection ended during start reply.");
             }
@@ -140,10 +126,16 @@ ClientController::doStartRequest(
         AliasPtr al;
         if (MasterController::_aliases.find_alias(startreq._alias, al)) {
             try {
-                BGAgentId aid(startreq._agent_id);
+                const BGAgentId aid(startreq._agent_id);
                 const AgentRepPtr p = al->validateStartAgent(aid);
                 if (p) {
-                    BGMasterAgentProtocolSpec::StartRequest agentreq(al->get_path(), al->get_args(), al->get_logdir(), al->get_name(), al->get_user());
+                    const BGMasterAgentProtocolSpec::StartRequest agentreq(
+                            al->get_path(), 
+                            al->get_args(), 
+                            al->get_logdir(), 
+                            al->get_name(), 
+                            al->get_user()
+                            );
                     BGMasterAgentProtocolSpec::StartReply agentrep;
                     agentrep._rc = exceptions::OK;
 
@@ -170,13 +162,13 @@ ClientController::doStartRequest(
                 std::ostringstream msg;
                 msg << "Policy error for alias " << startreq._alias << ". " << e.what() << " Correct configuration and restart or refresh.";
                 MasterController::handleErrorMessage(msg.str());
-                BinaryId id("0");
-                BGMasterClientProtocolSpec::StartReply failrep(e.errcode, msg.str(), id);
+                const BinaryId id("0");
+                const BGMasterClientProtocolSpec::StartReply failrep(e.errcode, msg.str(), id);
                 try {
                     _prot->sendReply(failrep.getClassName(), failrep);
-                } catch(const CxxSockets::SoftError& err) {
+                } catch (const CxxSockets::SoftError& err) {
                     LOG_ERROR_MSG("Client connection error during start reply.");
-                } catch(const CxxSockets::Error& err) {
+                } catch (const CxxSockets::Error& err) {
                     // Client aborted with an incomplete transmission
                     LOG_ERROR_MSG("Client connection ended during start reply.");
                 }
@@ -195,9 +187,9 @@ ClientController::doStartRequest(
     }
     try {
         _prot->sendReply(clientrep.getClassName(), clientrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during start reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during start reply.");
     }
@@ -208,7 +200,6 @@ ClientController::doAgentRequest(
         const BGMasterClientProtocolSpec::AgentlistRequest& /* agentreq */
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     // Got an agent request. Build up a reply which means going through all of the agents and all of their
     // binaries, and shoving it in the message. First, iterate through the agent manager:
@@ -222,14 +213,16 @@ ClientController::doAgentRequest(
         BOOST_FOREACH(const BinaryControllerPtr& binary, binaries) {
             typedef BGMasterClientProtocolSpec::AgentlistReply::Agent::Binary AgentBin;
             LOG_DEBUG_MSG("Found binary " << binary);
-            std::string t = boost::posix_time::to_simple_string(binary->get_start_time());
-            AgentBin bin((int)(binary->get_status()),
-                         binary->get_exit_status(),
-                         binary->get_binary_bin_path(),
-                         binary->get_alias_name(),
-                         binary->get_user(),
-                         binary->get_binid().str(),
-                         t);
+            const std::string t = boost::posix_time::to_simple_string(binary->get_start_time());
+            const AgentBin bin(
+                    binary->get_status(),
+                    binary->get_exit_status(),
+                    binary->get_binary_bin_path(),
+                    binary->get_alias_name(),
+                    binary->get_user(),
+                    binary->get_binid().str(),
+                    t
+                    );
             reply_agent._binaries.push_back(bin);
         }
 
@@ -240,9 +233,9 @@ ClientController::doAgentRequest(
     // Our reply should be complete now.  Return it.
     try {
         _prot->sendReply(agentrep.getClassName(), agentrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during list agents reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during list agents reply.");
     }
@@ -253,14 +246,13 @@ ClientController::doClientsRequest(
         const BGMasterClientProtocolSpec::ClientsRequest& /* clientreq */
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
-     LOG_TRACE_MSG(__FUNCTION__);
+    LOG_TRACE_MSG(__FUNCTION__);
     // Spin through the client controllers and add them to the reply
     BGMasterClientProtocolSpec::ClientsReply clientrep(exceptions::OK, "success");
     typedef std::vector<ClientControllerPtr> ClientVec;
-    ClientVec cv = MasterController::get_client_manager().getClients();
+    const ClientVec cv = MasterController::get_client_manager().getClients();
     LOG_DEBUG_MSG("Found " << cv.size() << " clients.");
-    for (ClientVec::iterator ci = cv.begin(); ci != cv.end(); ++ci) {
+    for (ClientVec::const_iterator ci = cv.begin(); ci != cv.end(); ++ci) {
         LOG_DEBUG_MSG("Sending client " << (*ci)->get_client_id().str() << ".");
         BGMasterClientProtocolSpec::ClientsReply::Client ct;
         ct._client_id = (*ci)->get_client_id().str();
@@ -269,9 +261,9 @@ ClientController::doClientsRequest(
     }
     try {
         _prot->sendReply(clientrep.getClassName(), clientrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during list clients reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during list clients reply.");
     }
@@ -282,17 +274,14 @@ ClientController::doWaitRequest(
         const BGMasterClientProtocolSpec::WaitRequest& waitreq
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__ << " " << waitreq._binary_id);
     // Get the binary id and then we'll loop until we can't find the controller any more.
-    BinaryId reqbid(waitreq._binary_id);
+    const BinaryId reqbid(waitreq._binary_id);
 
     // Now find the associated binary controller. We'll have a smart
     // pointer so it can't go away, but the status can change.
     BinaryLocation loc;
     bool found = MasterController::get_agent_manager().findBinary(reqbid, loc);
-
-    unsigned estatus = 0;
 
     BGMasterClientProtocolSpec::WaitReply waitrep;
     waitrep._rc = exceptions::OK;
@@ -300,7 +289,7 @@ ClientController::doWaitRequest(
     BGMasterClientProtocolSpec::WaitReply::BinaryStatus binstat;
 
     if (found) {
-        BinaryControllerPtr bcptr = loc.first;
+        const BinaryControllerPtr bcptr = loc.first;
 
         boost::unique_lock<boost::mutex> ulock(bcptr->_status_lock);
         while (bcptr->get_status() == BinaryController::RUNNING && !_ending) {
@@ -309,23 +298,18 @@ ClientController::doWaitRequest(
         }
 
         if (!_ending) {
-            estatus = bcptr->get_exit_status();
+            const int estatus = bcptr->get_exit_status();
             // We're done with it
-            bcptr.reset();
-            BGMasterClientProtocolSpec::WaitReply::BinaryStatus bs(reqbid.str(), estatus);
-            binstat = bs;
+            binstat = BGMasterClientProtocolSpec::WaitReply::BinaryStatus(reqbid.str(), estatus);
             waitrep._rc = exceptions::OK;
             waitrep._rt = "success";
         } else {
-            bcptr.reset();
-            BGMasterClientProtocolSpec::WaitReply::BinaryStatus bs(reqbid.str(), 0);
-            binstat = bs;
+            binstat = BGMasterClientProtocolSpec::WaitReply::BinaryStatus(reqbid.str(), 0);
             waitrep._rc = exceptions::WARN;
             waitrep._rt = "bgmaster_server ending";
         }
     } else {
-        BGMasterClientProtocolSpec::WaitReply::BinaryStatus bs("0",-1);
-        binstat = bs;
+        binstat = BGMasterClientProtocolSpec::WaitReply::BinaryStatus("0", 0);
         waitrep._rc = exceptions::INFO;
         waitrep._rt = "Specified binary not found.";
     }
@@ -334,9 +318,9 @@ ClientController::doWaitRequest(
     waitrep._status = binstat;
     try {
         _prot->sendReply(waitrep.getClassName(), waitrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during wait reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during wait reply.");
     }
@@ -347,7 +331,6 @@ ClientController::doStopRequest(
         const BGMasterClientProtocolSpec::StopRequest& stopreq
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     BGMasterClientProtocolSpec::StopReply reply_to_client(exceptions::OK, "stopped");
 
@@ -355,7 +338,7 @@ ClientController::doStopRequest(
             "Stop request for " << stopreq._binary_ids.size() << " ids and " << stopreq._aliases.size() <<
             " binary names with signal " << stopreq._signal
             );
-    bool binsfound = 0;
+    unsigned binsfound = 0;
     if (_utype != CxxSockets::Administrator) {
         reply_to_client._rc = exceptions::FATAL;
         reply_to_client._rt = "Authorization failure. Client did not present Administrator certificate.";
@@ -378,9 +361,8 @@ ClientController::doStopRequest(
         }
 
         // First go through all of the binary ids specified for stoppage
-        for (std::vector<std::string>::const_iterator idit = stopreq._binary_ids.begin();
-            idit != stopreq._binary_ids.end(); ++idit) {
-            BinaryId bid((*idit));
+        for (std::vector<std::string>::const_iterator idit = stopreq._binary_ids.begin(); idit != stopreq._binary_ids.end(); ++idit) {
+            const BinaryId bid((*idit));
 
             LOG_INFO_MSG("Processing stop request for binary id " << bid.str());
 
@@ -400,9 +382,10 @@ ClientController::doStopRequest(
                 location.second->stopBin(bid, location, stopreq._signal, stop_from_agent, false);
 
                 // Now collect the response and add it to the reply
-                BGMasterClientProtocolSpec::StopReply::BinaryStatus
-                    binstat_to_return (stop_from_agent._status._binary_id,
-                                       stop_from_agent._status._exit_status);
+                const BGMasterClientProtocolSpec::StopReply::BinaryStatus binstat_to_return(
+                        stop_from_agent._status._binary_id,
+                        stop_from_agent._status._exit_status
+                        );
 
                 reply_to_client._statuses.push_back(binstat_to_return);
                 if (stop_from_agent._rc != exceptions::OK) {
@@ -413,41 +396,37 @@ ClientController::doStopRequest(
         }
 
         // Now go through all of the aliases and find and stop each binary associated with the alias supplied.
-        for (std::vector<std::string>::const_iterator alias_it = stopreq._aliases.begin();
-            alias_it != stopreq._aliases.end(); ++alias_it) {
-
+        for (std::vector<std::string>::const_iterator ai = stopreq._aliases.begin(); ai != stopreq._aliases.end(); ++ai) {
             // First, find all of the binaries associated with this alias
             std::vector<BinaryLocation> locations;
-            bool found = MasterController::get_agent_manager().findBinary(*alias_it, locations);
+            const bool found = MasterController::get_agent_manager().findBinary(*ai, locations);
 
             if (!found) {
-                LOG_INFO_MSG("No binaries for alias " << *alias_it << " found.");
+                LOG_INFO_MSG("No binaries for alias " << *ai << " found.");
                 // break;
             } else {
                 ++binsfound;
-                LOG_INFO_MSG("Found " << locations.size() << " binaries associated with alias " << *alias_it);
+                LOG_INFO_MSG("Found " << locations.size() << " binaries associated with alias " << *ai);
 
                 // Now loop through the vector of locations associated with this alias and send a stop request to each agent.
-                for (std::vector<BinaryLocation>::iterator location_it = locations.begin();
-                    location_it != locations.end(); ++location_it) {
-
+                for (std::vector<BinaryLocation>::const_iterator li = locations.begin(); li != locations.end(); ++li) {
                     // Extract the agent and binary id from the location
-                    AgentRepPtr rep = location_it->second;
-                    BinaryId bid = location_it->first->get_binid();
+                    const AgentRepPtr rep = li->second;
+                    const BinaryId bid = li->first->get_binid();
 
                     // Build the stop request and reply that go to the agent
                     BGMasterAgentProtocolSpec::StopReply stop_from_agent;
                     stop_from_agent._rc = exceptions::OK;
 
-                    LOG_INFO_MSG("Sending stop request for alias " << *alias_it << " to agent " << rep->get_agent_id().str());
+                    LOG_INFO_MSG("Sending stop request for alias " << *ai << " to agent " << rep->get_agent_id().str());
 
-                    rep->stopBin(bid, *location_it, stopreq._signal, stop_from_agent, false);
+                    rep->stopBin(bid, *li, stopreq._signal, stop_from_agent, false);
 
                     // Now collect the response and add it to the reply
-                    BGMasterClientProtocolSpec::StopReply::BinaryStatus
-                        binstat_to_return (
-                                           stop_from_agent._status._binary_id,
-                                           stop_from_agent._status._exit_status);
+                    const BGMasterClientProtocolSpec::StopReply::BinaryStatus binstat_to_return(
+                            stop_from_agent._status._binary_id,
+                            stop_from_agent._status._exit_status
+                            );
 
                     reply_to_client._statuses.push_back(binstat_to_return);
                     if (stop_from_agent._rc != exceptions::OK) {
@@ -466,9 +445,9 @@ ClientController::doStopRequest(
 
     try {
         _prot->sendReply(reply_to_client.getClassName(), reply_to_client);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during stop reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during stop reply.");
     }
@@ -479,7 +458,6 @@ ClientController::doStatusRequest(
         const BGMasterClientProtocolSpec::StatusRequest& statusreq
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     BGMasterClientProtocolSpec::StatusReply statusrep(exceptions::OK, "success");
 
@@ -487,39 +465,49 @@ ClientController::doStatusRequest(
 
     // If binary ids are specified, must find them all and get their status. Else, we just need to get ALL of them.
     if (statusreq._binary_ids.size() > 0) {
-        for (std::vector<std::string>::const_iterator idit = statusreq._binary_ids.begin();
-            idit != statusreq._binary_ids.end(); ++idit) {
-            BinaryId id(*idit);
-            BinaryControllerPtr pbase;
+        for (std::vector<std::string>::const_iterator idit = statusreq._binary_ids.begin(); idit != statusreq._binary_ids.end(); ++idit) {
+            const BinaryId id(*idit);
 
             BinaryLocation location;
-            bool found = MasterController::get_agent_manager().findBinary(id, location);
+            const bool found = MasterController::get_agent_manager().findBinary(id, location);
             if (found) {
-                pbase = location.first;
+                const BinaryControllerPtr pbase = location.first;
                 if (pbase->valid()) {
-                    std::string t = boost::posix_time::to_simple_string(pbase->get_start_time());
-                    BinCont bin((unsigned)(pbase->get_exit_status()), pbase->get_binid().str(),
-                                pbase->get_binary_bin_path(), pbase->get_alias_name(), pbase->get_user(),
-                                (int)(pbase->get_status()), t);
+                    const std::string t = boost::posix_time::to_simple_string(pbase->get_start_time());
+                    const BinCont bin(
+                            pbase->get_exit_status(),
+                            pbase->get_binid().str(),
+                            pbase->get_binary_bin_path(), 
+                            pbase->get_alias_name(), 
+                            pbase->get_user(),
+                            pbase->get_status(),
+                            t
+                            );
                     statusrep._binaries.push_back(bin);
                 }
             }
         }
     } else {
         // Need them ALL. Loop through agents.
-        std::vector<AgentRepPtr> agents = MasterController::get_agent_manager().get_agent_list();
+        const std::vector<AgentRepPtr> agents = MasterController::get_agent_manager().get_agent_list();
         BOOST_FOREACH(const AgentRepPtr& rep, agents) {
             if (!rep) {
                 continue;
             }
-            std::vector<BinaryControllerPtr> binaries = rep->get_binaries();
+            const std::vector<BinaryControllerPtr> binaries = rep->get_binaries();
             // Now loop through binaries
             BOOST_FOREACH(const BinaryControllerPtr& pbase, binaries) {
                 if (pbase->valid()) {
-                    std::string t = boost::posix_time::to_simple_string(pbase->get_start_time());
-                    BinCont bin((unsigned)(pbase->get_exit_status()), pbase->get_binid().str(),
-                                pbase->get_binary_bin_path(), pbase->get_alias_name(), pbase->get_user(),
-                                (int)(pbase->get_status()), t);
+                    const std::string t = boost::posix_time::to_simple_string(pbase->get_start_time());
+                    const BinCont bin(
+                            pbase->get_exit_status(),
+                            pbase->get_binid().str(),
+                            pbase->get_binary_bin_path(), 
+                            pbase->get_alias_name(), 
+                            pbase->get_user(),
+                            pbase->get_status(),
+                            t
+                            );
                     statusrep._binaries.push_back(bin);
                 }
             }
@@ -527,9 +515,9 @@ ClientController::doStatusRequest(
     }
     try {
         _prot->sendReply(statusrep.getClassName(), statusrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during status reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during status reply.");
     }
@@ -540,7 +528,6 @@ ClientController::doTermRequest(
         const BGMasterClientProtocolSpec::TerminateRequest& termreq
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
 
     BGMasterClientProtocolSpec::TerminateReply termrep(exceptions::OK, "success");
@@ -557,9 +544,9 @@ ClientController::doTermRequest(
     try {
         LOG_INFO_MSG(termrep._rt);
         _prot->sendReply(termrep.getClassName(), termrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during terminate reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during terminate reply.");
     }
@@ -581,7 +568,6 @@ ClientController::doReloadRequest(
         const BGMasterClientProtocolSpec::ReloadRequest& relreq
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     BGMasterClientProtocolSpec::ReloadReply relrep(exceptions::OK, "Successfully reloaded configuration. ");
 
@@ -594,17 +580,17 @@ ClientController::doReloadRequest(
         LOG_INFO_MSG("Reload request for configuration file " << relreq._config_file);
         bgq::utility::Properties::Ptr newprops;
         try {
-            if (! MasterController::getProps()->reload(relreq._config_file)) {
+            if (!MasterController::getProps()->reload(relreq._config_file)) {
                 throw std::runtime_error("Properties file reload failed.");
             }
-        } catch(const std::runtime_error& e) {
+        } catch (const std::runtime_error& e) {
             std::ostringstream error;
             error << "Error reloading configuration file: " << e.what();
             MasterController::handleErrorMessage(error.str());
             relrep._rc = -1;
             relrep._rt = error.str();
             skip_policies = true;
-        } catch(const std::invalid_argument& e) {
+        } catch (const std::invalid_argument& e) {
             std::ostringstream error;
             error << "Error reading configuration file, verify file exists.";
             MasterController::handleErrorMessage(error.str());
@@ -637,9 +623,9 @@ ClientController::doReloadRequest(
 
     try {
         _prot->sendReply(relrep.getClassName(), relrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during reload reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during reload reply.");
     }
@@ -650,7 +636,6 @@ ClientController::doFailRequest(
         const BGMasterClientProtocolSpec::FailoverRequest& failreq
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__ << " " << failreq._binary_ids[0]);
     BGMasterClientProtocolSpec::FailoverReply failrep(exceptions::OK, "success");
     const std::string trigger = failreq._trigger;
@@ -678,11 +663,11 @@ ClientController::doFailRequest(
                 AgentRepPtr rep = location.second;
                 try {
                     rep->stopBinaryAndExecutePolicy(binid, location, SIGUSR2, stoprep, trigger);
-                    if(stoprep._rc == exceptions::OK) {
+                    if (stoprep._rc == exceptions::OK) {
                         failrep._rc = stoprep._rc;
                         failrep._rt = "success";
                     }
-                } catch(const exceptions::ConfigError& e) {
+                } catch (const exceptions::ConfigError& e) {
                     LOG_WARN_MSG("Policy execution failed. Check configuration");
                     BGMasterClientProtocolSpec::FailoverReply::BinaryStatus binstat(strbid, BinaryController::UNINITIALIZED);
                     failrep._statuses.push_back(binstat);
@@ -702,9 +687,9 @@ ClientController::doFailRequest(
     }
     try {
         _prot->sendReply(failrep.getClassName(), failrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during fail-over reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during fail-over reply.");
     }
@@ -715,15 +700,20 @@ ClientController::doMasterStatRequest(
         const BGMasterClientProtocolSpec::MasterstatRequest& /* statreq */
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
-    const std::string t = boost::posix_time::to_simple_string(MasterController::get_start_time());
-    BGMasterClientProtocolSpec::MasterstatReply statrep(exceptions::OK, "", getpid(), t, MasterController::_version_string);
+    const BGMasterClientProtocolSpec::MasterstatReply statrep(
+            exceptions::OK,
+            std::string(),
+            getpid(),
+            boost::posix_time::to_simple_string(MasterController::get_start_time()),
+            MasterController::_version_string,
+            MasterController::getProps()->getFilename()
+            );
     try {
         _prot->sendReply(statrep.getClassName(), statrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during status reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during status reply.");
     }
@@ -734,14 +724,13 @@ ClientController::doAliasWaitRequest(
         const BGMasterClientProtocolSpec::Alias_waitRequest& waitreq
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     BGMasterClientProtocolSpec::Alias_waitReply waitrep;
     waitrep._rc = exceptions::OK;
 
     // Find the matching alias in the alias list.
     AliasPtr al;
-    bool found = MasterController::_aliases.find_alias(waitreq._alias, al);
+    const bool found = MasterController::_aliases.find_alias(waitreq._alias, al);
     unsigned timeout = waitreq._timeout;
     BinaryId id;
 
@@ -752,9 +741,9 @@ ClientController::doAliasWaitRequest(
         waitrep._binary_id = "";
         try {
             _prot->sendReply(waitrep.getClassName(), waitrep);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during wait reply.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during wait reply.");
         }
@@ -778,9 +767,9 @@ ClientController::doAliasWaitRequest(
     }
     try {
         _prot->sendReply(waitrep.getClassName(), waitrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during wait reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during wait reply.");
     }
@@ -791,15 +780,14 @@ ClientController::doErrorsRequest(
         const BGMasterClientProtocolSpec::Get_errorsRequest& /* error_req */
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     BGMasterClientProtocolSpec::Get_errorsReply error_rep(exceptions::OK, "success");
     MasterController::getErrorMessages(error_rep._errors);
     try {
         _prot->sendReply(error_rep.getClassName(), error_rep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during get errors reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during get errors reply.");
     }
@@ -810,15 +798,14 @@ ClientController::doHistoryRequest(
         const BGMasterClientProtocolSpec::Get_historyRequest& /* history_req */
         )
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     BGMasterClientProtocolSpec::Get_historyReply history_rep(exceptions::OK, "success");
     MasterController::getHistoryMessages(history_rep._history);
     try {
         _prot->sendReply(history_rep.getClassName(), history_rep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during get history reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during get history reply.");
     }
@@ -831,20 +818,25 @@ ClientController::doEndmonitorRequest(
 {
     LOG_TRACE_MSG(__FUNCTION__);
 
-    BGMasterClientProtocolSpec::EndmonitorReply endmonrep;
+    const BGMasterClientProtocolSpec::EndmonitorReply endmonrep;
 
     try {
         _prot->sendReply(endmonrep.getClassName(), endmonrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during end monitor reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during end monitor reply.");
     }
     boost::mutex::scoped_lock scoped_lock(MasterController::_monitor_prots_mutex);
-    MasterController::get_monitor_prots().erase(std::remove(MasterController::get_monitor_prots().begin(),
-                                                            MasterController::get_monitor_prots().end(),
-                                                            _prot), MasterController::get_monitor_prots().end());
+    MasterController::get_monitor_prots().erase(
+            std::remove(
+                MasterController::get_monitor_prots().begin(),
+                MasterController::get_monitor_prots().end(),
+                _prot
+                ),
+            MasterController::get_monitor_prots().end()
+            );
 }
 
 void
@@ -858,8 +850,8 @@ ClientController::doLoglevelRequest(
 
     // If there are any changes in the request, apply them.
     bgq::utility::LoggingProgramOptions::Strings logstrings;
-    BOOST_FOREACH(const BGMasterClientProtocolSpec::Logger& curr_logger, loglevreq._loggers) {
-        logstrings.push_back(curr_logger._name + "=" + curr_logger._level);
+    BOOST_FOREACH(const std::string& logger, loglevreq._loggers) {
+        logstrings.push_back( logger );
     }
     // Set logging level
     try {
@@ -869,26 +861,30 @@ ClientController::doLoglevelRequest(
     } catch ( const std::invalid_argument& e ) {
         loglevrep._rc = exceptions::FATAL;
         loglevrep._rt = e.what();
+        LOG_WARN_MSG( e.what() );
     }
 
     // Get the current levels and return them.
     using namespace log4cxx;
     // Output all current loggers and their levels
-    LoggerPtr root = Logger::getRootLogger();
+    const LoggerPtr root = Logger::getRootLogger();
     BOOST_FOREACH(const LoggerPtr& curr_loggerp, root->getLoggerRepository()->getCurrentLoggers() ) {
-        BGMasterClientProtocolSpec::Logger logger;
-        if ( curr_loggerp && curr_loggerp->getLevel() ) {
-            logger._name = curr_loggerp->getName();
-            logger._level = curr_loggerp->getLevel()->toString();
-        }
-        loglevrep._loggers.push_back(logger);
+        if ( !curr_loggerp ) continue;
+        if ( !curr_loggerp->getLevel() ) continue;
+
+        loglevrep._loggers.push_back(
+                BGMasterClientProtocolSpec::Logger(
+                    curr_loggerp->getName(),
+                    curr_loggerp->getLevel()->toString()
+                    )
+                );
     }
 
     try {
         _prot->sendReply(loglevrep.getClassName(), loglevrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during log level reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during log level reply.");
     }
@@ -900,10 +896,10 @@ ClientController::doGetidleRequest(
         )
 {
     // Make a local copy because we don't really care about updates and we are going to destroy it when we're done.
-    std::vector<AliasPtr> alist = MasterController::_aliases.get_list_copy();
+    const std::vector<AliasPtr> alist = MasterController::_aliases.get_list_copy();
     BGMasterClientProtocolSpec::GetidleReply idlerep;
     BOOST_FOREACH(const AliasPtr& al, alist) {
-        if (al->running() == false) {
+        if (!al->running()) {
             // Nothing running, put it in the reply.
             idlerep._aliases.push_back(al->get_name());
         }
@@ -911,9 +907,9 @@ ClientController::doGetidleRequest(
 
     try {
         _prot->sendReply(idlerep.getClassName(), idlerep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during idle reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during idle reply.");
     }
@@ -925,7 +921,6 @@ ClientController::doMonitorRequest(
         )
 {
     // To do this, we first send a reply of all of the history and event messages in our buffer.
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     BGMasterClientProtocolSpec::MonitorReply monrep(exceptions::OK, "success");
     std::vector<std::string> history_messages;
@@ -943,9 +938,9 @@ ClientController::doMonitorRequest(
 
     try {
         _prot->sendReply(monrep.getClassName(), monrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during get history reply.");
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         LOG_ERROR_MSG("Client connection ended during get history reply.");
     }
@@ -958,35 +953,35 @@ ClientController::doMonitorRequest(
 void
 ClientController::processRequest()
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     // These will be requests coming from the bgagent.
-    std::string request_name = "";
+    std::string request_name;
 
     try {
         _prot->getName(request_name);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         LOG_ERROR_MSG("Client connection error during receive of class name.");
         return;
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         if (err.errcode != 0) {
             LOG_ERROR_MSG("Client connection ended during receive of class name.");
-        } else
+        } else {
             LOG_DEBUG_MSG("Client has ended connection.");
+        }
         _ending = true;
         return;
     }
 
-    LOG_DEBUG_MSG("-*-Request " << request_name << " received.-*-");
+    LOG_DEBUG_MSG("Request " << request_name << " received.");
 
     if (request_name == "StartRequest") {
         BGMasterClientProtocolSpec::StartRequest startreq;
         try {
             _prot->getObject(&startreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during start request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during start request.");
         }
@@ -996,9 +991,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::StopRequest stopreq;
         try {
             _prot->getObject(&stopreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during stop request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during stop request.");
         }
@@ -1007,9 +1002,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::AgentlistRequest agentreq;
         try {
             _prot->getObject(&agentreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during agent list request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during agent list request.");
         }
@@ -1018,9 +1013,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::ClientsRequest clientreq;
         try {
             _prot->getObject(&clientreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during clients request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during clients request.");
         }
@@ -1029,9 +1024,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::WaitRequest waitreq;
         try {
             _prot->getObject(&waitreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during wait request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during wait request.");
         }
@@ -1040,9 +1035,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::StatusRequest statreq;
         try {
             _prot->getObject(&statreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during status request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during status request.");
         }
@@ -1051,9 +1046,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::TerminateRequest termreq;
         try {
             _prot->getObject(&termreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during terminate request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during terminate request.");
         }
@@ -1062,9 +1057,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::ReloadRequest relreq;
         try {
             _prot->getObject(&relreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during reload request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during reload request.");
         }
@@ -1073,9 +1068,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::FailoverRequest failreq;
         try {
             _prot->getObject(&failreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during fail-over request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during fail-over request.");
         }
@@ -1084,9 +1079,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::MasterstatRequest statreq;
         try {
             _prot->getObject(&statreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during master status request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during master status request.");
         }
@@ -1095,9 +1090,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::Alias_waitRequest waitreq;
         try {
             _prot->getObject(&waitreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during alias wait request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during alias wait request.");
         }
@@ -1106,9 +1101,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::Get_errorsRequest error_req;
         try {
             _prot->getObject(&error_req);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during get errors request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during get errors request.");
         }
@@ -1117,9 +1112,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::Get_historyRequest history_req;
         try {
             _prot->getObject(&history_req);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during get history request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during get history request.");
         }
@@ -1128,9 +1123,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::MonitorRequest monreq;
         try {
             _prot->getObject(&monreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during monitor request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during monitor request.");
         }
@@ -1139,9 +1134,9 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::EndmonitorRequest endmonreq;
         try {
             _prot->getObject(&endmonreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during end monitor request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during get monitor request.");
         }
@@ -1150,21 +1145,20 @@ ClientController::processRequest()
         BGMasterClientProtocolSpec::LoglevelRequest loglevreq;
         try {
             _prot->getObject(&loglevreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during log level request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during log level request.");
         }
         doLoglevelRequest(loglevreq);
-
     } else if (request_name == "GetidleRequest") {
         BGMasterClientProtocolSpec::GetidleRequest idlereq;
         try {
             _prot->getObject(&idlereq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_ERROR_MSG("Client connection error during get idle request.");
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission
             LOG_ERROR_MSG("Client connection ended during get idle request.");
         }
@@ -1189,15 +1183,13 @@ ClientController::waitMessages()
     }
 
     // Client is gone, the controller must go too
-    ClientControllerPtr self_ptr = shared_from_this();
+    const ClientControllerPtr self_ptr = shared_from_this();
     MasterController::get_client_manager().removeClient(self_ptr);
 }
 
 void
 ClientController::startPoller()
 {
-    LOGGING_DECLARE_ID_MDC(_client_id.str());
-    LOG_TRACE_MSG(__FUNCTION__);
     _client_socket_poller = boost::thread(&ClientController::waitMessages, this);
 }
 
@@ -1212,7 +1204,6 @@ ClientController::cancel()
 
     LOG_DEBUG_MSG("Canceling client " << os.str());
     _ending = true;
-    XML::Parser::setstopping(pthread_self());
     pthread_kill(_my_tid, SIGUSR1);
     if (_my_tid != pthread_self()) {  // Don't want to wait for myself!
         _client_socket_poller.join();

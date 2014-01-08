@@ -152,6 +152,7 @@ __INLINE__ int L1P_DeallocatePattern(L1P_Pattern_t* ptr)
     
     free(ptr);
     Fetch_and_Add(&_L1P_PatternCount, -1);
+    return 0;
 }
 
 /*!

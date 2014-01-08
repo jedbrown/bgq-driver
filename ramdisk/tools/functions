@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 # begin_generated_IBM_copyright_prolog                             
 #                                                                  
 # This is an automatically generated copyright prolog.             
@@ -7,7 +7,7 @@
 #                                                                  
 # Licensed Materials - Property of IBM                             
 # Blue Gene/Q                                                      
-# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# (C) Copyright IBM Corp. 2012, 2013 All Rights Reserved                 
 # US Government Users Restricted Rights - Use,                     
 # duplication or disclosure restricted by GSA ADP                  
 # Schedule contract with IBM Corp.                                 
@@ -28,8 +28,6 @@
 #	    tools directory.
 #
 
-CURR_RHEL=RHEL6.3
-RHEL6_PATH=/install/redhat/RHEL6.3-ppc/Packages
 if [ -e /bgsys/logs/BGQ/distrofs ] ; then
 	LOG_DIR="/bgsys/logs/BGQ/distrofs"
 else

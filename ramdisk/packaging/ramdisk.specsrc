@@ -182,7 +182,7 @@ Files which are applied to a base RHEL6 image to create the BG/Q Linux Distro NF
 %{_base_dir}/ramdisk/distrofs/tar/etc/
 %{_base_dir}/ramdisk/distrofs/tar/sbin/
 %{_base_dir}/ramdisk/rpms/bgq-distrofs_runtime-*.rpm
-%{_base_dir}/ramdisk/tools/bgqDistrofs.rpmlist
+%{_base_dir}/ramdisk/tools/bgqDistrofs-*.rpmlist
 %{_base_dir}/ramdisk/tools/bgqDistrofsInstall.sh
 %{_base_dir}/ramdisk/tools/bgqDistrofsPostInstall.sh
 %{_base_dir}/ramdisk/tools/bgqDistrofsUninstall.sh

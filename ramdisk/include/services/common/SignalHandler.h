@@ -159,6 +159,8 @@ public:
 
    SigWritePipe(int);
 
+   ~SigWritePipe();
+
    //! \brief  Return indicator if signal has been caught.
    //! \return True if signal has been caught, otherwise false.
 

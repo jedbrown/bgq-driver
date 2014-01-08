@@ -50,7 +50,12 @@ BOOST_GLOBAL_FIXTURE( InitializeLoggingFixture );
 
 BOOST_AUTO_TEST_CASE( file_set )
 {
-    FileSet f;
+    struct Foo : public CxxSockets::FileSet
+    {
+
+    };
+
+    Foo f;
     const TCPSocketPtr foo( new TCPSocket );
 
     // add first should be ok

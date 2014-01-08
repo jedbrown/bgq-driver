@@ -51,6 +51,7 @@ extern const size_t         ServerIosdIdCounterSize;
 extern const unsigned       ServerKillJobTimeout;
 extern const uint16_t       ServerJobctlPort;
 extern const uint16_t       ServerStdioPort;
+extern const unsigned       ServerJobctlHeartbeat;
 
 // command stuff
 extern const unsigned       CommandConnectTimeout;

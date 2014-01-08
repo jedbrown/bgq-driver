@@ -271,7 +271,7 @@ bool doCommand(JobPtr job)
     try
     {
         printf("receiving command\n");
-        side_sock->Receive(side_msg);
+        SocketVector[0]->Receive(side_msg);
         printf("gotmessage\n");
         
 #define CMD(name) else if(side_msg.str() == name) 
@@ -325,7 +325,7 @@ bool doCommand(JobPtr job)
             cout << "Invalid command!!!  \"" << side_msg.str() << "\"" << endl;
             addStatus(response, -1);
         }
-        side_sock->Send(response);
+        SocketVector[0]->Send(response);
     }
     catch(CxxSockets::Error& e) // CxxSockets::SockCloseUnexpected & e)
     {

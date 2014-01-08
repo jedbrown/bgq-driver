@@ -38,7 +38,7 @@ BOOST_FIXTURE_TEST_SUITE( suite1, Fixture )
 BOOST_AUTO_TEST_CASE( file_not_found )
 {
     BOOST_CHECK_THROW(
-            boost::cref( Properties("/tmp/hopefully_i_do_not_exist") ),
+            Properties::create("/tmp/hopefully_i_do_not_exist"),
             Properties::FileError
         );
 }
@@ -289,42 +289,6 @@ BOOST_AUTO_TEST_CASE( reload )
     BOOST_CHECK_EQUAL(
             foo.getValue( "section_two", "key_two" ),
             "value_two"
-            );
-}
-
-BOOST_AUTO_TEST_CASE( copy_ctor )
-{
-    _file << "[section]" << endl;
-    _file << "key=value" << endl;
-    Properties foo( _filename );
-    Properties bar( foo );
-
-    BOOST_CHECK_EQUAL(
-            foo.getFilename(),
-            bar.getFilename()
-            );
-
-    BOOST_CHECK_EQUAL(
-            foo.getValue( "section", "key" ),
-            bar.getValue( "section", "key" )
-            );
-}
-
-BOOST_AUTO_TEST_CASE( assignment_operator )
-{
-    _file << "[section]" << endl;
-    _file << "key=value" << endl;
-    Properties foo( _filename );
-    Properties bar = foo;
-
-    BOOST_CHECK_EQUAL(
-            foo.getFilename(),
-            bar.getFilename()
-            );
-
-    BOOST_CHECK_EQUAL(
-            foo.getValue( "section", "key" ),
-            bar.getValue( "section", "key" )
             );
 }
 

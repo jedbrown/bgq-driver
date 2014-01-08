@@ -24,7 +24,6 @@
 #ifndef MMCS_COMMON_ABSTRACT_COMMAND_H_
 #define MMCS_COMMON_ABSTRACT_COMMAND_H_
 
-
 #include "fwd.h"
 
 #include "libmmcs_client/CommandReply.h"
@@ -36,11 +35,10 @@
 
 #include <deque>
 #include <string>
-
+#include <vector>
 
 namespace mmcs {
 namespace common {
-
 
 enum HELP_CAT {
     DEFAULT = 0,
@@ -49,21 +47,17 @@ enum HELP_CAT {
     SPECIAL
 };
 
-
 /*!
  * \brief Abstract base class for MMCS commands.
  *
  * To implement a specific command
  * -- Define a new class derived from AbstractCommand
- * -- Implement the build(), cmdname(), execute(), and help() methods
+ * -- Implement the build(),  execute(), and help() methods
  * -- Invoke the build() method from mmcs
  */
 class AbstractCommand : private boost::noncopyable
 {
-protected:
 public:
-
-
     /*!
      * \class Attributes
      * \brief Attributes of an MMCS command:
@@ -71,7 +65,7 @@ public:
      * requiresTarget -- does the command take a target prefix? (e.g., {*})
      * requiresConnection -- does the command require an active ido connection to the node cards?
      * internalCommand -- is the command for internal use only?
-     * mmcsConsoleCommand -- can the command be executed by mmcs_console?
+     * bgConsoleCommand -- can the command be executed by bg_console?
      * mmcsServerCommand -- can the command be executed by mmcs_server?
      * mmcsLiteCommand --  can the command be executed by mmcs_lite?
      * requiresObjNames -- special attribute to ensure that a block argument is sent to the command when a block is selected
@@ -86,7 +80,7 @@ public:
               _requiresConnection(false),
               _requiresTarget(false),
               _internalCommand(false),
-              _mmcsConsoleCommand(false),
+              _bgConsoleCommand(false),
               _mmcsServerCommand(false),
               _mmcsLiteCommand(false),
               _external(false),
@@ -104,8 +98,8 @@ public:
         void  requiresConnection(bool tf) { _requiresConnection = tf; }
         bool  internalCommand() { return _internalCommand; }
         void  internalCommand(bool tf) { _internalCommand = tf; }
-        bool  mmcsConsoleCommand() { return _mmcsConsoleCommand; }
-        void  mmcsConsoleCommand(bool tf) { _mmcsConsoleCommand = tf; }
+        bool  bgConsoleCommand() { return _bgConsoleCommand; }
+        void  bgConsoleCommand(bool tf) { _bgConsoleCommand = tf; }
         bool  mmcsServerCommand() { return _mmcsServerCommand; }
         void  mmcsServerCommand(bool tf) { _mmcsServerCommand = tf; }
         bool  mmcsLiteCommand() { return _mmcsLiteCommand; }
@@ -128,7 +122,7 @@ public:
         bool   _requiresConnection;             //!< is the command valid before a block is connected?
         bool   _requiresTarget;                 //!< does the command use a BlockControllerTarget?
         bool   _internalCommand;                //!< Is this command for internal use only?
-        bool   _mmcsConsoleCommand;             //!< can the command be executed by mmcs_console?
+        bool   _bgConsoleCommand;               //!< can the command be executed by bg_console?
         bool   _mmcsServerCommand;              //!< can the command be executed by mmcs_server?
         bool   _mmcsLiteCommand;                //!< can the command be executed by mmcs_lite?
         bool   _external;                       //!< Is this the special "external" command
@@ -142,141 +136,132 @@ public:
     };
 
 
-        /*!
-         ** AbstractCommand constructor
-         ** The constructor is normally invoked only by the build() method
-         ** @param name the command name
-         ** @param desc a brief, one line description
-         ** @param attr describes the attributes and requirements of the command
-         */
+    /*!
+     ** AbstractCommand constructor
+     ** The constructor is normally invoked only by the build() method
+     ** @param name the command name
+     ** @param desc a brief, one line description
+     ** @param attr describes the attributes and requirements of the command
+     */
     AbstractCommand(const char* name, const char* description, const Attributes& attributes)
             : _name(name),
             _description(description),
-            _attributes(attributes),
-            _stopping(false)
+            _attributes(attributes)
     {}
 
-        /*!
-         ** build() - AbstractCommand factory
-         ** This is invoked at MMCS startup when MMCS builds its list of commands
-         ** @return an AbstractCommand object for this specific command
-         */
-        static  AbstractCommand* build() { return NULL; }    // factory method
+    /*!
+     ** build() - AbstractCommand factory
+     ** This is invoked at MMCS startup when MMCS builds its list of commands
+     ** @return an AbstractCommand object for this specific command
+     */
+    static AbstractCommand* build() { return NULL; }    // factory method
 
-        /*!
-         ** cmdname() - Returns the command name
-         ** This returns the name of the command. It is a static method so that it
-         ** can be used before the object is built, in conjunction with build,
-         ** for inserting the command objects into a map.
-         ** @return command name
-         */
-        static  std::string cmdname() { return ""; }
+    /*!
+     ** AbstractCommand destructor
+     */
+    virtual ~AbstractCommand() {}
 
-        /*!
-         ** AbstractCommand destructor
-         */
-        virtual ~AbstractCommand() {}
+    /*!
+     ** execute() - Perform specific MMCS command
+     ** This variety of execute() is intended to be executed overridden by BlockController functions
+     ** @param args the command arguments
+     ** @param reply       the command output stream. Refer to class mmcs_client::CommandReply
+     ** @param pController the ConsoleController object that the command is to work on
+     ** @param pTarget     the BlockControllerTarget list that the command is to work on (optional)
+     */
+    virtual void execute(
+            std::deque<std::string> ,//args,
+            mmcs_client::CommandReply& reply,
+            ConsoleController* ,//pController,
+            server::BlockControllerTarget* ,//pTarget,
+            std::vector<std::string>* //validnames
+            )
+    {
+        reply << mmcs_client::FAIL << "Internal error occurred: return code=1." << mmcs_client::DONE;
+        return;
+    }
 
-        /*!
-         ** execute() - Perform specific MMCS command
-         ** This variety of execute() is intended to be executed overridden by BlockController functions
-         ** @param args the command arguments
-         ** @param reply       the command output stream. Refer to class mmcs_client::CommandReply
-         ** @param pController the ConsoleController object that the command is to work on
-         ** @param pTarget     the BlockControllerTarget list that the command is to work on (optional)
-         */
-        virtual void execute(
-                std::deque<std::string> ,//args,
-                mmcs_client::CommandReply& reply,
-                ConsoleController* ,//pController,
-                server::BlockControllerTarget* ,//pTarget,
-                std::vector<std::string>* //validnames
-                )
-        {
-            reply << mmcs_client::FAIL << "Internal error occurred: return code=1." << mmcs_client::DONE;
-            return;
-        }
-
-        /*!
-         ** execute() - Perform specific MMCS command
-         ** This variety of execute() is intended to be executed overridden by DBBlockController functions
-         ** @param args the command arguments
-         ** @param reply       the command output stream. Refer to class mmcs_client::CommandReply
-         ** @param pController the server::DBConsoleController object that the command is to work on
-         ** @param pTarget     the server::BlockControllerTarget list that the command is to work on (optional)
-         */
-        virtual void execute(
-                std::deque<std::string> args,
-                mmcs_client::CommandReply& reply,
-                server::DBConsoleController* pController,
-                server::BlockControllerTarget* pTarget,
-                std::vector<std::string>* validnames
-                )
-        {
-            return execute(
-                    args,
-                    reply,
-                    (ConsoleController*)pController,
-                    pTarget,
-                    validnames
-                    );
-        }
+    /*!
+     ** execute() - Perform specific MMCS command
+     ** This variety of execute() is intended to be executed overridden by DBBlockController functions
+     ** @param args the command arguments
+     ** @param reply       the command output stream. Refer to class mmcs_client::CommandReply
+     ** @param pController the server::DBConsoleController object that the command is to work on
+     ** @param pTarget     the server::BlockControllerTarget list that the command is to work on (optional)
+     */
+    virtual void execute(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            server::DBConsoleController* pController,
+            server::BlockControllerTarget* pTarget,
+            std::vector<std::string>* validnames
+            )
+    {
+        return execute(
+                args,
+                reply,
+                (ConsoleController*)pController,
+                pTarget,
+                validnames
+                );
+    }
 
 
-        // These two versions are the same as the first two, except
-        // that they do not take a list of object names that have
-        // been authorized (validnames).
-        virtual void execute(
-                std::deque<std::string> ,//args,
-                mmcs_client::CommandReply& reply,
-                ConsoleController* ,//pController,
-                server::BlockControllerTarget* //pTarget
-                )
-        {
-            reply << mmcs_client::FAIL << "Internal error occurred: return code=2." << mmcs_client::DONE;
-            return;
-        }
+    // These two versions are the same as the first two, except
+    // that they do not take a list of object names that have
+    // been authorized (validnames).
+    virtual void execute(
+            std::deque<std::string> ,//args,
+            mmcs_client::CommandReply& reply,
+            ConsoleController* ,//pController,
+            server::BlockControllerTarget* //pTarget
+            )
+    {
+        reply << mmcs_client::FAIL << "Internal error occurred: return code=2." << mmcs_client::DONE;
+        return;
+    }
 
-        virtual void execute(
-                std::deque<std::string> args,
-                mmcs_client::CommandReply& reply,
-                server::DBConsoleController* pController,
-                server::BlockControllerTarget* pTarget=NULL
-                )
-        {
-            return execute(
-                    args,
-                    reply,
-                    (ConsoleController*)pController,
-                    pTarget
-                    );
-        }
+    virtual void execute(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            server::DBConsoleController* pController,
+            server::BlockControllerTarget* pTarget=NULL
+            )
+    {
+        return execute(
+                args,
+                reply,
+                (ConsoleController*)pController,
+                pTarget
+                );
+    }
 
-        /*!
-         ** help() - Print extended command help to the reply stream
-         ** @param args  the help command arguments
-         ** @param reply the command output stream. Refer to class mmcs_client::CommandReply
-         */
-        virtual void help(std::deque<std::string> args, mmcs_client::CommandReply& reply) = 0;
+    /*!
+     ** help() - Print extended command help to the reply stream
+     ** @param args  the help command arguments
+     ** @param reply the command output stream. Refer to class mmcs_client::CommandReply
+     */
+    virtual void help(std::deque<std::string> args, mmcs_client::CommandReply& reply) = 0;
 
-        /*!
-         ** name() - Returns the command name
-         ** @return command name
-         */
-        virtual std::string  name() { return _name; }
+    /*!
+     ** name() - Returns the command name
+     ** @return command name
+     */
+    const std::string& name() const { return _name; }
 
-        /*!
-         ** description() - Returns the brief description
-         ** @return brief command description
-         */
-        virtual std::string  description() { return _description; }
+    /*!
+     ** description() - Returns the brief description
+     ** @return brief command description
+     */
+    const std::string& description() const { return _description; }
 
-        /*!
-         ** attributes() - Return the command attributes
-         ** @return Attributes for this object
-         */
-        virtual Attributes& attributes() { return _attributes; };
-    std::string get_usage() { return usage; }
+    /*!
+     ** attributes() - Return the command attributes
+     ** @return Attributes for this object
+     */
+    Attributes& attributes() { return _attributes; };
+
+    const std::string& usage() const { return _usage; }
 
     // Return whether the number of args is within useful bounds for the command.
     // By default, all commands expect zero arguments.
@@ -294,8 +279,7 @@ public:
         return false;
     }
 
-
-    // Takes the commmand arguments and returns the block objects the command would like to use.
+    // Takes the command arguments and returns the block objects the command would like to use.
     // Security validation in the command processor will determine whether the command can
     // actually use the objects.  By default, the first argument is returned.
     virtual std::vector<std::string> getBlockObjects(
@@ -310,18 +294,12 @@ public:
         return arg0_vec;
     }
 
-
 protected:
-        std::string _name;                  // name of the command
-        std::string _description;           // brief (one line) description -- use help() for extended help
-        Attributes _attributes;  // command attributes
-        std::string usage;
-        bool _stopping;
-    private:
-        AbstractCommand(const AbstractCommand&);
-        AbstractCommand& operator=(const AbstractCommand&);
+    const std::string _name;     // name of the command
+    const std::string _description;    // brief (one line) description -- use help() for extended help
+    Attributes  _attributes;     // command attributes
+    std::string _usage;
 };
-
 
 } } // namespace mmcs::common
 

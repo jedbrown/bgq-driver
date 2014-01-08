@@ -62,7 +62,7 @@ public:
          Missing,         //!< Hardware is missing
          Error,           //!< Hardware is in error
          Service,         //!< Hardware is being serviced
-         SoftwareFailure  //!< Software failure on hardware resource (only for compute nodes)
+         SoftwareFailure  //!< Software failure on hardware resource (only for midplanes and compute nodes)
     };
 
     /*!

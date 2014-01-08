@@ -62,17 +62,15 @@ run_io_service()
 void
 start_io_service()
 {
-    LOG_DEBUG_MSG( "starting location specific polling thread" );
+    LOG_TRACE_MSG("Starting location specific polling thread.");
     boost::thread t( &run_io_service );
 }
 
 }
 
-
 namespace mmcs {
 namespace server {
 namespace env {
-
 
 bool
 LocationList::start(
@@ -97,14 +95,12 @@ LocationList::start(
                 )
             );
 
-    if ( result != _locations.end() ) return false;
+    if ( result != _locations.end() )  {
+        return false;
+    }
 
-    const boost::shared_ptr<Location> polling(
-            new Location( _io_service, type, location, seconds )
-            );
-    _io_service.post(
-            boost::bind( &Polling::wait, polling )
-            );
+    const boost::shared_ptr<Location> polling(new Location( _io_service, type, location, seconds ));
+    _io_service.post( boost::bind( &Polling::wait, polling ));
 
     boost::call_once( &start_io_service, init_once_flag );
 
@@ -133,7 +129,9 @@ LocationList::stop(
                 )
             );
 
-    if ( result == _locations.end() ) return false;
+    if ( result == _locations.end() ) {
+        return false;
+    }
 
     (*result)->stop();
 
@@ -146,7 +144,7 @@ LocationList::remove(
         )
 {
     boost::mutex::scoped_lock lock( _mutex );
-    LOG_TRACE_MSG( __FUNCTION__ << " " << location );
+    //LOG_TRACE_MSG( __FUNCTION__ << " " << location );
 
     const Locations::iterator result = std::find_if(
             _locations.begin(),
@@ -161,7 +159,9 @@ LocationList::remove(
                 )
             );
 
-    if ( result == _locations.end() ) return;
+    if ( result == _locations.end() ) {
+        return;
+    }
 
     _locations.erase( result );
 }

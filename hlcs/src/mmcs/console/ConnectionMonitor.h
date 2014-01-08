@@ -24,25 +24,32 @@
 #ifndef MMCS_CONSOLE_CONNECTION_MONITOR_H_
 #define MMCS_CONSOLE_CONNECTION_MONITOR_H_
 
-
-#include "common/ConsoleController.h"
 #include "common/Thread.h"
 
-
 namespace mmcs {
+namespace common {
+
+class ConsoleController;
+
+} // common
+
 namespace console {
 
-
-//******************************************************************************
-// Class for polling the mmcs connection
-//******************************************************************************
+/*!
+ * \brief polling the mmcs connection
+ */
 class ConnectionMonitor : public common::Thread
 {
-    common::ConsoleController* _controller;
 public:
-    ConnectionMonitor() {};
-    void setConsole(common::ConsoleController* p) { _controller = p; }
+    ConnectionMonitor(
+            common::ConsoleController* p
+            );
+
+private:
     void* threadStart();
+
+private:
+    common::ConsoleController* const _controller;
 };
 
 } } // namespace mmcs::console

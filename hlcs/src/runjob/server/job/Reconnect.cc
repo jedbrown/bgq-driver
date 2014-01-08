@@ -119,32 +119,29 @@ Reconnect::nextJob()
     const Server::Ptr server( _server.lock() );
     if ( !server ) return;
 
-    // loop until we find a running job
-    // jobs with any other status are removed from bgqjob
-    while (1) {
-        if ( !_results->fetch() ) {
-            LOG_INFO_MSG( "done reconnecting" );
-            return;
-        }
-        const cxxdb::Columns& columns = _results->columns();
-
-        if ( columns[BGQDB::DBTJob::STATUS_COL].getString() != BGQDB::job::status_code::Running ) {
-            this->removeJob(
-                    error_code::job_failed_to_start,
-                    "job with status " + columns[BGQDB::DBTJob::STATUS_COL].getString() + " cannot be reconnected"
-                    );
-        } else if ( server->getOptions().reconnect().scope() != runjob::server::Reconnect::Scope::Jobs ) {
-            this->removeJob(
-                    error_code::runjob_server_restart,
-                    "job reconnect is not configured"
-                    );
-        } else {
-            // found a running job that should be reconnected
-            break;
-        }
+    if ( !_results->fetch() ) {
+        LOG_INFO_MSG( "done reconnecting" );
+        return;
     }
-
     const cxxdb::Columns& columns = _results->columns();
+
+    if ( columns[BGQDB::DBTJob::STATUS_COL].getString() != BGQDB::job::status_code::Running ) {
+        this->removeJob(
+                error_code::job_failed_to_start,
+                "job with status " + columns[BGQDB::DBTJob::STATUS_COL].getString() + " cannot be reconnected"
+                );
+        return;
+    }
+    
+    if ( server->getOptions().reconnect().scope() != runjob::server::Reconnect::Scope::Jobs ) {
+        this->removeJob(
+                error_code::runjob_server_restart,
+                "job reconnect is not configured"
+                );
+        return;
+    }
+        
+    // found a running job that should be reconnected
     server->getBlocks()->find(
             columns[BGQDB::DBTJob::BLOCKID_COL].getString(),
             boost::bind(
@@ -175,8 +172,6 @@ Reconnect::findBlockCallback(
                 error_code::block_not_found,
                 "could not find block '" + columns[BGQDB::DBTJob::BLOCKID_COL].getString() + "' to reconnect job"
                 );
-        this->nextJob();
-
         return;
     }
 
@@ -189,8 +184,6 @@ Reconnect::findBlockCallback(
                 error_code::runjob_server_restart,
                 e.what()
                 );
-        this->nextJob();
-
         return;
     }
 
@@ -274,14 +267,20 @@ Reconnect::removeJob(
     const database::Init::Ptr database = server->getDatabase();
 
     LOG_WARN_MSG( message );
+
     job::ExitStatus reason;
     reason.set( 
             message,
             error
             );
+
     database->getDelete().execute(
             _results->columns()[ BGQDB::DBTJob::ID_COL ].as<BGQDB::job::Id>(),
-            reason
+            reason,
+            boost::bind(
+                &Reconnect::nextJob,
+                shared_from_this()
+                )
             );
 }
 
@@ -303,12 +302,13 @@ Reconnect::arbitrateCallback(
                 error_code::runjob_server_restart,
                 std::string("could not arbitrate: ") + toString(error)
                 );
-    } else {
-        job->status().set(
-                Status::Running,
-                job
-                );
+        return;
     }
+
+    job->status().set(
+            Status::Running,
+            job
+            );
 
     this->nextJob();
 }

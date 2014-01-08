@@ -41,6 +41,9 @@ LDFLAGS += \
  -L../lib -lbgmasterclient \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib \
+ -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility -lcxxsockets \
+ -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib \
+ -llog4cxx
 
 
 common_parts := \
@@ -69,8 +72,7 @@ sbin_exes := \
 exes := $(bin_exes) $(sbin_exes)
 
 
-build_cmd = $(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
-clean_cmd := $(RM) *.o *.d $(exes)
+build_cmd = $(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 
 installs := \
@@ -83,7 +85,7 @@ bg_bin_links = $(bin_exes)
 
 default: all
 
-all: $(exes) $(installs) $(bg_links_targets)
+all: $(exes)
 
 
 alias_wait: alias_wait.o $(common_objs)
@@ -128,13 +130,12 @@ monitor_master: monitor_master.o $(common_objs)
 bgmaster_server_refresh_config: reload_config.o $(common_objs)
 	$(build_cmd)
 
-install: all
+install: $(installs) $(bg_links_targets)
 
 clean:
-	$(clean_cmd)
-	
-distclean:
-	$(clean_cmd)
+	$(RM) *.o *.d $(exes)
+
+distclean: clean
 
 .PHONY: default all install clean distclean
 

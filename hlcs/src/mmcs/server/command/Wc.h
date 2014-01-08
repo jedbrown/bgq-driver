@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_WC_H_
 #define MMCS_SERVER_COMMAND_WC_H_
 
-
 #include "WriteCon.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 class Wc : public WriteCon
 {

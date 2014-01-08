@@ -28,7 +28,6 @@
 #ifndef MMCS_SERVER_IO_BLOCK_CONTROLLER_H_
 #define MMCS_SERVER_IO_BLOCK_CONTROLLER_H_
 
-
 #include "BlockControllerBase.h"
 
 #include "RackBitset.h"
@@ -39,16 +38,11 @@
 #include <map>
 #include <string>
 
-
 namespace mmcs {
 namespace server {
 
-
 class IOBlockController : public BlockControllerBase
 {
-    std::map<std::string, IOBoardBitset>  _rackbits; // Bitset map rack location to corresponding bitset
-    BlockControllerTarget* _residual_target;
-
 public:
     /*!
      * \brief ctor.
@@ -76,9 +70,7 @@ public:
             );
 
     void build_shutdown_req(
-            MCServerMessageSpec::ShutdownBlockRequest& mcShutdownBlockRequest,
-            MCServerMessageSpec::ShutdownBlockReply& mcShutdownBlockReply,
-            mmcs_client::CommandReply& reply
+            MCServerMessageSpec::ShutdownBlockRequest& mcShutdownBlockRequest
             );
 
     void reboot_nodes(
@@ -89,7 +81,7 @@ public:
 
     void shutdown_block(
             mmcs_client::CommandReply& reply,
-            BlockControllerTarget* target
+            const std::deque<std::string>& args
             );
 
     void show_barrier(
@@ -99,8 +91,7 @@ public:
     void connect(
             std::deque<std::string> args,
             mmcs_client::CommandReply& reply,
-            const BlockControllerTarget* pTarget,
-            bool add_targets = false
+            const BlockControllerTarget* pTarget
             );
 
     void disconnect(
@@ -116,9 +107,11 @@ public:
 
 private:
     void calculateRatios();
-};
 
-typedef boost::shared_ptr<IOBlockController> IOBlockPtr;
+private:
+    std::map<std::string, IOBoardBitset> _rackbits;
+    std::string _bootOptions;
+};
 
 } } // namespace mmcs::server
 

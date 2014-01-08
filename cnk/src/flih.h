@@ -50,6 +50,7 @@
 #define GEA_MBOX   8     // Mailbox input
 #define GEA_PWRTH  9     // Power threshold warning, start reactive throttling
 #define GEA_PWRMG 10     // Power management timer
+#define GEA_CS    11     // Clockstop
 
 // Bit position in PUEA Interrupt Summary register corresponding to a C2C from the 17th core
 #define FLIH_C2C_CORE16 63

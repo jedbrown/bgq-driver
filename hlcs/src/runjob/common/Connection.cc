@@ -24,6 +24,7 @@
 
 #include "common/logging.h"
 
+#include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -60,9 +61,6 @@ Connection::start()
     const boost::asio::ip::tcp::endpoint& ep = _socket->next_layer().remote_endpoint();
     LOG_INFO_MSG( "connection from " << ep);
 
-    // use address as hostname
-    _hostname = _shortHostname = boost::lexical_cast<std::string>( ep.address() );
-
     // resolve hostname
     _resolver.async_resolve(
             ep,
@@ -98,8 +96,10 @@ Connection::resolveHandler(
     if ( error ) {
         LOG_WARN_MSG( "failed to resolve " << _socket->next_layer().remote_endpoint() );
         LOG_WARN_MSG( boost::system::system_error(error).what() );
+    } else if ( !_hostname.empty() ) {
+        LOG_DEBUG_MSG( __FUNCTION__ << " hostname already resolved: " << _hostname );
     } else {
-        LOG_INFO_MSG( "resolved hostname " << endpoint_iterator->host_name() << " for " << _hostname );
+        LOG_INFO_MSG( "resolved hostname " << endpoint_iterator->host_name() << " for " << endpoint_iterator->endpoint() );
         if ( _hostname != endpoint_iterator->host_name() ) {
             _shortHostname = _hostname = endpoint_iterator->host_name();
             // shorten to basename
@@ -116,7 +116,9 @@ Connection::resolveHandler(
             boost::asio::ip::tcp::no_delay( true )
             );
 
-    _timer.cancel();
+    boost::system::error_code ec;
+    _timer.cancel( ec ); // don't care about error
+
     this->resolveComplete();
 }
 
@@ -128,17 +130,24 @@ Connection::timerHandler(
     if ( error == boost::asio::error::operation_aborted ) {
         // do nothing, resolve completed
         return;
+    } else if ( !_hostname.empty() ) {
+        LOG_DEBUG_MSG( __FUNCTION__ << " hostname already resolved: " << _hostname );
+        return;
     }
 
-    // cancel resolve
     LOG_WARN_MSG( "resolving " << _socket->next_layer().remote_endpoint() << " timed out" );
     LOG_WARN_MSG( "using address as hostname" );
-    _resolver.cancel();
 
     // use address as hostname
-    _hostname = boost::lexical_cast<std::string>( _socket->next_layer().remote_endpoint().address() );
+    _shortHostname = _hostname = boost::lexical_cast<std::string>( _socket->next_layer().remote_endpoint().address() );
 
-    // notify parent class that resolve is complete
+    // disable Nagle algorithm
+    _socket->lowest_layer().set_option(
+            boost::asio::ip::tcp::no_delay( true )
+            );
+
+    _resolver.cancel();
+
     this->resolveComplete();
 }
 

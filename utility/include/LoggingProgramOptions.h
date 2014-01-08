@@ -108,6 +108,8 @@ public:
 
     typedef std::vector<std::string> Strings; //!< Argument for notifier.
 
+    typedef std::map<std::string,log4cxx::LevelPtr> LoggingLevels; //!< loggers to set
+
 
     /*! \brief Constructor.
      */
@@ -150,13 +152,15 @@ public:
     static log4cxx::LevelPtr parseVerboseArgument(
             const std::string& str  //!< [in]
             );
+
+    /*! \brief Get the logging levels set after parsing.
+     */
+    const LoggingLevels& get() const { return _logging_levels; }
+
 private:
 
-    typedef std::map<std::string,log4cxx::LevelPtr> _LoggingLevels;
-
-
     std::string _default_logger_name;
-    _LoggingLevels _logging_levels;
+    LoggingLevels _logging_levels;
 
 
     void _parseVerboseString(

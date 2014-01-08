@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_CONSOLE_COMMAND_COMMENT_H_
 #define MMCS_CONSOLE_COMMAND_COMMENT_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 /*!
 ** #
@@ -43,9 +39,8 @@ class Comment : public common::AbstractCommand
 {
 public:
     Comment(const char* name, const char* description, const Attributes& attributes)
-      : common::AbstractCommand(name,description,attributes) { usage = "# [<comment>]";}
+      : common::AbstractCommand(name,description,attributes) { _usage = "# [<comment>]";}
     static  Comment* build();    // factory method
-    static  std::string cmdname() { return "#"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,

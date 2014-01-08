@@ -41,6 +41,7 @@
 #include <db/include/api/Exception.h>
 
 #include <db/include/api/tableapi/gensrc/bgqtableapi.h>
+#include <db/include/api/tableapi/DBConnectionPool.h>
 
 #include <utility/include/Log.h>
 #include <utility/include/UserId.h>
@@ -215,7 +216,7 @@ IOBlock::getConnectedComputeBlocks(
     // Collect all the compute blocks using the I/O block
     sqlrc =  SQLFetch(hstmt);
     for(;sqlrc == SQL_SUCCESS;) {
-        trim_right_spaces(cnBlock);
+        BGQDB::trim_right_spaces(cnBlock);
         computeBlocks.push_back(string(cnBlock));
         sqlrc = SQLFetch(hstmt);
     }

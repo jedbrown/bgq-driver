@@ -50,7 +50,7 @@ LOG_DECLARE_FILE( runjob::log );
 namespace runjob {
 
 AbstractOptions::AbstractOptions(
-        unsigned int argc,
+        int argc,
         char** argv,
         const std::string& log_name
         ) :
@@ -75,7 +75,7 @@ AbstractOptions::AbstractOptions(
         po::store( cmd_line.run(), vm );
         po::notify(vm);
     } catch ( const std::exception& e ) {
-        std::cerr << e.what() << std::endl;
+        std::cerr << e.what() << ": check that an option was not specified twice." << std::endl;
         throw boost::program_options::invalid_option_value( "verbose" );
     }
     this->openProperties();

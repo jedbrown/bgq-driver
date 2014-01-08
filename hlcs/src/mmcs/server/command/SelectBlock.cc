@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "SelectBlock.h"
 
 #include "../DBConsoleController.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 SelectBlock*
 SelectBlock::build()
@@ -50,24 +46,28 @@ SelectBlock::build()
 }
 
 void
-SelectBlock::execute(deque<string> args,
-                  mmcs_client::CommandReply& reply,
-                  DBConsoleController* pController,
-                  BlockControllerTarget* pTarget,
-                                  std::vector<std::string>* validnames)
+SelectBlock::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        DBConsoleController* pController,
+        BlockControllerTarget* pTarget,
+        std::vector<std::string>* validnames
+)
 {
-    if (validnames->size() != 1 || validnames->at(0) != args[0])    {
-      reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
-      return;
+    if (validnames->size() != 1 || validnames->at(0) != args[0]) {
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
+        return;
     }
     pController->selectBlock(args, reply, true);
 }
 
 void
-SelectBlock::execute(deque<string> args,
-                  mmcs_client::CommandReply& reply,
-                  DBConsoleController* pController,
-                  BlockControllerTarget* pTarget)
+SelectBlock::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        DBConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
     std::vector<std::string> vn;
     vn.push_back(args[0]);
@@ -78,7 +78,6 @@ void
 SelectBlock::help(deque<string> args,
                    mmcs_client::CommandReply& reply)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
     reply << mmcs_client::OK << description()
           << ";Select an already allocated block to work with."
           << ";Does not initialize the block nor reset icon connections. "

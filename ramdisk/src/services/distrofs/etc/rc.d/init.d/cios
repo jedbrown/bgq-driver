@@ -30,7 +30,7 @@
 prog=iosd
 IOSD_BIN=/sbin/${prog}
 IOSD_CONFIG=/etc/sysconfig/${prog}
-PIDFILE=/var/run/cios.pid
+PIDFILE=/var/run/iosd.pid
 LOCKFILE=/var/lock/subsys/cios
 #CIOS_RPM_ARR=(`rpm -qa | grep cio_services_runtime | tr "-" "\n"`)
 
@@ -45,7 +45,7 @@ for DAEMON in "/sbin/iosd" "/sbin/gdbtool" "/sbin/jobctld" "/sbin/stdiod" \
 		RETVAL=$?
 		if [ $RETVAL -ne 0 ] ; then
 			failure
-			echo -en "\n\tERROR: Unable create bind mount  for CIOS daemone $DAEMON\n"
+			echo -en "\n\tERROR: Unable create bind mount for CIOS daemon $DAEMON\n"
 		fi	
 	fi
 done
@@ -92,7 +92,7 @@ function stop
 
 function mystatus
 {
-    status -p ${PIDFILE} cios
+    status -p ${PIDFILE} ${prog}
 }
 
 function restart

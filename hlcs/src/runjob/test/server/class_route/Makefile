@@ -35,7 +35,12 @@ CXXFLAGS += -pthread
 CXXFLAGS += -DBOOST_TEST_DYN_LINK
 CXXFLAGS += -DBOOST_TEST_MAIN
 
-LDFLAGS += -L ../../../common -lrunjob_common
+LDFLAGS += ../../../server/job/class_route/Coordinates.o
+LDFLAGS += ../../../server/job/class_route/Mapping.o
+LDFLAGS += ../../../server/job/class_route/Np.o
+LDFLAGS += ../../../server/job/class_route/Rectangle.o
+LDFLAGS += -L ../../../common -lrunjob_common 
+LDFLAGS += -llog4cxx
 LDFLAGS += -Wl,-rpath,$(BGQ_BUILD_DIR)/hlcs/src/runjob/common
 LDFLAGS += -lboost_filesystem-mt
 LDFLAGS += -lboost_program_options-mt
@@ -45,10 +50,6 @@ LDFLAGS += -L $(BGQ_INSTALL_DIR)/db/lib -lbgdb
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/ras/lib -lras
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/ras/lib
-LDFLAGS += ../../../server/job/class_route/Coordinates.o
-LDFLAGS += ../../../server/job/class_route/Mapping.o
-LDFLAGS += ../../../server/job/class_route/Np.o
-LDFLAGS += ../../../server/job/class_route/Rectangle.o
 
 TESTERS   = $(patsubst %.cc,%,$(wildcard *.cc))
 

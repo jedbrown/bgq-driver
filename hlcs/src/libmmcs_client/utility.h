@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_CLIENT_UTILITY_H_
 #define MMCS_CLIENT_UTILITY_H_
-
 
 #include "CommandReply.h"
 #include "ConsolePort.h"
 
 #include <string>
 
-
 namespace mmcs_client {
-
 
 /*!
  *  \throw ConsolePort::Error Failed to send the message or receive the reply because lost connection to server.
@@ -44,8 +40,6 @@ void sendCommandReceiveReply(
         CommandReply& reply
     );
 
-
 } // namespace mmcs_client
-
 
 #endif

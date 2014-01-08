@@ -36,7 +36,7 @@ namespace Exec {
 //! and process id so that a process can read the child's stderr and stdout
 //! and wait for it to complete.
 //! \param pipefd A file descriptor to be filled out with the child's output pipe.
-//!        This will not be set if logfd is passed. 
+//!        This will not be set if logfilename is passed. 
 //! \param path_and_args The full path of the executable and its arguments
 //! \param managed Sets the non-portable Linux PR_SET_PDEATHSIG so ensure that 
 //!        death of the parent takes out the child.

@@ -59,7 +59,7 @@ processBulks(
         if (static_cast<int>(bp->_error) == CARD_NOT_PRESENT) continue;
         if (static_cast<int>(bp->_error) == CARD_NOT_UP) continue;
         if (bp->_error) {
-            LOG_INFO_MSG("Error occurred reading environmentals from: " << bp->_location);
+            LOG_ERROR_MSG("Error reading environmentals from: " << bp->_location);
             RasEventImpl noContact(0x00061003);
             noContact.setDetail(RasEvent::LOCATION, bp->_location);
             RasEventHandlerChain::handle(noContact);
@@ -101,7 +101,6 @@ BulkPower::prepareInserts(
 {
     const cxxdb::ConnectionPtr result = BGQDB::DBConnectionPool::Instance().getConnection();
     if ( !result ) {
-        LOG_INFO_MSG("unable to connect to database");
         return result;
     }
 
@@ -131,7 +130,7 @@ BulkPower::impl(
     connection = this->prepareInserts( bulkInsert );
 
     if ( !connection ) {
-        LOG_ERROR_MSG( "could not get database connection" );
+        LOG_ERROR_MSG("Could not get database connection");
         this->wait();
         return;
     }
@@ -154,7 +153,7 @@ BulkPower::impl(
             request,
             boost::bind(
                 &BulkPower::makeTargetSetHandler,
-                this,
+                boost::static_pointer_cast<BulkPower>( shared_from_this() ),
                 _1,
                 mc_server,
                 connection,
@@ -177,13 +176,13 @@ BulkPower::makeTargetSetHandler(
     MCServerMessageSpec::MakeTargetSetReply reply;
     reply.read( response );
 
-    MCServerMessageSpec::OpenTargetRequest request( "EnvMonBulk","EnvMonBulk", MCServerMessageSpec::RAAW, true);
+    const MCServerMessageSpec::OpenTargetRequest request( "EnvMonBulk","EnvMonBulk", MCServerMessageSpec::RAAW, true);
     mc_server->send(
             request.getClassName(),
             request,
             boost::bind(
                 &BulkPower::openTargetHandler,
-                this,
+                boost::static_pointer_cast<BulkPower>( shared_from_this() ),
                 _1,
                 mc_server,
                 connection,
@@ -207,11 +206,11 @@ BulkPower::openTargetHandler(
     reply.read( response );
 
     if (reply._rc) {
-        LOG_INFO_MSG("unable to open target set: " << reply._rt);
+        LOG_ERROR_MSG("Unable to open target set: " << reply._rt);
         this->wait();
         return;
     }
-    LOG_TRACE_MSG( "opened target set with handle " << reply._handle );
+    LOG_TRACE_MSG("Opened target set with handle " << reply._handle );
 
     timer->dismiss( false );
     timer->stop();
@@ -226,7 +225,7 @@ BulkPower::openTargetHandler(
             request,
             boost::bind(
                 &BulkPower::readHandler,
-                this,
+                boost::static_pointer_cast<BulkPower>( shared_from_this() ),
                 _1,
                 reply._handle,
                 mc_server,
@@ -266,7 +265,7 @@ BulkPower::readHandler(
             handle,
             boost::bind(
                 &Polling::wait,
-                this
+                boost::static_pointer_cast<BulkPower>( shared_from_this() )
                 )
             );
 }

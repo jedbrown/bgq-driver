@@ -25,8 +25,10 @@
 #define MMCS_ENV_OPTICAL_H
 
 #include "Polling.h"
+#include "Token.h"
 
 #include <db/include/api/cxxdb/fwd.h>
+#include <xml/include/library/XML.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/asio/io_service.hpp>
@@ -35,6 +37,11 @@ namespace mmcs {
 namespace server {
 namespace env {
 
+/*!
+ * \brief Handle optical module environmentals
+ *
+ * \copydetails mmcs::server::env::NodeBoard
+ */
 class Optical : public Polling
 {
 public:
@@ -58,25 +65,29 @@ private:
     void connectHandler(
         const bgq::utility::Connector::Error::Type error,
         const std::string& message,
-        const boost::shared_ptr<McServerConnection>& mc_server
+        const boost::shared_ptr<McServerConnection>& mc_server,
+            const Token::Ptr& token
         );
 
     void makeTargetSet(
-            const boost::shared_ptr<McServerConnection>& mc_server
+            const boost::shared_ptr<McServerConnection>& mc_server,
+            const Token::Ptr& token
             );
 
     void makeTargetSetHandler(
             std::istream& response,
             const boost::shared_ptr<McServerConnection>& mc_server,
             const std::string& name,
-            bool io
+            bool io,
+            const Token::Ptr& token
         );
 
     void openTargetHandler(
             std::istream& response,
             const boost::shared_ptr<McServerConnection>& mc_server,
             const std::string& name,
-            bool io
+            bool io,
+            const Token::Ptr& token
             );
 
     void readHandler(
@@ -84,7 +95,16 @@ private:
             const std::string& name,
             const int handle,
             const boost::shared_ptr<McServerConnection>& mc_server,
-            bool io
+            bool io,
+            const Token::Ptr& token
+            );
+
+    void closeTargetHandler(
+            const boost::shared_ptr<XML::Serializable>& reply,
+            const std::string& name,
+            const boost::shared_ptr<McServerConnection>& mc_server,
+            bool io,
+            const Token::Ptr& token
             );
 
     void processNodeCard(
@@ -95,14 +115,21 @@ private:
             const MCServerMessageSpec::ReadIoCardEnvReply& reply
             );
 
+    void insertData(
+            const boost::shared_ptr<XML::Serializable>& reply,
+            const std::string& name,
+            const boost::shared_ptr<McServerConnection>& mc_server,
+            bool io,
+            const Token::Ptr& token
+            );
+
     void createTimers();
 
 private:
-    unsigned _connections;                          //!< outstanding connections to mc_server, protected by _strand
     Racks _racks;
     IoDrawers _drawers;
-    boost::asio::io_service::strand _strand;        //!< serialized access to _connections and _racks
-    boost::mutex _mutex;                            //!< serialized access to database connection
+    boost::asio::io_service::strand _strand;            //!< serialized access to _racks, and _drawers
+    boost::asio::io_service::strand _databaseStrand;    //!< serialized access to database connection
     cxxdb::ConnectionPtr _connection;
     cxxdb::UpdateStatementPtr _opticalInsert;
     cxxdb::UpdateStatementPtr _opticalDataInsert;

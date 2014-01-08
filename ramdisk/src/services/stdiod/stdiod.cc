@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
       LOG_ERROR_MSG("error changing working directory to '/': " << bgcios::errorString(errno));
    }
    
-   setFlightLogSize(2048);
+   setFlightLogSize(32768);
 
    // Create configuration from command-line arguments and properties.
    StdioConfigPtr config = StdioConfigPtr(new StdioConfig(argc, argv));

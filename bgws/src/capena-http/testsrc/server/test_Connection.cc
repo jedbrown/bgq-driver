@@ -796,14 +796,14 @@ protected:
 
         // This acceptor is just here as something that the responder can wait on, and can be cancelled.
 
-        _acceptor_ptr.reset( new boost::asio::ip::tcp::acceptor( _getStrand().io_service() ) );
+        _acceptor_ptr.reset( new boost::asio::ip::tcp::acceptor( _getStrand().get_io_service() ) );
 
         boost::asio::ip::tcp::endpoint endpoint( boost::asio::ip::tcp::v4(), 0 );
         _acceptor_ptr->open( endpoint.protocol() );
         _acceptor_ptr->bind( endpoint );
         _acceptor_ptr->listen();
 
-        _new_socket_ptr.reset( new boost::asio::ip::tcp::socket( _getStrand().io_service() ) );
+        _new_socket_ptr.reset( new boost::asio::ip::tcp::socket( _getStrand().get_io_service() ) );
 
         _acceptor_ptr->async_accept(
                 *_new_socket_ptr,

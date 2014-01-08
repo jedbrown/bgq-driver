@@ -56,89 +56,82 @@ sub updateStatements
 # the statements to execute, separate by commas    
 my @insertStmts = (
 
-"DROP VIEW BGQIOBlock",
+"ALTER TABLE tbgqdiagseventlog data capture none",
+"ALTER TABLE tbgqdiagseventlog alter column ctlaction set data type varchar(256) ",
+"ALTER TABLE tbgqdiagseventlog data capture changes",
+"DROP trigger midplane_history_u",
+"CREATE INDEX EventLogQ on  Tbgqeventlog (qualifier, recid desc)",
+"CREATE INDEX TEALTHRESHOLDEVENTLOG ON TBGQEVENTLOG (MSG_ID ASC, LOCATION ASC, SERIALNUMBER ASC, EVENT_TIME ASC)",
+"DROP VIEW X_BGQ_1_1",
+"CREATE VIEW X_BGQ_1_1 (
+    \"rec_id\",
+    \"category\",
+    \"severity\",
+    \"jobid\",
+    \"block\",
+    \"serialnumber\",
+    \"ecid\",
+    \"cpu\",
+    \"ctlaction\",
+    \"message\",
+    \"rawdata\",
+    \"diags\",
+    \"qualifier\") AS
+    SELECT BGQEVENTLOG.RECID AS \"rec_id\",
+           BGQEVENTLOG.CATEGORY AS \"category\",
+           BGQEVENTLOG.SEVERITY AS \"severity\",
+           BGQEVENTLOG.JOBID AS \"jobid\",
+           BGQEVENTLOG.BLOCK AS \"block\",
+           BGQEVENTLOG.SERIALNUMBER AS \"serialnumber\",
+           BGQEVENTLOG.ECID AS \"ecid\",
+           BGQEVENTLOG.CPU AS \"cpu\",
+           BGQEVENTLOG.CTLACTION AS \"ctlaction\",
+           BGQEVENTLOG.MESSAGE AS \"message\",
+           BGQEVENTLOG.RAWDATA AS \"rawdata\",
+           BGQEVENTLOG.DIAGS AS \"diags\",
+           BGQEVENTLOG.QUALIFIER AS \"qualifier\"
+   FROM TBGQEVENTLOG AS BGQEVENTLOG;",
+"
+create trigger midplane_history_u
+  after update on tbgqmidplane
+  referencing new as n old as o
+  for each row mode db2sql
 
-"CREATE VIEW BGQIOBlock AS SELECT blockid, numIOnodes, owner, username,
-   description, options, status, action,
-   statuslastmodified, mloaderimg,nodeconfig,bootoptions,createdate,
-   securitykey,errtext,seqid,creationid
-  from TBGQBlock where numCnodes = 0;",
+  begin atomic 
 
+    if (o.posinmachine = n.posinmachine) then
 
-"ALTER TABLE TBGQIONode
-  ADD COLUMN seqId bigint NOT NULL WITH DEFAULT 0
-  DATA CAPTURE CHANGES",
-  
-"DROP VIEW BGQIONode",
+    if ((n.status = 'F') or (o.status = 'F' and n.status = 'A') or (o.seqid <> n.seqid)) then
+      -- omit insertions for Software Failure transitions
+      -- or when sequence ID has changed from another trigger
+    else
+    insert into tbgqmidplane_history 
+      (serialNumber, productId, machineSerialNumber, posInMachine, status, ismaster, vpd)
+     values
+      (n.serialNumber, n.productId, n.machineSerialNumber, n.posInMachine, n.status, n.ismaster, n.vpd);
 
-"CREATE VIEW BGQIONode as SELECT serialnumber,productid, IOpos, ipaddress, macaddress,
-        status, memorymodulesize, memorysize, voltage, bitsteering, seqid, position,
-        IOpos || '-' || position as location  from TBGQIONode",
+     if (o.serialnumber <> n.serialnumber) then
+
+     insert into tbgqreplacement_history 
+      (type, location, oldserialnumber,newserialnumber, oldstatus, newstatus)
+     values
+      ('Midplane', n.posInMachine,o.serialnumber,n.serialNumber, o.status, n.status);
         
-"DROP VIEW BGQIONodeAll",
+     end if;
+     end if;
 
-"CREATE VIEW BGQIONodeAll as SELECT serialnumber,productid, IOpos, ipaddress, macaddress,
-        status, memorymodulesize, memorysize, psro, ecid, vpd, voltage, bitsteering, faildata, seqid,
-        position, IOpos || '-' || position as location  from TBGQIONode",
+    else
 
-"CREATE TRIGGER RT_IONODE_STATE
-  AFTER UPDATE OF status ON TBGQIONode
-  REFERENCING NEW AS newrow OLD AS oldrow
-  FOR EACH ROW MODE DB2SQL
-  BEGIN ATOMIC
-    DECLARE nextSeqId BIGINT;
-    SET nextSeqId = NEXT VALUE FOR SEQID;
-    UPDATE TBGQIONode SET seqId = nextSeqId
-     WHERE IOPos = newrow.IOPos AND
-           position = newrow.position ;
-  END",
+     SIGNAL SQLSTATE '70003' ('Updating positions not permitted');
 
+    end if;
 
-"ALTER TABLE TBGQIoDrawer
-  ADD COLUMN seqId bigint NOT NULL WITH DEFAULT 0
-  DATA CAPTURE CHANGES",
-
-"DROP VIEW BGQIODrawer",
-
-"CREATE VIEW BGQIODrawer AS SELECT serialnumber, productid, location, status, seqId
-       from TBGQIODrawer",
-
-"DROP VIEW BGQIODrawerAll",
-
-"CREATE VIEW BGQIODrawerAll AS SELECT serialnumber, productid, location, status, vpd, faildata, seqId
-       from TBGQIODrawer",
-
-"CREATE TRIGGER RT_IODRAWER_STATE
-  AFTER UPDATE OF status ON TBGQIODrawer
-  REFERENCING NEW AS newrow OLD AS oldrow
-  FOR EACH ROW MODE DB2SQL
-  BEGIN ATOMIC
-    DECLARE nextSeqId BIGINT;
-    SET nextSeqId = NEXT VALUE FOR SEQID;
-    UPDATE TBGQIODrawer SET seqId = nextSeqId
-     WHERE location = newrow.location ;
-  END",
-
-
-"ALTER TABLE TBGQBlock
-  DROP CONSTRAINT BGQBlock_actchk",
-
-"ALTER TABLE TBGQBlock
-  ADD CONSTRAINT BGQBlock_actchk
-  CHECK ( action IN ('B', 'D', 'N', ' ') )", 
-
-
-"ALTER TABLE TBGQMidplane
-  DROP CONSTRAINT BGQMidSt_chk",
-
-"ALTER TABLE TBGQMidplane
-  ADD CONSTRAINT BGQMidSt_chk 
-  CHECK ( status IN ('A','M','E','S','F') )",
-
-"ALTER TABLE X_TEALALERTLOG ADD COLUMN \"comments\" VARCHAR(128)",
-
-"UPDATE tbgqethgateway set ipaddress='0.0.0.0' WHERE (select count(*) from tbgqmachine WHERE hasEthernetGateway='F') = 1"
-
+   end
+",
+"ALTER TABLE tbgqnetconfig data capture none",
+"ALTER TABLE tbgqnetconfig alter column itemname set data type varchar(128) ",
+"ALTER TABLE tbgqnetconfig data capture changes",
+"CREATE OR REPLACE ALIAS BGQBlockAction_history for TBGQBlockAction_history"
 );
 
 
@@ -235,7 +228,7 @@ sub processSQL
 
     print "\n" . $stmt . "\n" if($debug);
   
-    if (substr($stmt,0,9) eq "IMPORTANT") { return; }
+    #if (substr($stmt,0,9) eq "IMPORTANT") { return; }
     $stmtHandle->execute();
 
     my $errno = $stmtHandle->err;  
@@ -300,22 +293,26 @@ sub setupDb
 
 # Define local variables
                my $optHelp          = undef;
-               my $dbPropertiesFile = "./bg.properties";    #location of bg.properties file, in CWD by default
+               my $bgPropertiesFile = $ENV{BG_PROPERTIES_FILE};
                my $schema;
                my $database;
 
 # Parse the command line
                GetOptions(
-                          'properties=s' => \$dbPropertiesFile,
+                          'properties=s' => \$bgPropertiesFile,
                           'help'           => \$optHelp,
                           'debug'          => \$debug
                           )
                or printUsage();
 
                printUsage() if ($optHelp);
+               
+               if (!defined($bgPropertiesFile)) {
+                  $$bgPropertiesFile = "/bgsys/local/etc/bg.properties";
+               }
  
 
-setupDb($dbPropertiesFile);
+setupDb($bgPropertiesFile);
 
 close(STDERR) unless($debug);
 
@@ -348,11 +345,11 @@ Options:
 
 This utility should be used to update the Blue Gene/Q database tables when installing a new driver. 
 
-NOTE: This utility requires the perl DBI module and DB2 database driver.  
+NOTE: This utility requires the perl DBI module and DB2 database driver. 
 
-=head1 BUGS
-
-None.
+NOTE: Database connection information will be obtained from the bg.properties file specified by
+BG_PROPERTIES_FILE environment variable. If that environment is not defined, it will use 
+/bgsys/local/etc/bg.properties by default.
 
 =head1 AUTHOR
 

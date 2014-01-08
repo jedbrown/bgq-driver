@@ -21,26 +21,21 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_DESELECT_BLOCK_H_
 #define MMCS_SERVER_COMMAND_DESELECT_BLOCK_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 class DeselectBlock : public common::AbstractCommand
 {
 public:
     DeselectBlock(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "deselect_block"; }
+      : AbstractCommand(name,description,attributes) { _usage = "deselect_block"; }
     static  DeselectBlock* build();    // factory method
-    static  std::string cmdname() { return "deselect_block"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              DBConsoleController* pController,
@@ -49,8 +44,6 @@ public:
               mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

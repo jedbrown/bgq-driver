@@ -58,12 +58,12 @@ __BEGIN_DECLS
 __INLINE__ void UPC_MU_EnableUPC(UpciBool_t indepStart)
 {
     //DCRWritePriv(MU_DCR(RESET), MU_DCR__RESET__UPC_set(0));
-    DCRWriteUser(MU_DCR(UPC_MU_COUNTER_CONTROL_W1S),
+    DCRWriteCommon(MU_DCR(UPC_MU_COUNTER_CONTROL_W1S),
             MU_DCR__UPC_MU_COUNTER_CONTROL_W1S__RESET_set(1ULL) |
             MU_DCR__UPC_MU_COUNTER_CONTROL_W1S__ENABLE_set( (indepStart ? 0 : 1ULL) ));
-    DCRWriteUser(MU_DCR(UPC_MU_COUNTER_CONTROL_W1C),
+    DCRWriteCommon(MU_DCR(UPC_MU_COUNTER_CONTROL_W1C),
             MU_DCR__UPC_MU_COUNTER_CONTROL_W1S__ENABLE_set( (indepStart ? 1ULL : 0) ));
-    DCRWriteUser(MU_DCR(UPC_MU_CONFIG),
+    DCRWriteCommon(MU_DCR(UPC_MU_CONFIG),
             MU_DCR__UPC_MU_CONFIG__UPC_MU_RING_ENABLE_set(1ULL) |
             MU_DCR__UPC_MU_CONFIG__SYNC_OVERRIDE_set( (indepStart ? 1ULL : 0) ) );
     mbar();
@@ -73,13 +73,13 @@ __INLINE__ void UPC_MU_EnableUPC(UpciBool_t indepStart)
 //! \brief: UPC_MU_DisableUPC
 __INLINE__ void UPC_MU_DisableUPC()
 {
-    DCRWriteUser(MU_DCR(UPC_MU_CONFIG),
+    DCRWriteCommon(MU_DCR(UPC_MU_CONFIG),
             MU_DCR__UPC_MU_CONFIG__SYNC_OVERRIDE_set(1));  // gain control over ctrs 1st
-    DCRWriteUser(MU_DCR(UPC_MU_COUNTER_CONTROL_W1C),       // ensure stopped
+    DCRWriteCommon(MU_DCR(UPC_MU_COUNTER_CONTROL_W1C),       // ensure stopped
             MU_DCR__UPC_MU_COUNTER_CONTROL_W1S__ENABLE_set(1));
-    DCRWriteUser(MU_DCR(UPC_MU_COUNTER_CONTROL_W1S),       // Reset ctrs
+    DCRWriteCommon(MU_DCR(UPC_MU_COUNTER_CONTROL_W1S),       // Reset ctrs
             MU_DCR__UPC_MU_COUNTER_CONTROL_W1S__RESET_set(1));
-    DCRWriteUser(MU_DCR(UPC_MU_CONFIG),                    // disable ring
+    DCRWriteCommon(MU_DCR(UPC_MU_CONFIG),                    // disable ring
             MU_DCR__UPC_MU_CONFIG__UPC_MU_RING_ENABLE_set(0) |
             MU_DCR__UPC_MU_CONFIG__SYNC_OVERRIDE_set(1));
     mbar();
@@ -92,12 +92,12 @@ __INLINE__ void UPC_MU_DisableUPC()
 //! @param[in]  indepStart  Start counting immediatly or wait for upc_c sync
 __INLINE__ void UPC_PCIe_EnableUPC(UpciBool_t indepStart)
 {
-    DCRWriteUser(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1S),
+    DCRWriteCommon(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1S),
             PE_DCR__UPC_PCIE_COUNTER_CONTROL_W1S__RESET_set(1) |
             PE_DCR__UPC_PCIE_COUNTER_CONTROL_W1S__ENABLE_set( (indepStart ? 0 : 1)) );
-    DCRWriteUser(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1C),
+    DCRWriteCommon(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1C),
             PE_DCR__UPC_PCIE_COUNTER_CONTROL_W1S__ENABLE_set( (indepStart ? 1 : 0)) );
-    DCRWriteUser(PE_DCR(UPC_PCIE_CONFIG),
+    DCRWriteCommon(PE_DCR(UPC_PCIE_CONFIG),
             PE_DCR__UPC_PCIE_CONFIG__UPC_PCIE_RING_ENABLE_set(1) |
             PE_DCR__UPC_PCIE_CONFIG__SYNC_OVERRIDE_set( (indepStart ? 1 : 0) ) );
     mbar();
@@ -108,13 +108,13 @@ __INLINE__ void UPC_PCIe_EnableUPC(UpciBool_t indepStart)
 //! \brief: UPC_PCIe_DisableUPC
 __INLINE__ void UPC_PCIe_DisableUPC()
 {
-    DCRWriteUser(PE_DCR(UPC_PCIE_CONFIG),
+    DCRWriteCommon(PE_DCR(UPC_PCIE_CONFIG),
             PE_DCR__UPC_PCIE_CONFIG__SYNC_OVERRIDE_set(1));   // gain control over ctrs
-    DCRWriteUser(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1C),
+    DCRWriteCommon(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1C),
             PE_DCR__UPC_PCIE_COUNTER_CONTROL_W1S__ENABLE_set(1));
-    DCRWriteUser(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1S),
+    DCRWriteCommon(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1S),
             PE_DCR__UPC_PCIE_COUNTER_CONTROL_W1S__RESET_set(1));
-    DCRWriteUser(PE_DCR(UPC_PCIE_CONFIG),
+    DCRWriteCommon(PE_DCR(UPC_PCIE_CONFIG),
             PE_DCR__UPC_PCIE_CONFIG__UPC_PCIE_RING_ENABLE_set(0) |
             PE_DCR__UPC_PCIE_CONFIG__SYNC_OVERRIDE_set(1));
     mbar();
@@ -127,12 +127,12 @@ __INLINE__ void UPC_PCIe_DisableUPC()
 //! @param[in]  indepStart  Start counting immediatly or wait for upc_c sync
 __INLINE__ void UPC_DevBus_EnableUPC(UpciBool_t indepStart)
 {
-    DCRWriteUser(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1S),
+    DCRWriteCommon(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1S),
             DEVBUS_DCR__UPC_DB_COUNTER_CONTROL_W1S__RESET_set(1) |
             DEVBUS_DCR__UPC_DB_COUNTER_CONTROL_W1S__ENABLE_set( (indepStart ? 0 : 1) ));
-    DCRWriteUser(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1C),
+    DCRWriteCommon(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1C),
             DEVBUS_DCR__UPC_DB_COUNTER_CONTROL_W1S__ENABLE_set( (indepStart ? 1 : 0) ));
-    DCRWriteUser(DEVBUS_DCR(UPC_DB_CONFIG),
+    DCRWriteCommon(DEVBUS_DCR(UPC_DB_CONFIG),
             DEVBUS_DCR__UPC_DB_CONFIG__UPC_DB_RING_ENABLE_set(1) |
             DEVBUS_DCR__UPC_DB_CONFIG__SYNC_OVERRIDE_set( (indepStart ? 1 : 0) ) );
     mbar();
@@ -143,13 +143,13 @@ __INLINE__ void UPC_DevBus_EnableUPC(UpciBool_t indepStart)
 //! \brief: UPC_DevBus_DisableUPC
 __INLINE__ void UPC_DevBus_DisableUPC()
 {
-    DCRWriteUser(DEVBUS_DCR(UPC_DB_CONFIG),
+    DCRWriteCommon(DEVBUS_DCR(UPC_DB_CONFIG),
             DEVBUS_DCR__UPC_DB_CONFIG__SYNC_OVERRIDE_set(1));
-    DCRWriteUser(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1C),
+    DCRWriteCommon(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1C),
             DEVBUS_DCR__UPC_DB_COUNTER_CONTROL_W1S__ENABLE_set(1));
-    DCRWriteUser(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1S),
+    DCRWriteCommon(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1S),
             DEVBUS_DCR__UPC_DB_COUNTER_CONTROL_W1S__RESET_set(1));
-    DCRWriteUser(DEVBUS_DCR(UPC_DB_CONFIG),
+    DCRWriteCommon(DEVBUS_DCR(UPC_DB_CONFIG),
             DEVBUS_DCR__UPC_DB_CONFIG__UPC_DB_RING_ENABLE_set(0) |
             DEVBUS_DCR__UPC_DB_CONFIG__SYNC_OVERRIDE_set(1));
     mbar();
@@ -202,9 +202,9 @@ void UPC_IO_Clear(uint64_t nodeConfig);
 //! @param[in]  nodeConfig  personality node config.
 __INLINE__ void UPC_IO_Start(uint64_t nodeConfig)
 {
-    DCRWriteUser(MU_DCR(UPC_MU_COUNTER_CONTROL_W1S), MU_DCR__UPC_MU_COUNTER_CONTROL_W1S__ENABLE_set(1));
-    if (nodeConfig & PERS_ENABLE_PCIe) DCRWriteUser(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1S), PE_DCR__UPC_PCIE_COUNTER_CONTROL_W1S__ENABLE_set(1));
-    DCRWriteUser(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1S), DEVBUS_DCR__UPC_DB_COUNTER_CONTROL_W1S__ENABLE_set(1));
+    DCRWriteCommon(MU_DCR(UPC_MU_COUNTER_CONTROL_W1S), MU_DCR__UPC_MU_COUNTER_CONTROL_W1S__ENABLE_set(1));
+    if (nodeConfig & PERS_ENABLE_PCIe) DCRWriteCommon(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1S), PE_DCR__UPC_PCIE_COUNTER_CONTROL_W1S__ENABLE_set(1));
+    DCRWriteCommon(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1S), DEVBUS_DCR__UPC_DB_COUNTER_CONTROL_W1S__ENABLE_set(1));
 }
 
 
@@ -214,9 +214,9 @@ __INLINE__ void UPC_IO_Start(uint64_t nodeConfig)
 //! @param[in]  nodeConfig  personality node config.
 __INLINE__ void UPC_IO_Stop(uint64_t nodeConfig)
 {
-    DCRWriteUser(MU_DCR(UPC_MU_COUNTER_CONTROL_W1C), MU_DCR__UPC_MU_COUNTER_CONTROL_W1C__ENABLE_set(1));
-    if (nodeConfig & PERS_ENABLE_PCIe) DCRWriteUser(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1C), PE_DCR__UPC_PCIE_COUNTER_CONTROL_W1C__ENABLE_set(1));
-    DCRWriteUser(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1C), DEVBUS_DCR__UPC_DB_COUNTER_CONTROL_W1C__ENABLE_set(1));
+    DCRWriteCommon(MU_DCR(UPC_MU_COUNTER_CONTROL_W1C), MU_DCR__UPC_MU_COUNTER_CONTROL_W1C__ENABLE_set(1));
+    if (nodeConfig & PERS_ENABLE_PCIe) DCRWriteCommon(PE_DCR(UPC_PCIE_COUNTER_CONTROL_W1C), PE_DCR__UPC_PCIE_COUNTER_CONTROL_W1C__ENABLE_set(1));
+    DCRWriteCommon(DEVBUS_DCR(UPC_DB_COUNTER_CONTROL_W1C), DEVBUS_DCR__UPC_DB_COUNTER_CONTROL_W1C__ENABLE_set(1));
 }
 
 

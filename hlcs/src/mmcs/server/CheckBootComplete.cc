@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "CheckBootComplete.h"
 
 #include "BCNodeInfo.h"
@@ -32,16 +31,12 @@
 
 #include "common/Properties.h"
 
-
 #include <utility/include/Log.h>
-
 
 LOG_DECLARE_FILE("mmcs.server");
 
-
 namespace mmcs {
 namespace server {
-
 
 CheckBootComplete::CheckBootComplete(
         DBBlockController* b
@@ -50,7 +45,7 @@ CheckBootComplete::CheckBootComplete(
     _block(b),
     _target(0)
 {
-    // need to join this thread
+    // Need to join this thread
     this->setJoinable( true );
     this->setDeleteOnExit( false );
 }
@@ -76,12 +71,13 @@ CheckBootComplete::markNodes(
         const std::set<std::string>& good_locs
         )
 {
-    LOG_TRACE_MSG(__FUNCTION__);
-    if(!_block->getBase()->isIOBlock()) return;
+    if (!_block->getBase()->isIoBlock()) {
+        return;
+    }
+
     std::vector<std::string> good( good_locs.begin(), good_locs.end() );
 
-    mmcs_client::CommandReply reply;
-    DBStatics::setLocationStatus(good, reply, DBStatics::AVAILABLE, DBStatics::ION);
+    DBStatics::setLocationStatus(good, DBStatics::AVAILABLE, bgq::util::Location::ComputeCardOnIoBoard);
 }
 
 void*
@@ -90,7 +86,7 @@ CheckBootComplete::threadStart()
     void* returnp = 0;
     const BlockPtr block_p = _block->getBase();
 
-    // start measuring how long this operation takes, we dismiss the counter
+    // Start measuring how long this operation takes, we dismiss the counter
     // until a success is encountered
     PerformanceCounters::Timer::Ptr counter = this->startCounter();
     counter->dismiss();
@@ -99,15 +95,14 @@ CheckBootComplete::threadStart()
     std::set<std::string> good_nodes;
     log4cxx::MDC _blockid_mdc_( "blockId", std::string("{") + _block->getBlockName() + "} " );
     log4cxx::MDC _block_user_mdc_( "user", std::string("[") + block_p->getUserName() + "] " );
-    LOG_INFO_MSG("Starting");
     unsigned nodecount = 0;
 
     // Build a boot check message
     MCServerMessageSpec::VerifyKernelReadyRequest bootreq;
-    if(_target == 0) {
-        for(unsigned int i = 0; i < block_p->getNodes().size(); ++i) {
+    if (_target == 0) {
+        for (unsigned int i = 0; i < block_p->getNodes().size(); ++i) {
             BCNodeInfo* ni = block_p->getNodes()[i];
-            if(ni->_linkio == false) {
+            if (ni->_linkio == false) {
                 bootreq._location.push_back(ni->_location);
                 ++nodecount;
             }
@@ -121,34 +116,33 @@ CheckBootComplete::threadStart()
 
     bool initialized = false;
 
-    while(isThreadStopping() == false) {
-        if(block_p->checkComplete(bad_node_locs, good_nodes, bootreq)) {
-            // check boot completion status
+    while (isThreadStopping() == false) {
+        if (block_p->checkComplete(bad_node_locs, good_nodes, bootreq)) {
+            // Check boot completion status
             if (block_p->isDisconnecting()) {
-                // this can occur for a KERNEL_FATAL ras event or
-                // deallocate by another console thread
+                // This can occur for a KERNEL_FATAL RAS event or deallocate by another console thread
                 LOG_WARN_MSG( block_p->disconnectReason() );
                 return returnp;
             }
 
-            if ( block_p->getRebooting() ) {
+            if ( block_p->_rebooting ) {
                 markNodes(good_nodes);
             } else {
                 counter->dismiss( false );
             }
 
-            if(_block->setBlockStatus(BGQDB::INITIALIZED) != BGQDB::OK) {
+            if (_block->setBlockStatus(BGQDB::INITIALIZED) != BGQDB::OK) {
                 // If we can't set the state to INITIALIZED, it's because another thread
                 // has done something to it.  Usually, that means there's been a free.
-                LOG_WARN_MSG("setBlockStatus(INITIALIZED) failed.  " << block_p->disconnectReason());
+                LOG_WARN_MSG("Setting block status to INITIALIZED failed for block " << _block->getBlockName() << ". Reason: " << block_p->disconnectReason());
                 return returnp;
             }
 
-            // success, stop and un-dismiss the counter
+            // Success, stop and un-dismiss the counter
             counter->stop();
 
             initialized = true;
-            // store counter and output all counters associated with this boot
+            // Store counter and output all counters associated with this boot
             counter.reset();
             _block->counters().output( block_p->_bootCookie );
             break;
@@ -157,32 +151,28 @@ CheckBootComplete::threadStart()
         sleep(1);
     }
 
-    if(bad_node_locs.size() < nodecount)
+    if (bad_node_locs.size() < nodecount) {
         block_p->_block_shut_down = false; // At least some nodes are running.
+    }
 
-    if(block_p->isIOBlock() &&
-       common::Properties::getProperty(FREE_IO_TARGETS) == "true") {
+    if (block_p->isIoBlock() && common::Properties::getProperty(FREE_IO_TARGETS) == "true") {
         bool redirecting = false;
-        if(block_p->_redirectSock != 0) {
+        if (block_p->_redirectSock != 0) {
             redirecting = true;
         }
         // Free the targets.
-        std::deque<std::string> args;
-        args.push_back("no_shutdown");
-        LOG_INFO_MSG("Freeing IO targets");
+        const std::deque<std::string> args( 1, "no_shutdown");
+        LOG_TRACE_MSG("Freeing I/O targets for I/O block " << _block->getBlockName());
         mmcs_client::CommandReply reply;
         block_p->disconnect(args, reply);
-        if(redirecting && initialized) {
+        if (redirecting && initialized) {
             // Redirecting?  Reopen the targets as RAAW.
-            LOG_INFO_MSG("Reopening targets in monitor mode for RAAW locks.");
-            std::deque<std::string> a;
-            a.push_back("mode=monitor");
-            std::string targspec = "{*}";
-            BlockControllerTarget* target = new BlockControllerTarget(block_p, targspec, reply);
-            block_p->connect(a, reply, target);
+            LOG_INFO_MSG("Reopening targets in monitor mode for RAAW locks for I/O block " << _block->getBlockName());
+            const std::deque<std::string> args( 1, "mode=monitor" );
+            const BlockControllerTarget target(block_p, "{*}", reply);
+            block_p->connect(args, reply, &target);
         }
     }
-    LOG_INFO_MSG("done");
     return returnp;
 }
 

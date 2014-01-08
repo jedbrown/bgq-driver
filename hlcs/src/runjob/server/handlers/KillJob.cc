@@ -111,6 +111,7 @@ KillJob::lookupJob()
 
     LOG_INFO_MSG( "associated " << job << " with pid " << _request->_pid );
     _request->_job = job;
+    _response->_job = job;
 
     const Server::Ptr server( _server.lock() );
     if ( !server ) return;
@@ -140,6 +141,7 @@ KillJob::handle(
     if ( !server ) return;
 
     if ( _request->_job ) {
+        _response->_job = _request->_job;
         server->getJobs()->find(
                 _request->_job,
                 boost::bind(
@@ -155,12 +157,12 @@ KillJob::handle(
     this->lookupJob();
 }
 
-    void
-        KillJob::findJobCallback(
+void
+KillJob::findJobCallback(
         const Job::Ptr& job
         )
 {
-    LOG_TRACE_MSG( "findJobHandler" );
+    LOG_TRACE_MSG( __FUNCTION__ );
 
     if ( !job ) {
         LOG_WARN_MSG( "could not find job " << _request->_job );
@@ -202,12 +204,14 @@ KillJob::handle(
             job,
             _request->_signal,
             _request->_timeout,
-            boost::bind(
-                &KillJob::callback,
-                shared_from_this(),
-                job,
-                _1,
-                _2
+            job->strand().wrap(
+                boost::bind(
+                    &KillJob::callback,
+                    shared_from_this(),
+                    job,
+                    _1,
+                    _2
+                    )
                 )
             );
 }
@@ -219,11 +223,14 @@ KillJob::callback(
         const std::string& message
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
+    LOGGING_DECLARE_JOB_MDC( job->id() );
+    LOGGING_DECLARE_BLOCK_MDC( job->info().getBlock() );
 
-    // only allod administrative connections to indicate the job was signaled by a control action
-    if ( _connection->getUserType() == bgq::utility::portConfig::UserType::Administrator ) {
+    if ( _connection->getUserType() == bgq::utility::portConfig::UserType::Administrator && _request->_controlActionRecordId ) {
+        // only allow administrative connections to indicate the job was signaled by a control action
         job->exitStatus().setRecordId( _request->_controlActionRecordId );
+    } else if ( !_request->_details.empty() ) {
+        job->exitStatus().setDetails( _request->_details );
     }
 
     _response->setError( error );

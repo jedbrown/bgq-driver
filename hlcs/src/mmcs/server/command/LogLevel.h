@@ -24,43 +24,26 @@
 #ifndef MMCS_SERVER_COMMAND_LOG_LEVEL_H
 #define MMCS_SERVER_COMMAND_LOG_LEVEL_H
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
-/*!
- * \brief
- */
 class LogLevel : public common::AbstractCommand
 {
 public:
-    /*!
-     * \brief
-     */
     LogLevel(
             const char* name,
             const char* description,
             const Attributes& attributes
             );
-
-    /*!
-     * \brief
-     */
     void execute(
             std::deque<std::string> args,
             mmcs_client::CommandReply& reply,
             common::ConsoleController* pController,
             BlockControllerTarget* pTarget=NULL
             );
-
-    /*!
-     * \brief
-     */
     void help(
             std::deque<std::string> args,
             mmcs_client::CommandReply& reply
@@ -69,8 +52,7 @@ public:
     bool checkArgs(std::deque<std::string>&) { return true; }
 
 public:
-    static  LogLevel* build();
-    static  std::string cmdname() { return "log_level"; }
+    static LogLevel* build();
 };
 
 } } } // namespace mmcs::server::command

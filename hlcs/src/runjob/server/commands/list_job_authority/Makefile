@@ -29,6 +29,10 @@ include ../../../../../../Make.rules
 
 
 LDFLAGS += -L../../../../security -lsecurity
+LDFLAGS += -lrunjob_common
+LDFLAGS += -lboost_program_options-mt
+LDFLAGS += -lboost_date_time-mt
+LDFLAGS += -llog4cxx
 
 
 COMMAND              = $(shell basename `pwd`)

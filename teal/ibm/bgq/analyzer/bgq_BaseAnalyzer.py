@@ -30,6 +30,7 @@ from ibm.teal import registry, alert
 from ibm.teal.analyzer.analyzer import EventAnalyzer
 from ibm.teal.registry import get_logger, get_service, SERVICE_DB_INTERFACE
 from ibm.teal.database import db_interface
+import binascii
 
 class bgqBaseAnalyzer(EventAnalyzer):
 
@@ -56,6 +57,15 @@ class bgqBaseAnalyzer(EventAnalyzer):
                 
         return row
 
+    def ecidString(self, ecid):
+        ''' Convert the ecid value to a readable string
+        '''
+
+        if ecid is None:
+            ecidStr = str(None)
+        else:
+            ecidStr = binascii.hexlify(str(ecid)).upper()
+        return ecidStr
 
     def executeQuery(self, query):
         ''' Run a query.

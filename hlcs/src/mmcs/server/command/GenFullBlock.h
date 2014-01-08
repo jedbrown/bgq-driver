@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_GEN_FULL_BLOCK_H_
 #define MMCS_SERVER_COMMAND_GEN_FULL_BLOCK_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*
 ** gen_full_block <blockid>
@@ -42,9 +38,8 @@ class GenFullBlock : public common::AbstractCommand
 {
 public:
     GenFullBlock (const char* name, const char* description, const Attributes& attributes)
-    : AbstractCommand(name,description,attributes) { usage = "gen_full_block <blockid>";}
+    : AbstractCommand(name,description,attributes) { _usage = "gen_full_block <blockid>";}
     static  GenFullBlock* build();    // factory method
-    static  std::string cmdname() { return "gen_full_block"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -54,13 +49,11 @@ public:
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
              BlockControllerTarget* pTarget);
-    bool checkArgs(std::deque<std::string>& args) { if(args.size() != 1) return false; else return true;  }
+    bool checkArgs(std::deque<std::string>& args) { if (args.size() != 1) return false; else return true;  }
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

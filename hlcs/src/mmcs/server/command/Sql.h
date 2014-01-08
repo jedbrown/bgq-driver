@@ -21,31 +21,26 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_SQL_H_
 #define MMCS_SERVER_COMMAND_SQL_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 /*!
 ** sql <sql-string>
 ** execute <sql-string>
-** This command cannot be used to run any sql statement that returns output (i.e., queries).
+** This command cannot be used to run any SQL statement that returns output (i.e., queries).
 */
 class Sql: public common::AbstractCommand
 {
 public:
     Sql(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "sql <sql-string>";}
-    static  Sql* build();    // factory method
-    static  std::string cmdname() { return "sql"; }
+      : AbstractCommand(name,description,attributes) { _usage = "sql <sql-string>";}
+    static Sql* build();    // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,

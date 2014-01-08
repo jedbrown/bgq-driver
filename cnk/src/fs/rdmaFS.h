@@ -124,10 +124,6 @@ private:
    //! Memory region for inbound messages.
    struct cnv_mr _inMessageRegion;
 
-   //! Lock to control access to message buffers.
-   Lock_Atomic_t _lock;
- 
-   
    struct cnv_mr _userRegion[USER_MAX_RDMA_REGIONS];
 
    struct cnv_mr * findFreeUserRegion(){

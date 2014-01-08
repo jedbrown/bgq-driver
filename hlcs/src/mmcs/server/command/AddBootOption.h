@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_ADD_BOOT_OPTION_H_
 #define MMCS_SERVER_COMMAND_ADD_BOOT_OPTION_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*
 ** add_boot_option <blockid|ALL> <bootoptions>
@@ -42,9 +38,8 @@ class AddBootOption : public common::AbstractCommand
 {
 public:
     AddBootOption (const char* name, const char* description, const Attributes& attributes)
-    : AbstractCommand(name,description,attributes) { usage = "add_boot_option <blockid|*ALL|*ALLIO|*ALLCOMPUTE> <bootoption>";}
+    : AbstractCommand(name,description,attributes) { _usage = "add_boot_option <blockid|*ALL|*ALLIO|*ALLCOMPUTE> <bootoption>";}
     static  AddBootOption* build();    // factory method
-    static  std::string cmdname() { return "add_boot_option"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -59,8 +54,6 @@ public:
               mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

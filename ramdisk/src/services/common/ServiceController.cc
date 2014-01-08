@@ -57,23 +57,10 @@ ServiceController::ServiceController()
 
    // The first core is handling interrupts and the last core is handling I/O link messages.  Stay off of both cores.
    size_t numCpus = getNumCpus();
-   switch (numCpus) {
-      case 68: // 4 hardware threads per core
-         pinToCpuRange(4, numCpus-5);
-         break;
-
-      case 34: // 2 hardware threads per core
-         pinToCpuRange(2, numCpus-3);
-         break;
-
-      case 17: // 1 hardware thread per core
-         pinToCpuRange(1, numCpus-2);
-         break;
-
-      default: // simulator so use all cores
+   if (numCpus == 68)
+         pinToCpuRange(4, 65);
+   else
          pinToCpuRange(0, numCpus-1);
-         break;
-   }
 }
 
 ServiceController::~ServiceController()

@@ -56,6 +56,7 @@ public:
         PrologFailure,
         EpilogFailure,
         BlockNotReady,
+        HeartbeatFailure,
         AdministrativeAuthorityDenied = 0x00063001
     };
 

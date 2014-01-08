@@ -27,12 +27,9 @@
 #ifndef UTILITY_CXXSOCKETS_HOST_H_
 #define UTILITY_CXXSOCKETS_HOST_H_
 
-
 #include <string>
 
-
 namespace CxxSockets {
-
 
 //! \brief Representation of a Host in an IP network.  Encapsulates
 //! the name and the IPv4 or IPv6 address.
@@ -41,7 +38,7 @@ class Host
     std::string _ip;
     std::string _name;
     //! \brief This is the primary, preferred host.
-    bool _primary;
+    bool        _primary;
 
     void build(const std::string& identifier);
 
@@ -69,7 +66,6 @@ public:
     void set_primary(bool p) { _primary = p; }
     bool get_primary() const { return _primary; }
 };
-
 
 }
 

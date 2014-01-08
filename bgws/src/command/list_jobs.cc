@@ -221,7 +221,7 @@ static void printJobDetails(
          << str( Q_LINE_FMT % "User" % job_obj.getString( "username" ) )
          << str( Q_LINE_FMT % "Executable" % job_obj.getString( "executable" ) )
          << str( NQ_LINE_FMT % "Status" % statusCodeToString( job_obj.getString( "status" ) ) )
-         << str( Q_LINE_FMT % "Working directory" % job_obj.getString( "executable" ) )
+         << str( Q_LINE_FMT % "Working directory" % job_obj.getString( "cwd" ) )
          << str( Q_LINE_FMT % "Arguments" % job_obj.getString( "arguments" ) )
          << str( Q_LINE_FMT % "Environment" % job_obj.getString( "environment" ) );
 

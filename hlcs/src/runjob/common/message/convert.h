@@ -58,61 +58,62 @@ convert(
        )
 {
     Message::Ptr result;
+    const size_t bufferSize( buffer.size() );
+    std::istream is( &buffer );
 
     try {
-        std::istream is(&buffer);
         boost::archive::binary_iarchive ar(is);
-        Message::Type type = static_cast<Message::Type>(header._type);
+        const Message::Type type = static_cast<Message::Type>(header._type);
         if (type == Message::InsertJob) {
-            InsertJob::Ptr derived(boost::make_shared<InsertJob>());
+            const InsertJob::Ptr derived(boost::make_shared<InsertJob>());
             ar & *derived;
             result = InsertJob::Ptr(derived);
         } else if (type == Message::InsertRas) {
-            InsertRas::Ptr derived(boost::make_shared<InsertRas>());
+            const InsertRas::Ptr derived(boost::make_shared<InsertRas>());
             ar & *derived;
             result = InsertRas::Ptr(derived);
         } else if (type == Message::ExitJob) {
-            ExitJob::Ptr derived(boost::make_shared<ExitJob>());
+            const ExitJob::Ptr derived(boost::make_shared<ExitJob>());
             ar & *derived;
             result = ExitJob::Ptr(derived);
         } else if (type == Message::KillJob) {
-            KillJob::Ptr derived(boost::make_shared<KillJob>());
+            const KillJob::Ptr derived(boost::make_shared<KillJob>());
             ar & *derived;
             result = KillJob::Ptr(derived);
         } else if (type == Message::PerfCounters) {
-            PerfCounters::Ptr derived(boost::make_shared<PerfCounters>());
+            const PerfCounters::Ptr derived(boost::make_shared<PerfCounters>());
             ar & *derived;
             result = PerfCounters::Ptr(derived);
         } else if (type == Message::Proctable) {
-            Proctable::Ptr derived(boost::make_shared<Proctable>());
+            const Proctable::Ptr derived(boost::make_shared<Proctable>());
             ar & *derived;
             result = Proctable::Ptr(derived);
         } else if (type == Message::Result) {
-            Result::Ptr derived(boost::make_shared<Result>());
+            const Result::Ptr derived(boost::make_shared<Result>());
             ar & *derived;
             result = Result::Ptr(derived);
         } else if (type == Message::StartJob) {
-            StartJob::Ptr derived(boost::make_shared<StartJob>());
+            const StartJob::Ptr derived(boost::make_shared<StartJob>());
             derived->setType( Message::StartJob );
             ar & *derived;
             result = StartJob::Ptr(derived);
         } else if (type == Message::StartTool) {
-            StartTool::Ptr derived(boost::make_shared<StartTool>());
+            const StartTool::Ptr derived(boost::make_shared<StartTool>());
             derived->setType( Message::StartTool );
             ar & *derived;
             result = StartTool::Ptr(derived);
         } else if (type == Message::StdError) {
-            StdIo::Ptr derived(boost::make_shared<StdIo>());
+            const StdIo::Ptr derived(boost::make_shared<StdIo>());
             derived->setType( Message::StdError );
             ar & *derived;
             result = StdIo::Ptr(derived);
         } else if (type == Message::StdIn) {
-            StdIo::Ptr derived(boost::make_shared<StdIo>());
+            const StdIo::Ptr derived(boost::make_shared<StdIo>());
             derived->setType( Message::StdIn );
             ar & *derived;
             result = StdIo::Ptr(derived);
         } else if (type == Message::StdOut) {
-            StdIo::Ptr derived(boost::make_shared<StdIo>());
+            const StdIo::Ptr derived(boost::make_shared<StdIo>());
             derived->setType( Message::StdOut );
             ar & *derived;
             result = StdIo::Ptr(derived);
@@ -120,8 +121,11 @@ convert(
             BOOST_ASSERT(!"shouldn't get here");
         }
     } catch ( const std::exception& e ) {
-        log4cxx::LoggerPtr log_logger_ = runjob::getLogger();
-        LOG_ERROR_MSG( "could not convert " << Message::toString(static_cast<Message::Type>(header._type)) << " message: " << e.what() );
+        const log4cxx::LoggerPtr log_logger_ = runjob::getLogger();
+        LOG_ERROR_MSG( "could not convert " << header._length << " bytes of " << Message::toString(static_cast<Message::Type>(header._type)) << " message: " << e.what() );
+        LOG_ERROR_MSG( "buffer has " << buffer.size() << " bytes of original " << bufferSize << " remaining" );
+        LOG_ERROR_MSG( "stream eof(" << is.eof() << ") fail(" << is.fail() << ") bad (" << is.bad() << ")" );
+
         result.reset();
     }
 

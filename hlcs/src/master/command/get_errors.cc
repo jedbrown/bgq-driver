@@ -23,17 +23,14 @@
 
 #include "common/ArgParse.h"
 
-#include "lib/BGMasterClientApi.h"
+#include "lib/BGMasterClient.h"
 #include "lib/exceptions.h"
 
 #include <utility/include/Log.h>
 
-#include <boost/tokenizer.hpp>
 
 LOG_DECLARE_FILE( "master" );
 
-BGMasterClient client;
-Args* pargs;
 void
 help()
 {
@@ -46,19 +43,19 @@ usage()
     std::cerr << "get_errors [ --properties filename ] [ --host host:port ] [ --verbose verbosity ]" << std::endl;
 }
 
-int main(int argc, const char** argv)
+int
+main(int argc, const char** argv)
 {
     std::vector<std::string> validargs;
     std::vector<std::string> singles;
-    Args largs(argc, argv, &usage, &help, validargs, singles);
-    pargs = &largs;
-    client.initProperties(pargs->get_props());
+    const Args largs(argc, argv, &usage, &help, validargs, singles);
+    BGMasterClient client;
 
     try {
-        client.connectMaster(pargs->get_portpairs());
+        client.connectMaster(largs.get_props(), largs.get_portpairs());
     }
-    catch(exceptions::BGMasterError& e) {
-        std::cerr << "Unable to contact bgmaster_server, server may be down." << std::endl;
+    catch ( const exceptions::BGMasterError& e ) {
+        std::cerr << "Unable to contact bgmaster_server: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
 

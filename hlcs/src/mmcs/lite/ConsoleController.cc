@@ -51,7 +51,7 @@ ConsoleController::ConsoleController(
 {
     // Need to create a dummy block controller to "select" it and keep the command processor
     // happy.
-    BlockPtr p(new BlockControllerBase(_machine, _user.getUser(), "", false));
+    BlockPtr p(new BlockControllerBase(_machine, _user.getUser(), "dummy", false));
     BlockHelperPtr helper(new BlockHelper(p));
     ConsoleController::setBlockController(helper);
 }

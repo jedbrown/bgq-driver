@@ -62,6 +62,7 @@
 #include <db/include/api/job/types.h>
 
 #include <db/include/api/tableapi/gensrc/bgqtableapi.h>
+#include <db/include/api/tableapi/DBConnectionPool.h>
 
 #include <hlcs/include/security/Enforcer.h>
 #include <hlcs/include/security/wrapper.h>
@@ -308,7 +309,7 @@ getNodes(
             state = Hardware::Impl::convertDatabaseState(hardwareState.c_str());
 
             // Construct the node object from node data
-            nodeImplPtr.reset(new Node::Impl::Impl(location,state,sequenceId));
+            nodeImplPtr.reset(new Node::Impl(location,state,sequenceId));
             Node::Ptr nodePtr(new Node(nodeImplPtr));
             nodeVector.push_back(nodePtr);
         } catch (const BGQDB::Exception& e) {
@@ -418,7 +419,7 @@ getMidplaneNodes(
             state = Hardware::Impl::convertDatabaseState(hardwareState.c_str());
 
             // Construct the node object from node data
-            nodeImplPtr.reset(new Node::Impl::Impl(location,state,sequenceId));
+            nodeImplPtr.reset(new Node::Impl(location,state,sequenceId));
             Node::Ptr nodePtr(new Node(nodeImplPtr));
             nodeVector.push_back(nodePtr);
         } catch (const BGQDB::Exception& e) {
@@ -516,7 +517,7 @@ getNodeBoards(
                 location.append("-");
                 location.append((*iter)->attrByName("NodeCardId"));
                 // Construct the node board object from XML stream
-                nodeBoardImplPtr.reset(new NodeBoard::Impl::Impl(location,*iter));
+                nodeBoardImplPtr.reset(new NodeBoard::Impl(location,*iter));
                 NodeBoard::Ptr nodeBoardPtr(new NodeBoard(nodeBoardImplPtr));
                 nodeBoardVector.push_back(nodeBoardPtr);
             } else {
@@ -651,7 +652,7 @@ getIOLinks(
                 // Get location for I/O link constructor
                 string location((*iter)->attrByName("source"));
                 // Construct the I/O link object from XML stream
-                IOLinkImplPtr.reset(new IOLink::Impl::Impl(location,*iter));
+                IOLinkImplPtr.reset(new IOLink::Impl(location,*iter));
                 IOLink::Ptr IOLinkPtr(new IOLink(IOLinkImplPtr));
                 IOLinkVector.push_back(IOLinkPtr);
             } else {
@@ -777,7 +778,7 @@ getAvailableIOLinks(
                 // Get location for I/O link constructor
                 string location((*iter)->attrByName("source"));
                 // Construct the I/O link object from XML stream
-                IOLinkImplPtr.reset(new IOLink::Impl::Impl(location,*iter));
+                IOLinkImplPtr.reset(new IOLink::Impl(location,*iter));
                 // Add the I/O link if both the I/O link hardware state and destination I/O node are available
                 if ((IOLinkImplPtr->getState() == Hardware::Available) && (IOLinkImplPtr->getIONodeState() == Hardware::Available)) {
                     IOLink::Ptr IOLinkPtr(new IOLink(IOLinkImplPtr));
@@ -816,7 +817,6 @@ getBlocks(
 {
     Block::Ptrs blockVector;
     cxxdb::ConnectionPtr conn_ptr;
-    cxxdb::ConnectionPtr conn_ptr2;
     cxxdb::ResultSetPtr rs_ptr;
     cxxdb::QueryStatementPtr job_stmt_ptr;
 
@@ -826,7 +826,6 @@ getBlocks(
     try {
         // Get database connections
         conn_ptr = BGQDB::DBConnectionPool::Instance().getConnection();
-        conn_ptr2 = BGQDB::DBConnectionPool::Instance().getConnection();
 
         // An empty user string means no security filtering will be performed and all results will be returned.
         bool checkUserAuthority = true;
@@ -878,7 +877,7 @@ getBlocks(
 
             // Check if compute block should be included in returned container of compute blocks
             if (includeBlock) {
-                Block::Pimpl blockImplPtr(Block::Impl::createFromDatabase(rs_ptr->columns(), filter.getExtendedInfo(), *conn_ptr2));
+                Block::Pimpl blockImplPtr(Block::Impl::createFromDatabase(rs_ptr->columns(), filter.getExtendedInfo(), *conn_ptr));
 
                 // Determine if jobs should be collected
                 if (filter.getIncludeJobs()) {
@@ -889,7 +888,7 @@ getBlocks(
                         dbJob.setColumns(job_cols);
 
                         job_stmt_ptr = dbJob.prepareSelect(
-                                *conn_ptr2,
+                                *conn_ptr,
                                 string() + "WHERE " + BGQDB::DBTJob::BLOCKID_COL + "=? ORDER BY " + BGQDB::DBTJob::ID_COL + " ASC",
                                 list_of( "blockId" )
                         );
@@ -952,7 +951,6 @@ getIOBlocks(
 {
     IOBlock::Ptrs IOBlockVector;
     cxxdb::ConnectionPtr conn_ptr;
-    cxxdb::ConnectionPtr conn_ptr2;
     cxxdb::ResultSetPtr rs_ptr;
     cxxdb::QueryStatementPtr job_stmt_ptr;
 
@@ -962,7 +960,6 @@ getIOBlocks(
     try {
         // Get database connections
         conn_ptr = BGQDB::DBConnectionPool::Instance().getConnection();
-        conn_ptr2 = BGQDB::DBConnectionPool::Instance().getConnection();
 
         // An empty user string means no security filtering will be performed and all results will be returned.
         bool checkUserAuthority = true;
@@ -1014,7 +1011,7 @@ getIOBlocks(
 
             // Check if block should be included in returned container of blocks
             if (includeBlock) {
-                IOBlock::Pimpl IOBlockImplPtr(IOBlock::Impl::createFromDatabase(rs_ptr->columns(), filter.getExtendedInfo(), *conn_ptr2));
+                IOBlock::Pimpl IOBlockImplPtr(IOBlock::Impl::createFromDatabase(rs_ptr->columns(), filter.getExtendedInfo(), *conn_ptr));
                 IOBlockVector.push_back(IOBlock::Ptr(new IOBlock(IOBlockImplPtr)));
             }
         }

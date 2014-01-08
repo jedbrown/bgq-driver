@@ -20,9 +20,6 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#include "common/message/ExitJob.h"
-#include "common/message/Result.h"
-
 #include "common/error.h"
 #include "common/Exception.h"
 #include "common/logging.h"
@@ -32,16 +29,14 @@
 #include "server/block/Compute.h"
 #include "server/block/IoNode.h"
 
-#include "server/database/Delete.h"
 #include "server/database/Init.h"
 #include "server/database/NodeStatus.h"
 
 #include "server/job/Container.h"
 #include "server/job/Create.h"
-#include "server/job/RasQuery.h"
+#include "server/job/Destroy.h"
 #include "server/job/SubNodePacing.h"
 
-#include "server/mux/ClientContainer.h"
 #include "server/mux/Connection.h"
 
 #include "server/Job.h"
@@ -72,7 +67,8 @@ Job::Job(
     _client( create._client_id ),
     _server( create._server ),
     _tools(),
-    _pacing( create._pacing )
+    _pacing( create._pacing ),
+    _outstandingSignal( 0 )
 {
     LOGGING_DECLARE_JOB_MDC( _id ? _id : _client );
     LOGGING_DECLARE_BLOCK_MDC( _info.getBlock() );
@@ -114,45 +110,13 @@ Job::~Job()
         return;
     }
 
-    const Server::Ptr server( _server.lock() );
-    if ( !server ) return;
-
-    // remove entry from database if a job ID was generated
-    if ( _id && server ) {
-        server->getDatabase()->getDelete().execute(
-                _id,
-                _exitStatus
-                );
-    }
-
-    // let client know job is done
-    runjob::Message::Ptr message;
-
-    if ( _status.started() ) {
-        const message::ExitJob::Ptr ej( new message::ExitJob() );
-        ej->_status = _exitStatus.getStatus().get();
-        ej->_error = _exitStatus.getError();
-        ej->_message = _exitStatus.getMessage();
-        job::RasQuery( _id ).add( ej );
-
-        message = ej;
-    } else {
-        const message::Result::Ptr result( new message::Result() );
-        result->setError( _exitStatus.getError() );
-        result->setMessage( _exitStatus.getMessage() );
-        message = result;
-    }
-
-    message->setClientId( _client );
-    message->setJobId( _id );
-    if ( const mux::Connection::Ptr mux = _mux.lock() ) {
-        mux->write( message );
-    }
-
-    // always remove client from mux client container
-    if ( const mux::Connection::Ptr mux = _mux.lock() ) {
-        mux->clients()->remove( _client );
-    }
+    job::Destroy::create( _server, _exitStatus )->
+        id( _id )->
+        mux( _mux )->
+        client_id( _client )->
+        started( _status.started() )->
+        client_disconnected( _queue.isClientDisconnected() )
+        ;
 }
 
 void

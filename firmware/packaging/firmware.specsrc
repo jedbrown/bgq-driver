@@ -31,6 +31,7 @@ defective hardware.
 %{_base_dir}/firmware/ras
 %{_base_dir}/firmware/tools
 %{_base_dir}/firmware/tests/hss_rx_cal
+%{_base_dir}/firmware/tests/dumpPersonality
 
 
 

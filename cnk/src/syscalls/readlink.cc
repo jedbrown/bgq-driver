@@ -35,12 +35,17 @@ uint64_t sc_readlink(SYSCALL_FCN_ARGS)
    char *pathname = (char *)r3;
    char *buf = (char *)r4;
    size_t bufsiz = r5;
-
+   
+   // Handle readlink "bufsiz is not positive" check as INVAL, not EFAULT.
+   if(bufsiz > LONG_MAX)
+       return CNK_RC_FAILURE(EINVAL);
+   
    // Check for error conditions.
-   if ((bufsiz > SSIZE_MAX) || (bufsiz < 0)) {
-      return CNK_RC_FAILURE(EINVAL);
+   if (!VMM_IsAppAddress(buf, bufsiz)) 
+   {
+       return CNK_RC_FAILURE(EFAULT);
    }
-
+   
    uint64_t pathlen = validatePathname(pathname);
    if (CNK_RC_IS_FAILURE(pathlen)) {
       return pathlen;

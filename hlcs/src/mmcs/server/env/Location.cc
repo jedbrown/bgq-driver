@@ -52,7 +52,7 @@ Location::Location(
     _location( location ),
     _type( type )
 {
-    LOG_DEBUG_MSG( type << " " << __FUNCTION__ << " for " << location << " every " << seconds << " seconds" );
+    // LOG_TRACE_MSG( type << " for " << location << " every " << seconds << " seconds" );
 }
 
 void
@@ -63,7 +63,7 @@ Location::stop()
     boost::system::error_code error;
     _timer.cancel( error );
     if ( error ) {
-        LOG_WARN_MSG( _location << " could not stop: " << boost::system::system_error(error).what() );
+        LOG_WARN_MSG(_location << " could not stop: " << boost::system::system_error(error).what());
     }
 }
 
@@ -86,7 +86,7 @@ Location::impl(
             request,
             boost::bind(
                 &Location::makeTargetSetHandler,
-                this,
+                boost::static_pointer_cast<Location>( shared_from_this() ),
                 _1,
                 mc_server
                 )
@@ -99,17 +99,16 @@ Location::makeTargetSetHandler(
         const McServerConnection::Ptr& mc_server
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
     MCServerMessageSpec::MakeTargetSetReply reply;
     reply.read( response );
 
-    MCServerMessageSpec::OpenTargetRequest request(_location, "EnvMonLoc", MCServerMessageSpec::RAAW, true);
+    const MCServerMessageSpec::OpenTargetRequest request(_location, "EnvMonLoc", MCServerMessageSpec::RAAW, true);
     mc_server->send(
             request.getClassName(),
             request,
             boost::bind(
                 &Location::openTargetHandler,
-                this,
+                boost::static_pointer_cast<Location>( shared_from_this() ),
                 _1,
                 mc_server
                 )
@@ -122,16 +121,15 @@ Location::openTargetHandler(
         const McServerConnection::Ptr& mc_server
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
     MCServerMessageSpec::OpenTargetReply reply;
     reply.read( response );
 
     if (reply._rc) {
-        LOG_INFO_MSG("unable to open target set: " << reply._rt);
+        LOG_ERROR_MSG("Unable to open target set: " << reply._rt);
         this->wait();
         return;
     }
-    LOG_TRACE_MSG( "opened target " << _location << " with handle " << reply._handle );
+    LOG_TRACE_MSG("Opened target " << _location << " with handle " << reply._handle);
 
     if (_type == "service") {
         MCServerMessageSpec::ReadServiceCardEnvRequest request;
@@ -142,7 +140,7 @@ Location::openTargetHandler(
                 request,
                 boost::bind(
                     &Location::readHandler,
-                    this,
+                    boost::static_pointer_cast<Location>( shared_from_this() ),
                     _1,
                     reply._handle,
                     mc_server
@@ -156,7 +154,7 @@ Location::openTargetHandler(
                 request,
                 boost::bind(
                     &Location::readHandler,
-                    this,
+                    boost::static_pointer_cast<Location>( shared_from_this() ),
                     _1,
                     reply._handle,
                     mc_server
@@ -170,7 +168,7 @@ Location::openTargetHandler(
                 request,
                 boost::bind(
                     &Location::readHandler,
-                    this,
+                    boost::static_pointer_cast<Location>( shared_from_this() ),
                     _1,
                     reply._handle,
                     mc_server
@@ -183,7 +181,7 @@ Location::openTargetHandler(
                 request,
                 boost::bind(
                     &Location::readHandler,
-                    this,
+                    boost::static_pointer_cast<Location>( shared_from_this() ),
                     _1,
                     reply._handle,
                     mc_server
@@ -264,7 +262,7 @@ Location::readHandler(
             handle,
             boost::bind(
                 &Polling::wait,
-                this
+                boost::static_pointer_cast<Location>( shared_from_this() )
                 )
             );
 }

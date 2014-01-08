@@ -21,26 +21,21 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_STOP_HW_POLLING_H_
 #define MMCS_SERVER_COMMAND_STOP_HW_POLLING_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 class StopHwPolling : public common::AbstractCommand
 {
 public:
     StopHwPolling(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "stop_hw_polling <location>";}
+      : AbstractCommand(name,description,attributes) { _usage = "stop_hw_polling <location>";}
     static StopHwPolling* build();
-    static std::string cmdname() { return "stop_hw_polling"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,

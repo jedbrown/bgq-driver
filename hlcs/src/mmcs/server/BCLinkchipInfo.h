@@ -24,7 +24,6 @@
 #ifndef MMCS_SERVER_BC_LINKCHIP_INFO_H_
 #define MMCS_SERVER_BC_LINKCHIP_INFO_H_
 
-
 #include "BCTargetInfo.h"
 
 #include <control/include/mc/cardsDefs.h>
@@ -33,10 +32,8 @@
 
 #include <boost/assert.hpp>
 
-
 namespace mmcs {
 namespace server {
-
 
 class BCLinkchipInfo : public BCTargetInfo
 {
@@ -66,7 +63,7 @@ public:
         } else if ( ioboardNodeConfig() ) {
             ostr << ioboardNodeConfig()->posInMachine();
         } else {
-            BOOST_ASSERT( !"not an I/O board or a midplane" );
+            BOOST_ASSERT( !"Not an I/O board or a midplane." );
         }
 
         ostr << "-" << linkchipPos();

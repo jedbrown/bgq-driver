@@ -72,7 +72,10 @@ public:
    uint64_t ftruncate64(int fd, off_t offset);
    uint64_t ioctl(int, long unsigned int, void*);
    uint64_t lchown(const char *path, uid_t uid, gid_t gid);
+   uint64_t link(const char *path, const char *link);
    uint64_t lseek(int fd, off_t offset, int whence);
+   uint64_t lstat(const char *pathname, struct stat *statbuf);
+   uint64_t lstat64(const char *pathname, struct stat64 *statbuf);
    uint64_t mkdir(const char *path, mode_t mode);
    uint64_t mmap(int fd, uint64_t length, uint64_t offset);
    uint64_t open(const char *pathname, int oflags, mode_t mode);
@@ -100,7 +103,7 @@ protected:
    int defineMemorySpace(ShmMgrEntry_t* ptr, size_t space);
    bool compactMemorySpace();
    
-   uint64_t findByName(const char *pathname, ShmMgrEntry_t*& ptr);
+   uint64_t findByName(const char *pathname, ShmMgrEntry_t*& ptr, bool traverseLink);
    uint64_t findByDescriptor(int fd, ShmMgrEntry_t*& ptr);
    void     fillStatStructure(struct stat64 *statbuf, ShmMgrEntry_t* ptr);
    virtual ShmMgr_t* getShmManager() { return NULL; };

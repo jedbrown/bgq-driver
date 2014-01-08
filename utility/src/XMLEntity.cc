@@ -23,19 +23,26 @@
 /*********************************************************************/
 
 #include "XMLEntity.h"
+#include "Log.h"
 
-#include "expat.h"
+#include <boost/scoped_array.hpp>
+
+#include <expat.h>
 
 #include <sys/stat.h>
+#include <sys/types.h>
 
-#include <assert.h>
+#include <cassert>
+#include <cerrno>
+#include <cstring>
+#include <unistd.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <stdio.h>
 #include <vector>
 
-class XML_ParserStruct;
+LOG_DECLARE_FILE( "utility" );
 
 XMLEntity*
 XMLEntity::readXML (const char* filename) throw(XMLException)
@@ -62,9 +69,9 @@ XMLEntity::readXML (const char* filename) throw(XMLException)
     bool done = false;
     do {
         char buf[256];
-        size_t len = fread(buf, 1, sizeof(buf)-1, fp);
+        const size_t len = fread(buf, 1, sizeof(buf)-1, fp);
         done = len < sizeof(buf)-1;
-        if (!XML_Parse((XML_Parser)parser, buf, len, done)) {
+        if (!XML_Parse((XML_Parser)parser, buf, static_cast<int>(len), done)) {
             char errbuffer[256];
             sprintf(errbuffer, "Syntax error: %s at line %d",
                     XML_ErrorString(XML_GetErrorCode(parser)),
@@ -108,7 +115,7 @@ XMLEntity::readXML(std::istream& is) throw(XMLException)
         size_t len = buf.size();
 
         // Parse the XML
-        if (!XML_Parse((XML_Parser)parser, buf.c_str(), len, done)) {
+        if (!XML_Parse((XML_Parser)parser, buf.c_str(), static_cast<int>(len), done)) {
             char errbuffer[256];
             sprintf(errbuffer, "Syntax error: %s at line %d column %d",
                     XML_ErrorString(XML_GetErrorCode(parser)),
@@ -144,45 +151,44 @@ XMLEntity::dumpXML(const std::stringstream& os, const char* description, const b
         filenameString << description << "_";
     }
     filenameString << pid << ".XXXXXX";
-    char* tempFilename = new char[filenameString.str().size()];
-    snprintf(tempFilename, filenameString.str().size() + 1, "%s", filenameString.str().c_str());
-    int tempFileFd = mkstemp(tempFilename);
+    boost::scoped_array<char> tempFilename( new char[filenameString.str().size()] );
+    snprintf(tempFilename.get(), filenameString.str().size() + 1, "%s", filenameString.str().c_str());
+    const int tempFileFd = mkstemp(tempFilename.get());
     if (tempFileFd == -1) {
-        printf("Could not create temp XML file");
-        delete[] tempFilename;
+        char buf[256];
+        LOG_ERROR_MSG("Could not create temp XML file: " << strerror_r(errno, buf, sizeof(buf)));
         return;
     }
 
     // Change mode of file descriptor so everyone can read
-    int rc = fchmod(tempFileFd, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    const int rc = fchmod(tempFileFd, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (rc == -1) {
-        printf("Could not chmod on temp XML file");
-        delete[] tempFilename;
+        char buf[256];
+        LOG_ERROR_MSG("Could not chmod on temp XML file: " << strerror_r(errno, buf, sizeof(buf)));
         return;
     }
 
     // Write XML
-    rc = write(tempFileFd, os.str().c_str(), os.str().size());
-    if (rc == -1) {
-        printf("Error writing to XML file");
-        delete[] tempFilename;
+    const ssize_t write_rc = write(tempFileFd, os.str().c_str(), static_cast<unsigned>(os.str().size()));
+    if (write_rc == -1) {
+        char buf[256];
+        LOG_ERROR_MSG("Error writing to XML file: " << strerror_r(errno, buf, sizeof(buf)));
         return;
     }
-    unsigned int bytesWritten = static_cast<unsigned int>(rc);
+    unsigned int bytesWritten = static_cast<unsigned int>(write_rc);
 
     // Close XML file
     close(tempFileFd);
 
     // Rename the file
     std::ostringstream newFilename;
-    newFilename << tempFilename << ".xml";
-    rename(tempFilename, newFilename.str().c_str());
+    newFilename << tempFilename.get() << ".xml";
+    rename(tempFilename.get(), newFilename.str().c_str());
 
     // Check we wrote everything
     if (bytesWritten != os.str().size()) {
         printf("Mismatch writing to XML file");
     }
-    delete[] tempFilename;
     return;
 }
 
@@ -241,7 +247,7 @@ XMLEntity::attrOptByName(const char* name) const
 XMLEntity::XMLEntity(void* parser):
     _name("*TopLevel*"),
     _cdata(),
-    _lineno(XML_GetCurrentLineNumber((XML_Parser)parser)),
+    _lineno(static_cast<unsigned>(XML_GetCurrentLineNumber((XML_Parser)parser))),
     _attnames(),
     _attvalues(),
     _entities(),
@@ -282,20 +288,20 @@ XMLEntity::~XMLEntity()
 }
 
 void
-XMLEntity::_startXML (void* ud, const char* name, const char** atts)
+XMLEntity::_startXML(void* ud, const char* name, const char** atts)
 {
     XMLEntity* root = (XMLEntity*)ud;
     assert (root != (XMLEntity*)NULL);
     root->_entities.push_back(XMLEntity(name,
             atts,
-            XML_GetCurrentLineNumber((XML_Parser)root->_parser),
+            static_cast<unsigned>(XML_GetCurrentLineNumber((XML_Parser)root->_parser)),
             root));
     XML_SetUserData((XML_Parser)root->parser(),
             (void*) & (root->_entities.back()));
 }
 
 void
-XMLEntity::_endXML (void* ud, const char*)
+XMLEntity::_endXML(void* ud, const char*)
 {
     XMLEntity* root = (XMLEntity*)ud;
     assert (root != (XMLEntity*)NULL);
@@ -306,5 +312,5 @@ void
 XMLEntity::_startCDATA(void* ud, const char* s, int len)
 {
     XMLEntity* root = (XMLEntity*)ud;
-    root->_cdata.append(std::string(s, len));
+    root->_cdata.append(std::string(s, static_cast<std::string::size_type>(len)));
 }

@@ -88,7 +88,7 @@ class InitializeLoggingFixture
 public:
     InitializeLoggingFixture()
     {
-        bgq::utility::initializeLogging( bgq::utility::Properties() );
+        bgq::utility::initializeLogging( *bgq::utility::Properties::create() );
     }
 };
 

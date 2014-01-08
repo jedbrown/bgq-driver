@@ -71,7 +71,14 @@ public:
      * \brief
      */
     void setRecordId(
-            int recid
+            int recid   //!< [in]
+            );
+
+    /*!
+     * \brief
+     */
+    void setDetails(
+            const std::string& details  //!< [in]
             );
 
     /*!
@@ -89,12 +96,18 @@ public:
      */
     const bgq::utility::ExitStatus& getStatus() const { return _status; }
 
+    /*!
+     * \brief Get control action record ID.
+     */
+    int getRecId() const { return _controlActionRecordId; }
+
 private:
     std::string _message;                                   //!<
     error_code::rc _error;                                  //!<
     bgq::utility::ExitStatus _status;                       //!<
     uint32_t _offender;                                     //!<
     int _controlActionRecordId;                             //!<
+    std::string _details;                                   //!<
 };
 
 } // job

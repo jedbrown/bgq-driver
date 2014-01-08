@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_WAIT_BOOT_H_
 #define MMCS_SERVER_COMMAND_WAIT_BOOT_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
 ** wait_boot
@@ -43,20 +39,17 @@ class WaitBoot: public common::AbstractCommand
 {
 public:
     WaitBoot(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "wait_boot [<minutes>]";}
-    static  WaitBoot* build(); // factory method
-    static  std::string cmdname() { return "wait_boot"; }
+      : AbstractCommand(name,description,attributes) { _usage = "wait_boot [<minutes>]";}
+    static WaitBoot* build(); // factory method
     void execute(std::deque<std::string> args,
          mmcs_client::CommandReply& reply,
          DBConsoleController* pController,
          BlockControllerTarget* pTarget=NULL);
-    bool checkArgs(std::deque<std::string>& args) { if(args.size() > 1) return false; else return true;}
+    bool checkArgs(std::deque<std::string>& args) { if (args.size() > 1) return false; else return true;}
     void help(std::deque<std::string> args,
           mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

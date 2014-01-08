@@ -179,14 +179,15 @@ void Flight_SchedDispatchDecoder(size_t bufsize, char* buffer, const BG_FlightRe
     uint64_t arg2 = log->data[1];
     uint64_t arg3 = log->data[2];
     uint64_t arg4 = log->data[3];
-    snprintf(buffer, bufsize, "Sched Disp  HWT=%ld TID=%ld SLOT=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld ORDER=0x%016lx PhysPID=%ld", 
+    snprintf(buffer, bufsize, "Sched Disp  HWT=%ld TID=%ld SLOT=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld ORDER=%010lx PENDING=0x%02lx PhysPID=%ld", 
              arg3 & 0xFF,                               // ProcessorID of the hardware thread 
              arg1 & 0xFFFF,                             // Thread ID of thread being dispatched
              (arg1>>16) & 0xFF,                         // Scheduler slot index being dispatched
              arg2,                                      // Instruction pointer of the location to begin execution
              (arg3>>SPRG_SPIinfo_NumThds)&0xFF,         // Number of software threads currently active on this hardware thread
              (arg3>>SPRG_SPIinfo_Runnable)&0xFF,        // Number of runnable software threads
-             arg4,                                      // Dispatch ordering data
+             (arg4>>24),                                // Dispatch ordering data
+             arg4&0xFF,                                 // Pending condition (located in lower byte)
              (arg1>>32) & 0xFFFF                        // physical pid 
              );
 }   

@@ -1123,11 +1123,12 @@ int TLBMapper::addSegment(enum SegmentType type, unsigned vaddr, unsigned paddr_
 #define INRANGE(low,high) if(((vaddr >= low)&&(vaddr < high)) || ((vaddr+size > low)&&(vaddr+size <= high))) {         Kernel_WriteFlightLog(FLIGHTLOG_high, FL_TLBSEGOVL, x, vaddr, low, high);  return -1; }
 #if !STANDALONE
         INRANGE( ((uint64_t)&__KERNEL_TEXT_START)/CONFIG_CNK_PAGE_SIZE, (((uint64_t)&__KERNEL_END) + CONFIG_CNK_PAGE_SIZE - 1)/CONFIG_CNK_PAGE_SIZE);
-        INRANGE(VA_MINADDR_MMIO, VA_MAXADDR_MMIO);
+        INRANGE(VA_MINADDR_MMIO/CONFIG_CNK_PAGE_SIZE, VA_MAXADDR_MMIO/CONFIG_CNK_PAGE_SIZE);
 #endif
         for(x=0; x<numsegs; x++)
         {
-            if((segs[x].process == process) || (segs[x].process == -1) || (process == -1))
+            if(((segs[x].process == process) || (segs[x].process == -1) || (process == -1)) && 
+               ((segs[x].coremask & coremask) != 0))  // overlap possible only when coremask overlaps
             {
                 INRANGE(segs[x].vaddr, segs[x].vaddr+segs[x].size);
             }
@@ -2087,6 +2088,8 @@ int TLBMapper::mapPinnedSegments()
             if(proc[segs[x].process].paddr_cur % 16 != segs[x].vaddr % 16)
             {
                 skewup = (16 + (segs[x].vaddr % 16) - (proc[segs[x].process].paddr_cur % 16)) % 16;
+                if(proc[segs[x].process].paddr_cur + skewup >= proc[segs[x].process].paddr_max)
+                    skewup = 0;
             }
             
             skew = (proc[segs[x].process].paddr_cur + segs[x].size + skewup) % 16;
@@ -2671,7 +2674,7 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
         }
         
         mapfailure = false;
-        for(x=0; x<numproc; x++)
+        for(x=startProc; x<endProc; x++)
         {
             if(MapAtomics(x, IS_HEAP) == -1)
             {
@@ -2739,7 +2742,7 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
         }
     } while(madeprogress);
     
-    for(x=0; x<numproc; x++)
+    for(x=startProc; x<endProc; x++)
     {
         if(createSpeculativeAliases(x))
             return -1;
@@ -3492,7 +3495,7 @@ int TLBMapper::installStaticEntry(int pindex, unsigned x)
         case IS_MMIO:
             return 0;
         case IS_USERMMIO:
-            flags = APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_GUARDEDINHIBITED | APP_FLAGS_FLUSHSTORES;
+            flags = APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_INHIBITED | APP_FLAGS_GUARDED | APP_FLAGS_FLUSHSTORES;
             break;
         case IS_SPEC:
             flags = APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_X;
@@ -3501,10 +3504,10 @@ int TLBMapper::installStaticEntry(int pindex, unsigned x)
             flags = APP_FLAGS_R | APP_FLAGS_LISTENABLE;
             break;
         case IS_ATOMICRGN:
-            flags = APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_GUARDEDINHIBITED;
+            flags = APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_INHIBITED;
             break;
         case IS_SCRUBWINDOW:
-            flags = APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_GUARDEDINHIBITED;
+            flags = APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_INHIBITED | APP_FLAGS_GUARDED;
             break;
         case IS_RAMDISK:
             flags = APP_FLAGS_NONSPECULATIVE;
@@ -4291,6 +4294,7 @@ int main(int argc, char** argv)
     char genstring[256];
     bool sharedMBSet = false;
     bool loopForProfiler = false;
+    bool dynamicLib = false;
     
     char* str = getenv("BG_DDRINIT");
     if(str)
@@ -4338,7 +4342,9 @@ int main(int argc, char** argv)
         
         else if(KEYWORD("-memsize="))    sscanf(argv[x], "-memsize=%ld",  &STANDALONE_MEMSIZE);
         else if(KEYWORD("-poffset="))    sscanf(argv[x], "-poffset=%ld",  &STANDALONE_MAPOFFSET);
-
+        
+        else if(KEYWORD("-dyn"))        { dynamicLib = 1; }
+        
         else if(KEYWORD("-numprocesses="))
         {
             sscanf(argv[x], "-numprocesses=%ld", &numproc);
@@ -4438,6 +4444,10 @@ int main(int argc, char** argv)
                 for(i=0; i<numproc; i++)
                 {
                     vmm_addSegment(IS_DATA, kernelsize + textsize, kernelsize + textsize, datasize, i, VMM_SEGMENTCOREMASK_APP, CONTIGUOUS_DATA, true, true, true, false, true);
+                    if(dynamicLib)
+                    {
+                        vmm_addSegment(IS_DYNAM, 0, kernelsize+textsize+datasize, 2, i, VMM_SEGMENTCOREMASK_APP, CONTIGUOUS_DATA, true, false, true, false, false);
+                    }
                 }
             }
             

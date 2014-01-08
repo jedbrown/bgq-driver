@@ -30,6 +30,7 @@
 
 #include <utility/include/cxxsockets/Host.h>
 
+#include <boost/assign/list_of.hpp>
 #include <boost/date_time.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
@@ -41,25 +42,20 @@
 
 
 //! \brief Controls a managed executable, base class
-class BinaryController : private boost::noncopyable {
+class BinaryController : private boost::noncopyable
+{
 public:
-
     enum Status { UNINITIALIZED, RUNNING, COMPLETED };
 
     static std::string status_to_string(Status s) {
-        std::string retstr = "";
-        switch(s) {
-        case UNINITIALIZED:
-            retstr = "UNINITIALIZED";
-            break;
-        case RUNNING:
-            retstr = "RUNNING";
-            break;
-        case COMPLETED:
-            retstr = "COMPLETED";
-            break;
-        }
-        return retstr;
+        static std::map<Status,std::string> values = boost::assign::map_list_of
+            (UNINITIALIZED, "UNINITIALIZED")
+            (RUNNING, "RUNNING")
+            (COMPLETED, "COMPLETED")
+            ;
+        const std::map<Status,std::string>::const_iterator result = values.find( s );
+        if ( result == values.end() ) return std::string();
+        return result->second;
     }
 
     static Status string_to_status(const std::string& statstr) {
@@ -78,51 +74,45 @@ public:
     boost::mutex _status_lock;
 
     //! \brief Default constructor
-    BinaryController() : _status(UNINITIALIZED), _exit_status(0), _binary_bin_path(""),
-                             _alias_name(""), _stop_requested(false) {
-        _start_time = boost::posix_time::second_clock::local_time();
-        _user = "";
-    }
+    BinaryController();
 
-    //! \brief construct with a binary id and a status
-    BinaryController(const BinaryId& id, const std::string& bin_path, const std::string& alias,
-                     const std::string& user, int exit_status = 0, Status stat = UNINITIALIZED,
-                     const std::string& start_time = "") :
-        _status(stat), _exit_status(exit_status), _binary_bin_path(bin_path), _alias_name(alias), _host(), _binid(id), _user(user) {
-        _stop_requested = false;
-        if(start_time.length() == 0)
-            _start_time = boost::posix_time::second_clock::local_time();
-        else
-            _start_time = boost::posix_time::time_from_string(start_time);
-        _stop_requested = false;
-        if(_user == "UNINITIALIZED") abort();
-    }
+    /*!
+     * \brief construct with a binary id and a status
+     */
+    BinaryController(
+            const BinaryId& id, 
+            const std::string& bin_path, 
+            const std::string& alias,
+            const std::string& user, 
+            int exit_status = 0, 
+            Status stat = UNINITIALIZED,
+            const std::string& start_time = std::string()
+            );
 
-    BinaryController(const std::string& path, const std::string& arguments, const std::string& logfile,
-                     const std::string& alias, const CxxSockets::Host& host, const std::string& user) {
-        _binary_bin_path = path + " " + arguments;
-        _logfile = logfile;
-        _alias_name = alias;
-        _host = host;
-        _start_time = boost::posix_time::second_clock::local_time();
-        _stop_requested = false;
-        _user = user;
-        _exit_status = 0;
-        if(_user == "UNINITIALIZED") abort();
-    }
+    /*!
+     * \brief construct with a path and arguments
+     */
+    BinaryController(
+            const std::string& path, 
+            const std::string& arguments, 
+            const std::string& logfile,
+            const std::string& alias, 
+            const CxxSockets::Host& host, 
+            const std::string& user
+            );
 
-    //! \brief construct with an id, full 'bin_path', user, exit status and status
-    BinaryController(const std::string& id, const std::string& bin_path, const std::string& alias,
-                     const std::string& user, int exit_status, int stat, const std::string& start_time) :
-        _binary_bin_path(bin_path), _alias_name(alias), _user(user) {
-
-        _exit_status = exit_status;
-        _status = (Status)stat;
-        _binid = id;
-        _stop_requested = false;
-        _start_time = boost::posix_time::time_from_string(start_time);
-        if(_user == "UNINITIALIZED") abort();
-    }
+    /*!
+     * \brief construct with an id, full 'bin_path', user, exit status and status
+     */
+    BinaryController(
+            const std::string& id, 
+            const std::string& bin_path, 
+            const std::string& alias,
+            const std::string& user, 
+            int exit_status, 
+            int stat, 
+            const std::string& start_time
+            );
 
     //! \brief start this binary
     //! \returns ID for started binary
@@ -133,7 +123,7 @@ public:
 
     //! \brief stop this binary
     //! \returns true if successful, false if not
-    int stopBinary(int signal);
+    int stop(int signal);
 
     //! \brief utility functions
     const std::string& get_binary_bin_path() const { return _binary_bin_path; }
@@ -160,8 +150,8 @@ public:
     bool stopping(bool stop = false) {
         if(stop == true) _stop_requested = true; return _stop_requested;
     }
-protected:
 
+protected:
     //! \brief monitor tid
     pthread_t _monitor_tid;
 

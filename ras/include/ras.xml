@@ -70,6 +70,7 @@
     <component  name="MUDM"      start_id="000C0000" end_id="000CFFFF" />
     <component  name="SPI"       start_id="000D0000" end_id="000DFFFF" />
     <component  name="BGPM"      start_id="000E0000" end_id="000EFFFF" />
+    <component  name="LLNL"      start_id="A5C00000" end_id="A5C0FFFF" />
     <component  name="TEST"      start_id="FFFE0000" end_id="FFFEFFFF" />
     <component  name="RESERVED2" start_id="FFFF0000" end_id="FFFFFFFF" />
   </ras_components>

@@ -43,78 +43,114 @@
 #define KTEXT_ENTRY    __attribute__((__section__(".text.domain")))
 
 char                             _stack_domain[17][4][STACK_SIZE] ALIGN_L2_CACHE /* = { 0, } */ ;
-volatile Firmware_Interface_t*   _firmware_domain = 0;
-Firmware_DomainDescriptor_t      _descriptor_domain;
-unsigned                         _numberOfCores_domain = 0;
-volatile uint64_t                _auxEntryPointBarrier_domain = 0 ;
-volatile uint64_t                _traditionalEntryBarrier_domain = 0 ;
-volatile int64_t                 _leader_domain = -1;
+volatile Firmware_Interface_t*   _firmware_for_this_domain = 0;
+Firmware_DomainDescriptor_t      _domain_descriptor;
+unsigned                         _number_of_cores_in_this_domain = 0;
+volatile uint64_t                _barrier_for_auxiliary_entry_point = 0;
+volatile uint64_t                _barrier_for_traditional_entry_point = 0 ;
+volatile int64_t                 _domain_leader = -1;
 
 
 #define SET_STACKP() {							\
     size_t pStk = (size_t)((size_t)&(_stack_domain[ProcessorCoreID()][ProcessorThreadID()][STACK_SIZE-64])); \
     asm volatile ( "mr 1,%0;" : : "r" (pStk) : "r1", "memory" );	\
-  }
+}
 
-#define ABORT()     _firmware_domain->terminate(__LINE__)
-#define FIRMWARE()  _firmware_domain
-#define DD()        _descriptor_domain
+#define ABORT()     _firmware_for_this_domain->terminate(__LINE__)
+#define FIRMWARE()  _firmware_for_this_domain
+#define DD()        _domain_descriptor
 
 void KTEXT_ENTRY testInterDomainMessaging_domain( void ) {
 
-	int rc = 0;
-	InterDomainMessage_t message;
-        int timeout = 10;
+    int rc = 0;
+    InterDomainMessage_t message;
+    int timeout = 10;
 
-        printf("(>) %s\n", __func__);
+    TRACE(("(>) %s\n", __func__));
 
-        // Send a "hello" message to the other domain ... they will be doing the
-	// same.
+    // Send a "hello" message to the other domain ... they will be doing the
+    // same.
 
-	message.hello.timestamp = GetTimeBase();
-	do {
-          TRACE(( "Sending message (timeout=%d)\n", timeout));
-          rc = FIRMWARE()->sendMessageToDomain( (ProcessorID()==0) ? 1 : 0, (void*)&message, sizeof(InterDomainHello_t) );
-        } while ( ( rc == FW_EAGAIN ) && ( --timeout > 0 ) );
+    message.hello.timestamp = GetTimeBase();
+    do {
+	TRACE(( "Sending message (timeout=%d)\n", timeout));
+	rc = FIRMWARE()->sendMessageToDomain( (ProcessorID()==0) ? 1 : 0, (void*)&message, sizeof(InterDomainHello_t) );
+    } while ( ( rc == FW_EAGAIN ) && ( --timeout > 0 ) );
 
-        if ( rc != FW_OK ) {
-          printf( "(E) failure to deliver inter-domain message rc=%d timeout=%d\n", rc, timeout );
-          ABORT();
-        }
+    if ( rc != FW_OK ) {
+	ERROR(( "(E) failure to deliver inter-domain message rc=%d timeout=%d\n", rc, timeout ));
+	ABORT();
+    }
 
-        // Now retrieve the message sent from the other domain:
-        unsigned source = 0;
-	unsigned length = 0;
+    // Now retrieve the message sent from the other domain:
+    unsigned source = 0;
+    unsigned length = 0;
 
-        timeout = 1000;
+    timeout = 1000;
  
-        do {
-          TRACE(( "Retrieving message (timeout=%d)\n", timeout));
-          rc = FIRMWARE()->retrieveMessage( &source, &message, &length );
-        } while ( ( rc == FW_EAGAIN ) && ( --timeout > 0 ) );
+    do {
+	TRACE(( "Retrieving message (timeout=%d)\n", timeout));
+	rc = FIRMWARE()->retrieveMessage( &source, &message, &length );
+    } while ( ( rc == FW_EAGAIN ) && ( --timeout > 0 ) );
 
-        if ( rc != FW_OK ) {
-	    printf( "(E) failure to recieve inter-domain message rc=%d timeout=%d\n", rc, timeout );
-	    ABORT();
-        }
+    if ( rc != FW_OK ) {
+	ERROR(( "(E) failure to recieve inter-domain message rc=%d timeout=%d\n", rc, timeout ));
+	ABORT();
+    }
        
-        if ( source != ( (ProcessorID()==0) ? 1 : 0 ) ) {
-          printf( "(E) invalid source domain expected %d vs. %d actual\n", (0 ? 0 : 1), source );
-          ABORT();
-        }
+    if ( source != ( (ProcessorID()==0) ? 1 : 0 ) ) {
+	ERROR(( "(E) invalid source domain expected %d vs. %d actual\n", (0 ? 0 : 1), source ));
+	ABORT();
+    }
 
-        if ( length != sizeof(InterDomainHello_t) ) {
-          printf( "(E) invalid message length expected %ld vs. %d actual\n", sizeof(InterDomainHello_t), length );
-          ABORT();
-        }
+    if ( length != sizeof(InterDomainHello_t) ) {
+	ERROR(( "(E) invalid message length expected %ld vs. %d actual\n", sizeof(InterDomainHello_t), length ));
+	ABORT();
+    }
 	
-	// The timestamp of the message should be in the past:
-	if ( message.hello.timestamp > GetTimeBase() ) {
-  	  printf( "(E) invalid timestamp in message : %lX\n", message.hello.timestamp );
-          ABORT();
+    // The timestamp of the message should be in the past:
+    if ( message.hello.timestamp > GetTimeBase() ) {
+	ERROR(( "(E) invalid timestamp in message : %lX\n", message.hello.timestamp ));
+	ABORT();
+    }
+
+    TRACE(("(<) %s\n", __func__));
+}
+
+int pollForShutdown() {
+
+    char message_buffer[64];
+    fw_uint32_t message_type = 0;
+
+    if ( FIRMWARE()->pollInbox(message_buffer, &message_type, sizeof(message_buffer) ) == FW_EAGAIN ) {
+	return 0;
+    }
+
+    switch ( message_type ) {
+
+    case JMB_CMD2CORE_CONTROL_SYSTEM_REQUEST :
+    {
+	MailBoxPayload_ControlSystemRequest_t* msg = (MailBoxPayload_ControlSystemRequest_t*)message_buffer;
+	switch ( msg->sysreq_id ) {
+        case JMB_CTRLSYSREQ_SHUTDOWN_IO_LINK  :
+        {
+	    fw_uint64_t block_id = msg->details.shutdown_io_link.block_id;
+	    FIRMWARE()->sendBlockStatus( JMB_BLOCKSTATE_IO_LINK_CLOSED, 1, &block_id );
+	    break;
         }
 
-        printf("(<) %s\n", __func__);
+        case JMB_CTRLSYSREQ_SHUTDOWN :
+        {
+	    FIRMWARE()->sendBlockStatus( JMB_BLOCKSTATE_HALTED, 0, 0 );
+	    return 1;
+	    break;
+        }
+	}
+	break;
+    }
+    }
+
+    return 0;
 }
 
 void KTEXT_ENTRY auxiliaryEntryPoint_domain( void* arg ) {
@@ -130,39 +166,53 @@ void KTEXT_ENTRY auxiliaryEntryPoint_domain( void* arg ) {
   // @todo : move this into an aux functtion
 
   if ( ( FIRMWARE()->deprecated.personalityPtr->Kernel_Config.NodeConfig & PERS_ENABLE_TakeCPU ) != 0 ) { 
-    if ( _leader_domain != ProcessorID() ) {
+    if ( _domain_leader != ProcessorID() ) {
       SET_STACKP();
     }
   }
 
   //uint64_t domain = (uint64_t)arg;
-  TRACE(("(>) %s arg=%p : leader=%ld this=%d\n", __func__, arg, _leader_domain, ProcessorID() ));
+  DEBUG(("(>) %s arg=%p : leader=%ld this=%d\n", __func__, arg, _domain_leader, ProcessorID() ));
 
 
   // Thread 0 on every node installs the interrupt vector:
   extern uint64_t _vec_domain_MCHK;
   if ( ProcessorThreadID() == 0 ) {
-      TRACE(("(*) Installing IVEC @%p\n", &_vec_domain_MCHK));
+      DEBUG(("(*) Installing IVEC @%p\n", &_vec_domain_MCHK));
       if ( FIRMWARE()->installInterruptVector( &_vec_domain_MCHK, 0x400 ) != FW_OK ) {
-	  printf( "(E) bad rc from installInterruptVector\n" );
+	  ERROR(( "(E) bad rc from installInterruptVector\n" ));
 	  ABORT();
       }
   }
  
   // Wait for all threads in this domain to arrive at this point:
-  TRACE(("(*) Before barrier numcores=%d\n", _numberOfCores_domain));
-  barrierThreads( &_auxEntryPointBarrier_domain, _numberOfCores_domain * 4 );
-  TRACE(("(*) After barrier numcores=%d\n", _numberOfCores_domain));
+  DEBUG(("(*) Before barrier numcores=%d\n", _number_of_cores_in_this_domain));
+  barrierThreads( &_barrier_for_auxiliary_entry_point, _number_of_cores_in_this_domain * 4 );
+  DEBUG(("(*) After barrier numcores=%d\n", _number_of_cores_in_this_domain));
+
+  /*
+   * Issue a "block initialized" message to the control system so that the block leaves 'B' state
+   * and the boot does not time out.
+   */
+
+  if ( ProcessorID() == 0 ) {
+      FIRMWARE()->sendBlockStatus( JMB_BLOCKSTATE_INITIALIZED, 0, 0 );
+  }
 
 
   // The leaders test the message passing mechanism:
-  if ( _leader_domain == ProcessorID() ) {
+  if ( _domain_leader == ProcessorID() ) {
     testInterDomainMessaging_domain();
   }
 
+  // Signal that we are done.  Do this only from thread 0 of core 0:
+  if ( ProcessorID() == 0 ) {
+    while ( pollForShutdown() == 0 );
+  }
+
   // We are done:
-  if ( _leader_domain == ProcessorID() ) {
-      printf("(!) Domain leader shutting down.\n");
+  if ( _domain_leader == ProcessorID() ) {
+      TRACE(("(!) Domain leader shutting down.\n"));
   }
 
   FIRMWARE()->exit(0);
@@ -178,8 +228,8 @@ void KTEXT_ENTRY mainCommon_domain( void ) {
 
     // Fetch the domain descriptor from firmware:
 
-    if ( ( rc = FIRMWARE()->getDomainDescriptor( &_descriptor_domain ) ) != FW_OK ) {
-	printf("(E) bad return code (%d) from getDomainDescriptor()\n", rc );
+    if ( ( rc = FIRMWARE()->getDomainDescriptor( &_domain_descriptor ) ) != FW_OK ) {
+	ERROR(("(E) bad return code (%d) from getDomainDescriptor()\n", rc ));
 	ABORT();
     }
 
@@ -191,29 +241,29 @@ void KTEXT_ENTRY mainCommon_domain( void ) {
 
     while ( mask ) {
 	if ( DD().coreMask & mask ) {
-	    _numberOfCores_domain++;
+	    _number_of_cores_in_this_domain++;
 	}
 	mask <<= 1;
     }
 
-    printf( "(*) %s : domain-descriptor={cores=%05X (%d), ddr=%016llX-%016llX entry=%016llX}\n", __func__, DD().coreMask, _numberOfCores_domain, DD().ddrOrigin, DD().ddrEnd, DD().entryPoint );
+    TRACE(( "(*) %s : domain-descriptor={cores=%05X (%d), ddr=%016llX-%016llX entry=%016llX config=%016llX:%d}\n", __func__, DD().coreMask, _number_of_cores_in_this_domain, DD().ddrOrigin, DD().ddrEnd, DD().entryPoint, DD().configAddress, DD().configLength ));
  
-   TRACE(("(<) %s this=%d numberOfCores=%d\n", __func__, ProcessorID(), _numberOfCores_domain ));
+   TRACE(("(<) %s this=%d numberOfCores=%d\n", __func__, ProcessorID(), _number_of_cores_in_this_domain ));
 }
 
 int KTEXT_ENTRY traditionalMain_domain( uint64_t domain ) {
 
   //int rc = 0;
 
-  TRACE(( "(>) %s : domain:%ld fw:%p descriptor:%p\n", __func__, domain, FIRMWARE(), &_descriptor_domain ));
+  TRACE(( "(>) %s : domain:%ld fw:%p descriptor:%p\n", __func__, domain, FIRMWARE(), &_domain_descriptor ));
 
   // Execute common main code on the leader:
-  if ( _leader_domain == ProcessorID() ) {
+  if ( _domain_leader == ProcessorID() ) {
     mainCommon_domain();
   }
 
   // Wait for the domain to get here:
-  barrierThreads( &_traditionalEntryBarrier_domain, _numberOfCores_domain * 4 );
+  barrierThreads( &_barrier_for_traditional_entry_point, _number_of_cores_in_this_domain * 4 );
   
   // Finally, jump to the same place that all other threads are (rendesvous).
 
@@ -237,7 +287,7 @@ int KTEXT_ENTRY takeCpuMain_domain( void ) {
 
   int rc = 0;
 
-  printf( "(>) %s : fw:%p\n", __func__, FIRMWARE() );
+  TRACE(( "(>) %s : fw:%p\n", __func__, FIRMWARE() ));
 
   
   mainCommon_domain();
@@ -247,7 +297,7 @@ int KTEXT_ENTRY takeCpuMain_domain( void ) {
   rc =  FIRMWARE()->takeCPU( ProcessorCoreID(), 0xF ^ ( 1 << ProcessorThreadID() ),  auxiliaryEntryPoint_domain, (void*)0 );
 
   if ( rc != FW_OK ) {
-      printf( "(E) couldnt take auxiliary threads on domain leader (rc=%d)\n", rc );
+      ERROR(( "(E) couldnt take auxiliary threads on domain leader (rc=%d)\n", rc ));
       ABORT();
   }
 
@@ -287,11 +337,11 @@ int KTEXT_ENTRY takeCpuMain_domain( void ) {
 
 
 __C_LINKAGE void __NORETURN KTEXT_ENTRY crash_domain( int status ) {
-  printf("I am here unexpetedly -> %s:%s:%d\n", __func__, __FILE__, __LINE__);
-  ABORT();
-  while (1)
-    /* spin */
-    ;
+    ERROR(("I am here unexpetedly -> %s:%s:%d\n", __func__, __FILE__, __LINE__));
+    ABORT();
+    while (1)
+	/* spin */
+	;
 }
 
 
@@ -321,7 +371,7 @@ __C_LINKAGE void __NORETURN _enter_domain( Firmware_Interface_t *fw_interface ) 
     // no race here ... but in traditional (thundering herd) mode, all threads may arrive
     // here at around the same time.
 
-    testAndSet( &_leader_domain, (int64_t)-1, ProcessorID() );
+    testAndSet( &_domain_leader, (int64_t)-1, ProcessorID() );
 
      FIRMWARE() = fw_interface;
      setFirmware( fw_interface );

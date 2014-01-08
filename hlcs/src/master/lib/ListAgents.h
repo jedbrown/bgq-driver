@@ -26,11 +26,15 @@
 #define MASTER_LIST_AGENTS_H_
 
 
-#include "BGMasterClientApi.h"
-
+class BGMasterClient;
 
 namespace ListAgents {
-    void doListAgents(BGMasterClient& client, bool agents_only = false, bool fancy = false);
+
+void doListAgents(
+        const BGMasterClient& client, 
+        bool agents_only = false, 
+        bool fancy = false
+        );
 }
 
 

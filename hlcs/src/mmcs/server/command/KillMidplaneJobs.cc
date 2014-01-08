@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "KillMidplaneJobs.h"
 
 #include "../DBConsoleController.h"
@@ -29,14 +28,11 @@
 
 #include <db/include/api/BGQDBlib.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 KillMidplaneJobs*
 KillMidplaneJobs::build()
@@ -52,14 +48,13 @@ KillMidplaneJobs::build()
     return new KillMidplaneJobs("kill_midplane_jobs", "kill_midplane_jobs <location> [kill|list]", commandAttributes);
 }
 
-
 void
 KillMidplaneJobs::execute(
         deque<string> args,
         mmcs_client::CommandReply& reply,
         DBConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     BGQDB::STATUS result;
 
@@ -71,13 +66,11 @@ KillMidplaneJobs::execute(
         string subcmd( args[1] );
         if (subcmd == string("kill"))  {
             // Nothing to do.
-        }
-        else if (subcmd == string("list")) {
+        } else if (subcmd == string("list")) {
             listOnly = true;
-        }
-        else {
+        } else {
             // Invalid argument
-            reply << mmcs_client::FAIL << "use kill or list" << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Use kill or list" << mmcs_client::DONE;
             return;
         }
     }
@@ -87,39 +80,32 @@ KillMidplaneJobs::execute(
 
     // first call to get list (3rd argument is "listOnly")
     result = BGQDB::killMidplaneJobs(args[0].c_str(), &jobs, true);
-    if (result != BGQDB::OK)
-    {
-        reply << mmcs_client::FAIL << "error on BGQDB::KillMidplaneJobs" << mmcs_client::DONE;
+    if (result != BGQDB::OK) {
+        reply << mmcs_client::FAIL << "Error on BGQDB::KillMidplaneJobs" << mmcs_client::DONE;
         return;
     }
 
-
-    if (listOnly == true)
-    {
+    if (listOnly == true) {
         reply << mmcs_client::OK;
         // list was requested, not kill, so just return the list of job IDs to the caller
-        for (vector<BGQDB::job::Id>::const_iterator i(jobs.begin()) ; i != jobs.end() ; ++i )
-        {
-            if ( i != jobs.begin() )
-            {
+        for (vector<BGQDB::job::Id>::const_iterator i(jobs.begin()) ; i != jobs.end() ; ++i ) {
+            if ( i != jobs.begin() ) {
                 reply << ";";
             }
             reply << *i;
         }
     } else {
-        int signal = 9;
+        const int signal = 9;
 
         // kill the jobs
-        for (vector<BGQDB::job::Id>::const_iterator i(jobs.begin()) ; i != jobs.end() ; ++i )
-        {
-            RunJobConnection::instance().Kill(*i, signal);
+        for (vector<BGQDB::job::Id>::const_iterator i(jobs.begin()) ; i != jobs.end() ; ++i ) {
+            RunJobConnection::instance().kill(*i, signal, "Delivered due to kill_midplane_jobs " + args[0] );
         }
 
         // now call to free the blocks
         result = BGQDB::killMidplaneJobs(args[0].c_str(), &jobs, false);
-        if (result != BGQDB::OK)
-        {
-            reply << mmcs_client::FAIL << "error on BGQDB::KillMidplaneJobs trying to free blocks" << mmcs_client::DONE;
+        if (result != BGQDB::OK) {
+            reply << mmcs_client::FAIL << "Error on BGQDB::KillMidplaneJobs trying to free blocks" << mmcs_client::DONE;
             return;
         }
 
@@ -133,12 +119,11 @@ void
 KillMidplaneJobs::help(
         deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     reply << mmcs_client::OK << description()
-        << ";Internal command, not to be used from console, only to be used internally during service actions. "
-        << mmcs_client::DONE;
+          << ";Internal command, not to be used from console, only to be used internally during service actions. "
+          << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

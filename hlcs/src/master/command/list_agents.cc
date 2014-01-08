@@ -23,20 +23,15 @@
 
 #include "common/ArgParse.h"
 
-#include "lib/BGMasterClientApi.h"
+#include "lib/BGMasterClient.h"
 #include "lib/exceptions.h"
 #include "lib/ListAgents.h"
 
 #include <utility/include/Log.h>
 
-#include <boost/tokenizer.hpp>
-
-#include <csignal>
+#include <iostream>
 
 LOG_DECLARE_FILE( "master" );
-
-BGMasterClient client;
-Args* pargs;
 
 void
 help()
@@ -50,7 +45,8 @@ usage()
     std::cerr << "list_agents [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]" << std::endl;
 }
 
-int main(int argc, const char** argv)
+int
+main(int argc, const char** argv)
 {
     std::vector<std::string> validargs;
     std::vector<std::string> singles;
@@ -58,9 +54,8 @@ int main(int argc, const char** argv)
     std::string uglyarg = "--normal";
     singles.push_back(fancyarg);
     singles.push_back(uglyarg);
-    Args largs(argc, argv, &usage, &help, validargs, singles);
-    pargs = &largs;
-    client.initProperties(pargs->get_props());
+    const Args largs(argc, argv, &usage, &help, validargs, singles);
+    BGMasterClient client;
 
     // assume fancy by default
     bool fancy = true;
@@ -69,10 +64,10 @@ int main(int argc, const char** argv)
     }
 
     try {
-        client.connectMaster(pargs->get_portpairs());
+        client.connectMaster(largs.get_props(), largs.get_portpairs());
     }
-    catch(exceptions::BGMasterError& e) {
-        std::cerr << "Unable to contact bgmaster_server, server may be down." << std::endl;
+    catch ( const exceptions::BGMasterError& e ) {
+        std::cerr << "Unable to contact bgmaster_server: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
 

@@ -26,6 +26,7 @@
 #include "fs/shmFS.h"
 #include <ramdisk/include/services/JobctlMessages.h>
 #include "flih.h"
+#include "NodeController.h"
 
 #define SIG_MASK(sig) (1ul << ((sig) - 1))
 
@@ -1731,14 +1732,11 @@ int ToolControl::init(cnv_pd *protectionDomain, cnv_cq *completionQ)
     destAddress.sin_port = NodeState.toolctldPortAddressDestination;
     destAddress.sin_addr.s_addr = NodeState.ServiceDeviceAddr;
     int err = cnv_connect(&_queuePair, (struct sockaddr *)&destAddress);
+    Node_ReportConnect(err, destAddress.sin_addr.s_addr, destAddress.sin_port);
     if (err != 0)
     {
-        RASBEGIN(3);
-        RASPUSH(NodeState.ServiceDeviceAddr);
-        RASPUSH(destAddress.sin_port);
-        RASPUSH(err);
-        RASFINAL(RAS_KERNELCNVCONNECTFAIL);
-        return err;
+        TRACE( TRACE_Toolctl, ("(E) ToolControl::init%s: cnv_connect() failed, error %d\n", whoami(), err) );
+        Kernel_Crash(RAS_KERNELCNVCONNECTFAIL);
     }
     
     TRACE( TRACE_Toolctl, ("(I) ToolControl::init%s: connected to tools daemon\n", whoami()) );
@@ -2780,8 +2778,12 @@ int ToolControl::findToolToNotify(KThread_t *kthread, int signal)
 void ToolControl::notifyControl(uint32_t target_toolid, NotifyControlReason reason, uint32_t toolid, char* toolTag, uint8_t priority, uint64_t jobid, uint32_t rank )
 {
     // Obtain lock to serialize Notify messages (lock is released when NotifyAck message is received).
-    Kernel_Lock(&_notifyLock);
-
+    while(Kernel_Lock_WithTimeout(&_notifyLock, 10000) != 0) // attempt to lock. Timeout after 10ms
+    {
+        // The attempt to grab the kernel lock timed out. The Tool controller thread may be hung, preventing another notify to complete. 
+        // Execute any tool IPI commands that the tool controller thread may have pending against us.
+        IntHandler_IPI_FlushToolCommands();
+    }
     // Build and send the Notify message
     NotifyMessage *msg = (NotifyMessage *)_outNotifyMessageRegion.addr;
     memset(msg, 0, sizeof (NotifyMessage));
@@ -2951,8 +2953,12 @@ void ToolControl::exitProcess(AppProcess_t *proc)
         if (toolid != 0)
         {
             // Obtain lock to serialize Notify messages (lock is released when NotifyAck message is received).
-            Kernel_Lock(&_notifyLock);
-
+            while(Kernel_Lock_WithTimeout(&_notifyLock, 10000) != 0) // attempt to lock. Timeout after 10ms
+            {
+                // The attempt to grab the kernel lock timed out. The Tool controller thread may be hung, preventing another notify to complete. 
+                // Execute any tool IPI commands that the tool controller thread may have pending against us.
+                IntHandler_IPI_FlushToolCommands();
+            }
             // Build and send the Notify message
             NotifyMessage *msg = (NotifyMessage *)_outNotifyMessageRegion.addr;
             memset(msg, 0, sizeof (NotifyMessage));
@@ -5906,7 +5912,7 @@ int Tool_AppStart(KThread_t* kthread)
                     // to the tool.
                     hwt->launchContextFlags.flag.DebugControlRegs = 1; // Enable debug control regs
                     kthread->Reg_State.iac1 = proc->Text_VStart;
-                    kthread->Reg_State.iac2 = ~((uint64_t)0xFFF); // Match any instruction in the 4K block of storage at the text start
+                    kthread->Reg_State.iac2 = ~((uint64_t)0xFFFFF); // Match any instruction in the 1M block of storage at the text start
                     mtspr(SPRN_IAC1, kthread->Reg_State.iac1);
                     mtspr(SPRN_IAC2, kthread->Reg_State.iac2);
                     kthread->Reg_State.dbcr0 |= DBCR0_IAC1 | DBCR0_IAC2 | DBCR0_IDM;

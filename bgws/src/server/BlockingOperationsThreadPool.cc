@@ -26,7 +26,7 @@
 
 #include <utility/include/Log.h>
 
-#include <boost/exception.hpp>
+#include <boost/exception/all.hpp>
 #include <boost/bind.hpp>
 
 #include <unistd.h>

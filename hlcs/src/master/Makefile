@@ -25,13 +25,7 @@ include ../../Make.hlcs.rules
 include ../../../Make.rules
 
 
-DIRS += protocol
-DIRS += common
-DIRS += agent
-DIRS += server
-DIRS += lib
-DIRS += command
-DIRS += docs
+DIRS = $(subst /Makefile,,$(wildcard */Makefile))
 
 
 
@@ -47,8 +41,6 @@ DIR_TARGS += $(DIR_TARGS_INSTALL)
 
 PROTOCOL_OBJS  = protocol/BGMasterAgentProtocolSpec.o
 PROTOCOL_OBJS += protocol/BGMasterClientProtocolSpec.o
-
-INSTALL_LIST += $(call INSTALL_SBIN_TARGET, startagents.py)
 
 
 bg_sbin_links := \
@@ -71,35 +63,35 @@ bg_bin_links := \
  get_errors \
  get_history
 
-.PHONY: $(DIR_TARGS) clean docs install distclean all build
+.PHONY: $(DIR_TARGS) clean docs install distclean all 
 
 all: $(DIR_TARGS_ALL)
 
-install: build ras_scan $(call INSTALL_SBIN_TARGET, startagents.py)
+install: $(DIR_TARGS_INSTALL)
 
-clean:			$(DIR_TARGS_CLEAN)
-	$(RM) ras_scan
+clean: $(DIR_TARGS_CLEAN)
 
-distclean:	clean
-
-build: $(DIR_TARGS_ALL)
-
+distclean: clean
 
 $(DIR_TARGS):
 	$(MAKE) --directory $(basename $@) $(subst .,,$(suffix $@))
 
 
-common.all: protocol.all ras_scan
+common.all: protocol.all 
+common.install: protocol.install 
 agent.all: common.all
+agent.install: common.install
 server.all: common.all
+server.install: common.install
 lib.all: common.all
+lib.install: common.install
 command.all: lib.all
-docs.all: protocol.all ras_scan
-
+command.install: lib.install
+docs.all: protocol.all 
+docs.install: protocol.install
+test.all: common.all
+test.install: common.install
 
 vars:
 	echo $(DIR_TARGS_ALL) $(DIR_TARGS_CLEAN) dt $(DIR_TARGS)
 
-ras_scan: server/ras.h
-	$(BGQ_BUILD_DIR)/scripts/rasScan.py '$(BGQ_BUILD_DIR)/hlcs/src/master' '$(BGQ_INSTALL_DIR)/hlcs/ras/metadata' 'bgmaster_ras.xml' '$(BGQ_INSTALL_DIR)/ras/include/ras.xml'
-	@touch $@

@@ -112,7 +112,10 @@ Iosd::fork()
         (void)close(STDIN_FILENO);
   
         // ask kernel to kill child if parent dies
-        prctl( PR_SET_PDEATHSIG, SIGKILL );
+        if ( prctl(PR_SET_PDEATHSIG, SIGKILL) ) {
+            perror( "prctl( PR_SET_PDEATHSIG, SIGKILL )" );
+            _exit( EXIT_FAILURE );
+        }
 
         // open stdout file
         (void)umask( S_IWGRP | S_IWOTH );
@@ -144,6 +147,13 @@ Iosd::fork()
         if ( setpgrp() < 0 ) {
             perror( "setpgrp" );
             _exit(EXIT_FAILURE);
+        }
+
+        // zero signal mask inherited from parent
+        sigset_t mask;
+        sigemptyset( &mask );
+        if ( pthread_sigmask( SIG_SETMASK, &mask, NULL ) == -1 ) {
+            _exit( EXIT_FAILURE );
         }
 
         // exec
@@ -178,17 +188,15 @@ Iosd::start(
     LOG_TRACE_MSG( "starting" );
 
     // create directory
-    boost::filesystem::path path(
+    const boost::filesystem::path path(
             "/tmp/cios" +
             boost::lexical_cast<std::string>(_id)
             );
     try {
         if ( !boost::filesystem::create_directory(path) ) {
-            LOG_WARN_MSG( "could not create directory: " << path );
-            LOG_RUNJOB_EXCEPTION( error_code::block_invalid, e.what() );
+            LOG_RUNJOB_EXCEPTION( error_code::block_invalid, "Could not create directory: " << path );
         }
-    } catch ( const boost::filesystem::basic_filesystem_error<boost::filesystem::path>& e ) {
-        LOG_ERROR_MSG( "could not create directory: " << path );
+    } catch ( const boost::filesystem::filesystem_error& e ) {
         LOG_RUNJOB_EXCEPTION( error_code::block_invalid, e.what() );
     }
 

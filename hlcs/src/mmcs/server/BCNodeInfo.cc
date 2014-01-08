@@ -23,7 +23,6 @@
 
 #include "BCNodeInfo.h"
 
-
 namespace mmcs {
 namespace server {
 

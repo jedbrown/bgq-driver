@@ -23,19 +23,16 @@
 
 #include "common/ArgParse.h"
 
-#include "lib/BGMasterClientApi.h"
+#include "lib/BGMasterClient.h"
 #include "lib/exceptions.h"
 
 #include <utility/include/Log.h>
 
-#include <boost/tokenizer.hpp>
 
 #include <csignal>
 
 LOG_DECLARE_FILE( "master" );
 
-BGMasterClient client;
-Args* pargs;
 static bool monitor_ending = false;
 static int signals[] = { SIGHUP, SIGINT, SIGQUIT, SIGUSR1, SIGTERM, SIGPIPE, SIGXFSZ, SIGABRT,
                          SIGSEGV, SIGILL, SIGFPE, SIGTERM, SIGBUS };
@@ -50,11 +47,8 @@ sig_handler(
     if (signum != SIGPIPE && sig_caught == false) {
         sig_caught = true; // Don't keep trying to do stuff if we fail.
         monitor_ending = true;
-        std::cout << "Signal " << signum << " caught. Ending bgmaster monitor." << std::endl;
-        client.set_ending(true);
     } else {
         // Don't end on a SIGPIPE.  It means master ended, but we want to retry.
-        std::cout << "SIGPIPE caught, bgmaster_server disconnected." << std::endl;
     }
 }
 
@@ -71,22 +65,24 @@ usage()
 }
 
 void
-doMonitor()
+doMonitor(
+        BGMasterClient& client
+        )
 {
     try {
         client.event_monitor();
-    } catch(exceptions::BGMasterError& e) {
+    } catch (const exceptions::BGMasterError& e) {
         std::cerr << e.what() << std::endl;
     }
 }
 
-int main(int argc, const char** argv)
+int
+main(int argc, const char** argv)
 {
     std::vector<std::string> validargs;
     std::vector<std::string> singles;
-    Args largs(argc, argv, &usage, &help, validargs, singles);
-    pargs = &largs;
-    client.initProperties(pargs->get_props());
+    const Args largs(argc, argv, &usage, &help, validargs, singles);
+    BGMasterClient client;
 
     // Signal handlers
     for (int i = 0; i < num_signals; i++) {
@@ -104,10 +100,10 @@ int main(int argc, const char** argv)
     while (!monitor_ending) {
         // We retry every second, but only update the user every minute.
         try {
-            client.connectMaster(pargs->get_portpairs());
-        } catch (exceptions::CommunicationError& e) {
+            client.connectMaster(largs.get_props(), largs.get_portpairs());
+        } catch (const exceptions::CommunicationError& e) {
             if (count % 60 == 0 || count == 1) {
-                std::cerr << "Unable to contact bgmaster_server, server may be down." << std::endl;
+                std::cerr << "Unable to contact bgmaster_server: " << e.what() << std::endl;
                 std::cerr << "Retrying..." << std::endl;
             }
             ++count;
@@ -115,7 +111,7 @@ int main(int argc, const char** argv)
             continue;
         }
         count = 1;
-        doMonitor();
-        client.set_ending(false);
+        doMonitor( client );
     }
+    std::cout << "Ending bgmaster monitor." << std::endl;
 }

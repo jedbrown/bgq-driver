@@ -21,42 +21,41 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_CONSOLE_COMMAND_PROCESSOR_H_
 #define MMCS_CONSOLE_COMMAND_PROCESSOR_H_
 
-
 #include "../MMCSCommandProcessor.h"
-
 
 namespace mmcs {
 namespace console {
 
-
 /*!
- * \brief Executes MMCS commands from mmcs_console.
+ * \brief Executes MMCS commands from bg_console.
  */
 class CommandProcessor : public MMCSCommandProcessor
 {
 public:
-    CommandProcessor(MMCSCommandMap* mmcsCommands)
-    : MMCSCommandProcessor(mmcsCommands) { logFailures(false); _bg_console = true; }
+    CommandProcessor(MMCSCommandMap* mmcsCommands);
 
 protected:
-    procstat invokeCommand(std::deque<std::string> cmdStr,
-                         mmcs_client::CommandReply& reply,
-                         common::ConsoleController* pController,
-                         server::BlockControllerTarget* pTarget,
-                         common::AbstractCommand* pCmd,
-                         procstat status,
-                                             std::vector<std::string>& validnames);
-    //! \brief Execute an external command
-    void executeExternal(std::deque<std::string>& cmdStr,
-                         mmcs_client::CommandReply& reply,
-                         common::ConsoleController* pController,
-                         server::BlockControllerTarget* pTarget);
-};
+    procstat invokeCommand(
+            std::deque<std::string> cmdStr,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            server::BlockControllerTarget* pTarget,
+            common::AbstractCommand* pCmd,
+            procstat status,
+            std::vector<std::string>& validnames
+            );
 
+    //! \brief Execute an external command
+    void executeExternal(
+            std::deque<std::string>& cmdStr,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            server::BlockControllerTarget* pTarget
+            );
+};
 
 } } // namespace mmcs::console
 

@@ -36,8 +36,8 @@
 #include <boost/foreach.hpp>
 #include <boost/function.hpp>
 
+#include <sys/signalfd.h>
 #include <csignal>
-#include <iostream>
 
 namespace bgq {
 namespace utility {
@@ -45,7 +45,10 @@ namespace utility {
 /*!
  * \brief Signal handler using Boost.Asio patterns.
  *
- * This library is header only. Support for handling up to 10 different signals is provided.
+ * This library is header only. Support for handling up to 10 different signals is provided. It
+ * is a small wrapper around the signalfd(2) API using Boost Asio. It uses the sigprocmask(2)
+ * API so you should instantiate this class before creating any threads in your application. Use
+ * of sigprocmask(2) in multi-threaded applications is undefined.
  *
  * Sample usage:
  *
@@ -82,65 +85,31 @@ public:
             boost::asio::io_service& io_service //!< [in]
             ) :
         _stream( io_service ),
-        _siginfo(),
-        _oldAction()
+        _siginfo()
     {
-        memset( &_oldAction, 0, sizeof(_oldAction) );
         log4cxx::LoggerPtr log_logger_ = log4cxx::Logger::getLogger( "ibm.utility.SignalHandler" );
 
-        // create pipe for handler to write into
-        int descriptors[2];
-        if ( pipe(descriptors) != 0 ) {
-            UTILITY_THROW_EXCEPTION( std::runtime_error, "could not create pipe: " << strerror(errno) );
-        }
-        LOG_TRACE_MSG( "created pipe on fds " << descriptors[0] << " and " << descriptors[1] );
-
-        // enable close on exec
-        BOOST_FOREACH( int descriptor, descriptors ) {
-            int flags = fcntl( descriptor, F_GETFL, 0 );
-            if ( flags < 0 ) {
-                UTILITY_THROW_EXCEPTION( std::runtime_error, "fcntl F_GETFL: " << strerror(errno) );
-            }
-            if ( fcntl( descriptor, F_SETFL, FD_CLOEXEC | flags ) < 0 ) {
-                UTILITY_THROW_EXCEPTION( std::runtime_error, "fcntl F_SETFL: " << strerror(errno) );
-            }
-        }
-
-        // assign read fd to stream descriptor
-        _stream.assign( descriptors[0] );
-
-        // assign write fd to static fd for handler
-        _signal_fd = descriptors[1];
-
-        // create sigaction
-        struct sigaction sa;
-        memset( &sa, 0, sizeof(sa) );
-        sa.sa_sigaction = &Type::handler;
-        sa.sa_flags = SA_SIGINFO;
+        sigset_t mask;
+        sigemptyset( &mask );
 
         // create array for all signals we want to watch
         const int signals[] = {S1,S2,S3,S4,S5,S6,S7,S8,S9,S10};
-
-        // iterate over all signals and add them to the sigaction mask
-        sigemptyset( &sa.sa_mask );
-        BOOST_FOREACH( int signal, signals ) {
-            if ( signal != 0 ) {
-                sigaddset( &sa.sa_mask, signal );
-            }
+        BOOST_FOREACH( const int signal, signals ) {
+            if ( !signal ) continue;
+            sigaddset( &mask, signal );
         }
 
-        // iterate over all signals and install handler
-        BOOST_FOREACH( int signal, signals ) {
-            // ignore signals that used default template argument
-            if ( signal != 0 ) {
-                LOG_DEBUG_MSG( "watching for signal " << signal );
-                int rc = sigaction( signal, &sa, &_oldAction );
-                if ( rc != 0 ) {
-                    LOG_ERROR_MSG( "could not register sigaction for signal " << signal );
-                    LOG_ERROR_MSG( strerror(errno) );
-                }
-            }
+        if ( sigprocmask(SIG_BLOCK, &mask, NULL) == -1 ) {
+            UTILITY_THROW_EXCEPTION( std::runtime_error, "sigprocmask(SIG_BLOCK): " << strerror(errno) );
         }
+
+        const int signal_fd = signalfd( -1, &mask, SFD_NONBLOCK | SFD_CLOEXEC );
+        if ( signal_fd == -1 ) {
+            UTILITY_THROW_EXCEPTION( std::runtime_error, "signalfd: " << strerror(errno) );
+        }
+       
+        LOG_TRACE_MSG( "assigned descriptor " << signal_fd );
+        _stream.assign( signal_fd );
     }
 
     /*!
@@ -150,22 +119,20 @@ public:
     {
         log4cxx::LoggerPtr log_logger_ = log4cxx::Logger::getLogger( "ibm.utility.SignalHandler" );
 
-        // close signal descriptor
-        if ( _signal_fd ) {
-            LOG_DEBUG_MSG( "closing signal descriptor " << _signal_fd );
-            ::close(_signal_fd);
-        }
-
         // create array for all signals we were watching
         const int signals[] = {S1,S2,S3,S4,S5,S6,S7,S8,S9,S10};
 
+        struct sigaction action;
+        memset( &action, 0, sizeof(action) );
+        action.sa_handler = SIG_DFL;
+
         // install old action
-        BOOST_FOREACH( int signal, signals ) {
+        BOOST_FOREACH( const int signal, signals ) {
             // ignore signals that used default template argument
-            if ( signal != 0 ) {
-                LOG_DEBUG_MSG( "installing old signal handler for signal " << signal );
-                (void)sigaction( signal, &_oldAction, NULL );
-            }
+            if ( !signal ) continue;
+
+            LOG_DEBUG_MSG( "installing default handler for signal " << signal );
+            (void)sigaction( signal, &action, NULL );
         }
     }
 
@@ -184,7 +151,7 @@ public:
                 _stream,
                 boost::asio::buffer(
                     &_siginfo,
-                    sizeof(siginfo_t)
+                    sizeof(signalfd_siginfo)
                     ),
                 boost::bind(
                     &Type::readHandler,
@@ -213,22 +180,6 @@ public:
 
 
 private:
-    static int _signal_fd;
-
-    /*!
-     * \brief Signal handler method given to sigaction.
-     */
-    static void handler(
-            int /* signal */,       //!< [in]
-            siginfo_t* siginfo,     //!< [in]
-            void*                   //!< [in]
-            )
-    {
-        // ignore return value here, there's nothing else that can be done if write fails
-        (void)write( _signal_fd, siginfo, sizeof(siginfo_t) );
-    }
-
-private:
     /*!
      * \brief handle a read.
      */
@@ -247,26 +198,37 @@ private:
 
         if ( error ) {
             LOG_ERROR_MSG( "could not read: " << boost::system::system_error(error).what() );
-        } else {
-            LOG_TRACE_MSG( "read handler " << length << " bytes" );
+            return;
         }
+        LOG_TRACE_MSG( "read handler " << length << " bytes" );
+
+        // need to translate into a siginfo_t structure
+        siginfo_t result;
+        memset( &result, 0, sizeof(result) );
+        result.si_signo = _siginfo.ssi_signo;
+        result.si_errno = _siginfo.ssi_errno;
+        result.si_code = _siginfo.ssi_code;
+        result.si_pid = _siginfo.ssi_pid;
+        result.si_uid = _siginfo.ssi_uid;
+        result.si_status = _siginfo.ssi_status;
+        result.si_utime = _siginfo.ssi_utime;
+        result.si_stime = _siginfo.ssi_stime;
+        result.si_int = _siginfo.ssi_int;
+        result.si_ptr = reinterpret_cast<void*>(_siginfo.ssi_ptr);
+        result.si_overrun = _siginfo.ssi_overrun;
+        result.si_timerid = _siginfo.ssi_tid;
+        result.si_addr = reinterpret_cast<void*>(_siginfo.ssi_addr);
+        result.si_band = _siginfo.ssi_band;
+        result.si_fd = _siginfo.ssi_fd;
 
         // invoke callback
-        callback( error, _siginfo );
+        callback( error, result );
     }
 
 private:
     boost::asio::posix::stream_descriptor _stream;
-    siginfo_t _siginfo;
-    struct sigaction _oldAction;
+    signalfd_siginfo _siginfo;
 };
-
-// static storage
-template <
-    int S1, int S2, int S3, int S4, int S5,
-    int S6, int S7, int S8, int S9, int S10
-    >
-int SignalHandler<S1,S2,S3,S4,S5,S6,S7,S8,S9,S10>::_signal_fd;
 
 } // utility
 } // bgq

@@ -31,9 +31,6 @@
 
 #include <spi/include/kernel/location.h>
 
-#include <iosfwd>
-#include <vector>
-
 namespace runjob {
 namespace server {
 namespace job {
@@ -60,10 +57,6 @@ private:
             );
 
 private:
-    typedef std::vector<uint32_t> Rank;
-
-private:
-    const JobInfo& _info;
     const BG_JobCoords_t _size;
 };
 

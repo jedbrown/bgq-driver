@@ -564,6 +564,7 @@ int  mudm_init(struct mudm_init_info* init_info,
        goto ALLOC_ERROR;  
     }
     mcontext -> packetcontrols[i] = (struct pkt_controls *)mcontext ->packet_controls_region[i].base_vaddr;
+    
   }
   
   for (i=0;i<NUM_IO_LINKS;i++){/*BEAM*//*loop doesn't iterate*/
@@ -574,6 +575,7 @@ int  mudm_init(struct mudm_init_info* init_info,
        goto ALLOC_ERROR;  
     }
     mcontext-> smallpa_obj_ctls[i] = mcontext->smallpa_obj_ctls_mregion[i].base_vaddr;
+    
   }
  
   #define MUDM_MIN_INJ_REGION 512*64
@@ -624,6 +626,7 @@ int  mudm_init(struct mudm_init_info* init_info,
     update_IdToInjFifo(mcontext->packetcontrols[i],  mcontext->injfifo_ctls[i].injfifo);
     update_IdToInjFifo(mcontext->smallpa_obj_ctls[i], mcontext->injfifo_ctls[i].injfifo);
    }
+
 
   //activate bcast info 
   bcast_init( mcontext,0);
@@ -681,13 +684,17 @@ uint32_t init_sys_rec_fifo_id[2] = {
   264,     /* 4 * 66 + 0  first in subgroup id 66*/
   268      /* 4 * 67 + 0  first in subgroup id 67*/
 };      
-    #if 1
+
+#if 1
     MUDM_DB_RECF_INFO(&mcontext->mudm_no_wrap_flight_recorder,hwfifo, start_va, init_subgroup_id[i],init_sys_rec_fifo_id[i]);                      
     logentry++;
     //logentry->timestamp |= 0x8000000000000000;    
 #endif 
   }
-
+  for (i=0;i<NUM_IO_LINKS;i++){  /*BEAM*//*loop doesn't iterate*/
+    check4notRight( mcontext -> packetcontrols[i],&mcontext->mudm_no_wrap_flight_recorder);
+    check4notRight( mcontext-> smallpa_obj_ctls[i],&mcontext->mudm_no_wrap_flight_recorder);
+  }
   //MUDM_DM_PERS_INFO(&mcontext->mudm_no_wrap_flight_recorder,mcontext->personality,NUM_IO_LINKS,mcontext->max_connections,mcontext->myTorusAddress);
   
   }

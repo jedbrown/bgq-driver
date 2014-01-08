@@ -50,6 +50,7 @@ SERVER = runjob_server
 bg_sbin_links := $(SERVER)
 
 CXXFLAGS += -iquote $(BGQ_INSTALL_DIR)/spi/include/kernel/cnk -iquote $(BGQ_INSTALL_DIR)/spi/include/mu/default
+CXXFLAGS += -D BGQ_INSTALL_DIR=\"$(BGQ_INSTALL_DIR)\"
 
 LDFLAGS  += -L ../common -lrunjob_common
 LDFLAGS  += -L ../../security -lsecurity
@@ -68,7 +69,9 @@ LDFLAGS  += -lboost_program_options-mt
 LDFLAGS  += -lboost_serialization-mt
 LDFLAGS  += -lboost_system-mt
 LDFLAGS  += -lboost_thread-mt
+LDFLAGS  += -lboost_date_time-mt
 LDFLAGS  += -rdynamic
+LDFLAGS  += -llog4cxx 
 
 
 INSTALL_LIST          += $(call INSTALL_SBIN_TARGET, $(SERVER))

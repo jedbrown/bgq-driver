@@ -27,6 +27,7 @@
 
 #include "mux/Options.h"
 
+#include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 
 LOG_DECLARE_FILE( runjob::mux::log );
@@ -42,9 +43,9 @@ Timer::Timer(
         boost::asio::strand& strand
         ) :
     _strand( strand ),
-    _timer( strand.io_service() ),
+    _timer( strand.get_io_service() ),
     _options( options ),
-    _connector( strand.io_service(), options.getClientPort() )
+    _connector( strand.get_io_service(), options.getClientPort() )
 {
 
 }

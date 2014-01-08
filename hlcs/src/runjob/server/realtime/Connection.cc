@@ -52,6 +52,13 @@ Connection::create(
             new Connection( server )
             );
 
+    result->_handler.start(
+            boost::bind(
+                &Connection::connect,
+                result
+                )
+            );
+
     return result;
 }
 
@@ -63,10 +70,11 @@ Connection::Connection(
     _connectTimeout( InitialConnectTimeout ), // seconds
     _timer( server->getIoService() ),
     _descriptor( ),
-    _handler( ),
+    _handler( server ),
     _connected( false )
 {
     _client.setBlocking( false );
+    _client.addListener( _handler );
 }
 
 void
@@ -95,26 +103,6 @@ Connection::~Connection()
     LOG_TRACE_MSG( __FUNCTION__ );
 }
 
-void
-Connection::start(
-        const bgsched::SequenceId sequence
-        )
-{
-    LOG_INFO_MSG( "starting with sequence " << sequence );
-
-    const Server::Ptr server( _server.lock() );
-    if ( !server ) return;
-
-    _handler.reset( 
-            new EventHandler( server, sequence )
-            );
-    _client.addListener( *_handler );
-
-    LOG_TRACE_MSG( __FUNCTION__ );
-
-    this->connect();
-}
-
 bool
 Connection::status()
 {
@@ -124,7 +112,7 @@ Connection::status()
 void
 Connection::connect()
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
+    LOG_INFO_MSG( "connecting to real-time server" );
 
     const Server::Ptr server( _server.lock() );
     if ( !server ) return;
@@ -246,7 +234,7 @@ Connection::handleRead(
         }
 
         if ( end ) {
-            _handler->poll();
+            _handler.poll();
             this->connect();
             return;
         }

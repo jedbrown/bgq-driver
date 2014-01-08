@@ -22,39 +22,19 @@
 /* end_generated_IBM_copyright_prolog                               */
 
 #include "Agent.h"
+#include "MasterConnection.h"
 #include "SignalHandler.h"
 
 #include "common/BinaryController.h"
-#include "common/Ids.h"
 
 #include "lib/exceptions.h"
 
 #include <utility/include/ExitStatus.h>
-#include <utility/include/Log.h>
-#include <utility/include/UserId.h>
 
-#include <utility/include/cxxsockets/Host.h>
+#include <boost/asio/io_service.hpp>
 
-#include <utility/include/portConfiguration/ServerPortConfiguration.h>
-
-#include <boost/asio/ip/host_name.hpp>
-#include <boost/foreach.hpp>
-#include <boost/thread.hpp>
-
-#include <algorithm>
-#include <stdexcept>
-#include <sstream>
-#include <string>
-#include <vector>
-
-#include <errno.h>
 #include <grp.h>
-#include <pthread.h>
-#include <pwd.h>
-#include <signal.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -62,32 +42,28 @@
 
 LOG_DECLARE_FILE( "master" );
 
-// Flag so we know when we have been told to shutdown.
-bool cleaningup = false;
-
-Agent::Agent() :
+Agent::Agent(
+        const bgq::utility::Properties::ConstPtr& props
+        ) :
     _uid_mutex(),
     _user_list(),
-    _portpairs(),
     _hostname( boost::asio::ip::host_name() ),
-    _properties()
+    _properties( props ),
+    _buffered_messages_mutex(),
+    _buffered_messages()
 {
     // Nothing to do
 }
 
 void
-Agent::startup(
-       const bgq::utility::Properties::ConstPtr& props
-       )
+Agent::start(
+        const bgq::utility::PortConfiguration::Pairs& ports
+        )
 {
-    LOG_TRACE_MSG(__FUNCTION__);
-    bool firstPass = true;
     _host = _hostname;
     LOG_INFO_MSG("Agent starting on " << _hostname.uhn() << ".");
-    BGAgentId id(0, _host.ip());
+    const BGAgentId id(0, _host.ip());
     _agent_id = id;
-
-    _properties = props;
 
     // Be who I should be!
     if (getuid() != 0) {
@@ -97,7 +73,7 @@ Agent::startup(
         std::string my_name = "root";
         try {
             my_name = _properties->getValue("master.agent", "agentuid");
-        } catch(const std::invalid_argument& e) {
+        } catch (const std::invalid_argument& e) {
             LOG_WARN_MSG("No agent userid " << e.what());
         }
 
@@ -143,46 +119,28 @@ Agent::startup(
          }
     }
 
-    // Create an io_service for the signal handler.  Before this, and until we set up the handler, 
-    // the default signal handler will take care of it.
     boost::asio::io_service io_service;
+    const SignalHandler::Ptr signalHandler(
+            SignalHandler::create( io_service )
+            );
+    MasterConnection::create( io_service, ports, this );
 
+    while ( 1 ) {
+        try {
+            io_service.run();
 
-    // If WaitMessages returns, that means that the connection to bgmaster failed.  We're going to retry joining
-    while (true) {
-        // Join the "cluster"
-        // If it is our first time through we need to join and start a thread for the signal handler.
-        // If it is not our first time and we aren't shutting down, we need to try to rejoin the cluster.
-        if( ! cleaningup ) {
-	  if (firstPass) {
-	    try {
-	        join();
-	    } catch (const std::exception& e) {
-	         LOG_WARN_MSG("Problem joining the cluster, will retry, error is: " << e.what());
-		 sleep(1);
-		 continue;
-	    }
-	    // We now have a connection ... start our signal handler.
-	    boost::shared_ptr<SignalHandler> signalhandler(
-							   new SignalHandler( io_service )
-							   );
-	    signalhandler->start(this);
-	    boost::thread startthread(boost::bind(&boost::asio::io_service::run, &io_service));
-	    firstPass = false;
-	  } else {
-	      try {
-		   join();
-	      } catch (const std::exception& e) {
-		  LOG_WARN_MSG("Problem joining the cluster, will retry, error is: " << e.what());
-		  sleep(1);
-		  continue;
-	      }
-	  }
-
-	  // We're joined to the agent cluster...
-	  waitMessages();  // and we should wait for new messages
-	}
+            // getting here means we received a signal, fall through
+            break;
+        } catch ( const std::exception& e ) {
+            LOG_WARN_MSG( "uncaught exception: " << e.what() );
+            io_service.reset();
+            sleep(5);
+        }
     }
+
+    // signal should be non-zero, if not something is wrong
+    BOOST_ASSERT( signalHandler->getSignal() );
+    this->doEndAgentRequest( signalHandler->getSignal() );
 }
 
 BGMasterAgentProtocolSpec::JoinRequest
@@ -195,7 +153,7 @@ Agent::build_join_request(
     // For each running binary, add it to the join request.
     BGMasterAgentProtocolSpec::JoinRequest joinreq(hostaddr, servname, "agent", _host.uhn());
     BOOST_FOREACH( const BinaryControllerPtr& pbin, this->get_binaries() ) {
-        BGMasterAgentProtocolSpec::JoinRequest::WorkingBins bin(
+        const BGMasterAgentProtocolSpec::JoinRequest::WorkingBins bin(
                 pbin->get_binid().str(),
                 pbin->get_binary_bin_path(),
                 pbin->get_alias_name(),
@@ -207,65 +165,42 @@ Agent::build_join_request(
     return joinreq;
 }
 
-void
-Agent::join()
+int
+Agent::join(
+        const bgq::utility::PortConfiguration::Pair& port
+        )
 {
     LOG_TRACE_MSG(__FUNCTION__);
 
-    typedef CxxSockets::ListeningSocketPtr Listener;
+    const AgentProtocolPtr p(new AgentProtocol);
 
-    const AgentProtocolPtr p(new AgentProtocol(_properties));
+    try {
+        // If [master.agent] section has multiple hosts defined we need to round-robin trying to connect,
+        // otherwise if only one host is defined try to connect indefinitely
+
+        p->initializeRequester(_properties, AF_UNSPEC, port.first, port.second);
+        LOG_INFO_MSG("Connected to bgmaster_server on " << port.first << ":" << port.second);
+
+        // fall through
+    } catch (const CxxSockets::Error& err) {
+        return errno;
+    }
+
     _prot = p;
-
-    std::string connected_host;
-    std::string connected_port;
-    bool failed = true;
-
-    // If [master.agent] section has multiple hosts defined we need to round-robin trying to connect,
-    // otherwise if only one host is defined try to connect forever.
-    int connectAttempts = 9; // This will try and connect to a host for about 30 secs before trying next host
-    if (_portpairs.size() == 1) {
-        connectAttempts = 0; // Only one bgmaster_server host listener defined so try to connect to it forever
-    }
-
-    while (failed) {
-        BOOST_FOREACH(const bgq::utility::PortConfiguration::Pair& portpair, _portpairs) {
-            LOG_INFO_MSG("Attempting to connect to bgmaster_server on " << portpair.first << ":" << portpair.second);
-            try {
-                // If [master.agent] section has multiple hosts defined we need to round-robin trying to connect,
-                // otherwise if only one host is defined try to connect indefinitely
-
-                _prot->initializeRequester(AF_UNSPEC, portpair.first, portpair.second, connectAttempts);
-                connected_host = portpair.first;
-                connected_port = portpair.second;
-                LOG_INFO_MSG("Connected to bgmaster_server on " << portpair.first << ":" << portpair.second);
-                failed = false;
-                break;
-            } catch (const CxxSockets::SoftError& err) {
-                char errorText[256];
-                LOG_WARN_MSG("Connection to bgmaster_server failed on " << portpair.first << ":" << portpair.second << " - " << std::string(strerror_r(errno, errorText, 256)));
-            } catch (const CxxSockets::Error& err) {
-                char errorText[256];
-                LOG_WARN_MSG("Connection to bgmaster_server failed on " << portpair.first << ":" << portpair.second << " - " << std::string(strerror_r(errno, errorText, 256)));
-            }
-            sleep(1);
-        }
-    }
-
     CxxSockets::SockAddr localsockaddr;
     _prot->getRequester()->getSockName(localsockaddr);
 
     // This socket will listen for a connection back from bgmaster.
     // It'll be on the same IP address as the requester.
     const CxxSockets::SockAddr sa(static_cast<unsigned short>(localsockaddr.family()), "", "");
-    const Listener ln(new CxxSockets::ListeningSocket(sa, 1));
-    _masterListener = ln;
+    typedef CxxSockets::ListeningSocketPtr Listener;
+    const Listener listener(new CxxSockets::ListeningSocket(sa, 1));
 
     // Need to send back the info for our listener
     CxxSockets::SockAddr requestersockaddr;
     CxxSockets::SockAddr listenersockaddr;
     _prot->getRequester()->getSockName(requestersockaddr);
-    _masterListener->getSockName(listenersockaddr);
+    listener->getSockName(listenersockaddr);
 
     // Note, this can throw an exception and dump us out of join processing if the hostname is unroutable.
     const CxxSockets::Host h(requestersockaddr.getHostAddr());
@@ -274,7 +209,7 @@ Agent::join()
     // The join request will be formulated with the local IP address of the requester
     // and the local port of the listener.  This is to ensure that the master has a
     // routable IP address (not loopback) and the correct port to connect back to.
-    BGMasterAgentProtocolSpec::JoinRequest joinreq(
+    const BGMasterAgentProtocolSpec::JoinRequest joinreq(
             build_join_request(
                 requestersockaddr.getHostAddr(), 
                 listenersockaddr.getServicePort()
@@ -284,8 +219,10 @@ Agent::join()
     BGMasterAgentProtocolSpec::JoinReply joinrep;
     joinrep._rc = exceptions::OK;
 
-    LOG_DEBUG_MSG("Sending join request from " << requestersockaddr.getHostAddr() << ":" << listenersockaddr.getServicePort()
-                 << " to " << connected_host << ":" << connected_port);
+    LOG_DEBUG_MSG(
+            "Sending join request from " << requestersockaddr.getHostAddr() << ":" << listenersockaddr.getServicePort() <<
+            " to " << port.first << ":" << port.second
+            );
     _prot->join(joinreq, joinrep);
 
     if (joinrep._rc != 0) {
@@ -302,7 +239,7 @@ Agent::join()
         if (find_binary(bid, ptr)) {
             // Only one at a time because we are switching uids
             boost::mutex::scoped_lock lock(_uid_mutex);
-            ptr->stopBinary(SIGTERM);
+            ptr->stop(SIGTERM);
             LOG_INFO_MSG("Stopped binary id " << bid.str());
             // Now take it out of the list
             this->removeController( ptr );
@@ -314,49 +251,52 @@ Agent::join()
     // We've joined the group.  Now set up our responder.  We've created
     // the listener, so we need to sit on an accept until the master
     // connects back.  At that point, we are completely part of the cluster.
-    CxxSockets::SecureTCPSocketPtr secure;
-    bool accepted = false;
-    while (!accepted) {
-        const CxxSockets::TCPSocketPtr sock(new CxxSockets::TCPSocket);
-        accepted = _masterListener->AcceptNew(sock);
-        bgq::utility::ServerPortConfiguration port_config(0, bgq::utility::ServerPortConfiguration::ConnectionType::AdministrativeOnly);
-        port_config.setProperties(_properties, "");
-        port_config.notifyComplete();
-        secure.reset(
-                new CxxSockets::SecureTCPSocket(
-                    sock,
-                    port_config
-                    )
-                );
-        if (accepted) {
-            LOG_INFO_MSG("Got a new connection from bgmaster_server.");
-            _prot->initializeResponder(secure);
-            break;
-        }
-    }
+    const CxxSockets::TCPSocketPtr sock(new CxxSockets::TCPSocket);
+    listener->AcceptNew(sock);
+    bgq::utility::ServerPortConfiguration port_config(0, bgq::utility::ServerPortConfiguration::ConnectionType::AdministrativeOnly);
+    port_config.setProperties(_properties, "");
+    port_config.notifyComplete();
+    const CxxSockets::SecureTCPSocketPtr secure(
+            new CxxSockets::SecureTCPSocket(
+                sock,
+                port_config
+                )
+            );
+    LOG_INFO_MSG("Got a new connection from bgmaster_server.");
+    _prot->initializeResponder(secure);
 
     // Spawn a thread to send any old buffered up messages so that we can immediately handle
     // incoming requests without deadlock.
-    boost::thread startthread(&Agent::sendBuffered, this);
+    boost::thread t(&Agent::sendBuffered, this);
+    t.detach();
+
+    return 0;
 }
 
 void
 Agent::sendBuffered()
 {
-    // Send buffered messages
-    LOG_DEBUG_MSG("Sending " << _buffered_messages.size() << " buffered messages to bgmaster_server.");
-    BOOST_FOREACH(const MsgBasePtr& curr_msg, _buffered_messages) {
-        if (_buffered_messages.empty()) break;
-        // Inelegant, but should work.
-        std::string classname;
-        classname = boost::static_pointer_cast<BGMasterAgentProtocolSpec::FailedRequest>(curr_msg)->getClassName();
-        if (classname == "FailedRequest") {
+    std::list<MsgBasePtr> buffered_messages;
+    {
+        boost::mutex::scoped_lock lock( _buffered_messages_mutex );
+        std::swap( buffered_messages, _buffered_messages );
+    }
+
+    LOG_DEBUG_MSG("Sending " << buffered_messages.size() << " buffered messages to bgmaster_server.");
+    BOOST_FOREACH(const MsgBasePtr& curr_msg, buffered_messages) {
+        // we support failed and complete request messages here, everything else is dropped
+        const boost::shared_ptr<BGMasterAgentProtocolSpec::FailedRequest> failed(
+                boost::dynamic_pointer_cast<BGMasterAgentProtocolSpec::FailedRequest>(curr_msg)
+                );
+        const boost::shared_ptr<BGMasterAgentProtocolSpec::CompleteRequest> complete( 
+                boost::dynamic_pointer_cast<BGMasterAgentProtocolSpec::CompleteRequest>(curr_msg)
+                );
+        if ( failed ) {
             BGMasterAgentProtocolSpec::FailedReply failrep;
             failrep._rc = exceptions::OK;
 
             try {
-                _prot->failed(*(boost::static_pointer_cast
-                                <BGMasterAgentProtocolSpec::FailedRequest>(curr_msg).get()), failrep);
+                _prot->failed( *failed, failrep );
             } catch (const CxxSockets::SoftError& err) {
                 char errorText[256];
                 std::ostringstream msg;
@@ -368,14 +308,13 @@ Agent::sendBuffered()
                 msg << "Connection to bgmaster_server ended: " << std::string(strerror_r(errno, errorText, 256));
                 throw exceptions::CommunicationError(exceptions::WARN, msg.str());
             }
-            LOG_DEBUG_MSG("Sent buffered failed request.");
-        } else if (classname == "CompleteRequest") {
+            LOG_DEBUG_MSG("Sent buffered failed request for " << failed->_status._binary_id);
+        } else if ( complete ) {
             BGMasterAgentProtocolSpec::CompleteReply comprep;
             comprep._rc = exceptions::OK;
 
             try {
-                _prot->complete(*(boost::static_pointer_cast
-                                  <BGMasterAgentProtocolSpec::CompleteRequest>(curr_msg).get()), comprep);
+                _prot->complete( *complete, comprep );
             } catch (const CxxSockets::SoftError& err) {
                 char errorText[256];
                 std::ostringstream msg;
@@ -387,10 +326,10 @@ Agent::sendBuffered()
                 msg << "Connection to bgmaster_server ended: " << std::string(strerror_r(errno, errorText, 256));
                 throw exceptions::CommunicationError(exceptions::WARN, msg.str());
             }
-            LOG_DEBUG_MSG("Sent buffered complete request.");
+            LOG_DEBUG_MSG("Sent buffered complete request for " << complete->_status._binary_id);
+        } else {
+            LOG_WARN_MSG( "ignoring unknown message type" );
         }
-        // Must remove this message from the list
-        _buffered_messages.erase(std::remove(_buffered_messages.begin(),_buffered_messages.end(), curr_msg), _buffered_messages.end());
     }
 }
 
@@ -400,24 +339,21 @@ Agent::processStartRequest(
        )
 {
     LOG_TRACE_MSG(__FUNCTION__);
+
     // We're happy to start as many instances of this binary as we're asked.
     // If only one is wanted, the client needs to enforce that.
-
     LOG_INFO_MSG("Received start request for alias " << startreq._alias << ".");
 
-    std::ostringstream filearg;
-    filearg << startreq._logdir <<
-        "/" << _hostname.uhn() << "-" << startreq._alias << ".log";
-    std::string log = filearg.str();
-    std::ostringstream logmsg;
-    logmsg << "Start request path=" << startreq._path << " "
-           << "arguments=" << startreq._arguments << " "
-           << "logdir=" << log << " "
-           << "user=" << startreq._user << " ";
-    LOG_DEBUG_MSG(logmsg.str());
+    const std::string log = startreq._logdir + "/" + _hostname.uhn() + "-" + startreq._alias + ".log";
+    LOG_DEBUG_MSG( 
+            "Start request path=" << startreq._path << 
+            (startreq._arguments.empty() ? " " : " " + startreq._arguments) <<
+            "logdir=" << log << " user=" << startreq._user
+            );
 
     const BinaryControllerPtr bin(
-            new BinaryController(startreq._path,
+            new BinaryController(
+                startreq._path,
                 startreq._arguments,
                 log,
                 startreq._alias,
@@ -428,7 +364,7 @@ Agent::processStartRequest(
     this->addController(bin);
 
     BinaryId bid;
-    BGMasterAgentProtocolSpec::StartReply::BinaryStatus binstat(bid, 0);
+    const BGMasterAgentProtocolSpec::StartReply::BinaryStatus binstat(bid, 0);
     BGMasterAgentProtocolSpec::StartReply rep(0, "start successful", binstat);
     rep._status = binstat;
     rep._rc = exceptions::OK;
@@ -443,6 +379,8 @@ Agent::processStartRequest(
             // There's an error, we've returned once and handled it.
             // This time we just bail.
             // sendreply = false;
+
+            // FIXME fall through?
         }
     } catch (const exceptions::FileError& e) {
         LOG_ERROR_MSG("Exec failed with a file error: " << e.what());
@@ -464,16 +402,15 @@ Agent::processStartRequest(
     try {
         LOG_DEBUG_MSG("Sending start reply");
         _prot->sendReply(rep.getClassName(), rep);
-        LOG_DEBUG_MSG("Start reply sent for " << bid.str() << "|" << bin->get_binary_bin_path() << " " << rep._rt);
-    } catch(const CxxSockets::SoftError& err) {
+        LOG_DEBUG_MSG("Start reply sent for " << bid.str() << "|" << bin->get_binary_bin_path() << ": " << rep._rt);
+    } catch (const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
         LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
         return;
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Server aborted with an incomplete transmission
         LOG_WARN_MSG("Connection to bgmaster_server ended.");
-        if (err.errcode >= 0)
-            _ending = true;
+        // FIXME fall through?
     }
 
     int exit_status = 0;
@@ -496,49 +433,49 @@ Agent::processStartRequest(
             return;
         }
 
-        BGMasterAgentProtocolSpec::FailedRequest::BinaryStatus binstat(bid.str(), exit_status);
-        BGMasterAgentProtocolSpec::FailedRequest failreq(binstat);
+        const BGMasterAgentProtocolSpec::FailedRequest::BinaryStatus binstat(bid.str(), exit_status);
+        const BGMasterAgentProtocolSpec::FailedRequest failreq(binstat);
         BGMasterAgentProtocolSpec::FailedReply failrep;
         failrep._rc = exceptions::OK;
 
         try {
             LOG_DEBUG_MSG("Sending ending request for alias " << bin->get_alias_name() << " binary id " << bid.str());
             _prot->failed(failreq, failrep);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             // For soft errors, we just back out and let it try again
             LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
             return;
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Server aborted with an incomplete transmission
             LOG_WARN_MSG("Connection to bgmaster_server ended.");
             const MsgBasePtr bp(new BGMasterAgentProtocolSpec::FailedRequest(binstat));
+            boost::mutex::scoped_lock lock( _buffered_messages_mutex );
             _buffered_messages.push_back(bp);
-            if (err.errcode >= 0)
-                _ending = true;
         }
     } else {
         if (child_pid > 0 && !dont_report) {
             // Only send a complete message if we haven't already sent a start failure.
-            BGMasterAgentProtocolSpec::CompleteRequest::BinaryStatus binstat(bid.str(), "COMPLETED");
-            BGMasterAgentProtocolSpec::CompleteRequest exereq(binstat, exit_status);
+            const BGMasterAgentProtocolSpec::CompleteRequest::BinaryStatus binstat(bid.str(), "COMPLETED");
+            const BGMasterAgentProtocolSpec::CompleteRequest exereq(binstat, exit_status);
             BGMasterAgentProtocolSpec::CompleteReply exerep;
             exerep._rc = exceptions::OK;
 
-            LOG_INFO_MSG("Sending complete request for " << bin->get_alias_name()
-                         << " binary id " << bid.str() << " with exit status of " << exit_status);
+            LOG_INFO_MSG(
+                    "Sending complete request for " << bin->get_alias_name() <<
+                    " binary id " << bid.str() << " with exit status of " << exit_status
+                    );
             try {
                 _prot->complete(exereq, exerep);
-            } catch(const CxxSockets::SoftError& err) {
+            } catch (const CxxSockets::SoftError& err) {
                 // For soft errors, we just back out and let it try again
                 LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
                 return;
-            } catch(const CxxSockets::Error& err) {
+            } catch (const CxxSockets::Error& err) {
                 // Server aborted with an incomplete transmission
                 LOG_WARN_MSG("Connection to bgmaster_server ended.");
                 const MsgBasePtr bp(new BGMasterAgentProtocolSpec::CompleteRequest(binstat, exit_status));
+                boost::mutex::scoped_lock lock( _buffered_messages_mutex );
                 _buffered_messages.push_back(bp);
-                if (err.errcode >= 0)
-                    _ending = true;
             }
         }
     }
@@ -561,7 +498,7 @@ Agent::doStopRequest(
     if (find_binary(bid, ptr)) {
         // Only one at a time because we are switching uids
         boost::mutex::scoped_lock lock(_uid_mutex);
-        int stop_sig = ptr->stopBinary(stopreq._signal);
+        const int stop_sig = ptr->stop(stopreq._signal);
         if (stop_sig == 0) {
             LOG_INFO_MSG("Failed to stop binary id " << bid.str());
             stoprep._rc = exceptions::WARN;
@@ -585,21 +522,19 @@ Agent::doStopRequest(
         LOG_DEBUG_MSG("Sending stop reply");
         _prot->sendReply(stoprep.getClassName(), stoprep);
         LOG_DEBUG_MSG("Sent stop reply for binary id " << bid.str());
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
         LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
         return;
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Master aborted with an incomplete transmission
         LOG_WARN_MSG("Connection to bgmaster_server ended.");
-        if (err.errcode >= 0)
-            _ending = true;
     }
 }
 
 void
 Agent::doEndAgentRequest(
-	const int signal
+        const int signal
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
@@ -612,7 +547,7 @@ Agent::doEndAgentRequest(
         // Only one at a time because we are switching uids
         boost::mutex::scoped_lock lock(_uid_mutex);
         const BinaryControllerPtr ptr = *i;
-        ptr->stopBinary(signal);
+        ptr->stop(signal);
         this->removeController( ptr );
     }
 
@@ -623,23 +558,22 @@ void
 Agent::processRequest()
 {
     LOG_TRACE_MSG(__FUNCTION__);
-    std::string request_name = "";
+    std::string request_name;
 
     try {
         _prot->getName(request_name);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
         LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
         return;
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Server aborted with an incomplete transmission
         LOG_WARN_MSG("Connection to bgmaster_server ended.");
-        if (err.errcode >= 0)
-            _ending = true;
+        _prot->getResponder().reset();
         return;
     }
 
-    LOG_DEBUG_MSG("-*-Request " << request_name << " received.-*-");
+    LOG_DEBUG_MSG("Request " << request_name << " received.");
 
     if (request_name == "StartRequest") {
         // Start request must be threaded because it does a wait on
@@ -647,15 +581,13 @@ Agent::processRequest()
         BGMasterAgentProtocolSpec::StartRequest startreq;
         try {
             _prot->getObject(&startreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             // For soft errors, we just back out and let it try again
             LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
             return;
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Server aborted with an incomplete transmission
             LOG_WARN_MSG("Connection to bgmaster_server ended.");
-            if (err.errcode >= 0)
-                _ending = true;
             return;
         }
         boost::thread startthread(&Agent::processStartRequest, this, startreq);
@@ -663,46 +595,18 @@ Agent::processRequest()
         BGMasterAgentProtocolSpec::StopRequest stopreq;
         try {
             _prot->getObject(&stopreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             // For soft errors, we just back out and let it try again
             LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
             return;
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Server aborted with an incomplete transmission
             LOG_WARN_MSG("Connection to bgmaster_server ended.");
-            if (err.errcode >= 0)
-                _ending = true;
             return;
         }
 
         doStopRequest(stopreq);
     } else {
         LOG_WARN_MSG("Unknown request: '" << request_name << "'");
-        sleep(5); // Just do this because LNs somehow get here and spin.
     }
-}
-
-void
-Agent::waitMessages()
-{
-    LOG_TRACE_MSG(__FUNCTION__);
-    // Wait for requests and send responses
-    LOG_DEBUG_MSG("Waiting for messages.");
-    while (!_ending) {
-        // Process message.
-        processRequest();
-    }
-    LOG_TRACE_MSG(__FUNCTION__ << " ending.");
-    //Reset flag in case bgagent isn't being shutdown.
-    _ending = false;
-}
-
-void
-Agent::cleanup(const int signal)
-{
-    LOG_TRACE_MSG(__FUNCTION__);
-    cleaningup = true;
-    LOG_INFO_MSG("bgagent shutdown in progress.  Waiting for cleanup to quiesce ...");
-    // Signal is passed along so binaries can be stopped with the same signal.
-    doEndAgentRequest(signal);
 }

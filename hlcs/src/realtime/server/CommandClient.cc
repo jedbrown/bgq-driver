@@ -213,7 +213,8 @@ void CommandClient::_gotStatus(
     oss << "running " << status_details.connected_clients <<
             (status_details.db_changes_monitor_state == DbChangesMonitor::State::Idle ? "idle" :
              status_details.db_changes_monitor_state == DbChangesMonitor::State::Monitoring ? "monitoring" :
-             status_details.db_changes_monitor_state == DbChangesMonitor::State::MaxXact ? "maxXact" : "unknown");
+             status_details.db_changes_monitor_state == DbChangesMonitor::State::MaxXact ? "maxXact" : "unknown") <<
+            " " << status_details.db2_version;
 
     _newOutMsg( oss.str() );
 }

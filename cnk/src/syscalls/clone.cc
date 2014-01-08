@@ -22,6 +22,7 @@
 /* end_generated_IBM_copyright_prolog                               */
 
 #include "Kernel.h"
+#include <limits.h>
 
 __C_LINKAGE uint64_t sc_set_tid_address( SYSCALL_FCN_ARGS )
 {
@@ -92,12 +93,23 @@ __C_LINKAGE uint64_t sc_clone( SYSCALL_FCN_ARGS)
     }
     
     // Only verify the cl_tls value if the CLONE_TLS flag is set
-    if((cl_flags & CLONE_SETTLS) && !VMM_IsAppAddress( (void *)cl_tls, sizeof(uint64_t)))
+    if(cl_flags & CLONE_SETTLS)
     {
-        return CNK_RC_FAILURE(EINVAL);
+        // Validate the address range that will be initialized in
+        // Process_InitializeThreadLocalStorage().
+        AppProcess_t *proc = GetMyProcess();
+        if ((proc->pTData_Start != 0) &&
+            !VMM_IsAppAddress((void *) (((uint64_t) cl_tls) - GLIBC_TCB_OFFSET),
+                              proc->TData_Size + proc->TBSS_Size))
+        {
+            return CNK_RC_FAILURE(EINVAL);
+        }
     }
     
-    if ( !VMM_IsAppAddress( (void *)cl_child_stack, (4 * 1024 * 1024) ) ||
+    // The stack address points to the end of the user stack space.  We don't
+    // know the actual size of the stack so just validate the minimum size
+    // allowed by the toolchain (128K).
+    if ( !VMM_IsAppAddress( (void *)(((uint64_t) cl_child_stack) - PTHREAD_STACK_MIN), PTHREAD_STACK_MIN) ||
          !VMM_IsAppAddress( (void *)cl_parent_tid,  sizeof(uint32_t)  ) ||
          !VMM_IsAppAddress( (void *)cl_child_tid,   sizeof(uint32_t)  ))
     {

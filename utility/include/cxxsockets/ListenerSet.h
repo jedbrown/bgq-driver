@@ -39,12 +39,13 @@ namespace CxxSockets {
 //! More transparent v4/v6 support. 
 class ListenerSet : public FileSet
 {
-    ListenerSet() {}
 public:
-
     //! \brief Constructor.  You need a list of sockaddrs even if you
     //! just want a single element.
-    ListenerSet(const SockAddrList& sal, int backlog = SOMAXCONN);
+    ListenerSet(
+            const SockAddrList& sal,    //!< [in]
+            int backlog = SOMAXCONN     //!< [in]
+            );
 
     //! \brief Performs a blocking accept.
     //!

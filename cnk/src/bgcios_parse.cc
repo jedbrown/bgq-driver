@@ -175,6 +175,34 @@ void Flight_SysioMsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecorde
         case sysio::Symlink: text=(char *)"sysio::Symlink";break;
         case sysio::SymlinkAck: text=(char *)"sysio::SymlinkAck";break;
 
+#define SYSIO(type) case sysio::type: text=(char *)"sysio::"#type;break; 
+         SYSIO(FsetXattr);
+         SYSIO(FsetXattrAck);
+         SYSIO(FgetXattr);
+         SYSIO(FgetXattrAck);
+         SYSIO(FremoveXattr);
+         SYSIO(FremoveXattrAck);
+         SYSIO(FlistXattr);
+         SYSIO(FlistXattrAck);
+
+         SYSIO(LsetXattr);
+         SYSIO(LsetXattrAck);
+         SYSIO(LgetXattr);
+         SYSIO(LgetXattrAck);
+         SYSIO(LremoveXattr);
+         SYSIO(LremoveXattrAck);
+         SYSIO(LlistXattr);
+         SYSIO(LlistXattrAck);
+
+         SYSIO(PsetXattr);
+         SYSIO(PsetXattrAck);
+         SYSIO(PgetXattr);
+         SYSIO(PgetXattrAck);
+         SYSIO(PremoveXattr);
+         SYSIO(PremoveXattrAck);
+         SYSIO(PlistXattr);
+         SYSIO(PlistXattrAck);
+
 
         default:   break;
     }

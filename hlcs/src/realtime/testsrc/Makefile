@@ -52,7 +52,7 @@ test: test_realtime
 
 
 test_realtime: test_realtime.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 
 install:

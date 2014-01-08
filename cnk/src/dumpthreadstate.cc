@@ -33,7 +33,7 @@ int dumpThreadState()
     int core;
     int hwt;
     KThread_t *kthread;
-    // Dump the rest of the valid threads in the process.
+    // Dump the active kthreads in the node.
     for (core = 0; core <  CONFIG_MAX_CORES; core++)
     {
         for (hwt = 0; (hwt < CONFIG_HWTHREADS_PER_CORE); hwt++)
@@ -44,19 +44,20 @@ int dumpThreadState()
                 // get the kthread pointer
                 kthread = NodeState.CoreState[core].HWThreads[hwt].SchedSlot[kindex];
                 {
-                    if (kthread->State != SCHED_STATE_FREE)
+                    if (!(kthread->State & SCHED_STATE_FREE))
                     {
                         int curHwt = ((core<<2) + hwt); 
                         int kHwt = kthread->ProcessorID;
                         int curSlot = kindex;
                         int kSlot = kthread->SlotIndex;
-                        // are we migrated from our home?
                         const char *isMigrated = (kthread != &(NodeState.KThreads[ kindex + (((core<<2) + hwt) * CONFIG_SCHED_SLOTS_PER_HWTHREAD)])) ? yes_string : no_string;
-                        // core hwt tid state running  migrationData iar  signal pendingsigmask 
                         const char *isRunning = (NodeState.CoreState[core].HWThreads[hwt].pCurrentThread == kthread) ? yes_string : no_string;
+                        const char *isRemote = (GetProcessByProcessorID((core<<2)+hwt) == kthread->pAppProc) ? no_string : yes_string;
+                        const char *isMain = (kthread->isProcessLeader) ? yes_string : no_string;
+                        const char *isShared = (kthread->FutexIsShared) ? yes_string : no_string;
                         // limit the string printed but keep the fields aligned for viewing
-                        printf("TID=%03d State=%08x curHWT=%02d curSlot=%01d kHWT=%02d kSlot=%01d Run=%s Migrated=%s R3=%016lx ExitFutex=%016lx Pri=%02d futex=%016lx sc=%04d\n",
-                               GetTID(kthread),kthread->State,curHwt,curSlot, kHwt, kSlot,isRunning,isMigrated,kthread->Reg_State.gpr[3],(uint64_t)kthread->pChild_TID,kthread->Priority,(uint64_t)kthread->FutexVAddr,(uint16_t)kthread->syscallNum);      
+                        printf("TID=%03d State=%04x HWT=%02d Slot=%01d kHWT=%02d kSlot=%01d IAR=%016lx Main=%s Run=%s Moved=%s Rmt=%s Futex=%016lx Shr=%s Sig=%02d Pri=%02d Pend=%02lx Divert=%02lx sc=%04d\n",
+                               GetTID(kthread),kthread->State,curHwt,curSlot, kHwt, kSlot, kthread->Reg_State.ip, isMain, isRunning,isMigrated,isRemote,(uint64_t)kthread->FutexVAddr,isShared,kthread->SigInfoSigno,kthread->Priority,kthread->Pending, kthread->SchedulerDivert, (uint16_t)kthread->syscallNum);      
                     }
                 }
             }

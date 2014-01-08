@@ -81,13 +81,11 @@ extern const char* HARDWARE_ERROR;
 extern const char* HARDWARE_SERVICE;
 extern const char* SOFTWARE_FAILURE;
 
-extern const uint32_t SERIAL_NUM_LEN;
-
 extern const std::string DEFAULT_MLOADERIMG;
 extern const std::string DEFAULT_COMPUTENODECONFIG;
 extern const std::string DEFAULT_IONODECONFIG;
 
-typedef std::bitset<30>  ColumnsBitmap;
+typedef std::bitset<30> ColumnsBitmap;
 
 /*!
  * \brief Return value enumeration for all calls offered by this library
@@ -167,9 +165,9 @@ struct SparingInfo {
     uint16_t    rxMask;    // Bad fiber mask for the RX register (12 bits)
 };
 
-typedef boost::array<uint32_t,Dimension::Count> DimensionSizes; //!< Size in each dimension
+typedef boost::array<uint32_t, Dimension::Count> DimensionSizes; //!< Size in each dimension
 typedef std::vector<std::string> NodeBoardPositions; //!< Vector of node board positions, like "N00".
-typedef boost::array<uint32_t,Dimension::Count> MidplaneCoordinate; //!< The coordinate of a midplane (A,B,C,D), either the offset in the machine torus or the offset in the block.
+typedef boost::array<uint32_t, Dimension::Count> MidplaneCoordinate; //!< The coordinate of a midplane (A,B,C,D), either the offset in the machine torus or the offset in the block.
 
 
 bool operator==( const MidplaneCoordinate& lhs, const MidplaneCoordinate& rhs );
@@ -203,18 +201,21 @@ struct SwitchConfig {
     };
 };
 
-typedef std::vector<std::string>  ConnectedIONodes;
+typedef std::vector<std::string> ConnectedIONodes;
 
-typedef struct midplaneIOInfo
+class MidplaneIOInfo
 {
-    int              IOLinkCount;
-    ConnectedIONodes IONodes;
-    midplaneIOInfo()
+public:
+    MidplaneIOInfo() :
+        IOLinkCount( 0 ),
+        IONodes()
     {
-        IOLinkCount = 0;
+
     }
 
-} MidplaneIOInfo;
+    int IOLinkCount;
+    ConnectedIONodes IONodes;
+};
 
 
 /*! \brief Values in the Replacement_history table type column. See create_trigger_bgq.sql. */
@@ -232,8 +233,6 @@ namespace replacement_history_types {
     extern const std::string IoLinkChip;
     extern const std::string BulkPower;
 }
-
-
 
 /*!
  * \brief initialize the API.
@@ -313,20 +312,6 @@ STATUS getBPs(
 STATUS getBPNodeCards(
         std::ostream& xml,              //!< [out]
         const std::string& midplane     //!< [in] midplane ID
-        );
-
-/*!
- *  \brief Get compute nodes on node boards in XML format.
- *
- *  \return
- *  - DB_ERROR if database error occurs retrieving data.
- *  - CONNECTION_ERROR if database connection error occurs retrieving data.
- *  - NOT_FOUND if node board not found in database.
- *  - OK if data was retrieved successfully.
- */
-STATUS getNodes(
-        std::ostream& xml,             //!< [out]
-        const std::string& nodecard    //!< [in] node board ID
         );
 
 /*!
@@ -414,21 +399,6 @@ STATUS getMachineBPSize(
 
 
 /*!
- *  \brief Get midplane(s) for a block in XML format.
- *
- *  \return
- *  - DB_ERROR if database error occurs retrieving data.
- *  - CONNECTION_ERROR if database connection error occurs retrieving data.
- *  - NOT_FOUND if midplane not found in database.
- *  - XML_ERROR if an XML error occurs.
- *  - OK if data was retrieved successfully.
- */
-STATUS getBPBlockXML(
-        std::ostream& xml,              //!< [out]
-        const std::string& block    //!< [in] block ID
-        );
-
-/*!
  *  \brief Get block in XML format.
  *
  *  \return
@@ -444,19 +414,6 @@ STATUS getBlockXML(
         );
 
 /*!
- *  \brief Get all blocks in XML format.
- *
- *  \return
- *  - DB_ERROR if database error occurs retrieving data.
- *  - CONNECTION_ERROR if database connection error occurs retrieving data.
- *  - NOT_FOUND if no blocks found in database.
- *  - OK if data was retrieved successfully.
- */
-STATUS getBlocks(
-        std::ostream& xml       //!< [out]
-        );
-
-/*!
  *  \brief Get all block names.
  *
  *  \return
@@ -467,19 +424,6 @@ STATUS getBlocks(
 STATUS getBlockIds(
         const std::string& whereClause,         //!< [in]
         std::vector<std::string>& outBlockList  //!< [out]
-        );
-
-/*!
- *  \brief Get bringup options.
- *
- *  \return
- *  - DB_ERROR if database error occurs retrieving data.
- *  - CONNECTION_ERROR if database connection error occurs retrieving data.
- *  - NOT_FOUND if bringup options data not found in database.
- *  - OK if data was retrieved successfully.
- */
-STATUS getBringupOptions(
-        std::string& buOptions      //!< [out]
         );
 
 /*!
@@ -524,7 +468,9 @@ STATUS putRAS(
  *  - CONNECTION_ERROR if database connection error occurs retrieving data.
  *  - OK if RAS event was augmented, or no data was missing
  */
-STATUS augmentRAS(RasEvent& rasEvent);              //!< [in]
+STATUS augmentRAS(
+        RasEvent& rasEvent              //!< [in]
+        );
 
 /*!
  *  \brief Insert RAS event into database.
@@ -535,11 +481,11 @@ STATUS augmentRAS(RasEvent& rasEvent);              //!< [in]
  *  - OK if RAS event was inserted to database successfully.
  */
 STATUS putRAS(
-        const std::string& block,                       //!< [in] block ID
+        const std::string& block,                           //!< [in] block ID
         const std::map<std::string, std::string>& rasmap,   //!< [in]
-        const timeval rastime,                              //!< [in]
-        job::Id job = 0,                                    //!< [in] job ID
-        bool diags = false                                  //!< [in]
+        const timeval& rastime,                             //!< [in]
+        const job::Id job = 0,                              //!< [in] job ID
+        const bool diags = false                            //!< [in]
         );
 
 /*!
@@ -597,20 +543,6 @@ STATUS copyBlock(
         const std::string& from,    //!< existing block ID
         const std::string& to,      //!< new block ID
         const std::string& owner    //!< owner
-        );
-
-/*!
- *  \brief Create node configuration.
- *
- *  \return
- *  - DB_ERROR if database error occurs retrieving data.
- *  - CONNECTION_ERROR if database connection error occurs retrieving data.
- *  - INVALID_ID if node configuration name is incorrect.
- *  - INVALID_ARG if an invalid argument was detected.
- *  - OK if node configuration was created successfully.
- */
-STATUS createNodeConfig(
-        const std::deque<std::string>& args     //!< [in] node configuration arguments
         );
 
 /*!
@@ -741,22 +673,6 @@ STATUS getBlockUser(
         int& qualifier                      //!< [out]
         );
 
-/*!
- *  \brief Set block options.
- *
- *  \return
- *  - DB_ERROR if database error occurs retrieving data.
- *  - CONNECTION_ERROR if database connection error occurs retrieving data.
- *  - INVALID_ID if the block name is too long.
- *  - INVALID_ARG if options argument is too long.
- *  - FAILED if block is not in FREE state.
- *  - NOT_FOUND if the block doesn't exist in the database.
- *  - OK if block options were set successful.
- */
-STATUS setBlockOptions(
-        const std::string& id,              //!< [in] block ID
-        const std::string& options          //!< [in] block options
-        );
 
 /*!
  *  \brief Set block boot options.
@@ -879,7 +795,6 @@ STATUS setBlockAction(
 STATUS getBlockAction(
         std::string& id,                            //!< [out] block ID
         BGQDB::BLOCK_ACTION& action,                //!< [out]
-        uint32_t& creationId,                       //!< [out]
         const std::string& exclude = std::string()  //!< [in]
         );
 
@@ -900,22 +815,6 @@ STATUS killMidplaneJobs(
         bool listOnly = false                          //!< [in] dont kill or free anything
         );
 
-
-/*!
- *  \brief resurrect an IO drawer after its been serviced
- *
- *  \return
- *  - CONNECTION_ERROR if database connection error occurs retrieving data.
- *  - DB_ERROR if database error occurs retrieving data.
- *  - INVALID_ID if the location of hardware provided was invalid
- *  - FAILED if the hardware is in an unknown state.
- *  - OK if operation was successful.
- */
-STATUS completeIOService(
-        const std::string& location,                    //!< [in] location
-        std::string& containingBlock                    //!< [out]
-        );
-
 /*!
  *  \brief Clear the block action.
  *
@@ -925,8 +824,7 @@ STATUS completeIOService(
  *  - OK if operation was successful.
  */
 STATUS clearBlockAction(
-        const std::string& id,                      //!< [in] block ID
-        uint32_t creationId = 0                     //!< [in] creation ID
+        const std::string& id                       //!< [in] block ID
         );
 
 /*!
@@ -954,7 +852,6 @@ STATUS checkIOBlockConnection(
         const std::string& id,                   //!< [in] block ID
         std::vector<std::string>* connected    //!< [out]
         );
-
 
 /*!
  *  \brief Check a compute block to see if all of its connected (and available) IO nodes are booted
@@ -989,7 +886,6 @@ STATUS checkBlockIO(
         std::vector<std::string>* unconnectedAvailableIONodes   //!< [out] Unconnected but 'Available' I/O node locations
        );
 
-
 /*!
  *  \brief Check if rack exists in db
  *
@@ -1002,15 +898,23 @@ STATUS checkBlockIO(
  */
 STATUS checkRack(
         const std::vector<std::string>& locations,   //!< [in] hw list, each element can be comma-separated
-        std::vector<std::string>*  invalid           //!< [out]
+        std::vector<std::string>& invalid            //!< [out]
         );
 
-/*! \brief Given a block code returns the block state. */
+/*! \brief Given a block action returns the block status as a string. */
+std::string blockActionToString( BLOCK_ACTION action );
+
+/*! \brief Given a block status returns the block status as a string. */
+std::string blockStatusToString( BLOCK_STATUS status );
+
+/*! \brief Given a block code returns the block code as a string. */
+std::string blockCodeToString( const char* code );
+
+/*! \brief Given a block status returns the block code. */
 const char* blockStatusToCode( BLOCK_STATUS state );
 
-/*! \brief Given a block state returns the block code. */
+/*! \brief Given a block code returns the block status. */
 BLOCK_STATUS blockCodeToStatus( const char* code );
-
 
 /*! \brief Returns true if the value exists in the table. */
 bool checkValueExists(
@@ -1020,7 +924,6 @@ bool checkValueExists(
         cxxdb::ConnectionPtr conn_ptr = cxxdb::ConnectionPtr() // may be null and will check out a new connection.
     );
 
-
 /*! \brief Returns true if hardware at the location exists. */
 bool checkLocationExists(
         const bgq::util::Location& location,
@@ -1028,9 +931,7 @@ bool checkLocationExists(
     );
 
 
-}// namespace BGQDB
-
-
+} // namespace BGQDB
 
 
 namespace std {
@@ -1038,6 +939,5 @@ namespace std {
 std::ostream& operator<<( std::ostream& os, const BGQDB::MidplaneCoordinate& coord );
 
 } // namespace std
-
 
 #endif

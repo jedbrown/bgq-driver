@@ -39,47 +39,34 @@
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/exception.hpp>
-#include <boost/thread.hpp>
+#include <boost/exception/all.hpp>
 
 #include <csignal>
 
 LOG_DECLARE_FILE( "mmcs.server" );
 
-namespace {
-
-void
-run_io_service(
-        boost::asio::io_service& io_service
-        )
-{
-    while (1) {
-        try {
-            io_service.run();
-            return;
-        } catch ( const boost::exception& e ) {
-            LOG_ERROR_MSG( boost::diagnostic_information(e) );
-        } catch ( const std::exception& e ) {
-            LOG_ERROR_MSG( e.what() );
-        }
-
-        sleep(10);
-    }
-}
-
-}
-
-
 namespace mmcs {
 namespace server {
 namespace env {
 
+Monitor::Ptr
+Monitor::create()
+{
+    const Ptr result( new Monitor );
+    result->start();
+    return result;
+}
 
 Monitor::Monitor() :
-    Thread(),
-    _io_service()
+    _io_service(),
+    _threads()
 {
 
+}
+
+Monitor::~Monitor()
+{
+    // LOG_TRACE_MSG( __FUNCTION__ );
 }
 
 unsigned
@@ -94,13 +81,13 @@ Monitor::calculateThreadPool()
         try {
             result = boost::lexical_cast<int>( value );
             if ( result <= 0 ) {
-                LOG_WARN_MSG( "invalid " << key << " value: '" << value << "'" );
+                LOG_WARN_MSG("Invalid " << key << " value: '" << value << "'");
                 result = 0;
             } else {
-                LOG_INFO_MSG( "set thread pool size to " << result << " from properties file" );
+                LOG_INFO_MSG("Set thread pool size to " << result << " from properties file.");
             }
         } catch ( const boost::bad_lexical_cast& e ) {
-            LOG_WARN_MSG( "invalid " << key << " value: '" << value << "'" );
+            LOG_WARN_MSG("Invalid " << key << " value: '" << value << "'");
         }
     }
 
@@ -114,8 +101,8 @@ Monitor::calculateThreadPool()
     return result;
 }
 
-void*
-Monitor::threadStart()
+void
+Monitor::start()
 {
     const Polling::Ptr nodeBoard(
             new NodeBoard( _io_service )
@@ -166,30 +153,48 @@ Monitor::threadStart()
     healthThread->seconds = 300;
     healthThread->start();
 
-    boost::thread_group threads;
     const unsigned numThreads = this->calculateThreadPool();
-    LOG_TRACE_MSG( "creating " << numThreads << " threads" );
+    LOG_TRACE_MSG("Creating " << numThreads << " threads" );
     for ( unsigned i = 1; i <= numThreads; ++i ) {
-        LOG_TRACE_MSG( "creating thread " << i );
-        threads.create_thread(
+        // LOG_TRACE_MSG("Creating thread " << i);
+        _threads.create_thread(
                 boost::bind(
-                    &run_io_service,
-                    boost::ref(_io_service)
+                    &Monitor::run,
+                    shared_from_this()
                     )
                 );
     }
+}
 
-    while ( !isThreadStopping() ) {
-        sleep(5);
-    }
-
+void
+Monitor::stop()
+{
     _io_service.stop();
+    LOG_DEBUG_MSG("Stopped I/O service");
+    _threads.join_all();
+    LOG_DEBUG_MSG("joined all threads");
+}
 
-    // getting here means we're done
-    LOG_INFO_MSG( "joining all threads" );
-    threads.join_all();
+void
+Monitor::run()
+{
+    while (1) {
+        try {
+            _io_service.run();
+            return;
+        } catch ( const boost::exception& e ) {
+            if ( const std::exception* what = dynamic_cast<const std::exception*>(&e) ) {
+                LOG_ERROR_MSG( what->what() );
+                LOG_DEBUG_MSG( boost::diagnostic_information(e) );
+            } else {
+                LOG_ERROR_MSG( boost::diagnostic_information(e) );
+            }
+        } catch ( const std::exception& e ) {
+            LOG_ERROR_MSG( e.what() );
+        }
 
-    return NULL;
+        sleep(10);
+    }
 }
 
 } } } // namespace mmcs::server::env

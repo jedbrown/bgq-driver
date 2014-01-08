@@ -44,7 +44,7 @@
 #include <ramdisk/include/services/MessageUtility.h>
 
 #include <boost/system/system_error.hpp>
-
+#include <boost/date_time/posix_time/posix_time_io.hpp>
 #include <boost/assert.hpp>
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
@@ -75,7 +75,8 @@ Connection::Connection(
     _incoming(),
     _outbox(),
     _block( block ),
-    _sequence( 0 )
+    _sequence( 0 ),
+    _pulse( boost::posix_time::microsec_clock::local_time() )
 {
 
 }
@@ -130,7 +131,6 @@ Connection::stop(
         const StopCallback& callback
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
     _strand.post(
             boost::bind(
                 &Connection::stopImpl,
@@ -196,6 +196,10 @@ Connection::statusImpl(
 void
 Connection::read()
 {
+    // assume this handler is protected by _strand
+    
+    if ( !_socket ) return;
+
     // start reading header
     boost::asio::async_read(
             *_socket,
@@ -230,6 +234,8 @@ Connection::writeImpl(
         const Message::Ptr& msg
         )
 {
+    // assume this handler is protected by _strand
+
     LOGGING_DECLARE_LOCATION_MDC( _location );
     LOGGING_DECLARE_BLOCK_MDC( _service == bgcios::JobctlService ? "jobctl" : "stdio" );
 
@@ -257,6 +263,31 @@ Connection::write()
     // every outgoing message has a unique sequence ID
     msg->header()->sequenceId = _sequence++;
 
+    if ( msg->header()->type == bgcios::jobctl::Heartbeat ) {
+        if ( _pulse.is_not_a_date_time() ) {
+            LOG_WARN_MSG( "has not responded to a Heartbeat" );
+
+            const block::Io::Ptr block( _block.lock() );
+            Ras::create( Ras::HeartbeatFailure ).
+                detail( RasEvent::LOCATION, _location ).
+                detail( "DAEMON", (_service == bgcios::JobctlService ? "jobctl" : "stdio") ).
+                block( block ? block->name() : std::string() )
+                ;
+
+            _outbox.clear();
+            _pulse = boost::posix_time::microsec_clock::local_time();
+
+            this->start( _endpoint );
+            _jobs->eof( _location );
+
+            return;
+        }
+
+        const boost::posix_time::ptime now( boost::posix_time::microsec_clock::local_time() );
+        LOG_DEBUG_MSG( "last message received " << (now - _pulse).total_seconds() << "s ago" );
+        _pulse = boost::posix_time::not_a_date_time;
+    }
+
     // log contents of header
     LOG_TRACE_MSG( "write " << bgcios::printHeader( *msg->header() ) );
 
@@ -278,9 +309,11 @@ Connection::connectHandler(
         const SocketPtr& socket
         )
 {
+    // assume this handler is protected by _strand
+
     LOGGING_DECLARE_LOCATION_MDC( _location );
     LOGGING_DECLARE_BLOCK_MDC( _service == bgcios::JobctlService ? "jobctl" : "stdio" );
-    LOG_TRACE_MSG( "connect handler" );
+    LOG_TRACE_MSG( __FUNCTION__ );
 
     if ( !socket ) {
         LOG_WARN_MSG( "could not connect" );
@@ -332,9 +365,11 @@ Connection::authenticateHandler(
         const SocketPtr& socket
         )
 {
+    // assume this handler is protected by _strand
+
     LOGGING_DECLARE_LOCATION_MDC( _location );
     LOGGING_DECLARE_BLOCK_MDC( _service == bgcios::JobctlService ? "jobctl" : "stdio" );
-    LOG_TRACE_MSG( "authenticate handler" );
+    LOG_TRACE_MSG( __FUNCTION__ );
 
     if ( !socket ) {
         const block::Io::Ptr block( _block.lock() );
@@ -362,9 +397,11 @@ Connection::writeHandler(
         const boost::system::error_code& error
         )
 {
+    // assume this handler is protected by _strand
+
     LOGGING_DECLARE_LOCATION_MDC( _location );
     LOGGING_DECLARE_BLOCK_MDC( _service == bgcios::JobctlService ? "jobctl" : "stdio" );
-    LOG_TRACE_MSG( "write handler" );
+    LOG_TRACE_MSG( __FUNCTION__ );
 
     // remove previous message from queue
     _outbox.pop_front();
@@ -377,10 +414,7 @@ Connection::writeHandler(
 
     // if non-empty, start another
     if ( !_outbox.empty() ) {
-        LOG_TRACE_MSG( "outbox size " << _outbox.size() );
         this->write();
-    } else {
-        LOG_TRACE_MSG("outbox is empty")
     }
 }
 
@@ -391,8 +425,6 @@ Connection::readHeaderHandler(
 {
     LOGGING_DECLARE_LOCATION_MDC( _location );
     LOGGING_DECLARE_BLOCK_MDC( _service == bgcios::JobctlService ? "jobctl" : "stdio" );
-
-    LOG_TRACE_MSG( "read header handler" );
     
     if ( error == boost::asio::error::operation_aborted ) {
         // do nothing, we were asked to terminate
@@ -410,7 +442,7 @@ Connection::readHeaderHandler(
     }
 
     // log header contents
-    LOG_TRACE_MSG( "read " << bgcios::printHeader(_header) );
+    LOG_TRACE_MSG( __FUNCTION__ << " " << bgcios::printHeader(_header) );
 
     _incoming = cios::Message::create();
 
@@ -456,14 +488,19 @@ Connection::readDataHandler(
         return;
     }
 
+    if ( _service == bgcios::JobctlService ) {
+        _strand.post(
+                boost::bind( &Connection::pulse, shared_from_this() )
+                );
+        return;
+    }
+
     // get job object
-    const BGQDB::job::Id id = _header.jobId;
     _jobs->find(
-            id,
+            _header.jobId,
             boost::bind(
                 &Connection::findJobHandler,
                 shared_from_this(),
-                id,
                 _1
                 )
             );
@@ -471,7 +508,6 @@ Connection::readDataHandler(
 
 void
 Connection::findJobHandler(
-        const BGQDB::job::Id id,
         const Job::Ptr& job
         )
 {
@@ -479,43 +515,47 @@ Connection::findJobHandler(
     LOGGING_DECLARE_BLOCK_MDC( _service == bgcios::JobctlService ? "jobctl" : "stdio" );
     LOG_TRACE_MSG( __FUNCTION__ );
 
+    const uint16_t type = _header.type;
+    const uint32_t returnCode = _header.returnCode;
+
     if ( !job ) {
         // special case for change config and reconnect ack due to no job ID
         if (
-                _header.type == bgcios::jobctl::ChangeConfigAck ||
-                _header.type == bgcios::stdio::ChangeConfigAck ||
-                _header.type == bgcios::jobctl::ReconnectAck ||
-                _header.type == bgcios::stdio::ReconnectAck
+                type == bgcios::jobctl::ChangeConfigAck ||
+                type == bgcios::stdio::ChangeConfigAck ||
+                type == bgcios::jobctl::ReconnectAck ||
+                type == bgcios::stdio::ReconnectAck
            )
         {
-            if ( _header.returnCode != bgcios::Success ) {
+            if ( returnCode != bgcios::Success ) {
                 LOG_WARN_MSG( 
                         (
                         _service == bgcios::JobctlService ? 
-                        bgcios::jobctl::toString(_header.type) : bgcios::stdio::toString(_header.type)
+                        bgcios::jobctl::toString(type) : bgcios::stdio::toString(type)
                         ) << 
-                        " failed with rc " << _header.returnCode << ": " <<
-                        bgcios::returnCodeToString( _header.returnCode )
+                        " failed with rc " << returnCode << ": " <<
+                        bgcios::returnCodeToString( returnCode )
                         );
             } else {
                 LOG_DEBUG_MSG(
                         (
                         _service == bgcios::JobctlService ? 
-                        bgcios::jobctl::toString(_header.type) : bgcios::stdio::toString(_header.type)
+                        bgcios::jobctl::toString(type) : bgcios::stdio::toString(type)
                         ) << " success"
                         );
             }
-        } else if ( _header.service == bgcios::StdioService ) {
+        } else if ( 
+                _service == bgcios::StdioService &&
+                ( type == bgcios::stdio::WriteStdout || type == bgcios::stdio::WriteStderr )
+                )
+        {
             // we don't need to log stdout/stderr messages not found at a high severity
-            LOG_DEBUG_MSG( "could not find job " << id );
-            LOG_DEBUG_MSG( bgcios::printHeader(_header) );
+            LOG_DEBUG_MSG( "Could not find job: " << bgcios::printHeader(_header) );
         } else  {
-            LOG_WARN_MSG( "could not find job " << id );
-            LOG_WARN_MSG( bgcios::printHeader(_header) );
+            LOG_WARN_MSG( "Could not find job: " << bgcios::printHeader(_header) );
         }
 
-        // start read for next header
-        this->read();
+        _strand.post( boost::bind(&Connection::read, shared_from_this()) );
         return;
     }
 
@@ -523,14 +563,21 @@ Connection::findJobHandler(
             boost::bind(
                 &Connection::handleJob,
                 shared_from_this(),
-                job
+                job,
+                _incoming
                 )
             );
+
+    if ( _service == bgcios::JobctlService ) {
+        // service connection immediately rather than callback after servicing job
+        _strand.post( boost::bind(&Connection::read, shared_from_this()) );
+    }
 }
 
 void
 Connection::handleJob(
-        const Job::Ptr& job
+        const Job::Ptr& job,
+        const cios::Message::Ptr& incoming
         )
 {
     LOGGING_DECLARE_LOCATION_MDC( _location );
@@ -538,21 +585,23 @@ Connection::handleJob(
     LOG_TRACE_MSG( __FUNCTION__ );
 
     job::Handle handle( job );
-    handle.impl(
-            _location,
-            _incoming,
-            boost::bind(
-                &Connection::completionHandler,
-                shared_from_this()
-                )
-            );
-}
 
-void
-Connection::completionHandler()
-{
-    LOG_TRACE_MSG( __FUNCTION__ );
-    this->read();
+    if ( _service == bgcios::StdioService ) {
+        handle.data(
+                _location,
+                incoming,
+                _strand.wrap( 
+                    boost::bind(
+                        &Connection::read, 
+                        shared_from_this()
+                        )
+                    )
+                );
+    } else if ( _service == bgcios::JobctlService ) {
+        handle.control( _location, incoming );
+    } else {
+        BOOST_ASSERT( !"unhandled service" );
+    }
 }
 
 void
@@ -652,6 +701,33 @@ Connection::keepAlive(
     if ( error ) {
         LOG_WARN_MSG( "could not enable TCP keep alive probe count: " << boost::system::system_error(error).what() );
     }
+}
+
+void
+Connection::pulse()
+{
+    // assume this handler is protected by _strand
+
+    LOGGING_DECLARE_LOCATION_MDC( _location );
+    LOGGING_DECLARE_BLOCK_MDC( _service == bgcios::JobctlService ? "jobctl" : "stdio" );
+
+    _pulse = boost::posix_time::microsec_clock::local_time();
+
+    if ( _header.type == bgcios::jobctl::HeartbeatAck ) {
+        // log round trip time
+        LOG_DEBUG_MSG( "round trip time " << time(NULL) - _header.jobId << "s" );
+        this->read();
+        return;
+    }
+
+    _jobs->find(
+            _header.jobId,
+            boost::bind(
+                &Connection::findJobHandler,
+                shared_from_this(),
+                _1
+                )
+            );
 }
 
 } // cios

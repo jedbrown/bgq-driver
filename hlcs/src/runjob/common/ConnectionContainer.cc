@@ -25,6 +25,7 @@
 #include "common/logging.h"
 
 #include <boost/assert.hpp>
+#include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 
 LOG_DECLARE_FILE( runjob::log );

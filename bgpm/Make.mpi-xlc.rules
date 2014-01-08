@@ -26,18 +26,18 @@ LIB_DIRS = $(BGQ_INSTALL_DIR)/spi/lib
 LIBS = pthread 
 
 
-MPIBIN = $(BGQ_INSTALL_DIR)/comm/xl/bin
-MPIBIN = $(BGQ_INSTALL_DIR)/comm/xl.perobj.fast/bin/
-MPIBIN = /bgsys/drivers/ppcfloor/comm/xl.perobj.fast/bin/
+#MPIBIN = $(BGQ_INSTALL_DIR)/comm/bin/xl.ndebug
+#MPIBIN = $(BGQ_INSTALL_DIR)/comm/bin/xl.ndebug
+MPIBIN = /bgsys/drivers/ppcfloor/comm/bin/xl.ndebug
 #XLBIN  = /gsa/tlbgsa/projects/x/xlcmpbld/run/vacpp/dev/bgq/daily/latest/bin
 XLBIN = /opt/ibmcmp/vacpp/bg/12.1/bin
 
 
-CFLAGS := -I$(BGQ_INSTALL_DIR)/comm/sys/include -I$(BGQ_INSTALL_DIR)/comm/gcc/include $(CFLAGS)
-LIB_DIRS += $(BGQ_INSTALL_DIR)/comm/xl/lib $(BGQ_INSTALL_DIR)/comm/sys/lib 
-LDFLAGS += -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/xl/lib -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/sys/lib \
+CFLAGS := -I$(BGQ_INSTALL_DIR)/comm/sys/include -I$(BGQ_INSTALL_DIR)/comm/include -I$(BGQ_INSTALL_DIR)/comm/include/xl $(CFLAGS)
+LIB_DIRS += $(BGQ_INSTALL_DIR)/comm/lib  
+LDFLAGS += -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/lib  \
            -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/spi/lib
-LIBS += cxxmpich mpich opa mpl dl pami SPI SPI_cnk rt ibmc++ stdc++
+LIBS += mpichcxx-xl mpich-xl opa-xl mpl-xl dl pami-gcc SPI SPI_cnk rt ibmc++ stdc++
 
 
 

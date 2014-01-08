@@ -266,8 +266,19 @@ void
 Options::setupSimulationEnvironment()
 {
     // verify iosd exists
-    const std::string iosd_path = this->getProperties()->getValue(PropertiesSection, "iosd_sim_path");
-    const std::string iosd_name = this->getProperties()->getValue(PropertiesSection, "iosd_sim_name");
+    std::string iosd_path = BGQ_INSTALL_DIR + std::string("/ramdisk/bin");
+    std::string iosd_name = "start_job_simulation";
+    try {
+        iosd_path = this->getProperties()->getValue(PropertiesSection, "iosd_sim_path");
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( "iosd_sim_path not found, using default: " << iosd_path );
+    }
+    try {
+        iosd_name = this->getProperties()->getValue(PropertiesSection, "iosd_sim_name");
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( "iosd_sim_name not found, using default: " << iosd_name );
+    }
+
     try {
         boost::filesystem::path path( iosd_path );
         path /= iosd_name;
@@ -293,8 +304,13 @@ Options::setupSimulationEnvironment()
         // set new maximum
         try {
             std::string max = this->getProperties()->getValue( PropertiesSection, "max_user_processes" );
-            limit.rlim_cur = boost::lexical_cast<rlim_t>( max );
-            LOG_INFO_MSG( "setting max user processes to " << max );
+            const int value = boost::lexical_cast<int>( max );
+            if ( value > 0 ) {
+                LOG_INFO_MSG( "setting max user processes to " << max );
+                limit.rlim_cur = value;
+            } else {
+                LOG_INFO_MSG( "leaving RLIMIT_NPROC at " << limit.rlim_cur );
+            }
         } catch ( const std::invalid_argument& e ) {
             LOG_WARN_MSG( "missing max_user_processes key from " << PropertiesSection << " of properties file" );
             LOG_WARN_MSG( "using " << defaults::ServerMaxUserProcesses << " as default" );

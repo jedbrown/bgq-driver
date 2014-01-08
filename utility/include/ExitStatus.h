@@ -48,7 +48,7 @@ class ExitStatus
 {
 public:
 
-    typedef const int ExitStatus::*_BoolType;
+    typedef const int ExitStatus::*BoolType;
 
 
     /*! \brief Normal exit is exited() & exit status is 0. */
@@ -75,7 +75,7 @@ public:
     /*! \brief Boolean comparison.
      *  \return true if abnormal exit, false if normal exit.
      */
-    operator _BoolType() const  { return (_exit_status != 0 ? &ExitStatus::_exit_status : 0 ); }
+    operator BoolType() const  { return (_exit_status != 0 ? &ExitStatus::_exit_status : 0 ); }
 
 
 private:

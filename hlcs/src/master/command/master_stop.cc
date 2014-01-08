@@ -23,23 +23,22 @@
 
 #include "common/ArgParse.h"
 
-#include "lib/BGMasterClientApi.h"
+#include "lib/BGMasterClient.h"
 #include "lib/exceptions.h"
 
 #include <utility/include/Log.h>
 
-#include <boost/tokenizer.hpp>
 
 #include <csignal>
 
 LOG_DECLARE_FILE( "master" );
 
-BGMasterClient client;
 
 enum TypeToStop { BGMASTER_ONLY, BINARY, BGMASTER, BGAGENT, ALIAS, BINARIES };
 
 int
 doStop(
+        BGMasterClient& client,
         const std::string& target,
         const TypeToStop stoptype = ALIAS,
         const int signal = 15
@@ -52,7 +51,7 @@ doStop(
         try {
             client.end_master(true);
             errormsg = "Stopped " + target;
-        } catch(const exceptions::BGMasterError& e) {
+        } catch (const exceptions::BGMasterError& e) {
             std::cerr << "end master failed, error is: " << e.what() << std::endl;
             return EXIT_FAILURE;
         }
@@ -60,7 +59,7 @@ doStop(
     case ALIAS:
         try {
             client.stop(target, signal, errormsg);
-        } catch(const exceptions::BGMasterError& e) {
+        } catch (const exceptions::BGMasterError& e) {
             std::cerr << "Stop alias failed, error is: " << e.what() << std::endl;
             return EXIT_FAILURE;
         }
@@ -68,7 +67,7 @@ doStop(
     case BINARY:
         try {
             client.stop(id, signal, errormsg);
-        } catch(const exceptions::BGMasterError& e) {
+        } catch (const exceptions::BGMasterError& e) {
             std::cerr << "Stop binary failed, error is: " << e.what() << std::endl;
             return EXIT_FAILURE;
         }
@@ -85,7 +84,7 @@ doStop(
         try {
 	    errormsg = "Stopping bgmaster (bgmaster_server)";
             client.end_master(false, signal);
-        } catch(const exceptions::BGMasterError& e) {
+        } catch (const exceptions::BGMasterError& e) {
             std::cerr << "Stopping bgmaster (bgmaster_server) failed, error is: " << e.what() << std::endl;
             return EXIT_FAILURE;
         }
@@ -97,7 +96,7 @@ doStop(
             const BinaryId emptyid;
             // An empty id says kill 'em all.
             client.stop(emptyid, signal, errormsg);
-        } catch(const exceptions::BGMasterError& e) {
+        } catch (const exceptions::BGMasterError& e) {
             std::cerr << "Stopping binaries failed, error is: " << e.what() << std::endl;
             return EXIT_FAILURE;
         }
@@ -136,80 +135,80 @@ stringSigToIntSig(
         )
 {
     int intsig = 0;
-    if(strsig == "SIGHUP")
+    if (strsig == "SIGHUP")
         intsig = SIGHUP;
-    else if(strsig == "SIGINT")
+    else if (strsig == "SIGINT")
         intsig = SIGINT;
-    else if(strsig == "SIGQUIT")
+    else if (strsig == "SIGQUIT")
         intsig = SIGQUIT;
-    else if(strsig == "SIGILL")
+    else if (strsig == "SIGILL")
         intsig = SIGILL;
-    else if(strsig == "SIGABRT")
+    else if (strsig == "SIGABRT")
         intsig = SIGABRT;
-    else if(strsig == "SIGFPE")
+    else if (strsig == "SIGFPE")
         intsig = SIGFPE;
-    else if(strsig == "SIGKILL")
+    else if (strsig == "SIGKILL")
         intsig = SIGKILL;
-    else if(strsig == "SIGSEGV")
+    else if (strsig == "SIGSEGV")
         intsig = SIGSEGV;
-    else if(strsig == "SIGPIPE")
+    else if (strsig == "SIGPIPE")
         intsig = SIGPIPE;
-    else if(strsig == "SIGALRM")
+    else if (strsig == "SIGALRM")
         intsig = SIGALRM;
-    else if(strsig == "SIGTERM")
+    else if (strsig == "SIGTERM")
         intsig = SIGTERM;
-    else if(strsig == "SIGUSR1")
+    else if (strsig == "SIGUSR1")
         intsig = SIGUSR1;
-    else if(strsig == "SIGUSR2")
+    else if (strsig == "SIGUSR2")
         intsig = SIGUSR2;
-    else if(strsig == "SIGCHLD")
+    else if (strsig == "SIGCHLD")
         intsig = SIGCHLD;
-    else if(strsig == "SIGCONT")
+    else if (strsig == "SIGCONT")
         intsig = SIGCONT;
-    else if(strsig == "SIGSTOP")
+    else if (strsig == "SIGSTOP")
         intsig = SIGSTOP;
-    else if(strsig == "SIGTSTP")
+    else if (strsig == "SIGTSTP")
         intsig = SIGTSTP;
-    else if(strsig == "SIGTTIN")
+    else if (strsig == "SIGTTIN")
         intsig = SIGTTIN;
-    else if(strsig == "SIGTTOU")
+    else if (strsig == "SIGTTOU")
         intsig = SIGTTOU;
-    else if(strsig == "SIGBUS")
+    else if (strsig == "SIGBUS")
         intsig = SIGBUS;
-    else if(strsig == "SIGPOLL")
+    else if (strsig == "SIGPOLL")
         intsig = SIGPOLL;
-    else if(strsig == "SIGIO")
+    else if (strsig == "SIGIO")
         intsig = SIGIO;
-    else if(strsig == "SIGPROF")
+    else if (strsig == "SIGPROF")
         intsig = SIGPROF;
-    else if(strsig == "SIGSYS")
+    else if (strsig == "SIGSYS")
         intsig = SIGSYS;
-    else if(strsig == "SIGTRAP")
+    else if (strsig == "SIGTRAP")
         intsig = SIGTRAP;
-    else if(strsig == "SIGURG")
+    else if (strsig == "SIGURG")
         intsig = SIGURG;
-    else if(strsig == "SIGVTALRM")
+    else if (strsig == "SIGVTALRM")
         intsig = SIGVTALRM;
-    else if(strsig == "SIGXCPU")
+    else if (strsig == "SIGXCPU")
         intsig = SIGXCPU;
-    else if(strsig == "SIGXFSZ")
+    else if (strsig == "SIGXFSZ")
         intsig = SIGXFSZ;
-    else if(strsig == "SIGIOT")
+    else if (strsig == "SIGIOT")
         intsig = SIGIOT;
-    else if(strsig == "SIGSTKFLT")
+    else if (strsig == "SIGSTKFLT")
         intsig = SIGSTKFLT;
-    else if(strsig == "SIGCLD")
+    else if (strsig == "SIGCLD")
         intsig = SIGCLD;
-    else if(strsig == "SIGPWR")
+    else if (strsig == "SIGPWR")
         intsig = SIGPWR;
-    else if(strsig == "SIGWINCH")
+    else if (strsig == "SIGWINCH")
         intsig = SIGWINCH;
-    else if(strsig == "SIGUNUSED")
+    else if (strsig == "SIGUNUSED")
         intsig = SIGUNUSED;
     else {
         try {
             intsig = boost::lexical_cast<int>(strsig);
-        } catch(const boost::bad_lexical_cast& e) {
+        } catch (const boost::bad_lexical_cast& e) {
             std::cerr << "Invalid signal \"" << strsig << "\" specified." << std::endl;
             exit(EXIT_FAILURE);
         }
@@ -232,7 +231,7 @@ main(int argc, const char** argv)
     validargs.push_back(sigarg);
 
     const Args largs(argc, argv, &usage, &help, validargs, singles);
-    client.initProperties(largs.get_props());
+    BGMasterClient client;
 
     const std::string binary = largs[binarg];
     const std::string agent = largs[agarg];
@@ -263,19 +262,19 @@ main(int argc, const char** argv)
             target.clear();
             stoptype = BINARY;
         }
-        else if(target == "bgmaster_only")
+        else if (target == "bgmaster_only")
             stoptype = BGMASTER_ONLY;
         else
             stoptype = ALIAS;
     }
 
     try {
-        client.connectMaster(largs.get_portpairs());
-    } catch(const exceptions::BGMasterError& e) {
-        std::cerr << "Unable to contact bgmaster_server, server may be down." << std::endl;
+        client.connectMaster(largs.get_props(), largs.get_portpairs());
+    } catch (const exceptions::BGMasterError& e) {
+        std::cerr << "Unable to contact bgmaster_server: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    const int rc = doStop(target, stoptype, signal);
+    const int rc = doStop(client, target, stoptype, signal);
     exit( rc );
 }

@@ -24,6 +24,7 @@
 #include "Optical.h"
 
 #include "McServerConnection.h"
+#include "Token.h"
 #include "types.h"
 #include "utility.h"
 
@@ -41,6 +42,8 @@
 
 #include <xml/include/c_api/MCServerMessageSpec.h>
 
+#include <boost/make_shared.hpp>
+
 LOG_DECLARE_FILE( "mmcs.server" );
 
 namespace mmcs {
@@ -51,18 +54,16 @@ Optical::Optical(
         boost::asio::io_service& io_service
         ) :
     Polling( io_service, 3600 ),
-    _connections( 0 ),
     _racks( ),
     _drawers( ),
     _strand( io_service ),
-    _mutex( ),
+    _databaseStrand( io_service ),
     _connection( ),
     _opticalInsert( ),
     _opticalDataInsert( ),
     _opticalChannelDataInsert( ),
     _mc_start( ),
     _insertion_time( )
-
 {
 
 }
@@ -119,7 +120,7 @@ Optical::impl(
     _connection = this->prepareInserts( _opticalInsert, _opticalDataInsert, _opticalChannelDataInsert );
 
     if ( !_connection ) {
-        LOG_ERROR_MSG( "could not get database connection" );
+        LOG_ERROR_MSG("Could not get database connection.");
         this->wait();
         return;
     }
@@ -127,46 +128,58 @@ Optical::impl(
     database_timer->dismiss( false );
     database_timer->stop();
 
+    // We'll pass this token around to the completion handlers for collecting and
+    // inserting all the environmental values. When it goes out of scope, it means we are done.
+    const Token::Ptr token(
+            Token::create(
+                this->getDescription(),
+                boost::bind(
+                    &Optical::createTimers,
+                    boost::static_pointer_cast<Optical>( shared_from_this() )
+                    )
+                )
+            );
+
     const Timer::Ptr rack_timer = this->time()->subFunction("count racks");
 
     _racks = getRacks(_connection);
     _drawers = getIoDrawers(_connection);
-    _connections = calculateConnectionSize( _racks );
+    const unsigned connections = calculateConnectionSize( _racks );
 
     rack_timer->stop();
 
-    LOG_DEBUG_MSG( "creating " << _connections << " connections to mc_server" );
+    LOG_DEBUG_MSG("Creating " << connections << " connections to mc_server." );
 
     _insertion_time = boost::posix_time::time_duration();
     _mc_start = boost::posix_time::microsec_clock::local_time();
 
-    for ( unsigned i = 0; i < _connections; ++i ) {
+    for ( unsigned i = 0; i < connections; ++i ) {
         const McServerConnection::Ptr mc(
                 McServerConnection::create(
                     _io_service
                     )
                 );
         mc->start(
+                this->getDescription(),
                 _strand.wrap(
                     boost::bind(
                         &Optical::connectHandler,
-                        this,
+                        boost::static_pointer_cast<Optical>( shared_from_this() ),
                         _1,
                         _2,
-                        mc
+                        mc,
+                        token
                         )
                     )
                 );
     }
 
-    // account for the connection passed in as a parameter
-    ++_connections;
-
     _strand.post(
             boost::bind(
                 &Optical::makeTargetSet,
-                this,
-                mc_server
+                boost::static_pointer_cast<Optical>( shared_from_this() ),
+                mc_server,
+                token
                 )
             );
 }
@@ -175,38 +188,27 @@ void
 Optical::connectHandler(
         const bgq::utility::Connector::Error::Type error,
         const std::string& message,
-        const McServerConnection::Ptr& mc_server
+        const McServerConnection::Ptr& mc_server,
+        const Token::Ptr& token
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
     if ( error ) {
-        LOG_WARN_MSG( " could not connect: " << message );
-        --_connections;
+        LOG_ERROR_MSG("Could not connect: " << message );
         return;
     }
 
-    this->makeTargetSet( mc_server );
+    this->makeTargetSet( mc_server, token );
 }
-
 
 void
 Optical::makeTargetSet(
-        const McServerConnection::Ptr& mc_server
+        const McServerConnection::Ptr& mc_server,
+        const Token::Ptr& token
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
+    // assume this handler is protected by _strand
+    LOG_DEBUG_MSG( _racks.size() << " racks remaining and " << _drawers.size() << " drawers remaining" );
     if ( _racks.empty() && _drawers.empty() ) {
-        --_connections;
-        if ( _connections ) {
-            LOG_TRACE_MSG( _connections << " connections left" );
-            return;
-        }
-
-        // getting here means every connection has completed its work
-        this->createTimers();
-
-        this->wait();
-
         return;
     }
 
@@ -230,16 +232,18 @@ Optical::makeTargetSet(
         io = true;
     }
 
+    LOG_TRACE_MSG( "Making target set " << request._set );
     mc_server->send(
             request.getClassName(),
             request,
             boost::bind(
                 &Optical::makeTargetSetHandler,
-                this,
+                boost::static_pointer_cast<Optical>( shared_from_this() ),
                 _1,
                 mc_server,
                 request._set,
-                io
+                io,
+                token
                 )
             );
 }
@@ -249,26 +253,27 @@ Optical::makeTargetSetHandler(
         std::istream& response,
         const McServerConnection::Ptr& mc_server,
         const std::string& name,
-        bool io
+        bool io,
+        const Token::Ptr& token
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
-
     MCServerMessageSpec::MakeTargetSetReply reply;
     reply.read( response );
 
-    MCServerMessageSpec::OpenTargetRequest request(name, "EnvMonOM", MCServerMessageSpec::RAAW, true);
+    LOG_TRACE_MSG( "Made target set " << name );
+    const MCServerMessageSpec::OpenTargetRequest request(name, "EnvMonOM", MCServerMessageSpec::RAAW, true);
 
     mc_server->send(
             request.getClassName(),
             request,
             boost::bind(
                 &Optical::openTargetHandler,
-                this,
+                boost::static_pointer_cast<Optical>( shared_from_this() ),
                 _1,
                 mc_server,
                 name,
-                io
+                io,
+                token
                 )
             );
 }
@@ -278,58 +283,63 @@ Optical::openTargetHandler(
         std::istream& response,
         const McServerConnection::Ptr& mc_server,
         const std::string& name,
-        bool io
+        bool io,
+        const Token::Ptr& token
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
     MCServerMessageSpec::OpenTargetReply reply;
     reply.read( response );
 
     if (reply._rc) {
-        LOG_INFO_MSG("unable to open target set: " << reply._rt);
+        LOG_ERROR_MSG("Unable to open target set: " << reply._rt);
         _strand.post(
                 boost::bind(
                     &Optical::makeTargetSet,
-                    this,
-                    mc_server
+                    boost::static_pointer_cast<Optical>( shared_from_this() ),
+                    mc_server,
+                    token
                     )
                 );
         return;
     }
-    LOG_TRACE_MSG( "opened target set with handle " << reply._handle );
+    LOG_TRACE_MSG("Opened " << name << " target set with handle " << reply._handle );
 
     if ( io ) {
         MCServerMessageSpec::ReadIoCardEnvRequest request;
         request._set = name;
+        LOG_DEBUG_MSG( request.getClassName() << " begin " << name );
 
         mc_server->send(
                 request.getClassName(),
                 request,
                 boost::bind(
                     &Optical::readHandler,
-                    this,
+                    boost::static_pointer_cast<Optical>( shared_from_this() ),
                     _1,
                     name,
                     reply._handle,
                     mc_server,
-                    io
+                    io,
+                    token
                     )
                 );
     } else {
         MCServerMessageSpec::ReadNodeCardEnvRequest request;
         request._set = name;
+        LOG_DEBUG_MSG( request.getClassName() << " begin " << name );
 
         mc_server->send(
                 request.getClassName(),
                 request,
                 boost::bind(
                     &Optical::readHandler,
-                    this,
+                    boost::static_pointer_cast<Optical>( shared_from_this() ),
                     _1,
                     name,
                     reply._handle,
                     mc_server,
-                    io
+                    io,
+                    token
                     )
                 );
     }
@@ -341,39 +351,66 @@ Optical::readHandler(
         const std::string& name,
         const int handle,
         const McServerConnection::Ptr& mc_server,
-        bool io
+        bool io,
+        const Token::Ptr& token
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
+    LOG_DEBUG_MSG( __FUNCTION__ << " end " << name );
 
-    // database connections need exclusive access
-    boost::mutex::scoped_lock lock( _mutex );
-    const boost::posix_time::ptime start( boost::posix_time::microsec_clock::local_time() );
-
+    boost::shared_ptr<XML::Serializable> reply;
     if ( io ) {
-        MCServerMessageSpec::ReadIoCardEnvReply reply;
-        reply.read( response );
-        this->processIo( reply );
+        reply = boost::make_shared<MCServerMessageSpec::ReadIoCardEnvReply>();
+        reply->read( response );
     } else {
-        MCServerMessageSpec::ReadNodeCardEnvReply reply;
-        reply.read( response );
-        this->processNodeCard( reply );
+        reply = boost::make_shared<MCServerMessageSpec::ReadNodeCardEnvReply>();
+        reply->read( response );
     }
-
-    _insertion_time += boost::posix_time::microsec_clock::local_time() - start;
-
     this->closeTarget(
             mc_server,
             name,
             handle,
-            _strand.wrap(
-                boost::bind(
-                    &Optical::makeTargetSet,
-                    this,
-                    mc_server
-                    )
+            boost::bind(
+                &Optical::closeTargetHandler,
+                boost::static_pointer_cast<Optical>( shared_from_this() ),
+                reply,
+                name,
+                mc_server,
+                io,
+                token
                 )
             );
+}
+
+void
+Optical::closeTargetHandler(
+            const boost::shared_ptr<XML::Serializable>& reply,
+            const std::string& name,
+            const boost::shared_ptr<McServerConnection>& mc_server,
+            bool io,
+            const Token::Ptr& token
+            )
+{
+    _databaseStrand.post(
+            boost::bind(
+                &Optical::insertData,
+                boost::static_pointer_cast<Optical>( shared_from_this() ),
+                reply,
+                name,
+                mc_server,
+                io,
+                token
+                )
+            );
+
+    _strand.post(
+            boost::bind(
+                &Optical::makeTargetSet,
+                boost::static_pointer_cast<Optical>( shared_from_this() ),
+                mc_server,
+                token
+                )
+            );
+
 }
 
 void
@@ -392,7 +429,7 @@ Optical::processNodeCard(
         if (nodecard->_error == CARD_NOT_PRESENT) continue;
         if (nodecard->_error == CARD_NOT_UP) continue;
         if (nodecard->_error) {
-            LOG_INFO_MSG("Error occurred reading environmentals from: " << nodecard->_lctn);
+            LOG_ERROR_MSG("Error reading environmentals from: " << nodecard->_lctn);
             RasEventImpl noContact(0x00061001);
             noContact.setDetail(RasEvent::LOCATION, nodecard->_lctn);
             RasEventHandlerChain::handle(noContact);
@@ -410,7 +447,7 @@ Optical::processNodeCard(
             )
         {
             if (optic->_error) {
-                LOG_INFO_MSG("Error occurred reading environmentals from: " << optic->_lctn);
+                LOG_ERROR_MSG("Error reading environmentals from: " << optic->_lctn);
                 continue;
             }
 
@@ -482,7 +519,7 @@ Optical::processIo(
         if (io->_error == CARD_NOT_PRESENT) continue;
         if (io->_error == CARD_NOT_UP) continue;
         if (io->_error) {
-            LOG_INFO_MSG("Error occurred reading environmentals from: " << io->_lctn);
+            LOG_ERROR_MSG("Error reading environmentals from: " << io->_lctn);
             RasEventImpl noContact(0x00061004);
             noContact.setDetail(RasEvent::LOCATION, io->_lctn);
             RasEventHandlerChain::handle(noContact);
@@ -500,7 +537,7 @@ Optical::processIo(
             )
         {
             if (optic->_error) {
-                LOG_INFO_MSG("Error occurred reading environmentals from: " << optic->_lctn);
+                LOG_ERROR_MSG("Error reading environmentals from: " << optic->_lctn);
                 continue;
             }
 
@@ -517,15 +554,42 @@ Optical::processIo(
 }
 
 void
+Optical::insertData(
+        const boost::shared_ptr<XML::Serializable>& reply,
+        const std::string& name,
+        const McServerConnection::Ptr& mc_server,
+        bool io,
+        const Token::Ptr& token
+        )
+{
+    // Assume this handler is protected by the database strand
+    const boost::posix_time::ptime start( boost::posix_time::microsec_clock::local_time() );
+    LOG_TRACE_MSG( __FUNCTION__ << " begin " << name );
+    BOOST_ASSERT( reply );
+
+    if ( io ) {
+        this->processIo(
+                *boost::dynamic_pointer_cast<MCServerMessageSpec::ReadIoCardEnvReply>( reply )
+                );
+    } else {
+        this->processNodeCard(
+                *boost::dynamic_pointer_cast<MCServerMessageSpec::ReadNodeCardEnvReply>( reply )
+                );
+    }
+
+    LOG_TRACE_MSG( __FUNCTION__ << " end " << name );
+    _insertion_time += boost::posix_time::microsec_clock::local_time() - start;
+}
+
+void
 Optical::createTimers()
 {
-    // need to subtract the insertion time from the mc time
+    // Need to subtract the insertion time from the mc time
     const boost::posix_time::time_duration mc_time(
             boost::posix_time::microsec_clock::local_time() - _mc_start - _insertion_time
             );
 
-    // need to create data points here, we can't use timers since the durations
-    // can overlap
+    // Need to create data points here, we can't use timers since the durations can overlap
     const std::string qualifier(
             boost::lexical_cast<std::string>(
                 boost::posix_time::time_duration(
@@ -545,7 +609,13 @@ Optical::createTimers()
     database.setQualifier( qualifier );
     database.setSubFunction( "database insertion" );
     _counters->add( database );
-}
 
+    _opticalInsert.reset();
+    _opticalDataInsert.reset();
+    _opticalChannelDataInsert.reset();
+    _connection.reset();
+
+    this->wait();
+}
 
 } } } // namespace mmcs::server::env

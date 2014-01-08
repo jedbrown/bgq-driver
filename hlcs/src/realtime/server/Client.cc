@@ -235,8 +235,9 @@ void Client::_readComplete( const boost::system::error_code& err, size_t /*bytes
 
     try {
         if ( err ) {
-            LOG_DEBUG_MSG( "Client read error: " << err );
-            throw std::runtime_error( "read error" );
+            const boost::system::system_error e(err);
+            LOG_DEBUG_MSG( "Client read error: " << e.what() );
+            throw std::runtime_error( std::string("read error: ") + e.what() );
         }
 
         istream is( &_in_sb );
@@ -254,7 +255,7 @@ void Client::_readComplete( const boost::system::error_code& err, size_t /*bytes
 
         _startRead();
     } catch ( std::exception& e ) {
-        LOG_WARN_MSG( "Error reading from client, " << e.what() );
+        LOG_WARN_MSG( "Error reading from client " << _id << ", " << e.what() );
         _shutdown();
     }
 }

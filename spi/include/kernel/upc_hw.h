@@ -56,18 +56,6 @@ __BEGIN_DECLS
 //#define BGQ_GetNumThreads() 68
 
 
-//! \brief: UPC_C MMIO Addr
-//! The starting address for the UPC region is a constant value.
-//! The value is a privileged address in kernel state, and non-privileged
-//! in user state.
-#ifdef UPC_C_C
-upc_c_mmio_t *const  upc_c = (upc_c_mmio_t *const) UPC_C_MMIO_ADDR;
-#else
-extern upc_c_mmio_t *const  upc_c;
-#endif
-
-
-
 #ifndef LIKELY
 #define LIKELY(x)       __builtin_expect(!!(x), 1)
 #define UNLIKELY(x)     __builtin_expect(!!(x), 0)
@@ -110,17 +98,6 @@ upc_p_mmio_t *      UPC_P_Addr(int unit);
 
 
 volatile uint64_t * UPC_L1p_Addr(int unit);
-
-
-//! global ptr for local upc_p mmio address - use with low latency routines which are only
-//! valid when accessed by a local thread.
-#ifdef UPC_P_C
-upc_p_mmio_t *const upc_p_local = (upc_p_mmio_t*const)(UPC_P_MMIO_ADDR);
-#else
-extern upc_p_mmio_t *const upc_p_local;
-#endif
-
-
 
 
 __END_DECLS

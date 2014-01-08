@@ -7,7 +7,7 @@
 #                                                                  
 # Licensed Materials - Property of IBM                             
 # Blue Gene/Q                                                      
-# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# (C) Copyright IBM Corp. 2012, 2013 All Rights Reserved                 
 # US Government Users Restricted Rights - Use,                     
 # duplication or disclosure restricted by GSA ADP                  
 # Schedule contract with IBM Corp.                                 
@@ -171,6 +171,12 @@ logEvent() {
 	    echo -en "\n\n\n#################################################################\n" >> $LOG
 	    echo -en "NFS Statistics: " >> $LOG
 	    nfsstat -c >> $LOG
+
+	    ;;
+
+	"CIOSInfo" )
+	    
+	    ps auxw | grep [s]ysiod >> $LOG
 
 	    ;;
 
@@ -537,6 +543,10 @@ if [ $ENABLED -eq 1 ] ; then
 	    sleep $FREQUENCY
 	fi
 	    
+	let BG_SYSIOD_COUNT=`ps aux | grep -c [s]ysiod`
+	if [ $BG_SYSIOD_COUNT -gt $ATTACHED_COMPUTE_NODES ]; then
+		logEvent "The number of sysiod processes [$BG_SYSIOD_COUNT] exceeds the expected number [$ATTACHED_COMPUTE_NODES]." CIOSInfo
+	fi 
 
     done
 

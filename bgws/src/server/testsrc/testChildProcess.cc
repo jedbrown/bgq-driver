@@ -34,6 +34,7 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include <iostream>
 
 #define BOOST_TEST_MAIN
 #define BOOST_TEST_MODULE ChildProcess

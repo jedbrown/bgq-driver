@@ -29,93 +29,59 @@
 
 #include "protocol/BGMasterAgentProtocolSpec.h"
 
-#include <utility/include/Properties.h>
-
-
 //! \brief Basic BGMaster Protocol object for agent communications.  
-class AgentProtocol: public Protocol
+class AgentProtocol : public Protocol
 {
 public:
-    AgentProtocol(const bgq::utility::Properties::ConstPtr& p) : Protocol(p) {}
-   ~AgentProtocol() { }
+    AgentProtocol() : Protocol() {}
 
-  /*!
-   * Registration message.
-   *
-   * @param JoinRequest
-   *           request object
-   * @param JoinReply
-   *           reply object
-   */
-   void join(const BGMasterAgentProtocolSpec::JoinRequest& request, BGMasterAgentProtocolSpec::JoinReply& reply)
-  {
-    sendReceive(BGMasterAgentProtocolSpec::JoinRequest::getClassName(), request, BGMasterAgentProtocolSpec::JoinReply::getClassName(), reply);
-  }
+    /*!
+     * Registration message.
+     */
+    void join(const BGMasterAgentProtocolSpec::JoinRequest& request, BGMasterAgentProtocolSpec::JoinReply& reply)
+    {
+        sendReceive(BGMasterAgentProtocolSpec::JoinRequest::getClassName(), request, BGMasterAgentProtocolSpec::JoinReply::getClassName(), reply);
+    }
 
-  /*!
-   * Start a managed binary message.
-   *
-   * @param StartRequest
-   *           request object
-   * @param StartReply
-   *           reply object
-   */
-   void start(const BGMasterAgentProtocolSpec::StartRequest& request, BGMasterAgentProtocolSpec::StartReply& reply)
-  {
-    sendReceive(BGMasterAgentProtocolSpec::StartRequest::getClassName(), request, BGMasterAgentProtocolSpec::StartReply::getClassName(), reply);
-  }
+    /*!
+     * Start a managed binary message.
+     */
+    void start(const BGMasterAgentProtocolSpec::StartRequest& request, BGMasterAgentProtocolSpec::StartReply& reply)
+    {
+        sendReceive(BGMasterAgentProtocolSpec::StartRequest::getClassName(), request, BGMasterAgentProtocolSpec::StartReply::getClassName(), reply);
+    }
 
-  /*!
-   * Stop a managed binary message.
-   *
-   * @param StopRequest
-   *           request object
-   * @param StopReply
-   *           reply object
-   */
-   void stop(const BGMasterAgentProtocolSpec::StopRequest& request, BGMasterAgentProtocolSpec::StopReply& reply)
-  {
-    sendReceive(BGMasterAgentProtocolSpec::StopRequest::getClassName(), request, BGMasterAgentProtocolSpec::StopReply::getClassName(), reply);
-  }
+    /*!
+     * Stop a managed binary message.
+     */
+    void stop(const BGMasterAgentProtocolSpec::StopRequest& request, BGMasterAgentProtocolSpec::StopReply& reply)
+    {
+        sendReceive(BGMasterAgentProtocolSpec::StopRequest::getClassName(), request, BGMasterAgentProtocolSpec::StopReply::getClassName(), reply);
+    }
 
-  /*!
-   * Status of managed binaries.
-   *
-   * @param StatusRequest
-   *           request object
-   * @param StatusReply
-   *           reply object
-   */
-   void status(const BGMasterAgentProtocolSpec::StatusRequest& request, BGMasterAgentProtocolSpec::StatusReply& reply)
-  {
-    sendReceive(BGMasterAgentProtocolSpec::StatusRequest::getClassName(), request, BGMasterAgentProtocolSpec::StatusReply::getClassName(), reply);
-  }
+    /*!
+     * Status of managed binaries.
+     */
+    void status(const BGMasterAgentProtocolSpec::StatusRequest& request, BGMasterAgentProtocolSpec::StatusReply& reply)
+    {
+        sendReceive(BGMasterAgentProtocolSpec::StatusRequest::getClassName(), request, BGMasterAgentProtocolSpec::StatusReply::getClassName(), reply);
+    }
 
-  /*!
-   * Tell bgmaster that binary(ies) completed.
-   *
-   * @param CompleteRequest
-   *           request object
-   * @param CompleteReply
-   *           reply object
-   */
-  virtual void complete(const BGMasterAgentProtocolSpec::CompleteRequest& request, BGMasterAgentProtocolSpec::CompleteReply& reply)
-  {
-    sendReceive(BGMasterAgentProtocolSpec::CompleteRequest::getClassName(), request, BGMasterAgentProtocolSpec::CompleteReply::getClassName(), reply);
-  }
+    /*!
+     * Tell bgmaster that binary(ies) completed.
+     */
+    virtual void complete(const BGMasterAgentProtocolSpec::CompleteRequest& request, BGMasterAgentProtocolSpec::CompleteReply& reply)
+    {
+        sendReceive(BGMasterAgentProtocolSpec::CompleteRequest::getClassName(), request, BGMasterAgentProtocolSpec::CompleteReply::getClassName(), reply);
+    }
 
-  /*!
-   * Tell bgmaster that binary(ies) failed.
-   *
-   * @param FailedRequest
-   *           request object
-   * @param FailedReply
-   *           reply object
-   */
-  virtual void failed(const BGMasterAgentProtocolSpec::FailedRequest& request, BGMasterAgentProtocolSpec::FailedReply& reply)
-  {
-    sendReceive(BGMasterAgentProtocolSpec::FailedRequest::getClassName(), request, BGMasterAgentProtocolSpec::FailedReply::getClassName(), reply);
-  }
+    /*!
+     * Tell bgmaster that binary(ies) failed.
+     */
+    virtual void failed(const BGMasterAgentProtocolSpec::FailedRequest& request, BGMasterAgentProtocolSpec::FailedReply& reply)
+    {
+        sendReceive(BGMasterAgentProtocolSpec::FailedRequest::getClassName(), request, BGMasterAgentProtocolSpec::FailedReply::getClassName(), reply);
+    }
 };
 
 #endif

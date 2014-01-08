@@ -24,56 +24,58 @@
 #include "cxxsockets/File.h"
 #include "cxxsockets/FileLocker.h"
 #include "cxxsockets/exception.h"
-#include "cxxsockets/SocketReceiveSide.h"
-#include "cxxsockets/SocketSendSide.h"
 
 #include "Log.h"
 
 #include <fcntl.h>
 
-
 LOG_DECLARE_FILE( "utility.cxxsockets" );
 
 namespace CxxSockets {
 
-int
+void
 File::LockFile(
         FileLocker& locker
-        )
+        ) const
 {
-    // Get the whole socket lock first to ensure that 
+    // Get the whole socket lock first to ensure that
     // neither the sender nor the receiver gets invalidated
     // between the existence check and the lock() call.
-    int rc = 0;
-    rc = locker._all.Lock(&_fileLock); 
+    int rc = locker._all.Lock(&_fileLock);
+    if ( rc ) {
+        std::ostringstream msg;
+        char buf[256];
+        msg << "Could not lock file: " << strerror_r(rc, buf, sizeof(buf));
+        throw SoftError(rc, msg.str());
+    }
 
     // Note, we don't have to have either or both.  If they've
     // been invalidated, we don't care here.
-    if(_sender) {
-        locker._send.Lock(&_sender->getLock());
+    if (_sender) {
+        rc = locker._send.Lock(_sender.get());
+        if ( rc ) {
+            std::ostringstream msg;
+            char buf[256];
+            msg << "Could not lock sender: " << strerror_r(rc, buf, sizeof(buf));
+            throw SoftError(rc, msg.str());
+        }
     }
-    if(_receiver) {
-        locker._receive.Lock(&_receiver->getLock());
+    if (_receiver) {
+        rc = locker._receive.Lock(_receiver.get());
+        if ( rc ) {
+            std::ostringstream msg;
+            char buf[256];
+            msg << "Could not lock receiver: " << strerror_r(rc, buf, sizeof(buf));
+            throw SoftError(rc, msg.str());
+        }
     }
-    return rc;
-}
-
-File::File(
-        const int descriptor
-        ) :
-    _fileDescriptor(descriptor),
-    _fileLock(),
-    _receiver( new SocketReceiveSide ),
-    _sender( new SocketSendSide )
-{
-
 }
 
 File::File() :
-    _fileDescriptor(-1),
     _fileLock(),
-    _receiver( new SocketReceiveSide ),
-    _sender( new SocketSendSide )
+    _fileDescriptor(-1),
+    _receiver( new PthreadMutex ),
+    _sender( new PthreadMutex )
 {
 
 }
@@ -87,31 +89,35 @@ int
 File::LockSend(
         PthreadMutexHolder& smutex
         )
-{ 
+{
     int rc = 0;
-    if(_sender) {
-        rc = smutex.Lock(&_sender->getLock());
+    if (_sender) {
+        rc = smutex.Lock(_sender.get());
+    } else {
+        rc = -1;
     }
-    else rc = -1;
-    return rc; 
+    return rc;
 }
 
 int
 File::LockReceive(
         PthreadMutexHolder& rmutex
         )
-{ 
+{
     int rc = 0;
-    if(_receiver) {
-        rc = rmutex.Lock(&_receiver->getLock());
+    if (_receiver) {
+        rc = rmutex.Lock(_receiver.get());
+    } else {
+        rc = -1;
     }
-    else rc = -1;
     return rc;
 }
 
 int
 File::Close()
 {
+    if ( _fileDescriptor == -1 ) return 0;
+
     return ::close(_fileDescriptor);
 }
 

@@ -21,26 +21,21 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_KILL_MIDPLANE_JOBS_H_
 #define MMCS_SERVER_COMMAND_KILL_MIDPLANE_JOBS_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 class KillMidplaneJobs: public common::AbstractCommand
 {
 public:
     KillMidplaneJobs(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "kill_midplane_jobs <location> [kill|list]";}
+      : AbstractCommand(name,description,attributes) { _usage = "kill_midplane_jobs <location> [kill|list]";}
     static  KillMidplaneJobs* build();    // factory method
-    static  std::string cmdname() { return "kill_midplane_jobs"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              DBConsoleController* pController,

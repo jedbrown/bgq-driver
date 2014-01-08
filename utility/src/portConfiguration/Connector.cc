@@ -32,6 +32,7 @@
 #include "ScopeGuard.h"
 #include "UserId.h"
 
+#include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/throw_exception.hpp>
 

@@ -212,6 +212,14 @@ __INLINE__ uint32_t Kernel_MyTcoord();
 __INLINE__ uint32_t Kernel_GetRank();
 
 
+/*! \brief returns the coordinate rank mapping algorithm.
+ *
+ * \param[in] maporderlen size of the provided maporder buffer in bytes
+ * \param[inout] maporder pointer to a buffer that will contain the ABCDET mapping
+ * \param[inout] isFile pointer to a boolean that will be set to indicate whether maporder refers to a custom mapfile
+ */
+
+__INLINE__ uint32_t Kernel_GetMapping(size_t maporderlen, char* maporder, uint32_t* isFile);
 
 
 

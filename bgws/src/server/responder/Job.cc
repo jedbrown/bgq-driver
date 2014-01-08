@@ -43,6 +43,7 @@ The user must have READ authority to the job.
 [
   { "id": <i>ID</i>,
     "executable" : &quot;<i>path</i>&quot;,
+    "cwd" : &quot;<i>path</i>&quot;,
     "username" : &quot;<i>string</i>&quot;,
     "block" : &quot;<i>blockID</i>&quot;
     "workingDirectory" : &quot;<i>directory</i>&quot;,
@@ -241,6 +242,7 @@ void Job::_doGet()
 
     obj.set( "id", cols[BGQDB::DBTJob_history::ID_COL].as<uint64_t>() );
     obj.set( "executable", cols[BGQDB::DBTJob_history::EXECUTABLE_COL].getString() );
+    obj.set( "cwd", cols[BGQDB::DBTJob_history::WORKINGDIR_COL].getString() );
     obj.set( "username", cols[BGQDB::DBTJob_history::USERNAME_COL].getString() );
     obj.set( "block", cols[BGQDB::DBTJob_history::BLOCKID_COL].getString() );
     obj.set( "workingDirectory", cols[BGQDB::DBTJob_history::WORKINGDIR_COL].getString() );

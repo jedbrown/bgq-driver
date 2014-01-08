@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "Sleep.h"
 
 #include <unistd.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 Sleep*
 Sleep::build()
@@ -42,7 +38,7 @@ Sleep::build()
     commandAttributes.requiresBlock(false);             // does not require a BlockController object
     commandAttributes.requiresConnection(false);        // does not require  mc_server connections
     commandAttributes.requiresTarget(false);            // does not require a BlockControllerTarget object
-    commandAttributes.mmcsConsoleCommand(true);
+    commandAttributes.bgConsoleCommand(true);
     commandAttributes.mmcsLiteCommand(true);
     commandAttributes.internalAuth(true);
     commandAttributes.helpCategory(common::DEFAULT);
@@ -55,23 +51,22 @@ Sleep::execute(deque<string> args,
                common::ConsoleController* pController,
                server::BlockControllerTarget* pTarget)
 {
-    if (args.size() != 1)
-    {
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+    if (args.size() != 1) {
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         return;
     }
 
     try {
         const int secs = boost::lexical_cast<int>( args[0] );
         if ( secs <= 0 ) {
-            reply << mmcs_client::FAIL << "seconds must > 0" << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Number of seconds must be > 0" << mmcs_client::DONE;
             return;
         }
 
         sleep(secs);
         reply << mmcs_client::OK << mmcs_client::DONE;
     } catch ( const boost::bad_lexical_cast& e ) {
-        reply << mmcs_client::FAIL << "invalid number of seconds: " << args[0] << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Invalid number of seconds: " << args[0] << mmcs_client::DONE;
     }
 }
 

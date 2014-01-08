@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_LIST_MIDPLANES_H_
 #define MMCS_SERVER_COMMAND_LIST_MIDPLANES_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
  ** list_midplanes
@@ -40,17 +36,16 @@ namespace command {
  */
 class ListMidplanes : public common::AbstractCommand
 {
-    public:
+public:
     ListMidplanes(const char* name, const char* description, const Attributes& attributes)
-            : AbstractCommand(name,description,attributes) { usage = "list_midplanes"; }
-        static  ListMidplanes* build();    // factory method
-        static  std::string cmdname() { return "list_midplanes"; }
-        void execute(std::deque<std::string> args,
-                mmcs_client::CommandReply& reply,
-                common::ConsoleController* pController,
-                BlockControllerTarget* pTarget=NULL);
-        void help(std::deque<std::string> args,
-                mmcs_client::CommandReply& reply);
+    : AbstractCommand(name,description,attributes) { _usage = "list_midplanes"; }
+    static  ListMidplanes* build();    // factory method
+    void execute(std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            BlockControllerTarget* pTarget=NULL);
+    void help(std::deque<std::string> args,
+            mmcs_client::CommandReply& reply);
 };
 
 } } } // namespace mmcs::server::command

@@ -48,8 +48,8 @@ uninstall:      $(TARGETS_UNINSTALL)
 
 
 # dependencies
-common.all: samples.all
-common.install: samples.install
+samples.all: common.all client.all
+samples.install: common.install client.install
 client.all: common.all
 client.install: common.install
 server.all: common.all

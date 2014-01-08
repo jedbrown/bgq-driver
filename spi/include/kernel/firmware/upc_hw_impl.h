@@ -54,6 +54,7 @@ __BEGIN_DECLS
 
 #define UPC_C_MMIO_ADDR (PHYMAP_MINADDR_UPC | PRIV_ADDR_MASK )      // 0x3FFFE400000
 #define UPC_USER_THRLOCAL                                           //!< make vars the default thread global in kernel state
+#define DCRWriteCommon DCRWritePriv  
 
 
 
@@ -77,6 +78,19 @@ __BEGIN_DECLS
     printf("CRITICAL WARNING (" loc ") " __VA_ARGS__);  \
 }
 
+
+
+#ifdef UPC_C_C
+upc_c_mmio_t *const  upc_c = (upc_c_mmio_t *const) UPC_C_MMIO_ADDR;
+#else
+extern upc_c_mmio_t *const  upc_c;
+#endif
+
+#ifdef UPC_P_C
+upc_p_mmio_t *const upc_p_local = (upc_p_mmio_t*const)(UPC_P_MMIO_ADDR | PRIV_ADDR_MASK);
+#else
+extern upc_p_mmio_t *const upc_p_local;
+#endif
 
 
 __INLINE__ upc_p_mmio_t * UPC_P_Addr(int unit)

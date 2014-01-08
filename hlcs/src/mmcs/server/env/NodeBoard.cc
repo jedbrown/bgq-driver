@@ -24,6 +24,7 @@
 #include "NodeBoard.h"
 
 #include "McServerConnection.h"
+#include "Token.h"
 #include "types.h"
 #include "utility.h"
 
@@ -41,11 +42,12 @@
 
 #include <xml/include/c_api/MCServerMessageSpec.h>
 
+#include <boost/make_shared.hpp>
+
 #include <algorithm>
 #include <string>
 
 using mmcs::common::Properties;
-
 
 LOG_DECLARE_FILE( "mmcs.server" );
 
@@ -72,10 +74,16 @@ processNB(
             ++nodecard
         )
     {
-        if (nodecard->_error == CARD_NOT_PRESENT) continue;
-        if (nodecard->_error == CARD_NOT_UP) continue;
+        if (nodecard->_error == CARD_NOT_PRESENT) {
+            continue;
+        }
+
+        if (nodecard->_error == CARD_NOT_UP) {
+            continue;
+        }
+
         if (nodecard->_error) {
-            LOG_INFO_MSG("Error occurred reading environmentals from: " << nodecard->_lctn);
+            LOG_ERROR_MSG("Error reading environmentals from: " << nodecard->_lctn);
             RasEventImpl noContact(0x00061001);
             noContact.setDetail(RasEvent::LOCATION, nodecard->_lctn);
             RasEventHandlerChain::handle(noContact);
@@ -111,7 +119,7 @@ processNB(
             )
         {
             if (compute->_error) {
-                LOG_INFO_MSG("Error occurred reading environmentals from: " << compute->_lctn);
+                LOG_ERROR_MSG("Error reading environmentals from: " << compute->_lctn);
                 continue;
             }
 
@@ -149,7 +157,7 @@ processNB(
             )
         {
             if (link->_error) {
-                LOG_INFO_MSG("Error occurred reading environmentals from: " << link->_lctn);
+                LOG_ERROR_MSG("Error reading environmentals from: " << link->_lctn);
                 continue;
             }
             linkChipInsert->parameters()[ BGQDB::DBTLinkchipenvironment::LOCATION_COL ].set( link->_lctn );
@@ -165,14 +173,13 @@ processNB(
     }
 }
 
-
 NodeBoard::NodeBoard(
         boost::asio::io_service& io_service
         ) :
     Polling( io_service, 900 ),
-    _connections( 0 ),
     _racks( ),
     _strand( io_service ),
+    _databaseStrand( io_service ),
     _connection( ),
     _nodeBoardInsert( ),
     _nodeInsert( ),
@@ -192,7 +199,6 @@ NodeBoard::prepareInserts(
 {
     const cxxdb::ConnectionPtr result = BGQDB::DBConnectionPool::Instance().getConnection();
     if ( !result ) {
-        LOG_INFO_MSG("unable to connect to database");
         return result;
     }
 
@@ -236,52 +242,64 @@ NodeBoard::impl(
     _connection = this->prepareInserts( _nodeBoardInsert, _nodeInsert, _linkChipInsert );
 
     if ( !_connection ) {
-        LOG_ERROR_MSG( "could not get database connection" );
+        LOG_ERROR_MSG("Could not get database connection." );
         this->wait();
         return;
     }
     database_timer->dismiss( false );
     database_timer->stop();
 
+    // We'll pass this token around to the completion handlers for collecting and
+    // inserting all the environmental values. When it goes out of scope, it means we are done.
+    const Token::Ptr token(
+            Token::create(
+                this->getDescription(),
+                boost::bind(
+                    &NodeBoard::createTimers,
+                    boost::static_pointer_cast<NodeBoard>( shared_from_this() )
+                    )
+                )
+            );
+
     const Timer::Ptr rack_timer = this->time()->subFunction("count compute racks");
 
     _racks = getRacks(_connection);
-    _connections = calculateConnectionSize( _racks );
+    const unsigned connections = calculateConnectionSize( _racks );
 
     rack_timer->stop();
 
-    LOG_DEBUG_MSG( "creating " << _connections << " connections to mc_server" );
+    LOG_DEBUG_MSG("Creating " << connections << " connections to mc_server.");
 
     _insertion_time = boost::posix_time::time_duration();
     _mc_start = boost::posix_time::microsec_clock::local_time();
 
-    for ( unsigned i = 0; i < _connections; ++i ) {
+    for ( unsigned i = 0; i < connections; ++i ) {
         const McServerConnection::Ptr mc(
                 McServerConnection::create(
                     _io_service
                     )
                 );
         mc->start(
+                this->getDescription(),
                 _strand.wrap(
                     boost::bind(
                         &NodeBoard::connectHandler,
-                        this,
+                        boost::static_pointer_cast<NodeBoard>( shared_from_this() ),
                         _1,
                         _2,
-                        mc
+                        mc,
+                        token
                         )
                     )
                 );
     }
 
-    // account for the connection passed in as a parameter
-    ++_connections;
-
     _strand.post(
             boost::bind(
                 &NodeBoard::makeTargetSet,
-                this,
-                mc_server
+                boost::static_pointer_cast<NodeBoard>( shared_from_this() ),
+                mc_server,
+                token
                 )
             );
 }
@@ -290,39 +308,27 @@ void
 NodeBoard::connectHandler(
         const bgq::utility::Connector::Error::Type error,
         const std::string& message,
-        const McServerConnection::Ptr& mc_server
+        const McServerConnection::Ptr& mc_server,
+        const Token::Ptr& token
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
     if ( error ) {
-        LOG_WARN_MSG( " could not connect: " << message );
-        --_connections;
+        LOG_ERROR_MSG("Could not connect: " << message );
         return;
     }
 
-    this->makeTargetSet( mc_server );
+    this->makeTargetSet( mc_server, token );
 }
 
 void
 NodeBoard::makeTargetSet(
-        const McServerConnection::Ptr& mc_server
+        const McServerConnection::Ptr& mc_server,
+        const Token::Ptr& token
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
-    if ( _racks.empty() ) {
-        --_connections;
-        if ( _connections ) {
-            LOG_TRACE_MSG( _connections << " connections left" );
-            return;
-        }
-
-        // getting here means every connection has completed its work
-        this->createTimers();
-
-        this->wait();
-
-        return;
-    }
+    // assume this handler is protected by _strand
+    LOG_DEBUG_MSG( _racks.size() << " racks remaining" );
+    if ( _racks.empty() ) return;
 
     // use rack location as part of name, ex: EnvMonNCxx where xx is rack row,column
     const std::string name( "EnvMonNC" + _racks.begin()->substr(1,2) );
@@ -330,15 +336,17 @@ NodeBoard::makeTargetSet(
     request._expression.push_back( _racks.begin()->substr(1,2) + "-M.-N..$" );
     _racks.erase( _racks.begin() );
 
+    LOG_TRACE_MSG( "Making target set " << request._set );
     mc_server->send(
             request.getClassName(),
             request,
             boost::bind(
                 &NodeBoard::makeTargetSetHandler,
-                this,
+                boost::static_pointer_cast<NodeBoard>( shared_from_this() ),
                 _1,
                 mc_server,
-                name
+                name,
+                token
                 )
             );
 }
@@ -347,25 +355,26 @@ void
 NodeBoard::makeTargetSetHandler(
         std::istream& response,
         const McServerConnection::Ptr& mc_server,
-        const std::string& name
+        const std::string& name,
+        const Token::Ptr& token
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
-
     MCServerMessageSpec::MakeTargetSetReply reply;
     reply.read( response );
 
-    MCServerMessageSpec::OpenTargetRequest request(name, "EnvMonNC", MCServerMessageSpec::RAAW, true);
+    LOG_TRACE_MSG( "Made target set " << name );
+    const MCServerMessageSpec::OpenTargetRequest request(name, "EnvMonNC", MCServerMessageSpec::RAAW, true);
 
     mc_server->send(
             request.getClassName(),
             request,
             boost::bind(
                 &NodeBoard::openTargetHandler,
-                this,
+                boost::static_pointer_cast<NodeBoard>( shared_from_this() ),
                 _1,
                 mc_server,
-                name
+                name,
+                token
                 )
             );
 }
@@ -374,39 +383,43 @@ void
 NodeBoard::openTargetHandler(
         std::istream& response,
         const McServerConnection::Ptr& mc_server,
-        const std::string& name
+        const std::string& name,
+        const Token::Ptr& token
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
     MCServerMessageSpec::OpenTargetReply reply;
     reply.read( response );
 
     if (reply._rc) {
-        LOG_INFO_MSG("unable to open target set: " << reply._rt);
+        LOG_ERROR_MSG("Unable to open target set: " << reply._rt);
         _strand.post(
                 boost::bind(
                     &NodeBoard::makeTargetSet,
-                    this,
-                    mc_server
+                    boost::static_pointer_cast<NodeBoard>( shared_from_this() ),
+                    mc_server,
+                    token
                     )
                 );
+
         return;
     }
-    LOG_TRACE_MSG( "opened target set with handle " << reply._handle );
+    LOG_TRACE_MSG("Opened " << name << " target set with handle " << reply._handle );
 
     MCServerMessageSpec::ReadNodeCardEnvRequest request;
     request._set = name;
+    LOG_DEBUG_MSG( request.getClassName() << " begin " << name );
 
     mc_server->send(
             request.getClassName(),
             request,
             boost::bind(
                 &NodeBoard::readHandler,
-                this,
+                boost::static_pointer_cast<NodeBoard>( shared_from_this() ),
                 _1,
                 name,
                 reply._handle,
-                mc_server
+                mc_server,
+                token
                 )
             );
 }
@@ -416,47 +429,92 @@ NodeBoard::readHandler(
         std::istream& response,
         const std::string& name,
         const int handle,
-        const McServerConnection::Ptr& mc_server
+        const McServerConnection::Ptr& mc_server,
+        const Token::Ptr& token
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
+    LOG_DEBUG_MSG( __FUNCTION__ << " end " << name );
 
-    MCServerMessageSpec::ReadNodeCardEnvReply reply;
-    reply.read( response );
-
-    // database connections need exclusive access
-    boost::mutex::scoped_lock lock( _mutex );
-    const boost::posix_time::ptime start( boost::posix_time::microsec_clock::local_time() );
-
-    cxxdb::Transaction tx( *_connection );
-    processNB(&reply, _nodeBoardInsert, _nodeInsert, _linkChipInsert);
-    _connection->commit();
-    _insertion_time += boost::posix_time::microsec_clock::local_time() - start;
+    const boost::shared_ptr<MCServerMessageSpec::ReadNodeCardEnvReply> reply(
+            boost::make_shared<MCServerMessageSpec::ReadNodeCardEnvReply>()
+            );
+    reply->read( response );
 
     this->closeTarget(
             mc_server,
             name,
             handle,
-            _strand.wrap(
-                boost::bind(
-                    &NodeBoard::makeTargetSet,
-                    this,
-                    mc_server
-                    )
+            boost::bind(
+                &NodeBoard::closeTargetHandler,
+                boost::static_pointer_cast<NodeBoard>( shared_from_this() ),
+                reply,
+                name,
+                mc_server,
+                token
                 )
             );
 }
 
 void
+NodeBoard::closeTargetHandler(
+        const boost::shared_ptr<MCServerMessageSpec::ReadNodeCardEnvReply>& reply,
+        const std::string& name,
+        const McServerConnection::Ptr& mc_server,
+        const Token::Ptr& token
+        )
+{
+    LOG_DEBUG_MSG( __FUNCTION__ << " for " << name );
+
+    _databaseStrand.post(
+            boost::bind(
+                &NodeBoard::insertData,
+                boost::static_pointer_cast<NodeBoard>( shared_from_this() ),
+                reply,
+                name,
+                mc_server,
+                token
+                )
+            );
+
+    _strand.post(
+            boost::bind(
+                &NodeBoard::makeTargetSet,
+                boost::static_pointer_cast<NodeBoard>( shared_from_this() ),
+                mc_server,
+                token
+                )
+            );
+}
+
+void
+NodeBoard::insertData(
+        const boost::shared_ptr<MCServerMessageSpec::ReadNodeCardEnvReply>& reply,
+        const std::string& name,
+        const McServerConnection::Ptr& mc_server,
+        const Token::Ptr& token
+        )
+{
+    // assume this handler is protected by the database strand
+    const boost::posix_time::ptime start( boost::posix_time::microsec_clock::local_time() );
+    LOG_DEBUG_MSG( __FUNCTION__ << " begin " << name );
+
+    cxxdb::Transaction tx( *_connection );
+    processNB(reply.get(), _nodeBoardInsert, _nodeInsert, _linkChipInsert);
+    _connection->commit();
+    _insertion_time += boost::posix_time::microsec_clock::local_time() - start;
+
+    LOG_DEBUG_MSG( __FUNCTION__ << " end " << name );
+}
+
+void
 NodeBoard::createTimers()
 {
-    // need to subtract the insertion time from the mc time
+    // Need to subtract the insertion time from the mc time
     const boost::posix_time::time_duration mc_time(
             boost::posix_time::microsec_clock::local_time() - _mc_start - _insertion_time
             );
 
-    // need to create data points here, we can't use timers since the durations
-    // can overlap
+    // Need to create data points here, we can't use timers since the durations can overlap
     const std::string qualifier(
             boost::lexical_cast<std::string>(
                 boost::posix_time::time_duration(
@@ -476,7 +534,13 @@ NodeBoard::createTimers()
     database.setQualifier( qualifier );
     database.setSubFunction( "database insertion" );
     _counters->add( database );
-}
 
+    _linkChipInsert.reset();
+    _nodeInsert.reset();
+    _nodeBoardInsert.reset();
+    _connection.reset();
+
+    this->wait();
+}
 
 } } } // namespace mmcs::server::env

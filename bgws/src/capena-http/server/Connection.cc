@@ -77,7 +77,7 @@ Connection::Connection(
         _socket_ptr(socket_ptr),
         _user_type(user_type),
         _responder_creator_fn(responder_creator_fn),
-        _strand( _socket_ptr->io_service() ),
+        _strand( _socket_ptr->get_io_service() ),
         _request_count(0),
         _error(false),
         _streambuf(),
@@ -196,7 +196,8 @@ void Connection::_handleReadRequestLine(
             return;
         }
 
-        LOG_DEBUG_MSG( "Receiving request #" << ++_request_count << " for this connection." );
+        ++_request_count;
+        LOG_DEBUG_MSG( "Receiving request #" << _request_count << " for this connection." );
 
         try {
 
@@ -347,7 +348,7 @@ void Connection::_initializeResponder()
 
             // If Transfer-Coding is anything other than not present or chunked then respond with 501 and close.
             if ( ! (_request_ptr->getTransferCoding().empty() || _request_ptr->getTransferCoding() == http::TRANSFER_CODING_CHUNKED) ) {
-                LOG_WARN_MSG( "Unexpected tranfer coding " << _request_ptr->getTransferCoding() );
+                LOG_WARN_MSG( "Unexpected transfer coding " << _request_ptr->getTransferCoding() );
 
                 dont_read_body_and_close = true;
 
@@ -385,17 +386,17 @@ void Connection::_initializeResponder()
     AbstractResponder::ResponseComplete response_complete(AbstractResponder::ResponseComplete::CONTINUE);
 
     responder_ptr->initialize(
-            _strand.io_service(),
-            _strand.wrap( boost::bind(
-                    &Connection::_notifyResponseStatusHeaders,
-                    shared_from_this(),
-                    _1, _2, _3
-                ) ),
-            _strand.wrap( boost::bind(
-                    &Connection::_notifyResponseBodyData,
-                    shared_from_this(),
-                    _1, _2
-                ) ),
+            _strand.get_io_service(),
+            boost::bind(
+                &Connection::_notifyResponseStatusHeaders,
+                shared_from_this(),
+                _1, _2, _3
+                ),
+            boost::bind(
+                &Connection::_notifyResponseBodyData,
+                shared_from_this(),
+                _1, _2
+                ),
             &response_complete
         );
 
@@ -804,6 +805,21 @@ void Connection::_notifyResponseStatusHeaders(
         BodyPresense expect_body
     )
 {
+    _strand.post(
+            boost::bind(
+                &Connection::_notifyResponseStatusHeadersImpl,
+                shared_from_this(),
+                status, headers, expect_body
+                )
+            );
+}
+
+void Connection::_notifyResponseStatusHeadersImpl(
+        http::Status status,
+        const Headers& headers,
+        BodyPresense expect_body
+    )
+{
     _newResponse( string() +
             http::PROTOCOL_VERSION + " " + http::getText( status ) + http::CRLF
         );
@@ -832,6 +848,21 @@ void Connection::_notifyResponseStatusHeaders(
 
 
 void Connection::_notifyResponseBodyData(
+        const std::string& data,
+        DataContinuesIndicator data_continues
+        )
+{
+    _strand.post(
+            boost::bind(
+                &Connection::_notifyResponseBodyDataImpl,
+                shared_from_this(),
+                data,
+                data_continues
+                )
+            );
+}
+
+void Connection::_notifyResponseBodyDataImpl(
         const std::string& data,
         DataContinuesIndicator data_continues
     )

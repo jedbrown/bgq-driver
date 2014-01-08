@@ -21,33 +21,26 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_ALLOCATE_H_
 #define MMCS_SERVER_COMMAND_ALLOCATE_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 /*!
 ** For specified <blockId>, performs select_block, allocate_block, boot_block and wait_boot.
 ** <blockId> identifies a block in the BGQBLOCK table.
 ** This command can be used to initialize a block in free state.
-** If virtual_node_mode is not specified, mode will default to coprocessor.
-** Block will revert to coprocessor mode each time it is freed.
 */
 class Allocate: public common::AbstractCommand
 {
 public:
     Allocate(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "allocate <blockId> "; }
+      : AbstractCommand(name,description,attributes) { _usage = "allocate <blockId> [ options ] "; }
     static  Allocate* build();  // factory method
-    static  std::string cmdname() { return "allocate"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              DBConsoleController* pController,
@@ -69,6 +62,5 @@ private:
 };
 
 } } } // namespace mmcs::server::command
-
 
 #endif

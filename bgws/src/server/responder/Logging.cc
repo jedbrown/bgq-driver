@@ -113,6 +113,7 @@ HTTP status: 403 Forbidden
 #include "chiron-json/json.hpp"
 
 #include <utility/include/Log.h>
+#include <utility/include/LoggingProgramOptions.h>
 
 #include <boost/throw_exception.hpp>
 
@@ -188,9 +189,24 @@ void Logging::_doPut( json::ConstValuePtr val_ptr )
     std::ostringstream oss;
 
     oss << "Updating BGWS server logging configuration\n";
+    bgq::utility::LoggingProgramOptions::Strings strings;
     for ( _LoggingInfo::const_iterator i(logging_info.begin()) ; i != logging_info.end() ; ++i ) {
         oss << "\tSetting '" << i->first << "' logger to '" << i->second << "'\n";
-        log4cxx::Logger::getLogger( i->first )->setLevel( log4cxx::Level::toLevel( i->second ) );
+        strings.push_back( i->first + "=" + i->second );
+    }
+
+    bgq::utility::LoggingProgramOptions lpo( "ibm.bgws" );
+    try {
+        lpo.notifier( strings );
+        lpo.apply();
+    } catch ( const std::exception& e ) {
+        BOOST_THROW_EXCEPTION(
+                Error(
+                    e.what(),
+                    "configureLogging", "inputWrongType", Error::Data(),
+                    capena::http::Status::BadRequest
+                    )
+                );
     }
 
     LOG_INFO_MSG_FORCED( oss.str() );

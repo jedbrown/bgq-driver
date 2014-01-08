@@ -25,7 +25,6 @@
  * \file MmcsServerConnect.cc
  */
 
-
 #include "MmcsServerConnect.h"
 
 #include "MmcsServerCmd.h"
@@ -36,23 +35,18 @@
 
 #include "libmmcs_client/ConsolePort.h"
 
-#include <utility/include/cxxsockets/error.h>
 #include <utility/include/Log.h>
 #include <utility/include/ScopeGuard.h>
 
 #include <boost/scope_exit.hpp>
 
-
 LOG_DECLARE_FILE( "mmcs.console" );
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 MmcsServerConnect*
 MmcsServerConnect::build()
@@ -62,7 +56,7 @@ MmcsServerConnect::build()
     commandAttributes.requiresConnection(false);       // does not require  mc_server connections
     commandAttributes.requiresTarget(false);           // does not require a BlockControllerTarget object
     commandAttributes.internalCommand(true);           // this is an internal use command
-    commandAttributes.mmcsConsoleCommand(true);
+    commandAttributes.bgConsoleCommand(true);
     commandAttributes.internalAuth(true);
     commandAttributes.helpCategory(common::DEFAULT);
     return new MmcsServerConnect("mmcs_server_connect", "mmcs_server_connect [<retry>]", commandAttributes);
@@ -81,28 +75,24 @@ MmcsServerConnect::execute(
     bool wait_for_connection = false;
 
     // validate arguments
-    if (!args.empty())
-    {
+    if (!args.empty()) {
         if (args[0] == "retry")
             wait_for_connection = true;
-        else
-        {
-            reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+        else {
+            reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
             return;
         }
     }
 
-    LOG_DEBUG_MSG( "wait for connection: " << wait_for_connection );
+    LOG_DEBUG_MSG("Wait for connection: " << wait_for_connection);
 
-    if (pController->getConsolePort()) // delete any existing server connection
-    {
-        reply << mmcs_client::FAIL << "already connected" << mmcs_client::DONE;
+    if (pController->getConsolePort()) { // delete any existing server connection
+        reply << mmcs_client::FAIL << "Already connected" << mmcs_client::DONE;
         return;
     }
 
     // create a console port for communicating with the MMCS server
-    while (!connected && !command::MmcsServerCmd::ending())
-    {
+    while (!connected && !command::MmcsServerCmd::ending()) {
         try {
             // raise uid to read SSL private key if needed
             this->raiseUid();
@@ -115,9 +105,9 @@ MmcsServerConnect::execute(
                 (void)getresuid( &real, &effective, &saved );
                 if ( effective != real ) {
                     if ( seteuid(real) ) {
-                        LOG_WARN_MSG( "could not seteuid(" << real << ") " << strerror(errno) );
+                        LOG_WARN_MSG("Could not seteuid(" << real << ") " << strerror(errno) );
                     } else {
-                        LOG_TRACE_MSG( "reduced euid to " << geteuid() );
+                        LOG_TRACE_MSG("Reduced euid to " << geteuid());
                     }
                 }
             } BOOST_SCOPE_EXIT_END
@@ -128,28 +118,20 @@ MmcsServerConnect::execute(
 
             connected = true;
             pController->setConsolePort(serverPort); // save the server port in the common::ConsoleController
-        }
-        catch (const mmcs_client::ConsolePort::Error &e)
-        {
-            if (e.errcode == ECONNREFUSED)
-            {
-                if (wait_for_connection)
-                {
-                    if (!error_reported)
-                    {
-                        LOG_WARN_MSG("mmcs_server is not started, retrying. Type quit or ctl-c to quit");
+        } catch (const mmcs_client::ConsolePort::Error &e) {
+            LOG_TRACE_MSG( e.what() );
+            if (e.errcode == ECONNREFUSED) {
+                if (wait_for_connection) {
+                    if (!error_reported) {
+                        LOG_WARN_MSG("mmcs_server is not started, retrying. Type quit or ctl-c to quit.");
                         error_reported = true;
                     }
                     sleep(5);
-                }
-                else
-                {
+                } else {
                     reply << mmcs_client::FAIL << e.what() << "... mmcs_server is not started" << mmcs_client::DONE;
                     return;
                 }
-            }
-            else
-            {
+            } else {
                 reply << mmcs_client::FAIL << e.what() << mmcs_client::DONE;
                 return;
             }
@@ -169,7 +151,7 @@ MmcsServerConnect::help(
         )
 {
     reply << mmcs_client::OK << description()
-        << ";Establish a tcp connection to the mmcs server."
+        << ";Establish a TCP connection to the mmcs server."
         << ";retry indicates that the connection attempt is repeated until"
         << ";the connection is established or a SIGINT is received."
         << ";Once established, the username is sent to the server."
@@ -190,12 +172,12 @@ MmcsServerConnect::raiseUid() const
     LOG_TRACE_MSG( "effective uid:  " << effective );
     LOG_TRACE_MSG( "saved uid:      " << saved );
 
-    // raise priviliges to read private key
+    // raise privileges to read private key
     if ( effective != saved ) {
         if ( seteuid(saved) ) {
-            LOG_WARN_MSG( "could not seteuid(" << saved << ") " << strerror(errno) );
+            LOG_WARN_MSG("Could not seteuid(" << saved << ") " << strerror(errno));
         } else {
-            LOG_TRACE_MSG( "raised euid to " << geteuid() );
+            LOG_TRACE_MSG("Raised euid to " << geteuid());
         }
     }
 }

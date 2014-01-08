@@ -75,6 +75,11 @@ private:
             const boost::shared_ptr<Runjob>& client            //!< [in]
             );
 
+    /*!
+     * \brief
+     */
+    int getBacklog() const;
+
 private:
     const Options& _options;                                            //!<
     boost::weak_ptr<Multiplexer> _mux;                                  //!<

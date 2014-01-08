@@ -28,6 +28,7 @@
 #include "common/Message.h"
 
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
 
 LOG_DECLARE_FILE( runjob::mux::log );
 

@@ -24,9 +24,7 @@
 
 int JOBID = 0;
 char TOOLNAME[64] = "/bgsys/drivers/ppcfloor/coreprocessor/bin/sdebug_proxy";
-string MyIPAddress;
 map<string, int> clientIPAddresses;
-void findIPs(std::vector<string>& IPs);
 
 int main(int argc, char** argv)
 {
@@ -38,7 +36,6 @@ int main(int argc, char** argv)
     char data[256];
     char pid[64];
     std::vector<CxxSockets::Message> messages;
-    std::vector<string> myips;
     char cmd[256];
     
     setbuf(stdout, NULL);
@@ -68,8 +65,6 @@ int main(int argc, char** argv)
     
     printf("Launching tool on job %d\n", JOBID);
     
-    findIPs(myips);
-    
     snprintf(cmd, sizeof(cmd), "/bgsys/drivers/ppcfloor/bin/dump_proctable --id=%d", JOBID);
     FILE* proctable = popen(cmd, "r");
     char line[256];
@@ -80,63 +75,66 @@ int main(int argc, char** argv)
         if(strncmp(line, "Rank ", 5) == 0)
             break;
     }
+    
+    number_of_clients = 0;
     while(1)
     {
         rc = fscanf(proctable, "%d %s %s", &rank, ipaddress, pid);
         if(rc != 3)
             break;
-        if(rank == 0)
-        {
-            int class_a, class_b, ipa, ipb;
-            sscanf(ipaddress, "%d.%d", &class_a, &class_b);
-            for(vector<string>::iterator it = myips.begin(); it != myips.end(); it++)
-            {
-                sscanf(it->c_str(), "%d.%d", &ipa, &ipb);
-                if((ipa == class_a)&&(ipb == class_b))
-                    MyIPAddress = *it;
-            }
-        }
         
         string ipaddress_str(ipaddress);
-        clientIPAddresses[ipaddress_str]++;
+        clientIPAddresses[ipaddress_str] = 1;
     }
-
-    if ( MyIPAddress.empty() ) {
-        printf("Could not find IP address of functional network!\n");
-        exit(-1);
-    }
-    
     number_of_clients = clientIPAddresses.size();
+    
     printf("Number of IO nodes = %d\n", number_of_clients);
-    printf("IP address of the functional network is %s\n", MyIPAddress.c_str());
     if(number_of_clients == 0)
         return 0;
     
-    snprintf(cmd, sizeof(cmd), "/bgsys/drivers/ppcfloor/bin/start_tool --id %d --tool %s --args %s", JOBID, TOOLNAME, MyIPAddress.c_str());
+    snprintf(cmd, sizeof(cmd), "/bgsys/drivers/ppcfloor/bin/start_tool --id %d --tool %s", JOBID, TOOLNAME);
     system(cmd);
+    sleep(5);
     
     bgq::utility::initializeLogging(*props);
     CxxSockets::SockAddrList side_salist(AF_INET, "", "34543");
     CxxSockets::ListenerSetPtr side_listener(new CxxSockets::ListenerSet(side_salist));
 
-    for(x=0; x<number_of_clients; x++)
+    for(std::map<string,int>::iterator it = clientIPAddresses.begin(); it != clientIPAddresses.end(); it++)
     {
-#if USE_SECURE_CERTIFICATE
-        CxxSockets::SecureTCPSocketPtr sock(new CxxSockets::SecureTCPSocket());
-        bgq::utility::ServerPortConfiguration port_config(0);
-        port_config.setProperties(props, "");
-        port_config.notifyComplete();
-        side_listener->AcceptNew(sock, port_config);
-#else
-        CxxSockets::TCPSocketPtr sock(new CxxSockets::TCPSocket());
-        side_listener->AcceptNew(sock);
-#endif        
+        bool retry = false;
+        CxxSockets::TCPSocketPtr side_sock;
+        do
         {
-            CxxSockets::Message side_msg("READY");
-            sock->Send(side_msg);
-            side_msg.str().clear();
-            SocketVector.push_back(sock);
+            try
+            {
+                printf("Connecting to ionode %s\n", it->first.c_str());
+                CxxSockets::SockAddr remote(AF_INET, it->first, "34543");
+#if USE_SECURE_CERTIFICATE
+                side_sock = (CxxSockets::SecureTCPSocketPtr) new CxxSockets::SecureTCPSocket(remote.family(), 0, CxxSockets::SECURE, CxxSockets::CERTIFICATE);
+                bgq::utility::ClientPortConfiguration port_config(0);
+                port_config.setProperties(props, "");
+                port_config.notifyComplete();
+                side_sock->Connect(remote, port_config);
+#else
+                side_sock = (CxxSockets::TCPSocketPtr) new CxxSockets::TCPSocket(remote.family(), 0);
+                side_sock->Connect(remote);
+#endif
+            }
+            catch(CxxSockets::HardError& e)
+            {
+                printf("connection CxxSockets::HardError failed\n");
+                retry = true;
+                sleep(1);
+            }
         }
+        while(retry);
+        
+        CxxSockets::Message side_msg;
+        side_sock->Receive(side_msg);
+        assert(side_msg.str() == "READY");
+        side_msg.str().clear();
+        SocketVector.push_back(side_sock);
     }
     
     while(1)

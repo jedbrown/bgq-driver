@@ -173,7 +173,7 @@
       <DataMember type="Domain" name="domains" occurrences="many" comment="a set of hardware resources and associated images to run on those resources" />
       <DataMember type="uint32" name="cookie" comment="boot cookie for perf stats qualifier" />
       <DataMember type="text" name="options" comment="list of name=value options to pass to boot" />
-      <DataMember type="uint32" name="startTime" comment="timestamp the boot started" />
+      <DataMember type="uint64" name="startTime" comment="timestamp the boot started" />
 
       <DataMember type="NodeCard" name="nodeCards" occurrences="many" comment="all the node cards" />
       <DataMember type="NodeCardReboot" name="rebootNodeCards" occurrences="many" comment="node cards to be rebooted" />
@@ -240,23 +240,6 @@
       <DataMember type="NodeCard" name="nodeCards"        occurrences="many" comment="all the node cards" />
       <DataMember type="IoCard"   name="ioCards"          occurrences="many" comment="all the node cards" />
       <DataMember type="ServiceCard" name="serviceCards"  occurrences="many" comment="all of the service cards" />
-    </Class>
-  </Method>
-
-  <Method name="haltnodes" type="RequestReply" comment="Tell node kernels to perform shutdown processing.">
-    <Class name="HaltNodesRequest" parent="TargetRequest">
-      <DataMember type="uint32" name="cookie" comment="boot cookie for perf stats qualifier" />
-    </Class>
-    <Class name="HaltNodesReply" parent="Reply">
-    </Class>
-  </Method>
-
-  <Method name="notify_io" type="RequestReply" comment="Tell I/O nodes that compute block is shutting down.">
-    <Class name="NotifyIoRequest" parent="TargetRequest">
-      <DataMember type="uint32" name="blockid" comment="Creation ID of the block being shut down"/>
-      <DataMember type="uint32" name="cookie" comment="boot cookie for perf stats qualifier" />
-    </Class>
-    <Class name="NotifyIoReply" parent="Reply">
     </Class>
   </Method>
 
@@ -569,24 +552,6 @@
     </Class>
   </Method>
 
-  <Method name="registerEnvListener" type="RequestReply" comment="Register a listener for environmental readings from the hardware. This is in effect until halt or until a closeEnvListener.">
-    <Class name="RegisterEnvListenerRequest" parent="TargetRequest">
-      <DataMember type="text" name="listenerAddr" comment="address and port for listener, e.g  127.0.0.1:31555   or bgl2.rchland.ibm.com:31888, etc." />
-      <DataMember type="uint32" name="version" comment="version number for format of returned information." />
-      <DataMember type="uint32" name="messageTypes" occurrences="many" comment="vector of env types (0x0000 all, 0x0001 temps, 0x0002 voltages, etc.) that should be sent to the listener" />
-      <DataMember type="uint32" name="pollInterval" comment="polling interval, in seconds" />
-    </Class>
-    <Class name="RegisterEnvListenerReply" parent="Reply">
-    </Class>
-  </Method>
-
-  <Method name="closeEnvListener" type="RequestReply" comment="Close a listener for mailbox messages from the nodes.">
-    <Class name="CloseEnvListenerRequest" parent="TargetRequest">
-    </Class>
-    <Class name="CloseEnvListenerReply" parent="Reply">
-    </Class>
-  </Method>
-
   <Method name="status" type="RequestReply" comment="List all the machine, sorted by midplane and then service cards, node cards and link cards.">
     <Class name="StatusRequest" parent="TargetRequest">
     </Class>
@@ -634,19 +599,6 @@
     <Class name="VerifyKernelReadyReply" parent="Reply">
       <DataMember type="uint32" name="error" comment="mc error code " />
       <DataMember type="text" name="compute_not_ready" occurrences="many" comment="Computes not ready" />
-      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
-
-    </Class>
-  </Method>
-
-
-  <Method name="verifyKernelShutdown" type="RequestReply" comment="Ask MC to verify computes are booted">
-    <Class name="VerifyKernelShutdownRequest" parent="TargetRequest">
-      <DataMember type="uint32" name="cookie" comment="boot cookie for perf stats qualifier" />
-    </Class>
-    <Class name="VerifyKernelShutdownReply" parent="Reply">
-      <DataMember type="uint32" name="error" comment="mc error code " />
-      <DataMember type="text" name="compute_not_halted" occurrences="many" comment="Computes not halted" />
       <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
 
     </Class>
@@ -1709,15 +1661,6 @@
       <DataMember type="text" name="locations" occurrences="many" comment="list of all nodes in the block"/>
     </Class>
     <Class name="CheckBootCompleteReply" parent="Reply">
-      <DataMember type="text" name="locations" occurrences="many" comment="list of all nodes that are not yet complete"/>
-    </Class>
-  </Method>
-
-  <Method name="checkShutdownComplete" type="RequestReply" comment="Count the number of nodes reporting a complete boot.">
-    <Class name="CheckShutdownCompleteRequest">
-      <DataMember type="text" name="locations" occurrences="many" comment="list of all nodes in the block"/>
-    </Class>
-    <Class name="CheckShutdownCompleteReply" parent="Reply">
       <DataMember type="text" name="locations" occurrences="many" comment="list of all nodes that are not yet complete"/>
     </Class>
   </Method>

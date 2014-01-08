@@ -38,7 +38,7 @@ CXXFLAGS += \
  -Wall \
  -Wconversion \
  -O2 \
- -MMD \
+ -MP -MD \
  -pthread \
  -fPIC
 
@@ -52,12 +52,13 @@ LDFLAGS += \
 
 
 parts := \
- BGMasterClientApi \
+ BGMasterClient \
  ListAgents
 
 objs := ${parts:%=%.o}
 
 common_parts := \
+ BinaryController \
  Ids \
  Protocol
 
@@ -69,9 +70,6 @@ protocol_parts := \
 protocol_objs := ${protocol_parts:%=../protocol/%.o}
 
 
-clean_cmd := $(RM) *.o *.d $(lib) $(lib_soname) $(lib_dev)
-
-
 $(BGQ_INSTALL_DIR)/hlcs/lib/%: %
 	$(MKDIR) ${dirname $@}
 	$(CP) $< $@
@@ -79,10 +77,10 @@ $(BGQ_INSTALL_DIR)/hlcs/lib/%: %
 
 default: all
 
-all: $(lib) $(lib_soname) $(lib_dev) $(BGQ_INSTALL_DIR)/hlcs/lib/$(lib) $(BGQ_INSTALL_DIR)/hlcs/lib/$(lib_soname) $(BGQ_INSTALL_DIR)/hlcs/lib/$(lib_dev)
+all: $(lib_dev)
 
 $(lib): $(objs) $(common_objs) $(protocol_objs)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $^
+	$(CXX) $(CXXFLAGS) -shared -o $@ $^ $(LDFLAGS)
 
 $(lib_soname): $(lib)
 	ln -sf $(lib) $@
@@ -92,13 +90,12 @@ $(lib_dev): $(lib_soname)
 
 
 
-install: all
+install: $(BGQ_INSTALL_DIR)/hlcs/lib/$(lib) $(BGQ_INSTALL_DIR)/hlcs/lib/$(lib_soname) $(BGQ_INSTALL_DIR)/hlcs/lib/$(lib_dev)
 
 clean:
-	$(clean_cmd)
+	$(RM) *.o *.d $(lib) $(lib_soname) $(lib_dev)
 
-distclean:
-	$(clean_cmd)
+distclean: clean
 
 
 .PHONY: default all install clean distclean

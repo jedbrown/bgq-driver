@@ -230,7 +230,7 @@ void RasEventHandlerChain::clear() {
   //Clear all memory allocated during initChain()
   RasEventMetadata::clearMetadata();
   RasDecoder::clearDecoder();
-  for (int i=0; i<handlers.size(); ++i) {
+  for (unsigned i=0; i<handlers.size(); ++i) {
     delete handlers[i];
   }
   handlers.clear();

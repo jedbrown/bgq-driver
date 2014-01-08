@@ -1,9 +1,0 @@
-Non-blocking implementation issues
-Non-locking non-blocking polled sockets
-Test: Epolling needs the same new interface taking a FileSetPtr
-      Also, look in to protection issues with epoll compared to poll
-Can we get rid of the SECURITY property?
-See where we are with the old security interface
-Flag management on secure sockets
-Yank asio stuff if I can get away with it.
-Nagle test cases

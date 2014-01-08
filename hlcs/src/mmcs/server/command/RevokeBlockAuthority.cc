@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "RevokeBlockAuthority.h"
 
 #include "../DBConsoleController.h"
@@ -35,14 +34,11 @@
 #include <ras/include/RasEventImpl.h>
 #include <ras/include/RasEventHandlerChain.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 RevokeBlockAuthority*
 RevokeBlockAuthority::build()
@@ -60,31 +56,36 @@ RevokeBlockAuthority::build()
 }
 
 void
-RevokeBlockAuthority::execute(deque<string> args,
-                                            mmcs_client::CommandReply& reply,
-                                            DBConsoleController* pController,
-                                            BlockControllerTarget* pTarget)
+RevokeBlockAuthority::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        DBConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
-    std::string block = args[0];
-    std::string newuser = args[1];
-    std::string action = args[2];
+    const std::string block = args[0];
+    const std::string newuser = args[1];
+    const std::string action = args[2];
     // An administrator can do anything, anybody else has to be the block owner
     std::string blockowner;
-    if(BGQDB::getBlockOwner(block, blockowner) != BGQDB::OK) {
+    if (BGQDB::getBlockOwner(block, blockowner) != BGQDB::OK) {
         reply << mmcs_client::FAIL << "Cannot get block owner for " << block << " from database." << mmcs_client::DONE;
         return;
     }
 
-    if(pController->getUserType() == CxxSockets::Administrator ||
-       blockowner == pController->getUser().getUser()) {
+    if (
+            pController->getUserType() == CxxSockets::Administrator ||
+            blockowner == pController->getUser().getUser()
+       )
+    {
         hlcs::security::Action::Type action_type;
-        if(action == "read")
+        if (action == "read")
             action_type = hlcs::security::Action::Read;
-        else if(action == "update")
+        else if (action == "update")
             action_type = hlcs::security::Action::Update;
-        else if(action == "delete")
+        else if (action == "delete")
             action_type = hlcs::security::Action::Delete;
-        else if(action == "execute")
+        else if (action == "execute")
             action_type = hlcs::security::Action::Execute;
         else {
             reply << mmcs_client::FAIL << action << " is not a valid security action type." << mmcs_client::DONE;
@@ -94,18 +95,18 @@ RevokeBlockAuthority::execute(deque<string> args,
             hlcs::security::Object blockobj(hlcs::security::Object::Block, block);
             hlcs::security::Authority auth(newuser, action_type);
             hlcs::security::revoke(blockobj, auth, pController->getUser());
-        } catch(hlcs::security::exception::ObjectNotFound& e) {
+        } catch(const hlcs::security::exception::ObjectNotFound& e) {
             reply << mmcs_client::FAIL << "Database block object error for " << block << " : " << e.what() << mmcs_client::DONE;
             return;
-        } catch(hlcs::security::exception::DatabaseError& e) {
+        } catch(const hlcs::security::exception::DatabaseError& e) {
             reply << mmcs_client::FAIL << "Database error detected: " << e.what() << mmcs_client::DONE;
             return;
-        } catch(std::invalid_argument& e) {
+        } catch(const std::invalid_argument& e) {
             reply << mmcs_client::FAIL << "Object " << block << " is not a block." << e.what() << mmcs_client::DONE;
             return;
-        } catch(std::logic_error& e) {
+        } catch(const std::logic_error& e) {
             reply << mmcs_client::FAIL << "Action " << action << " not valid for object "
-                  << block << ": " << e.what() << mmcs_client::DONE;
+                << block << ": " << e.what() << mmcs_client::DONE;
             return;
         }
         reply << mmcs_client::OK << mmcs_client::DONE;
@@ -120,8 +121,10 @@ RevokeBlockAuthority::execute(deque<string> args,
 }
 
 void
-RevokeBlockAuthority::help(deque<string> args,
-                                         mmcs_client::CommandReply& reply)
+RevokeBlockAuthority::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
           << ";Revokes authority to < action > from < user > on < blockid > object."
@@ -129,6 +132,5 @@ RevokeBlockAuthority::help(deque<string> args,
           << ";This does NOT affect special authorities created in the properties file."
           << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

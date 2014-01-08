@@ -60,7 +60,7 @@ all: $(lib_short)
 
 $(lib_full): $(SRCS:%.cc=%.o)
 	@echo "link $@"
-	$(SILENT)$(CXX) $(LDFLAGS) $^ -o $@
+	$(SILENT)$(CXX) $^ -o $@ $(LDFLAGS)
 
 
 $(lib_vers): $(lib_full)

@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_WRITE_CON_H_
 #define MMCS_SERVER_COMMAND_WRITE_CON_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
 ** write_con
@@ -44,9 +40,8 @@ class WriteCon: public common::AbstractCommand
 {
 public:
     WriteCon(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "[<target>] write_con <console-command>"; }
-    static  WriteCon* build(); // factory method
-    static  std::string cmdname() { return "write_con"; }
+      : AbstractCommand(name,description,attributes) { _usage = "[<target>] write_con <console-command>"; }
+    static WriteCon* build(); // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -55,7 +50,6 @@ public:
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };
-
 
 } } } // namespace mmcs::server::command
 

@@ -34,10 +34,8 @@
 
 #include <string>
 
-
 namespace mmcs {
 namespace console {
-
 
 /*!
  * \brief Parse command line program Options.
@@ -57,7 +55,6 @@ public:
 
     boost::shared_ptr<const bgq::utility::ClientPortConfiguration> getPortConfigurationPtr() const  { return _portConfig_ptr; }
 
-
 private:
     /*!
      * \brief Open properties file.
@@ -66,15 +63,14 @@ private:
 
     void setupLoggingDefaults();
 private:
-    unsigned int _argc;                                             //!<
-    char** _argv;                                                   //!<
-    boost::program_options::variables_map _vm;                      //!<
-    boost::program_options::options_description _options;           //!<
-    bgq::utility::Properties::ProgramOptions _propertiesOptions;    //!<
-    bgq::utility::LoggingProgramOptions _loggingOptions;            //!<
-    boost::shared_ptr<bgq::utility::ClientPortConfiguration> _portConfig_ptr;
+    unsigned int                                              _argc;
+    char**                                                    _argv;
+    boost::program_options::variables_map                     _vm;
+    boost::program_options::options_description               _options;
+    bgq::utility::Properties::ProgramOptions                  _propertiesOptions;
+    bgq::utility::LoggingProgramOptions                       _loggingOptions;
+    boost::shared_ptr<bgq::utility::ClientPortConfiguration>  _portConfig_ptr;
 };
-
 
 } } // namespace mmcs::console
 

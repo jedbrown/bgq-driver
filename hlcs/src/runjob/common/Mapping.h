@@ -37,6 +37,11 @@ namespace runjob {
 /*!
  * \brief coordinate to rank mapping.
  * \ingroup argument_parsing
+ *
+ * When the mapping type is a file, and validation is performed, the contents of the file
+ * are packed into a 32 bit unsigned integer per rank. This container is then serialized
+ * with the rest of the job description and sent to the runjob_server as part of the job
+ * launch process where it is used for additional validation.
  */
 class Mapping
 {
@@ -54,17 +59,7 @@ public:
     /*!
      * \brief Container of ranks
      */
-    typedef std::set<uint32_t> Rank;
-
-    /*!
-     * \brief Size and line number
-     */
-    typedef std::pair<int, unsigned> Max;
-
-    /*!
-     * \brief
-     */
-    typedef std::vector<Max> Dimensions;
+    typedef std::vector<uint32_t> Rank;
 
 public:
     /*!
@@ -74,7 +69,7 @@ public:
             Type t = Type::None,                        //!< [in]
             const std::string& value = std::string(),   //!< [in]
             bool performValidation = true               //!< [in]
-          );
+           );
 
     /*!
      * \brief get mapping type
@@ -86,15 +81,15 @@ public:
     Type type() const { return _type; }   //!< Get type.
     const std::string& value() const { return _value; } //!< Get value.
     operator const std::string&() const { return this->value(); }  //!< Conversion to const std::string&
-    const Dimensions& dimensions() const { return _maxDimensions; }
-    unsigned lineCount() const { return _lineCount; }
+    const std::vector<uint32_t>& fileContents() const { return _fileContents; }
 
 private:
     void validateFile();
 
     void analyzeLine(
             std::string& line,      //!< [in]
-            Rank& ranks             //!< [in]
+            Rank& ranks,            //!< [in]
+            size_t lineNumber       //!< [in]
             );
 
     friend class boost::serialization::access;
@@ -106,15 +101,13 @@ private:
     {
         ar & _type;
         ar & _value;
-        ar & _maxDimensions;
-        ar & _lineCount;
+        ar & _fileContents;
     }
 
 private:
     Type _type;
     std::string _value;
-    Dimensions _maxDimensions; // mapping file specific
-    unsigned _lineCount; // mapping file specific 
+    std::vector<uint32_t> _fileContents; // encoded mapping file contents
 };
 
 /*!

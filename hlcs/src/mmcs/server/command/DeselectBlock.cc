@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "DeselectBlock.h"
 
 #include "../DBConsoleController.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 DeselectBlock*
 DeselectBlock::build()
@@ -50,20 +46,23 @@ DeselectBlock::build()
 }
 
 void
-DeselectBlock::execute(deque<string> args,
-                    mmcs_client::CommandReply& reply,
-                    DBConsoleController* pController,
-                    BlockControllerTarget* pTarget)
+DeselectBlock::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        DBConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
     pController->deselectBlock();
     reply << mmcs_client::OK << mmcs_client::DONE;
 }
 
 void
-DeselectBlock::help(deque<string> args,
-                 mmcs_client::CommandReply& reply)
+DeselectBlock::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
     reply << mmcs_client::OK << description() << ";Stop working with the selected block" << mmcs_client::DONE;
 }
 

@@ -28,14 +28,11 @@
 #ifndef MMCS_SERVER_COMMAND_REFRESH_CONFIG_H_
 #define MMCS_SERVER_COMMAND_REFRESH_CONFIG_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
 ** refresh_config
@@ -45,14 +42,13 @@ class RefreshConfig : public common::AbstractCommand
 {
 public:
     RefreshConfig(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "refresh_config [file]";}
-    static  RefreshConfig* build();	// factory method
-    static  std::string cmdname() { return "refresh_config"; }
+      : AbstractCommand(name,description,attributes) { _usage = "refresh_config [file]";}
+    static RefreshConfig* build();	// factory method
     void execute(std::deque<std::string> args,
 			 mmcs_client::CommandReply& reply,
 			 DBConsoleController* pController,
 			 BlockControllerTarget* pTarget=NULL);
-    bool checkArgs(std::deque<std::string>& args) { if(args.size() > 1) return false; else return true; }
+    bool checkArgs(std::deque<std::string>& args) { if (args.size() > 1) return false; else return true; }
     void help(std::deque<std::string> args,
 		      mmcs_client::CommandReply& reply);
 };

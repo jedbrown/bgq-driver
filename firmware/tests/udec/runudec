@@ -1,0 +1,4 @@
+free R00-M1-N15
+allocate_block R00-M1-N15 diags svchost_options=/bghome/tgooding/bgq/firmware/tests/udec/udec.svchost
+redirect_block on
+boot_block uloader=/bgsys/drivers/ppcfloor/boot/firmware domain={ images=/bghome/tgooding/bgq/firmware/tests/udec/udec.elf id=fwddr cores=0-16 memory=0--1} steps=enableNodes,initDevbus,startTraining,enableLinkChips,trainLinkChips,trainTorus,installFirmware,installPersonalities,startCores,verifyMailbox,monitorMailbox,verifyMailboxReady,installKernelImages,configureDomains,launchKernels,verifyKernelReady

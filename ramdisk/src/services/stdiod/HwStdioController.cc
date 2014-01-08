@@ -310,7 +310,7 @@ HwStdioController::eventMonitor(void)
          }
 
          // Continue monitoring the data channel listener for restarted connection Start monitoring the data channel.
-         LOG_INFO_MSG_FORCED("data channel is connected to " << incoming->getPeerName() << " using fd " << incoming->getSd());;
+         LOG_INFO_MSG_FORCED("data channel is connected to " << incoming->getPeerName() << " using fd " << incoming->getSd());
 
          // Handle the Authenticate message which must be sent first.
          if (!dataChannelHandler(incoming)) {
@@ -731,9 +731,9 @@ HwStdioController::authenticate(InetSocketPtr dataChannel)
    const int err = getEncryptionKey(&bfkey);
    if (err != 0) {
       LOG_ERROR_MSG("could not get encryption key:" << err);
-      _dataChannel.reset();
+      dataChannel.reset();
       _done = 1;
-      return 0;
+      return err;
    }
 
    // Decrypt the data from the message.
@@ -743,7 +743,7 @@ HwStdioController::authenticate(InetSocketPtr dataChannel)
 
    // Compare the data.
    if (memcmp(inMsg->plainData, decryptedData, sizeof(inMsg->plainData)) != 0) {
-      LOG_ERROR_MSG("authentication failed '" << inMsg->plainData << "' '" << decryptedData << "'");
+      LOG_ERROR_MSG("authentication failed");
       
       std::ostringstream os;
       for ( unsigned i = 0; i < PlainDataSize; ++i ) {
@@ -757,9 +757,9 @@ HwStdioController::authenticate(InetSocketPtr dataChannel)
       }
       LOG_ERROR_MSG( "encrypted: " << os.str() );
 
-      _dataChannel.reset();
+      dataChannel.reset();
       _done = 1;
-      return 0;
+      return EPERM;
    }
 
    // Send AuthenticateAck message.

@@ -31,7 +31,7 @@ using namespace std;
 
 namespace bgsched {
 
-const TimeInterval::TimeInterval TimeInterval::ALL;
+const TimeInterval TimeInterval::ALL;
 
 TimeInterval::TimeInterval() :
     _start(boost::posix_time::neg_infin),

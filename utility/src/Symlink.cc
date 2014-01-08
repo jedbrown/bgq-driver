@@ -43,7 +43,14 @@ Symlink::Symlink(
     boost::scoped_array<char> buf( new char[bufSize] );
 
     while (1) {
-        ssize_t linkSize = readlink( path.file_string().c_str(), buf.get(), bufSize );
+        ssize_t linkSize = readlink(
+#if BOOST_FILESYSTEM_VERSION == 3
+                path.native().c_str(),
+#else
+                path.file_string().c_str(),
+#endif
+                buf.get(), static_cast<size_t>(bufSize)
+                );
         if ( linkSize == -1 ) {
             BOOST_THROW_EXCEPTION(
                     boost::system::system_error(
@@ -57,7 +64,7 @@ Symlink::Symlink(
             LOG_TRACE_MSG( "increased buffer size to " << bufSize );
             buf.reset( new char[bufSize] );
         } else {
-            _link = std::string( buf.get(), linkSize );
+            _link = std::string( buf.get(), static_cast<size_t>(linkSize) );
             LOG_TRACE_MSG( path << " links to " << _link );
             break;
         }

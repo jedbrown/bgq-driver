@@ -97,6 +97,7 @@ public:
    uint64_t getpeername(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
    uint64_t getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
    uint64_t getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen);
+   uint64_t gpfsfcntl(int fd, const void* ptr, size_t length, int* gpfsresult);
    uint64_t ioctl(int fd, unsigned long int cmd, void *parm3);
    uint64_t lchown(const char *path, uid_t uid, gid_t gid);
    uint64_t link(const char *oldpathname, const char *newpathname);
@@ -133,7 +134,59 @@ public:
    uint64_t utime(const char *path, const struct utimbuf *buf);
    uint64_t write(int fd, const void *buffer, size_t length);
    uint64_t writev(int fd, const struct iovec *iov, int iovcnt);
-   uint64_t writeRdmaVirt(int fd, const void *buffer, size_t length);
+   uint64_t writeImmediate(int fd, const void *buffer, size_t length);
+   
+
+   uint64_t getxattr(const char *path, const char *name, void *value, size_t size){
+      return pathgetXattr(path, name, value, size, bgcios::sysio::PgetXattr);
+   }
+   uint64_t lgetxattr(const char *path, const char *name, void *value, size_t size){
+      return pathgetXattr(path, name, value, size, bgcios::sysio::LgetXattr);
+   }
+   uint64_t pathgetXattr(const char *path, const char *name, void *value, size_t size, uint16_t type);
+ 
+   uint64_t listxattr(const char *path, char *list, size_t size){
+      return pathlistXattr(path, list,size, bgcios::sysio::PlistXattr);
+   }
+   uint64_t llistxattr(const char *path, char *list, size_t size){
+      return pathlistXattr(path, list,size, bgcios::sysio::LlistXattr);
+   }
+   uint64_t pathlistXattr(const char *path, char *list, size_t size, uint16_t type);
+
+   uint64_t setxattr(const char *path, const char *name, const void *value, size_t size, int flags){
+      return pathsetXattr(path, name, value, size, flags, bgcios::sysio::PsetXattr);
+   }
+   uint64_t lsetxattr(const char *path, const char *name, const void *value, size_t size, int flags){
+      return pathsetXattr(path, name, value, size, flags, bgcios::sysio::LsetXattr);
+   }
+   uint64_t pathsetXattr(const char *path, const char *name, const void *value, size_t size, int flags, uint16_t type);
+
+   uint64_t lremovexattr(const char *path, const char *name){
+      return pathRemoveXattr(path, name, bgcios::sysio::LremoveXattr);
+   } 
+   uint64_t removexattr(const char *path, const char *name){
+      return pathRemoveXattr(path, name, bgcios::sysio::PremoveXattr);
+   }  
+
+   uint64_t pathRemoveXattr(const char *path, const char *name, uint16_t type);
+   
+
+   uint64_t fsetxattr(int fd, const char *name, const void *value, size_t size, int flags){
+            return fxattr_setOrRemove(fd,name,bgcios::sysio::FsetXattr,value,size,flags);
+   }
+   uint64_t fgetxattr(int fd, const char *name, void *value, size_t size){
+            return fxattr_retrieve(fd, name, bgcios::sysio::FgetXattr, value, size);
+   }
+   uint64_t fremovexattr(int fd, const char *name){
+            return fxattr_setOrRemove(fd,name,bgcios::sysio::FremoveXattr,NULL,0,0);
+   }  
+
+   uint64_t flistxattr(int fd, char *list, size_t size){
+            return fxattr_retrieve(fd, NULL, bgcios::sysio::FlistXattr, list, size);
+   }
+
+   uint64_t fxattr_setOrRemove(int fd, const char *name, uint16_t type, const void *value, size_t size, int flags);
+   uint64_t fxattr_retrieve(int fd, const char *name, uint16_t type, void *target, size_t size);
 
   //! \brief Send User Message to sysiod with expected User message back 
   //! \param mInput is a char * alias for struct MsgInputs *
@@ -209,6 +262,19 @@ void fillHeader(bgcios::MessageHeader *header, uint16_t type, size_t length)
    //! \return Return code.
 
    uint64_t exchange(void *outMsg, void **inMsg);
+   uint64_t exchangeInline(void *outMsg, void **inMsg)
+{
+   // Build scatter/gather element for outbound request message.
+   bgcios::MessageHeader *requestMsg = (bgcios::MessageHeader *)outMsg;
+   uint64_t * data = (uint64_t * )outMsg;
+   Kernel_WriteFlightLog(FLIGHTLOG, FL_SYSMSGSND, data[0],data[1],data[2],data[3] );
+   struct cnv_sge sge;
+   sge.addr = (uint64_t)outMsg;
+   sge.length = requestMsg->length;
+   sge.lkey = _outMessageRegion.lkey;
+   uint64_t rc = exchangeMessages(&sge, 1, inMsg,requestMsg->sequenceId);
+   return rc;
+}
 
    //! \brief  Simple exchange of request (with one path name) and reply messages.
    //! \param  outMsg Pointer to outbound request message.
@@ -281,10 +347,6 @@ void fillHeader(bgcios::MessageHeader *header, uint16_t type, size_t length)
 
    uint32_t _procSequenceId[CONFIG_MAX_HWTHREADS];
 
-   //! Job usage counter which is incremented each time setupJob() is run and decremented each time cleanupJob() is run.
-   //! \note Required since this file system is used for multiple descriptor types.
-   uint32_t _jobCounter;
-
    //! True when termination has completed.
    //! \note Required since this file system is used for multiple descriptor types.
    bool _isTerminated;
@@ -300,9 +362,6 @@ void fillHeader(bgcios::MessageHeader *header, uint16_t type, size_t length)
 
    //! Queue pair connected to sysiod.
    cnv_qp _queuePair;
-
-   //! Memory region for user storage.
-   struct cnv_mr _userRegion;
 
    //! Memory region for outbound messages.
    struct cnv_mr _outMessageRegion;

@@ -1260,11 +1260,11 @@ inline int _parseRowCol( char** s, unsigned* rowcol ) {
   (*s)++;
 
   if ( ( c >= '0' ) && ( c <= '9') ) {
-    *rowcol = c - '0';
+      *rowcol = (unsigned)c - (unsigned)'0';
     return 0;
   }
   else if ( ( c >= 'A' ) && ( c <= 'V') ) {
-    *rowcol = c - 'A' + 10;
+      *rowcol = (unsigned)c - (unsigned)'A' + 10;
     return 0;
   }
   else {
@@ -1314,9 +1314,9 @@ inline int _parseSingleDigit( char** s, unsigned* value, char id, unsigned lower
   char digit = **s;
 
   if ( (digit >= '0') && (digit <= '9') )
-    *value = digit - '0';
+      *value = (unsigned)digit - (unsigned)'0';
   else if ( (digit >= 'A') && (digit <= 'Z') )
-    *value = digit - 'A' + 10;
+      *value = (unsigned)digit - (unsigned)'A' + 10;
   else
     return -1;
 
@@ -1378,14 +1378,14 @@ inline int _parseDoubleDecimalDigits( char** s, unsigned* value, char id, unsign
   char n1 = **s; (*s)++;
 
   if ( ( n0 >= '0' ) && ( n0 <= '9' ) ) {
-    *value = (n0 - '0') * 10;
+      *value = ((unsigned)n0 - (unsigned)'0') * 10;
   }
   else {
     return -1;
   }
 
   if ( ( n1 >= '0' ) && ( n1 <= '9' ) ) {
-    *value += ( n1 - '0');
+      *value += ( (unsigned)n1 - (unsigned)'0');
   }
   else {
     return -1;
@@ -1477,7 +1477,7 @@ inline int _parseLinkModule( char** s, unsigned* link ) {
   }
   else if ( _uci_pattern_matches( str,  BG_UCI_Pattern_ClockCardOnIoRack         ) ) {
     rc = _parseIoRack( &str, &row, &col );
-    rc = _parseClockCard( &str, &clock );
+    rc |= _parseClockCard( &str, &clock );
     *uci = bg_encodeClockCardOnIoRackUCI( row, col, clock );
   }
   else if ( _uci_pattern_matches( str,  BG_UCI_Pattern_IoDrawerOnComputeRack     ) ) {

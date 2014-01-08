@@ -50,9 +50,10 @@
 #define APP_FLAGS_TLS               0x010
 #define APP_FLAGS_DYN               0x020
 #define APP_FLAGS_NONSPECULATIVE    0x040
-#define APP_FLAGS_GUARDEDINHIBITED  0x080
+#define APP_FLAGS_GUARDED           0x080
 #define APP_FLAGS_LISTENABLE        0x100
 #define APP_FLAGS_FLUSHSTORES       0x200
+#define APP_FLAGS_INHIBITED         0x400
 #define APP_FLAGS_ESEL(x)           ((x)<<16)
 
 
@@ -242,6 +243,7 @@ typedef struct AppState_t
     uint32_t MaxSequence;
     uint32_t IsLoadLeader;
     uint32_t LoadNodeCount;
+    uint32_t prohibitLoad;
 }
 AppState_t;
 

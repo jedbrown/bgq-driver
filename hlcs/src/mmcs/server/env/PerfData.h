@@ -59,8 +59,8 @@ private:
 
 private:
     cxxdb::ConnectionPtr prepareInserts(
-                cxxdb::UpdateStatementPtr& perfInsert
-        );
+            cxxdb::UpdateStatementPtr& perfInsert
+            );
 };
 
 } } } // namespace mmcs::server::env

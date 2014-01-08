@@ -52,6 +52,8 @@ CXXFLAGS += -DBOOST_TEST_DYN_LINK
 CXXFLAGS += -DBOOST_TEST_MAIN
 
 
+LDFLAGS += ../../server/Options.o
+LDFLAGS += ../../server/Reconnect.o
 LDFLAGS += -L ../../common -lrunjob_common
 LDFLAGS += -Wl,-rpath,$(BGQ_BUILD_DIR)/hlcs/src/runjob/common
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/ras/lib -lras
@@ -60,8 +62,7 @@ LDFLAGS += -lboost_filesystem-mt
 LDFLAGS += -lboost_program_options-mt
 LDFLAGS += -lboost_system-mt
 LDFLAGS += -lboost_unit_test_framework-mt
-LDFLAGS += ../../server/Options.o
-LDFLAGS += ../../server/Reconnect.o
+LDFLAGS += -llog4cxx
 
 
 TESTERS   = $(patsubst %.cc,%,$(wildcard *.cc))
@@ -88,13 +89,17 @@ out_%: test_%
 
 test_io_connection: io_connection.o ../../server/cios/ConnectionInterval.o
 	@echo "link $@"
-	$(SILENT)$(CXX) -o $@ $^ $(LDFLAGS) -L $(BGQ_INSTALL_DIR)/db/lib -lbgdb -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib
+	$(SILENT)$(CXX) -o $@ $^ -L $(BGQ_INSTALL_DIR)/db/lib -lbgdb -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib $(LDFLAGS)
 
 test_performance_counter_interval: performance_counter_interval.o ../../server/performance/Interval.o
 	@echo "link $@"
 	$(SILENT)$(CXX) -o $@ $^ $(LDFLAGS)
 
 test_mapping_file: mapping_file.o ../../server/job/ValidateMappingFile.o
+	@echo "link $@"
+	$(SILENT)$(CXX) -o $@ $^ $(LDFLAGS)
+
+test_copy_mapping_file: copy_mapping_file.o ../../server/job/CopyMappingFile.o
 	@echo "link $@"
 	$(SILENT)$(CXX) -o $@ $^ $(LDFLAGS)
 

@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "Disconnect.h"
 
 #include "../BlockControllerBase.h"
@@ -29,14 +28,11 @@
 
 #include "common/ConsoleController.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 Disconnect*
 Disconnect::build()
@@ -55,17 +51,15 @@ Disconnect::build()
     return new Disconnect("disconnect", "disconnect", commandAttributes);
 }
 
-
 void
 Disconnect::execute(
         deque<string> args,
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     const BlockPtr pBlock = pController->getBlockHelper()->getBase();  // get selected block
-    const log4cxx::MDC _blockid_mdc_( "blockId", std::string("{") + pBlock->getBlockName() + "} " );
     args.push_back( "no_shutdown" );
     pBlock->disconnect(args, reply);
 }
@@ -74,12 +68,9 @@ void
 Disconnect::help(
         deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
-    reply << mmcs_client::OK << description()
-      << ";disconnect from a set of the block's resources"
-      << mmcs_client::DONE;
+    reply << mmcs_client::OK << description() << ";Disconnect from a set of the block's resources" << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

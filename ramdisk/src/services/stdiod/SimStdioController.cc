@@ -530,13 +530,25 @@ SimStdioController::authenticate(InetSocketPtr channel)
    // Get pointer to inbound Authenticate message.
    AuthenticateMessage *inMsg = (AuthenticateMessage *)_inboundMessage;
 
-   LOG_TRACE_MSG( "plain: " << inMsg->plainData );
    std::ostringstream os;
+   BOOST_FOREACH( const unsigned char i, inMsg->plainData ) {
+       os << std::setfill('0') << std::setw(2) << std::hex << static_cast<unsigned>(i);
+   }
+   LOG_TRACE_MSG( "plain: " << os.str() );
+   os.str("");
    BOOST_FOREACH( const unsigned char i, inMsg->encryptedData ) {
        os << std::setfill('0') << std::setw(2) << std::hex << static_cast<unsigned>(i);
    }
    LOG_TRACE_MSG( "encrypted: " << os.str() );
 
+   // special case to simulate authentication failures, plain and encrypted will be the same
+   if ( memcmp(inMsg->plainData, inMsg->encryptedData, sizeof(inMsg->plainData)) == 0 ) {
+       LOG_ERROR_MSG( "authentication failed" );
+      channel.reset();
+      _done = 1;
+       return EPERM;
+   }
+ 
    // Build AuthenticateAckMessage message in outbound buffer.
    AuthenticateAckMessage *outMsg = (AuthenticateAckMessage *)_outboundMessage;
    memcpy(&(outMsg->header), &(inMsg->header), sizeof(MessageHeader));

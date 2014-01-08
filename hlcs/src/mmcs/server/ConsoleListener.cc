@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "ConsoleListener.h"
 
 #include "ConsoleConnectionThread.h"
@@ -32,13 +31,10 @@
 #include <utility/include/cxxsockets/SecureTCPSocket.h>
 #include <utility/include/cxxsockets/SockAddr.h>
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
-
 
 void*
 ConsoleListener::threadStart()
@@ -48,39 +44,30 @@ ConsoleListener::threadStart()
     // Get the parameters
     boost::shared_ptr<ConsoleMonitorParameters> parms;
     this->getArg( parms );
-    mmcs_client::ConsolePortServer* consolePort
-        = (mmcs_client::ConsolePortServer*) parms->consolePort;
-    MMCSCommandMap* commandMap
-        = (MMCSCommandMap*) parms->commandMap;
+    mmcs_client::ConsolePortServer* consolePort = (mmcs_client::ConsolePortServer*) parms->consolePort;
+    MMCSCommandMap* commandMap = (MMCSCommandMap*) parms->commandMap;
 
-    LOG_INFO_MSG("started");
-
-    while (!isThreadStopping() && portWorking)
-    {
+    while (!isThreadStopping() && portWorking) {
         mmcs_client::ConsolePortClient* connection = NULL;
         // Wait for a connection from a client
-        try
-        {
+        try {
             connection = consolePort->accept();
-        }
-        catch (const mmcs_client::ConsolePort::Error& e)
-        {
+        } catch (const mmcs_client::ConsolePort::Error& e) {
             connection = NULL; // we didn't get a connection
             if (e.errcode == EINTR || e.errcode == ECONNABORTED || e.errcode == EMFILE ||
                     e.errcode == ENFILE || e.errcode == ENOBUFS || e.errcode == ENOMEM ||
                     e.errcode == -1 || e.errcode == 0); // recoverable error, retry accept
-            else
-            {
-                if (e.errcode != EINVAL && e.errcode != 0) // we normally receive EINVAL on shutdown
-                    LOG_ERROR_MSG("accept: " << e.what() << " " << e.errcode);
+            else {
+                if (e.errcode != EINVAL && e.errcode != 0) { // we normally receive EINVAL on shutdown
+                    LOG_ERROR_MSG("Error occurred listening for console clients to connect: " << e.what() << " " << e.errcode);
+                }
                 portWorking = false;
             }
         }
-        if (connection)
-        {
+
+        if (connection) {
             // Create a thread to service the connection
-            ConsoleConnectionThread* serverThread =
-                new ConsoleConnectionThread;
+            ConsoleConnectionThread* serverThread = new ConsoleConnectionThread;
             serverThread->setArg(
                     boost::shared_ptr<ConsoleMonitorParameters>(
                         new ConsoleMonitorParameters(connection, commandMap)
@@ -92,14 +79,12 @@ ConsoleListener::threadStart()
         }
     }
 
-    // close the interactive console port
+    // Close the interactive console port
     delete consolePort;
     consolePort = NULL;
 
-    // return when done
-    LOG_INFO_MSG("stopped");
+    // Return when done
     return NULL;
 }
-
 
 } } // namespace mmcs::server

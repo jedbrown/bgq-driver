@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "FreeAll.h"
 
 #include "Free.h"
@@ -39,18 +38,15 @@
 #include <utility/include/Log.h>
 
 #include <boost/assign.hpp>
-
+#include <boost/scoped_ptr.hpp>
 
 using namespace std;
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 FreeAll*
 FreeAll::build()
@@ -73,7 +69,7 @@ FreeAll::execute(
         mmcs_client::CommandReply& reply,
         DBConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     getBlockObjects(args, pController);
     execute(args, reply, pController, pTarget, &_blocks);
@@ -87,15 +83,15 @@ FreeAll::execute(
         DBConsoleController* pController,
         BlockControllerTarget* pTarget,
         std::vector<std::string>* validnames
-        )
+)
 {
-    // here's the heavy lifting to do the actual freeing
+    // Here's the heavy lifting to do the actual freeing
     size_t failureCount = 0;
-    for(unsigned int i = 0; i < validnames->size(); ++i) {
+    for (unsigned int i = 0; i < validnames->size(); ++i) {
         std::vector<std::string> name;
-        std::string block = validnames->at(i);
+        const std::string block = validnames->at(i);
         name.push_back(block);
-        Free* free_cmd = command::Free::build();
+        const boost::scoped_ptr<Free> free_cmd( command::Free::build() );
         free_cmd->execute(
                 boost::assign::list_of(std::string(block)),
                 reply,
@@ -104,19 +100,18 @@ FreeAll::execute(
                 &name
                 );
         if ( reply.getStatus() != 0 ) {
-            LOG_WARN_MSG( "could not free block " << block << ": " << reply.str());
+            LOG_WARN_MSG( "Could not free block " << block << ": " << reply.str());
             failureCount++;
             reply.str("");
         }
         name.clear();
-        delete free_cmd;
     }
 
     // send reply if we didn't have any failures
     if ( !failureCount ) {
-        reply << mmcs_client::OK << "freed " << validnames->size() << " " << (validnames->size() == 1 ? "block" : "blocks") << mmcs_client::DONE;
+        reply << mmcs_client::OK << "Freed " << validnames->size() << " " << (validnames->size() == 1 ? "block" : "blocks") << mmcs_client::DONE;
     } else {
-        reply << mmcs_client::FAIL << "freed " << validnames->size() - failureCount << " out of " << validnames->size() << " blocks" << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Freed " << validnames->size() - failureCount << " out of " << validnames->size() << " blocks" << mmcs_client::DONE;
     }
 }
 
@@ -124,7 +119,7 @@ std::vector<std::string>
 FreeAll::getBlockObjects(
         std::deque<std::string>& cmdString,
         DBConsoleController* pController
-        )
+)
 {
     // default scope is to free all compute blocks, the arguments to this
     // command can alter that behavior
@@ -138,7 +133,7 @@ FreeAll::getBlockObjects(
         } else if ( cmdString[0] == "both" ) {
             scope.clear();
         } else {
-            LOG_ERROR_MSG( "unknown argument: " << cmdString[0]);
+            LOG_ERROR_MSG( "Unknown argument: " << cmdString[0]);
             return blocks;
         }
     }
@@ -162,17 +157,15 @@ FreeAll::getBlockObjects(
         const cxxdb::ResultSetPtr result( statement->execute() );
         std::vector<std::string> ioblocks;
         while ( result->fetch() ) {
-            LOG_DEBUG_MSG("block " << result->columns()[ BGQDB::DBTBlock::BLOCKID_COL ].getString() << " set to be freed.");
-            if(result->columns()[BGQDB::DBTBlock::NUMIONODES_COL].getInt64() == 0)
+            LOG_DEBUG_MSG("Block " << result->columns()[ BGQDB::DBTBlock::BLOCKID_COL ].getString() << " set to be freed.");
+            if (result->columns()[BGQDB::DBTBlock::NUMIONODES_COL].getInt64() == 0)
                 blocks.push_back( result->columns()[ BGQDB::DBTBlock::BLOCKID_COL ].getString() );
             else
                 ioblocks.push_back(result->columns()[ BGQDB::DBTBlock::BLOCKID_COL ].getString() );
         }
 
-        // Now put any/all IO blocks at the end of the list so the CN blocks
-        // get freed first.
-        for(std::vector<std::string>::iterator it = ioblocks.begin();
-            it != ioblocks.end(); ++it) {
+        // Now put any/all IO blocks at the end of the list so the CN blocks get freed first.
+        for (std::vector<std::string>::iterator it = ioblocks.begin(); it != ioblocks.end(); ++it) {
             blocks.push_back(*it);
         }
     } catch ( const cxxdb::DatabaseException& e ) {
@@ -187,17 +180,16 @@ void
 FreeAll::help(
         deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     reply << mmcs_client::OK << description()
-        << ";Release all blocks in use by the console user. By default only compute"
-        << ";blocks are freed, to alter this behavior use one of the options below."
-        << ";options:"
-        << ";  io - free I/O blocks"
-        << ";  compute - free compute blocks"
-        << ";  both - free both compute and I/O blocks"
-        << mmcs_client::DONE;
+          << ";Release all blocks in use by the console user. By default only compute"
+          << ";blocks are freed, to alter this behavior use one of the options below."
+          << ";Options:"
+          << ";  io - free I/O blocks"
+          << ";  compute - free compute blocks"
+          << ";  both - free both compute and I/O blocks"
+          << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

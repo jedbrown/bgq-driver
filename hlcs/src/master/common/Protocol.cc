@@ -23,16 +23,19 @@
 
 #include "Protocol.h"
 
-#include <utility/include/Log.h>
 #include <utility/include/cxxsockets/SockAddrList.h>
 
 #include <boost/foreach.hpp>
 
-#include <sstream>
 
 #include <unistd.h>
 
 LOG_DECLARE_FILE( "master" );
+
+Protocol::Protocol()
+{
+
+}
 
 Protocol::~Protocol()
 {
@@ -113,10 +116,11 @@ Protocol::sendReceive(
 
 void
 Protocol::initializeRequester(
+        const bgq::utility::Properties::ConstPtr& props,
         const int ipv,
         const std::string& host,
         const std::string& port,
-        const int attempts
+        const unsigned attempts
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
@@ -124,10 +128,10 @@ Protocol::initializeRequester(
 
     // Connect to the server.
     // Let the caller decide the exception handling policy
-    int retries = 0;
+    unsigned retries = 0;
     const bool forever = (attempts == 0); // Zero attempts means try 'forever'
-    int timeout = 500;
-    const int timeout_max = 3000000;
+    unsigned timeout = 500;
+    const unsigned timeout_max = 3000000;
 
     // Normally, we pass socket exceptions back to the client.
     // Here, however, we make use of them.
@@ -136,30 +140,24 @@ Protocol::initializeRequester(
         if (connected) {
             break;
         }
-        _remote = remote;
         while (retries < attempts || forever) {
-            CxxSockets::SecureTCPSocketPtr sock(new CxxSockets::SecureTCPSocket(remote.family(), 0));
+            const CxxSockets::SecureTCPSocketPtr sock(new CxxSockets::SecureTCPSocket(remote.family(), 0));
             try {
                 bgq::utility::ClientPortConfiguration port_config(0, bgq::utility::ClientPortConfiguration::ConnectionType::Command);
-                port_config.setProperties(_props, "");
+                port_config.setProperties(props, "");
                 port_config.notifyComplete();
                 sock->Connect(remote, port_config);
-            } catch(const CxxSockets::HardError& e) {
-                LOG_DEBUG_MSG("Server not available, will retry.");
+            } catch (const CxxSockets::Error& e) {
+                if ( e.errcode == -1 ) {
+                    // no point in retrying
+                    throw;
+                }
+                LOG_DEBUG_MSG("Server not available, will retry: " << e.what() );
                 if (timeout < timeout_max)
                     timeout *= 10;
-                usleep(timeout);
-                ++retries;
-                continue;
-            } catch(const CxxSockets::SoftError& e) {
-                LOG_DEBUG_MSG("Caught exception, will retry. Exception is: " << e.what());
-                if (timeout < timeout_max)
-                    timeout *= 10;
-                usleep(timeout);
-                ++retries;
-                continue;
-            } catch(const CxxSockets::Error& e) {
-                LOG_ERROR_MSG("Unexpected error on connecting socket: " << e.what());
+                if ( forever || attempts > 1 ) {
+                    usleep(timeout);
+                }
                 ++retries;
                 continue;
             }
@@ -172,7 +170,6 @@ Protocol::initializeRequester(
     if (retries >= attempts && !forever) {
         std::ostringstream msg;
         msg << "Retries timed out attempting to connect to " << host << ":" << port;
-        LOG_DEBUG_MSG(msg.str());
         throw CxxSockets::HardError(EAGAIN, msg.str());
     }
 

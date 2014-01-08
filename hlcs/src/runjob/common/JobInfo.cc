@@ -60,7 +60,8 @@ JobInfo::JobInfo() :
     _stdinRank( 0 ),
     _umask( umask(0) )
 {
-
+    // reset umask
+    umask( _umask );
 }
 
 void
@@ -227,6 +228,11 @@ JobInfo::setCwd(
         )
 {
     _cwd = cwd;
+    if ( _cwd.empty() ) {
+        // provide some reasonable default
+        _cwd = "/";
+        LOG_WARN_MSG( "could not get working directory, defaulting to " << _cwd );
+    }
 
     this->validateMappingPath();
 } 

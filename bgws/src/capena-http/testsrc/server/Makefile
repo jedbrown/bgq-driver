@@ -33,9 +33,14 @@ CXXFLAGS += \
 
 LDFLAGS += \
  -Wl,--enable-new-dtags \
- -L$(BGQ_INSTALL_DIR)/extlib/lib -lboost_unit_test_framework-mt \
+ -L$(BGQ_INSTALL_DIR)/extlib/lib \
+ -lboost_unit_test_framework-mt \
+ -lboost_system-mt \
+ -lboost_thread-mt \
+ -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility \
  -Wl,-rpath-link,$(BGQ_INSTALL_DIR)/extlib/lib:$(BGQ_INSTALL_DIR)/utility/lib \
- -lcurl
+ -lcurl \
+ -llog4cxx
 
 
 test_%.o: CXXFLAGS+=-DBOOST_TEST_DYN_LINK
@@ -67,16 +72,16 @@ test: $(output_files)
 
 
 test_basics: test_basics.o CurlHandle.o GlobalFixture.o ../../libcapena-http.so
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 test_Connection: test_Connection.o ConnectSendGetResponseLine.o CurlHandle.o EchoResponder.o GlobalFixture.o ../../libcapena-http.so
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 test_Request: test_Request.o ConnectSendGetResponseLine.o CurlHandle.o GlobalFixture.o ../../libcapena-http.so
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 test_Responder: test_Responder.o CurlHandle.o GlobalFixture.o ../../libcapena-http.so
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 
 clean:

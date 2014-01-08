@@ -34,7 +34,7 @@ extern uint64_t  _fw_Vec0_MCHK;
 extern uint64_t  _fw_Vec1_MCHK;
 #endif
 
-int fw_recoverTLBParityError();
+int fw_recoverTLBParityError( uint64_t mcsr );
 
 
 int fw_installInterruptVector( void* vec, unsigned size ) {
@@ -323,21 +323,22 @@ void fw_machineCheckHandler( void ) {
       }
       else {
 
-	  fw_uint64_t details[2];
+	  fw_uint64_t details[3];
 
 	  // NOTE: we categorize multi-hit errors as software errors.  Do not mark hardware in error for
 	  //       this case
 
           #define MCSR_SOFTWARE_ERRORS ( MCSR_IEMH | MCSR_DEMH | MCSR_TLBMH )
           
-          if((mcsr & MCSR_TLBPE) != 0)
+          if ( ( mcsr & ( MCSR_TLBPE | MCSR_TLBLRUPE ) ) != 0 )
           {
-              rc = fw_recoverTLBParityError();
-              if(rc)
-              {
+              rc = fw_recoverTLBParityError( mcsr & ( MCSR_TLBPE | MCSR_TLBLRUPE ) );
+
+              if (rc) {
                   details[0] = mcsr & ~MCSR_SOFTWARE_ERRORS;
                   details[1] = ProcessorCoreID();
-                  fw_machineCheckRas( FW_RAS_A2_HARDWARE_MACHINE_CHECK, details, 2, __FILE__, __LINE__ );
+		  details[2] = rc;
+                  fw_machineCheckRas( FW_RAS_A2_HARDWARE_MACHINE_CHECK, details, 3, __FILE__, __LINE__ );
                   fw_machineCheckIsFatal |= 1; 
               }
               
@@ -423,36 +424,36 @@ int fw_A2_setTLBTable(Firmware_TLBEntries_t* mmu)
     return 0;
 }
 
-int fw_recoverTLBParityError()
-{
+int fw_recoverTLBParityError( uint64_t mcsr ) {
+
     int notHandled = 1;
     int setway;
     uint64_t core = PhysicalProcessorID();
     uint64_t mask = ~(1<<(ProcessorThreadID()));
     uint64_t mmucr1;
     Firmware_TLBEntries_t* mmu;
-    fw_uint64_t details[8];
+    fw_uint64_t details[10];
+    int n = 0;
     mtspr(SPRN_TENC,((mask) & 0xf));
     isync();
     
     mmucr1 = mfspr(SPRN_MMUCR1); // read bits 52-63 clears those bits
     setway = (mmucr1 & 0x1ff);
     
-    details[0] = mmucr1;
-    details[1] = (fw_uint64_t)fw_MMUCache[core];
+    details[n++] = mmucr1;
+    details[n++] = mcsr;
+    details[n++] = (fw_uint64_t)fw_MMUCache[core];
+    
     
     // This code is currently assuming that fw_MMUCache[core]'s TLB is good
-    if(fw_MMUCache[core] != NULL)
-    {
+    if(fw_MMUCache[core] != NULL) {
         mmu = fw_MMUCache[core];
-        details[2] = setway;
-        details[3] = mmu[setway].mas1;
-        details[4] = mmu[setway].mas2;
-        details[5] = mmu[setway].mas7_3;
-        details[6] = mmu[setway].mas8;
-        details[7] = mmu[setway].mmucr3;
-        
-        fw_machineCheckRas( FW_RAS_A2_TLBPE_MACHINE_CHECK, details, 8, __FILE__, __LINE__ );
+        details[n++] = setway;
+        details[n++] = mmu[setway].mas1;
+        details[n++] = mmu[setway].mas2;
+        details[n++] = mmu[setway].mas7_3;
+        details[n++] = mmu[setway].mas8;
+        details[n++] = mmu[setway].mmucr3;
         
         tlbwe_slot(setway%4, 
                    mmu[setway].mas1, mmu[setway].mas2, mmu[setway].mas7_3, 
@@ -460,10 +461,9 @@ int fw_recoverTLBParityError()
         isync();
         notHandled = 0;
     }
-    else
-    {
-        fw_machineCheckRas( FW_RAS_A2_TLBPE_MACHINE_CHECK, details, 2, __FILE__, __LINE__ );
-    }
+
+    fw_machineCheckRas( FW_RAS_A2_TLBPE_MACHINE_CHECK, details, n, __FILE__, __LINE__ );
+
     
     mtspr(SPRN_TENS,0xf);
     isync();

@@ -115,9 +115,9 @@ extern "C" {
     }
 
     event.setDetail( "DETAILS", details.str() );
-    if ( unit != -1 ) {
-	event.setDetail( "DIM_DIR", nd_rese_unit2Dimension( (unsigned int) unit ) );
-    }
+
+
+    event.setDetail( "DIM_DIR", ( unit != -1 ) ? nd_rese_unit2Dimension( (unsigned int) unit ) : "NA" );
   }
 
     const std::string CE_COUNT_Prologs[] = {
@@ -134,7 +134,7 @@ extern "C" {
 
   void fw_ND_correctableDecoder( RasEvent& event, const vector<uint64_t>& mbox ) {
 
-      if ( mbox.size() < 2 ) {
+      if ( mbox.size() < 3 ) {
 	  event.setDetail( "DETAILS", "INTERNAL ERROR: details missing");
 	  return;
       }
@@ -143,10 +143,11 @@ extern "C" {
 
       uint64_t unit  = mbox[0];
       uint64_t count = mbox[1];
+      uint64_t dimswap = mbox[2];
 
       event.setDetail( "LINK", nd_rese_unit2Dimension( (unsigned int) unit ) );
 
-      for ( unsigned i = 2; i < mbox.size(); i++ ) {
+      for ( unsigned i = 3; i < mbox.size(); i++ ) {
 
 	  uint64_t dcr = mbox[i]; 
 
@@ -164,6 +165,10 @@ extern "C" {
 
       event.setDetail( "DETAILS", details.str() );
       event.setDetail( "DIM_DIR", nd_rese_unit2Dimension( (unsigned int) unit ) );
+
+      ostringstream swapStr;
+      swapStr << dimswap;
+      event.setDetail( "DIM_SWAP", swapStr.str() );
 
       ostringstream countStr;
       countStr << count;

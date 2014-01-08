@@ -45,14 +45,23 @@ namespace env {
 
 class McServerConnection;
 
+/*!
+ * \brief Base class for environmental data collection.
+ *
+ * This class presents an asyncrhonous interface for operations needed
+ * by other environmental types:
+ *
+ * - connecting to mc_server, see Polling::poll()
+ * - closing a target set, see Polling::closeTarget()
+ * - creating performance counters, see Polling::time()
+ * - waiting for the configured interval to begin polling, see Polling::wait()
+ */
 class Polling : public boost::enable_shared_from_this<Polling>
 {
 public:
     typedef bgq::utility::performance::StatisticSet<
-        bgq::utility::performance::List<
-            bgq::utility::performance::DataPoint
-            >,
-             bgq::utility::performance::DatabaseOutput
+        bgq::utility::performance::List<bgq::utility::performance::DataPoint>,
+        bgq::utility::performance::DatabaseOutput
         > PerformanceCounters;
 
     typedef boost::shared_ptr<Polling> Ptr;
@@ -105,11 +114,14 @@ protected:
      */
     Timer::Ptr time();
 
+    /*!
+     * \brief
+     */
     void closeTarget(
-            const boost::shared_ptr<McServerConnection>& mc_server,
-            const std::string& name,
-            const int handle,
-            const Callback& callback
+            const boost::shared_ptr<McServerConnection>& mc_server, //!< [in]
+            const std::string& name,                                //!< [in]
+            const int handle,                                       //!< [in]
+            const Callback& callback                                //!< [in]
             );
 
 private:
@@ -120,11 +132,6 @@ private:
     void connectHandler(
             const bgq::utility::Connector::Error::Type error,
             const std::string& message,
-            const boost::shared_ptr<McServerConnection>& mc_server
-            );
-
-    void connectResponseHandler(
-            std::istream& response,
             const boost::shared_ptr<McServerConnection>& mc_server
             );
 

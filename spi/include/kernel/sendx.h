@@ -46,8 +46,8 @@ struct MsgInputs {
   uint32_t recv_length;         //!< Length of user provided response buffer recvMessage (0 means not supplied)
   int      numberOfRdmaRegions; //!< Number of RDMA Regions
   int      cnkFileDescriptor[2];//!< CNK file descriptors (0 value means ignore)
-  int      data_length;         //!< Length of data to send to IO node sysiod user link-load library (0 means no data)
-  char *   dataRegion;          //!< Address to dataRegion to send to IO node sysiod user link-load library (NULL means no data)
+  int      data_length;         //!< Length of data to send in message to IO node sysiod user link-load library (0 means no data)
+  char *   dataRegion;          //!< Address to dataRegion to send in message to IO node sysiod user link-load library (NULL means no data)
   char *   recvMessage;         //!< Address region for receiving response message of length recv_length (NULL means no region supplied) 
   struct CNKuserRDMA * cnkUserRDMA;  //!< Address to list of RDMA regions in CNK user space
 };

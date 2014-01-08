@@ -151,7 +151,7 @@ int mudm_resetIOlink(void* mudm_context , uint32_t BlockID){
   for (i=0;i<NUM_IO_LINKS;i++){  /*BEAM*//*loop doesn't iterate*/
      //MPRINT("ififo_subgroup->groupStatus->isEnabled=%llx   \n",(LLUS)mcontext->MU_subgroup_mem[i]->ififo_subgroup.groupStatus->isEnabled); 
     
-    if(  (mcontext->remote_BlockID[i]==BlockID)  )
+    if(  mcontext->remote_BlockID[i]==BlockID  )
     { entry_num =
       MUDM_IO_LINKRESET(&mcontext->mudm_no_wrap_flight_recorder,i,BlockID,mcontext->remote_BlockID[i],mcontext->link4reset[i]);
       // set state of connection and reject requests that lead to injection
@@ -172,7 +172,7 @@ int mudm_resetIOlink(void* mudm_context , uint32_t BlockID){
   
   for (i=0;i<NUM_IO_LINKS;i++){  /*BEAM*//*loop doesn't iterate*/
    
-   if( (mcontext->remote_BlockID[i]==BlockID) )//reset if no report on link
+   if( mcontext->remote_BlockID[i]==BlockID )//reset if no report on link
    {   
       //put the link active list of connections into disconnect state
       rc = disable_active_connection_list(mcontext, &mcontext->conn_activelist[i]);
@@ -240,14 +240,17 @@ int mudm_resetIOlink(void* mudm_context , uint32_t BlockID){
 
       rc = flush_iolink_connection_list(mcontext, &mcontext->conn_activelist[i]);
       MUDM_IO_LINKFLUSHED(&mcontext->mudm_no_wrap_flight_recorder,i,BlockID,mcontext->remote_BlockID[i],mcontext->link4reset[i]);
-
+#if 0
+      check4notRight( mcontext -> packetcontrols[i],&mcontext->mudm_no_wrap_flight_recorder);
+      check4notRight( mcontext-> smallpa_obj_ctls[i],&mcontext->mudm_no_wrap_flight_recorder);
+#endif 
    }
    //MH;
   }//endfor i
  
   for (i=0;i<NUM_IO_LINKS;i++){     /*BEAM*//*loop doesn't iterate*/
    //if( (mcontext->remote_BlockID[i]==BlockID) || mcontext->remote_BlockID[i]==0)//reset if no report on link
-   if( (mcontext->remote_BlockID[i]==BlockID) )//reset if no report on link
+   if( mcontext->remote_BlockID[i]==BlockID )//reset if no report on link
    {   
       //re-activate base address table, receive and injection FIFOs
 

@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_TYPES_H_
 #define MMCS_SERVER_TYPES_H_
 
@@ -29,22 +28,26 @@
 
 #include <boost/shared_ptr.hpp>
 
-
 namespace mmcs {
 namespace server {
-
 
 class BCIconInfo;
 class BCLinkchipInfo;
 class BCNodecardInfo;
 class BCNodeInfo;
 class BCTargetInfo;
-
 class BlockControllerBase;
+class CNBlockController;
+class DBBlockController;
+class IOBlockController;
+
 typedef boost::shared_ptr<BlockControllerBase> BlockPtr;
+typedef boost::shared_ptr<CNBlockController> CNBlockPtr;
+typedef boost::shared_ptr<DBBlockController> DBBlockPtr;
+typedef boost::shared_ptr<IOBlockController> IOBlockPtr;
+
 
 class DBBlockController;
-
 
 } } // namespace mmcs::server
 

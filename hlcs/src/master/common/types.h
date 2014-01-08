@@ -31,7 +31,6 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
 
 #include <string>
 #include <utility>
@@ -53,7 +52,6 @@ class Protocol;
 typedef boost::shared_ptr<Protocol> ProtocolPtr;
 
 typedef boost::shared_ptr<XML::Serializable> MsgBasePtr;
-typedef boost::shared_ptr<boost::thread> ThreadPtr;
 
 
 #define LOGGING_DECLARE_ID_MDC(value) \

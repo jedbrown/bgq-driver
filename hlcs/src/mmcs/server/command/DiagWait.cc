@@ -48,14 +48,11 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 DiagWait*
 DiagWait::build()
@@ -75,14 +72,14 @@ DiagWait::build()
 
 void
 DiagWait::execute(
-        deque<string> args, 
+        deque<string> args,
         mmcs_client::CommandReply& reply,
-        common::ConsoleController* pController, 
+        common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
-    if(HardwareBlockList::list_size() != 0) {
-        reply << mmcs_client::FAIL << "Subnet_mc failover in progress.  Try again later." << mmcs_client::DONE;
+    if (HardwareBlockList::list_size() != 0) {
+        reply << mmcs_client::FAIL << "Subnet_mc failover in progress, try again later." << mmcs_client::DONE;
         return;
     }
 
@@ -90,12 +87,10 @@ DiagWait::execute(
 
     // If we are not in the mode where we are accepting mailbox messages
     // then we can't ever see this message...
-    if (!pBlock->isMailboxStarted())
-    {
-        reply << mmcs_client::FAIL << "programs are not running" << mmcs_client::DONE;
+    if (!pBlock->isMailboxStarted()) {
+        reply << mmcs_client::FAIL << "Programs are not running" << mmcs_client::DONE;
         return;
     }
-
 
     bool waitall = false;
 
@@ -103,7 +98,7 @@ DiagWait::execute(
         if ( args[1] == "waitall" ) {
             waitall = true;
         } else {
-            reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
             return;
         }
     }
@@ -113,11 +108,11 @@ DiagWait::execute(
         try {
             timeout = boost::lexical_cast<int>( args[0] );
             if ( timeout <= 0 ) {
-                reply << mmcs_client::FAIL << "timeout must be positive" << mmcs_client::DONE;
+                reply << mmcs_client::FAIL << "Timeout value must be positive" << mmcs_client::DONE;
                 return;
             }
         } catch ( const boost::bad_lexical_cast& e ) {
-            reply << mmcs_client::FAIL << "garbage timeout value: " << args[0] << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Bad timeout value: " << args[0] << mmcs_client::DONE;
             return;
         }
     }
@@ -132,16 +127,16 @@ DiagWait::execute(
             )
     {
         // Check if we are disconnecting
-        if (pBlock->peekDisconnecting())
-        {
+        if (pBlock->peekDisconnecting()) {
             reply << mmcs_client::FAIL << pBlock->disconnectReason() << mmcs_client::DONE;
             return;
         }
         sleep(1);
         time(&now);
         elapsed_time = difftime(now, starttime);
-        if(elapsed_time >= timeout)
+        if (elapsed_time >= timeout) {
             break;
+        }
     }
 
     if (pBlock->terminatedNodes() == static_cast<int>(pBlock->numNodesStarted())) {
@@ -157,9 +152,9 @@ DiagWait::execute(
 
 void
 DiagWait::help(
-        deque<string> args, 
+        deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     reply << mmcs_client::OK << description() << ";Wait for diagnostic test to terminate or time out" << mmcs_client::DONE;
 }

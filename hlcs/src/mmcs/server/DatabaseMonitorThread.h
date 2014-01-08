@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_DATABASE_MONITOR_THREAD_H_
 #define MMCS_SERVER_DATABASE_MONITOR_THREAD_H_
 
@@ -29,10 +28,8 @@
 
 #include "common/Thread.h"
 
-
 namespace mmcs {
 namespace server {
-
 
 /*!
  * \class DatabaseMonitorThread
@@ -45,17 +42,14 @@ public:
             MMCSCommandMap* commands
             ) :
         Thread(),
-        monitorBlockTable(false),
         commands( commands )
     {
 
     }
 
-    bool monitorBlockTable;
     MMCSCommandMap* commands;
     void* threadStart();
 };
-
 
 } } // namespace mmcs::server
 

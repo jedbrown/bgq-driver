@@ -23,7 +23,7 @@
 #ifndef RUNJOB_SERVER_REALTIME_CONNECTION_H
 #define RUNJOB_SERVER_REALTIME_CONNECTION_H
 
-#include "server/realtime/fwd.h"
+#include "server/realtime/EventHandler.h"
 #include "server/fwd.h"
 
 #include <hlcs/include/bgsched/realtime/Client.h>
@@ -38,6 +38,20 @@ namespace runjob {
 namespace server {
 namespace realtime {
 
+/*!
+ * \brief Establishes a connection to the real-time server and handles events.
+ *
+ * The EventHandler will initiate block reconnection to get a sequence ID, after
+ * which the connection to the real-time server will be created.
+ *
+ * In the event the real-time server is not available (not configured, or not
+ * running for some reason) this class will fall back to using a Polling
+ * implementation for getting block status events.
+ *
+ * \see EventHandler
+ * \see Polling
+ * \see block::Reconnect
+ */
 class Connection : public boost::enable_shared_from_this<Connection>
 {
 public:
@@ -58,13 +72,6 @@ public:
      * \brief dtor.
      */
     ~Connection();
-
-    /*!
-     * \brief
-     */
-    void start(
-            bgsched::SequenceId sequence    //!< [in] maximum sequence ID from initial poll of tbgqblock
-            );
 
     /*!
      * \brief
@@ -97,7 +104,7 @@ private:
     boost::asio::deadline_timer _timer;
     boost::scoped_ptr<boost::asio::posix::stream_descriptor> _descriptor;
     bgsched::SequenceId _sequence;
-    boost::scoped_ptr<EventHandler> _handler;
+    EventHandler _handler;
     bool _connected;
 };
 

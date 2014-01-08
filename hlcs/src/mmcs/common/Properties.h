@@ -23,12 +23,11 @@
 
 /*!
  * \file Properties.h
- * \brief conveys MMCS server startup options to other classes.
+ * \brief Conveys MMCS server startup options to other classes.
  */
 
 #ifndef MMCS_COMMON_PROPERTIES_H_
 #define MMCS_COMMON_PROPERTIES_H_
-
 
 #include <utility/include/Properties.h>
 
@@ -39,22 +38,17 @@
 #include <map>
 #include <vector>
 
-
 namespace mmcs {
 namespace common {
 
-
 class Subnet;
-
 
 // various key values - case sensitive
 #define MMCS_LOGDIR                     "log_dir"               // name of the I/O node logging directory, from --log-ionodes option
 #define MMCS_VERSION                    "mmcs_version"          // version of the current bg_console, mmcs_server, mmcs_lite
-#define SHUTDOWN_TIMEOUT                "shutdown_timeout"      // timeout in seconds for I/O node shutdown
-#define LISTEN_PORTS                    "listen_ports"          // IP/Port pairs
 #define MC_SERVER_IP                    "mc_server_ip"          // IP address for the mcServer
 #define MC_SERVER_PORT                  "mc_server_port"        // IP port for the mcServer
-#define BRINGUP_OPTS                    "bringupOptions"       // Bringup options for mc
+#define BRINGUP_OPTS                    "bringupOptions"        // Bringup options for mc
 #define BRINGUP                         "bringup"               // Bringup options for mc
 #define MMCS_PROCESS                    "mmcs_process"          // Type of MMCS process: bg_console, mmcs_server, mmcs_lite
 #define DFT_TGTSET_TYPE                 "dft_tgtset_type"       // default targetset type
@@ -72,7 +66,6 @@ class Subnet;
 #define RECONNECT_BLOCKS                "reconnect_blocks"
 #define FILE_EXIT                       "eof_exit"
 #define MASTER_MON                      "master_mon"
-#define RUNJOB_CONNECT                  "runjob_connect"
 #define AUTO_RECONNECT                  "AUTO_RECONNECT"
 #define MMCS_PERFDATA_INTERVAL_SECONDS  "perfdata_interval_seconds"
 #define MMCS_ENVS_BULK_INTERVAL_SECONDS "bulk_interval_seconds"
@@ -83,6 +76,7 @@ class Subnet;
 #define MINIMUM_BOOT_WAIT               "minimum_boot_wait"
 #define CN_BOOT_SLOPE                   "cn_boot_slope"
 #define IO_BOOT_SLOPE                   "io_boot_slope"
+#define THREAD_STACK_SIZE               "thread_stack_size"
 
 
 class Properties : boost::noncopyable
@@ -94,18 +88,13 @@ public:
         server
     };
 
-    //! Base BGMaster base exception class inheriting from runtime_error
-    class PropertiesException : public std::runtime_error {
-    public:
-        PropertiesException(const std::string& what="") : std::runtime_error(what) {}
-    };
-
 public:
     static std::string& getProperty(const char* key) { return (*getProp())[std::string(key)]; }
+    static std::string& getProperty(const std::string& key) { return (*getProp())[key]; }
     static void setProperty(const char* key, const std::string& value);
-    static void addExternal(std::string& name, std::string& description) { _externalCmds[name] = description; }
+    static void addExternal(const std::string& name, const std::string& description);
     static void init(const std::string& filename, object mmcs = server);
-    static void read(object mmcs, bool bail = false);
+    static void read(object mmcs, bool bail);
     static void reload();
     static int buildSubnets();
     static int getSubnets(std::string& hwstring);
@@ -125,8 +114,6 @@ public:
     static std::vector<Subnet> _subnets;
 };
 
-
 } } // namespace mmcs::common
-
 
 #endif

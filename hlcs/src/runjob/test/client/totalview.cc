@@ -37,7 +37,6 @@ using namespace runjob::client;
 extern volatile int MPIR_being_debugged;
 extern char MPIR_executable_path[256];
 extern char MPIR_server_arguments[1024];
-extern char MPIR_server_arguments[1024];
 extern MPIR_PROCDESC* MPIR_proctable;
 extern int MPIR_proctable_size;
 

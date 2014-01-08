@@ -56,7 +56,7 @@ static uint64_t preload_jobid;
 extern int Process_SetupMap(bgcios::jobctl::LoadJobMessage *loadMsg, AppState_t **ppAppState);
 extern int Process_SetupAgentMap(bgcios::jobctl::LoadJobMessage *loadMsg, AppState_t *parentAppState);
 extern int Process_SetupJob(bgcios::jobctl::SetupJobMessage *setupJobMsg);
-extern int elf_loadimage(AppState_t *appState, uint64_t physical_offset);
+extern int elf_loadimage(AppState_t *appState, uint64_t physical_offset, uint64_t* agent_poffset_adjust);
 extern "C" void UPC_Init(uint64_t jobID);
 extern uint32_t GetEnvString(bgcios::jobctl::LoadJobMessage *msg, const char* envname, char** value);
 extern uint32_t GetEnvValue(bgcios::jobctl::LoadJobMessage *msg, const char* envname, uint32_t* value);
@@ -209,6 +209,7 @@ void App_SetLoadState(uint32_t loadState, uint32_t returnCode, uint32_t errorCod
     app->LoadStateReturnCode = returnCode;
     app->LoadStateErrorCode = errorCode;
     app->LoadState = loadState;
+    ppc_msync();
 }
 
 // Test the progress of the Application load that is taking place. If an error has been
@@ -493,7 +494,6 @@ void  App_CreateMainThread( uint64_t app_start, int priv )
     {
 
         App_SetLoadState(AppState_LoadComplete, 0, 0);
-        ppc_msync();
 
         // Send message to the Node Controller that the load of the job is completed 
         if (Personality_CiosEnabled()) 
@@ -824,8 +824,11 @@ int  App_SetupMemory( Personality_t *pPers)
                 //printf("Agent addSegment: vtext: %d ptext: %d size: %d\n", agentSegmentRange[i].text_startMB, agentSegmentRange[i].text_pstartMB, agentSegmentRange[i].text_sizeMB );
                 //printf("Agent addSegment: vdata: %d pdata: %d size: %d\n", agentSegmentRange[i].data_startMB, agentSegmentRange[i].data_pstartMB, agentSegmentRange[i].data_sizeMB );
                 rc = vmm_addSegment(IS_TEXT, agentSegmentRange[i].text_startMB, agentSegmentRange[i].text_pstartMB, agentSegmentRange[i].text_sizeMB, CONFIG_MAX_APP_PROCESSES+i, VMM_SEGMENTCOREMASK_16, true, false,true, true, true, false);
+                if(rc) return rc;
                 rc = vmm_addSegment(IS_DATA, agentSegmentRange[i].data_startMB, agentSegmentRange[i].data_pstartMB, agentSegmentRange[i].data_sizeMB, CONFIG_MAX_APP_PROCESSES+i, VMM_SEGMENTCOREMASK_16, true, false, true, true, false, false);
+                if(rc) return rc;
                 rc = vmm_addSegment(IS_HEAP, 0,                                 0,                                  agentHeapSize[i],    CONFIG_MAX_APP_PROCESSES+i,              VMM_SEGMENTCOREMASK_16, true, true, false,false,false, false);
+                if(rc) return rc;
             }
         }
     }
@@ -1023,6 +1026,22 @@ int Process_SetupMemory()
             }
         }
         vmm_getSegment(pAppProc->Tcoord, IS_HEAP, &vaddr, &paddr, &vsize);
+        
+        uint64_t localfssize = 0;
+        App_GetEnvValue64("BG_LOCALFSSIZE", &localfssize);
+        if((vsize > (localfssize + 1)*1024*1024) && (localfssize > 0))
+        {
+            pAppProc->LocalDisk.VStart = (uint64_t)vaddr;
+            pAppProc->LocalDisk.Size   = localfssize * 1024*1024;
+            
+            vsize -= localfssize * 1024*1024;
+            vaddr += localfssize * 1024*1024;
+        }
+        else
+        {
+            pAppProc->LocalDisk.VStart = 0;
+            pAppProc->LocalDisk.Size   = 0;
+        }
         pAppProc->Heap_Break = pAppProc->Heap_VStart = pAppProc->Heap_Start = vaddr;
         pAppProc->Heap_VEnd = pAppProc->Heap_End  = vaddr + ((vsize>0)?vsize-1:0);
         pAppProc->Heap_PStart = paddr;
@@ -1331,6 +1350,7 @@ void App_Load()
     Personality_t *pPers = &NodeState.Personality;
     AppState_t *pAppState = GetMyAppState();
     AppProcess_t *pProc = GetMyProcess();
+    uint64_t agent_poffset_adjust = 0;
     
     assert(pAppState && pProc);
     
@@ -1449,7 +1469,7 @@ void App_Load()
                 if((sequence == GetMyAppState()->LoadSequence) || (enableCollectiveLoad == 0))
                 {
                     uint64_t physical_offset = pAppState->corner.core * ((NodeState.DomainDesc.ddrEnd + 1 - NodeState.DomainDesc.ddrOrigin)/ CONFIG_MAX_APP_CORES);
-                    rc = elf_loadimage(pAppState, physical_offset);
+                    rc = elf_loadimage(pAppState, physical_offset, &agent_poffset_adjust);
                     if (rc != 0)
                     {
                         TRACE( TRACE_Jobctl, ("(E) Bad return code from elf_loadimage.  rc=%d\n", rc) );
@@ -1486,7 +1506,8 @@ void App_Load()
                 if (NodeState.AppAgents & _BN(i))
                 {
                     AppState_t *agentAppState = &NodeState.AppState[agentAppStateIndex];
-                    rc = elf_loadimage(agentAppState, 0);
+                    uint64_t temp_poffset_adjust = agent_poffset_adjust;
+                    rc = elf_loadimage(agentAppState, agent_poffset_adjust, &temp_poffset_adjust);
                     if (rc != 0)
                     {
                         printf("(E) Bad return code from elf_loadimage for agent.  rc=%d\n", rc);
@@ -2215,9 +2236,11 @@ void App_ActivateCollectiveLoad()
         return;
     }
     
+    GetMyAppState()->prohibitLoad = 0;
     if(GetMyAppState()->LoadSequence == ~(0u))
     {
         GetMyAppState()->LoadSequence = 0;
+        GetMyAppState()->prohibitLoad = 1;
     }
     
     MUHWI_Destination_t dest;
@@ -2255,12 +2278,16 @@ void App_SetupLoadLeader()
     mycoord.Destination.E_Destination = pers->Network_Config.Ecoord;
     
     minSequence = mycoord.Destination.Destination;
+    if(GetMyAppState()->prohibitLoad)
+    {
+        minSequence = ~(0);
+    }
     
     int rc;
     MUSPI_GIBarrierEnterAndWait( &systemLoadJobGIBarrier );
     rc = mudm_bcast_reduce(NodeState.MUDM, 
                            MUDM_REDUCE_ALL,
-                           MUHWI_COLLECTIVE_OP_CODE_UNSIGNED_MAX,
+                           MUHWI_COLLECTIVE_OP_CODE_UNSIGNED_MIN,
                            (void*)&minSequence,
                            sizeof(minSequence),
                            mycoord,  // ignored for MUHWI_COLLECTIVE_TYPE_ALLREDUCE

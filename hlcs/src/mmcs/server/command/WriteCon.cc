@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "WriteCon.h"
 
 #include "../BCNodeInfo.h"
@@ -32,14 +31,11 @@
 
 #include <control/include/mcServer/MCServerRef.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 WriteCon*
 WriteCon::build()
@@ -57,21 +53,21 @@ WriteCon::build()
 }
 
 void
-WriteCon::execute(deque<string> args,
-                   mmcs_client::CommandReply& reply,
-                   common::ConsoleController* pController,
-                   BlockControllerTarget* pTarget)
+WriteCon::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        common::ConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
     string text;
 
-    if (pTarget->getNodes().size() == 0)
-    {
-        reply << mmcs_client::FAIL << "no targets selected" << mmcs_client::DONE;
+    if (pTarget->getNodes().size() == 0) {
+        reply << mmcs_client::FAIL << "No targets selected" << mmcs_client::DONE;
         return;
     }
 
-    for (unsigned i = 0; i < args.size(); ++i)
-    {
+    for (unsigned i = 0; i < args.size(); ++i) {
         text += args[i];
         if (i != args.size() - 1)
             text += " ";
@@ -80,7 +76,7 @@ WriteCon::execute(deque<string> args,
     BlockPtr pBlock = pTarget->getBlockController();    // get selected block
 
     bool wasconnected = true;
-    if(!pBlock->isConnected()) {
+    if (!pBlock->isConnected()) {
         wasconnected = false;
         // Need to connect
         std::deque<string> pargs;
@@ -88,8 +84,7 @@ WriteCon::execute(deque<string> args,
         pBlock->connect(pargs, reply, pTarget);
     }
 
-    for (unsigned i = 0; i < pTarget->getNodes().size(); ++i)
-    {
+    for (unsigned i = 0; i < pTarget->getNodes().size(); ++i) {
         BCNodeInfo *nodeInfo = pTarget->getNodes()[i];
 
         if (!nodeInfo->_iopos.trainOnly()) {
@@ -99,14 +94,13 @@ WriteCon::execute(deque<string> args,
             mcMailboxRequest._location.push_back(nodeInfo->location());
             MCServerMessageSpec::MailboxReply mcMailboxReply;
             pBlock->getMCServer()->mailbox(mcMailboxRequest, mcMailboxReply);
-            if (mcMailboxReply._rc)
-            {
+            if (mcMailboxReply._rc) {
                 reply << mmcs_client::FAIL << mcMailboxReply._rt << mmcs_client::DONE;
                 return;
             }
         }
     }
-    if(!wasconnected) {
+    if (!wasconnected) {
         // Now disconnect since we had to connect
         std::deque<std::string> args;
         args.push_back("no_shutdown");
@@ -117,14 +111,16 @@ WriteCon::execute(deque<string> args,
 }
 
 void
-WriteCon::help(deque<string> args,
-                mmcs_client::CommandReply& reply)
+WriteCon::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
-      << ";Send <console-command> to target node for execution."
-      << ";Output will be returned asynchronously to mailbox (either console or I/O node log)."
-      << ";Requires write access to the target set, use connect to obtain write access."
-      << mmcs_client::DONE;
+          << ";Send <console-command> to target node for execution."
+          << ";Output will be returned asynchronously to mailbox (either console or I/O node log)."
+          << ";Requires write access to the target set, use connect to obtain write access."
+          << mmcs_client::DONE;
 
 }
 

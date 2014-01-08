@@ -23,101 +23,55 @@
 
 #include "ExcludeList.h"
 
-#include <sstream>
-
+#include <algorithm>
 
 namespace mmcs {
 namespace server {
 
-
 void
-ExcludeList::add(std::string key)
+ExcludeList::add(
+        const std::string& key
+        )
 {
     PthreadMutexHolder mutex;
-    std::list<std::string>::iterator it;
-    int mutex_rc = mutex.Lock(&_excludeListMutex);
+    const int mutex_rc = mutex.Lock(&_mutex);
     assert(mutex_rc == 0);
-    for (it = _keyList.begin(); it != _keyList.end(); ++it)
-	if (*it == key)
-	    break;
-    if (it == _keyList.end())
-	_keyList.push_back(key);
-    mutex.Unlock();
+    const std::list<std::string>::const_iterator it = std::find( _keyList.begin(), _keyList.end(), key );
+    if ( it == _keyList.end() ) {
+        _keyList.push_back(key);
+    }
 }
 
 void
-ExcludeList::add(unsigned key)
-{
-    std::ostringstream s;
-    s << key;
-    add(s.str());
-}
-
-void
-ExcludeList::remove(std::string key)
+ExcludeList::remove(
+        const std::string& key
+        )
 {
     PthreadMutexHolder mutex;
-    int mutex_rc = mutex.Lock(&_excludeListMutex);
+    const int mutex_rc = mutex.Lock(&_mutex);
     assert(mutex_rc == 0);
     _keyList.remove(key);
-    mutex.Unlock();
-}
-
-void
-ExcludeList::remove(unsigned key)
-{
-    std::ostringstream s;
-    s << key;
-    remove(s.str());
 }
 
 std::string
-ExcludeList::getSqlListQuoted()
+ExcludeList::getSqlListQuoted() const
 {
-    std::string sqlList = "";
-    std::list<std::string>::iterator it;
+    std::string result;
     PthreadMutexHolder mutex;
-    int mutex_rc = mutex.Lock(&_excludeListMutex);
+    const int mutex_rc = mutex.Lock(&_mutex);
     assert(mutex_rc == 0);
-    if (!_keyList.empty())
-    {
-	sqlList.append("(");
-	for (it = _keyList.begin(); it != _keyList.end(); ++it)
-	{
-	    if (it != _keyList.begin())
-		sqlList.append(",");
-	    sqlList.append("'").append(*it).append("'");
-	}
-	sqlList.append(")");
+    if (_keyList.empty()) return result;
 
+    result.append("(");
+    for ( std::list<std::string>::const_iterator it = _keyList.begin(); it != _keyList.end(); ++it) {
+        if (it != _keyList.begin()) {
+            result.append(",");
+        }
+        result.append("'").append(*it).append("'");
     }
-    mutex.Unlock();
-    return sqlList;
+    result.append(")");
+
+    return result;
 }
-
-std::string
-ExcludeList::getSqlListUnquoted()
-{
-    std::string sqlList = "";
-    std::list<std::string>::iterator it;
-    PthreadMutexHolder mutex;
-    int mutex_rc = mutex.Lock(&_excludeListMutex);
-    assert(mutex_rc == 0);
-    if (!_keyList.empty())
-    {
-	sqlList.append("(");
-	for (it = _keyList.begin(); it != _keyList.end(); ++it)
-	{
-	    if (it != _keyList.begin())
-		sqlList.append(",");
-	    sqlList.append(*it);
-	}
-	sqlList.append(")");
-
-    }
-    mutex.Unlock();
-    return sqlList;
-}
-
 
 } } // namespace mmcs::server

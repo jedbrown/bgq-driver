@@ -115,8 +115,8 @@ public:
 
 
 private:
-    typedef std::vector<char> _UserIdBuf;
-    typedef boost::shared_ptr<_UserIdBuf> _UserIdBufPtr;
+    typedef std::vector<char> UserIdBuf;
+    typedef boost::shared_ptr<UserIdBuf> UserIdBufPtr;
 
 private:
 
@@ -152,7 +152,7 @@ private:
 
     void _handleReadUserLen(
             portConfig::SocketPtr socket_ptr,
-            _UserIdBufPtr user_id_buf_ptr,
+            UserIdBufPtr user_id_buf_ptr,
             portConfig::UserType::Value user_type,
             const std::string& client_cn,
             ServerHandler callback,
@@ -161,7 +161,7 @@ private:
 
     void _handleReadUserInfo(
             portConfig::SocketPtr socket_ptr,
-            _UserIdBufPtr user_id_buf_ptr,
+            UserIdBufPtr user_id_buf_ptr,
             portConfig::UserType::Value user_type,
             const std::string& client_cn,
             ServerHandler callback,

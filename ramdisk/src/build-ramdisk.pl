@@ -85,7 +85,6 @@ my $site = "/bgsys/local";
 my $init = "";
 my $saveimg=0;
 my $compress=1;
-my $classicRamdisk=0;
 my $verbose=0;
 my $outfile="ramdisk";
 my @basefiles;
@@ -101,7 +100,6 @@ sub usage {
     "--site <dir>     Use this directory for sitewide boot config (default $site)\n",
     "--init <opts>    Use this to specify initialization options.\n",
     "--addtree <dir>  Add files from the given tree to the ramdisk\n",
-    "--classicRamdisk Build the ramdisk using the full classic ramdisk filelist.\n",
     "--nocompress     Do not compress the ramdisk\n",
     "--saveimg        Do not delete the temporary ramdisk.cpio\n",
     "--verbose        Be verbose about what is being done\n",
@@ -131,8 +129,6 @@ while (defined(my $arg = shift @ARGV)) {
 	$saveimg=1;
     } elsif ($arg eq "--nocompress") {
 	$compress=0;
-    } elsif ($arg eq "--classicRamdisk") {
-	$classicRamdisk=1;
     } elsif ($arg eq "-o") {
 	$outfile = shift @ARGV;
     } elsif ($arg eq "--verbose") {
@@ -153,7 +149,6 @@ while (defined(my $arg = shift @ARGV)) {
 # Use a trailing slash to indicate empty directories that must exist.
 # Use "/dev/xyz c # #" to indicate devices 
 
-if ( $classicRamdisk == 0 ) {
 	@basefiles = (
 		"/bgusr/",
 		"/bin/[ -> busybox",
@@ -269,7 +264,7 @@ if ( $classicRamdisk == 0 ) {
 		"/lib64/libdl.so.2 -> libdl-2.12.so",
 		"/lib64/libnsl.so.1 -> libnsl-2.12.so",
 		"/lib64/libnss_files.so.2 -> libnss_files-2.12.so",
-		"/lib64/libpci.so.3 -> libpci.so.3.1.4",
+		"/lib64/libpci.so.3 -> libpci.so.3.1.10",
 		"/lib64/libpthread.so.0 -> libpthread-2.12.so",
 		"/lib64/libresolv.so.2 -> libresolv-2.12.so",
 		"/lib64/libuuid.so.1 -> libuuid.so.1.3.0",
@@ -285,18 +280,15 @@ if ( $classicRamdisk == 0 ) {
 		"/sbin/ifdown -> ../bin/busybox",
 		"/sbin/ifup -> ../bin/busybox",
 		"/sbin/inetd -> ../bin/busybox",
-		#"/sbin/init -> ../bin/busybox",
 		"/sbin/insmod -> ../bin/busybox",
 		"/sbin/lsmod -> ../bin/busybox",
 		"/sbin/modprobe -> ../bin/busybox",
 		"/sbin/pidof -> ./killall5",
-		#"/sbin/pivot_root -> ../bin/busybox",
 		"/sbin/poweroff -> ../bin/busybox",
 		"/sbin/reboot -> ../bin/busybox",
 		"/sbin/rmmod -> ../bin/busybox",
 		"/sbin/route -> ../bin/busybox",
 		"/sbin/runlevel -> ../bin/busybox",
-		#"/sbin/switch_root -> ../bin/busybox",
 		"/sbin/telnetd -> ../bin/busybox",
 		"/sbin/telnet -> ../bin/busybox",
 		"/sbin/ftpput -> ../bin/busybox",
@@ -307,10 +299,7 @@ if ( $classicRamdisk == 0 ) {
 		"/selinux/",	# Added to avoid a bug with RHEL's busybox/selinux libs ...try removing some day.
 		"/sys/",
 
-#		"/usr/lib64/libgssglue.so.1 -> libgssglue.so.1.0.0",
 		"/usr/lib64/libresolv.so -> /lib64/libresolv.so.2",
-#		"/usr/lib64/libstdc++.so.6 -> libstdc++.so.6.0.13",
-#		"/usr/lib64/libtirpc.so.1 -> libtirpc.so.1.0.10",
 
 		"/var/",
 		"/var/empty/",
@@ -321,230 +310,6 @@ if ( $classicRamdisk == 0 ) {
 
 	);
 
-} else {
-
-	#Classic Ramdisk Files
-	@basefiles = (
-                "/bgusr/",
-                "/bin/[ -> busybox",
-                "/bin/[[ -> busybox",
-                "/bin/ar -> busybox",
-                "/bin/ash -> busybox",
-                "/bin/awk -> busybox",
-                "/bin/basename -> busybox",
-                "/bin/bunzip2 -> busybox", 
-                "/bin/cat -> busybox",     
-                "/bin/chgrp -> busybox",   
-                "/bin/chmod -> busybox",   
-                "/bin/chown -> busybox",   
-                "/bin/clear -> busybox",   
-                "/bin/cp -> busybox",      
-                "/bin/cut -> busybox",     
-                "/bin/date -> busybox",    
-                "/bin/dd -> busybox",      
-                "/bin/df -> busybox",      
-                "/bin/diff -> busybox",    
-                "/bin/dirname -> busybox", 
-                "/bin/dmesg -> busybox",   
-                "/bin/du -> busybox",      
-                "/bin/echo -> busybox",    
-                "/bin/env -> busybox",     
-                "/bin/expr -> busybox",    
-                "/bin/false -> busybox",   
-                "/bin/fgrep -> busybox",   
-                "/bin/find -> busybox",    
-                "/bin/free -> busybox",    
-                "/bin/grep -> busybox",    
-                "/bin/gunzip -> busybox",  
-                "/bin/gzip -> busybox",    
-                "/bin/head -> busybox",    
-                "/bin/hostname -> busybox",
-                "/bin/id -> busybox",      
-                "/bin/kill -> busybox",    
-                "/bin/killall -> busybox", 
-                "/bin/less -> busybox",    
-                "/bin/ln -> busybox",      
-                "/bin/logger -> busybox",  
-                "/bin/login -> busybox",   
-                "/bin/ls -> busybox",      
-                "/bin/md5sum -> busybox",  
-                "/bin/mesg -> busybox",    
-                "/bin/mkdir -> busybox",   
-                "/bin/mkfifo -> busybox",  
-                "/bin/mknod -> busybox",   
-                "/bin/more -> busybox",    
-                "/bin/mv -> busybox",      
-                "/bin/netstat -> busybox", 
-                "/bin/nice -> busybox",    
-                "/bin/passwd -> busybox",  
-                "/bin/ping -> busybox",    
-                "/bin/ping6 -> busybox",   
-                "/bin/printenv -> busybox",
-                "/bin/printf -> busybox",  
-                "/bin/pwd -> busybox",     
-                "/bin/renice -> busybox",  
-                "/bin/reset -> busybox",   
-                "/bin/rm -> busybox",      
-                "/bin/rmdir -> busybox",   
-                "/bin/sed -> busybox",     
-                "/bin/sh -> bash",         
-                "/bin/sleep -> busybox",   
-                "/bin/sort -> busybox",    
-                "/bin/su -> busybox",      
-                "/bin/sync -> busybox",    
-                "/bin/tail -> busybox",    
-                "/bin/tar -> busybox",     
-                "/bin/test -> busybox",    
-                "/bin/tftp -> busybox",    
-                "/bin/time -> busybox",    
-                "/bin/top -> busybox",     
-                "/bin/touch -> busybox",   
-                "/bin/traceroute -> busybox",
-                "/bin/true -> busybox",      
-                "/bin/tty -> busybox",       
-                "/bin/umount -> busybox",    
-                "/bin/uname -> busybox",     
-                "/bin/uniq -> busybox",      
-                "/bin/uptime -> busybox",    
-                "/bin/usleep -> busybox",    
-                "/bin/vi -> busybox",        
-                "/bin/watch -> busybox",     
-                "/bin/wget -> busybox",      
-                "/bin/which -> busybox",     
-                "/bin/whoami -> busybox",    
-                "/bin/xargs -> busybox",     
-                "/bin/yes -> busybox",       
-                "/bin/zcat -> busybox",      
-
-
-                "/dev/pts/",
-                "/dev/shm/",
-                # Need to continue to create the personality device manually until we are no longer using
-                # simulators.                                                                            
-                "/dev/bgpers c 10 111",                                                                  
-
-                "/etc/init.d -> /etc/rc.d/init.d",
-
-                "/lib/libbgcios.so -> /lib/libbgcios.so.1.0.0",
-                "/lib/libbgcios.so.1 -> /lib/libbgcios.so.1.0.0",
-                "/lib/libbgutility.so -> /lib/libbgutility.so.1.0.0",
-                "/lib/libbgutility.so.1 -> /lib/libbgutility.so.1.0.0",
-
-                "/lib64/ld64.so.1 -> ld-2.12.so",
-                "/lib64/ld-lsb-ppc64.so.3 -> ld64.so.1",
-                "/lib64/libattr.so.1 -> libattr.so.1.1.0",
-                "/lib64/libaudit.so.1 -> libaudit.so.1.0.0",
-                "/lib64/libblkid.so.1 -> libblkid.so.1.1.0",
-                "/lib64/libc.so.6 -> libc-2.12.so",         
-                "/lib64/libcap.so.2 -> libcap.so.2.16",     
-                "/lib64/libcom_err.so.2 -> libcom_err.so.2.1",
-                "/lib64/libcrypt.so.1 -> libcrypt-2.12.so",   
-                "/lib64/libdl.so.2 -> libdl-2.12.so",         
-                "/lib64/libexpat.so.1 -> libexpat.so.1.5.2",  
-                "/lib64/libgcc_s.so.1 -> libgcc_s-4.4.4-20100726.so.1",
-                "/lib64/libgssapi_krb5.so.2 -> libgssapi_krb5.so.2.2", 
-                "/lib64/libk5crypto.so.3 -> libk5crypto.so.3.1",       
-                "/lib64/libkeyutils.so.1 -> libkeyutils.so.1.3",       
-                "/lib64/libkrb5.so.3 -> libkrb5.so.3.3",               
-                "/lib64/libkrb5support.so.0 -> libkrb5support.so.0.1", 
-#               "/lib64/liblog4cxx.so -> /lib/liblog4cxx.so.10.0.0",   
-#               "/lib64/liblog4cxx.so.10 -> /lib/liblog4cxx.so.10.0.0",
-                "/lib64/libm.so.6 -> libm-2.12.so",                    
-                "/lib64/libnsl.so.1 -> libnsl-2.12.so",                
-                "/lib64/libnss_files.so.2 -> libnss_files-2.12.so",    
-                "/lib64/libpam.so.0 -> libpam.so.0.82.2",              
-                "/lib64/libpci.so.3 -> libpci.so.3.1.4",               
-                "/lib64/libpthread.so.0 -> libpthread-2.12.so",        
-                "/lib64/libresolv.so.2 -> libresolv-2.12.so",          
-                "/lib64/librt.so.1 -> librt-2.12.so",                  
-                "/lib64/libtinfo.so.5 -> libtinfo.so.5.7",             
-                "/lib64/libuuid.so.1 -> libuuid.so.1.3.0",             
-                "/lib64/libutil.so.1 -> libutil-2.12.so",              
-                "/lib64/libwrap.so.0 -> libwrap.so.0.7.6",             
-                "/lib64/libz.so.1 -> libz.so.1.2.3",                   
-
-
-                "/sbin/arp -> ../bin/busybox",
-                "/sbin/chroot -> ../bin/busybox",
-                "/sbin/crond -> ../bin/busybox", 
-                "/sbin/getty -> ../bin/busybox", 
-                "/sbin/halt -> ../etc/rc.shutdown",
-                "/sbin/hwclock -> ../bin/busybox", 
-                "/sbin/ifconfig -> ../bin/busybox",
-                "/sbin/ifdown -> ../bin/busybox",  
-                "/sbin/ifup -> ../bin/busybox",    
-                "/sbin/inetd -> ../bin/busybox",   
-                #"/sbin/init -> ../bin/busybox",    
-                "/sbin/insmod -> ../bin/busybox",  
-                "/sbin/lsmod -> ../bin/busybox",   
-                "/sbin/modprobe -> ../bin/busybox",
-                "/sbin/pidof -> ./killall5",       
-                "/sbin/pivot_root -> ../bin/busybox",
-                "/sbin/poweroff -> ../bin/busybox",  
-                "/sbin/reboot -> ../bin/busybox",    
-                "/sbin/rmmod -> ../bin/busybox",     
-                "/sbin/route -> ../bin/busybox",     
-                "/sbin/runlevel -> ../bin/busybox",  
-                "/sbin/telnetd -> ../bin/busybox",   
-                "/sbin/telnet -> ../bin/busybox",    
-                "/sbin/ftpput -> ../bin/busybox",    
-                "/sbin/ftpget -> ../bin/busybox",    
-
-                "/tmp/",
-                "/proc/",
-                "/selinux/",    # Added to avoid a bug with RHEL's busybox/selinux libs ...try removing some day.                                                                                                       
-                "/sys/",                                                                                    
-
-                "/usr/lib64/autofs/lookup_files.so -> lookup_file.so",
-                "/usr/lib64/autofs/lookup_ldaps.so -> lookup_ldap.so",
-                "/usr/lib64/autofs/lookup_nis.so -> lookup_yp.so",    
-                "/usr/lib64/autofs/mount_ext3.so -> mount_ext2.so",   
-                "/usr/lib64/autofs/mount_ext4.so -> mount_ext2.so",   
-                "/usr/lib64/autofs/mount_nfs4.so -? mount_nfs.so",    
-                "/usr/lib64/libapr-1.so -> libapr-1.so.0.3.9",        
-                "/usr/lib64/libapr-1.so.0 -> libapr-1.so.0.3.9",      
-                "/usr/lib64/libaprutil-1.so -> libaprutil-1.so.0.3.9",
-                "/usr/lib64/libaprutil-1.so.0 -> libaprutil-1.so.0.3.9",
-# libboost disabled until we switch to using the distro's boost         
-#               "/usr/lib64/libboost_system.so.5 -> libboost_system.so.1.39.0",
-#               "/usr/lib64/libboost_program_options.so.5 -> libboost_program_options.so.1.39.0",
-#               "/usr/lib64/libboost_regex.so.5 -> libboost_regex.so.1.39.0",                    
-#               "/usr/lib64/libboost_serialization.so.5 -> libboost_serialization.so.1.39.0",    
-#               "/usr/lib64/libboost_thread-mt.so.5 -> libboost_thread-mt.so.1.39.0",            
-                "/usr/lib64/libcrack.so.2 -> libcrack.so.2.8.0",                                 
-                "/usr/lib64/libcrypto.so.10 -> libcrypto.so.1.0.0",                              
-                "/usr/lib64/libdb-4.7.so -> /lib64/libdb-4.7.so",                                
-                "/usr/lib64/libfipscheck.so.1 -> ./libfipscheck.so.1.1.0",                       
-                "/usr/lib64/libgssapi_krb5.so.2 -> /lib64/libgssapi_krb5.so.2.2",                
-                "/usr/lib64/libgssglue.so.1 -> libgssglue.so.1.0.0",                             
-                "/usr/lib64/libicudata.so.42 -> libicudata.so.42.1",                             
-                "/usr/lib64/libicui18n.so.42 -> libicui18n.so.42.1",                             
-                "/usr/lib64/libicuuc.so.42 -> libicuuc.so.42.1",                                 
-                "/usr/lib64/libk5crypto.so -> /lib64/libk5crypto.so.3.1",                        
-                "/usr/lib64/liblber.so -> liblber-2.4.so.2.5.2",                                 
-                "/usr/lib64/liblber-2.4.so.2 -> liblber-2.4.so.2.5.2",                           
-                "/usr/lib64/libldap.so -> libldap-2.4.so.2.5.2",                                 
-                "/usr/lib64/libldap-2.4.so.2 -> libldap-2.4.so.2.5.2",                           
-                "/usr/lib64/libibverbs.so -> libibverbs.so.1.0.0",                               
-                "/usr/lib64/libibverbs.so.1 -> libibverbs.so.1.0.0",                             
-                "/usr/lib64/libresolv.so -> /lib64/libresolv.so.2",                              
-                "/usr/lib64/librdmacm.so -> librdmacm.so.1.0.0",                                 
-                "/usr/lib64/librdmacm.so.1 -> librdmacm.so.1.0.0",                               
-                "/usr/lib64/libsasl2.so -> libsasl2.so.2.0.23",                                  
-                "/usr/lib64/libsasl2.so.2 -> libsasl2.so.2.0.23",                                
-                "/usr/lib64/libssl.so.10 -> libssl.so.1.0.0",                                    
-                "/usr/lib64/libssl.so -> libssl.so.1.0.0",                                       
-                "/usr/lib64/libstdc++.so.6 -> libstdc++.so.6.0.13",                              
-                "/usr/lib64/libtirpc.so.1 -> libtirpc.so.1.0.10",                                
-                "/usr/lib64/libxml2.so.2 -> libxml2.so.2.7.6",                                   
-
-                "/var/",
-                "/var/empty/",
-                "/var/empty/sshd/"
-
-        );
-
-}
 
 # special modes (default 755 for dirs, 644 for devices and use existing mode for files)
 my %modes = (  

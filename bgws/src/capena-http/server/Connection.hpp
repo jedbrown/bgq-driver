@@ -80,7 +80,7 @@ public:
     void start();
 
 
-    boost::asio::io_service& ioService()  { return _socket_ptr->io_service(); }
+    boost::asio::io_service& ioService()  { return _socket_ptr->get_io_service(); }
 
 
     ~Connection();
@@ -222,8 +222,19 @@ private:
             const Headers& headers,
             BodyPresense expect_body
         );
+    
+    void _notifyResponseStatusHeadersImpl(
+            http::Status status,
+            const Headers& headers,
+            BodyPresense expect_body
+        );
 
     void _notifyResponseBodyData(
+            const std::string& data,
+            DataContinuesIndicator data_continues
+        );
+    
+    void _notifyResponseBodyDataImpl(
             const std::string& data,
             DataContinuesIndicator data_continues
         );

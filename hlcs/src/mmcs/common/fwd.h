@@ -21,27 +21,20 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_COMMON_FWD_H_
 #define MMCS_COMMON_FWD_H_
 
-
 #include <boost/shared_ptr.hpp>
-
 
 namespace mmcs {
 
-
     /*!
      * \brief status returned by MMCSCommandProcessor::execute()
-     *
      * 0   command was executed, check reply for command status
      * 1   command was not executed because it was not found
      * 2   command was not executed because of an error, check reply for error message
-     *
      */
     enum procstat { CMD_EXECUTED, CMD_NOT_FOUND, CMD_INVALID, CMD_EXTERNAL };
-
 
     namespace common {
 
@@ -61,6 +54,5 @@ namespace mmcs {
     }
 
 } // namespace mmcs
-
 
 #endif

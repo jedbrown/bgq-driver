@@ -48,7 +48,7 @@ __BEGIN_DECLS
 
 #define UPC_C_MMIO_ADDR (PHYMAP_MINADDR_UPC )     // 0x3FDFE400000
 #define UPC_USER_THRLOCAL __thread                //!< make vars thread local in user state
-
+#define DCRWriteCommon DCRWriteUser  
 
 
 #define UPC_FATAL_ERRIMPL(loc, ...) \
@@ -64,6 +64,19 @@ __BEGIN_DECLS
 { \
     fprintf(stderr,"UPCI CRITICAL WARNING (" loc ") " __VA_ARGS__);  \
 }
+
+
+#ifdef UPC_C_C
+upc_c_mmio_t *const  upc_c = (upc_c_mmio_t *const) UPC_C_MMIO_ADDR;
+#else
+extern upc_c_mmio_t *const  upc_c;
+#endif
+
+#ifdef UPC_P_C
+upc_p_mmio_t *const upc_p_local = (upc_p_mmio_t*const)(UPC_P_MMIO_ADDR);
+#else
+extern upc_p_mmio_t *const upc_p_local;
+#endif
 
 
 

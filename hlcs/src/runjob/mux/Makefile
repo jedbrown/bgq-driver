@@ -54,7 +54,10 @@ LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib
 LDFLAGS  += -lboost_filesystem-mt
 LDFLAGS  += -lboost_program_options-mt
 LDFLAGS  += -lboost_serialization-mt
-LDFLAGS  += -lboost_system-mt
+LDFLAGS  += -lboost_system-mt 
+LDFLAGS  += -lboost_thread-mt 
+LDFLAGS  += -lboost_date_time-mt
+LDFLAGS  += -llog4cxx
 LDFLAGS  += -rdynamic
 
 

@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "McserverClients.h"
 
 #include "../BlockControllerBase.h"
@@ -32,14 +31,11 @@
 
 #include <boost/foreach.hpp>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 McserverClients*
 McserverClients::build() {
@@ -58,10 +54,10 @@ McserverClients::execute(
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     if ( !args.empty() ) {
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         return;
     }
 
@@ -72,7 +68,9 @@ McserverClients::execute(
     BlockControllerBase::mcserver_connect(temp, pController->getUser().getUser(), reply);
     const boost::scoped_ptr<MCServerRef> mcServer( temp );
 
-    if ( reply.getStatus() ) return;
+    if ( reply.getStatus() ) {
+        return;
+    }
 
     MCServerMessageSpec::ListClientsRequest mcRequest;
     MCServerMessageSpec::ListClientsReply   mcReply;
@@ -89,11 +87,11 @@ void
 McserverClients::help(
         deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     reply << mmcs_client::OK << description()
-        << ";display mcServer clients"
-        << mmcs_client::DONE;
+          << ";Display mcServer clients"
+          << mmcs_client::DONE;
 }
 
 } } } // namespace mmcs::server::command

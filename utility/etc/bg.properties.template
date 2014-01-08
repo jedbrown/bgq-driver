@@ -225,7 +225,7 @@ host = [::1]:26510,127.0.0.1:26510
     # port is a port number or service name.
     # The host and port are optional.
     # If the host is not specified the client will connect to localhost.
-    # If the port is not specified the default port will be used (24510).
+    # If the port is not specified the default port will be used (26510).
 
 
 [runjob.server]
@@ -277,6 +277,12 @@ control_action_heartbeat = 60
     # due to a RAS event with a control action. If not specified, this value is 60.
     # This value can be updated by the runjob_server_refresh_config command.
 
+jobctl_heartbeat = 60
+    # The number of seconds to wait between checking jobctl daemon status. If a daemon does
+    # not respond to the heartbeat during this interval, a RAS event will be issued causing
+    # node to be placed in a Software Failure status. If not specified, this value is 60.
+    # A value of zero disables the heartbeat, a negative value defaults to 60.
+    # This value can be updated by the runjob_server_refresh_config command.
 
 [runjob.server.commands]
 
@@ -358,9 +364,6 @@ listen_ports = [::1]:32031,127.0.0.1:32031
     # If the host is not specified mmcs_server will listen on localhost.
     # If the port is not specified the default port will be used (32031).
 
-shutdown_timeout = 90
-    # seconds
-
 wait_boot_free_time = 20
     # maximum wait time for a boot to complete (minutes)
 
@@ -373,7 +376,7 @@ reconnect_blocks = false
 log_dir = /bgsys/logs/BGQ
     # I/O log
 
-connection_pool_size = 10
+connection_pool_size = 30
     # Maximum number of connections held in the database connection pool.
 
 cn_boot_slope = .017
@@ -480,8 +483,6 @@ host = [::1]:32062,127.0.0.1:32062
 clientPort = 1206 
     # The TCP port that mc_server will listen on.
 
-machineType = 0
-
 hostName = 127.0.0.1
     # This is the IP address/name that the external apps use to talk to mcServer (e.g. mmcs, baremetal, etc.)
 #PrimaryMcHostName = 172.16.2.8  
@@ -504,9 +505,9 @@ CardThatTalksToMasterClockCard = R00-M0-S
 bringupOptions=
     # Options to be used when bringing up the machine (indicates how to initialize this machine). 
 
-kernel_shutdown_timeout = 60
+kernel_shutdown_timeout = 120
     # Number of seconds compute and I/O kernels have to complete shutdown  
-    # The default is 60.
+    # The default is 120.
 
 io_link_shutdown_timeout = 180
     # Number of seconds to complete I/O link shutdown  
@@ -553,7 +554,6 @@ client_listen_ports = [::1]:32042,127.0.0.1:32042
     # If the host is not specified the server will listen on any interface.
     # If the port is not specified the default port will be used (32041 and 32042).
 
-max_agents_per_host=1
 logdir = /bgsys/logs/BGQ
     # Default logging location for bgmaster_server and all managed binaries.
 logdirEdramChargePump=/bgsys/logs/BGQ/diags/bringup
@@ -618,7 +618,7 @@ runjob_mux =
 mc_server =
 Subnet1 =
 mmcs_server =
-teal_server = --realtime --logfile /dev/stdout
+teal_server = --realtime --restart=now --logfile /dev/stdout
 teal_bg = --logfile /dev/stdout
 
 [master.user]
@@ -648,7 +648,7 @@ Subnet1 = 127.0.0.1
 
 [master.policy.instances]
     # Policies for the number of instances of each alias are allowed.
-    # Valid entries are 0 through 65535, the default if not specified is 1.
+    # Valid entries are 1 through 65535, the default if not specified is 1.
 
 bgmaster_server = 1
 bgws_server = 1
@@ -1001,7 +1001,7 @@ log4j.appender.default.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss.SSS} (%
 
 log4j.appender.default = org.apache.log4j.ConsoleAppender
 log4j.appender.default.layout = org.apache.log4j.PatternLayout
-log4j.appender.default.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} (%-5p) [%t] %X{blockId}%X{user}%X{FD}%X{FT}%c: %m%n
+log4j.appender.default.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} (%-5p) [%t] %X{blockId}%X{user}%c: %m%n
 
 
 [logging.runjob]
@@ -1015,7 +1015,7 @@ log4j.appender.default.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss.SSS} (%
 
 log4j.appender.default=org.apache.log4j.ConsoleAppender
 log4j.appender.default.layout=org.apache.log4j.PatternLayout
-log4j.appender.default.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} (%-5p) [%t] %X{ID}%X{ALIAS}%X{FD}%X{FT}%c: %m%n
+log4j.appender.default.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} (%-5p) [%t] %X{ID}%X{ALIAS}%c: %m%n
 
 [logging.cios]
 

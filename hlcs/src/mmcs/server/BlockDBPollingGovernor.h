@@ -21,31 +21,27 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_BLOCK_POLLING_DB_GOVERNOR_H_
 #define MMCS_SERVER_BLOCK_POLLING_DB_GOVERNOR_H_
-
 
 #include "DBPollingGovernor.h"
 
 #include "ExcludeList.h"
 
-
 namespace mmcs {
 namespace server {
 
-
-class BlockDBPollingGovernor: public DBPollingGovernor<std::string, BGQDB::BLOCK_ACTION>
+class BlockDBPollingGovernor : public DBPollingGovernor<std::string, BGQDB::BLOCK_ACTION>
 {
 public:
-    BlockDBPollingGovernor() : dbExcludedBlockList(new ExcludeList) {}
-    ~BlockDBPollingGovernor() { delete dbExcludedBlockList; }
-    BGQDB::STATUS beginTransaction(std::string& blockName, std::string& userName, BGQDB::BLOCK_ACTION& action, unsigned int& creationId);
+    BlockDBPollingGovernor() : dbExcludedBlockList() {}
+    ~BlockDBPollingGovernor() { }
+    BGQDB::STATUS beginTransaction(std::string& blockName, std::string& userName, BGQDB::BLOCK_ACTION& action);
     void endTransaction(std::string& blockName, BGQDB::BLOCK_ACTION& action, bool exclude = true);
 protected:
     const std::string& governorType() { static const std::string thisType("BlockDBPollingGovernor"); return thisType; }
 private:
-    ExcludeList* dbExcludedBlockList; // blocks to be excluded from DB polling
+    ExcludeList dbExcludedBlockList; // blocks to be excluded from DB polling
 };
 
 

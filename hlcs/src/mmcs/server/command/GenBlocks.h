@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_GEN_BLOCKS_H_
 #define MMCS_SERVER_COMMAND_GEN_BLOCKS_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
 ** gen_blocks [<blockidprefix>]
@@ -44,9 +40,8 @@ class GenBlocks : public common::AbstractCommand
 {
 public:
     GenBlocks (const char* name, const char* description, const Attributes& attributes)
-    : AbstractCommand(name,description,attributes) { usage = "gen_blocks [<blockidprefix>]";}
+    : AbstractCommand(name,description,attributes) { _usage = "gen_blocks [<blockidprefix>]";}
     static  GenBlocks* build();    // factory method
-    static  std::string cmdname() { return "gen_blocks"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -61,8 +56,6 @@ public:
     bool checkArgs(std::deque<std::string>& args) { if((args.size() != 0) && (args.size() != 1)) return false; else return true;  }
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

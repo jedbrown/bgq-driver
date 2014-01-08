@@ -25,20 +25,12 @@
 
 #include <utility/include/Log.h>
 #include <utility/include/LoggingProgramOptions.h>
-#include <utility/include/Properties.h>
 
 #include <utility/include/portConfiguration/ClientPortConfiguration.h>
 
-#include <log4cxx/log4cxx.h>
-
 #include <boost/assign.hpp>
-#include <boost/lexical_cast.hpp>
 
-#include <algorithm>
 #include <iostream>
-#include <stdexcept>
-#include <string>
-#include <vector>
 
 #include <stdlib.h>
 #include <string.h>
@@ -68,7 +60,6 @@ Args::setupLogger(
         const std::string& verbarg
         ) const
 {
-
     // parse --verbose arguments
     // they are in the form --verbose logger=level or --verbose level
     const std::string::size_type split_pos( verbarg.find( '=' ) );
@@ -120,13 +111,12 @@ APusage(
 }
 
 Args::Args(
-        const unsigned int argc, 
+        const int argc, 
         const char** argv,
         void (*usage)(), 
         void (*help)(),
         std::vector<std::string>& valargs,
-        const std::vector<std::string>& singles,
-        const bool ignore_defaults
+        const std::vector<std::string>& singles
         )
 {
     valargs.push_back("--verbose");
@@ -137,15 +127,18 @@ Args::Args(
     // First find the properties
     bool gotprops = false;
     std::string host_string;
-    for (unsigned int i = 1; i < argc; ++i) {
+    for (int i = 1; i < argc; ++i) {
         if (!strcasecmp(argv[i], "--properties") || !strcasecmp(argv[i], "-p")) {
-            if (argc == ++i) {
+            if (_props) {
+                std::cerr << "--properties already specified." << std::endl;
+                exit(EXIT_FAILURE);
+            } else if (argc == ++i) {
                 std::cerr << "Please give a file name after " << argv[i-1] << std::endl;
                 exit(EXIT_FAILURE);
             }
             try {
                 _props = bgq::utility::Properties::create(argv[i]);
-            } catch(const std::runtime_error& e) {
+            } catch (const std::runtime_error& e) {
                 std::cerr << "Error reading properties: " << e.what() << std::endl;
                 exit(EXIT_FAILURE);
             }
@@ -153,12 +146,12 @@ Args::Args(
         }
         if (!strcasecmp(argv[i], "--host") || !strcmp(argv[i], "-H")) {
             // Got a host parameter
-            if(++i < argc) {
+            if (++i < argc) {
                 host_string = argv[i];
-                if(host_string.find(":") == std::string::npos) {
+                if (host_string.find(":") == std::string::npos) {
                     host_string = host_string + ":32042";
                 }
-                if(argc == i || host_string.find("--") != std::string::npos) {
+                if (argc == i || host_string.find("--") != std::string::npos) {
                     std::cerr << "Must provide host/port pairs for --host parameter" << std::endl;
                     exit(EXIT_FAILURE);
                 }
@@ -174,7 +167,7 @@ Args::Args(
     if (!gotprops) {
         try {
             _props = bgq::utility::Properties::create();
-        } catch(const std::runtime_error& e) {
+        } catch (const std::runtime_error& e) {
             std::cerr << "Properties file error: " << e.what() << std::endl;
             exit(EXIT_FAILURE);
         }
@@ -184,9 +177,7 @@ Args::Args(
 
     const bgq::utility::LoggingProgramOptions logging_program_options( default_logger );
     bgq::utility::initializeLogging(*_props, logging_program_options, "master");
-    if (!ignore_defaults)
-        setupLoggerDefaults();
-
+    setupLoggerDefaults();
 
     // Needs to get master location from properties and command line
     bgq::utility::ClientPortConfiguration port_config(
@@ -208,86 +199,73 @@ Args::Args(
 
     LOG_DEBUG_MSG("Using properties file " << _props->getFilename())
 
-    int mandatory_count = 0;
-    int optional_count = 0;
+    unsigned optional_count = 0;
     for (std::vector<std::string>::const_iterator it = valargs.begin(); it != valargs.end(); ++it) {
         // Count up the "wild" args.
         if (*it == "*") {
             ++optional_count;
+        } else if (*it == "**") {
+            optional_count = std::numeric_limits<unsigned>::max();
+            break;
         }
     }
 
-    for (std::vector<std::string>::const_iterator it = valargs.begin(); it != valargs.end(); ++it) {
-        // Count up the "mandatory" args.
-        if (*it == "%") {
-            ++mandatory_count;
-        }
-    }
-
-    for (unsigned int i = 1; i < argc; ++i) {
+    for (int i = 1; i < argc; ++i) {
         if (!strcasecmp(argv[i], "--help") || !strcmp(argv[i], "-h")) {
             help();
             APusage(usage, true);
             exit(0);
-        } else {
-            // See if the arg is in the pairs vector
-            const std::string curr_arg = argv[i];
+        }
 
-            if (std::find(valargs.begin(), valargs.end(), curr_arg) != valargs.end()) {
-                // If it's in the vector, make sure there's a value associated with it
-                if (i + 1 == argc) {
-                    std::cerr << "Missing value for " << curr_arg << std::endl;
-                    APusage(usage);
-                    exit(EXIT_FAILURE);
-                }
+        // See if the arg is in the pairs vector
+        const std::string curr_arg = argv[i];
 
-                const std::string nextval = argv[i + 1];
-                if (nextval.length() != 0 && nextval.find("--") == std::string::npos) {
-                    if (curr_arg == "--verbose" || curr_arg == "-v") {
-                        const std::string verbarg = argv[++i];
-                        if (setupLogger(verbarg) == false) {
-                            APusage(usage);
-                            exit(EXIT_FAILURE);
-                        }
-                    } else {
-                        _argpairs[curr_arg] = argv[++i];
-                    }
-                } else {
-                    std::cerr << "Invalid option \'" << curr_arg << "\'" << std::endl;
-                    APusage(usage);
-                    exit(EXIT_FAILURE);
-                }
-            } else {
-                // It's not in the pairs vector, see if it's a wildcard or a single.
-                if (curr_arg.find("--") != std::string::npos && curr_arg.find("-") != std::string::npos) {
-                    if (std::find(singles.begin(), singles.end(), curr_arg) != singles.end()) {
-                        _otherargs.push_back(curr_arg);
-                    } else {
-                        // It's not in the pairs list or the singles list, it isn't any good.
-                        std::cerr << "Invalid option \'" << curr_arg << "\'" << std::endl;
+        if (std::find(valargs.begin(), valargs.end(), curr_arg) != valargs.end()) {
+            // If it's in the vector, make sure there's a value associated with it
+            if (i + 1 == argc) {
+                std::cerr << "Missing value for " << curr_arg << std::endl;
+                APusage(usage);
+                exit(EXIT_FAILURE);
+            }
+
+            const std::string nextval = argv[i + 1];
+            if (nextval.length() != 0 && nextval.find("--") == std::string::npos) {
+                if (curr_arg == "--verbose" || curr_arg == "-v") {
+                    const std::string verbarg = argv[++i];
+                    if (setupLogger(verbarg) == false) {
+                        std::cerr << "Invalid verbose option \'" << verbarg << "\'" << std::endl;
                         APusage(usage);
                         exit(EXIT_FAILURE);
                     }
-                } else if (optional_count > 0) {
-                    _otherargs.push_back(curr_arg);
-                    --optional_count;
-                    --mandatory_count; // consumed one of our allotment of wildcards.
                 } else {
+                    _argpairs[curr_arg] = argv[++i];
+                }
+            } else {
+                std::cerr << "Invalid option \'" << curr_arg << "\'" << std::endl;
+                APusage(usage);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            // It's not in the pairs vector, see if it's a wildcard or a single.
+            if (curr_arg.find("--") != std::string::npos && curr_arg.find("-") != std::string::npos) {
+                if (std::find(singles.begin(), singles.end(), curr_arg) != singles.end()) {
+                    _otherargs.push_back(curr_arg);
+                } else {
+                    // It's not in the pairs list or the singles list, it isn't any good.
                     std::cerr << "Invalid option \'" << curr_arg << "\'" << std::endl;
                     APusage(usage);
                     exit(EXIT_FAILURE);
                 }
+            } else if (optional_count > 0) {
+                _otherargs.push_back(curr_arg);
+                --optional_count;
+            } else {
+                std::cerr << "Invalid option \'" << curr_arg << "\'" << std::endl;
+                APusage(usage);
+                exit(EXIT_FAILURE);
             }
         }
     }
-
-    if (mandatory_count > 0) {
-        // Not enough args
-        std::cerr << "Not enough arguments." << std::endl;
-        APusage(usage);
-        exit(EXIT_FAILURE);
-    }
-
 }
 
 std::string

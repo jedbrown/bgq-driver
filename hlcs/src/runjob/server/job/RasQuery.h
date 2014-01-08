@@ -26,11 +26,12 @@
 #include "common/message/ExitJob.h"
 
 #include <db/include/api/cxxdb/cxxdb.h>
-
 #include <db/include/api/job/types.h>
 
+#include "server/job/ExitStatus.h"
 #include "server/fwd.h"
 
+#include <map>
 #include <string>
 
 namespace runjob {
@@ -43,11 +44,15 @@ namespace job {
 class RasQuery
 {
 public:
+    typedef std::map<std::string, unsigned> SeverityCount;
+
+public:
     /*!
      * \brief ctor.
      */
     RasQuery(
-            const BGQDB::job::Id job    //!< [in]
+            const BGQDB::job::Id job,   //!< [in]
+            const ExitStatus& status    //!< [in]
             );
 
     /*!
@@ -65,11 +70,13 @@ private:
 
     void message(
             const cxxdb::ConnectionPtr& connection,
-            const BGQDB::job::Id job
+            const BGQDB::job::Id job,
+            const ExitStatus& status
             );
 private:
-    unsigned _count;
+    SeverityCount _count;
     std::string _message;
+    std::string _severity;
 };
 
 } // job

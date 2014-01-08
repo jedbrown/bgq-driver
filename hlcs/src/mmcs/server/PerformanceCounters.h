@@ -24,7 +24,6 @@
 #ifndef MMCS_SERVER_PERFORMANCE_COUNTERS_H
 #define MMCS_SERVER_PERFORMANCE_COUNTERS_H
 
-
 #include "types.h"
 
 #include <boost/noncopyable.hpp>
@@ -37,10 +36,8 @@
 
 #include <string>
 
-
 namespace mmcs {
 namespace server {
-
 
 /*!
  * \brief Container for storing block boot performance counters.
@@ -91,9 +88,9 @@ private:
     void getBlockSize();
 
 private:
-    const BlockPtr _block;
+    const BlockPtr                     _block;
     const boost::shared_ptr<Container> _container;
-    std::string _otherData;
+    std::string                        _otherData;
 };
 
 } } // namespace mmcs::server

@@ -30,11 +30,9 @@
 
 #include "common/AbstractCommand.h"
 
-
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
 ** diag_wait
@@ -45,9 +43,8 @@ class DiagWait: public common::AbstractCommand
 {
 public:
     DiagWait(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "diag_wait [<seconds> [waitall]]"; }
+      : AbstractCommand(name,description,attributes) { _usage = "diag_wait [<seconds> [waitall]]"; }
     static  DiagWait* build();    // factory method
-    static  std::string cmdname() { return "diag_wait"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,

@@ -149,6 +149,24 @@ uint64_t Kernel_GetRawEnvmonPowerData(int mode, uint8_t *fpga_version_p,
 __INLINE__
 uint64_t Kernel_SetPowerConsumptionParam(uint64_t param, uint64_t value);
 
+
+/*!
+ * \brief Executes Envmon2 FPGA&DCA interface command
+ *
+ *  THIS INTERFACE IS EXPERIMENTAL AND UNSUPPORTED.
+ *
+ * \param[in] command      The Envmon2 command to be executed
+ *
+ * \return Error indication
+ * \retval  0 success
+ * \retval  EIO if emon errors occur
+ *
+ */
+
+__INLINE__
+uint64_t Kernel_ExecEnvmon2Command(uint64_t command);
+
+
 /**
  * \brief Include implementations of the above functions.
  */

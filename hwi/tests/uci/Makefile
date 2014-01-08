@@ -21,7 +21,7 @@
 #                                                                  
 # end_generated_IBM_copyright_prolog                               
 CC     = gcc
-CFLAGS = -O2 -Wall -Werror -I ../../../
+CFLAGS = -O2 -Wall -Werror  -Wsign-compare -Wsign-conversion  -I ../../../
 
 
 default:	test_uci_h

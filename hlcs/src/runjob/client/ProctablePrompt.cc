@@ -63,7 +63,7 @@ ProctablePrompt::create(
 
         result->_input.assign( input );
         closeGuard.dismiss();
-    } catch( const boost::system::system_error& e ) {
+    } catch ( const boost::system::system_error& e ) {
         // assume stdin is not a tty
         LOG_WARN_MSG( "standard input is not a tty, ignoring proctable query" );
         return ProctablePrompt::Ptr();
@@ -178,7 +178,7 @@ ProctablePrompt::readHandler(
     }
 
     // keep reading if the user entered anything, even invalid input
-    bgq::utility::ScopeGuard readGuard( 
+    const bgq::utility::ScopeGuard readGuard( 
             boost::bind(
                 &ProctablePrompt::read,
                 this

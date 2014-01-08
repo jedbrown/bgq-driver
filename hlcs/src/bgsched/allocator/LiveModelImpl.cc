@@ -275,7 +275,7 @@ LiveModel::Impl::pollAllocateBlocks()
         poll_interval = 3000;
     }
 
-    unsigned realtime_interval_check = 600000; // After 10 minutes check if real-time server is back
+    unsigned realtime_interval_check = 60000; // After 1 minute check if real-time server is back
     unsigned accumulated_time = 0; // Tracker for time spent polling
 
     // Block polling code. Used when we get an exception or the real-time server disconnects.
@@ -373,7 +373,7 @@ LiveModel::Impl::pollAllocateBlocks()
                 // Did we find our block?
                 if (!blockFound) {
                     // Request failed because no block was found
-                    string errorMessage = "Allocate monitor: block " + block + " was not found.";
+                    string errorMessage = "Allocate monitor: compute block " + block + " was not found.";
                     LOG_WARN_MSG(errorMessage);
 
                     // Build dummy block event notification for Free because block has been deleted
@@ -599,7 +599,7 @@ LiveModel::Impl::pollDeallocateBlocks()
         poll_interval = 3000;
     }
 
-    unsigned realtime_interval_check = 600000; // After 10 minutes check if real-time server is back
+    unsigned realtime_interval_check = 60000; // After 1 minute check if real-time server is back
     unsigned accumulated_time = 0; // Tracker for time spent polling
 
     // Block polling code. Used when we get an exception or the real-time server disconnects.
@@ -616,7 +616,7 @@ LiveModel::Impl::pollDeallocateBlocks()
 
         // Any blocks to check on?
         if (_freeBlocks.empty()) {
-            // Have we exceeded our 10 mins of polling before retrying real-time events?
+            // Have we exceeded our polling interval before retrying real-time events?
             if (accumulated_time > realtime_interval_check) {
                 LOG_WARN_MSG("Switching over to real-time events for block deallocate monitor.");
                 return;
@@ -639,6 +639,7 @@ LiveModel::Impl::pollDeallocateBlocks()
             while (iter != _freeBlocks.end()) {
                 bool iteratorErased = false;
                 string block = iter->first; // Get the block name in our monitor list
+                SequenceId monitorSeqId = iter->second; // Get the sequence ID associated with block
                 // Filter on specific block name
                 block_filter.setName(block);
                 // Clear out previous block entries
@@ -650,11 +651,12 @@ LiveModel::Impl::pollDeallocateBlocks()
                 for (Block::Ptrs::iterator it = blockVector.begin(); it != blockVector.end(); it++) {
                     Block::Ptr blockPtr = *(it);
                     string name = blockPtr->getName();
+                    SequenceId seqId = blockPtr->getSequenceId();
                     // Block names match?
                     if (name.compare(block) == 0) {
                         blockFound = true;
-                        // Check if block is Free
-                        if (blockPtr->getStatus() == Block::Free) {
+                        // Check if block is Free and status really changed
+                        if ((blockPtr->getStatus() == Block::Free) && (seqId > monitorSeqId)) {
                             // Build dummy block event notification for Free
                             realtime::ClientEventListener::BlockStateChangedEventInfo::Impl dummyBlockEvent(
                                     block,
@@ -679,7 +681,7 @@ LiveModel::Impl::pollDeallocateBlocks()
                 // Did we find our block?
                 if (!blockFound) {
                     // Request failed because no block was found
-                    string errorMessage = "Deallocate thread: block " + block + " was not found.";
+                    string errorMessage = "Deallocate thread: compute block " + block + " was not found.";
                     LOG_WARN_MSG(errorMessage);
 
                     // Build dummy block event notification for Free because block has been deleted
@@ -914,6 +916,7 @@ LiveModel::Impl::allocate(
         const string& blockName
         )
 {
+    std::vector<std::string> unavailableResources;   // Unavailable block resources
     LOG_TRACE_MSG(__FUNCTION__ << " Trying to obtain exclusive write lock");
     // Lock mutex as single writer across multiple threads, mutex is automatically unlocked when stack is unwound
     boost::unique_lock<boost::shared_mutex> lock(_mutex);
@@ -927,10 +930,47 @@ LiveModel::Impl::allocate(
         );
     }
 
+    // Block filter
+    BlockFilter block_filter;
+    block_filter.setName(blockName);
+    block_filter.setExtendedInfo(false);
+
+    // Block returned from core::getBlocks()
+    Block::Ptrs blocks;
+    try {
+        // Get the block detail including sequence ID from the database
+        blocks = bgsched::core::getBlocks(block_filter);
+    } catch (...) {
+        LOG_ERROR_MSG("Error occurred while attempting to allocate block " << blockName);
+        // Rethrow the exception
+        throw;
+    }
+
+    // Did we get a block back?
+    if (blocks.empty()) {
+        LOG_ERROR_MSG("Error occurred while attempting to allocate block " << blockName);
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " not found."
+                );
+    }
+
+    Block::Ptr blockPtr = blocks[0];
+
+    // Check if block has pending action
+    if (blockPtr->getAction() != Block::Action::None) {
+        LOG_ERROR_MSG("Error occurred while attempting to allocate block " << blockName);
+        THROW_EXCEPTION( // Block already has action pending
+                bgsched::RuntimeException,
+                bgsched::RuntimeErrors::BlockBootError,
+                "Block boot request failed because block " << blockName << " has pending action."
+                );
+    }
+
     // Only post the block to the allocate monitoring thread if there are listeners
     if (!_listeners.empty()) {
-
-        // Check if block is already being monitored
+        // Check if block is already being monitored for allocate
         AllocatingBlocks allocatingBlocks = getAllocatingBlocks();
         AllocatingBlocks::iterator it = allocatingBlocks.find(blockName);
         if (it != allocatingBlocks.end()) {
@@ -939,45 +979,44 @@ LiveModel::Impl::allocate(
                     bgsched::RuntimeException,
                     bgsched::RuntimeErrors::BlockBootError,
                     "Block boot request failed because either block " << blockName << " is not Free or has pending action."
-                    );
-        }
-
-        // Block filter
-        BlockFilter block_filter;
-        block_filter.setName(blockName);
-        block_filter.setExtendedInfo(false);
-
-        // Block returned from core::getBlocks()
-        Block::Ptrs blocks;
-        try {
-            // Get the block detail including sequence ID from the database
-            blocks = bgsched::core::getBlocks(block_filter);
-        } catch (...) {
-            LOG_ERROR_MSG("Error occurred while attempting to allocate block " << blockName);
-            // Rethrow the exception
-            throw;
-        }
-
-        // Did we get a block back?
-        if (blocks.empty()) {
-            LOG_ERROR_MSG("Error occurred while attempting to allocate block " << blockName);
-            THROW_EXCEPTION(
-                    bgsched::InputException,
-                    bgsched::InputErrors::BlockNotFound,
-                    "Block " << blockName << " not found"
-                    );
+            );
         }
 
         // If polling the database we could get status before the boot request is processed.
         // To prevent this we want the seq id to be a higher value so we know the status changed.
-        Block::Ptr blockPtr = blocks[0];
         addAllocatingBlock(blockName, blockPtr->getSequenceId());
+
+        // Check if block is already being monitored for deallocate
+        DeallocatingBlocks deallocatingBlocks = getDeallocatingBlocks();
+        DeallocatingBlocks::iterator it2 = deallocatingBlocks.find(blockName);
+        // Only add to deallocate watch list if not already in the list
+        if (it2 == deallocatingBlocks.end()) {
+            // If polling the database we could get status before the free request is processed.
+            // To prevent this we want the seq id to be a higher value so we know the status changed.
+            // LoadLeveler requires that callbacks for deallocates be sent back on blocks they allocated since
+            // deallocates can be done outside there control (e.g. RAS event).
+            addDeallocatingBlock(blockName, blockPtr->getSequenceId());
+        }
     }
     try {
-        Block::initiateBoot(blockName);
+        // Note: There are two versions of initiateBoot(). The version we are using does more extensive
+        // checking to verify resources are available for the compute block to boot successfully.
+        Block::initiateBoot(blockName, &unavailableResources);
     } catch (...) {
+        if (unavailableResources.size() > 0) {
+            // Print the unavailable compute resources
+            LOG_ERROR_MSG("Compute block " << blockName << " has " << unavailableResources.size() << " unavailable resources:");
+            for (unsigned int it = 0; it < unavailableResources.size(); it++) {
+                LOG_ERROR_MSG(unavailableResources[it]);
+            }
+        } else {
+            LOG_DEBUG_MSG("All compute resources are available for compute block " << blockName);
+        }
+
         LOG_ERROR_MSG("Error occurred while attempting to allocate block " << blockName);
         removeAllocatingBlock(blockName);
+        removeDeallocatingBlock(blockName);
+
         // Rethrow the exception
         throw;
     }
@@ -1024,7 +1063,7 @@ LiveModel::Impl::deallocate(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotFound,
-                "Block " << blockName << " not found"
+                "Compute block " << blockName << " not found."
                 );
     }
     Block::Ptr blockPtr = blocks[0];
@@ -1034,28 +1073,31 @@ LiveModel::Impl::deallocate(
         return;
     }
 
-    // Only post the block to the deallocate monitoring thread if there are listeners
-    if (!_listeners.empty()) {
-
-        // Check if block is already being monitored
-        DeallocatingBlocks deallocatingBlocks = getDeallocatingBlocks();
-        DeallocatingBlocks::iterator it = deallocatingBlocks.find(blockName);
-        if (it != deallocatingBlocks.end()) {
-            LOG_ERROR_MSG("Error occurred while attempting to deallocate block " << blockName);
-            THROW_EXCEPTION( // Block already has action pending
-                    bgsched::RuntimeException,
-                    bgsched::RuntimeErrors::BlockFreeError,
-                    "Block free request failed because block " << blockName << " has pending action."
-            );
-        }
-
-        // If polling the database we could get status before the free request is processed.
-        // To prevent this we want the seq id to be a higher value so we know the status changed.
-
-        addDeallocatingBlock(blockName, blockPtr->getSequenceId());
+    // Check if block has pending action
+    if (blockPtr->getAction() != Block::Action::None) {
+        LOG_ERROR_MSG("Error occurred while attempting to deallocate block " << blockName);
+        THROW_EXCEPTION( // Block already has action pending
+                bgsched::RuntimeException,
+                bgsched::RuntimeErrors::BlockFreeError,
+                "Block free request failed because block " << blockName << " has pending action."
+        );
     }
 
-    // Block is not already Free so initiate a Free request on the block
+    // Only post the block to the deallocate monitoring thread if there are listeners
+    if (!_listeners.empty()) {
+        // Check if block is already being monitored for deallocate
+        DeallocatingBlocks deallocatingBlocks = getDeallocatingBlocks();
+        DeallocatingBlocks::iterator it = deallocatingBlocks.find(blockName);
+        // Only add to deallocate watch list if not already in the list. It is normal for allocate() method to insert
+        // the block on the deallocate watch list.
+        if (it == deallocatingBlocks.end()) {
+            // If polling the database we could get status before the free request is processed.
+            // To prevent this we want the seq id to be a higher value so we know the status changed.
+            addDeallocatingBlock(blockName, blockPtr->getSequenceId());
+        }
+    }
+
+    // Block is not already Free and has no pending action so initiate a Free request on the block
     try {
         Block::initiateFree(blockName);
     } catch (...) {
@@ -1087,7 +1129,7 @@ LiveModel::Impl::getBlock(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotFound,
-                "Block " << blockName << " not found"
+                "Compute block " << blockName << " not found."
                 );
     return blocks[0]->getPimpl();
 }
@@ -1136,7 +1178,7 @@ LiveModel::Impl::getBlockStatus(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotFound,
-                "Compute block " << blockName << " not found"
+                "Compute block " << blockName << " not found."
                 );
     }
 
@@ -1162,7 +1204,7 @@ LiveModel::Impl::getBlockStatus(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotFound,
-                "Compute block " << blockName << " not found"
+                "Compute block " << blockName << " not found."
         );
     case BGQDB::FAILED:    // Block in unknown state
         THROW_EXCEPTION(
@@ -1253,7 +1295,7 @@ LiveModel::Impl::removeBlock(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotFound,
-                "Compute block " << blockName << " not found"
+                "Compute block " << blockName << " not found."
                 );
     }
 
@@ -1417,6 +1459,140 @@ LiveModel::Impl::addAllocatingBlock(
 }
 
 void
+LiveModel::Impl::monitorBlockAllocate(
+        const string& blockName
+        )
+{
+    LOG_TRACE_MSG(__FUNCTION__ << " Trying to obtain exclusive write lock");
+    // Lock mutex as single writer across multiple threads, mutex is automatically unlocked when stack is unwound
+    boost::unique_lock<boost::shared_mutex> lock(_mutex);
+    LOG_TRACE_MSG(__FUNCTION__ << " Obtained exclusive write lock");
+
+    // Only post the block to the allocate monitoring thread if there are listeners
+    if (_listeners.empty()) {
+        LOG_WARN_MSG("Ignoring request to monitor booting of compute block " << blockName << ". No callbacks registered.");
+        return;
+    }
+
+    if (blockName.empty()) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::InvalidBlockName,
+                No_Block_Name_Str
+        );
+    }
+
+    // Block filter
+    BlockFilter block_filter;
+    block_filter.setName(blockName);
+    block_filter.setExtendedInfo(false);
+
+    // Block returned from core::getBlocks()
+    Block::Ptrs blocks;
+    try {
+        // Get the block detail including sequence ID from the database
+        blocks = bgsched::core::getBlocks(block_filter);
+    } catch (...) {
+        LOG_ERROR_MSG("Error while attempting to get details for compute block " << blockName);
+        // Rethrow the exception
+        throw;
+    }
+
+    // Did we get a block back?
+    if (blocks.empty()) {
+        LOG_ERROR_MSG("Error while attempting to get details for compute block " << blockName);
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " not found."
+                );
+    }
+
+    Block::Ptr blockPtr = blocks[0];
+    SequenceId seqId = blockPtr->getSequenceId();
+    // Check if block already has Free or Initialized state which is what we will be monitoring for
+    if (blockPtr->getStatus() == Block::Free || blockPtr->getStatus() == Block::Initialized) {
+        if (blockPtr->getStatus() == Block::Free) {
+            LOG_ERROR_MSG("Request to monitor booting of compute block " << blockName << " failed. Block has 'Free' status.");
+            THROW_EXCEPTION( // Block has 'Free' status
+                    bgsched::RuntimeException,
+                    bgsched::RuntimeErrors::InvalidBlockState,
+                    "Request to monitor booting of compute block " << blockName << " failed. Block has 'Free' status."
+            );
+        } else {
+            LOG_ERROR_MSG("Request to monitor booting of compute block " << blockName << " failed. Block has 'Initialized' status.");
+            THROW_EXCEPTION( // Block has 'Initialized' status
+                    bgsched::RuntimeException,
+                    bgsched::RuntimeErrors::InvalidBlockState,
+                    "Request to monitor booting of compute block " << blockName << " failed. Block has 'Initialized' status."
+            );
+        }
+    }
+
+    // Check if compute block is already being monitored for allocate
+    AllocatingBlocks allocatingBlocks = getAllocatingBlocks();
+    AllocatingBlocks::iterator it = allocatingBlocks.find(blockName);
+    // Only add the compute block if not currently being monitored
+    if (it == allocatingBlocks.end()) {
+        // The seqId is used to determine if status changed since it was posted on the monitor list
+        addAllocatingBlock(blockName, seqId);
+    } else {
+        return;
+    }
+
+    // Close any timing windows on compute block status change by reverifying block status. Don't want to miss the status event.
+    try {
+        // Get the compute block details including sequence ID from the database
+        blocks = bgsched::core::getBlocks(block_filter);
+    } catch (...) {
+        removeAllocatingBlock(blockName);
+        LOG_ERROR_MSG("Error while attempting to get details for compute block " << blockName);
+        // Rethrow the exception
+        throw;
+    }
+
+    // Did we get a compute block back?
+    if (blocks.empty()) {
+        removeAllocatingBlock(blockName);
+        LOG_ERROR_MSG("Error while attempting to get details for compute block " << blockName << ". Block may have been deleted.");
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " not found."
+                );
+    }
+
+    blockPtr = blocks[0];
+    SequenceId recentSeqId = blockPtr->getSequenceId();
+
+    // Check if the compute block status changed since we posted to the monitor list
+    if (recentSeqId > seqId) {
+        // The sequence id indicates that the block status changed since we first looked and posted it to monitor list.
+        // Check if compute block now has state of Free or Initialized which is what we were monitoring for.
+        if (blockPtr->getStatus() == Block::Free || blockPtr->getStatus() == Block::Initialized) {
+            removeAllocatingBlock(blockName);
+            if (blockPtr->getStatus() == Block::Free) {
+                LOG_ERROR_MSG("Request to monitor booting of compute block " << blockName << " failed. Block has 'Free' status.");
+                THROW_EXCEPTION( // Compute block has 'Free' status
+                        bgsched::RuntimeException,
+                        bgsched::RuntimeErrors::InvalidBlockState,
+                        "Request to monitor booting of compute block " << blockName << " failed. Block has 'Free' status."
+                );
+            } else {
+                LOG_ERROR_MSG("Request to monitor booting of block " << blockName << " failed. Block has 'Initialized' status.");
+                THROW_EXCEPTION( // Compute block has 'Initialized' status
+                        bgsched::RuntimeException,
+                        bgsched::RuntimeErrors::InvalidBlockState,
+                        "Request to monitor booting of compute block " << blockName << " failed. Block has 'Initialized' status."
+                );
+            }
+        }
+    }
+
+    LOG_TRACE_MSG(__FUNCTION__ << " Unlocked exclusive write lock");
+}
+
+void
 LiveModel::Impl::addDeallocatingBlock(
         const string& blockName,
         bgsched::SequenceId seqId
@@ -1435,6 +1611,122 @@ LiveModel::Impl::addDeallocatingBlock(
     LOG_TRACE_MSG("Adding block " << blockName << " with sequence ID " << seqId << " to deallocate monitor list");
     _freeBlocks.insert(DeallocatingBlocks::value_type(blockName, seqId));
     LOG_TRACE_MSG(__FUNCTION__ << " Unlocked exclusive write lock on free block container");
+}
+
+void
+LiveModel::Impl::monitorBlockDeallocate(
+        const string& blockName
+        )
+{
+    LOG_TRACE_MSG(__FUNCTION__ << " Trying to obtain exclusive write lock");
+    // Lock mutex as single writer across multiple threads, mutex is automatically unlocked when stack is unwound
+    boost::unique_lock<boost::shared_mutex> lock(_mutex);
+    LOG_TRACE_MSG(__FUNCTION__ << " Obtained exclusive write lock");
+
+    // Only post the block to the deallocate monitoring thread if there are listeners
+    if (_listeners.empty()) {
+        LOG_WARN_MSG("Ignoring request to monitor freeing of compute block " << blockName << ". No callbacks registered.");
+        return;
+    }
+
+    if (blockName.empty()) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::InvalidBlockName,
+                No_Block_Name_Str
+        );
+    }
+
+    // Block filter
+    BlockFilter block_filter;
+    block_filter.setName(blockName);
+    block_filter.setExtendedInfo(false);
+
+    // Block returned from core::getBlocks()
+    Block::Ptrs blocks;
+    try {
+        // Get the block detail including sequence ID from the database
+        blocks = bgsched::core::getBlocks(block_filter);
+    } catch (...) {
+        LOG_ERROR_MSG("Error while attempting to get details for compute block " << blockName);
+        // Rethrow the exception
+        throw;
+    }
+
+    // Did we get a block back?
+    if (blocks.empty()) {
+        LOG_ERROR_MSG("Error while attempting to get details for compute block " << blockName);
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " not found."
+                );
+    }
+
+    Block::Ptr blockPtr = blocks[0];
+    SequenceId seqId = blockPtr->getSequenceId();
+    // Check if block already has Free state which is what we will be monitoring for
+    if (blockPtr->getStatus() == Block::Free) {
+        LOG_ERROR_MSG("Request to monitor freeing of compute block " << blockName << " failed. Block has 'Free' status.");
+        THROW_EXCEPTION( // Block has 'Free' status
+                bgsched::RuntimeException,
+                bgsched::RuntimeErrors::InvalidBlockState,
+                "Request to monitor freeing of compute block " << blockName << " failed. Block has 'Free' status."
+        );
+    }
+
+    // Check if compute block is already being monitored for deallocate
+    DeallocatingBlocks deallocatingBlocks = getDeallocatingBlocks();
+    DeallocatingBlocks::iterator it = deallocatingBlocks.find(blockName);
+    // Only add the compute block if not currently being monitored
+    if (it == deallocatingBlocks.end()) {
+        // The seqId is used to determine if status changed since it was posted on the monitor list
+        addDeallocatingBlock(blockName, seqId);
+    } else {
+        return;
+    }
+
+    // Close any timing windows on compute block status change by reverifying block status. Don't want to miss the status event.
+    try {
+        // Get the compute block details including sequence ID from the database
+        blocks = bgsched::core::getBlocks(block_filter);
+    } catch (...) {
+        removeDeallocatingBlock(blockName);
+        LOG_ERROR_MSG("Error while attempting to get details for compute block " << blockName);
+        // Rethrow the exception
+        throw;
+    }
+
+    // Did we get a compute block back?
+    if (blocks.empty()) {
+        removeDeallocatingBlock(blockName);
+        LOG_ERROR_MSG("Error while attempting to get details for compute block " << blockName << ". Block may have been deleted.");
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " not found."
+                );
+    }
+
+    blockPtr = blocks[0];
+    SequenceId recentSeqId = blockPtr->getSequenceId();
+
+    // Check if the compute block status changed since we posted to the monitor list
+    if (recentSeqId > seqId) {
+        // The sequence id indicates that the block status changed since we first looked and posted it to monitor list.
+        // Check if compute block now has state of Free which is what we were monitoring for.
+        if (blockPtr->getStatus() == Block::Free) {
+            removeDeallocatingBlock(blockName);
+            LOG_ERROR_MSG("Request to monitor freeing of compute block " << blockName << " failed. Block has 'Free' status.");
+            THROW_EXCEPTION( // Compute block has 'Free' status
+                    bgsched::RuntimeException,
+                    bgsched::RuntimeErrors::InvalidBlockState,
+                    "Request to monitor freeing of compute block " << blockName << " failed. Block has 'Free' status."
+            );
+        }
+    }
+
+    LOG_TRACE_MSG(__FUNCTION__ << " Unlocked exclusive write lock");
 }
 
 void

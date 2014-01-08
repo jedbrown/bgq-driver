@@ -23,32 +23,27 @@
 
 #include "common/ArgParse.h"
 
-#include "lib/BGMasterClientApi.h"
+#include "lib/BGMasterClient.h"
 #include "lib/exceptions.h"
 
 #include <utility/include/Log.h>
 
-#include <boost/tokenizer.hpp>
 
-#include <csignal>
 
 LOG_DECLARE_FILE( "master" );
 
-BGMasterClient client;
-Args* pargs;
-
 void
-doListClients()
+doListClients(
+        const BGMasterClient& client
+        )
 {
     BGMasterClient::ClientAndUserMap clients;
     client.get_clients(clients);
 
     // Loop through the map and print the clients and associated binaries
-    for (BGMasterClient::ClientAndUserMap::iterator it = clients.begin();
-        it != clients.end(); ++it) {
-        // Get the Id string
-        std::string idstr = it->first.str();
-        BGMasterClient::ClientUID uid = it->second;
+    for (BGMasterClient::ClientAndUserMap::const_iterator it = clients.begin(); it != clients.end(); ++it) {
+        const std::string idstr = it->first.str();
+        const BGMasterClient::ClientUID uid = it->second;
         std::cout << idstr << "|" << uid << std::endl;
     }
 }
@@ -65,21 +60,21 @@ usage()
     std::cerr << "list_clients [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]" << std::endl;
 }
 
-int main(int argc, const char** argv)
+int
+main(int argc, const char** argv)
 {
     std::vector<std::string> validargs;
     std::vector<std::string> singles;
-    Args largs(argc, argv, &usage, &help, validargs, singles);
-    pargs = &largs;
-    client.initProperties(pargs->get_props());
+    const Args largs(argc, argv, &usage, &help, validargs, singles);
+    BGMasterClient client;
 
     try {
-        client.connectMaster(pargs->get_portpairs());
+        client.connectMaster(largs.get_props(), largs.get_portpairs());
     }
-    catch(exceptions::BGMasterError& e) {
-        std::cerr << "Unable to contact bgmaster_server, server may be down." << std::endl;
+    catch ( const exceptions::BGMasterError& e ) {
+        std::cerr << "Unable to contact bgmaster_server: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    doListClients();
+    doListClients( client );
 }

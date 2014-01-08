@@ -97,8 +97,14 @@ const std::locale TimestampFormat1::_PARSE_LOCALE( std::cin.getloc(), new boost:
 
 const TimestampFormat1 TimestampFormat1::INSTANCE;
 
-const bool added_timestampFormat1(TimestampFormats::instance.add( TimestampFormat1::INSTANCE ) || added_timestampFormat1);
+const bool added_timestampFormat1(TimestampFormats::instance.add( TimestampFormat1::INSTANCE ) || false);
 
+
+TimestampFormat1::TimestampFormat1() :
+    TimestampFormat()
+{
+
+}
 
 bool TimestampFormat1::split( const std::string& line, std::string* time_str_out, std::string* remaining_out ) const
 {
@@ -156,9 +162,14 @@ const boost::regex TimestampFormat3::_LINE_RE( "(\\d{4}-\\d{2}-\\d{2}-\\d{2}:\\d
 const std::locale TimestampFormat3::_PARSE_LOCALE( std::cin.getloc(), new boost::posix_time::time_input_facet( "%Y-%m-%d-%H:%M:%S%f" ) ); // 2009-04-22-23:20:00.025
 
 const TimestampFormat3 TimestampFormat3::INSTANCE;
-const bool added_timestampFormat3(TimestampFormats::instance.add( TimestampFormat3::INSTANCE ) || added_timestampFormat3);
+const bool added_timestampFormat3(TimestampFormats::instance.add( TimestampFormat3::INSTANCE ) || false);
 
 
+TimestampFormat3::TimestampFormat3() :
+    TimestampFormat()
+{
+
+}
 
 bool TimestampFormat3::split( const std::string& line, std::string* time_str_out, std::string* remaining_out ) const
 {
@@ -194,6 +205,12 @@ const boost::regex TimestampFormatQ::_LINE_RE( "(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d
 
 const TimestampFormatQ TimestampFormatQ::INSTANCE;
 
+TimestampFormatQ::TimestampFormatQ() :
+    TimestampFormat()
+{
+
+}
+
 
 bool TimestampFormatQ::split( const std::string& line, std::string* time_str_out, std::string* remaining_out ) const
 {
@@ -215,6 +232,6 @@ boost::posix_time::ptime TimestampFormatQ::parse( const std::string& time_str ) 
 }
 
 
-const bool added_timestampFormatQ(TimestampFormats::instance.add( TimestampFormatQ::INSTANCE ) || added_timestampFormatQ);
+const bool added_timestampFormatQ(TimestampFormats::instance.add( TimestampFormatQ::INSTANCE ) || false);
 
 } // namespace log_merge

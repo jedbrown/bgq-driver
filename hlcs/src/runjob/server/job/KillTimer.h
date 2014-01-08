@@ -91,6 +91,10 @@ private:
             const boost::shared_ptr<Job>& job
             ) const;
 
+    void cleanup(
+            const boost::shared_ptr<Job>& job
+            ) const;
+
 private:
     boost::asio::deadline_timer _timer;
     bool _force;

@@ -82,6 +82,7 @@ SharedMemory::SharedMemory(
         // set umask so anyone can write to shared memory file when we create it
         const mode_t access = 0777;
         const mode_t old_umask = umask( ~(access & 0777) );
+        LOG_DEBUG_MSG( "old umask " << std::oct << std::setfill('0') << std::setw(4) << old_umask );
         bgq::utility::ScopeGuard mask_guard( boost::bind(&umask, old_umask) );
 
         // create shared memory file

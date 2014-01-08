@@ -21,13 +21,10 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_DISCONNECT_H_
 #define MMCS_SERVER_COMMAND_DISCONNECT_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
@@ -42,9 +39,8 @@ class Disconnect: public common::AbstractCommand
 {
 public:
     Disconnect(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "disconnect";}
+      : AbstractCommand(name,description,attributes) { _usage = "disconnect";}
     static  Disconnect* build();    // factory method
-    static  std::string cmdname() { return "disconnect"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -53,8 +49,6 @@ public:
               mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

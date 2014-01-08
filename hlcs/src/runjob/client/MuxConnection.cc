@@ -68,7 +68,7 @@ MuxConnection::start(
     const std::string socket = _options->getSocket();
     path.append( socket );
     LOG_DEBUG_MSG( "connecting to " << socket );
-    boost::asio::local::stream_protocol::endpoint ep( path );
+    const boost::asio::local::stream_protocol::endpoint ep( path );
 
     // start connect
     _socket.async_connect(
@@ -92,14 +92,22 @@ MuxConnection::write(
         const Message::Ptr& msg
         )
 {
+    _outbox.push_back( msg );
+
     // check if a send is in progress
-    if ( _outbox.size() > 0 ) {
-        // add to queue and punt
-        _outbox.push_back( msg );
+    if ( _outbox.size() > 1 ) {
         LOG_TRACE_MSG("added message to queue, size " << _outbox.size());
         return;
     }
 
+    this->writeImpl( msg );
+}
+
+void
+MuxConnection::writeImpl(
+        const Message::Ptr& msg
+        )
+{
     // serialize message
     std::ostream os( &_outgoingMessage );
     msg->serialize( os );
@@ -136,7 +144,7 @@ MuxConnection::connectHandler(
 
     callback( error );
 
-    if (error ) return;
+    if ( error ) return;
 
     // start reading
     boost::asio::async_read(
@@ -251,6 +259,7 @@ MuxConnection::writeHandler(
 
     LOG_TRACE_MSG( "write handler " << bytesTransferred << " bytes" );
     _outgoingMessage.consume( bytesTransferred );
+    _outbox.pop_front();
 
     if ( error ) {
         LOG_ERROR_MSG( 
@@ -264,8 +273,7 @@ MuxConnection::writeHandler(
     if ( !_outbox.empty() ) {
         // get next queued message
         const Message::Ptr msg = _outbox[0];
-        _outbox.pop_front();
-        this->write(msg);
+        this->writeImpl(msg);
     }
 }
 

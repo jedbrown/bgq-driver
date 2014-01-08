@@ -65,7 +65,6 @@ Job::Job(
 {
     // validate job info
     this->validate();
-
 }
 
 Job::~Job()
@@ -128,8 +127,8 @@ Job::start(
     }
 
     _stdin = Input::create( _io_service, _mux, input );
-    _stdout =  Output::create(_options, _io_service, output, "stdout" );
-    _stderr =  Output::create(_options, _io_service, error, "stderr" );
+    _stdout = Output::create( _options, _io_service, output, "stdout" );
+    _stderr = Output::create( _options, _io_service, error, "stderr" );
 }
 
 void
@@ -389,22 +388,38 @@ Job::running(
             } else {
                 LOG_WARN_MSG( "terminated with status " << _exitStatus.get() );
             }
-            if ( exit_job_msg->_rasCount ) {
-                LOG_WARN_MSG( exit_job_msg->_rasCount << " RAS event" << (exit_job_msg->_rasCount == 1 ? "" : "s") );
+            if ( !exit_job_msg->_rasCount.empty() ) {
+                for (
+                        std::map<std::string,unsigned>::const_iterator i = exit_job_msg->_rasCount.begin();
+                        i != exit_job_msg->_rasCount.end();
+                        ++i
+                    )
+                {
+                    LOG_WARN_MSG( i->second << " " << i->first <<" RAS event" << (i->second == 1 ? "" : "s") );
+                }
             }
             if ( !exit_job_msg->_rasMessage.empty() ) {
                 LOG_WARN_MSG( "most recent RAS event text: " << exit_job_msg->_rasMessage );
+                LOG_WARN_MSG( "with severity " << exit_job_msg->_rasSeverity );
             }
         } else {
             LOG_FATAL_MSG( "terminated due to: " << error_code::toString(error) );
             if ( !message.empty() ) {
                 LOG_FATAL_MSG( message );
             }
-            if ( exit_job_msg->_rasCount ) {
-                LOG_FATAL_MSG( exit_job_msg->_rasCount << " RAS event" << (exit_job_msg->_rasCount == 1 ? "" : "s") );
+            if ( !exit_job_msg->_rasCount.empty() ) {
+                for (
+                        std::map<std::string,unsigned>::const_iterator i = exit_job_msg->_rasCount.begin();
+                        i != exit_job_msg->_rasCount.end();
+                        ++i
+                    )
+                {
+                    LOG_FATAL_MSG( i->second << " " << i->first <<" RAS event" << (i->second == 1 ? "" : "s") );
+                }
             }
             if ( !exit_job_msg->_rasMessage.empty() ) {
                 LOG_FATAL_MSG( "most recent RAS event text: " << exit_job_msg->_rasMessage );
+                LOG_FATAL_MSG( "with severity " << exit_job_msg->_rasSeverity );
             }
         }
 
@@ -426,7 +441,7 @@ Job::running(
 
 void
 Job::kill(
-        int signal
+        const int signal
         )
 {
     const boost::shared_ptr<MuxConnection> mux( _mux.lock() );

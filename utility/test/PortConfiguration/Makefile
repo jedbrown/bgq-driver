@@ -46,7 +46,7 @@ run_targets = ${exes:%=%.run}
 
 
 test_%: test_%.o
-	$(CXX) -o $@ $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS)
+	$(CXX) -o $@ $^ $(LDFLAGS) $(LOADLIBES) $(LDLIBS)
 
 
 test_%.run: test_%

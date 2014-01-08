@@ -28,7 +28,6 @@
 #ifndef MMCS_SERVER_CHECK_BOOT_COMPLETE_H_
 #define MMCS_SERVER_CHECK_BOOT_COMPLETE_H_
 
-
 #include "PerformanceCounters.h"
 
 #include "common/Thread.h"
@@ -40,10 +39,8 @@
 #include <string>
 #include <vector>
 
-
 namespace mmcs {
 namespace server {
-
 
 class CheckBootComplete : public common::Thread
 {
@@ -66,8 +63,6 @@ private:
     BlockControllerTarget* _target;
 };
 
-
 } } // namespace mmcs::server
-
 
 #endif

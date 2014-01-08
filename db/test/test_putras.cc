@@ -110,10 +110,9 @@ BOOST_AUTO_TEST_CASE( small_block )
             );
 
     BGQDB::BLOCK_ACTION action;
-    uint32_t creationId;
     std::string b;
     BOOST_CHECK_EQUAL(
-            getBlockAction( b, action, creationId ),
+            getBlockAction( b, action),
             BGQDB::OK
             );
 
@@ -164,10 +163,9 @@ BOOST_AUTO_TEST_CASE( large_block )
             );
 
     BGQDB::BLOCK_ACTION action;
-    uint32_t creationId;
     std::string b;
     BOOST_CHECK_EQUAL(
-            getBlockAction( b, action, creationId ),
+            getBlockAction( b, action ),
             BGQDB::OK
             );
 
@@ -220,10 +218,9 @@ BOOST_AUTO_TEST_CASE( large_block_passthrough )
             );
 
     BGQDB::BLOCK_ACTION action;
-    uint32_t creationId;
     std::string b;
     BOOST_CHECK_EQUAL(
-            getBlockAction( b, action, creationId ),
+            getBlockAction( b, action ),
             BGQDB::OK
             );
 
@@ -274,10 +271,9 @@ BOOST_AUTO_TEST_CASE( large_block_should_not_free )
             );
 
     BGQDB::BLOCK_ACTION action;
-    uint32_t creationId;
     std::string b;
     BOOST_CHECK_EQUAL(
-            getBlockAction( b, action, creationId ),
+            getBlockAction( b, action ),
             BGQDB::OK
             );
 
@@ -349,10 +345,9 @@ BOOST_AUTO_TEST_CASE( large_block_passthrough_and_smallblock )
             );
 
     BGQDB::BLOCK_ACTION action;
-    uint32_t creationId;
     std::string b;
     BOOST_CHECK_EQUAL(
-            getBlockAction( b, action, creationId, "('" + small_block + "')" ),
+            getBlockAction( b, action, "('" + small_block + "')" ),
             BGQDB::OK
             );
 
@@ -360,7 +355,7 @@ BOOST_AUTO_TEST_CASE( large_block_passthrough_and_smallblock )
     BOOST_CHECK_EQUAL( action, BGQDB::DEALLOCATE_BLOCK );
             
     BOOST_CHECK_EQUAL(
-            getBlockAction( b, action, creationId, "('" + large_block + "')" ),
+            getBlockAction( b, action, "('" + large_block + "')" ),
             BGQDB::OK
             );
 
@@ -431,10 +426,9 @@ BOOST_AUTO_TEST_CASE( job )
     BOOST_CHECK_EQUAL( jobs_to_kill.at(0), job_id );
 
     BGQDB::BLOCK_ACTION action;
-    uint32_t creationId;
     std::string b;
     BOOST_CHECK_EQUAL(
-            getBlockAction( b, action, creationId ),
+            getBlockAction( b, action ),
             BGQDB::OK
             );
 

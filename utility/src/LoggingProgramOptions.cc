@@ -69,7 +69,7 @@ LoggingProgramOptions::parseVerboseArgument(
     if ( str == "A" || str == "a" )  return Level::getAll();
 
     try {
-        unsigned level_int(boost::lexical_cast<int> ( str ));
+        int level_int(boost::lexical_cast<int> ( str ));
 
         switch ( level_int ) {
             case 0: return Level::getOff();
@@ -149,7 +149,7 @@ void LoggingProgramOptions::apply() const
 {
     // Go through the stored logging settings and apply to the current logging configuration.
 
-    for ( _LoggingLevels::const_iterator i(_logging_levels.begin()) ; i != _logging_levels.end() ; ++i ) {
+    for ( LoggingLevels::const_iterator i(_logging_levels.begin()) ; i != _logging_levels.end() ; ++i ) {
         Logger::getLogger( i->first )->setLevel( i->second );
     }
 

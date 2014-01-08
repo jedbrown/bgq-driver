@@ -39,7 +39,7 @@ namespace mmcs {
 namespace lite {
 
 
-class LiteControlEventListener: public lite::BlockController
+class LiteControlEventListener : public lite::BlockController
 {
     friend class MailboxMonitor;
     friend class MailboxListener;

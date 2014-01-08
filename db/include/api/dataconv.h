@@ -21,17 +21,31 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#ifndef _DATACONV_H_
-#define _DATACONV_H_
+#ifndef BGQ_DB_DATACONV_H_
+#define BGQ_DB_DATACONV_H_
+
+#include <string>
+
+namespace BGQDB {
 
 void trim_right_spaces(char *input);
 void trim_right_spaces(char *input, int len);
-void char2bitdata(unsigned char *dest, unsigned destLen, const char *source);
-void hexchar2bitdata(unsigned char *dest, unsigned destLen, const char *source);
-void bitdata2hexchar(char *dest, unsigned destLen, const unsigned char *source, unsigned sourceLen);
-bool isSerialnumberString(const char* str);
-char* makeChars(char* target, const char* source, int len);
 
+/*!
+ * \brief convert hexadecimal input such as DEADBEEF into its bit data equivalent.
+ *
+ * As an example, the string "AB" as input will be converted to 0xAB as output
+ *
+ * \note source must have a length divisible by 2
+ * \note destLen must be 2x source length
+ * \note every character in source must be isxdigit()
+ */
+bool hexchar2bitdata(
+        unsigned char *dest,        //!< [in] pointer to output buffer
+        unsigned destLen,           //!< [in] output buffer length
+        const std::string& source   //!< [in] input string
+        );
 
+} // namespace BGQDB
 
 #endif

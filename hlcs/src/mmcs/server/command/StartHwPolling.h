@@ -21,26 +21,21 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_START_HW_POLLING_H_
 #define MMCS_SERVER_COMMAND_START_HW_POLLING_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 class StartHwPolling : public common::AbstractCommand
 {
 public:
     StartHwPolling(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "start_hw_polling <type> <location> <seconds>";}
+      : AbstractCommand(name,description,attributes) { _usage = "start_hw_polling <type> <location> <seconds>";}
     static StartHwPolling* build();
-    static std::string cmdname() { return "start_hw_polling"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -50,8 +45,6 @@ public:
               mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

@@ -393,9 +393,9 @@ sub gatherBlockInfo
 
 sub verifyServiceNode
 {
-    $cmd = logCommand("/bin/ps auxwww | grep bgmaster | grep bgqadmin | grep -v grep");
+    $cmd = logCommand("/bin/ps auxwww | grep bgmaster_server | grep -v grep");
     $psout = `$cmd`;
-    if($psout !~ /^\s*bgqadmin.*bgmaster/so)
+    if($psout !~ /\sbgmaster_server/so)
     {
 	logError("SnapBug must be executed from a service node");
 	exit(-1);

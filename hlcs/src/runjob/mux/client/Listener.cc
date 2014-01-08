@@ -37,6 +37,8 @@
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 
+#include <fstream>
+
 namespace runjob {
 namespace mux {
 namespace client {
@@ -55,16 +57,14 @@ Listener::Listener(
         // create endpoint
         std::string path( 1, '\0' ); // first byte is NULL for anonymous namespace
         path.append( _options.getLocalSocket() );
-        boost::asio::local::stream_protocol::endpoint ep(path);
+        const boost::asio::local::stream_protocol::endpoint ep(path);
 
-        // open
+        const unsigned backlog( this->getBacklog() );
+        LOG_DEBUG_MSG( "using backlog of " << backlog );
+
         _acceptor.open( ep.protocol() );
-
-        // bind
         _acceptor.bind( ep );
-
-        // listen
-        _acceptor.listen();
+        _acceptor.listen( backlog );
     } catch ( const boost::system::system_error& e ) {
         LOG_FATAL_MSG( e.what() );
         throw;
@@ -72,6 +72,26 @@ Listener::Listener(
         LOG_FATAL_MSG( e.what() );
         throw;
     }
+}
+
+int
+Listener::getBacklog() const
+{
+    const std::string file( "/proc/sys/net/core/somaxconn" );
+    std::ifstream input( file );
+    if ( !input ) {
+        char buf[256];
+        LOG_WARN_MSG( "Could not open " << file << ": " << strerror_r(errno, buf, sizeof(buf)) );
+        return SOMAXCONN;
+    }
+
+    int result = SOMAXCONN;
+    input >> result;
+    if ( !input ) {
+        LOG_WARN_MSG( "Could not convert value from " << file << " into a number" );
+    }
+
+    return result;
 }
 
 void

@@ -37,27 +37,26 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-
 LOG_DECLARE_FILE("mmcs.console");
-
 
 using namespace std;
 
 using mmcs::common::Properties;
 
-
 namespace mmcs {
 namespace console {
 
-
 ExternalCommand*
-ExternalCommand::build(std::string& name, std::string& description)
+ExternalCommand::build(
+        const std::string& name, 
+        const std::string& description
+        )
 {
     Attributes commandAttributes;
     commandAttributes.requiresBlock(false);            // does not require a BlockController object
     commandAttributes.requiresConnection(false);       // does not require  mc_server connections
     commandAttributes.requiresTarget(false);           // does not require a BlockControllerTarget object
-    commandAttributes.mmcsConsoleCommand(true);
+    commandAttributes.bgConsoleCommand(true);
     commandAttributes.externalCommand(true);
     commandAttributes.helpCategory(common::DEFAULT);
     return new ExternalCommand(name.c_str(), description.c_str(), commandAttributes);
@@ -82,7 +81,7 @@ ExternalCommand::runcmd(
     // see if our executable exists in any of them.
     tokenizer pathtok(pathstring, boost::char_separator<char>(":"));
     bool found = false;
-    for(tokenizer::iterator dir = pathtok.begin(); dir != pathtok.end(); ++dir) {
+    for (tokenizer::iterator dir = pathtok.begin(); dir != pathtok.end(); ++dir) {
         const std::string filestring = *dir + "/" + executable;
         if(boost::filesystem::exists(filestring)) {
             found = true;
@@ -91,7 +90,7 @@ ExternalCommand::runcmd(
         }
     }
 
-    if(!found) {
+    if (!found) {
         reply << mmcs_client::ABORT << "Command " << executable << " not found in command path." << mmcs_client::DONE;
         return;
     }
@@ -101,7 +100,7 @@ ExternalCommand::runcmd(
     int pipefd;
     const bgq::utility::ScopeGuard logGuard(boost::bind(&::close, boost::ref(pipefd)));
     std::string errorstring;
-    LOG_DEBUG_MSG( "using properties file " << Properties::getProperties()->getFilename() );
+    LOG_DEBUG_MSG( "Using properties file " << Properties::getProperties()->getFilename() );
     const pid_t child_pid = Exec::fexec(
             pipefd,
             command.str(),
@@ -159,12 +158,11 @@ ExternalCommand::execute(
 
     LOG_DEBUG_MSG("Executing external command " << args[0]);
 
-    for(std::deque<std::string>::const_iterator it = args.begin();
-        it != args.end(); ++it) {
+    for (std::deque<std::string>::const_iterator it = args.begin(); it != args.end(); ++it) {
         command << *it << " ";
     }
 
-    LOG_DEBUG_MSG("command line: " << command.str());
+    LOG_DEBUG_MSG("Command line: " << command.str());
 
     runcmd(reply, command.str(), args[0]);
 }

@@ -121,18 +121,39 @@ Signal::impl(
         return;
     }
 
-
     // job has to be running to signal it
     if ( _job->status().get() != Status::Running ) {
         _error = runjob::commands::error::job_status_invalid;
         switch( number ) {
             case SIGKILL:
             case bgcios::jobctl::SIGHARDWAREFAILURE:
-                _message << "waiting for job to begin " << Status::toString(Status::Running) << " before delivering signal " << number;
+                _message << "Waiting for job to begin " << Status::toString(Status::Running) << " before delivering signal " << number << ". ";
                 this->startTimer( number, timeout );
                 break;
             default:
-                _message << "cannot deliver signal " << number << " when status is " << std::string(_job->status());
+                _message << "Cannot deliver signal " << number << " when status is " << std::string(_job->status()) << ". ";
+                break;
+        }
+
+        LOG_WARN_MSG( _message.str() );
+        return;
+    }
+
+    // another signal cannot be outstanding
+    if ( _job->_outstandingSignal ) {
+        _error = runjob::commands::error::job_already_dying;
+        switch( number ) {
+            case SIGKILL:
+            case bgcios::jobctl::SIGHARDWAREFAILURE:
+                _message <<
+                    "Waiting for signal " << _job->_outstandingSignal << 
+                    " to be delivered before delivering signal " << number << ". ";
+                this->startTimer( number, timeout );
+                break;
+            default:
+                _message <<
+                    "Cannot deliver signal " << number << " when signal " <<
+                    _job->_outstandingSignal << " is in flight. ";
                 break;
         }
 
@@ -170,6 +191,7 @@ Signal::impl(
     
     if ( count ) {
         LOG_INFO_MSG( "sent signal " << number );
+        _job->_outstandingSignal = number;
     }
 
     if ( this->startTimer(number, timeout) ) {

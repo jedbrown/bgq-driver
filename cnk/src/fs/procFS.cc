@@ -168,7 +168,7 @@ bool procFS::isMatch(const char *pathname)
     }
     
     Kernel_Lock(&ShareLock);    
-    findByName(pathname, entry);
+    findByName(pathname, entry, true);
     Kernel_Unlock(&ShareLock);
     
     if(entry)

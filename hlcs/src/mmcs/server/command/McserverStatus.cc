@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "McserverStatus.h"
 
 #include "../BlockControllerBase.h"
@@ -30,14 +29,11 @@
 
 #include <control/include/mcServer/MCServerRef.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 McserverStatus*
 McserverStatus::build() {
@@ -57,7 +53,7 @@ McserverStatus::execute(
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     using namespace MCServerMessageSpec;
 
@@ -66,7 +62,9 @@ McserverStatus::execute(
     BlockControllerBase::mcserver_connect(temp, pController->getUser().getUser(), reply);
     const boost::scoped_ptr<MCServerRef> mcServer( temp );
 
-    if ( reply.getStatus() ) return;
+    if ( reply.getStatus() ) {
+        return;
+    }
 
     MCServerMessageSpec::StatusRequest mcStatusRequest;
     if ( args.empty() ) {
@@ -74,15 +72,14 @@ McserverStatus::execute(
     } else if ( args.size() == 1 ) {
         mcStatusRequest._expression.push_back( args[0] );
     } else {
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         return;
     }
 
     MCServerMessageSpec::StatusReply   mcStatusReply;
     mcServer->status(mcStatusRequest, mcStatusReply);
 
-    if (mcStatusReply._rc)
-    {
+    if (mcStatusReply._rc) {
         reply << mmcs_client::FAIL << mcStatusReply._rt << mmcs_client::DONE;
         return;
     }
@@ -110,11 +107,12 @@ McserverStatus::execute(
 void
 McserverStatus::help(
         deque<string> args,
-        mmcs_client::CommandReply& reply)
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
-        << ";display mcServer status"
-        << mmcs_client::DONE;
+          << ";Display mcServer status"
+          << mmcs_client::DONE;
 }
 
 

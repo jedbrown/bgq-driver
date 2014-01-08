@@ -77,7 +77,7 @@ public:
 	 * Get the refCode
 	 * @return refCode
 	 */
-	virtual const uint32_t msgId() const = 0;
+	virtual uint32_t msgId() const = 0;
 
 	/**
 	 * Get the time the event was created 
@@ -90,7 +90,7 @@ public:
 	 * has been through the handler chain 
 	 * @return boolean handled
 	 */
-	virtual const bool handled() const = 0;
+	virtual bool handled() const = 0;
 
 	/**
 	 * Get the value associated with the key

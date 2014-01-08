@@ -21,43 +21,49 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "ConnectionMonitor.h"
 
 #include "command/MmcsServerCmd.h"
+#include "common/ConsoleController.h"
 
 #include "libmmcs_client/ConsolePort.h"
 
 #include <utility/include/Log.h>
 
-
 LOG_DECLARE_FILE( "mmcs.console" );
-
 
 namespace mmcs {
 namespace console {
 
+ConnectionMonitor::ConnectionMonitor(
+        common::ConsoleController* p
+        ) :
+    _controller(p)
+{
+
+}
 
 void*
 ConnectionMonitor::threadStart()
 {
     LOG_DEBUG_MSG("Starting");
-    while(!isThreadStopping()) {
+    while (!isThreadStopping()) {
         try {
-            if(_controller->getConsolePort()) {
-                LOG_TRACE_MSG("Checking connection to mmcs_server");
+            if (_controller->getConsolePort()) {
                 _controller->getConsolePort()->checkConnection();
                 sleep(1);
             } else {
                 LOG_INFO_MSG("Connecting to mmcs_server");
                 mmcs_client::CommandReply rep;
                 console::command::MmcsServerCmd::reconnect_to_server(rep, _controller);
+                if ( rep.getStatus() ) {
+                    sleep(5);
+                }
             }
-        } catch(const mmcs_client::ConsolePort::Error& e) {
-            LOG_ERROR_MSG("Console disconnected from server.  " << e.what()
-                          << "  Attempting to reconnect.");
-            mmcs_client::CommandReply rep;
-            console::command::MmcsServerCmd::reconnect_to_server(rep, _controller);
+        } catch (const mmcs_client::ConsolePort::Error& e) {
+            delete _controller->getConsolePort();
+            _controller->setConsolePort(NULL);
+            LOG_ERROR_MSG("Console disconnected from server. " << e.what() );
         }
     }
     LOG_DEBUG_MSG("Ending");

@@ -27,7 +27,7 @@
  *
  * \section SYNOPSIS
  *
- * runjob_mux_log_level [OPTIONS]
+ * runjob_mux_log_level [OPTIONS] [logger=level [... logger=level]]
  *
  * \section DESCRIPTION
  *

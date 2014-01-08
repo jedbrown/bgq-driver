@@ -267,7 +267,7 @@ bool shmFS::compactMemorySpace()
 uint64_t shmFS::access(const char *pathname, int mode)
 {
     ShmMgrEntry_t* entry = NULL;
-    uint64_t rc = findByName(pathname, entry);
+    uint64_t rc = findByName(pathname, entry, true);
     if ( CNK_RC_IS_SUCCESS(rc) )
     {
         touchAccess(entry);
@@ -305,7 +305,7 @@ uint64_t shmFS::chdir(const char *path)
 uint64_t shmFS::chmod(const char *pathname, mode_t mode)
 {
     ShmMgrEntry_t* entry = NULL;
-    uint64_t rc = findByName(pathname, entry);
+    uint64_t rc = findByName(pathname, entry, true);
     if ( CNK_RC_IS_SUCCESS(rc) )
     {
         touchAccess(entry);
@@ -317,7 +317,7 @@ uint64_t shmFS::chmod(const char *pathname, mode_t mode)
 uint64_t shmFS::chown(const char *pathname, uid_t uid, gid_t gid)
 {
     ShmMgrEntry_t* entry = NULL;
-    uint64_t rc = findByName(pathname, entry);
+    uint64_t rc = findByName(pathname, entry, true);
     if ( CNK_RC_IS_SUCCESS(rc) )
     {
         touchAccess(entry);
@@ -341,9 +341,18 @@ uint64_t shmFS::close(int fd)
     entry->LinkCount--;
     File_FreeFD(fd);
     
-    if((entry->LinkCount > 0x80000000)&&((entry->LinkCount & 0xffff) == 0))  // file was marked for deletion
+    if((entry->markForDelete) && (entry->LinkCount == 0))  // file was marked for deletion
     {
         entry->owner = NULL;
+        for ( uint32_t index = 0; index < SHM_MAX_OPENS; index++ )
+        {
+            if(( SharedPool[ index ].owner == getShmManager()) &&
+               ( SharedPool[ index ].isHardLink) &&
+               ( SharedPool[ index ].hardLinkPtr == entry))
+            {
+                SharedPool[ index ].owner = NULL;
+            }
+        }
     }
     Kernel_Unlock(&ShareLock);
     
@@ -643,7 +652,7 @@ uint64_t shmFS::lseek(int fd, off_t offset, int whence)
             }
             break;
         case SEEK_END:
-            if((entry->AllocatedSize + offset > entry->AllocatedSize) || (entry->AllocatedSize + offset < 0))
+            if((entry->AllocatedSize + offset > entry->AllocatedSize) || ((int64_t)entry->AllocatedSize + offset < 0))
                 rc = CNK_RC_FAILURE(EINVAL);
             else
             {
@@ -658,6 +667,60 @@ uint64_t shmFS::lseek(int fd, off_t offset, int whence)
     
     Kernel_Unlock(&ShareLock);
     return rc;
+}
+
+uint64_t shmFS::link(const char *path, const char *link)
+{
+    uint64_t rc;
+    Kernel_Lock(&ShareLock);
+    
+    ShmMgrEntry_t* sourceEntry = NULL;
+    rc = findByName(path, sourceEntry, true);
+    if(rc)
+    {
+        Kernel_Unlock(&ShareLock);
+        return rc;
+    }
+    
+    ShmMgrEntry_t* entry = NULL;
+    rc = findByName(link, entry, true);
+    if(entry)
+    {
+        rc = EEXIST;
+        Kernel_Unlock(&ShareLock);
+        return rc;
+    }
+    
+    int x;
+    rc = ENOSPC;
+    for(x=0; x<SHM_MAX_OPENS; x++)
+    {
+        if(SharedPool[x].owner == NULL)
+        {
+            memset(&SharedPool[x], 0, sizeof(SharedPool[x]));
+            entry = &SharedPool[x];
+            entry->owner = getShmManager();
+            entry->isHardLink = true;
+            entry->hardLinkPtr = sourceEntry;
+            strncpy(entry->FileName, link, sizeof(entry->FileName));
+            sourceEntry->LinkCount++;
+            rc = 0;
+            break;
+        }
+    }
+    Kernel_Unlock(&ShareLock);
+    
+    return rc;
+}
+
+uint64_t shmFS::lstat(const char *pathname, struct stat *statbuf)
+{
+   return stat64(pathname, (struct stat64 *)statbuf);
+}
+
+uint64_t shmFS::lstat64(const char *pathname, struct stat64 *statbuf)
+{
+   return stat64(pathname, (struct stat64 *)statbuf);
 }
 
 uint64_t shmFS::mkdir(const char *path, mode_t mode)
@@ -723,7 +786,7 @@ uint64_t shmFS::open(const char* pathname, int oflags, mode_t mode)
 
    // See if handle for that pathname already assigned.
    ShmMgrEntry_t* entry = NULL;
-   uint64_t rc = findByName(pathname, entry);
+   uint64_t rc = findByName(pathname, entry, true);
    if ( CNK_RC_IS_SUCCESS(rc) )
    {
        touchAccess(entry);
@@ -749,6 +812,15 @@ uint64_t shmFS::open(const char* pathname, int oflags, mode_t mode)
        
        // Need to allocate descriptor for existing file.
        TRACE( TRACE_ShmFS, ("(I) shmFS::open%s: found existing file path=%s oflags=%08x rc=%s\n", whoami(), pathname, oflags, CNK_RC_STRING(rc)) );
+       return rc;
+   }
+   
+   // File not found and O_CREAT not specified, return error.  
+   if((oflags & O_CREAT) == 0)
+   {
+       Kernel_Unlock(&ShareLock);
+       
+       rc = CNK_RC_FAILURE(ENOENT);
        return rc;
    }
    
@@ -799,6 +871,12 @@ uint64_t shmFS::open(const char* pathname, int oflags, mode_t mode)
            entry->UserID = GetMyAppState()->UserID;
            entry->GroupID = GetMyAppState()->GroupID;
            File_SetCurrentOffset(fd, 0);
+#if CONFIG_SHMFILEIMPLICITL2ATOMIC
+           if(strstr(entry->FileName, "l2atomic") != 0)
+           {
+               entry->needAtomic = true;
+           }
+#endif
            rc = CNK_RC_SUCCESS(fd);
        }
    }
@@ -875,7 +953,7 @@ uint64_t shmFS::stat64(const char *pathname, struct stat64 *statbuf)
 
    // See if the pathname is a valid shared memory file.
    ShmMgrEntry_t* entry;
-   uint64_t rc = findByName(pathname, entry);
+   uint64_t rc = findByName(pathname, entry, true);
 
    if ( CNK_RC_IS_SUCCESS(rc) )
    {
@@ -908,17 +986,37 @@ uint64_t shmFS::unlink(const char* pathname)
 {
    Kernel_Lock(&ShareLock);
    ShmMgrEntry_t* entry;
-   uint64_t rc = findByName(pathname, entry);
    
+   uint64_t rc = findByName(pathname, entry, false);
+   if(entry != NULL)
+   {
+       if(entry->isHardLink)
+       {
+           while(entry->isHardLink)
+           {
+               entry = entry->hardLinkPtr;
+           }
+           entry->LinkCount--;
+       }
+   }
    if(entry != NULL)
    {
        if(entry->LinkCount == 0)
        {
            entry->owner = NULL;
+           for ( uint32_t index = 0; index < SHM_MAX_OPENS; index++ )
+           {
+               if(( SharedPool[ index ].owner == getShmManager()) &&
+                  ( SharedPool[ index ].isHardLink) &&
+                  ( SharedPool[ index ].hardLinkPtr == entry))
+               {
+                   SharedPool[ index ].owner = NULL;
+               }
+           }
        }
        else
        {
-           entry->LinkCount |= 0xf0000000;
+           entry->markForDelete = true;
        }
    }
    Kernel_Unlock(&ShareLock);
@@ -931,7 +1029,7 @@ uint64_t shmFS::utime(const char *pathname, const struct utimbuf *utimes)
 {
     Kernel_Lock(&ShareLock);
     ShmMgrEntry_t* entry;
-    uint64_t rc = findByName(pathname, entry);
+    uint64_t rc = findByName(pathname, entry, true);
     if ( CNK_RC_IS_SUCCESS(rc) )
     {
         entry->lastAccess = ConvertTimeToCycles(utimes->actime);
@@ -997,7 +1095,7 @@ uint64_t shmFS::getFilenames(uint32_t& numfiles, char filenames[][128])
     {
         if(numfiles >= 256)
             break;
-        if( SharedPool[ index ].owner != NULL)
+        if( SharedPool[ index ].owner == getShmManager())
         {
             entry = &SharedPool[index];
             strncpy(filenames[numfiles++], entry->FileName, sizeof(filenames[0]));
@@ -1012,7 +1110,7 @@ uint64_t shmFS::getFileContents(const char* pathname, size_t offset, size_t& len
     Kernel_Lock(&ShareLock);
 
     ShmMgrEntry_t* entry;
-    uint64_t rc = findByName(pathname, entry);
+    uint64_t rc = findByName(pathname, entry, true);
     if (CNK_RC_IS_FAILURE(rc))
     {
         Kernel_Unlock(&ShareLock);
@@ -1043,7 +1141,7 @@ uint64_t shmFS::getFileContents(const char* pathname, size_t offset, size_t& len
 
 }
 
-uint64_t shmFS::findByName(const char *pathname, ShmMgrEntry_t*& entry)
+uint64_t shmFS::findByName(const char *pathname, ShmMgrEntry_t*& entry, bool traverseLink)
 {
    entry = NULL;
    
@@ -1051,11 +1149,19 @@ uint64_t shmFS::findByName(const char *pathname, ShmMgrEntry_t*& entry)
    for ( uint32_t index = 0; index < SHM_MAX_OPENS; index++ )
    {
        // Matching pathname?
-       if(( SharedPool[ index ].owner != NULL) &&
-          ( strncmp(SharedPool[ index ].FileName, pathname, APP_MAX_PATHNAME) == 0 ))
+       if(( SharedPool[ index ].owner == getShmManager()) &&
+          ( strncmp(SharedPool[ index ].FileName, pathname, APP_MAX_PATHNAME) == 0 ) &&
+          ( SharedPool[ index ].markForDelete == 0))
        {
            entry = &SharedPool[index];
            TRACE( TRACE_ShmFS, ("(I) shmFS::findByName%s: found %s at slot %d\n", whoami(), pathname, index) );
+           if(traverseLink)
+           {
+               while(entry->isHardLink)
+               {
+                   entry = entry->hardLinkPtr;
+               }
+           }
            return CNK_RC_SUCCESS(0);
        }
    }
@@ -1077,6 +1183,10 @@ uint64_t shmFS::findByDescriptor(int fd, ShmMgrEntry_t*& entry)
    else
    {
        entry = &SharedPool[slot];
+       while(entry->isHardLink)
+       {
+           entry = entry->hardLinkPtr;
+       }
    }
    
    TRACE( TRACE_ShmFS, ("(I) shmFS::findByDescriptor%s: descriptor %d is at slot %d\n", whoami(), fd, slot) );

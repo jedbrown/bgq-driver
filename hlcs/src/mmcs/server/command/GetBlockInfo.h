@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_GET_BLOCK_INFO_H_
 #define MMCS_SERVER_COMMAND_GET_BLOCK_INFO_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
  ** get_block_info [<blockId>]
@@ -42,9 +38,8 @@ class GetBlockInfo : public common::AbstractCommand
 {
     public:
     GetBlockInfo(const char* name, const char* description, const Attributes& attributes)
-            : AbstractCommand(name,description,attributes) { usage = "get_block_info <blockId>"; }
+            : AbstractCommand(name,description,attributes) { _usage = "get_block_info <blockId>"; }
         static  GetBlockInfo* build();    // factory method
-        static  std::string cmdname() { return "get_block_info"; }
         void execute(std::deque<std::string> args,
                 mmcs_client::CommandReply& reply,
                 common::ConsoleController* pController,

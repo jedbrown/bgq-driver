@@ -24,7 +24,6 @@
 #include "cxxsockets/SecureTCPSocket.h"
 
 #include "cxxsockets/FileLocker.h"
-#include "cxxsockets/error.h"
 
 #include "portConfiguration/SslConfiguration.h"
 
@@ -41,11 +40,74 @@ boost::once_flag init_once_flag = BOOST_ONCE_INIT;
 void
 init_ssl()
 {
-    LOG_DEBUG_MSG( "initializing SSL library" );
+    LOG_TRACE_MSG( "Initializing SSL library." );
     SSL_library_init();
 }
 
+void
+getErrStr(
+        std::ostringstream& message
+        )
+{
+    size_t count = 0;
+    while ( 1 ) {
+        const unsigned long error = ERR_get_error();
+        if ( !error ) break;
+
+        if ( ++count > 1 ) {
+            message << ", ";
+        }
+
+        char buf[256] = {0};
+        ERR_error_string_n(error, buf, sizeof(buf));
+        
+        message << buf;
+    }
 }
+
+std::string
+printSSLError(
+        SSL* ssl,
+        const int rc
+        )
+{
+    const int sslerror = SSL_get_error(ssl, rc);
+    std::ostringstream error;
+    switch (sslerror) {
+        case SSL_ERROR_NONE:
+            error << "SSL_ERROR_NONE: ";
+            break;
+        case SSL_ERROR_ZERO_RETURN:
+            error << "SSL_ERROR_ZERO_RETURN: ";
+            break;
+        case SSL_ERROR_WANT_READ:
+            error << "SSL_ERROR_WANT_READ: ";
+            break;
+        case SSL_ERROR_WANT_WRITE:
+            error << "SSL_ERROR_WANT_WRITE: ";
+            break;
+        case SSL_ERROR_WANT_CONNECT:
+            error << "SSL_ERROR_WANT_CONNECT: ";
+            break;
+        case SSL_ERROR_WANT_ACCEPT:
+            error << "SSL_ERROR_WANT_ACCEPT: ";
+            break;
+        case SSL_ERROR_WANT_X509_LOOKUP:
+            error << "SSL_ERROR_WANT_X509_LOOKUP: ";
+            break;
+        case SSL_ERROR_SYSCALL:
+            error << "SSL_ERROR_SYSCALL: ";
+            break;
+        case SSL_ERROR_SSL:
+            error << "SSL_ERROR_SSL: ";
+            break;
+    }
+    SSL_load_error_strings();
+    getErrStr(error);
+    return error.str();
+}
+
+} // anonymous namespace
 
 namespace CxxSockets {
 
@@ -61,11 +123,20 @@ SecureTCPSocket::SecureTCPSocket(
 
     socket->releaseFd();
 
-    this->MakeSecure( port_config );
+    try {
+        this->MakeSecure( port_config );
+    } catch ( const std::exception& e ) {
+        LOG_DEBUG_MSG( e.what() );
+
+        // clean up memory for resources we potentially allocated
+        if (_ctx) SSL_CTX_free(_ctx);
+        if (_ssl) SSL_free(_ssl);
+        throw;
+    }
 }
 
 SecureTCPSocket::SecureTCPSocket(
-        const int family, 
+        const int family,
         const int fd
         ) :
     TCPSocket(family, fd)
@@ -77,75 +148,17 @@ SecureTCPSocket::SecureTCPSocket(
 
 SecureTCPSocket::~SecureTCPSocket()
 {
-    CXXSOCKET_LOGGING_DECLARE_FD_MDC; CXXSOCKET_LOGGING_DECLARE_FT_MDC;
-    LOG_TRACE_MSG(__FUNCTION__ << " " << _ssl << " " << _fileDescriptor);
-    if(_ctx)
+    // LOG_TRACE_MSG(__FUNCTION__ << " " << _ssl << " " << _fileDescriptor);
+    if (_ctx) {
         SSL_CTX_free(_ctx);
-    if(_ssl)            
+    }
+
+    if (_ssl) {
         SSL_free(_ssl);
+    }
+
     _ctx = 0;
     _ssl = 0;
-}
-
-
-void
-getErrStr(
-        std::ostringstream& error
-        )
-{
-    int errorint = 0;    
-    do {
-        errorint = ERR_get_error();
-        char* errorstring = (char*)(malloc(128));
-        bzero(errorstring, 128);
-        ERR_error_string(errorint, errorstring);
-        error << errorstring << ", ";
-        free(errorstring);
-    } while (errorint != 0);
-    return;
-}
-
-std::string
-SecureTCPSocket::printSSLError(
-        SSL* ssl,
-        const int rc
-        )
-{
-    int sslerror = SSL_get_error(ssl, rc);
-    std::ostringstream error;
-    switch(sslerror) {
-    case SSL_ERROR_NONE:
-        error << "SSL_ERROR_NONE";
-        break;
-    case SSL_ERROR_ZERO_RETURN:
-        error << "SSL_ERROR_ZERO_RETURN";
-        break;
-    case SSL_ERROR_WANT_READ:
-        error << "SSL_ERROR_WANT_READ";
-        break;
-    case SSL_ERROR_WANT_WRITE:
-        error << "SSL_ERROR_WANT_WRITE";
-        break;
-    case SSL_ERROR_WANT_CONNECT:
-        error << "SSL_ERROR_WANT_CONNECT";
-        break;
-    case SSL_ERROR_WANT_ACCEPT:
-        error << "SSL_ERROR_WANT_ACCEPT";
-        break;
-    case SSL_ERROR_WANT_X509_LOOKUP:
-        error << "SSL_ERROR_WANT_X509_LOOKUP";
-        break;
-    case SSL_ERROR_SYSCALL:
-        error << "SSL_ERROR_SYSCALL";
-        break;
-    case SSL_ERROR_SSL:
-        error << "SSL_ERROR_SSL: ";
-        break;
-    }
-    SSL_load_error_strings();
-    getErrStr(error);
-    LOG_DEBUG_MSG(error.str());
-    return error.str();
 }
 
 std::string
@@ -153,140 +166,145 @@ extract_peer_cn(
         SSL* ssl
         )
 {
-    X509 *cert(SSL_get_peer_certificate(ssl));
-    int error = 0;
+    const boost::shared_ptr<X509> cert(
+            SSL_get_peer_certificate( ssl ),
+            boost::bind( &X509_free, _1)
+            );
     if ( ! cert ) {
-        std::string estr = SecureTCPSocket::printSSLError(ssl, error);
-        throw HardError(error, "failed to get peer certificate" + estr);
+        int error = 0;
+        const std::string estr = printSSLError(ssl, error);
+        throw HardError(error, "Failed to get peer certificate " + estr);
     }
 
-    X509_NAME *subject_name(X509_get_subject_name( cert ));
+    X509_NAME *subject_name(X509_get_subject_name( cert.get() ));
 
     if ( ! subject_name ) {
-        std::string estr = SecureTCPSocket::printSSLError(ssl, error);
-        throw HardError(error, "failed to get peer subject name" + estr);
+        int error = 0;
+        const std::string estr = printSSLError(ssl, error);
+        throw HardError(error, "Failed to get peer subject name " + estr);
     }
 
     char peer_cn[256];
-    int rc = X509_NAME_get_text_by_NID( subject_name, NID_commonName, peer_cn, sizeof ( peer_cn ) );
+    const int rc = X509_NAME_get_text_by_NID( subject_name, NID_commonName, peer_cn, sizeof(peer_cn) );
 
     if ( rc == -1 ) {
-        std::string estr = SecureTCPSocket::printSSLError(ssl, error);
-        throw HardError(error, "failed to get peer CN from certificate" + estr);
+        int error = 0;
+        const std::string estr = printSSLError(ssl, error);
+        throw HardError(error, "Failed to get peer CN from certificate " + estr);
     }
 
     return std::string(peer_cn);
 }
 
-int
+void
 SecureTCPSocket::ServerHandshake(
         const bgq::utility::ServerPortConfiguration& port_config
         )
 {
-    CXXSOCKET_LOGGING_DECLARE_FD_MDC; CXXSOCKET_LOGGING_DECLARE_FT_MDC;
     const std::string administrative_cn( port_config.getAdministrativeCn() );
     const std::string command_cn( port_config.getCommandCn() );
-    const bool administrative_only( port_config.getConnectionType() == 
-                                    bgq::utility::ServerPortConfiguration::ConnectionType::AdministrativeOnly );
+    const bool administrative_only(
+            port_config.getConnectionType() ==
+            bgq::utility::ServerPortConfiguration::ConnectionType::AdministrativeOnly
+            );
+
     // Get the client's CN so can compare it vs the expected CNs.
-    std::string client_cn;
+    const std::string client_cn( extract_peer_cn(_ssl) );
+    LOG_TRACE_MSG( "Client's CN='" << client_cn << "'" );
 
-    client_cn = extract_peer_cn(_ssl);
-
-    LOG_DEBUG_MSG( "Client's CN='" << client_cn << "'" );
-
-    if(client_cn == administrative_cn) {
+    if (client_cn == administrative_cn) {
         _utype = Administrator;
     } else if (client_cn == command_cn) {
         _utype = Normal;
     } else {
-        throw std::runtime_error(std::string() + 
-                                 "client sent certificate with invalid CN. The client's CN is '" 
-                                 + client_cn + "'");
+        throw std::runtime_error("Client sent certificate with invalid CN. The client's CN is '" + client_cn + "'");
     }
 
-    if ( administrative_only && (_utype != Administrator ) ) {
-        throw std::runtime_error(std::string() + 
-                                 "only accepting administrative certificate and client using command certificate");
+    if ( administrative_only && (_utype != Administrator) ) {
+        throw std::runtime_error("Only accepting administrative certificate and client using command certificate.");
     }
 
     // Read the user info off the socket.
-    Message msg;
+    char buffer[5];
+    memset( buffer, 0, sizeof(buffer) );
     SecureTCPReceiveFunctor recvf(_ssl);
-    InternalReceiveUnManaged(msg, 4, 0, recvf);
-    uint32_t user_id_size;
-    if(msg.str() == "") {
-        throw HardError(0,"No User ID received on this connection.");
+    int rc = recvf( _fileDescriptor, buffer, sizeof(buffer) - 1 );
+
+    if (rc < 0) {
+        char buf[256];
+        strerror_r( errno, buf, sizeof(buf) );
+        throw HardError(errno, std::string() + "No User ID received on this connection:" + buf);
+    } else if ( rc == 0 ) {
+        throw HardError(0, "No User ID size received on this connection." );
+    } else if ( rc != sizeof(buffer) - 1 ) {
+        throw HardError(0, 
+                "Received " + boost::lexical_cast<std::string>(rc) + " bytes of expected " +
+                boost::lexical_cast<std::string>(sizeof(buffer) - 1) + " user ID size bytes"
+                );
     }
 
+    uint32_t user_id_size;
     try {
-        user_id_size = boost::lexical_cast<uint32_t>(msg.str());
+        user_id_size = boost::lexical_cast<uint32_t>(buffer);
     } catch (const boost::bad_lexical_cast& e) {
-        throw HardError(0, e.what());
+        throw HardError(0, std::string() + "Could not convert user size (" + buffer + ") to a number: " + e.what());
     }
 
     if ( user_id_size == 0 ) {
         // No user info provided. Only if using administrative certificate is this ok.
         if ( _utype != Administrator ) {
-            throw std::runtime_error(std::string() +  
-                                     "handshake with client failed because user info was not sent and the administrative certificate wasn't used");
+            throw std::runtime_error(std::string() +
+                                     "Handshake with client failed because user info was not sent and the administrative certificate was not used.");
         }
-        
-        // only OK because using the administrative certificate.
-        LOG_INFO_MSG( "Client didn't send user info but used administrative certificate." );
-        
-        return 0;
+
+        // Only OK because using the administrative certificate.
+        LOG_TRACE_MSG( "Client didn't send user info but used administrative certificate." );
+
+        return;
     }
 
-    Message uidmsg;
-    const unsigned int bytes = InternalReceiveUnManaged(uidmsg, user_id_size, 0, recvf);
-    if(bytes != user_id_size) {
-        std::ostringstream msg;
-        msg << "Unable to receive user id. " << bytes << " bytes received, expected " << user_id_size << " bytes.";
-        LOG_ERROR_MSG(msg.str());
-        throw HardError(0, msg.str());
+    std::vector<char> uid( user_id_size );
+    rc = recvf( _fileDescriptor, &uid[0], user_id_size );
+
+    if (rc < 0) {
+        char buf[256];
+        strerror_r( errno, buf, sizeof(buf) );
+        throw HardError(errno, std::string() + "No User ID received on this connection:" + buf);
+    } else if ( rc == 0 ) {
+        throw HardError(0, "No User ID received on this connection." );
+    } else if ( static_cast<uint32_t>(rc) != user_id_size ) {
+        throw HardError(0, 
+                "Received " + boost::lexical_cast<std::string>(rc) + " bytes of expected " +
+                boost::lexical_cast<std::string>(user_id_size) + " bytes"
+                );
     }
 
-    LOG_DEBUG_MSG("Received serialized user ID: " << uidmsg.str());
-
-    const std::string buf( uidmsg.str() );
-    const std::vector<char> ubuff(buf.begin(), buf.end());
-    _uid_ptr.reset( new bgq::utility::UserId(ubuff) );
-    
-    return 0;
+    _uid_ptr.reset( new bgq::utility::UserId(uid) );
+    LOG_TRACE_MSG("Received serialized user ID: " << _uid_ptr->getUser() );
 }
 
-int
+void
 SecureTCPSocket::ClientHandshake(
         const bgq::utility::ClientPortConfiguration& port_config
         )
 {
-    CXXSOCKET_LOGGING_DECLARE_FD_MDC; CXXSOCKET_LOGGING_DECLARE_FT_MDC;
     // Get the server's CN so can compare it vs the expected administrative certificate CN.
-    std::string server_cn;
-
-    try {
-        server_cn = extract_peer_cn(_ssl);
-    } catch (const std::exception& e) {
-        std::string error_str( std::string() + "handshake failed, couldn't get commonName from subject name from server's certificate" );
-        LOG_ERROR_MSG( error_str );
-        throw HardError(0, error_str); 
-    }
-
-    LOG_INFO_MSG( "Server's CN='" << server_cn << "'" );
+    const std::string server_cn( extract_peer_cn(_ssl) );
+    LOG_TRACE_MSG( "Server's CN='" << server_cn << "'" );
 
     if ( server_cn != port_config.getAdministrativeCn() ) {
-        std::string error_str( std::string() + "server sent invalid certificate with cn='" + server_cn + "' expected '" + port_config.getAdministrativeCn() + "'" );
-        throw HardError(0, error_str); 
+        const std::string error_str( std::string() + "Server sent invalid certificate with CN='" + server_cn + "' expected '" + port_config.getAdministrativeCn() + "'" );
+        LOG_DEBUG_MSG( error_str );
+        throw HardError(0, error_str);
     }
 
     // Send the user info.
-    //  Gather the user info and serialize it to a std::string.
-    //  Sends the length as 4 ascii bytes, then sends the user id
+    // Gather the user info and serialize it to a std::string.
+    // Sends the length as 4 ascii bytes, then sends the user id.
     bgq::utility::UserId user_id;
 
-    std::string user_id_str( user_id.serialize() );
-    uint32_t user_id_str_len( user_id_str.size() );
+    const std::string user_id_str( user_id.serialize() );
+    const size_t user_id_str_len( user_id_str.size() );
 
     std::ostringstream oss;
     oss.width( 4 );
@@ -297,11 +315,11 @@ SecureTCPSocket::ClientHandshake(
     msg << oss.str();
     msg << user_id_str;
 
-    LOG_TRACE_MSG ("Sending client uid =" << msg.str());
+    const std::string buffer( msg.str() );
+    LOG_TRACE_MSG("Sending client uid: " << buffer);
     SecureTCPSendFunctor sendf(_ssl);
-    InternalSendUnmanaged(msg, 0, sendf);
-
-    return 0;
+    sendf( _fileDescriptor, buffer.c_str(), buffer.size());
+    // FIXME check return code?
 }
 
 void
@@ -309,54 +327,53 @@ SecureTCPSocket::SetupCredentials(
         const bgq::utility::SslConfiguration& sslconfig
         )
 {
-    CXXSOCKET_LOGGING_DECLARE_FD_MDC; CXXSOCKET_LOGGING_DECLARE_FT_MDC;
-    LOG_DEBUG_MSG("Using cert file=" << sslconfig.getMyCertFilename());
+    LOG_TRACE_MSG("Using cert file=" << sslconfig.getMyCertFilename());
     int rc = SSL_CTX_use_certificate_chain_file(_ctx, sslconfig.getMyCertFilename().c_str());
-    if(rc != 1) {
+    if (rc != 1) {
         std::ostringstream errstr;
         getErrStr(errstr);
-        LOG_ERROR_MSG("Setting certificate chain file failed. " << errstr.str());
+        LOG_DEBUG_MSG("Setting certificate chain file failed: " << errstr.str());
         throw HardError(0, errstr.str());
     }
 
-    LOG_DEBUG_MSG("Using private key file=" << sslconfig.getMyPrivateKeyFilename());
+    LOG_TRACE_MSG("Using private key file=" << sslconfig.getMyPrivateKeyFilename());
     rc = SSL_CTX_use_PrivateKey_file(_ctx, sslconfig.getMyPrivateKeyFilename().c_str(), SSL_FILETYPE_PEM);
     if (!rc) {
         std::ostringstream errstr;
         getErrStr(errstr);
-        LOG_ERROR_MSG("Setting private key file failed. " << errstr.str());
+        LOG_DEBUG_MSG("Setting private key file failed: " << errstr.str());
         throw HardError(0, errstr.str());
     }
 
     char* certpath = 0;
     char* certfile = 0;
 
-    if(sslconfig.getCaCertificatesPath() != 0) {
-        // add verify path getCaCertificatesPath
-        LOG_DEBUG_MSG("Using CA path=" << sslconfig.getCaCertificatesPath());
+    if (sslconfig.getCaCertificatesPath() != 0) {
+        // Add verify path getCaCertificatesPath
+        LOG_TRACE_MSG("Using CA path=" << sslconfig.getCaCertificatesPath());
         certpath = (char*)(sslconfig.getCaCertificatesPath()->c_str());
     }
 
-    if(sslconfig.getCaCertificateFilename() != 0) {
-        LOG_DEBUG_MSG("Using CA filename " << *(sslconfig.getCaCertificateFilename()));
+    if (sslconfig.getCaCertificateFilename() != 0) {
+        LOG_TRACE_MSG("Using CA filename " << *(sslconfig.getCaCertificateFilename()));
         certfile = (char*)(sslconfig.getCaCertificateFilename()->c_str());
     }
 
     rc = SSL_CTX_load_verify_locations(_ctx, certfile, certpath);
-    if(rc == 0) {
+    if (rc == 0) {
         std::ostringstream errstr;
         getErrStr(errstr);
-        LOG_ERROR_MSG("Loading verify locations failed. " << errstr.str());
+        LOG_DEBUG_MSG("Loading verify locations failed: " << errstr.str());
         throw HardError(0, errstr.str());
     }
 
     // Default paths!
-    if(sslconfig.getCaUseDefaultPaths() == true) {
+    if (sslconfig.getCaUseDefaultPaths() == true) {
         rc = SSL_CTX_set_default_verify_paths(_ctx);
         if (rc == 0 ) {
             std::ostringstream errstr;
             getErrStr(errstr);
-            LOG_ERROR_MSG("Setting default very paths failed. " << errstr.str());
+            LOG_DEBUG_MSG("Setting default verify paths failed: " << errstr.str());
             throw HardError(0, errstr.str());
         }
     }
@@ -367,25 +384,27 @@ SecureTCPSocket::SetupContext(
         const bgq::utility::SslConfiguration& sslconf
         )
 {
-    CXXSOCKET_LOGGING_DECLARE_FD_MDC; CXXSOCKET_LOGGING_DECLARE_FT_MDC;
-    LOG_TRACE_MSG(__FUNCTION__);
-    if(_ssl || _ctx) return;
+    if (_ssl || _ctx) {
+        return;
+    }
 
     // Set up context
     _ctx = SSL_CTX_new(TLSv1_method());
-    if(!_ctx) {
+    if (!_ctx) {
         std::ostringstream errstr;
         getErrStr(errstr);
-        LOG_ERROR_MSG("Creating SSL context failed." << errstr.str());
+        LOG_ERROR_MSG("Creating SSL context failed: " << errstr.str());
+        // Should this code really just continue?
     }
 
     SSL_CTX_set_verify(_ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, 0);
     SetupCredentials(sslconf);
     _ssl = SSL_new(_ctx);
 
-    // Set up the bio
-    _cnnbio = BIO_new_socket(_fileDescriptor, BIO_NOCLOSE);
-    SSL_set_bio(_ssl, _cnnbio, _cnnbio);
+    // Set up the bio, the SSL object will own the bio so we don't need to
+    // explicitly free it with BIO_free
+    BIO* const cnnbio = BIO_new_socket(_fileDescriptor, BIO_NOCLOSE);
+    SSL_set_bio(_ssl, cnnbio, cnnbio);
 }
 
 void
@@ -393,39 +412,38 @@ SecureTCPSocket::MakeSecure(
         const bgq::utility::ClientPortConfiguration& port_config
         )
 {
-    CXXSOCKET_LOGGING_DECLARE_FD_MDC; CXXSOCKET_LOGGING_DECLARE_FT_MDC;
-    LOG_DEBUG_MSG("handshaking with remote host");
+    LOG_TRACE_MSG("Starting SSL handshake with remote host.");
     try {
-        bgq::utility::SslConfiguration sslconf = port_config.createSslConfiguration();
-        SetupContext(sslconf);
+        const bgq::utility::SslConfiguration sslconf = port_config.createSslConfiguration();
+        this->SetupContext(sslconf);
         // If keepalive isn't on, turn it on for the ssl connect
         int opt = 0;
         socklen_t optlen = sizeof(opt);
-        if(getsockopt(_fileDescriptor, SOL_SOCKET, SO_KEEPALIVE, &opt, &optlen)) {
+        if (getsockopt(_fileDescriptor, SOL_SOCKET, SO_KEEPALIVE, &opt, &optlen)) {
             throw HardError(errno, "Could not determine if keepalive was on while securing socket.");
         }
-        if(!opt) {
+        if (!opt) {
             setProbe(true,2,2,5);
         }
-        // ssl connect.
         const int rc = SSL_connect(_ssl);
-        if(!opt) // If we turned on keepalive, turn it back off.  Leave things as they were.
+        if (!opt) {  // If we turned on keepalive, turn it back off. Leave things as they were.
             setProbe(false);
-        if(rc < 0) {
-            const std::string errormsg = printSSLError(_ssl,rc);
-            LOG_ERROR_MSG(errormsg);
-            throw HardError(SSL_ERROR, errormsg);
         }
-        LOG_DEBUG_MSG("SSL connected");
+        if (rc < 0) {
+            const std::string errormsg = printSSLError(_ssl, rc);
+            LOG_DEBUG_MSG(errormsg);
+            throw HardError(-1, errormsg);
+        }
+        LOG_TRACE_MSG("SSL connected.");
         // Complete handshake
-        ClientHandshake(port_config);
-    } catch(const std::runtime_error& e) {
+        this->ClientHandshake(port_config);
+    } catch (const std::runtime_error& e) {
         std::ostringstream msg;
-        msg << "SSL handshake failed " << e.what();
-        LOG_ERROR_MSG(msg.str());
-        throw HardError(SSL_ERROR, msg.str());
+        msg << "SSL handshake failed: " << e.what();
+        LOG_DEBUG_MSG(msg.str());
+        throw HardError(-1, msg.str());
     }
-    LOG_DEBUG_MSG("authorization complete");
+    LOG_TRACE_MSG("SSL handshake with remote host completed successfully.");
 }
 
 void
@@ -434,154 +452,98 @@ SecureTCPSocket::MakeSecure(
         )
 {
     try {
-        bgq::utility::SslConfiguration sslconf = port_config.createSslConfiguration();
-        SetupContext(sslconf);
+        const bgq::utility::SslConfiguration sslconf = port_config.createSslConfiguration();
+        this->SetupContext(sslconf);
         const int rc = SSL_accept(_ssl);
-        if(rc <= 0) {
-            const std::string errormsg = SecureTCPSocket::printSSLError(_ssl, rc);
-            LOG_ERROR_MSG(errormsg);
-            throw HardError(SSL_ERROR, errormsg);
+        if (rc <= 0) {
+            const std::string errormsg = printSSLError(_ssl, rc);
+            LOG_DEBUG_MSG(errormsg);
+            throw HardError(-1, errormsg);
         }
-        LOG_DEBUG_MSG("ssl accept successful");
+        LOG_TRACE_MSG("SSL accept was successful.");
         ServerHandshake(port_config);
-        LOG_INFO_MSG("Accepted secure socket file descriptor " << _fileDescriptor);
+        LOG_TRACE_MSG("Accepted secure socket file descriptor " << _fileDescriptor);
     } catch (const std::runtime_error& e) {
         std::ostringstream msg;
-        msg << __FUNCTION__ << "() SSL handshake failed accepting new connection " << e.what();
-        LOG_ERROR_MSG(msg.str());
-        throw HardError(SSL_ERROR, msg.str());
+        msg << "SSL handshake failed accepting new connection: " << e.what();
+        LOG_DEBUG_MSG(msg.str());
+        throw HardError(-1, msg.str());
     }
 }
 
 void
 SecureTCPSocket::Connect(
-        const SockAddr& remote_sa, 
+        const SockAddr& remote_sa,
         const bgq::utility::ClientPortConfiguration& port_config
         )
 {
-    CXXSOCKET_LOGGING_DECLARE_FD_MDC; 
     FileLocker locker;
     LockFile(locker);
 
-    LOG_DEBUG_MSG("Connecting secure TCP socket.");
-
-    // Call the base unlocked, unsecured method and then
-    // do our own security work.
+    // Call the base unlocked, unsecured method and then do our own security work.
     TCPSocket::mConnect(remote_sa);
-    CXXSOCKET_LOGGING_DECLARE_FT_MDC;
     MakeSecure(port_config);
 }
 
 int
 SecureTCPSocket::Send(
-        const Message& msg, 
-        const int flags
+        const Message& msg
         )
 {
-    CXXSOCKET_LOGGING_DECLARE_FD_MDC; CXXSOCKET_LOGGING_DECLARE_FT_MDC;
     // We do the locking and build the functor for the
-    // send method we need to pass to the send logic
+    // send method we need to pass to the send logic.
     PthreadMutexHolder mutex;
     const int lockrc = LockSend(mutex);
 
-    if(lockrc != 0) {
+    if (lockrc != 0) {
         std::ostringstream msg;
-        if(lockrc != -1)
-            msg << "Send error.  Socket send side lock error: " << strerror(lockrc);
-        else
-            msg << "Send error.  Socket send side closed: " << 0;
-        LOG_INFO_MSG(msg.str());
-        throw SoftError(lockrc, msg.str());
-    }
-
-    SecureTCPSendFunctor sendf(_ssl);
-    return InternalSend(msg, flags, sendf);
-}
-
-int
-SecureTCPSocket::SendUnManaged(
-        const Message& msg, 
-        const int flags
-        )
-{
-    CXXSOCKET_LOGGING_DECLARE_FD_MDC; CXXSOCKET_LOGGING_DECLARE_FT_MDC;
-    PthreadMutexHolder mutex;
-    const int lockrc = LockSend(mutex);
-
-    if(lockrc != 0) {
-        std::ostringstream msg;
-        if(lockrc != -1)
-            msg << "SendUnManaged error.  Socket send side lock error: " << strerror(lockrc);
-        else
-            msg << "SendUnManaged error.  Socket send side closed: " << 0;
-        throw SoftError(lockrc, msg.str());
-    }
-
-    SecureTCPSendFunctor sendf(_ssl);
-    return InternalSendUnmanaged(msg, flags, sendf);
-}
-
-int
-SecureTCPSocket::Receive(
-        Message& msg, 
-        const int flags
-        )
-{
-    CXXSOCKET_LOGGING_DECLARE_FD_MDC; CXXSOCKET_LOGGING_DECLARE_FT_MDC;
-    PthreadMutexHolder mutex;
-    const int lockrc = LockReceive(mutex);
-
-    if(lockrc != 0) {
-        std::ostringstream msg;
-        if(lockrc != -1)
-            msg << "Receive error.  Socket receive side lock error: " << strerror(lockrc);
-        else
-            msg << "Receive error.  Socket receive side closed: " << 0;
+        if (lockrc != -1) {
+            msg << "Send error, socket send side lock error: " << strerror(lockrc);
+        } else {
+            msg << "Send error, socket send side closed.";
+        }
         LOG_DEBUG_MSG(msg.str());
         throw SoftError(lockrc, msg.str());
     }
 
-    SecureTCPReceiveFunctor recvf(_ssl);
-    return InternalReceive(msg, flags, recvf);
+    SecureTCPSendFunctor sendf(_ssl);
+    return InternalSend(msg, sendf);
 }
 
 int
-SecureTCPSocket::ReceiveUnManaged(
-        Message& msg, 
-        const unsigned int bytes, 
-        const int flags
+SecureTCPSocket::Receive(
+        Message& msg
         )
 {
-    CXXSOCKET_LOGGING_DECLARE_FD_MDC; CXXSOCKET_LOGGING_DECLARE_FT_MDC;
     PthreadMutexHolder mutex;
     const int lockrc = LockReceive(mutex);
 
-    if(lockrc != 0) {
-        std::ostringstream msg;
-        if(lockrc != -1)
-            msg << "ReceiveUnManaged error.  Socket receive side lock error: " << strerror(lockrc);
-        else
-            msg << "ReceiveUnManaged error.  Socket receive side closed: " << 0;
-        LOG_INFO_MSG(msg.str());
-        throw SoftError(lockrc, msg.str());
+    if (lockrc != 0) {
+        if (lockrc != -1) {
+            std::ostringstream msg;
+            msg << "Receive error, socket receive side lock error: " << strerror(lockrc);
+            LOG_DEBUG_MSG( msg.str() );
+            throw SoftError(lockrc, msg.str());
+        }
+
+        throw SoftError(0, "Receive error, socket receive side closed.");
     }
 
     SecureTCPReceiveFunctor recvf(_ssl);
-    return InternalReceiveUnManaged(msg, bytes, flags, recvf);
+    return InternalReceive(msg, recvf);
 }
 
 int
 SecureTCPSendFunctor::operator()(
         int,
         const void* msg,
-        int length, 
-        int
+        size_t length
         )
 {
-    LOG_DEBUG_MSG("TCP Sending encrypted data");
-    const int rc = SSL_write(_ssl, msg, length);
-    if(rc <= 0) {
-        SecureTCPSocket::printSSLError(_ssl, rc);
+    const int rc = SSL_write(_ssl, msg, static_cast<int>(length));
+    if (rc <= 0) {
+        const std::string msg = printSSLError(_ssl, rc);
+        LOG_DEBUG_MSG( msg );
     }
     return rc;
 }
@@ -590,16 +552,15 @@ int
 SecureTCPReceiveFunctor::operator()(
         int,
         const void* msg,
-        int length,
-        int
+        size_t length
         )
 {
-    LOG_DEBUG_MSG("TCP Receiving encrypted data");
-    const int rc = SSL_read(_ssl, (void*)msg, length);
-    if(rc < 0) {
-        SecureTCPSocket::printSSLError(_ssl, rc);
+    const int rc = SSL_read(_ssl, const_cast<void*>(msg), static_cast<int>(length));
+    if (rc < 0) {
+        const std::string msg = printSSLError(_ssl, rc);
+        LOG_DEBUG_MSG( msg );
     }
     return rc;
 }
 
-}
+} // namespace CxxSockets

@@ -76,7 +76,7 @@ operator>>(
     } else if ( value[0] == '=' ) {
         std::cerr << "environment '" << value << "' has equals character in first position." << std::endl;
         stream.setstate( std::ios::failbit );
-    } else if ( std::isblank(value[0]) ) {
+    } else if ( isblank(value[0]) ) {
         std::cerr << "environment '" << value << "' has a leading space." << std::endl;
         stream.setstate( std::ios::failbit );
     } else if ( std::isdigit(value[0]) ) {

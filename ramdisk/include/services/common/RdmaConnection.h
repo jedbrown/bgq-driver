@@ -224,6 +224,7 @@ postSendNoImmed(RdmaMemoryRegionPtr region, void *address, uint64_t length)
    send_wr.num_sge = 1;
    send_wr.opcode = IBV_WR_SEND;
    send_wr.wr_id = region->getLocalKey(); // So memory region is available in work completion.
+   send_wr.send_flags = IBV_SEND_FENCE;//Always wait for the preceding operation (like in RDMA putdata to compute node not signaled)
 
    // Post a send for outbound message.
    ++_totalSendPosted;
@@ -296,12 +297,13 @@ postRdmaRead(uint64_t reqID, uint32_t remoteKey, uint64_t remoteAddr,
    //! \param  localKey Key of local memory region.
    //! \param  localAddr Address of local memory region
    //! \param  length is the size of the transfer
+   //! \param  flags are 0 or IBV_SEND_SIGNALED typically
    //! \return error status for the posted operation.
    //!
 int
 postRdmaWrite(uint64_t reqID, uint32_t remoteKey, uint64_t remoteAddr, 
                                              uint32_t localKey,  uint64_t localAddr,
-                                             ssize_t length)
+                                             ssize_t length, int flags)
 {
    // Build scatter/gather element for inbound message.
    struct ibv_send_wr *badRequest;
@@ -317,7 +319,7 @@ postRdmaWrite(uint64_t reqID, uint32_t remoteKey, uint64_t remoteAddr,
    send_wr.sg_list = &read_sge;
    send_wr.num_sge = 1;
    send_wr.opcode = IBV_WR_RDMA_WRITE;
-   send_wr.send_flags = IBV_SEND_SIGNALED; // Force completion queue to be posted with result.
+   send_wr.send_flags = flags; //if IBV_SEND_SIGNALED, Force completion queue to be posted with result.
    send_wr.wr_id = reqID;
    send_wr.wr.rdma.remote_addr = remoteAddr;
    send_wr.wr.rdma.rkey = remoteKey;
@@ -326,6 +328,56 @@ postRdmaWrite(uint64_t reqID, uint32_t remoteKey, uint64_t remoteAddr,
    ++_totalReadPosted;
    int err = ibv_post_send(_cmId->qp, &send_wr, &badRequest);
    CIOSLOGPOSTSEND(BGV_POST_WRR,send_wr,err);
+   return err;
+}
+
+int
+postRdmaWriteWithAck(uint64_t reqID, uint32_t remoteKey, uint64_t remoteAddr, 
+                                             uint32_t localKey,  uint64_t localAddr,
+                                             ssize_t length, 
+                                             RdmaMemoryRegionPtr regionSend, void *addressSend, uint64_t lengthSend)
+{
+   // Build scatter/gather element for inbound message.
+   struct ibv_send_wr *badRequest;
+   struct ibv_sge read_sge;
+   read_sge.addr = localAddr;
+   read_sge.length = length;
+   read_sge.lkey = localKey;
+
+   // Build a send work request.
+   struct ibv_send_wr send_wr;
+   memset(&send_wr, 0, sizeof(send_wr));
+   
+   send_wr.sg_list = &read_sge;
+   send_wr.num_sge = 1;
+   send_wr.opcode = IBV_WR_RDMA_WRITE;
+   //ssend_wr.send_flags = 0; //No completion necessary
+   send_wr.wr_id = reqID;
+   send_wr.wr.rdma.remote_addr = remoteAddr;
+   send_wr.wr.rdma.rkey = remoteKey;
+
+   //append an IBV_WR_SEND
+   struct ibv_send_wr send_wr2;
+   send_wr.next = &send_wr2;
+
+   struct ibv_sge send_sge;
+   send_sge.addr = (uint64_t)addressSend;
+   send_sge.length = lengthSend;
+   send_sge.lkey = regionSend->getLocalKey();
+
+   // Build the send work request.
+
+   memset(&send_wr2, 0, sizeof(send_wr2));
+   send_wr2.next = NULL;
+   send_wr2.sg_list = &send_sge;
+   send_wr2.num_sge = 1;
+   send_wr2.opcode = IBV_WR_SEND;
+   send_wr2.wr_id = regionSend->getLocalKey(); // So memory region is available in work completion.
+   send_wr2.send_flags = IBV_SEND_FENCE;//Always wait for the preceding operation (like in RDMA putdata to compute node not signaled)
+   
+   int err = ibv_post_send(_cmId->qp, &send_wr, &badRequest);
+   CIOSLOGPOSTSEND(BGV_POST_WRR,send_wr,err);
+   CIOSLOGPOSTSEND(BGV_POST_SND,send_wr2,err);
    return err;
 }
 

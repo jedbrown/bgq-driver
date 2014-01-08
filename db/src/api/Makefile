@@ -82,8 +82,19 @@ SRC +=  Exception.cc
 SRC +=  extract_db.cc
 SRC +=  GenBlockParams.cc
 SRC +=  genblock.cc
+SRC +=  init.cc
 SRC +=  ioUsage.cc
+SRC +=  isBlockFree.cc
+SRC +=  postProcessRas.cc
+SRC +=  setBlockAction.cc
+SRC +=  setBlockStatus.cc
+SRC +=  swfailure.cc
 SRC +=  utility.cc
+SRC +=  killMidplaneJobs.cc
+SRC +=  putRAS.cc
+SRC +=  queryMissing.cc
+SRC +=  queryError.cc
+SRC +=  copyBlock.cc
 SRC +=  ${job_parts:%=job/%.cc}
 SRC +=  ${tableapi_parts:%=tableapi/%.cc}
 SRC +=  $(wildcard tableapi/gensrc/*.cc)
@@ -107,12 +118,13 @@ CXXFLAGS += -MD -MP
 CXXFLAGS += -pthread
 CXXFLAGS += -fpic
 CXXFLAGS += -iquote ../../../db/include/api
+CXXFLAGS += -iquote .
 CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)
 
 LDFLAGS += -Wl,-soname,$(lib_vers)
 LDFLAGS += -lodbc
 LDFLAGS += -L$(BGQ_INSTALL_DIR)/bgq_util/lib -lbgq_util -Wl,-rpath,$(BGQ_INSTALL_DIR)/bgq_util/lib
-LDFLAGS += -L$(BGQ_INSTALL_DIR)/control/lib -lbgqconfig -Wl,-rpath,$(BGQ_INSTALL_DIR)/control/lib
+LDFLAGS += -L$(BGQ_INSTALL_DIR)/control/lib -lbgqconfig -lmcserver -Wl,-rpath,$(BGQ_INSTALL_DIR)/control/lib
 LDFLAGS += -L$(BGQ_INSTALL_DIR)/ras/lib -lras -Wl,-rpath,$(BGQ_INSTALL_DIR)/ras/lib
 LDFLAGS += -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
 LDFLAGS += -L$(BGQ_INSTALL_DIR)/extlib/lib -lboost_date_time-mt -Wl,-rpath,$(BGQ_INSTALL_DIR)/extlib/lib
@@ -146,7 +158,7 @@ $(SRC:%.cc=%.o): | job/sqlStrings.gen.h
     # I think this will make sure creates .h first... if not use job/Operations.o & other users of sqlStrings.gen.hpp rather than .o-s
 
 $(lib_full): $(SRC:%.cc=%.o)
-	$(CXX) -shared $(CXXFLAGS) $(LDFLAGS) $^ -o $@
+	$(CXX) -shared $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 $(lib_vers): $(lib_full)
 	ln -sf $< $@

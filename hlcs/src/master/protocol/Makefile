@@ -24,8 +24,6 @@
 include ../../../../Make.rules
 include ../../../Make.hlcs.rules
 
-TOP_DIR=hlcs
-
 # Location of the python scripts to build headers
 XMLSCRIPT_DIR=$(BGQ_INSTALL_DIR)/xml/scripts
 
@@ -33,8 +31,7 @@ CXXFLAGS += -Wall -Wno-format-y2k
 CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)
 CXXFLAGS += -O2
 CXXFLAGS += -fpic
-
-CXXFLAGS_64 += -m64
+CXXFLAGS += -MD -MP
 
 INSTALL_DIR=$(BGQ_INSTALL_DIR)/hlcs/include/c_api
 BGMASTER_PROTOCOL_DIR=../../../include/master/protocol/
@@ -43,21 +40,10 @@ XML_DEFS = $(wildcard *.xml)
 C_API_H  = $(addsuffix .h, $(basename $(notdir $(XML_DEFS))))
 C_API_CC = $(addsuffix .cc, $(basename $(notdir $(XML_DEFS))))
 
-compile-cmd = g++ $(CXXFLAGS) $1 -o $@ -c $<
-
 default: all install
 
-# explicit 64
-ifneq ($(BITS),32)
-%.o: %.cc
-	$(call compile-cmd, $(CXXFLAGS_64))
-else
-%.o: %.cc
-	$(call compile-cmd, $(CXXFLAGS))
-endif
-
 SRCS=$(C_API_CC)
-OBJS64   = $(SRCS:%.cc=%.o)
+OBJS   = $(SRCS:%.cc=%.o)
 
 xml:
 	@echo $(XML_DEFS)
@@ -67,7 +53,7 @@ $(INSTALL_DIR):
 
 install: all
 
-all: $(C_API_CC) $(OBJS64) 
+all: $(C_API_CC) $(OBJS) 
 
 $(C_API_CC): $(C_API_H) $(XML_DEFS)
 
@@ -78,7 +64,6 @@ $(C_API_CC): $(C_API_H) $(XML_DEFS)
 	$(IDLC) --cimpl $<
 
 clean:
-	rm -rf *o *o_64 *.d *~ BGMaster*[cch] \#* $(INSTALL_TARGETS)
+	rm -rf *.o *.h *.cc
 
-#-include *.d
-#-include .dep.*.64.d
+-include *.d

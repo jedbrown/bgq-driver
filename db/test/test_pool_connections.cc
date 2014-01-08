@@ -41,7 +41,7 @@ struct InitializeLogging
     }
 };
 
-bool is_invalid_minimum( const std::invalid_argument& e ) { return e.what() == std::string("minimum"); }
+bool is_invalid_minimum( const std::invalid_argument& e ) { return e.what() == std::string("size"); }
 bool is_invalid_maximum( const std::invalid_argument& e ) { return e.what() == std::string("maximum"); }
 bool is_invalid_properties( const std::invalid_argument& e ) { return e.what() == std::string("properties"); }
 
@@ -92,20 +92,6 @@ BOOST_AUTO_TEST_CASE( garbage_properties_custom_section )
             );
 }
 
-BOOST_AUTO_TEST_CASE( connection_pool_ceiling )
-{
-    // ensure if we set the minimum value above the ceiling, it throws
-    bgq::utility::Properties::ConstPtr properties;
-    properties = bgq::utility::Properties::create( "good.properties" );
-    BGQDB::DBConnectionPool::reset();
-    const unsigned max = BGQDB::DBConnectionPool::MaximumSize + 1;
-    BOOST_CHECK_EXCEPTION(
-            BGQDB::DBConnectionPool::init( properties, max ),
-            std::invalid_argument,
-            is_invalid_minimum
-            );
-}
-
 BOOST_AUTO_TEST_CASE( multiple_init )
 {
     // ensure an application initializing the API twice only gets the values set the first time
@@ -148,3 +134,38 @@ BOOST_AUTO_TEST_CASE( invalid_properties )
             );
 }
 
+BOOST_AUTO_TEST_CASE( auto_commit )
+{
+    BGQDB::DBConnectionPool::reset();
+    const bgq::utility::Properties::ConstPtr properties(
+            bgq::utility::Properties::create( "good.properties" )
+            );
+    BGQDB::DBConnectionPool::init( properties, 1 );
+    BOOST_CHECK_EQUAL( BGQDB::DBConnectionPool::instance().size(), 1u );
+
+    // get a connection
+    {
+        const BGQDB::DBConnection::Ptr connection(
+                BGQDB::DBConnectionPool::instance().checkout()
+                );
+        BOOST_CHECK( connection != NULL );
+
+        // auto-commit should be enabled
+        BOOST_CHECK_EQUAL( connection->isAutoCommit(), true );
+
+        // disable it
+        connection->setAutoCommit( false );
+        BOOST_CHECK_EQUAL( connection->isAutoCommit(), false );
+    }
+
+    // get another connection
+    {
+        const BGQDB::DBConnection::Ptr connection(
+                BGQDB::DBConnectionPool::instance().checkout()
+                );
+        BOOST_CHECK( connection != NULL );
+
+        // auto-commit should be enabled
+        BOOST_CHECK_EQUAL( connection->isAutoCommit(), true );
+    }
+}

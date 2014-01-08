@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "CommandProcessor.h"
 
 #include "common/AbstractCommand.h"
@@ -29,10 +28,8 @@
 
 using namespace std;
 
-
 namespace mmcs {
 namespace server {
-
 
 #ifdef WITH_DB
 
@@ -54,25 +51,19 @@ CommandProcessor::invokeCommand(
         )
 {
     // execute the command
-    if (status == 0)
-    {
-        try
-        {
+    if (status == 0) {
+        try {
             status = CMD_EXECUTED;
 
             if(!validnames.empty())// && pCmd->attributes().requiresBlock() == false)
                 pCmd->execute(cmdStr, reply, (server::DBConsoleController*) pController, pTarget, &validnames);
             else
                 pCmd->execute(cmdStr, reply, (server::DBConsoleController*) pController, pTarget);
-        }
-        catch (const exception &e)
-        {
+        } catch (const exception &e) {
             reply << mmcs_client::ABORT << e.what() << mmcs_client::DONE;
         }
-    }
-    else if (status == CMD_NOT_FOUND)
-    {
-        reply << mmcs_client::FAIL << "command not found" << mmcs_client::DONE;
+    } else if (status == CMD_NOT_FOUND) {
+        reply << mmcs_client::FAIL << "Command not found" << mmcs_client::DONE;
     }
 
     return status;

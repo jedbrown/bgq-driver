@@ -35,7 +35,8 @@
 
 
 //! \brief Locking wrapper for alias vector
-class AliasList {
+class AliasList
+{
     std::vector<AliasPtr> _alias_list;
     mutable boost::mutex _mutex;
 public:

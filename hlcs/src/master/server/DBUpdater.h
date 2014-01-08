@@ -25,14 +25,15 @@
 #define MASTER_DB_UPDATER_H_
 
 
-#include <utility/include/DropoffQueue.h>
+#include "DropoffQueue.h"
 
 #include <boost/thread.hpp>
 
 #include <string>
 
 
-class DBUpdater {
+class DBUpdater
+{
 public:
     DBUpdater();
     ~DBUpdater();

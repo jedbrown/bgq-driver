@@ -20,6 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+
 /*!
  * \file utility/include/cxxsockets/SecureTCPSocket.h
  */
@@ -44,7 +45,7 @@ class SecureTCPSocket : public TCPSocket
 {
 public:
     /*!
-     * \brief secure a TCPSocket with SSL_accept
+     * \brief Secure a TCPSocket with SSL_accept
      *
      * \note ownership of the file descriptor managed by TCPSocket is released
      */
@@ -72,7 +73,7 @@ public:
             const bgq::utility::ClientPortConfiguration& port_config    //!< [in] port_config
             );
 
-    //! \brief Make this connection a secure one!  You'll only want to call this
+    //! \brief Make this connection a secure one! You'll only want to call this
     //! if you passed a previously connected file descriptor to the constructor.
     //! Otherwise, you get this for free.
     void MakeSecure(
@@ -83,24 +84,13 @@ public:
             const bgq::utility::ServerPortConfiguration& port_config    //!< [in]
             );
 
-    //! \brief Managed send.  Takes care of byte counting for you.
+    //! \brief Managed send. Takes care of byte counting for you.
     //!
     //! This method will send the size of the data before sending the
-    //! data.  It's meant to be used with a CxxSocket on the other
-    //! side.  This allows the user to send a Message object
-    //! atomically.
+    //! data. It's meant to be used with a CxxSocket on the other
+    //! side. This allows the user to send a Message object atomically.
     int Send(
-            const Message& msg, //!< [in] msg  Message object to send.
-            int flags = 0       //!< [in] flags
-            );
-
-    //! \brief Unmanaged send.  User must manage data.
-    //!
-    //! Just send the message.  Use when the other side may not
-    //! be using CxxSockets.  Can be blocking or not.
-    int SendUnManaged(
-            const Message& msg, //!< [in] msg Message object to send.
-            int flags = 0       //!< [in] flags
+            const Message& msg  //!< [in] msg  Message object to send.
             );
 
     //! \brief Managed receive.
@@ -109,53 +99,42 @@ public:
     //! continues to receive data until that amount has arrived.
     //! The assumption is that it is communicating with a CxxSocket.
     int Receive(
-            Message& msg, //!< [in] msg Message object to receive.
-            int flags = 0 //!< [in] flags
-            );
-
-    //! \brief Unmanaged receive
-    //!
-    //! This method just receives whatever is available and returns.
-    int ReceiveUnManaged(
-            Message& msg,       //!< [in] msg Message object to receive.
-            unsigned int bytes, //!< [in] bytes
-            int flags = 0       //!< [in] flags
+            Message& msg  //!< [in] msg Message object to receive.
             );
 
     const bgq::utility::UserId& getUserId() const { return *_uid_ptr; }
 
     UserType getUserType() const { return _utype; }
 
-    static std::string printSSLError(SSL* ssl, int rc);
-
 private:
-    int ClientHandshake(const bgq::utility::ClientPortConfiguration& port_config);
-    int ServerHandshake(const bgq::utility::ServerPortConfiguration& port_config);
+    void ClientHandshake(const bgq::utility::ClientPortConfiguration& port_config);
+    void ServerHandshake(const bgq::utility::ServerPortConfiguration& port_config);
     void SetupCredentials(const bgq::utility::SslConfiguration& sslconfig);
     void SetupContext(const bgq::utility::SslConfiguration& sslconfig);
-    bgq::utility::UserId::ConstPtr _uid_ptr;
-    BIO* _cnnbio;
-    SSL* _ssl;
-    SSL_CTX* _ctx;
-    UserType _utype;
+    bgq::utility::UserId::ConstPtr   _uid_ptr;
+    SSL*                             _ssl;
+    SSL_CTX*                         _ctx;
+    UserType                         _utype;
 };
 
 class SecureTCPSendFunctor
 {
-    int error;
-    SSL* _ssl;
 public:
     SecureTCPSendFunctor(SSL* ssl) : _ssl(ssl) {}
-    int operator() (int _fileDescriptor, const void* msg, int length, int flags);
+    int operator()(int _fileDescriptor, const void* msg, size_t length);
+
+private:
+    SSL* const _ssl;
 };
 
 class SecureTCPReceiveFunctor
 {
-    int error;
-    SSL* _ssl;
 public:
     SecureTCPReceiveFunctor(SSL* ssl) : _ssl(ssl) {}
-    int operator() (int _fileDescriptor, const void* msg, int length, int flags);
+    int operator()(int _fileDescriptor, const void* msg, size_t length);
+
+private:
+    SSL* const _ssl;
 };
 
 }

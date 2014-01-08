@@ -46,8 +46,8 @@ Options::Options(
     // create options
     _options.add_options()
         ("block", po::value(&_block), "block ID")
-        ("corner", po::value(&_corner), "corner location")
-        ("shape", po::value(&_shape), "5 dimensional shape")
+        ("corner", po::value(&_corner), "corner location (e.g. R32-M0-N04-J01)")
+        ("shape", po::value(&_shape), "5 dimensional shape (e.g. 1x1x1x1x1)")
         ;
 
     // add generic args
@@ -58,7 +58,7 @@ Options::Options(
     this->notify();
 
     // initialize database
-    BGQDB::init( this->getProperties() );
+    BGQDB::init( this->getProperties(), 10 );
 
     // get machine XML
     LOG_DEBUG_MSG( "extracting machine XML description" );
@@ -67,7 +67,7 @@ Options::Options(
     if (result != BGQDB::OK) {
         throw std::runtime_error( "could not get machine XML" );
     }
-    
+
     // create bgqconfig object
     LOG_DEBUG_MSG( "creating machine XML object" );
     _machine.reset( BGQMachineXML::create(xml) );

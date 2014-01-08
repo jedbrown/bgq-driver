@@ -80,10 +80,6 @@ public:
    virtual ShmMgr_t* getShmManager();
    virtual uint64_t  getDeviceID()   { return 0x01021997; };
    int cleanupJob(int fs);
-   
-private:
-
-   Lock_Atomic_t _lock;
 };
 
 #endif // _CNK_PROCFS_H

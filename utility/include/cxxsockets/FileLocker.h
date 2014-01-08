@@ -29,9 +29,11 @@
 
 #include <bgq_util/include/pthreadmutex.h>
 
+#include <boost/utility.hpp>
+
 namespace CxxSockets {
 
-struct FileLocker
+struct FileLocker : boost::noncopyable
 {
     PthreadMutexHolder _all;
     PthreadMutexHolder _send;

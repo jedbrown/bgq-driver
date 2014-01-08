@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "AddBootOption.h"
 
 #include <db/include/api/BGQDBlib.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 AddBootOption*
 AddBootOption::build()
@@ -43,7 +39,7 @@ AddBootOption::build()
     commandAttributes.requiresConnection(false);       // does not require  mc_server connections
     commandAttributes.requiresTarget(false);           // does not require a BlockControllerTarget object
     commandAttributes.mmcsServerCommand(true);
-    commandAttributes.mmcsConsoleCommand(false);
+    commandAttributes.bgConsoleCommand(false);
     commandAttributes.helpCategory(common::ADMIN);             // 'help admin'  will include this command's summary
     commandAttributes.bgadminAuth(true);
     return new AddBootOption("add_boot_option", "add_boot_option <blockid|*ALL|*ALLIO|*ALLCOMPUTE> <bootoption>", commandAttributes);
@@ -55,7 +51,7 @@ AddBootOption::execute(
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     std::vector<std::string>* validnames = 0;
     return execute(args, reply, pController, pTarget, validnames);
@@ -68,19 +64,17 @@ AddBootOption::execute(
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget,
         std::vector<std::string>* validnames
-        )
+)
 {
     BGQDB::STATUS result;
 
-    if(args.size() != 2)
-    {
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+    if (args.size() != 2) {
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         return;
     }
 
-    if(args[1].size() > BGQDB::BlockInfo::OptionsSize)
-    {
-        reply << mmcs_client::FAIL << "boot options too long" << mmcs_client::DONE;
+    if (args[1].size() > BGQDB::BlockInfo::OptionsSize) {
+        reply << mmcs_client::FAIL << "Boot options too long" << mmcs_client::DONE;
         return;
     }
 
@@ -90,25 +84,25 @@ AddBootOption::execute(
             reply << mmcs_client::OK << mmcs_client::DONE;
             break;
         case BGQDB::INVALID_ID:
-            reply << mmcs_client::FAIL << "invalid block id " << args[0] << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Invalid block id " << args[0] << mmcs_client::DONE;
             break;
         case BGQDB::CONNECTION_ERROR:
-            reply << mmcs_client::FAIL << "unable to connect to database" << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Unable to connect to database" << mmcs_client::DONE;
             break;
         case BGQDB::DB_ERROR:
-            reply << mmcs_client::FAIL << "database failure" << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Database failure" << mmcs_client::DONE;
             break;
         case BGQDB::NOT_FOUND:
-            reply << mmcs_client::FAIL << "block " << args[0] << " not found or not in valid state" << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Block " << args[0] << " not found or not in valid status" << mmcs_client::DONE;
             break;
         case BGQDB::FAILED:
-            reply << mmcs_client::FAIL << "invalid block state" << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Invalid block status" << mmcs_client::DONE;
             break;
         case BGQDB::INVALID_ARG:
-            reply << mmcs_client::FAIL << "invalid arguments provided" << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Invalid arguments provided" << mmcs_client::DONE;
             break;
         default:
-            reply << mmcs_client::FAIL << "unexpected return code from BGQDB::addBootOption : " << result << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Unexpected return code from BGQDB::addBootOption : " << result << mmcs_client::DONE;
             break;
     }
 }
@@ -117,14 +111,12 @@ void
 AddBootOption::help(
         deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
     reply << mmcs_client::OK << description()
-        << ";Add boot option for a block, all io blocks, all compute blocks, or all blocks."
-        << ";To add multiple boot options, separate by commas, with no spaces."
-        << mmcs_client::DONE;
+          << ";Add boot option for a block, all I/O blocks, all compute blocks, or all blocks."
+          << ";To add multiple boot options, separate by commas, with no spaces."
+          << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

@@ -204,7 +204,7 @@
 #define CONFIG_DEFAULT_MIN_SHAREDMEMSIZE  32
 
 // IPI message checker interval in microseconds
-#define CONFIG_IPIMESSAGECHECKER_INTERVAL 2000000
+#define CONFIG_IPIMESSAGECHECKER_INTERVAL 20000
 
 // Default maximum number of abnormally terminating nodes that will generate core files
 #define CONFIG_COREDUMPMAXNODES_DEFAULT 2048
@@ -251,5 +251,10 @@
 // Always allow printf to console
 #define CONFIG_ALLOWPRINTF 0
 
+// MUDM connect timeout in seconds
+#define CONFIG_MUDMCONNECTTIMEOUT (3*60)
+
+// Enable implicit side-effect for shared filename "l2atomic", triggers file to be L2 atomic capable w/o ioctl call.
+#define CONFIG_SHMFILEIMPLICITL2ATOMIC  0
 
 #endif // Add nothing below this line.

@@ -50,3 +50,37 @@ JobController::startup(in_port_t dataChannelPort)
    return 0;
 }
 
+int
+JobController::heartbeat(void)
+{
+   // Get pointer to inbound Heartbeat message.
+   HeartbeatMessage *inMsg = (HeartbeatMessage*)_inboundMessage;
+
+   // Build HeartbeatAckMessage message in outbound buffer.
+   HeartbeatAckMessage* outMsg = (HeartbeatAckMessage*)_outboundMessage;
+   memcpy(&(outMsg->header), &(inMsg->header), sizeof(bgcios::MessageHeader));
+   outMsg->header.type = HeartbeatAck;
+   outMsg->header.length = sizeof(HeartbeatAckMessage);
+   outMsg->header.returnCode = Success;
+
+   // compare current time against overloaded "job ID"
+   if ( inMsg->header.jobId ) {
+       const time_t now( time(NULL) );
+       const time_t previous( static_cast<time_t>(inMsg->header.jobId) );
+       const time_t difference = now - previous;
+       if ( difference > _config->getHeartbeatTimeout() ) {
+           LOG_WARN_MSG_FORCED(
+                   __FUNCTION__ << " difference of " << difference << " seconds is greater than configured " << 
+                   _config->getHeartbeatTimeout() << " value"
+                   );
+           // TODO trap and/or dump flight logs?
+       } else {
+           LOG_CIOS_DEBUG_MSG(__FUNCTION__ << " still alive " << difference << "s difference" );
+       }
+   } else {
+       LOG_CIOS_DEBUG_MSG(__FUNCTION__ << " still alive");
+   }
+
+   return sendToDataChannel(outMsg); 
+}
+

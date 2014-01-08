@@ -68,7 +68,7 @@ all: test
 
 $(lib_full): $(SRCS:%.cc=%.o)
 	@echo "link $@"
-	$(SILENT)$(CXX) $(LDFLAGS) $^ -o $@
+	$(SILENT)$(CXX) $^ -o $@ $(LDFLAGS)
 
 
 $(lib_vers): $(lib_full)
@@ -109,8 +109,8 @@ test.out: test
 	./$^ &> $@
 
 test: test.o $(lib_short)
-	$(CXX) -o $@ test.o -L. -l$(lib_base) -Wl,-rpath,. -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib -L$(BGQ_INSTALL_DIR)/db/lib -lbgdb -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib -lboost_unit_test_framework-mt
-	
+	$(CXX) -o $@ test.o -L. -l$(lib_base) -Wl,-rpath,. -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib -L$(BGQ_INSTALL_DIR)/db/lib -lbgdb -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib -lboost_unit_test_framework-mt -L $(BGQ_INSTALL_DIR)/hlcs/lib -lbgsched
+
 distclean: clean
 
 .DELETE_ON_ERROR:

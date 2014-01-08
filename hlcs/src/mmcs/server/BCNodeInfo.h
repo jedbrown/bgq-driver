@@ -24,7 +24,6 @@
 #ifndef MMCS_SERVER_BC_NODE_INFO_H_
 #define MMCS_SERVER_BC_NODE_INFO_H_
 
-
 #include "BCTargetInfo.h"
 
 #include <control/include/bgqconfig/BGQMidplaneNodeConfig.h>
@@ -33,10 +32,8 @@
 
 #include <cstdio>
 
-
 namespace mmcs {
 namespace server {
-
 
 // Information needed by BlockController to boot and communicate with a BGQ node via jtag.
 //
@@ -50,7 +47,7 @@ enum {
    NST_TERMINATED,             // all cores terminated
 };
 
-class BCNodeInfo: public BCTargetInfo
+class BCNodeInfo : public BCTargetInfo
 {
 public:
     // node position
@@ -61,7 +58,7 @@ public:
     //
     unsigned        _state;              // state of this node.
     bool            _initialized;        // is the kernel ready for job submission?
-    bool	    _haltComplete;	 // did we receive 'Shutdown complete'?
+    bool	        _haltComplete;	     // did we receive 'Shutdown complete'?
     FILE            *_mailboxOutput;     // mailbox output file for I/O node logs
     Personality_t   _iopersonality;      // Used only for a link IO node in a CN block
 
@@ -91,59 +88,53 @@ public:
 
     ~BCNodeInfo()
 	{
-	    if (_mailboxOutput)
-		fclose(_mailboxOutput);
+        if (_mailboxOutput)
+            fclose(_mailboxOutput);
 	}
 
     bool isIOnode() const {
-        if(_linkio) return true;
-        if(ioboardNodeConfig() != 0)
+        if (_linkio)
             return true;
-        else if(midplaneNodeConfig() != 0)
+        if (ioboardNodeConfig() != 0)
+            return true;
+        else if (midplaneNodeConfig() != 0)
             return false;
-        else return false;
+        else
+            return false;
     }
 
-    Personality_t& personality()
-	{
-            if(_linkio) { // We're a link training IO node
-                return _iopersonality;
-            }
-            else if(midplaneNodeConfig() != NULL) {
-                return midplaneNodeConfig()->nodeConfig(_pos)->_personality;
-            }
-            else if (ioboardNodeConfig()) {  // Might be an io board
-                return ioboardNodeConfig()->nodeConfig(_iopos)->_personality;
-            } else return default_personality;
+    Personality_t& personality() {
+        if (_linkio) { // We're a link training IO node
+            return _iopersonality;
+        } else if (midplaneNodeConfig() != NULL) {
+            return midplaneNodeConfig()->nodeConfig(_pos)->_personality;
+        } else if (ioboardNodeConfig()) {  // Might be an io board
+            return ioboardNodeConfig()->nodeConfig(_iopos)->_personality;
+        } else
+            return default_personality;
 
-	    return (midplaneNodeConfig() != NULL)
-		? midplaneNodeConfig()->nodeConfig(_pos)->_personality
-		: default_personality;
-	}
+        return (midplaneNodeConfig() != NULL) ? midplaneNodeConfig()->nodeConfig(_pos)->_personality : default_personality;
+    }
 
     const char* nodeCardPos() { return BGQTopology::nodeCardNameFromPos(_pos.nodeCard()); }
     std::string nodeCardLocation() { return midplaneNodeConfig()->nodeCardLocation(_pos.nodeCard()); }
     const char* processorCardPos() { return BGQTopology::processorCardNameFromJtagPort(_pos.jtagPort()); }
     const char* processorPos() { return "0"; }
     void init_location()
-	{
-	    if (midplaneNodeConfig())
-	    {
-                std::ostringstream ostr;
-		ostr << midplaneNodeConfig()->posInMachine()
-		     << "-"  << nodeCardPos()
-		     << "-"  << processorCardPos();
-		_location = ostr.str();
-	    } else if (ioboardNodeConfig()) {  // Might be an io board
-                std::ostringstream ostr;
-                ostr << ioboardNodeConfig()->posInMachine()
-                     << "-" << _iopos;
-                _location = ostr.str();
-            }
-	}
+    {
+        if (midplaneNodeConfig()) {
+            std::ostringstream ostr;
+            ostr << midplaneNodeConfig()->posInMachine() << "-"  << nodeCardPos() << "-"  << processorCardPos();
+            _location = ostr.str();
+        } else if (ioboardNodeConfig()) {  // Might be an io board
+            std::ostringstream ostr;
+            ostr << ioboardNodeConfig()->posInMachine() << "-" << _iopos;
+            _location = ostr.str();
+        }
+    }
 
     int jtag() {
-        if(_pos.nodeCard() == 0)
+        if (_pos.nodeCard() == 0)
             return _iopos.jtagPort();
         return _pos.jtagPort();
     }

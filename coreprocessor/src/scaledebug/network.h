@@ -55,10 +55,8 @@ extern int number_of_clients;
 
 #if USE_SECURE_CERTIFICATE
 extern std::vector<CxxSockets::SecureTCPSocketPtr> SocketVector;
-extern CxxSockets::SecureTCPSocketPtr side_sock;
 #else
 extern std::vector<CxxSockets::TCPSocketPtr> SocketVector;
-extern CxxSockets::TCPSocketPtr side_sock;
 #endif
 
 int connectToTool(int argc, char* argv[]);

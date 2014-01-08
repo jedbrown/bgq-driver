@@ -69,12 +69,6 @@ BOOST_AUTO_TEST_CASE( equality_operator )
     BOOST_CHECK( h2 == h2 );
 }
 
-BOOST_AUTO_TEST_CASE( unresolvable )
-{
-    Host h( "1.9.1.9" );
-    BOOST_CHECK( h.ip() == h.fqhn() );
-}
-
 BOOST_AUTO_TEST_CASE( less_than_operator )
 {
     Host h1( "1.9.1.9" );

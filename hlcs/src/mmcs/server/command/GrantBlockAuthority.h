@@ -21,23 +21,18 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_GRANT_BLOCK_AUTHORITY_H_
 #define MMCS_SERVER_COMMAND_GRANT_BLOCK_AUTHORITY_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 // This command 'does' its own security instead
 // of going through the command processor.  While it operates
 // on security objects, blocks, they don't use CRUDE actions.
-
 
 /*!
  * Grant authority to security objects
@@ -46,18 +41,16 @@ class GrantBlockAuthority : public common::AbstractCommand
 {
 public:
     GrantBlockAuthority(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "grant_block_authority < block > < user > < actions >";}
+      : AbstractCommand(name,description,attributes) { _usage = "grant_block_authority < block > < user > < actions >";}
     static  GrantBlockAuthority* build(); // factory method
-    static  std::string cmdname() { return "grant_block_authority"; }
     void execute(std::deque<std::string> args,
                  mmcs_client::CommandReply& reply,
                  DBConsoleController* pController,
                  BlockControllerTarget* pTarget=NULL);
-    bool checkArgs(std::deque<std::string>& args) { if(args.size() != 3) return false; else return true;}
+    bool checkArgs(std::deque<std::string>& args) { if (args.size() != 3) return false; else return true;}
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };
-
 
 } } } // namespace mmcs::server::command
 

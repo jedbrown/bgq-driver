@@ -27,6 +27,7 @@
 #include "JobControl.h"
 #include "ToolControl.h"
 #include <firmware/include/mailbox.h>
+#include "rank.h"
 
 // Define nodectl object in static storage.
 static NodeController nodectl;
@@ -71,6 +72,14 @@ void __NORETURN Node_Run(void)
 
    printf("(I) Nothing to do, parking node controller thread\n");
    while (1);
+}
+
+int Node_ReportConnect(int cnv_error, uint64_t address, uint16_t port)
+{
+   if (Personality_CiosEnabled()) {
+      return nodectl.report_connect_result(cnv_error, address, port);
+   }
+   return 0;
 }
 
 int
@@ -188,5 +197,69 @@ NodeController::run(void)
    return 0;
 }
 
+int
+NodeController::report_connect_result(int cnv_err, uint64_t address, uint16_t port)
+{
+    int rc = 0;
+    int64_t myCoord = getPersonality()->Network_Config.Acoord;
+    myCoord *=256;
+    myCoord += getPersonality()->Network_Config.Bcoord;
+    myCoord *=256;
+    myCoord += getPersonality()->Network_Config.Ccoord;
+    myCoord *=256;
+    myCoord += getPersonality()->Network_Config.Dcoord;
+    myCoord *=256;
+    myCoord += getPersonality()->Network_Config.Ecoord;
 
+    // This barrier is not needed for functionality, however it is being included to aid in debug in the event of a hardware problem.
+    MUSPI_GIBarrierEnterAndWait( &systemBlockGIBarrier );
+
+    volatile int64_t minCoord = cnv_err ? myCoord : -1;
+    MUHWI_Destination_t dest;
+    dest.Destination.Destination = 0;
+    mudm_bcast_reduce(NodeState.MUDM, 
+                      MUDM_REDUCE_ALL,
+                      MUHWI_COLLECTIVE_OP_CODE_UNSIGNED_MIN,
+                      (void*)&minCoord,
+                      sizeof(minCoord),
+                      dest,  // ignored for MUHWI_COLLECTIVE_TYPE_ALLREDUCE
+                      15,
+                      MUHWI_COLLECTIVE_TYPE_ALLREDUCE,
+                      (void*)&minCoord);
+
+    // If the returned MIN value does not equal the original initialized value, then at least one node 
+    // had a connection problem.
+    if (minCoord != -1)
+    {
+        // All of the nodes will now participate in a collective to determine the max number of failed connections
+        uint64_t totalfails = cnv_err ? 1 : 0;
+        mudm_bcast_reduce(NodeState.MUDM, 
+                          MUDM_REDUCE_ALL,
+                          MUHWI_COLLECTIVE_OP_CODE_UNSIGNED_ADD,
+                          (void*)&totalfails,
+                          sizeof(totalfails),
+                          dest,  // ignored for MUHWI_COLLECTIVE_TYPE_ALLREDUCE
+                          15,
+                          MUHWI_COLLECTIVE_TYPE_ALLREDUCE,
+                          (void*)&totalfails);
+
+        // If we match the results of the mudm reduce operation,
+        // then we are responsible for reporting this failure.
+        if (minCoord == myCoord) 
+        {
+            RASBEGIN(4);
+            RASPUSH(address);
+            RASPUSH(port);
+            RASPUSH(cnv_err);
+            RASPUSH(totalfails);
+            RASFINAL(RAS_KERNELCNVCONNECTFAIL);
+
+            rc = -1; // return indication that this node generated ras
+
+    }
+
+
+    }
+    return rc; // return indication that we did not report an error (note: this doesn't mean a cnv_err was not present)
+}
 

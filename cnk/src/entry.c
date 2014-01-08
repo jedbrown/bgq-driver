@@ -115,6 +115,10 @@ __C_LINKAGE void __NORETURN Kernel_EntryPrimary( Firmware_Interface_t *fw_interf
         }
     }
     Kernel_EntrySecondary(fw_interface);
+    
+    while(1)
+    {
+    }
 }
 
 __C_LINKAGE void __NORETURN Kernel_EntrySecondary(void *fw_interface_void)

@@ -26,7 +26,7 @@
  *
  * \section SYNOPSIS
  *
- * runjob_server_log_level [OPTIONS] logger=level [... logger=level]
+ * runjob_server_log_level [OPTIONS] [logger=level [... logger=level]]
  *
  * \section DESCRIPTION
  *
@@ -47,7 +47,7 @@
  *
  * \section examples EXAMPLES
  *
- * runjob_server_log level
+ * runjob_server_log_level
  *
  * to display all loggers and their levels.
  *

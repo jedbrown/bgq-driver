@@ -21,13 +21,10 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_DUMP_PERSONALITIES_H_
 #define MMCS_SERVER_COMMAND_DUMP_PERSONALITIES_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
@@ -42,9 +39,8 @@ class DumpPersonalities: public common::AbstractCommand
 {
 public:
     DumpPersonalities(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "[<target>] dump_personalities [unformatted]"; }
+      : AbstractCommand(name,description,attributes) { _usage = "[<target>] dump_personalities [unformatted]"; }
     static  DumpPersonalities* build();    // factory method
-    static  std::string cmdname() { return "dump_personalities"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,

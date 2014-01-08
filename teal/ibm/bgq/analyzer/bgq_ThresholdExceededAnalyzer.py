@@ -125,142 +125,14 @@ class bgqThresholdExceededEventAnalyzer(bgqBaseAnalyzer):
         self.period_query = "select count(*) from " + eventTable + " where msg_id = ? and location LOC and serialnumber SN and event_time <= ? and event_time > (timestamp('MYTIME') - PERIOD)"
         self.period_query2 = "select sum(count) from " + eventTable + " where msg_id = ? and location LOC and serialnumber SN and event_time <= ? and event_time > (timestamp('MYTIME') - PERIOD)"
 
-        # define the list of serdes training failure message ids
-        self.serdesMsgIDs = list()
-        self.serdesMsgIDs.append('000900A0')
-        self.serdesMsgIDs.append('000900A1')
-        self.serdesMsgIDs.append('000900B0')
-        self.serdesMsgIDs.append('000900B1')
-        self.serdesMsgIDs.append('000900C0')
-        self.serdesMsgIDs.append('000900C1')
-        self.serdesMsgIDs.append('000900D0')
-        self.serdesMsgIDs.append('000900D1')
-        self.serdesMsgIDs.append('000900E0')
-        self.serdesMsgIDs.append('000900E1')
-        self.serdesMsgIDs.append('000900F0')
-
         # the number of consecutive periods that the threshold has to exceed
         self.msgidConsecutivePeriods = dict()
         self.msgidConsecutivePeriods['0008002F'] = 7
         self.msgidConsecutivePeriods['00080030'] = 3
-
+        
         return
 
-    def rasRawDataQuery(self, cursor, recid):
-        '''Run a query to retrieve the rawdata from the RAS event.
-        '''
-        # define query for ras event details
-        eventlogTable = self.appendSchema('tbgqeventlog')
-        rd_query = "select rawdata from " + eventlogTable + " where recid = ?"
-        registry.get_logger().debug(rd_query + ' ? = ' + str(recid))
-        cursor.execute(rd_query, recid);
-        row = list(cursor.fetchone())
-        if row:
-            if row[0]:
-                row[0] = row[0].strip()
-                return row[0]
-        return row
-
-    def nodeStatusQuery(self, cursor, location):
-        '''Run a query to retrieve the status of the noder.
-        '''
-        # define query for ras event details
-        nodeTable = self.appendSchema('bgqnode')
-        if (re.match("R[0-9A-V][0-9A-V]-I[C-F]", location) or re.match("Q[0-9A-V][0-9A-V]-I", location)):
-            nodeTable = self.appendSchema('bgqionode')
-        status_query = "select status from " + nodeTable + " where location = ?"
-        registry.get_logger().debug(status_query + ' ? = ' + location)
-        cursor.execute(status_query, location);
-        row = cursor.fetchone()
-        #registry.get_logger().debug('Status query results: ' + str(row))
-        if row:
-            if row[0]:
-                row[0] = row[0].strip()
-                return row[0]
-        return row
-
-    def neighborSNQuery(self, cursor, neighbor):
-        '''Run a query to retrieve the serial number for the neighbor node.
-        '''
-        # define query for ras event details
-        nodeTable = self.appendSchema('bgqnode')
-        if (re.match("R[0-9A-V][0-9A-V]-I[C-F]", neighbor) or re.match("Q[0-9A-V][0-9A-V]-I", neighbor)):
-            nodeTable = self.appendSchema('bgqionode')
-        status_query = "select serialnumber from " + nodeTable + " where location = ?"
-        registry.get_logger().debug(status_query + ' ? = ' + neighbor)
-        cursor.execute(status_query, neighbor);
-        row = list(cursor.fetchone())
-        if row:
-            if row[0]:
-                row[0] = row[0].strip()
-                return row[0]
-        return row
-
-    def sendSerdesRas(self, rec_id, location, serialnumber, ecid, event_time, block, msgText, rawdata, neighbor, neighbor_sn):
-        # log a ras event for the location
-        command = list()
-        command.append('/bgsys/drivers/ppcfloor/sbin/mc_server_log_ras')
-        command.append('--location')
-        command.append(location)
-        command.append('--message-id')
-        command.append('0x00090213')
-        command.append('--detail')
-        d = 'BG_SN=' + serialnumber
-        command.append(d)
-        command.append('--detail')
-        d = 'BG_ECID=' + ecid
-        command.append(d)
-        command.append('--detail')
-        d = 'BG_BLOCKID=' + block
-        command.append(d)
-        command.append('--detail')
-        d = 'NEIGHBOR=' + neighbor
-        command.append(d)
-        command.append('--detail')
-        d = 'NEIGHBOR_SERIAL_NUMBER=' + neighbor_sn
-        command.append(d)
-        rindex = rawdata.find('Connects ')
-        if rindex != -1:
-            command.append('--detail')
-            d = 'CONNECTION=' + rawdata[rindex:]
-            command.append(d)
-        command.append('--detail')
-        command.append('Submitter=TEAL')
-        command.append('--detail')
-        command.append('Associated_Rec_Id=' + str(rec_id))
-        registry.get_logger().debug('Calling: ' + str(command)) 
-        subprocess.call(command)
-
-        # log a ras event for the neighbor
-        command = list()
-        command.append('/bgsys/drivers/ppcfloor/sbin/mc_server_log_ras')
-        command.append('--location')
-        command.append(neighbor)
-        command.append('--message-id')
-        command.append('0x00090213')
-        command.append('--detail')
-        d = 'BG_SN=' + neighbor_sn
-        command.append(d)
-        command.append('--detail')
-        d = 'BG_BLOCKID=' + block
-        command.append(d)
-        command.append('--detail')
-        d = 'NEIGHBOR=' + location
-        command.append(d)
-        command.append('--detail')
-        d = 'NEIGHBOR_SERIAL_NUMBER=' + serialnumber
-        command.append(d)
-        if rindex != -1:
-            command.append('--detail')
-            d = 'CONNECTION=' + rawdata[rindex:]
-            command.append(d)
-        command.append('--detail')
-        command.append('Submitter=TEAL')
-        command.append('--detail')
-        command.append('Associated_Rec_Id=' + str(rec_id))
-        registry.get_logger().debug('Calling: ' + str(command)) 
-        subprocess.call(command)
-        return
+ 
 
 
     def will_analyze_event(self, event):
@@ -294,6 +166,8 @@ class bgqThresholdExceededEventAnalyzer(bgqBaseAnalyzer):
             return timedelta(microseconds=int(pdigit))
         registry.get_logger().error("No timedelta possible for " + period)
         return None
+    
+
 
     def analyze_event(self, event):
         '''Analyze a RAS event and determine whether threshold has been
@@ -303,88 +177,15 @@ class bgqThresholdExceededEventAnalyzer(bgqBaseAnalyzer):
         rec_id = event.get_rec_id()
         registry.get_logger().info("Analyzing msgid = " + msg_id + " recid = " + str(rec_id))
 
-        # Query ras event details
-        dbi = registry.get_service(SERVICE_DB_INTERFACE)
-        dbConn = dbi.get_connection()
-        cursor = dbConn.cursor()
-        location, severity, serialnumber, ecid, event_time, jobid, block, msgText, diags, count = self.rasDetailQuery(cursor, int(rec_id))
+        count = event.get_event_cnt()
+        event_time = event.get_time_logged()
 
+        location = str(event.get_src_loc())
+        location = location[3:].strip()
         # Exclude event logged from DIAG run
-        if diags == 'T':
+        if event.raw_data['diags'] == 'T':
             registry.get_logger().debug('RAS Event generated by Diagnostics, skip creating an alert')
             return
-
-        # handle serdes training errors - the node and its neighbor are on the 
-        # same midplane - send a ras event to mark them in error
-        if msg_id in self.serdesMsgIDs:
-            # return if this event happened more than 1 hour ago based 
-            # on current time)
-            # consider making backlog_window a property 
-            backlog_window = 1
-            if ((datetime.now() - timedelta(hours=backlog_window)) > event_time):
-                registry.get_logger().debug('Serdes RAS Event for the training error happened over ' + str(backlog_window) + ' hour(s) ago, skipping analysis to avoid changing node status')
-                return
-            # if this node is not in an active status, return
-            nodestatus = self.nodeStatusQuery(cursor, location)
-            if nodestatus != 'A':
-                registry.get_logger().debug('Serdes RAS Event node for location ' + location + ' is not active, skipping analysis')
-                return
-            # Get the neighbor info from the rawdata 
-            # format: NEIGHBOR=RB3-M1-N01-J12 or NEIGHBOR=RB3-ID-J03
-            rawdata =  self.rasRawDataQuery(cursor, int(rec_id))
-            rindex =  rawdata.find('TXAMP=')
-            if rindex != -1:
-                registry.get_logger().debug('Skipping analysis of duplicate Serdes RAS Event')
-                return    
-            rindex = rawdata.find('NEIGHBOR=')
-            if rindex == -1:
-                registry.get_logger().debug('Skipping analysis of Serdes RAS Event because neighbor information is not available.  Raw Data: ' + rawdata.strip())
-                return    
-            rindex = rindex + len('NEIGHBOR=')
-            sindex = rawdata.find(' ',rindex)
-            s2index = rawdata.find(';',rindex)
-            if sindex == -1 and s2index == -1:
-                registry.get_logger().debug('Skipping analysis of Serdes RAS Event because neighbor information is not formated correctly.  Raw Data: ' + rawdata.strip())
-                return
-            if s2index != -1 and s2index < sindex:
-                sindex = s2index
-            neighbor = rawdata[rindex:sindex].strip()
-            registry.get_logger().debug('Checking neighbor ' + neighbor)
-            # if this neighbor is not in an active status, return
-            neighborstatus = self.nodeStatusQuery(cursor, neighbor)
-            if neighborstatus != 'A':
-                registry.get_logger().debug('Serdes RAS Event node for location ' + neighbor + ' is not active, skipping analysis')
-                return
-            # check if the location and neighbor are compute nodes
-            if re.match("R[0-9A-V][0-9A-V]-M[01]-N(?:0[0-9]|1[0-5])", location) and re.match("R[0-9A-V][0-9A-V]-M[01]-N(?:0[0-9]|1[0-5])", neighbor):
-                # check if they are on the same midplane
-                if location[0:6] == neighbor[0:6]:
-                    # query neighbor serialnumber
-                    neighbor_sn = self.neighborSNQuery(cursor, neighbor)
-                    # send a ras event to mark the nodes in error 
-                    self.sendSerdesRas(rec_id, location, serialnumber, ecid, event_time, block, msgText, rawdata, neighbor, neighbor_sn)
-                    return
-            # check if location is a compute and neighbor is an I/O node 
-            if re.match("R[0-9A-V][0-9A-V]-M[01]-N(?:0[0-9]|1[0-5])", location) and (re.match("R[0-9A-V][0-9A-V]-I[C-F]", neighbor) or re.match("Q[0-9A-V][0-9A-V]-I", neighbor)):
-                neighbor_sn = self.neighborSNQuery(cursor, neighbor)
-                # send a ras event to mark the nodes in error 
-                self.sendSerdesRas(rec_id, location, serialnumber, ecid, event_time, block, msgText, rawdata, neighbor, neighbor_sn)
-                return
-            # check if location is an I/O node and neighbor is a compute 
-            if re.match("R[0-9A-V][0-9A-V]-M[01]-N(?:0[0-9]|1[0-5])", neighbor) and (re.match("R[0-9A-V][0-9A-V]-I[C-F]", location) or re.match("Q[0-9A-V][0-9A-V]-I", location)):
-                neighbor_sn = self.neighborSNQuery(cursor, neighbor)
-                # send a ras event to mark the nodes in error 
-                self.sendSerdesRas(rec_id, location, serialnumber, ecid, event_time, block, msgText, rawdata, neighbor, neighbor_sn)
-                return
-            # check if location and neighbor is I/O node 
-            if (re.match("R[0-9A-V][0-9A-V]-I[C-F]", location) or re.match("Q[0-9A-V][0-9A-V]-I", location)) and (re.match("R[0-9A-V][0-9A-V]-I[C-F]", neigbhor) or re.match("Q[0-9A-V][0-9A-V]-I", neighbor)):
-                if location[0:6] == neighbor[0:6]:
-                    # query neighbor serialnumber and ecid
-                    neighbor_sn = self.neighborSNQuery(cursor, neighbor)
-                    # send a ras event to mark the nodes in error 
-                    self.sendSerdesRas(rec_id, location, serialnumber, ecid, event_time, block, msgText, rawdata, neighbor, neighbor_sn)
-                    return
-            registry.get_logger().debug('Serdes RAS Event for the training error with ' + location + ' and ' + neighbor + ' will be handled as a normal threshold condition')
 
         # Set threshold value
         threshold = self.msgidCount[msg_id]
@@ -406,18 +207,25 @@ class bgqThresholdExceededEventAnalyzer(bgqBaseAnalyzer):
             query = self.count_query
             if count:
                 query = self.count_query2
-            
-        if serialnumber:
+        
+        if event.raw_data['serialnumber'] is not None:
+            serialnumber = event.raw_data['serialnumber'].strip()
             sn = "= '" + serialnumber + "'"
             query = query.replace('SN', sn)
         else:
+            serialnumber = None
             query = query.replace('SN', 'is NULL')
         if location:
-            loc = "= '" + location.strip() + "'"
+            loc = "= '" + location + "'"
             query = query.replace('LOC', loc)
         else:
             query = query.replace('LOC', 'is NULL')
+        
         registry.get_logger().debug(query + " msgId=" + msg_id + " event_time=" + str(event_time)) 
+
+        dbi = registry.get_service(SERVICE_DB_INTERFACE)
+        dbConn = dbi.get_connection()
+        cursor = dbConn.cursor()
         cursor.execute(query, msg_id, event_time)
         row = cursor.fetchone()
         msgCount = row[0]
@@ -443,7 +251,7 @@ class bgqThresholdExceededEventAnalyzer(bgqBaseAnalyzer):
                 else:
                     query = query.replace('SN', 'is NULL')
                 if location:
-                    loc = "= '" + location.strip() + "'"
+                    loc = "= '" + location + "'"
                     query = query.replace('LOC', loc)
                 else:
                     query = query.replace('LOC', 'is NULL')
@@ -460,6 +268,7 @@ class bgqThresholdExceededEventAnalyzer(bgqBaseAnalyzer):
                 else:
                     registry.get_logger().debug("Threshold exceeded " + msg_id + " recid " + str(rec_id) + " for consecutive period " + str(nums+2) + " of " + str(numPeriods+1))
 
+        msgText = event.raw_data['message'].strip()
         if msg_id == '00040020':
             skipAlert = False
             index = msgText.find('StatusWord=0x0002')
@@ -482,11 +291,12 @@ class bgqThresholdExceededEventAnalyzer(bgqBaseAnalyzer):
         reason = tmsg + "\nRAS event details:" \
                  " message id = " + msg_id + \
                  ", recid = " + str(rec_id) + \
-                 ", timestamp = " + str(event_time) + \
-                 ", serial number = " + str(serialnumber) + \
-                 ", ecid = " + str(ecid) + \
-                 ", jobid = " + str(jobid) + \
-                 ", block = " + str(block)
+                 ", timestamp = " + str(event.get_time_occurred()) + \
+                 ", serial number = " + str(event.raw_data['serialnumber']) + \
+                 ", ecid = " + self.ecidString(event.raw_data['ecid']) + \
+                 ", jobid = " + str(event.raw_data['jobid']) + \
+                 ", block = " + str(event.raw_data['block'])
+
         rasMessage = "RAS Message: " + msgText
 
         recommendation = self.recommendation

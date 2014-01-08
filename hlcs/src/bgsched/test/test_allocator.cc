@@ -502,7 +502,7 @@ main(int argc, char *argv[])
         TestAllocatorEventListener blockEventListener;
         LOG_TRACE_MSG( "Registering block event listener for LiveModel" );
         model.registerListener(blockEventListener);
-
+/*
         // while (true) {
             // Cleanup (free and remove) any LiveModel blocks from previous runs
             LOG_DEBUG_MSG( "Cleaning up blocks from previous runs" );
@@ -519,7 +519,7 @@ main(int argc, char *argv[])
             //model.addDrainedMidplane("R00-M0");
             //model.addDrainedMidplane("R00-M1");
             //model.addDrainedMidplane("R01-M0");
-/*
+
             LOG_INFO_MSG( "=== findBlockResources() for 32,64,128,256 cnodes on LiveModel ===" );
             LOG_INFO_MSG( "=== 32 cnodes on LiveModel: should complete OK ===" );
             Block::Ptr block32;
@@ -538,8 +538,8 @@ main(int argc, char *argv[])
             findAndAllocateSmallBlock(my_alloc, model, false, 256, true, block256);
             model.syncState();
         //}
-*/
 
+*/
 /*
         // Cleanup (free and remove) any LiveModel blocks from previous runs
         LOG_DEBUG_MSG( "Cleaning up blocks from previous runs" );
@@ -584,7 +584,9 @@ main(int argc, char *argv[])
         model.addBlock(live_block, dft_owner);
 */
 
-/*
+        // Cleanup (free and remove) any LiveModel blocks from previous runs
+        LOG_DEBUG_MSG( "Cleaning up blocks from previous runs" );
+        cleanupBlocks(my_alloc, model, isWaitOnCleanup);
         LOG_INFO_MSG( "=== findBlockResources() and allocate for all midplanes on LiveModel ===" );
         Block::Ptr block512;
         uint32_t midplaneCount = coords[Dimension::A] * coords[Dimension::B] * coords[Dimension::C] * coords[Dimension::D];
@@ -608,7 +610,7 @@ main(int argc, char *argv[])
                     block512);
             model.syncState();
         }
-*/
+
 /*
         LOG_INFO_MSG( "=== findBlockResources() and allocate all small blocks (128 cnodes each) on LiveModel ===" );
         Block::Ptr smallblock128;

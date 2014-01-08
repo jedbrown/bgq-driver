@@ -162,6 +162,19 @@ typedef enum { MUDMRAS_NONE = 0x000C0000,
          />
        */
 
+       MUDMRAS_CN_TOOK2LONG = 0x000CD003,
+       /*
+         <rasevent 
+         id="000CD003"
+         category="Software_Error"
+         component="MUDM"
+         severity="WARN"
+         message="A connection is taking a long time to complete.   The packet header is $(HEX0) $(HEX1) $(HEX2) $(HEX3)."
+         description="A connection is taking a long time to complete processing.."
+         service_action="Please report these errors to IBM.  Logs, timestamps, and any other recreation material will be helpful."
+         />
+       */
+
        MUDMRAS_ID_MAX= 0xcffff    // always last  
 } mudmras_msg_id;
 

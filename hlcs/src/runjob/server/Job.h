@@ -43,8 +43,6 @@
 
 #include "server/fwd.h"
 
-#include "common/message/ExitJob.h"
-
 #include "common/error.h"
 #include "common/JobInfo.h"
 
@@ -168,6 +166,8 @@ public:
 private:
     friend class database::Insert;
     friend class job::Setup;
+    friend class job::Signal;
+    friend class job::Handle;
     friend class mux::Reconnect;
 
     job::Status _status;                                            //!<
@@ -185,6 +185,7 @@ private:
     const boost::weak_ptr<Server> _server;                          //!<
     job::tool::Container _tools;                                    //!<
     const boost::shared_ptr<job::SubNodePacing> _pacing;            //!<
+    int _outstandingSignal;                                         //!<
 };
 
 } // server

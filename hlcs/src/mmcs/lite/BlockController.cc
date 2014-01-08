@@ -164,7 +164,7 @@ BlockController::processRASMessage(
         RasEvent& rasEvent
         )
 {
-    LOG_TRACE_MSG( "processing RAS event" );
+    LOG_TRACE_MSG("Processing RAS event");
     LOG_TRACE_MSG(rasEvent);
     // let BlockController do its part
     bool filtered = getBase()->processRASMessage(rasEvent);

@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "GetBlockSize.h"
 
 #include "../BlockHelper.h"
@@ -30,11 +29,9 @@
 
 #include "common/ConsoleController.h"
 
-
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 GetBlockSize*
 GetBlockSize::build()
@@ -58,7 +55,7 @@ GetBlockSize::execute(
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     const BlockPtr block = pController->getBlockHelper()->getBase();
     const CNBlockPtr compute_block = boost::dynamic_pointer_cast<CNBlockController>( block );
@@ -80,7 +77,7 @@ GetBlockSize::io(
         const std::deque<std::string>& args,
         const BGQBlockNodeConfig* bnc,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     if      (args[0] == "a")  reply << bnc->aIONodeSize();
     else if (args[0] == "b")  reply << bnc->bIONodeSize();
@@ -102,7 +99,7 @@ GetBlockSize::compute(
         const std::deque<std::string>& args,
         const BGQBlockNodeConfig* bnc,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     if      (args[0] == "a")  reply << bnc->aNodeSize();
     else if (args[0] == "b")  reply << bnc->bNodeSize();
@@ -120,17 +117,18 @@ GetBlockSize::compute(
     }
     reply << mmcs_client::DONE;
 }
+
 void
 GetBlockSize::help(
         std::deque<std::string> args,
-        mmcs_client::CommandReply& reply)
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
-        << ";Retrieve the block dimensions of selected block."
-        << ";Specifiying a, b, c, d, e, or io retrieves that one dimension."
-        << ";Specifying * retrieves all dimensions."
-        << mmcs_client::DONE;
+          << ";Retrieve the block dimensions of selected block."
+          << ";Specifiying a, b, c, d, e, or io retrieves that one dimension."
+          << ";Specifying * retrieves all dimensions."
+          << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

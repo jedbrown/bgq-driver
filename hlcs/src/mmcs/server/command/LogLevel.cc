@@ -32,11 +32,9 @@ LOG_DECLARE_FILE( "mmcs.server" );
 
 using namespace std;
 
-
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 LogLevel::LogLevel(
         const char* name,
@@ -68,7 +66,7 @@ LogLevel::execute(
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     using namespace log4cxx;
 
@@ -114,10 +112,10 @@ void
 LogLevel::help(
         deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     reply << mmcs_client::OK << description();
-    reply << ";sets the specified loggers to the requested levels.  If no logger is given,";
+    reply << ";Sets the specified loggers to the requested levels. If no logger is given,";
     reply << ";all loggers and their current levels are displayed. Each logger parameter can";
     reply << ";have one of three formats:";
     reply << ";   1. logger=level : set the logger to the level.";
@@ -136,9 +134,7 @@ LogLevel::help(
     reply << ";";
     reply << ";Example:";
     reply << ";log_level ibm.mmcs=T";
-
     reply << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

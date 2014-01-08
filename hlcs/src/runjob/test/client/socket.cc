@@ -31,6 +31,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/scoped_array.hpp>
 
 #include <sys/un.h>
 

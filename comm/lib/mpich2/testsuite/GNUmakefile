@@ -7,7 +7,7 @@ ifneq ($(origin TEST), undefined)
 endif
 
 INSTALLED_MPICC = $(sort $(shell find $(TOP_INSTALL_DIR)/ -name mpicc 2>/dev/null))
-MPI_INSTALL_DIRS = $(subst /bin/mpicc,,$(INSTALLED_MPICC))
+MPI_INSTALL_DIRS = $(subst /mpicc,,$(INSTALLED_MPICC))
 MPI_INSTALL_NAMES = $(notdir $(MPI_INSTALL_DIRS))
 BUILD_DIRECTORIES = $(patsubst %,build/%,$(MPI_INSTALL_NAMES))
 RUNTEST_TARGETS = $(patsubst %,build/%/runtests,$(MPI_INSTALL_NAMES))
@@ -85,10 +85,10 @@ $(RUNTEST_TARGETS):
 	mkdir -p $(dir $@)
 	(											\
 	cd $(dir $@) &&										\
-	CC=$(filter %/$(patsubst build/%/runtests,%,$@),$(MPI_INSTALL_DIRS))/bin/mpicc		\
-	CXX=$(filter %/$(patsubst build/%/runtests,%,$@),$(MPI_INSTALL_DIRS))/bin/mpicxx	\
-	FC=$(filter %/$(patsubst build/%/runtests,%,$@),$(MPI_INSTALL_DIRS))/bin/mpif90		\
-	F77=$(filter %/$(patsubst build/%/runtests,%,$@),$(MPI_INSTALL_DIRS))/bin/mpif77	\
+	CC=$(filter %/$(patsubst build/%/runtests,%,$@),$(MPI_INSTALL_DIRS))/mpicc		\
+	CXX=$(filter %/$(patsubst build/%/runtests,%,$@),$(MPI_INSTALL_DIRS))/mpicxx		\
+	FC=$(filter %/$(patsubst build/%/runtests,%,$@),$(MPI_INSTALL_DIRS))/mpif90		\
+	F77=$(filter %/$(patsubst build/%/runtests,%,$@),$(MPI_INSTALL_DIRS))/mpif77		\
 	$(testsuite_srcdir)/configure								\
 	--enable-strictmpi $(TESTSUITE_CONFIGURE_EXTRA)						\
 	)

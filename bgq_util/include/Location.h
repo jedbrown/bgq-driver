@@ -118,7 +118,7 @@ public:
      */
     struct Dimension {
         enum Value {
-            A, B, C, D
+            A, B, C, D, NONE
         };
     };
 

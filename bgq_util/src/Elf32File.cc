@@ -214,7 +214,7 @@ void Elf32File::Close()
     m_vectProgramHeaders.clear();
     m_vectSectionHeaders.clear();    
     if (m_pStringTable)
-        delete m_pStringTable, m_pStringTable = NULL;
+        delete [] m_pStringTable, m_pStringTable = NULL;
     m_ulStringTblSize = 0;
 }
 ////////////////////////////////////////////////////////////////

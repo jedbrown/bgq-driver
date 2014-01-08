@@ -28,7 +28,6 @@
 #ifndef MMCS_SERVER_DB_BLOCK_CONTROLLER_H_
 #define MMCS_SERVER_DB_BLOCK_CONTROLLER_H_
 
-
 #include "BlockHelper.h"
 
 #include "CheckBootComplete.h"
@@ -51,12 +50,10 @@
 #include <stdint.h>
 #include <time.h>
 
-
 namespace mmcs {
 namespace server {
 
-
-class DBBlockController: public BlockHelper
+class DBBlockController : public BlockHelper
 {
 public:
     DBBlockController(
@@ -76,7 +73,7 @@ public:
     void                          waitBoot(std::deque<std::string> args, mmcs_client::CommandReply& reply, bool interactive = false, bool rebooting = false);
     void                          waitFree(mmcs_client::CommandReply& reply);
     void                          initMachineConfig(mmcs_client::CommandReply& reply);
-    static std::string            strDBError(int result);
+    static const std::string&     strDBError(BGQDB::STATUS result);
     PerformanceCounters&          counters() { return _counters; }
 
     void                          create_block(std::deque<std::string> args, mmcs_client::CommandReply& reply);
@@ -93,6 +90,10 @@ public:
     const std::string&            getBlockName() const;
     void                          startBootCheck(BlockControllerTarget* target) { _cbc._target = target; _cbc.start(); }
     void                          setAllocateStartTime(time_t time) { _allocate_block_start = time; }
+
+private:
+    void abnormalComputeShutdown();
+
 protected:
     time_t                              _allocate_block_start;
     BGQDB::DBTEventlog                  dbe;
@@ -107,8 +108,6 @@ protected:
     uint32_t                            _rasInsertionCount;
     boost::posix_time::time_duration    _rasInsertionTime;
 };
-
-typedef boost::shared_ptr<DBBlockController> DBBlockPtr;
 
 } } // namespace mmcs::server
 

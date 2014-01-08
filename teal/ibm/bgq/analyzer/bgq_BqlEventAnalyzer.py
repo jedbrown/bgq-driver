@@ -105,29 +105,13 @@ class bgqBqlEventAnalyzer(bgqBaseAnalyzer):
         alertTable = self.appendSchema('x_tealalertlog')
         self.alert_period = '1 day'
         self.alert_query = "select count(*) from " + alertTable + " where \"alert_id\"='BQL01' and \"event_loc\"= ? and \"creation_time\" >= (timestamp('MYTIME') - PERIOD) and \"state\"=1"
-        return
 
-    def rasRawDataQuery(self, cursor, recid):
-        '''Run a query to retrieve details of a RAS event.
-        '''
-        # define query for ras event details
-        eventlogTable = self.appendSchema('tbgqeventlog')
-        details_query = "select location, severity, serialnumber, hex(ecid), event_time, jobid, block, message, rawdata, count from " + eventlogTable + " where recid = ?"
-        registry.get_logger().debug(details_query)
-        cursor.execute(details_query, recid);
-        row = list(cursor.fetchone())
-        if row:
-            if row[0]:
-                row[0] = row[0].strip()
-            if row[1]:
-                row[1] = row[1].strip()
-            if row[6]:
-                row[6] = row[6].strip()
-            if row[7]:
-                row[7] = row[7].strip()
-            if row[8]:
-                row[8] = row[8].strip()
-        return row
+        # database connection and cursor
+        dbi = registry.get_service(SERVICE_DB_INTERFACE)
+        self.dbConn = dbi.get_connection()
+        self.cursor = self.dbConn.cursor()
+
+        return
 
     def will_analyze_event(self, event):
         '''Indicate this analyzer handles certain BQL events.
@@ -148,12 +132,18 @@ class bgqBqlEventAnalyzer(bgqBaseAnalyzer):
         rec_id = event.get_rec_id()
         registry.get_logger().info("Analyzing msgid = " + msg_id + " recid = " + str(rec_id))
 
-        # query ras event details
-        dbi = registry.get_service(SERVICE_DB_INTERFACE)
-        dbConn = dbi.get_connection()
-        cursor = dbConn.cursor()
-        location, severity, serialnumber, ecid, event_time, jobid, block, msgText, rawdata, count = self.rasRawDataQuery(cursor, int(rec_id))
-
+        location = str(event.get_src_loc())
+        location = location[3:].strip()
+        severity = event.raw_data['severity'].strip()
+        serialnumber = event.raw_data['serialnumber']
+        ecid = event.raw_data['ecid']
+        event_time = event.get_time_logged()
+        block = event.raw_data['block'].strip()
+        jobid = event.raw_data['jobid']
+        msgText = event.raw_data['message'].strip()
+        rawdata = event.raw_data['rawdata'].strip()
+        count = event.get_event_cnt()
+        
         # Set threshold value
         threshold = self.msgidCount[msg_id]
         tmsg = "BQL error threshold of " + str(threshold) + " has been reached or exceeded, total count is "
@@ -166,13 +156,26 @@ class bgqBqlEventAnalyzer(bgqBaseAnalyzer):
 
         # search for events associated with this location's midplane or I/O board
         qryloc = location.strip()[0:6] + '%'
-        registry.get_logger().debug(query + " xmsgId=" + msg_id + " loc=" + qryloc + " ev_time=" + str(event_time)) 
-        cursor.execute(query, qryloc)    
-        row = cursor.fetchone()
-        msgCount = row[0]
+        registry.get_logger().debug(query + " xmsgId=" + msg_id + " loc=" + qryloc + " ev_time=" + str(event_time))
+        
+        msgCount = 0
+        for x in range(5):
+            try:
+                self.cursor.execute(query, qryloc)
+                row = self.cursor.fetchone()
+                msgCount = row[0]
+                break
+            except Exception, e:
+                registry.get_logger().debug(e)
+                if x < 4:
+                    dbi = registry.get_service(SERVICE_DB_INTERFACE)
+                    self.dbConn = dbi.get_connection()
+                    self.cursor = self.dbConn.cursor()
+                else:
+                    raise Exception('Error: bgq_BqlEventAnalyzer could not connect to the database')
 
         if msgCount < threshold:
-            if msg_id == '00090200' or msg_id == '00090210' or msg_id == '00090211':
+            if msg_id == '00090200':
                 registry.get_logger().info("The optical lane will be spared since only " + str(msgCount) + " BQL event(s) were logged during the window.")
                 # perform the BQL sparing action
                 self.perform_sparing(rec_id, location, rawdata)
@@ -181,9 +184,24 @@ class bgqBqlEventAnalyzer(bgqBaseAnalyzer):
         aquery = self.alert_query.replace('PERIOD',self.alert_period)
         aquery = aquery.replace('MYTIME', str(event_time))
         registry.get_logger().debug(aquery + " xmsgId=" + msg_id + " loc=" + location.strip() + " ev_time=" + str(event_time))
-        cursor.execute(aquery, location.strip())
-        row = cursor.fetchone()
-        msgCount = row[0]
+
+        msgCount = 0
+        for x in range(5):
+            try:
+                self.cursor.execute(aquery,location.strip())
+                row = self.cursor.fetchone()
+                msgCount = row[0]
+                break
+            except Exception, e:
+                registry.get_logger().debug(e)
+                if x < 4:
+                    dbi = registry.get_service(SERVICE_DB_INTERFACE)
+                    self.dbConn = dbi.get_connection()
+                    self.cursor = self.dbConn.cursor()
+                else:
+                    raise Exception('Error: bgq_BqlEventAnalyzer could not connect to the database')
+
+
         # do not log more than one BQL alert per day for the same location 
         if msgCount > 0:
             registry.get_logger().debug("An active BQL01 alert for location " + location.strip() + " exist within a period of " + self.alert_period + ". Skip logging a duplicate.")
@@ -195,7 +213,7 @@ class bgqBqlEventAnalyzer(bgqBaseAnalyzer):
                  ", recid = " + str(rec_id) + \
                  ", timestamp = " + str(event_time) + \
                  ", serial number = " + str(serialnumber) + \
-                 ", ecid = " + str(ecid) + \
+                 ", ecid = " + self.ecidString(ecid) + \
                  ", jobid = " + str(jobid) + \
                  ", block = " + str(block)
         raw_data = "RAS Message: " + msgText

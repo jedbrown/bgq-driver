@@ -153,7 +153,7 @@ LocalSocket::bind(std::string name)
 LocalDatagramSocket::LocalDatagramSocket() : LocalSocket()
 {
    // Create the socket.
-   _sd = ::socket(AF_LOCAL, SOCK_DGRAM, 0);
+   _sd = ::socket(AF_LOCAL, SOCK_DGRAM | SOCK_CLOEXEC, 0);
    if (_sd == Closed) {
       SocketError e(errno, "socket() failed");
       LOG_ERROR_MSG("error creating unnamed local datagram socket: " << bgcios::errorString(e.errcode()));
@@ -174,7 +174,7 @@ LocalDatagramSocket::LocalDatagramSocket() : LocalSocket()
 LocalDatagramSocket::LocalDatagramSocket(std::string name) : LocalSocket()
 {
    // Create the socket.
-   _sd = ::socket(AF_LOCAL, SOCK_DGRAM, 0);
+   _sd = ::socket(AF_LOCAL, SOCK_DGRAM | SOCK_CLOEXEC, 0);
    if (_sd == Closed) {
       SocketError e(errno, "socket() failed");
       LOG_ERROR_MSG("error creating named local datagram socket: " << bgcios::errorString(e.errcode()));
@@ -249,7 +249,7 @@ LocalDatagramSocket::recvAvailableFrom(std::string& name, void *buffer, size_t l
 LocalStreamSocket::LocalStreamSocket() : LocalSocket()
 {
    // Create the socket.
-   _sd = ::socket(AF_LOCAL, SOCK_STREAM, 0);
+   _sd = ::socket(AF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC, 0);
    if (_sd == Closed) {
       SocketError e(errno, "socket() failed");
       LOG_ERROR_MSG("error creating unnamed local stream socket: " << bgcios::errorString(e.errcode()));
@@ -270,7 +270,7 @@ LocalStreamSocket::LocalStreamSocket() : LocalSocket()
 LocalStreamSocket::LocalStreamSocket(std::string name) : LocalSocket()
 {
    // Create the socket.
-   _sd = ::socket(AF_LOCAL, SOCK_STREAM, 0);
+   _sd = ::socket(AF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC, 0);
    if (_sd == Closed) {
       SocketError e(errno, "socket() failed");
       LOG_ERROR_MSG("error creating named local stream socket: " << bgcios::errorString(e.errcode()));

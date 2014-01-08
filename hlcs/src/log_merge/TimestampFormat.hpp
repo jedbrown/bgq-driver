@@ -79,6 +79,7 @@ private:
 class TimestampFormat1 : public TimestampFormat
 {
 public:
+    TimestampFormat1();
     bool split( const std::string& line, std::string* time_str_out, std::string* remaining_out ) const;
     boost::posix_time::ptime parse( const std::string& time_str ) const;
 
@@ -95,6 +96,7 @@ private:
 class TimestampFormat3 : public TimestampFormat
 {
 public:
+    TimestampFormat3();
     bool split( const std::string& line, std::string* time_str_out, std::string* remaining_out ) const;
     boost::posix_time::ptime parse( const std::string& time_str ) const;
 
@@ -111,6 +113,7 @@ private:
 class TimestampFormatQ : public TimestampFormat
 {
 public:
+    TimestampFormatQ();
     bool split( const std::string& line, std::string* time_str_out, std::string* remaining_out ) const;
     boost::posix_time::ptime parse( const std::string& time_str ) const;
 

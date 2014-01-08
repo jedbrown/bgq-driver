@@ -21,22 +21,19 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "ListIo.h"
 
 #include <db/include/api/BGQDBlib.h>
 #include <db/include/api/dataconv.h>
 
+#include <db/include/api/tableapi/DBConnectionPool.h>
 #include <db/include/api/tableapi/gensrc/bgqtableapi.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 ListIo*
 ListIo::build()
@@ -46,17 +43,19 @@ ListIo::build()
     commandAttributes.requiresConnection(false);       // does not require  mc_server connections
     commandAttributes.requiresTarget(false);           // does not require a BlockControllerTarget object
     commandAttributes.mmcsServerCommand(true);
-    commandAttributes.mmcsConsoleCommand(false);
+    commandAttributes.bgConsoleCommand(false);
     commandAttributes.bgadminAuth(true);
     commandAttributes.helpCategory(common::ADMIN);
     return new ListIo("list_io", "list_io [ioblock]", commandAttributes);
 }
 
 void
-ListIo::execute(deque<string> args,
+ListIo::execute(
+        deque<string> args,
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
-        BlockControllerTarget* pTarget)
+        BlockControllerTarget* pTarget
+)
 {
     BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
     if (!tx.getConnection()) {
@@ -66,10 +65,15 @@ ListIo::execute(deque<string> args,
 
     string sqlstr;
     SQLLEN ind[8];
-    SQLRETURN sqlrc;
     SQLHANDLE hstmt;
-    char ioid[7], iostatus[2], block[33], blockstatus[2], subd[2], nodepos[5], numnodes[12];
-    char cn[16];
+    char ioid[7] = {0};
+    char iostatus[2] = {0};
+    char block[33] = {0};
+    char blockstatus[2] = {0};
+    char subd[2] = {0};
+    char nodepos[5] = {0};
+    char numnodes[12] = {0};
+    char cn[16] = {0};
     char curioid[7] = "prev";
     char curblock[33] = "prev";
 
@@ -99,21 +103,21 @@ ListIo::execute(deque<string> args,
             + string("   as x on a.drawer = x.drawer ")
             + string("    order by drawer, nodepos ; ");
     } else {
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         return;
     }
 
-    sqlrc = tx.execQuery(sqlstr.c_str(), &hstmt);
-    sqlrc = SQLBindCol(hstmt, 1, SQL_C_CHAR, ioid,        7, &ind[0]);
-    sqlrc = SQLBindCol(hstmt, 2, SQL_C_CHAR, iostatus,    2, &ind[1]);
-    sqlrc = SQLBindCol(hstmt, 3, SQL_C_CHAR, block,      33, &ind[2]);
-    sqlrc = SQLBindCol(hstmt, 4, SQL_C_CHAR, blockstatus, 2, &ind[3]);
-    sqlrc = SQLBindCol(hstmt, 5, SQL_C_CHAR, subd,        2, &ind[4]);
-    sqlrc = SQLBindCol(hstmt, 6, SQL_C_CHAR, nodepos,     5, &ind[5]);
-    sqlrc = SQLBindCol(hstmt, 7, SQL_C_CHAR, numnodes,   12, &ind[6]);
+    tx.execQuery(sqlstr.c_str(), &hstmt);
+    SQLBindCol(hstmt, 1, SQL_C_CHAR, ioid,        7, &ind[0]);
+    SQLBindCol(hstmt, 2, SQL_C_CHAR, iostatus,    2, &ind[1]);
+    SQLBindCol(hstmt, 3, SQL_C_CHAR, block,      33, &ind[2]);
+    SQLBindCol(hstmt, 4, SQL_C_CHAR, blockstatus, 2, &ind[3]);
+    SQLBindCol(hstmt, 5, SQL_C_CHAR, subd,        2, &ind[4]);
+    SQLBindCol(hstmt, 6, SQL_C_CHAR, nodepos,     5, &ind[5]);
+    SQLBindCol(hstmt, 7, SQL_C_CHAR, numnodes,   12, &ind[6]);
 
     if  (args.size() > 0) {
-        sqlrc= SQLBindCol(hstmt, 8, SQL_C_CHAR, cn,   16, &ind[7]);
+        SQLBindCol(hstmt, 8, SQL_C_CHAR, cn,   16, &ind[7]);
         reply << mmcs_client::OK;
         reply << "ID      STATUS SUBDIVIDED BLOCK                            BLOCKSTATUS NODEPOS NUMNODES COMPUTENODE\n";
     } else {
@@ -121,11 +125,11 @@ ListIo::execute(deque<string> args,
         reply << "ID      STATUS SUBDIVIDED BLOCK                            BLOCKSTATUS NODEPOS NUMNODES\n";
     }
 
-    sqlrc = SQLFetch(hstmt);
+    SQLRETURN sqlrc = SQLFetch(hstmt);
 
-    trim_right_spaces(nodepos);
-    trim_right_spaces(numnodes);
-    for (;sqlrc==SQL_SUCCESS;)   {
+    BGQDB::trim_right_spaces(nodepos);
+    BGQDB::trim_right_spaces(numnodes);
+    while ( sqlrc==SQL_SUCCESS ) {
         reply.setf( ios::left);
         if (ind[2]==SQL_NULL_DATA)
             reply << setw(7)  << ioid << " " << setw(7) << iostatus
@@ -137,32 +141,32 @@ ListIo::execute(deque<string> args,
                 } else
                     if (strcmp(curioid,ioid)==0)  {
                         reply << setw(7)  << " " <<  " " << setw(7) << " "
-                              << setw(11) << " " << setw(33) <<    block
-                              << setw(12) << blockstatus
-                              << setw(8)  << ((ind[5]==SQL_NULL_DATA) ? " " : nodepos)
-                              << setw(9)  << ((ind[6]==SQL_NULL_DATA) ? " " : numnodes)
-                              << setw(15)  << cn << "\n";
+                            << setw(11) << " " << setw(33) <<    block
+                            << setw(12) << blockstatus
+                            << setw(8)  << ((ind[5]==SQL_NULL_DATA) ? " " : nodepos)
+                            << setw(9)  << ((ind[6]==SQL_NULL_DATA) ? " " : numnodes)
+                            << setw(15)  << cn << "\n";
                     } else {
                         reply << setw(7)  << ioid << " " << setw(7) << iostatus
-                              << setw(11) << subd << setw(33) <<    block
-                              << setw(12) << blockstatus
-                              << setw(8)  << ((ind[5]==SQL_NULL_DATA) ? " " : nodepos)
-                              << setw(9)  << ((ind[6]==SQL_NULL_DATA) ? " " : numnodes)
-                              << setw(15)  << cn << "\n";
+                            << setw(11) << subd << setw(33) <<    block
+                            << setw(12) << blockstatus
+                            << setw(8)  << ((ind[5]==SQL_NULL_DATA) ? " " : nodepos)
+                            << setw(9)  << ((ind[6]==SQL_NULL_DATA) ? " " : numnodes)
+                            << setw(15)  << cn << "\n";
                     }
             } else {
                 if (strcmp(curioid,ioid)==0) {
                     reply << setw(7)  << " " <<  " " << setw(7) << " "
-                          << setw(11) << " " << setw(33) <<    block
-                          << setw(12) << blockstatus
-                          << setw(8)  << ((ind[5]==SQL_NULL_DATA) ? " " : nodepos)
-                          << setw(9)  << ((ind[6]==SQL_NULL_DATA) ? " " : numnodes) << "\n";
+                        << setw(11) << " " << setw(33) <<    block
+                        << setw(12) << blockstatus
+                        << setw(8)  << ((ind[5]==SQL_NULL_DATA) ? " " : nodepos)
+                        << setw(9)  << ((ind[6]==SQL_NULL_DATA) ? " " : numnodes) << "\n";
                 } else {
                     reply << setw(7)  << ioid << " " << setw(7) << iostatus
-                          << setw(11) << subd << setw(33) <<    block
-                          << setw(12) << blockstatus
-                          << setw(8)  << ((ind[5]==SQL_NULL_DATA) ? " " : nodepos)
-                          << setw(9)  << ((ind[6]==SQL_NULL_DATA) ? " " : numnodes) << "\n";
+                        << setw(11) << subd << setw(33) <<    block
+                        << setw(12) << blockstatus
+                        << setw(8)  << ((ind[5]==SQL_NULL_DATA) ? " " : nodepos)
+                        << setw(9)  << ((ind[6]==SQL_NULL_DATA) ? " " : numnodes) << "\n";
                 }
             }
         }
@@ -177,15 +181,16 @@ ListIo::execute(deque<string> args,
 }
 
 void
-ListIo::help(deque<string> args,
-                   mmcs_client::CommandReply& reply)
+ListIo::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
-        << ";Prints IO drawer information for the machine,"
-        << ";including blocks that are booted on each drawer."
-        << ";If the name of an IO block is provided, the output will include details for that block."
-        << mmcs_client::DONE;
+          << ";Prints I/O drawer information for the machine,"
+          << ";including blocks that are booted on each drawer."
+          << ";If the name of an I/O block is provided, the output will include details for that block."
+          << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

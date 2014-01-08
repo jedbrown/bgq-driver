@@ -278,5 +278,37 @@ uint64_t poll_pkt_message(struct my_context * mcontext,struct pkt_controls * pkt
    return unfreed_req_id;
 }
 
+void check4notRight(struct pkt_controls * pkt_ctls,BG_FlightRecorderRegistry_t* logregistry){
 
+  uint64_t expected = pkt_ctls->num_pkts;
+
+  uint64_t free_num = 0;
+  uint64_t reqid_num = 0;
+  //uint64_t backwards_reqid_num = 0;
+  struct pkt_descriptor * pktd = NULL;
+  //LOCK
+  SPIN_LOCK(pkt_ctls->pkt_list_lock);
+  pktd = pkt_ctls->pkt_free_list;
+  while (pktd){
+    free_num++;
+    pktd = pktd->next;
+    if (free_num > expected){
+      break;
+    }
+  }
+  pktd = pkt_ctls->pkt_reqid_list;
+  while (pktd){
+    reqid_num++;
+    pktd = pktd->next;
+    if (reqid_num > expected){ 
+      DB_PKT_CHECK(logregistry,pkt_ctls,expected,free_num,reqid_num);
+      break;
+    }
+  }
+  PKT_CHECK(logregistry,pkt_ctls,expected,free_num,reqid_num);
+  
+  //UNLOCK
+  SPIN_UNLOCK(pkt_ctls->pkt_list_lock);
+
+}
 

@@ -32,6 +32,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
+#include <boost/assert.hpp>
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/scoped_array.hpp>
@@ -60,7 +61,7 @@ UserId::UserId(
     memset(&mypwent, 0, sizeof(mypwent));
     struct passwd* mypwent_p = NULL;
     errno = 0;
-    const int result = getpwuid_r(_uid, &mypwent, buf.get(), usernameLength, &mypwent_p);
+    const int result = getpwuid_r(_uid, &mypwent, buf.get(), static_cast<size_t>(usernameLength), &mypwent_p);
     if ( !result && mypwent_p ) {
         _name = mypwent_p->pw_name;
         LOG_DEBUG_MSG("username " << _name);
@@ -96,7 +97,7 @@ UserId::UserId(
     struct passwd mypwent;
     memset(&mypwent, 0, sizeof(mypwent));
     struct passwd* mypwent_p = NULL;
-    const int result = getpwnam_r(_name.c_str(), &mypwent, buf.get(), usernameLength, &mypwent_p);
+    const int result = getpwnam_r(_name.c_str(), &mypwent, buf.get(), static_cast<size_t>(usernameLength), &mypwent_p);
     if ( !result && mypwent_p ) {
         _uid = mypwent_p->pw_uid;
         LOG_DEBUG_MSG("uid " << _uid);
@@ -124,10 +125,16 @@ UserId::UserId(
         const std::vector<char>& buf
         )
 {
-    std::string buf_str( buf.begin(), buf.end() );
+    const std::string buf_str( buf.begin(), buf.end() );
     std::istringstream is( buf_str );
-    boost::archive::text_iarchive ar( is );
-    ar & *this;
+    try {
+        boost::archive::text_iarchive ar( is );
+        ar & *this;
+    } catch ( const std::exception& e ) {
+        LOG_ERROR_MSG( "could not deserialize buffer: " << e.what() );
+        LOG_ERROR_MSG( "buffer: " << buf_str );
+        throw;
+    }
 }
 
 bool
@@ -173,13 +180,14 @@ UserId::setGroupList(
 
         // create variables for getgrgid_r
         struct group mygroup;
+        memset( &mygroup, 0, sizeof(mygroup) );
         struct group* group_p = NULL;
         errno = 0;
         int rc = 0;
 
         // as long as rc == ERANGE, try to increase the buffer size
         while (
-            ( rc = getgrgid_r(gid, &mygroup, buf.get(), group_buffer_length, &group_p) )
+            ( rc = getgrgid_r(gid, &mygroup, buf.get(), static_cast<size_t>(group_buffer_length), &group_p) )
             ==
             ERANGE
             )
@@ -189,10 +197,17 @@ UserId::setGroupList(
             buf.reset( new char[group_buffer_length] );
         }
 
-        if (rc == 0) {
+        if (rc == 0 && group_p) {
             // add to list
+            BOOST_ASSERT( mygroup.gr_name );
             _groups.push_front(GroupList::value_type(gid, mygroup.gr_name));
             LOG_DEBUG_MSG("Added group " << mygroup.gr_name << " with " << gid);
+        } else if ( !rc ) {
+            LOG_DEBUG_MSG("Could not find group name for gid " << gid );
+            // add entry with an empty group name
+            _groups.push_front(
+                    GroupList::value_type( gid, Group::second_type() )
+                    );
         } else {
             LOG_WARN_MSG("Could not find group name for gid " << gid << ": " << strerror(rc));
         }

@@ -88,7 +88,7 @@ default: install
 lib_objs=$(OBJS)
 
 $(lib_full): $(lib_objs)
-	$(CXX) -shared $(CXXFLAGS) $(LDFLAGS) $^ -o $@
+	$(CXX) -shared $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 $(lib_vers): $(lib_full)
 	ln -sf $< $@

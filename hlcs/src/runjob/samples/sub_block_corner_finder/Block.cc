@@ -36,6 +36,8 @@
 #include <boost/foreach.hpp>
 #include <boost/scoped_ptr.hpp>
 
+#include <sstream>
+
 LOG_DECLARE_FILE( runjob::log );
 
 using namespace runjob::samples;
@@ -48,16 +50,17 @@ Block::Block(
 {
     // validate block
     if ( _id.empty() ) {
-        throw std::invalid_argument( "empty block ID" );
+        throw std::invalid_argument( "Empty block ID" );
     }
-    LOG_DEBUG_MSG( "block " << _id );
+    LOG_DEBUG_MSG( "Block " << _id );
 
     // validate sub-block
     if ( _options.getCorner().empty() ) {
-        throw std::invalid_argument( "empty corner" );
+        throw std::invalid_argument( "Empty corner" );
     } else if ( _options.getShape().empty() ) {
-        throw std::invalid_argument( "empty shape" );
+        throw std::invalid_argument( "Empty shape" );
     }
+
     runjob::SubBlock sub_block(
             _options.getCorner(),
             runjob::Shape( _options.getShape() )
@@ -66,7 +69,7 @@ Block::Block(
     // get block XML
     std::stringstream xml;
     if ( BGQDB::getBlockXML(xml, _id) != BGQDB::OK) {
-        throw std::invalid_argument( "could not get xml definition for block " + _id );
+        throw std::invalid_argument( "Could not get xml definition for block " + _id );
     }
 
     // get BGQBlockXML
@@ -75,9 +78,8 @@ Block::Block(
             BGQBlockXML::create( xml, _options.getMachine().get() )
             );
     if ( !block_xml ) {
-        throw std::runtime_error( "could not create XML object for block " + _id );
+        throw std::runtime_error( "Could not create XML object for block " + _id );
     }
-
     // get BGQBlockNodeConfig
     boost::shared_ptr<BGQBlockNodeConfig> block_config;
     block_config.reset(
@@ -87,9 +89,9 @@ Block::Block(
                 )
             );
 
-    // we only support compute blocks    
+    // we only support compute blocks
     if ( block_xml->_ioboards.size() ) {
-        throw std::invalid_argument( "block " + _id + " is an I/O block, only compute blocks are supported" );
+        throw std::invalid_argument( "Block " + _id + " is an I/O block, only compute blocks are supported." );
     }
 
     // iterate through midplanes
@@ -102,7 +104,13 @@ Block::Block(
             ++midplane
         )
     {
-        LOG_TRACE_MSG( "looking at midplane " << midplane->posInMachine() );
+        LOG_DEBUG_MSG(
+                "Midplane " << midplane->posInMachine() << " coordinates relative to block (" <<
+                midplane->allMidplaneA() << "," <<
+                midplane->allMidplaneB() << "," <<
+                midplane->allMidplaneC() << "," <<
+                midplane->allMidplaneD() << ")"
+                );
 
         // get origin for partial midplane
         unsigned offset_a, offset_b, offset_c, offset_d, offset_e = 0;
@@ -114,7 +122,7 @@ Block::Block(
                 offset_e
                 );
         LOG_DEBUG_MSG(
-                "offset (" <<
+                "Origin position within the midplane (" <<
                 offset_a << "," <<
                 offset_b << "," <<
                 offset_c << "," <<
@@ -129,7 +137,7 @@ Block::Block(
             location.append( midplane->posInMachine() );
             location.append( "-" );
             location.append( boost::lexical_cast<std::string>( compute ) );
-            
+
             // get coordinates
             compute.getABCDE(
                         corner_a,
@@ -147,7 +155,7 @@ Block::Block(
             corner_e -= offset_e;
 
             // log location and coordinates
-            LOG_TRACE_MSG( 
+            LOG_TRACE_MSG(
                     compute << " (" <<
                     corner_a << "," <<
                     corner_b << "," <<
@@ -157,17 +165,20 @@ Block::Block(
                     );
 
             // find corner coordinates
-            if ( location == sub_block.corner().getValue() ) {
+            std::ostringstream cornerLocation;
+            cornerLocation.clear();
+            cornerLocation << sub_block.corner();
+            if ( location == cornerLocation.str() ) {
                 found = true;
 
                 // log corner coordinates
-                LOG_DEBUG_MSG( 
-                        "corner " << sub_block.corner() << " has coordinates " <<
+                LOG_DEBUG_MSG(
+                        "Corner " << sub_block.corner() << " has coordinates " <<
                         "(" << corner_a << "," << corner_b << "," << corner_c << "," << corner_d << "," << corner_e << ")"
                         );
 
                 // find shape coordinates
-                LOG_DEBUG_MSG( "shape " << std::string(sub_block.shape()) );
+                LOG_DEBUG_MSG( "Shape " << std::string(sub_block.shape()) );
                 for ( unsigned a = corner_a; a < corner_a + sub_block.shape().a(); ++a ) {
                     for ( unsigned b = corner_b; b < corner_b + sub_block.shape().b(); ++b ) {
                         for ( unsigned c = corner_c; c < corner_c + sub_block.shape().c(); ++c ) {
@@ -175,7 +186,7 @@ Block::Block(
                                 for ( unsigned e = corner_e; e < corner_e + sub_block.shape().e(); ++e ) {
 
                                     // validate coordinates
-                                    if ( 
+                                    if (
                                             midplane->fullMidplaneUsed() && (
                                                 a >= BGQTopology::MAX_A_NODE ||
                                                 b >= BGQTopology::MAX_B_NODE ||
@@ -186,7 +197,7 @@ Block::Block(
                                        )
                                     {
                                         std::ostringstream msg;
-                                        msg << "shape " << std::string(sub_block.shape()) <<
+                                        msg << "Shape " << std::string(sub_block.shape()) <<
                                             " extends beyond midplane dimensions (" <<
                                             BGQTopology::MAX_A_NODE << "," <<
                                             BGQTopology::MAX_B_NODE << "," <<
@@ -205,7 +216,7 @@ Block::Block(
                                             )
                                     {
                                         std::ostringstream msg;
-                                        msg << "shape " << std::string(sub_block.shape()) <<
+                                        msg << "Shape " << std::string(sub_block.shape()) <<
                                             " extends beyond nodeboard dimensions (" <<
                                             midplane->partialAsize() << "," <<
                                             midplane->partialBsize() << "," <<
@@ -217,7 +228,7 @@ Block::Block(
                                     }
 
                                     BGQNodePos compute( a, b, c, d, e);
-                                    LOG_DEBUG_MSG( 
+                                    LOG_DEBUG_MSG(
                                             midplane->posInMachine() << "-" << compute << " (" <<
                                             a << "," <<
                                             b << "," <<
@@ -234,7 +245,9 @@ Block::Block(
         }
     }
     if ( !found ) {
-        throw std::invalid_argument( "could not find corner " + std::string(sub_block.corner()) );
+        std::ostringstream os;
+        os << "Could not find corner " << sub_block.corner();
+        throw std::invalid_argument( os.str() );
     }
 }
 

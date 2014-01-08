@@ -50,6 +50,12 @@
             </listitem>
         </varlistentry>
         <varlistentry>
+            <term><option>-v --version</option></term>
+            <listitem>
+            <para>version information </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
             <term><option>--listen-ports portpairs</option></term>
             <listitem>
             <para>Listen on the comma separated list of host:port pairs. </para>

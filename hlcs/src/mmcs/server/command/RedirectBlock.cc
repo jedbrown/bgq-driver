@@ -21,19 +21,13 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "RedirectBlock.h"
 
 #include "Redirect.h"
 
-
-using namespace std;
-
-
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 RedirectBlock*
 RedirectBlock::build()
@@ -52,32 +46,31 @@ RedirectBlock::build()
     return new RedirectBlock("redirect_block", "redirect_block on|off", commandAttributes);
 }
 
-
 void
 RedirectBlock::execute(
-        deque<string> args,
+        std::deque<std::string> args,
         mmcs_client::CommandReply& reply,
         DBConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
-    command::Redirect::redirect_block(args, reply, pController);
-    if(reply.str() == "args?")
-      reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+    Redirect::redirect_block(args, reply, pController);
+    if (reply.str() == "args?") {
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
+    }
 }
 
 void
 RedirectBlock::help(
-        deque<string> args,
+        std::deque<std::string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
     reply << mmcs_client::OK << description()
-      << ";Redirect I/O node output for the selected block to the mmcs console."
-      << ";Directs subsequent mailbox output back to the socket connection that this command is received on."
-      << ";Allocating or freeing the block will stop the mailbox redirection."
-      << mmcs_client::DONE;
+          << ";Redirect I/O node output for the selected block to the mmcs console."
+          << ";Directs subsequent mailbox output back to the socket connection that this command is received on."
+          << ";Allocating or freeing the block will stop the mailbox redirection."
+          << mmcs_client::DONE;
 }
 
 } } } // namespace mmcs::server::command

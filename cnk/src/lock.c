@@ -119,6 +119,9 @@ void Kernel_Unlock(Lock_Atomic_t *pLock)
 void Kernel_Barrier_Internal(Lock_Atomic_t* pLock, uint32_t rendezvous_num)
 {
     uint32_t tmp_val, generation;
+
+    ppc_msync();
+
     // atomically increment the thread count
     do  /*loop doesn't iterate*/ 
     {

@@ -75,7 +75,7 @@ int test_compute_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -103,7 +103,7 @@ int test_io_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -135,7 +135,7 @@ int test_midplane() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -165,7 +165,7 @@ int test_bulk_power_supply_on_compute_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -194,7 +194,7 @@ int test_bulk_power_supply_on_io_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -228,7 +228,7 @@ int test_power_module_on_compute_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -260,7 +260,7 @@ int test_power_module_on_io_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -290,7 +290,7 @@ int test_clock_card_on_compute_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -322,7 +322,7 @@ int test_clock_card_on_io_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -354,7 +354,7 @@ int test_io_board_on_compute_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -386,7 +386,7 @@ int test_io_board_on_io_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -421,7 +421,7 @@ int test_node_board() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -457,7 +457,7 @@ int test_fan_assembly_on_compute_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -491,7 +491,7 @@ int test_fan_assembly_on_io_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -527,7 +527,7 @@ int test_fan_on_compute_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -562,7 +562,7 @@ int test_fan_on_io_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -600,7 +600,7 @@ int test_compute_card_on_node_board() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d str=%s\n", rc, str ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -634,7 +634,7 @@ int test_compute_card_on_io_board_on_io_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d str=%s\n", rc, str ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -668,7 +668,7 @@ int test_compute_card_on_io_board_on_compute_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d str=%s\n", rc, str ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -705,7 +705,7 @@ int test_compute_card_core_on_node_board() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d str=%s\n", rc, str ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -740,7 +740,7 @@ int test_compute_card_core_on_io_board() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -771,7 +771,7 @@ int test_service_card() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -808,7 +808,7 @@ int test_link_module_on_node_board() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -842,7 +842,7 @@ int test_link_module_on_io_board() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -880,7 +880,7 @@ int test_optical_module_on_node_board() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d str=%s\n", rc, str ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -914,7 +914,7 @@ int test_optical_module_on_io_board() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -950,7 +950,7 @@ int test_dca_on_node_board() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -984,7 +984,7 @@ int test_dca_on_io_board() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -1016,7 +1016,7 @@ int test_pci_adapter() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 
@@ -1045,7 +1045,7 @@ int test_leak_detector_on_compute_rack() {
 
   int rc = bg_string_to_uci(str, &uci2 );
   ASSERT( rc == 0, ( "non-zero rc from str_to_uci %d\n", rc ) );
-  ASSERT( uci == uci2, ( "string_to_uci error : %s %016llX vs %016llX\n", str, uci, uci2 ) );
+  ASSERT( uci == uci2, ( "string_to_uci error : %s %016lX vs %016lX\n", str, uci, uci2 ) );
   return 0;
 }
 

@@ -32,7 +32,8 @@
 
 
 //! \brief base class for ID representations
-class Id {
+class Id
+{
 protected:
     //! \brief The ONLY data member
     //! Everything else is sugar
@@ -68,7 +69,8 @@ public:
 //! A BGAgentId is a unique identifier for a bgagentd consisting
 //! of its hostname and listening port in the format
 //! host:port
-class BGAgentId : public Id {
+class BGAgentId : public Id
+{
 public:
     BGAgentId() : Id("") {}
     BGAgentId(const std::string& id_string);
@@ -81,7 +83,8 @@ public:
 //! A BinaryId is a unique identifier for a managed binary
 //! consisting of its hostname and process id in the format
 //! host:pid
-class BinaryId : public Id {
+class BinaryId : public Id
+{
 public:
     BinaryId() : Id("") {}
     BinaryId(const std::string& id_string);
@@ -97,7 +100,8 @@ public:
 //! A ClientId is a unique identifier for a client consisting
 //! of its hostname and local port.  (There is no listener on a client connection.)
 //! host:port
-class ClientId : public Id {
+class ClientId : public Id 
+{
 public:
     ClientId() {}
     ClientId(const std::string& id_string);

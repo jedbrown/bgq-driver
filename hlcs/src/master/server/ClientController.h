@@ -44,8 +44,8 @@
 //!
 //! Client Controller owns the sockets connected to the client and all
 //! messages to and from the client flow through it.
-class ClientController : public boost::enable_shared_from_this<ClientController> {
-
+class ClientController : public boost::enable_shared_from_this<ClientController>
+{
     //! \brief Protocol management object
     const ClientProtocolPtr _prot;
     bool _ending;
@@ -96,8 +96,8 @@ class ClientController : public boost::enable_shared_from_this<ClientController>
     void doLoglevelRequest(const BGMasterClientProtocolSpec::LoglevelRequest& loglevreq);
     //! \brief Get list of idle aliases
     void doGetidleRequest(const BGMasterClientProtocolSpec::GetidleRequest& idlereq);
-public:
 
+public:
     ClientController(
             const ClientProtocolPtr& prot,
             const std::string& ipaddr, 

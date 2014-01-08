@@ -26,8 +26,6 @@ ifndef $(OS_ARCH)
 OS_ARCH := $(shell uname -m)
 endif
 
-RHEL6_2 := $(shell if [[ $(BGQ_LINUX_OS_PATH) =~ RHEL6.2 ]] ; then echo TRUE ; else echo FALSE ; fi)
-
 # Figure out if 64-bit or 32-bit architecture
 ifndef $(BITS)
 BITS=32
@@ -67,7 +65,6 @@ CXXFLAGS += -Wsign-compare
 CXXFLAGS += -Wsign-conversion
 CXXFLAGS += -Wundef
 CXXFLAGS += -pthread
-CXXFLAGS += -rdynamic
 
 # Set include flags
 #CXXFLAGS += -iquote $(BGQ_BUILD_DIR)/ramdisk/src/services
@@ -76,18 +73,10 @@ CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)/extlib/include
 
 # Set linker flags
 LDFLAGS  += -pthread
-ifeq ($(RHEL6_2),FALSE)
-LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.3_base/usr/lib64
-LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.3_base/usr/lib
-LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.3_base/lib64
-LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.3_base/lib
-endif
-ifeq ($(RHEL6_2),TRUE)
-LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.2_base/usr/lib64
-LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.2_base/usr/lib
-LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.2_base/lib64
-LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.2_base/lib
-endif
+LDFLAGS  += -Wl,-rpath,$(BGQ_DISTROFS_BASE_PATH)/usr/lib64
+LDFLAGS  += -Wl,-rpath,$(BGQ_DISTROFS_BASE_PATH)/usr/lib
+LDFLAGS  += -Wl,-rpath,$(BGQ_DISTROFS_BASE_PATH)/lib64
+LDFLAGS  += -Wl,-rpath,$(BGQ_DISTROFS_BASE_PATH)/lib
 LDFLAGS  += -Wl,-rpath,$(IOS_LIBRARY_DIR)
 LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
 LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/extlib/lib
@@ -96,6 +85,7 @@ LDFLAGS  += -L $(BGQ_INSTALL_DIR)/utility/lib
 LDFLAGS  += -lbgutility
 LDFLAGS  += -lboost_system-mt
 LDFLAGS  += -lboost_program_options-mt
+LDFLAGS  += -rdynamic
 
 # Set 64-bit build rules
 %.o_64: %.cc

@@ -53,14 +53,21 @@ LDFLAGS  += -L$(BGQ_INSTALL_DIR)/xml/lib -lXML
 LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/xml/lib
 LDFLAGS  += -lexpat -ldl
 
-CXXFLAGS += -I$(include_install_dir)
-CXXFLAGS += -I$(BGQ_INSTALL_DIR)/xml/include
-CXXFLAGS += -I$(BGQ_INSTALL_DIR)/bgq_util/include
-CXXFLAGS += -I$(BGQ_INSTALL_DIR)
+CXXFLAGS += -iquote $(include_install_dir)
+CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)/xml/include
+CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)/bgq_util/include
+CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)
 CXXFLAGS += -iquote $(BGQ_BUILD_DIR)/ras/src
 CXXFLAGS += -fPIC
 CXXFLAGS += -MD
 CXXFLAGS += -g
+CXXFLAGS += -O2
+CXXFLAGS += -Wall
+CXXFLAGS += -Wconversion
+CXXFLAGS += -Wextra
+CXXFLAGS += -Wformat
+CXXFLAGS += -Woverloaded-virtual
+CXXFLAGS += -Wundef
 
 LIBS = $(lib_static)
 
@@ -94,7 +101,7 @@ $(lib_vers): $(lib_full)
 	ln -sf $< $@
 
 $(lib_full): $(OBJS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 $(lib_static): Makefile $(OBJS)
 	$(AR) crv  $@ $(OBJS)

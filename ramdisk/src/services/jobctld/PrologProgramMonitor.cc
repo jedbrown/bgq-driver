@@ -33,6 +33,8 @@
 #include <ramdisk/include/services/common/logging.h>
 #include <sstream>
 
+#include <boost/lexical_cast.hpp>
+
 using namespace bgcios::jobctl;
 
 LOG_DECLARE_FILE("cios.jobctld");
@@ -64,6 +66,10 @@ PrologProgramMonitor::run(void)
    std::ostringstream jobIdArg;
    jobIdArg << _jobId;
    prologProcess->addArgument(jobIdArg.str());
+
+   // Add BG_JOBID variable
+   prologProcess->addEnvironVariable( "BG_JOBID=" + boost::lexical_cast<std::string>(_jobId) );
+
    bgcios::MessageResult result = prologProcess->start();
    if (result.isError()) {
       result.setHeader(_ackMsg.header);

@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "RefreshConfig.h"
 
 #include "../DBConsoleController.h"
@@ -35,7 +34,6 @@
 #include <iostream>
 #include <fstream>
 
-
 using namespace std;
 
 using mmcs::common::Properties;
@@ -43,7 +41,6 @@ using mmcs::common::Properties;
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 RefreshConfig*
 RefreshConfig::build()
@@ -58,13 +55,13 @@ RefreshConfig::build()
     return new RefreshConfig("refresh_config", "refresh_config [file]", commandAttributes);
 }
 
-
 void
 RefreshConfig::execute(
         deque<string> args,
         mmcs_client::CommandReply& reply,
         DBConsoleController* pController,
-        BlockControllerTarget* pTarget)
+        BlockControllerTarget* pTarget
+)
 {
     std::string configfile;
     if ( args.size() == 1 ) {
@@ -72,7 +69,7 @@ RefreshConfig::execute(
     } else if ( args.empty() ) {
         configfile = Properties::getProperties()->getFilename();
     } else {
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         return;
     }
 
@@ -83,21 +80,18 @@ RefreshConfig::execute(
         RasEventHandlerChain::setProperties(Properties::getProperties());
         RasEventHandlerChain::initChain();
         reply << mmcs_client::OK << mmcs_client::DONE;
-    }
-    catch ( const std::exception& e )
-    {
+    } catch ( const std::exception& e ) {
         reply << mmcs_client::FAIL << e.what() << mmcs_client::DONE;
     }
 }
 
 void
-RefreshConfig::help(deque<string> args,
-			   mmcs_client::CommandReply& reply)
+RefreshConfig::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
-    reply << mmcs_client::OK << description()
-	  << ";Rereads config file."
-	  << mmcs_client::DONE;
+    reply << mmcs_client::OK << description() << ";Rereads config file." << mmcs_client::DONE;
 }
 
 } } } // namespace mmcs::server::command

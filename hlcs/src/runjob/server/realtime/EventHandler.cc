@@ -22,6 +22,7 @@
 /* end_generated_IBM_copyright_prolog                               */
 
 #include "server/block/Container.h"
+#include "server/block/Reconnect.h"
 #include "server/realtime/EventHandler.h"
 #include "server/realtime/Polling.h"
 #include "server/Server.h"
@@ -68,17 +69,54 @@ namespace server {
 namespace realtime {
 
 EventHandler::EventHandler(
-        const Server::Ptr& server,
-        const bgsched::SequenceId sequence
+        const Server::Ptr& server
         ) :
     _server( server ),
-    _polling( Polling::create(server, sequence) ),
-    _pollingSequence( sequence ),
-    _sequence( sequence ),
+    _polling( ),
+    _pollingSequence( 0),
+    _sequence( 0 ),
     _strand( server->getIoService() ),
     _queue( )
 {
 
+}
+
+void
+EventHandler::start(
+        const Callback& callback
+        )
+{
+    const Server::Ptr server( _server.lock() );
+    if ( !server ) return;
+
+    // start block reconnection to get the sequence ID that we'll
+    // use for handling future real-time events
+    block::Reconnect::create(
+            server,
+            boost::bind(
+                &EventHandler::reconnectCallback,
+                this,
+                _1,
+                callback
+                )
+            );
+}
+
+void
+EventHandler::reconnectCallback(
+        const bgsched::SequenceId sequence,
+        const Callback& callback
+        )
+{
+    const Server::Ptr server( _server.lock() );
+    if ( !server ) return;
+
+    LOG_INFO_MSG( "starting with sequence " << sequence );
+
+    _pollingSequence = sequence;
+    _sequence = sequence;
+    _polling = Polling::create(server, sequence);
+    callback();
 }
 
 void
@@ -225,6 +263,7 @@ EventHandler::handleBlockStateChangedRealtimeEvent(
         } else if ( previous == bgsched::Block::Allocated && current == bgsched::Block::Booting ) {
             server->getBlocks()->create( 
                     event.getBlockName(),
+                    boost::shared_ptr<BGQMachineXML>(),
                     boost::bind(
                         &EventHandler::blockCallback,
                         this,

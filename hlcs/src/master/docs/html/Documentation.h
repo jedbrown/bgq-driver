@@ -31,7 +31,6 @@
  *
  * - \ref introduction
  * - \ref quick_start
- * - \ref startagents
  * - \ref concepts
  * - \ref commands
  * - \ref policies
@@ -110,18 +109,6 @@
  * > man /bgsys/drivers/ppcfloor/hlcs/man/man8/bgmaster_server.8
  * \endcode
  *
- * \section startagents
- *  The startagents.py script is a short python script that allows you to start and stop bgagentd
- *  on multiple remote machines using their bgagent init scripts. startagents.py takes a file name,
- *  an optional init script path and a start/stop argument. Like this:
- *  \code
- *  startagents.py --file=< machine file > --agent=< agent path > --start|--stop
- *  \endcode
- * There are some administrative requirements for startagents to do its magic:
- * - You need to have a user known to all machines in your cluster that has permission
- *   to run the bgagent init script.
- * - You need to have ssh keys configured for that user.
- * - You have to be the special user.
  * \section concepts Concepts
  * - Binary:  A binary is a single instance of an executable under the management of BGmaster. A
  *            binary has a unique id formulated from its IP address and process id separated by

@@ -237,17 +237,6 @@ namespace {
     }
 
 
-    void printMatches( regmatch_t matches[] )
-    {
-        cout << "Matches: " << std::endl;
-        for ( unsigned i(0) ; i < MaxSubstitutions ; ++i ) {
-            if ( matches[i].rm_so == -1 ) {
-                break;
-            }
-            cout << "\t" << i << " so:" << matches[i].rm_so << " eo:" << matches[i].rm_eo << std::endl;
-        }
-    }
-
     uint8_t parseCharToNum( int rack_num_char )
     {
         if ( rack_num_char >= '0' && rack_num_char <= '9' ) {
@@ -265,7 +254,7 @@ namespace util {
 
 
 Location::Location()
-    : _type(NotValid), _rack_type(NotValid)
+    : _type(NotValid), _rack_type(NotValid), _switch_dimension( Dimension::NONE )
 {
     // Nothing to do.
 }

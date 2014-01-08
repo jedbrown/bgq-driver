@@ -92,6 +92,7 @@ JobStatus::impl()
         io._exited = node.exited();
         io._loaded = node.loaded();
         io._running = node.running();
+        io._signalInFlight = node.signalInFlight();
 
         response->_connections.push_back( io );
     }

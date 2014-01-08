@@ -30,6 +30,7 @@
 
 #include "server/BlockControllerBase.h"
 
+#include <control/include/mcServer/defaults.h>
 #include <control/include/mcServer/MCServerRef.h>
 
 #include <ras/include/RasEvent.h>
@@ -59,7 +60,7 @@ LiteControlEventListener::getLiteControlEventListener()
 
 // constructor
 LiteControlEventListener::LiteControlEventListener()
-    : lite::BlockController(NULL, "mmcs", "DefaultControlEventListener")
+    : lite::BlockController(NULL, "mmcs", mc_server::DefaultListener)
 {
 }
 
@@ -83,9 +84,6 @@ LiteControlEventListener::disconnect()
 	return;
 
     LOG_INFO_MSG("LiteControlEventListener::disconnect() releasing block resources");
-
-    // Wait for the mailbox I/O to quiesce, then stop the MailboxMonitor
-    getBase()->quiesceMailbox(0);
 
     // close socket connection to mcServer
     MCServerRef* tempRef = getBase()->getMCServer();

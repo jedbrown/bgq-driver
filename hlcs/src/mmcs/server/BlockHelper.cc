@@ -21,34 +21,33 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "BlockHelper.h"
 
 #include "BlockControllerBase.h"
 
-
 namespace mmcs {
 namespace server {
 
-
-BlockHelper::BlockHelper(BlockControllerBase* b) {
-    BlockPtr p(b);
-    _base = p;
-    _base->setHelper(this);
+BlockHelper::BlockHelper(
+        BlockControllerBase* b
+        ) :
+    _base( b )
+{
+    _base->_helper = this;
 }
 
-BlockHelper::BlockHelper(BlockPtr b) {
-    _base = b;
-    _base->setHelper(this);
+BlockHelper::BlockHelper(
+        BlockPtr b
+        ) :
+    _base( b )
+{
+    _base->_helper = this;
 }
 
-void BlockHelper::setBase(BlockPtr b) {
-    _base->_machineXML = 0;
-    _base = b;
+PthreadMutex&
+BlockHelper::getMutex()
+{
+    return getBase()->_mutex;
 }
-
-
-PthreadMutex& BlockHelper::getMutex() { return getBase()->_mutex; }
-
 
 } } // namespace mmcs::server

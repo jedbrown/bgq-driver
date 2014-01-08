@@ -28,23 +28,15 @@
 
 #include "protocol/BGMasterClientProtocolSpec.h"
 
-#include <utility/include/Properties.h>
 
-
-//! \brief Basic BGMaster Protocol object for agent communications.  
-class ClientProtocol: public Protocol
+//! \brief Basic BGMaster Protocol object for client communications.  
+class ClientProtocol : public Protocol
 {
 public:
-    ClientProtocol(const bgq::utility::Properties::ConstPtr& p) : Protocol(p) {}
-    ~ClientProtocol() {}
+    ClientProtocol() : Protocol() {}
 
     /*!
      * Registration message.
-     *
-     * @param JoinRequest
-     *           request object
-     * @param JoinReply
-     *           reply object
      */
     void join(const BGMasterClientProtocolSpec::JoinRequest& request, BGMasterClientProtocolSpec::JoinReply& reply)
     {
@@ -53,25 +45,14 @@ public:
 
     /*!
      * Start a managed binary message.
-     *
-     * @param StartRequest
-     *           request object
-     * @param StartReply
-     *           reply object
      */
     void start(const BGMasterClientProtocolSpec::StartRequest& request, BGMasterClientProtocolSpec::StartReply& reply)
     {
         sendReceive(BGMasterClientProtocolSpec::StartRequest::getClassName(), request, BGMasterClientProtocolSpec::StartReply::getClassName(), reply);
     }
 
-
     /*!
      * Wait for a managed binary to complete.
-     *
-     * @param WaitRequest
-     *           request object
-     * @param WaitReply
-     *           reply object
      */
     void wait(const BGMasterClientProtocolSpec::WaitRequest& request, BGMasterClientProtocolSpec::WaitReply& reply)
     {
@@ -80,11 +61,6 @@ public:
 
     /*!
      * Stop a managed binary message.
-     *
-     * @param StopRequest
-     *           request object
-     * @param StopReply
-     *           reply object
      */
     void stop(const BGMasterClientProtocolSpec::StopRequest& request, BGMasterClientProtocolSpec::StopReply& reply)
     {
@@ -93,11 +69,6 @@ public:
 
     /*!
      * Status of managed binaries.
-     *
-     * @param StatusRequest
-     *           request object
-     * @param StatusReply
-     *           reply object
      */
     void status(const BGMasterClientProtocolSpec::StatusRequest& request, BGMasterClientProtocolSpec::StatusReply& reply)
     {
@@ -106,11 +77,6 @@ public:
 
     /*!
      * Failover a managed binary message.
-     *
-     * @param StopRequest
-     *           request object
-     * @param StopReply
-     *           reply object
      */
     void failover(const BGMasterClientProtocolSpec::FailoverRequest& request, BGMasterClientProtocolSpec::FailoverReply& reply)
     {
@@ -118,25 +84,7 @@ public:
     }
 
     /*!
-     * Ask agents to commit suicide.
-     *
-     * @param End_agentRequest
-     *           request object
-     * @param End_agentReply
-     *           reply object
-     */
-    void end_agent(const BGMasterClientProtocolSpec::End_agentRequest& request, BGMasterClientProtocolSpec::End_agentReply& reply)
-    {
-        sendReceive(BGMasterClientProtocolSpec::End_agentRequest::getClassName(), request, BGMasterClientProtocolSpec::End_agentReply::getClassName(), reply);
-    }
-
-    /*!
-     * Ask master to commit suicide.
-     *
-     * @param TerminateRequest
-     *           request object
-     * @param TerminateReply
-     *           reply object
+     * Ask master to end
      */
     void terminate(const BGMasterClientProtocolSpec::TerminateRequest& request, BGMasterClientProtocolSpec::TerminateReply& reply)
     {
@@ -145,11 +93,6 @@ public:
 
     /*!
      * Get a list of the ids of connected clients.
-     *
-     * @param ClientsRequest
-     *           request object
-     * @param ClientsReply
-     *           reply object
      */
     void clients(const BGMasterClientProtocolSpec::ClientsRequest& request, BGMasterClientProtocolSpec::ClientsReply& reply)
     {
@@ -158,11 +101,6 @@ public:
 
     /*!
      * Get list of agents and their binaries.
-     *
-     * @param AgentlistRequest
-     *           request object
-     * @param AgentlistReply
-     *           reply object
      */
     void agentlist(const BGMasterClientProtocolSpec::AgentlistRequest& request, BGMasterClientProtocolSpec::AgentlistReply& reply)
     {
@@ -171,11 +109,6 @@ public:
 
     /*!
      * Reload the config file.
-     *
-     * @param ReloadRequest
-     *           request object
-     * @param ReloadReply
-     *           reply object
      */
     void reload(const BGMasterClientProtocolSpec::ReloadRequest& request, BGMasterClientProtocolSpec::ReloadReply& reply)
     {
@@ -184,11 +117,6 @@ public:
 
     /*!
      * Return the status of bgmaster_server.
-     *
-     * @param MasterstatRequest
-     *           request object
-     * @param MasterstatReply
-     *           reply object
      */
     void masterstat(const BGMasterClientProtocolSpec::MasterstatRequest& request, BGMasterClientProtocolSpec::MasterstatReply& reply)
     {
@@ -197,11 +125,6 @@ public:
 
     /*!
      * Wait for a binary associated with an alias to start.
-     *
-     * @param Alias_waitRequest
-     *           request object
-     * @param Alias_waitReply
-     *           reply object
      */
     void alias_wait(const BGMasterClientProtocolSpec::Alias_waitRequest& request, BGMasterClientProtocolSpec::Alias_waitReply& reply)
     {
@@ -210,11 +133,6 @@ public:
 
     /*!
      * Get contents of bgmaster_server error ring buffer
-     *
-     * @param Get_errorsRequest
-     *           request object
-     * @param Get_errorsReply
-     *           reply object
      */
     void get_errors(const BGMasterClientProtocolSpec::Get_errorsRequest& request, BGMasterClientProtocolSpec::Get_errorsReply& reply)
     {
@@ -223,11 +141,6 @@ public:
 
     /*!
      * Get contents of bgmaster_server history ring buffer
-     *
-     * @param Get_historyRequest
-     *           request object
-     * @param Get_historyReply
-     *           reply object
      */
     void get_history(const BGMasterClientProtocolSpec::Get_historyRequest& request, BGMasterClientProtocolSpec::Get_historyReply& reply)
     {
@@ -236,24 +149,14 @@ public:
 
     /*!
      * Start a monitor of bgmaster_server for new events and errors.
-     *
-     * @param MonitorRequest
-     *           request object
-     * @param MonitorReply
-     *           reply object
      */
     virtual void monitor(const BGMasterClientProtocolSpec::MonitorRequest& request, BGMasterClientProtocolSpec::MonitorReply& reply)
     {
         sendReceive(BGMasterClientProtocolSpec::MonitorRequest::getClassName(), request, BGMasterClientProtocolSpec::MonitorReply::getClassName(), reply);
     }
  
-   /*!
+    /*!
      * Stop a monitor of bgmaster_server for new events and errors.
-     *
-     * @param EndmonitorRequest
-     *           request object
-     * @param EndmonitorReply
-     *           reply object
      */
     virtual void endmonitor(const BGMasterClientProtocolSpec::EndmonitorRequest& request, BGMasterClientProtocolSpec::EndmonitorReply& reply)
     {
@@ -262,11 +165,6 @@ public:
 
     /*!
      * Change the logging levels of bgmaster_server.
-     *
-     * @param Log_levelRequest
-     *           request object
-     * @param Log_levelReply
-     *           reply object
      */
     virtual void loglevel(const BGMasterClientProtocolSpec::LoglevelRequest& request, BGMasterClientProtocolSpec::LoglevelReply& reply)
     {
@@ -275,17 +173,11 @@ public:
 
     /*!
      * Get the aliases that are configured but not running.
-     *
-     * @param GetidleRequest
-     *           request object
-     * @param GetidleReply
-     *           reply object
      */
     virtual void getidle(const BGMasterClientProtocolSpec::GetidleRequest& request, BGMasterClientProtocolSpec::GetidleReply& reply) 
     {
         sendReceive(BGMasterClientProtocolSpec::GetidleRequest::getClassName(), request, BGMasterClientProtocolSpec::GetidleReply::getClassName(), reply);
     }
-
 };
 
 #endif

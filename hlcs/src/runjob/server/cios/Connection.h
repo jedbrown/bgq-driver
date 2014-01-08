@@ -38,6 +38,7 @@
 
 #include <ramdisk/include/services/MessageHeader.h>
 
+#include <boost/date_time/posix_time/ptime.hpp>
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/function.hpp>
@@ -69,17 +70,13 @@ public:
     /*!
      * \brief Status callback type.
      */
-    typedef boost::function<
-        void (
-                const SocketPtr&
-             )
-        > StatusCallback;
+    typedef boost::function<void (const SocketPtr&)> StatusCallback;
 
     /*!
      * \brief
      */
     typedef boost::function<void()> StopCallback;
-
+    
 public:
     /*!
      * \brief ctor.
@@ -179,19 +176,19 @@ private:
             );
 
     void findJobHandler(
-            BGQDB::job::Id id,
             const boost::shared_ptr<Job>& job
             );
 
     void handleJob(
-            const boost::shared_ptr<Job>& job
+            const boost::shared_ptr<Job>& job,
+            const boost::shared_ptr<cios::Message>& incoming
             );
-
-    void completionHandler();
 
     void keepAlive(
             const SocketPtr& socket
             );
+    
+    void pulse();
 
 private:
     typedef std::deque< boost::shared_ptr<Message> > Outbox;
@@ -212,6 +209,7 @@ private:
     Outbox _outbox;                                         //!< outgoing messages
     boost::weak_ptr<block::Io> _block;                      //!<
     uint32_t _sequence;                                     //!<
+    boost::posix_time::ptime _pulse;                        //!<
 };
 
 } // cios

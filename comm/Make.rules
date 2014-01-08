@@ -37,4 +37,4 @@ XL = ${shell if uname -i | grep -qi ppc &&	\
 
 # This attempts to guess if we are building in parallel.  If not,
 # JLEVEL is set and we can try to do sub-builds in parallel
-JLEVEL = ${shell if echo ${MAKEFLAGS} ${MFLAGS} | grep -qv jobserver; then echo -j6; fi}
+JLEVEL = ${shell if echo ${MAKEFLAGS} ${MFLAGS} | grep -qv jobserver; then echo -j12; fi}

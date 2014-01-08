@@ -819,7 +819,7 @@ CREATE TABLE TBGQNetConfig
 (
    location              char(16)       NOT NULL,
    interface             char(16)       NOT NULL,
-   itemName              char(16)       NOT NULL,
+   itemName              varchar(128)   NOT NULL,
    itemValue             varchar(255)   NOT NULL,
    CONSTRAINT BGQNet_unqitem UNIQUE ( location, interface, itemName )
 );
@@ -1567,7 +1567,8 @@ CREATE INDEX EventLogL on  Tbgqeventlog (location);
 CREATE INDEX EventLogR on  Tbgqeventlog (recid desc);
 CREATE INDEX EventLogJ on  Tbgqeventlog (jobid, recid desc);
 CREATE INDEX EventLogM on  Tbgqeventlog (msg_id, recid desc);
-
+CREATE INDEX EventLogQ on  Tbgqeventlog (qualifier, recid desc);
+CREATE INDEX TEALTHRESHOLDEVENTLOG ON TBGQEVENTLOG (MSG_ID ASC, LOCATION ASC, SERIALNUMBER ASC, EVENT_TIME ASC);
 
 CREATE TABLE   TBGQDIAGSEVENTLOG 
 (
@@ -1584,7 +1585,7 @@ CREATE TABLE   TBGQDIAGSEVENTLOG
    ecid                  char(32)       FOR BIT DATA,
    cpu                   int,
    count                 integer,
-   ctlaction             char(32),       
+   ctlaction             varchar(256),       
    Message               varchar(1024),
    RawData               varchar(2048),
    Diags                 char(1)        NOT NULL WITH DEFAULT 'T',
@@ -1750,7 +1751,7 @@ CREATE TABLE TBGQBlockAction_history
    entrydate             timestamp      DEFAULT current timestamp,
    creationId            integer        NOT NULL
 );
-CREATE ALIAS BGQBlockAction_history for TBGQBlock_history;
+CREATE ALIAS BGQBlockAction_history for TBGQBlockAction_history;
 
 
 COMMIT;

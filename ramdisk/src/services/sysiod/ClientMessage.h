@@ -53,6 +53,7 @@ public:
       _processorId = processorId;
       _storage = NULL;
       _inProgress =  false;
+      _messageAck = NULL;
    }
 
    //! \brief  Default destructor.
@@ -111,11 +112,18 @@ inline
 inline
    uint32_t getProcessorId(void) const { return _processorId; }
 
+inline
+void    saveAck(bgcios::MessageHeader *messageAck){_messageAck=messageAck;}
+inline
+bgcios::MessageHeader *   getAck(){return _messageAck;}
 
 private:
 
    //! Pointer to current copy of the message.
    bgcios::MessageHeader *_message;
+
+   //! Pointer to current copy of the Ack message.
+   bgcios::MessageHeader *_messageAck;
 
    //! Pointer to storage for saved message.
    void *_storage;

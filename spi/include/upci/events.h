@@ -107,7 +107,7 @@ enum eUpci_EventIds {
     PEVT_IU_SPR_DEP_HIT_CYC                  = 37,  //!< SPR Dep Hit
     PEVT_IU_AXU_DEP_HIT_CYC                  = 38,  //!< AXU Dep Hit
     PEVT_IU_FXU_DEP_HIT_CYC                  = 39,  //!< FXU Dep Hit
-    PEVT_IU_AXU_FXU_DEP_HIT_CYC              = 40,  //!< AXU CR Instruction Committed
+    PEVT_IU_AXU_FXU_DEP_HIT_CYC              = 40,  //!< Cycles the FP unit is stalled
     PEVT_IU_AXU_ISSUE_PRI_LOSS_CYC           = 41,  //!< AXU Issue Priority Loss
     PEVT_IU_FXU_ISSUE_PRI_LOSS_CYC           = 42,  //!< FXU Issue Priority Loss
     PEVT_IU_FXU_ISSUE_COUNT                  = 43,  //!< FXU Issue Count

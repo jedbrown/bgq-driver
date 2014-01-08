@@ -85,7 +85,6 @@ cat $COPYRIGHT_FILE >$INCALL
 echo "// Automatically generated: don't edit it\n" >> $INCALL
 echo "#ifndef $incdef"             >>$INCALL
 echo "#define $incdef"             >>$INCALL
-echo "#include <db/include/api/tableapi/dbdataconv.h>"   >>$INCALL
 echo "#include <db/include/api/tableapi/TxObject.h>"     >>$INCALL
 echo "#include <db/include/api/tableapi/DBConnection.h>" >>$INCALL
 echo "listing table description:\n"

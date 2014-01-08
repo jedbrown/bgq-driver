@@ -344,6 +344,13 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
             if(value == '\n')
             {
                 line[y] = 0;
+                
+                // erase any trailing spaces
+                while((y>0) && (isspace(line[y-1]) != 0))
+                {
+                    y--;
+                    line[y] = 0;
+                }
                 break;
             }
             if(!isprint(value))
@@ -410,6 +417,7 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
                         close(fd);
                         fd = -1;
                     }
+                    return -1;
                 }
                 if(*str == '-')
                 {
@@ -437,7 +445,9 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
                 else if(myRank == rank0)
                     foundme = true;
                 
-                while((*str) && (!isdigit(*str)))
+                while((*str) && (*str != ','))
+                    str++;
+                if(*str == ',') 
                     str++;
             }
             while(*str);

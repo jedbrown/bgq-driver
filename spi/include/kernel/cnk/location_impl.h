@@ -149,6 +149,13 @@ __INLINE__ uint32_t Kernel_GetPVR(uint32_t* pvr)
     return (uint32_t)CNK_SPI_SYSCALL_1(GETPVR, pvr);
 }
 
+
+__INLINE__ uint32_t Kernel_GetMapping(size_t namesize, char* name, uint32_t* isFile)
+{
+    return (uint32_t)CNK_SPI_SYSCALL_3(GETMAPPING,namesize, name, isFile);
+}
+
+
 __END_DECLS
 
 

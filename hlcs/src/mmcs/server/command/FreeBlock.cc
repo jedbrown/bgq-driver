@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "FreeBlock.h"
 
 #include "../BlockControllerBase.h"
@@ -30,17 +29,13 @@
 
 #include <boost/scope_exit.hpp>
 
-
 using namespace std;
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 FreeBlock*
 FreeBlock::build()
@@ -54,7 +49,7 @@ FreeBlock::build()
     commandAttributes.helpCategory(common::USER);
     Attributes::AuthPair blockexecute(hlcs::security::Object::Block, hlcs::security::Action::Execute);
     commandAttributes.addAuthPair(blockexecute);
-    return new FreeBlock("free_block", "free_block", commandAttributes);
+    return new FreeBlock("free_block", "free_block [abnormal]", commandAttributes);
 }
 
 void
@@ -63,14 +58,19 @@ FreeBlock::execute(
         mmcs_client::CommandReply& reply,
         DBConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
+    if (!args.empty()) {
+        if (args[0] != "abnormal") {
+            reply << mmcs_client::FAIL << "unknown argument " << args[0] << mmcs_client::DONE;
+            return;
+        }
+    }
+
     const DBBlockPtr pBlock = boost::dynamic_pointer_cast<DBBlockController>(pController->getBlockHelper()); // get selected block
     const string blockName = pBlock->getBase()->getBlockName(); // get the block name
 
-    log4cxx::MDC _blockid_mdc_( "blockId", std::string("{") + blockName + "} " );
-
-    if(!DBConsoleController::setAllocating(blockName)) {
+    if (!DBConsoleController::setAllocating(blockName)) {
         reply << mmcs_client::FAIL << "Block is being allocated or freed in another thread" << mmcs_client::DONE;
         return;
     }
@@ -80,29 +80,31 @@ FreeBlock::execute(
     } BOOST_SCOPE_EXIT_END;
 
     pBlock->freeBlock(args, reply);
-    if (reply.getStatus() != 0) {
+    if (reply.getStatus()) {
         pController->deselectBlock();
         return;
     }
 
-    // deselect the block
     pController->deselectBlock();
 
     // wait for the block to complete Termination
     pBlock->waitFree(reply);
-
-    LOG_DEBUG_MSG( "done" );
 }
 
 void
 FreeBlock::help(
         deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     reply << mmcs_client::OK << description()
-        << ";Release a selected block.  An alternate form of free that operates on the currently selected block."
-        << mmcs_client::DONE;
+          << ";Release a selected block. An alternate form of free that operates on the currently selected block."
+          << ";options:"
+          << ";  abnormal - Skip normal kernel shutdown. Also skips I/O link shutdown for compute blocks as part of the"
+          << ";             abnormal action. This will leave the I/O node software in an unknown state and may cause"
+          << ";             spurious RAS events. The status of all linked I/O nodes is changed to Software (F)ailure"
+          << ";             when using this option for compute blocks."
+          << mmcs_client::DONE;
 }
 
 

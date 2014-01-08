@@ -382,12 +382,14 @@ HwJobController::dataChannelHandler(InetSocketPtr authOnly)
    // Make sure the service field is correct.
    bgcios::MessageHeader *msghdr = (bgcios::MessageHeader *)_inboundMessage;
    if (msghdr->service != bgcios::JobctlService) {
-      LOG_ERROR_MSG("Job " << msghdr->jobId << ": message service " << msghdr->service << " is wrong");
+      LOG_ERROR_MSG("Job " << msghdr->jobId << ": message service " << (int)msghdr->service << " is wrong, header: " << bgcios::printHeader(*msghdr));
       sendErrorAckToDataChannel(bgcios::WrongService, bgcios::JobctlService);
       return 1;
    }
 
-   CIOSLOGMSG(DTA_RECV_MSG,msghdr);
+   if ( msghdr->type != Heartbeat ) {
+       CIOSLOGMSG(DTA_RECV_MSG,msghdr);
+   }
 
    // Make the sure protocol version is a match.
    if (msghdr->version != ProtocolVersion) {
@@ -411,6 +413,10 @@ HwJobController::dataChannelHandler(InetSocketPtr authOnly)
    // Handle the message.
    LOG_CIOS_DEBUG_MSG("Job " << msghdr->jobId << ": " << toString(msghdr->type) << " message is available on data channel");
    switch (msghdr->type) {
+      case Heartbeat:
+          err = heartbeat();
+          break;
+
       case Authenticate:
          err = authenticate(authOnly);
          break;
@@ -521,7 +527,7 @@ HwJobController::commandChannelHandler(void)
    }
 
    if (err != 0) {
-      LOG_ERROR_MSG("Job " << msghdr->jobId << ": error sending ack message: " << bgcios::errorString(err));
+      LOG_ERROR_MSG("Job " << msghdr->jobId << ": sending " << bgcios::toString(msghdr) << " ack: " << bgcios::errorString(err));
    }
 
    return 0;
@@ -820,9 +826,9 @@ HwJobController::authenticate(InetSocketPtr channel)
    const int err = getEncryptionKey(&bfkey);
    if (err != 0) {
       LOG_ERROR_MSG("could not get encryption key: " << err);
-      _dataChannel.reset();
+      channel.reset();
       _done = 1;
-      return 0;
+      return err;
    }
 
    // Decrypt the data from the message.
@@ -846,9 +852,9 @@ HwJobController::authenticate(InetSocketPtr channel)
       }
       LOG_ERROR_MSG( "encrypted: " << os.str() );
 
-      _dataChannel.reset();
+      channel.reset();
       _done = 1;
-      return 0;
+      return EPERM;
    }
 
    // Send AuthenticateAck message.
@@ -919,7 +925,7 @@ HwJobController::discoverNodeStep2(void)
    // Find the compute node to send the DiscoverNodeAck message to.
    ComputeNodePtr cnode = _cnodes.get(inMsg->serviceId);
    if (cnode == NULL) {
-      LOG_ERROR_MSG("Job " << inMsg->header.jobId << ": service id " << inMsg->serviceId << " was not found in compute node list");
+      LOG_ERROR_MSG("service id " << inMsg->serviceId << " was not found in compute node list");
       return ENOENT;
    }
 
@@ -1189,10 +1195,19 @@ HwJobController::startJob(void)
       return sendToDataChannel(outMsg);
    }
 
-   // Get the current time for the compute nodes.
    struct timeval now;
    gettimeofday(&now, NULL);
-   inMsg->currentTime = ((uint64_t)now.tv_sec * bgcios::MicrosecondsPerSecond) + (uint64_t)now.tv_usec;
+   const uint64_t currentTime = ((uint64_t)now.tv_sec * bgcios::MicrosecondsPerSecond) + (uint64_t)now.tv_usec;
+   if ( !inMsg->currentTime ) {
+       // backwards compatible with V1R2M0, get the current time for the compute nodes.
+       inMsg->currentTime = currentTime;
+   } else {
+       const uint64_t difference = currentTime > inMsg->currentTime ? currentTime - inMsg->currentTime : inMsg->currentTime - currentTime;
+       const uint64_t threshold = _config->getStartTimeThreshold();
+       if ( threshold && difference > threshold ) {
+           LOG_CIOS_INFO_MSG_FORCED("Job " << inMsg->header.jobId << " " << difference / 1000.0l << "ms difference" );
+       }
+   }
 
    //! \todo Why do we care about the numRanksForIONode field.
 
@@ -1507,6 +1522,17 @@ HwJobController::cleanupJob(void)
       return sendToDataChannel(outMsg);
    }
 
+   if (inMsg->killTimeout) {
+       // delivering a KILL signal to the job timed out, we should cleanup now
+       // rather than wait for the compute nodes to respond
+       job->cleanup();
+       _jobs.remove(job->getJobId());
+
+       // no ack is necessary for this message
+
+       return 0;
+   }
+
    // Forward the CleanupJob message to all of the compute nodes in the job.
    job->sendMessageToAllNodes(&(inMsg->header));
    LOG_CIOS_INFO_MSG("Job " << inMsg->header.jobId << ": CleanupJob message forwarded to " << job->numComputeNodes() << " compute nodes");
@@ -1591,6 +1617,7 @@ HwJobController::cleanupJobAck(void)
    _activeTools -= job->numTools();
    job->cleanup();
    LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": " << _activeTools << " tools are active on node");
+   _jobs.remove(job->getJobId());
 
    // Forward CleanupJobAck message on data channel.
    LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": CleanupJobAck message sent on data channel");

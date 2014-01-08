@@ -43,6 +43,8 @@ LDFLAGS += \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib \
  -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility -lcxxsockets \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib \
+ -L $(BGQ_INSTALL_DIR)/control/lib -lmcserver \
+ -Wl,-rpath,$(BGQ_INSTALL_DIR)/control/lib \
  -ledit
 
 
@@ -82,7 +84,7 @@ all: libmmcs_common.so
 
 
 libmmcs_common.so.1.0.0: $(objs)
-	$(CXX) -o $@ $(CXXFLAGS) $(LDFLAGS) -shared -Wl,-soname,libmmcs_common.so.1 $^
+	$(CXX) -o $@ $(CXXFLAGS) $^ -shared -Wl,-soname,libmmcs_common.so.1 $(LDFLAGS)
 
 libmmcs_common.so.1: libmmcs_common.so.1.0.0
 	$(RM) $@

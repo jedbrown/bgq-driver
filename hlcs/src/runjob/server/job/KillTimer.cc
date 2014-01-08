@@ -24,7 +24,9 @@
 
 #include "server/block/Compute.h"
 #include "server/block/IoNode.h"
+#include "server/cios/Message.h"
 #include "server/job/Status.h"
+#include "server/job/SubNodePacing.h"
 
 #include "common/JobInfo.h"
 #include "common/SubBlock.h"
@@ -93,7 +95,7 @@ KillTimer::start(
         } else {
             BOOST_THROW_EXCEPTION(
                 std::logic_error(
-                    "kill timeout expires in " + boost::lexical_cast<std::string>( expires.total_seconds() ) + " seconds" )
+                    "Kill timeout expires in " + boost::lexical_cast<std::string>( expires.total_seconds() ) + " seconds." )
                 );
         }
     }
@@ -164,6 +166,8 @@ KillTimer::handler(
     this->insertRas( job, seconds );
 
     this->breadcrumbs( job );
+
+    this->cleanup( job );
 }
 
 void
@@ -240,6 +244,28 @@ KillTimer::breadcrumbs(
             LOG_INFO_MSG( "has not cleaned up for " << node.getComputes() << " compute nodes" );
         } else {
             BOOST_ASSERT( !"shouldn't get here" );
+        }
+    }
+}
+
+void
+KillTimer::cleanup(
+        const Job::Ptr& job
+        ) const
+{
+    const cios::Message::Ptr msg( 
+            cios::Message::create( bgcios::jobctl::CleanupJob, job->id() )
+            );
+    msg->as<bgcios::jobctl::CleanupJobMessage>()->killTimeout = true;
+
+    BOOST_FOREACH( IoNode::Map::value_type& i, job->io() ) {
+        IoNode& node = i.second;
+        if ( node.cleanup() ) continue;
+
+        if ( job->pacing() ) {
+            job->pacing()->add( msg, job );
+        } else {
+            node.writeControl( msg );
         }
     }
 }

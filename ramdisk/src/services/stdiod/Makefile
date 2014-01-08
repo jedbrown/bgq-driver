@@ -49,6 +49,9 @@ endif
 
 # Additional linker flags
 LDFLAGS  += -L $(IOS_LIBRARY_DIR) -lbgcios
+LDFLAGS  += -llog4cxx
+LDFLAGS  += -libverbs
+LDFLAGS  += -lrdmacm
 
 all: $(STDIOD)
 

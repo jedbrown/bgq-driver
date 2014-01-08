@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_COPY_BLOCK_H_
 #define MMCS_SERVER_COMMAND_COPY_BLOCK_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*
 ** copy_block <existingblockid> <newblockid>
@@ -42,9 +38,8 @@ class CopyBlock : public common::AbstractCommand
 {
 public:
     CopyBlock (const char* name, const char* description, const Attributes& attributes)
-    : AbstractCommand(name,description,attributes) { usage = "copy_block <existingblockid> <newblockid>";}
+    : AbstractCommand(name,description,attributes) { _usage = "copy_block <existingblockid> <newblockid>";}
     static  CopyBlock* build();    // factory method
-    static  std::string cmdname() { return "copy_block"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -56,13 +51,11 @@ public:
              BlockControllerTarget* pTarget);
     std::vector<std::string> getBlockObjects(std::deque<std::string>& cmdString, DBConsoleController* pController);
     bool doSpecialAuths(std::vector<std::string>& blocks, const boost::shared_ptr<hlcs::security::Enforcer>& enforcer, procstat& stat, const bgq::utility::UserId& user);
-    bool checkArgs(std::deque<std::string>& args) { if(args.size() != 2) return false; else return true;}
+    bool checkArgs(std::deque<std::string>& args) { if (args.size() != 2) return false; else return true;}
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

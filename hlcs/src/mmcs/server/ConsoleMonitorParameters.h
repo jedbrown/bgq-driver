@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_CONSOLE_MONITOR_PARAMETERS_H_
 #define MMCS_SERVER_CONSOLE_MONITOR_PARAMETERS_H_
-
 
 #include "../MMCSCommandProcessor.h"
 
 #include "libmmcs_client/ConsolePort.h"
 
-
 namespace mmcs {
 namespace server {
-
 
 /*!
  * \brief Parameters passed to MMCSConsoleListener and MMCSConsoleConnectionThread.
@@ -57,7 +53,6 @@ public:
     mmcs_client::ConsolePort* consolePort; // console port or console connection
     MMCSCommandMap* commandMap;  // commands that can be executed
 };
-
 
 } } // namespace mmcs::server
 

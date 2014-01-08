@@ -43,9 +43,8 @@ class DumpBlock: public common::AbstractCommand
 {
 public:
     DumpBlock(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "dump_block";}
+      : AbstractCommand(name,description,attributes) { _usage = "dump_block";}
     static  DumpBlock* build();    // factory method
-    static  std::string cmdname() { return "dump_block"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,

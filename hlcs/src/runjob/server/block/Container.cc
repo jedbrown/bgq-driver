@@ -37,6 +37,8 @@
 #include "server/Options.h"
 #include "server/Server.h"
 
+#include <bgq_util/include/Location.h>
+
 #include <control/include/bgqconfig/xml/BGQBlockXML.h>
 #include <control/include/bgqconfig/xml/BGQMachineXML.h>
 #include <control/include/bgqconfig/BGQBlockNodeConfig.h>
@@ -81,7 +83,7 @@ Container::Container(
 }
 
 void
-Container::loadMachineImpl(
+Container::loadMachine(
         const LoadMachineCallback& callback
         )
 {
@@ -119,8 +121,14 @@ Container::loadMachineImpl(
     }
 
     // get number of compute and I/O nodes
-    const size_t compute = machine->_midplanes.size() * 512;
-    const size_t io = machine->_ioBoards.size() * 8;
+    const size_t compute(
+            machine->_midplanes.size() * 
+            bgq::util::Location::NodeBoardsOnMidplane * 
+            bgq::util::Location::ComputeCardsOnNodeBoard
+            );
+    const size_t io(
+            machine->_ioBoards.size() * bgq::util::Location::ComputeCardsOnIoBoard
+            );
 
     // ensure we have something
     if ( compute == 0 ) {
@@ -241,22 +249,38 @@ Container::add(
 void
 Container::create(
         const std::string& name,
+        const boost::shared_ptr<BGQMachineXML>& machine,
         const ResponseCallback& callback
         )
 {
     LOGGING_DECLARE_BLOCK_MDC( name );
-    this->loadMachineImpl(
-            _strand.wrap(
-                boost::bind(
-                    &Container::createImpl,
-                    this,
-                    _1,
-                    _2,
-                    name,
-                    callback
+    if ( !machine ) {
+        this->loadMachine(
+                _strand.wrap(
+                    boost::bind(
+                        &Container::createImpl,
+                        this,
+                        _1,
+                        _2,
+                        name,
+                        callback
+                        )
                     )
+                );
+
+        return;
+    }
+
+    _strand.post(
+            boost::bind(
+                &Container::createImpl,
+                this,
+                machine,
+                error_code::success,
+                name,
+                callback
                 )
-            );
+        );
 }
 
 void
@@ -516,10 +540,13 @@ Container::initializedImpl(
     }
 
     if ( Io::Ptr io = boost::dynamic_pointer_cast<Io>(*result) ) {
-        io->initialized();
+        try {
+            io->initialized();
+            callback( error_code::success, "success" );
+        } catch ( const Exception e ) {
+            callback( e.getError(), e.what() );
+        }
     }
-
-    callback( error_code::success, "success" );
 }
 
 void

@@ -294,40 +294,6 @@ public:
     }
 };
 
-class GetComputeNodesCommandHandler : public AbstractCommandHandler
-{
-public:
-    std::string getName() const  { return "getComputeNodes"; }
-    std::string getHelpText() const  { return "nodeBoard"; }
-
-    void execute( const Args& args ) {
-        string nodeBoard(args.at( 0 ));
-
-        std::stringstream xmlStream;
-        TempFile tmpFile("__DBTester_tmp_computenodes.XXXXXX");
-        tmpFile.keep = true;
-
-        initializeBGQDB();
-
-        BGQDB::STATUS db_status(BGQDB::getNodes(xmlStream, nodeBoard.c_str()));
-        if ( db_status != BGQDB::OK ) {
-            cout << "getNodes failed with db_status=" << db_status << "\n";
-            if ( db_status == BGQDB::XML_ERROR ) {
-                cout << " -- check directory permissions\n";
-            } else {
-                //dump the XML stream to /tmp
-                (void)write(tmpFile.fd, xmlStream.str().c_str(), xmlStream.str().size());
-                cout  << " -- XML file is " << tmpFile.fname << "\n";
-            }
-            throw runtime_error( "failed" );
-        }
-        //dump the XML stream to /tmp
-        (void)write(tmpFile.fd, xmlStream.str().c_str(), xmlStream.str().size());
-        cout  << " -- XML file is " << tmpFile.fname << "\n";
-        cout << "getComputeNodes completed successfully\n";
-    }
-};
-
 class GetSwitchesCommandHandler : public AbstractCommandHandler
 {
 public:
@@ -509,38 +475,6 @@ public:
     }
 };
 
-class GetBlocksCommandHandler : public AbstractCommandHandler
-{
-public:
-    std::string getName() const  { return "getBlocks"; }
-    std::string getHelpText() const  { return ""; }
-
-    void execute( const Args& args ) {
-        std::stringstream xmlStream;
-        TempFile tmpFile("__DBTester_tmp_blocks.XXXXXX");
-        tmpFile.keep = true;
-
-        initializeBGQDB();
-
-        BGQDB::STATUS db_status(BGQDB::getBlocks(xmlStream));
-        if ( db_status != BGQDB::OK ) {
-            cout << "getBlocks failed with db_status=" << db_status << "\n";
-            if ( db_status == BGQDB::XML_ERROR ) {
-                cout << " -- check directory permissions\n";
-            } else {
-                //dump the XML stream to /tmp
-                (void)write(tmpFile.fd, xmlStream.str().c_str(), xmlStream.str().size());
-                cout  << " -- XML file is " << tmpFile.fname << "\n";
-            }
-            throw runtime_error( "failed" );
-        }
-        //dump the XML stream to /tmp
-        (void)write(tmpFile.fd, xmlStream.str().c_str(), xmlStream.str().size());
-        cout  << " -- XML file is " << tmpFile.fname << "\n";
-        cout << "getBlocks completed successfully\n";
-    }
-};
-
 class GetBlockXmlCommandHandler : public AbstractCommandHandler
 {
 public:
@@ -647,11 +581,10 @@ public:
     void execute( const Args& args ) {
         string blockid;
         BGQDB::BLOCK_ACTION action;
-        unsigned int creationid;
 
         initializeBGQDB();
 
-        BGQDB::STATUS db_status(BGQDB::getBlockAction( blockid, action, creationid ));
+        BGQDB::STATUS db_status(BGQDB::getBlockAction( blockid, action ));
 
         if ( db_status != BGQDB::OK ) {
             cout << "getBlockAction failed with db_status=" << db_status << "\n";
@@ -660,7 +593,6 @@ public:
 
         cout << blockid << "\n";
         cout << action << "\n";
-        cout << creationid << "\n";
 
         cout << "getBlockAction successful.\n";
     }
@@ -670,7 +602,7 @@ class SetBlockActionCommandHandler : public AbstractCommandHandler
 {
 public:
     std::string getName() const  { return "setBlockAction"; }
-    std::string getHelpText() const  { return "blockid"; }
+    std::string getHelpText() const  { return "blockid [action]"; }
 
 
     void execute( const Args& args ) {
@@ -707,11 +639,9 @@ public:
     void execute( const Args& args ) {
         string blockid(args.at(0));
 
-        unsigned int creationid = 0;
-
         initializeBGQDB();
 
-        BGQDB::STATUS db_status(BGQDB::clearBlockAction( blockid.c_str(), creationid ));
+        BGQDB::STATUS db_status(BGQDB::clearBlockAction( blockid ));
 
         if ( db_status != BGQDB::OK ) {
             cout << "clearBlockAction failed with db_status=" << db_status << "\n";
@@ -750,54 +680,6 @@ public:
         }
 
         cout << "killMidplaneJobs successful.\n";
-    }
-};
-
-
-class CompleteIOServiceCommandHandler : public AbstractCommandHandler
-{
-public:
-    std::string getName() const  { return "completeIOService"; }
-    std::string getHelpText() const  { return "location"; }
-
-    void execute( const Args& args ) {
-        string location(args.at(0));
-        string block_to_reboot = "<none>";
-
-        initializeBGQDB();
-
-        BGQDB::STATUS db_status(BGQDB::completeIOService( location, block_to_reboot ));
-
-        if ( db_status != BGQDB::OK ) {
-            cout << "completeIOService failed with db_status=" << db_status << "\n";
-            throw runtime_error( "failed" );
-        }
-
-        cout << "Location is part of block: " << block_to_reboot << "\n";
-
-        cout << "completeIOService successful.\n";
-    }
-};
-
-
-class CreateNodeConfigCommandHandler : public AbstractCommandHandler
-{
-public:
-    std::string getName() const  { return "createNodeConfig"; }
-    std::string getHelpText() const  { return "ARGS..."; }
-
-    void execute( const Args& args ) {
-        initializeBGQDB();
-
-        std::deque<std::string> cncargs( args.begin(), args.end() );
-        BGQDB::STATUS db_status(BGQDB::createNodeConfig( cncargs ));
-
-        if ( db_status != BGQDB::OK ) {
-            cout << "createNodeConfig failed with db_status=" << db_status << "\n";
-            throw runtime_error( "failed" );
-        }
-
-        cout << "createNodeConfig successful.\n";
     }
 };
 
@@ -1291,13 +1173,11 @@ static CommandHandlers initializeCommandHandlers()
             ( new GetMidplaneCablesCommandHandler )
             ( new GetMidplaneIOCommandHandler )
             ( new CheckIOLinksCommandHandler )
-            ( new GetComputeNodesCommandHandler )
             ( new GetSwitchesCommandHandler )
             ( new GenBlockCommandHandler )
             ( new GenBlocksCommandHandler )
             ( new GenFullBlockCommandHandler )
             ( new GenSmallBlockCommandHandler )
-            ( new GetBlocksCommandHandler )
             ( new GetBlockXmlCommandHandler )
             ( new GetBlockStateCommandHandler )
             ( new SetBlockStateCommandHandler )
@@ -1306,8 +1186,6 @@ static CommandHandlers initializeCommandHandlers()
             ( new ClearBlockActionCommandHandler )
             ( new KillMidplaneJobsCommandHandler )
             ( new QueryMissingCommandHandler )
-            ( new CompleteIOServiceCommandHandler )
-            ( new CreateNodeConfigCommandHandler )
             ( new CheckBlockConnectionCommandHandler )
             ( new CheckBlockIOCommandHandler )
             ( new CheckIOBlockConnectionCommandHandler )

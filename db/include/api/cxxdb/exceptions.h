@@ -26,7 +26,7 @@
 
 #include "diagnostics.h"
 
-#include <boost/exception.hpp>
+#include <boost/exception/all.hpp>
 #include <boost/throw_exception.hpp>
 
 #include <stdexcept>

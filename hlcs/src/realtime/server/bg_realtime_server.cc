@@ -341,6 +341,7 @@ int main( int argc, char* argv[] )
             );
 
         LOG_INFO_MSG_FORCED( "Real-time server[" << ::getpid() << "]: starting: " << bgq::utility::DriverName << " (revision " << bgq::utility::Revision << ")" << " " << __DATE__ << " " << __TIME__ );
+        LOG_INFO_MSG_FORCED( "built against DB2 " << DB2VERSION );
         LOG_INFO_MSG_FORCED( string() + "Startup parameters: " + join( vector<string>( argv, argv + argc ), " " ) );
 
         BgRealtimeServer bg_realtime_server( argv[0] );

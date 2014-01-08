@@ -58,12 +58,28 @@
  *
  * \section examples EXAMPLES
  *
- * user@bgq ~> job_status 43
- * 2 I/O connections
- * Location     Compute Nodes  Drained  Killed  HW Failure  Ended  Error  Exited  Loaded  Output  Running
- * R00-ID-J02              16                                              x       x        x   
- * R00-ID-J03              16                                              x       x        x   
- * user@bgq ~> 
+ *
+\verbatim
+user@bgq ~> job_status 43
+2 I/O connections
+Drained:    0 of 2 I/O nodes
+Killed:     0 of 2 I/O nodes
+HW Failure: 0 of 2 I/O nodes
+Ended:      0 of 2 I/O nodes
+Error:      0 of 2 I/O nodes
+Exited:     0 of 2 I/O nodes
+Loaded:     2 of 2 I/O nodes
+Output:     2 of 2 I/O nodes
+Running:    2 of 2 I/O nodes
+Signal:     0 of 2 I/O nodes
+
+user@bgq ~> job_status 43 --details
+2 I/O connections
+Location     Compute Nodes  Drained  Killed  HW Failure  Ended  Error  Exited  Loaded  Output  Running  Signal
+Q02-I0-J00              16                                                       x       x        x
+Q02-I0-J01              16                                                       x       x        x
+user@bgq ~>
+\endverbatim
  *
  * In this example, job 43 is using two I/O nodes: R00-ID-J02 and R00-ID-J02. Each of them have
  * successfully loaded the job, began standard output services, and the job is running.
@@ -222,6 +238,7 @@ Options::details(
     size_t loaded = strlen("Loaded");
     size_t output_started = strlen("Output");
     size_t running = strlen("Running");
+    size_t signal = strlen("Signal");
     BOOST_FOREACH( const runjob::commands::response::JobStatus::Connections::value_type& io, connections ) {
         char buf[32] = {0};
         (void)bg_uci_toString( io._location, buf );
@@ -242,7 +259,8 @@ Options::details(
     formatting << "%=" << exited + 1 << "s ";
     formatting << "%=" << loaded + 1 << "s ";
     formatting << "%=" << output_started + 1 << "s ";
-    formatting << "%=" << running + 1 << "s\n";
+    formatting << "%=" << running + 1 << "s ";
+    formatting << "%=" << signal + 1 << "s\n";
     std::cout << boost::format(formatting.str()) %
         "Location" %
         "Compute Nodes" %
@@ -254,7 +272,8 @@ Options::details(
         "Exited" %
         "Loaded" %
         "Output" %
-        "Running";
+        "Running" %
+        "Signal";
     BOOST_FOREACH( const runjob::commands::response::JobStatus::Connections::value_type& io, connections ) {
         char buf[32] = {0};
         (void)bg_uci_toString( io._location, buf );
@@ -270,7 +289,8 @@ Options::details(
             (io._exited ? "x" : " ") %
             (io._loaded ? "x" : " ") %
             (io._outputStarted ? "x" : " ") %
-            (io._running ? "x" : " ")
+            (io._running ? "x" : " ") %
+            (io._signalInFlight ? "x" : " ")
             ;
     }
 }
@@ -280,8 +300,8 @@ Options::summary(
         const runjob::commands::response::JobStatus::Connections& connections
         ) const
 {
-    size_t drained, killed, hwFailure, ended, error, exited, loaded, output, running;
-    drained = killed = hwFailure = ended = error = exited = loaded = output = running = 0;
+    size_t drained, killed, hwFailure, ended, error, exited, loaded, output, running, signal;
+    drained = killed = hwFailure = ended = error = exited = loaded = output = running = signal = 0;
     BOOST_FOREACH( const auto& io, connections ) {
         drained += (io._drained ? 1 : 0 );
         killed += (io._killed ? 1 : 0 );
@@ -292,6 +312,7 @@ Options::summary(
         loaded += (io._loaded ? 1 : 0 );
         output += (io._outputStarted ? 1 : 0 );
         running += (io._running ? 1 : 0 );
+        signal += (io._signalInFlight ? 1 : 0 );
     }
 
     std::cout << "Drained:    " << drained << " of " << connections.size() << " I/O nodes" << std::endl;
@@ -302,7 +323,8 @@ Options::summary(
     std::cout << "Exited:     " << exited << " of " << connections.size() << " I/O nodes" << std::endl;
     std::cout << "Loaded:     " << loaded << " of " << connections.size() << " I/O nodes" << std::endl;
     std::cout << "Output:     " << output << " of " << connections.size() << " I/O nodes" << std::endl;
-    std::cout << "Running     " << running << " of " << connections.size() << " I/O nodes" << std::endl;
+    std::cout << "Running:    " << running << " of " << connections.size() << " I/O nodes" << std::endl;
+    std::cout << "Signal:     " << signal << " of " << connections.size() << " I/O nodes" << std::endl;
 
     std::cout << std::endl;
 }

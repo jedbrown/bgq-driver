@@ -43,7 +43,7 @@ class JobInfo;
 /*!
  * \brief
  */
-class MMCSCommand_runjob: public common::AbstractCommand
+class MMCSCommand_runjob : public common::AbstractCommand
 {
 public:
     /*!
@@ -79,8 +79,7 @@ public:
     bool checkArgs(std::deque<std::string>&) { return true; }
 
 public:
-    static  MMCSCommand_runjob* build();
-    static  std::string cmdname() { return "runjob"; }
+    static MMCSCommand_runjob* build();
 
 private:
     /*!

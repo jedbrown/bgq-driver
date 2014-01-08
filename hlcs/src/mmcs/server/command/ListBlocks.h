@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_LIST_BLOCKS_H_
 #define MMCS_SERVER_COMMAND_LIST_BLOCKS_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
  ** list_blocks
@@ -40,25 +36,23 @@ namespace command {
  */
 class ListBlocks : public common::AbstractCommand
 {
-    public:
+public:
     ListBlocks(const char* name, const char* description, const Attributes& attributes)
-            : AbstractCommand(name,description,attributes) { usage = "list_blocks"; }
-        static  ListBlocks* build();    // factory method
-        static  std::string cmdname() { return "list_blocks"; }
-        void execute(std::deque<std::string> args,
-                mmcs_client::CommandReply& reply,
-                DBConsoleController* pController,
-                BlockControllerTarget* pTarget,
-                std::vector<std::string>* validnames);
-        void execute(std::deque<std::string> args,
-                mmcs_client::CommandReply& reply,
-                DBConsoleController* pController,
-                BlockControllerTarget* pTarget);
-        std::vector<std::string> getBlockObjects(std::deque<std::string>& cmdString, DBConsoleController* pController);
-        void help(std::deque<std::string> args,
-                mmcs_client::CommandReply& reply);
+    : AbstractCommand(name,description,attributes) { _usage = "list_blocks"; }
+    static  ListBlocks* build();    // factory method
+    void execute(std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            DBConsoleController* pController,
+            BlockControllerTarget* pTarget,
+            std::vector<std::string>* validnames);
+    void execute(std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            DBConsoleController* pController,
+            BlockControllerTarget* pTarget);
+    std::vector<std::string> getBlockObjects(std::deque<std::string>& cmdString, DBConsoleController* pController);
+    void help(std::deque<std::string> args,
+            mmcs_client::CommandReply& reply);
 };
-
 
 } } } // namespace mmcs::server::command
 

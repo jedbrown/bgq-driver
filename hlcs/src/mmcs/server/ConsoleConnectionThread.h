@@ -21,17 +21,13 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_CONSOLE_CONNECTION_THREAD_H_
 #define MMCS_SERVER_CONSOLE_CONNECTION_THREAD_H_
 
-
 #include "common/Thread.h"
-
 
 namespace mmcs {
 namespace server {
-
 
 /*!
  *  \brief execute commands from MMCS console connections.

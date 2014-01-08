@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "DatabaseBlockCommandThread.h"
 
 #include "CommandProcessor.h"
@@ -35,13 +34,10 @@
 
 using namespace std;
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
-
 
 void*
 DatabaseBlockCommandThread::threadStart()
@@ -50,20 +46,19 @@ DatabaseBlockCommandThread::threadStart()
     mmcs_client::CommandReply reply;             // holds reply from MMCS command
     CommandProcessor mmcsCommandProcessor(_commands); // MMCS command processor
 
+    if ( _userName.empty() ) {
+        _userName = "nobody";
+    }
+
     // Create a midplane controller object
     const bool allowRemote( true );
     const bgq::utility::UserId uid( _userName, allowRemote );
     DBConsoleController midplaneController(&mmcsCommandProcessor, uid, CxxSockets::Administrator);
-    this->setThreadName("DBBlockCmd"); 
+    this->setThreadName("DBBlockCmd");
     midplaneController.setMMCSThread(this);
 
-    log4cxx::MDC _block_user_mdc_( "user", std::string("[") + _userName + "] " );
-    LOG_INFO_MSG(
-            "started"
-             << ": block " << _name
-             << ", action " << _action
-             << ", creationId " << _creationId
-        );
+    const log4cxx::MDC _block_user_mdc_( "user", std::string("[") + _userName + "] " );
+    LOG_INFO_MSG("Started: block " << _name << ", action=" << BGQDB::blockActionToString(_action));
 
     switch(_action)
     {
@@ -71,7 +66,7 @@ DatabaseBlockCommandThread::threadStart()
             break;
         case BGQDB::CONFIGURE_BLOCK_NO_CHECK:  // Allocate and boot I/O block with nodes in error
         case BGQDB::CONFIGURE_BLOCK:           // Allocate and boot the block (I/O or compute)
-            BGQDB::clearBlockAction(_name, _creationId);
+            BGQDB::clearBlockAction(_name);
             args.clear();
             args.push_back(_name);
             // Set the "no_check" argument when calling allocate to boot I/O blocks with nodes in error
@@ -90,16 +85,15 @@ DatabaseBlockCommandThread::threadStart()
             midplaneController.deselectBlock();
             break;
         default:
-            LOG_ERROR_MSG( "unexpected blockAction " << _action);
+            LOG_ERROR_MSG( "Unexpected blockAction " << _action);
     }
 
-    // end the transaction
+    // End the transaction
     _transactions->endTransaction(_name, _action);
 
-    // return when done
-    LOG_INFO_MSG("stopped");
+    // Return when done
+    // LOG_TRACE_MSG("Stopped");
     return NULL;
 }
-
 
 } } // namespace mmcs::server

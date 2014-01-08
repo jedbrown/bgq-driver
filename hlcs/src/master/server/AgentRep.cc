@@ -26,27 +26,16 @@
 #include "Alias.h"
 #include "AliasList.h"
 #include "MasterController.h"
-#include "Policy.h"
 #include "ras.h"
 
-#include "common/AgentProtocol.h"
 #include "common/BinaryController.h"
-#include "common/Ids.h"
 
 #include "../lib/exceptions.h"
 
-#include <utility/include/Log.h>
 
-#include <xml/include/library/XML.h>
 
-#include <boost/foreach.hpp>
 #include <boost/scope_exit.hpp>
-#include <boost/thread.hpp>
 
-#include <algorithm>
-#include <map>
-#include <sstream>
-#include <string>
 
 #include <pthread.h>
 #include <signal.h>
@@ -161,13 +150,13 @@ AgentRep::stopBin_nl(
         stoprep._rc = exceptions::OK;
         try {
             _prot->stop(stop_to_agent, stoprep);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             LOG_WARN_MSG("Agent connection interrupted, will retry.");
             success = false;
             --retries;
             usleep(750);
             continue;
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             std::string nrs("No requester socket.");
             if (err.errcode == -1 || err.what() == nrs) {
                 // Agent not yet set up. Just return.
@@ -285,11 +274,11 @@ AgentRep::startBin_nl(
     LOG_DEBUG_MSG("Sending start request");
     try {
         _prot->start(startreq,startrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
         LOG_ERROR_MSG("Agent connection error during start send request.");
         return bid;
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         std::string nrs("No requester socket.");
         if (err.errcode == -1 || err.what() == nrs) {
             // Agent not yet set up. Just return.
@@ -306,7 +295,6 @@ AgentRep::startBin_nl(
     LOG_DEBUG_MSG("Received start reply");
 
     // If the start was successful, then we need to add a binary controller to the agent representation.
-    std::ostringstream failmsg;
     if (startrep._rc == exceptions::OK && startrep._status._binary_id != "0") {
         LOG_DEBUG_MSG("Adding binary " << startrep._status._binary_id);
         BinaryId b(startrep._status._binary_id);
@@ -359,17 +347,13 @@ AgentRep::startBin_nl(
             msg << " Error text is " << startrep._rt << ".";
         }
 
-        failmsg << msg.str();
-
         // Something went wrong, update RAS.
         std::map<std::string, std::string> details;
         details["ALIAS"] = startreq._alias;
         details["BIN"] = startrep._status._binary_id;
         details["SIGNAL"] = boost::lexical_cast<std::string>(signo);
         details["ESTAT"] = boost::lexical_cast<std::string>(estat);
-        std::ostringstream newmsg;
-        newmsg << "Alias " << startreq._alias << " failed to start.  " << failmsg.str() << startrep._rt;
-        details["EMSG"] = newmsg.str();
+        details["EMSG"] = startrep._rt;
         MasterController::handleErrorMessage(msg.str());
         MasterController::putRAS(BINARY_FAIL_RAS, details);
     }
@@ -516,7 +500,7 @@ AgentRep::executePolicy_nl(
                 LOG_WARN_MSG("Not starting alias " << al->get_name());
             }
         }
-    } catch(const exceptions::InternalError& e) {
+    } catch (const exceptions::InternalError& e) {
         std::ostringstream msg;
         msg << "Unable to execute policy for " << reqbid.str() << "|" << al->get_name() << " " << e.what();
         MasterController::handleErrorMessage(msg.str());
@@ -605,11 +589,11 @@ AgentRep::doCompleteRequest(
 
     try {
         _prot->sendReply(comprep.getClassName(), comprep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
         LOG_ERROR_MSG("Agent connection error during complete reply send.");
         return;
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         // Bad, bad, bad.  This object must die
         std::ostringstream msg;
@@ -690,11 +674,11 @@ AgentRep::doFailedRequest(
 
     try {
         _prot->sendReply(failrep.getClassName(), failrep);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
         LOG_ERROR_MSG("Agent connection error during failed reply send.");
         return;
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         // Bad, bad, bad.  This object must die
         std::ostringstream msg;
@@ -713,11 +697,11 @@ AgentRep::processRequest()
     std::string request_name;
     try {
         _prot->getName(request_name);
-    } catch(const CxxSockets::SoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
         LOG_ERROR_MSG("Agent connection error processing request from agent.");
         return true;
-    } catch(const CxxSockets::Error& err) {
+    } catch (const CxxSockets::Error& err) {
         // Any other error, we bail
         std::ostringstream msg;
         msg << "Agent connection ended.";
@@ -725,17 +709,17 @@ AgentRep::processRequest()
         return false;
     }
 
-    LOG_DEBUG_MSG("-*-Request " << request_name << " received from agent " << get_agent_id().str() << "-*-");
+    LOG_DEBUG_MSG("Request " << request_name << " received from agent " << get_agent_id().str());
 
     if (request_name == "CompleteRequest") {
         BGMasterAgentProtocolSpec::CompleteRequest compreq;
         try {
             _prot->getObject(&compreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             // For soft errors, we just back out and let it try again
             LOG_ERROR_MSG("Agent connection error processing request from agent.");
             return true;
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission.
             // Bad, bad, bad.  This object must die.
             std::ostringstream msg;
@@ -748,11 +732,11 @@ AgentRep::processRequest()
         BGMasterAgentProtocolSpec::FailedRequest failreq;
         try {
             _prot->getObject(&failreq);
-        } catch(const CxxSockets::SoftError& err) {
+        } catch (const CxxSockets::SoftError& err) {
             // For soft errors, we just back out and let it try again.
             LOG_ERROR_MSG("Agent connection error processing request from agent.");
             return true;
-        } catch(const CxxSockets::Error& err) {
+        } catch (const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission.
             // Bad, bad, bad.  This object must die.
             std::ostringstream msg;
@@ -815,7 +799,7 @@ AgentRep::startPoller()
 void
 AgentRep::cancel(
         const bool binaries,
-        const unsigned signal
+        const int signal
         )
 {
     LOGGING_DECLARE_ID_MDC(_agent_id.str());
@@ -845,7 +829,6 @@ AgentRep::cancel(
     _ending = true;
     _orderly = true;
     if ( _my_tid ) {
-        XML::Parser::setstopping(_my_tid);
         pthread_kill(_my_tid, SIGUSR1);
     }
     _agent_socket_poller.join();
@@ -880,9 +863,10 @@ AgentRep::stopAllBins(
 
             stopBin_nl(rit->get_binid(), location, signal, stop_from_agent, false);
             // Now collect the response and add it to the reply
-            BGMasterClientProtocolSpec::StopReply::BinaryStatus
-                binstat_to_return (stop_from_agent._status._binary_id,
-                                   stop_from_agent._status._exit_status);
+            const BGMasterClientProtocolSpec::StopReply::BinaryStatus binstat_to_return(
+                    stop_from_agent._status._binary_id,
+                    stop_from_agent._status._exit_status
+                    );
 
             reply._statuses.push_back(binstat_to_return);
             if (stop_from_agent._rc != exceptions::OK) {

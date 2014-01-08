@@ -61,6 +61,11 @@ INSTALL_LIST  += $(call INSTALL_BIN_TARGET,svn_revision)
 
 CXXFLAGS += -Wall
 CXXFLAGS += -Wextra
+CXXFLAGS += -Wconversion
+CXXFLAGS += -Wsign-conversion
+CXXFLAGS += -Wlogical-op
+CXXFLAGS += -Wvla
+CXXFLAGS += -Wmissing-include-dirs
 CXXFLAGS += -fpic
 CXXFLAGS += -MD -MP
 CXXFLAGS += -O2
@@ -76,10 +81,12 @@ LDFLAGS += -pthread
 LDFLAGS += -Wl,-soname,$(lib_vers)
 LDFLAGS += -llog4cxx
 LDFLAGS += -lboost_serialization-mt
+LDFLAGS += -lboost_filesystem-mt
 LDFLAGS += -lboost_system-mt
 LDFLAGS += -lboost_thread-mt
 LDFLAGS += -lboost_program_options-mt
 LDFLAGS += -lboost_regex-mt
+LDFLAGS += -lboost_filesystem-mt
 LDFLAGS += -lssl
 LDFLAGS += -Wl,--enable-new-dtags # sets DT_RUNPATH
 
@@ -132,7 +139,7 @@ $(lib_vers): $(lib_full)
 
 
 $(lib_full): $(so_objs) Makefile
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $(so_objs)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $(so_objs) $(LDFLAGS) 
 
 
 $(static_lib): $(ar_objs) Makefile

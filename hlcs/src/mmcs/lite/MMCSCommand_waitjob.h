@@ -35,7 +35,7 @@ namespace lite {
 /*!
  * \brief
  */
-class MMCSCommand_waitjob: public common::AbstractCommand
+class MMCSCommand_waitjob : public common::AbstractCommand
 {
 public:
     /*!
@@ -71,8 +71,7 @@ public:
     bool checkArgs(std::deque<std::string>&) { return true; }
 
 public:
-    static  MMCSCommand_waitjob* build();
-    static  std::string cmdname() { return "waitjob"; }
+    static MMCSCommand_waitjob* build();
 
 private:
     static int selectJobCallback(void*, int argc, char** argv, char**);

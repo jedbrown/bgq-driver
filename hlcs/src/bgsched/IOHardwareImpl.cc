@@ -37,6 +37,7 @@
 #include <db/include/api/cxxdb/cxxdb.h>
 
 #include <db/include/api/tableapi/gensrc/bgqtableapi.h>
+#include <db/include/api/tableapi/DBConnectionPool.h>
 
 #include <utility/include/Log.h>
 

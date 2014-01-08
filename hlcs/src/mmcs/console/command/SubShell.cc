@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "SubShell.h"
 
 #include "common/Properties.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 SubShell*
 SubShell::build()
@@ -42,7 +38,7 @@ SubShell::build()
     commandAttributes.requiresBlock(false);             // does not require a BlockController object
     commandAttributes.requiresConnection(false);        // does not require  mc_server connections
     commandAttributes.requiresTarget(false);            // does not require a BlockControllerTarget object
-    commandAttributes.mmcsConsoleCommand(true);
+    commandAttributes.bgConsoleCommand(true);
     commandAttributes.mmcsLiteCommand(true);
     commandAttributes.internalAuth(true);
     commandAttributes.helpCategory(common::DEFAULT);
@@ -55,7 +51,7 @@ SubShell::execute(deque<string> args,
                   common::ConsoleController* pController,
                   server::BlockControllerTarget* pTarget)
 {
-    if(common::Properties::getProperty(NO_SHELL) == "true") {
+    if (common::Properties::getProperty(NO_SHELL) == "true") {
         reply << mmcs_client::FAIL << mmcs_client::DONE;
         return;
     }
@@ -63,8 +59,7 @@ SubShell::execute(deque<string> args,
     string escapeCommand;
 
     if (args.size() > 0) {
-        for (unsigned i = 0; i < args.size(); ++i)
-        {
+        for (unsigned i = 0; i < args.size(); ++i) {
             escapeCommand += args[i] + " ";
         }
     } else
@@ -89,6 +84,5 @@ SubShell::help(deque<string> args,
       << ";If optional <command> is specified, executes that command in a sub_shell and returns you to mmcs$ prompt."
       << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::console::command

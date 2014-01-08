@@ -143,7 +143,8 @@ CREATE VIEW X_BGQ_1_1 (
     "ctlaction",
     "message",
     "rawdata",
-    "diags") AS    
+    "diags",    
+    "qualifier") AS
     SELECT BGQEVENTLOG.RECID AS "rec_id",
            BGQEVENTLOG.CATEGORY AS "category", 
            BGQEVENTLOG.SEVERITY AS "severity", 
@@ -155,7 +156,8 @@ CREATE VIEW X_BGQ_1_1 (
            BGQEVENTLOG.CTLACTION AS "ctlaction", 
            BGQEVENTLOG.MESSAGE AS "message",
            BGQEVENTLOG.RAWDATA AS "rawdata",
-           BGQEVENTLOG.DIAGS AS "diags"
+           BGQEVENTLOG.DIAGS AS "diags",
+           BGQEVENTLOG.QUALIFIER AS "qualifier"
    FROM TBGQEVENTLOG AS BGQEVENTLOG;
 
 

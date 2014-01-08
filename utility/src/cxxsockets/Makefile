@@ -23,16 +23,19 @@
 include ../../Make.utility.rules
 include ../../../Make.rules
 
-# for optimization and debugging
 CXXFLAGS += -Wall
-CXXFLAGS += -W
 CXXFLAGS += -Wextra
+CXXFLAGS += -Wconversion
+CXXFLAGS += -Wsign-conversion
+CXXFLAGS += -Wlogical-op
+CXXFLAGS += -Wvla
+CXXFLAGS += -Wmissing-include-dirs
 CXXFLAGS += -O2
 CXXFLAGS += -MD -MP
 CXXFLAGS += -fpic
 
 ifeq ($(BGQ_HOST_OS),x86_64)
-# tollerate warnings in rh5 x86 builds.
+# tolerate warnings in rh5 x86 builds.
 CFLAGS    := $(subst -Werror,,$(CFLAGS))
 CXXFLAGS  := $(subst -Werror,,$(CXXFLAGS))
 endif
@@ -63,8 +66,6 @@ SRCS += SockAddr.cc
 SRCS += SockAddrList.cc
 SRCS += FileSet.cc
 SRCS += ListenerSet.cc
-SRCS += PollingSocketSet.cc
-SRCS += PollingFileSet.cc
 SRCS += Host.cc
 
 OBJS     = $(SRCS:%.cc=%.o)
@@ -81,7 +82,7 @@ $(lib_vers): $(lib_full)
 	ln -sf $< $@
 
 $(lib_full): $(OBJS)
-	$(CXX) $(SHARED_LDFLAGS) -o $@ $^
+	$(CXX) -o $@ $^ $(SHARED_LDFLAGS)
 
 install: $(install_list)
 

@@ -36,6 +36,7 @@
 
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/utility.hpp>
 #include <boost/weak_ptr.hpp>
 
 namespace runjob {
@@ -43,9 +44,11 @@ namespace server {
 namespace job {
 
 /*!
+ *
  * \brief 
+ * \note noncopyable because destructor does actual work
  */
-class Reconnect : public boost::enable_shared_from_this<Reconnect>
+class Reconnect : public boost::enable_shared_from_this<Reconnect>, private boost::noncopyable
 {
 public:
     /*!
@@ -68,7 +71,7 @@ public:
 private:
     Reconnect(
             const boost::shared_ptr<Server>& server
-         );
+            );
 
     JobInfo getJobInfo();
 

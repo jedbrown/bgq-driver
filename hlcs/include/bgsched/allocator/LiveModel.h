@@ -317,6 +317,59 @@ public:
     );
 
     /*!
+     * \brief Request that the LiveModel start monitoring the specified compute block for allocate status.
+     *
+     * Registered listeners will be notified when the compute block is available to run a job or if
+     * the boot of the compute block failed.
+     *
+     * \note This method was added in V1R2M1.
+     * \ingroup V1R2M1
+     *
+     * \throws bgsched::RuntimeException with value:
+     * - bgsched::RuntimeErrors::InvalidBlockState - if compute block status is Free or Initialized
+     *
+     * \throws bgsched::DatabaseException with values:
+     * - bgsched::DatabaseErrors::DatabaseError - if error occurs accessing the database
+     * - bgsched::DatabaseErrors::ConnectionError - if error occurs connecting to the database
+     *
+     * \throws bgsched::InputException with values:
+     * - bgsched::InputErrors::InvalidBlockName - if the block name is not valid
+     * - bgsched::InputErrors::BlockNotFound - if block name was not found
+     *
+     * \throws bgsched::InternalException with value:
+     * - bgsched::InternalErrors::UnexpectedError - if any type of unexpected error occurs
+     */
+    void monitorBlockAllocate(
+            const std::string& blockName  //!< [in] Compute block to monitor for allocate
+    );
+
+    /*!
+     * \brief Request that the LiveModel start monitoring the specified compute block for deallocate status.
+     *
+     * Registered listeners will be notified when the compute block resources are freed.
+     *
+     * \note This method was added in V1R2M1.
+     * \ingroup V1R2M1
+     *
+     * \throws bgsched::RuntimeException with value:
+     * - bgsched::RuntimeErrors::InvalidBlockState - if compute block status is Free
+     *
+     * \throws bgsched::DatabaseException with values:
+     * - bgsched::DatabaseErrors::DatabaseError - if error occurs accessing the database
+     * - bgsched::DatabaseErrors::ConnectionError - if error occurs connecting to the database
+     *
+     * \throws bgsched::InputException with values:
+     * - bgsched::InputErrors::InvalidBlockName - if the block name is not valid
+     * - bgsched::InputErrors::BlockNotFound - if block name was not found
+     *
+     * \throws bgsched::InternalException with value:
+     * - bgsched::InternalErrors::UnexpectedError - if any type of unexpected error occurs
+     */
+    void monitorBlockDeallocate(
+            const std::string& blockName  //!< [in] Compute block to monitor for deallocate
+    );
+
+    /*!
      * \brief Implementation type.
      */
     class Impl;

@@ -36,6 +36,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -253,7 +254,7 @@ SimJobController::dataChannelHandler(InetSocketPtr authOnly)
    // Make sure the service field is correct.
    bgcios::MessageHeader *msghdr = (bgcios::MessageHeader *)_inboundMessage;
    if (msghdr->service != bgcios::JobctlService) {
-      LOG_ERROR_MSG("Job " << msghdr->jobId << ": message service " << msghdr->service << " is wrong");
+      LOG_ERROR_MSG("Job " << msghdr->jobId << ": message service " << (int)msghdr->service << " is wrong, header: " << bgcios::printHeader(*msghdr));
       sendErrorAckToDataChannel(bgcios::WrongService, bgcios::JobctlService);
       return 1;
    }
@@ -262,6 +263,16 @@ SimJobController::dataChannelHandler(InetSocketPtr authOnly)
    if (msghdr->version != ProtocolVersion) {
       LOG_ERROR_MSG("Job " << msghdr->jobId << ": message protocol version " << (int)msghdr->version << " does not match jobctld version " << (int)ProtocolVersion);
       sendErrorAckToDataChannel(bgcios::VersionMismatch, ProtocolVersion);
+      return 1;
+   }
+
+   // Make sure the Authenticate message is arriving when expected.
+   if (authOnly && msghdr->type != Authenticate) {
+      LOG_ERROR_MSG("Job " << msghdr->jobId << ": expected Authenticate message: " << bgcios::printHeader(*msghdr) );
+      return 1;
+   } else if (!authOnly && msghdr->type == Authenticate) {
+      LOG_TRACE_MSG("Job " << msghdr->jobId << ": unexpected Authenticate message");
+      dataChannel.reset();
       return 1;
    }
 
@@ -310,6 +321,10 @@ SimJobController::dataChannelHandler(InetSocketPtr authOnly)
 
       case Reconnect:
          err = reconnect();
+         break;
+
+      case Heartbeat:
+         err = heartbeat();
          break;
 
       default:
@@ -509,6 +524,22 @@ SimJobController::startJob(void)
       return sendToDataChannel(outMsg);
    }
 
+   struct timeval now;
+   gettimeofday(&now, NULL);
+   const uint64_t currentTime = ((uint64_t)now.tv_sec * bgcios::MicrosecondsPerSecond) + (uint64_t)now.tv_usec;
+   if ( !inMsg->currentTime ) {
+       // Get the current time for the compute nodes.
+       inMsg->currentTime = currentTime;
+   } else {
+       const uint64_t difference = currentTime > inMsg->currentTime ? currentTime - inMsg->currentTime : inMsg->currentTime - currentTime;
+       const uint64_t threshold = _config->getStartTimeThreshold();
+       if ( threshold && difference > threshold ) {
+           LOG_INFO_MSG_FORCED("Job " << inMsg->header.jobId << " " << difference / 1000.0l << "ms difference" );
+       } else {
+           LOG_DEBUG_MSG("Job " << inMsg->header.jobId << " " << difference << "ms difference" );
+       }
+   }
+
    // Set number of ranks for the job.
    _sim->setNumRanks(inMsg->numRanksForIONode);
    _sim->setStartRank(inMsg->header.rank);
@@ -618,7 +649,11 @@ SimJobController::cleanupJob(void)
    _jobs.remove(job->getJobId());
    job.reset();
 
-   // Send CleanupJobAck message.
+   if (inMsg->killTimeout) {
+       // no ack is required
+       return 0;
+   }
+
    return sendToDataChannel(outMsg);
 }
 
@@ -809,12 +844,24 @@ SimJobController::authenticate(InetSocketPtr channel)
    // Get pointer to inbound Authenticate message.
    AuthenticateMessage *inMsg = (AuthenticateMessage *)_inboundMessage;
 
-   LOG_TRACE_MSG( "plain: " << inMsg->plainData );
    std::ostringstream os;
+   BOOST_FOREACH( const unsigned char i, inMsg->plainData ) {
+       os << std::setfill('0') << std::setw(2) << std::hex << static_cast<unsigned>(i);
+   }
+   LOG_TRACE_MSG( "plain: " << os.str() );
+   os.str("");
    BOOST_FOREACH( const unsigned char i, inMsg->encryptedData ) {
        os << std::setfill('0') << std::setw(2) << std::hex << static_cast<unsigned>(i);
    }
    LOG_TRACE_MSG( "encrypted: " << os.str() );
+
+   // special case to simulate authentication failures, plain and encrypted will be the same
+   if ( memcmp(inMsg->plainData, inMsg->encryptedData, sizeof(inMsg->plainData)) == 0 ) {
+       LOG_ERROR_MSG( "authentication failed" );
+      channel.reset();
+      _done = 1;
+       return EPERM;
+   }
 
    // Build AuthenticateAck message in outbound buffer.
    AuthenticateAckMessage *outMsg = (AuthenticateAckMessage *)_outboundMessage;

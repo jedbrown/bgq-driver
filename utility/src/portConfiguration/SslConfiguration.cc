@@ -59,6 +59,7 @@ SslConfiguration::SslConfiguration(
         Properties::ConstPtr properties_ptr
     ) :
         _use(use),
+        _certificate(certificate),
         _my_private_key_filename(),
         _ca_certificates_path(),
         _ca_certificate_filename(),
@@ -167,7 +168,7 @@ SslConfiguration::ContextPtr SslConfiguration::createContext(
         ssl_function_name = "constructor";
         context_ptr.reset( new Context(
                 io_service,
-                _use == SslConfiguration::Use::Client ? boost::asio::ssl::context::sslv23_client : boost::asio::ssl::context::sslv23_server
+                _use == Use::Client ? boost::asio::ssl::context::sslv23_client : boost::asio::ssl::context::sslv23_server
             ) );
 
         Context &context(*context_ptr);
@@ -178,10 +179,17 @@ SslConfiguration::ContextPtr SslConfiguration::createContext(
             );
 
         ssl_function_name = "set_verify_mode";
-        context.set_verify_mode(
-                boost::asio::ssl::context::verify_peer ||
-                boost::asio::ssl::context::verify_fail_if_no_peer_cert
-            );
+        boost::asio::ssl::context::verify_mode mode = boost::asio::ssl::context::verify_peer;
+        if ( _use == Use::Client ) {
+            mode |= boost::asio::ssl::context::verify_fail_if_no_peer_cert;
+        } else {
+            // only enable peer verification if requested
+            if ( _certificate != Certificate::Optional ) {
+                mode |= boost::asio::ssl::context::verify_fail_if_no_peer_cert;
+            }
+        }
+        LOG_DEBUG_MSG( "verify mode: " << std::hex << mode );
+        context.set_verify_mode( mode );
 
         ssl_function_name = "use_certificate_chain_file";
         context.use_certificate_chain_file(

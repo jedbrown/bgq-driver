@@ -31,6 +31,7 @@
 #include "server/job/Debug.h"
 #include "server/job/IoNode.h"
 #include "server/job/Load.h"
+#include "server/job/Signal.h"
 #include "server/job/Start.h"
 #include "server/job/Status.h"
 #include "server/job/SubNodePacing.h"
@@ -57,7 +58,36 @@ Handle::Handle(
 }
 
 void
-Handle::impl(
+Handle::control(
+        const Uci& location,
+        const cios::Message::Ptr& message
+        )
+{
+    LOGGING_DECLARE_JOB_MDC( _job->id() );
+    LOGGING_DECLARE_BLOCK_MDC( _job->info().getBlock() );
+
+    const bgcios::MessageHeader* header = message->header();
+
+    const IoNode::Map::iterator iterator = _job->io().find( location );
+    if ( iterator == _job->io().end() ) {
+        LOG_WARN_MSG( "could not find I/O node: " << bgcios::printHeader(*header) );
+        return;
+    }
+    IoNode& node = iterator->second;
+
+    BOOST_ASSERT( header->service == bgcios::JobctlService );
+
+    node.handleControl(
+            header,
+            message,
+            _job
+            );
+    
+    this->transition( header );
+}
+
+void
+Handle::data(
         const Uci& location,
         const cios::Message::Ptr& message,
         const Callback& callback
@@ -66,38 +96,60 @@ Handle::impl(
     LOGGING_DECLARE_JOB_MDC( _job->id() );
     LOGGING_DECLARE_BLOCK_MDC( _job->info().getBlock() );
 
-    // header is always the first member of each message
     const bgcios::MessageHeader* header = message->header();
 
-    // find node
+    if ( header->type == bgcios::stdio::WriteStdout || header->type == bgcios::stdio::WriteStderr ) {
+        if ( !_job->killTimer().expires().is_not_a_date_time() ) {
+            // job is dying, drop output
+            callback();
+            return;
+        }
+
+        const boost::shared_ptr<bgcios::stdio::WriteStdioMessage> msg(
+                message->as<bgcios::stdio::WriteStdioMessage>()
+                );
+
+        // note: length of stdout message is contained within the header
+        const message::StdIo::Ptr outmsg( new message::StdIo() );
+        outmsg->setClientId( _job->client() );
+        outmsg->setJobId( _job->id() );
+        outmsg->setData( msg->data, header->length - sizeof(*header) );
+        outmsg->setRank( header->rank );
+        outmsg->setType( 
+                header->type == bgcios::stdio::WriteStdout ? runjob::Message::StdOut : runjob::Message::StdError
+                );
+
+        // add it to our queue
+        _job->queue().add( outmsg, callback );
+
+        return;
+    }
+
     const IoNode::Map::iterator iterator = _job->io().find( location );
     if ( iterator == _job->io().end() ) {
-        LOG_WARN_MSG( "could not find I/O node" );
-        callback();
+        LOG_WARN_MSG( "could not find I/O node: " << bgcios::printHeader(*header) );
+        if ( callback ) callback();
         return;
     }
     IoNode& node = iterator->second;
 
-    // check service
-    if ( header->service == bgcios::JobctlService ) {
-        // let the I/O node handle the message
-        node.handleControl(
-                header,
-                message,
-                _job
-                );
-        callback();
-    } else if ( header->service == bgcios::StdioService ) {
-        node.handleData(
-                header,
-                message,
-                _job,
-                callback
-                );
-    } else {
-        BOOST_ASSERT( !"unhandled I/O service" );
-    }
+    BOOST_ASSERT( header->service == bgcios::StdioService );
 
+    node.handleData(
+            header,
+            message,
+            _job,
+            callback
+            );
+
+    this->transition( header );
+}
+
+void
+Handle::transition(
+        const bgcios::MessageHeader* header
+        )
+{
     if ( 
             _job->pacing() && (
             header->type == bgcios::jobctl::SetupJobAck ||
@@ -117,10 +169,41 @@ Handle::impl(
             header->type == bgcios::stdio::WriteStdout ||
             header->type == bgcios::stdio::WriteStderr ||
             header->type == bgcios::jobctl::StartToolAck ||
-            header->type == bgcios::jobctl::EndToolAck ||
-            header->type == bgcios::jobctl::SignalJobAck
+            header->type == bgcios::jobctl::EndToolAck
        )
     {
+        return;
+    }
+            
+    if ( header->type == bgcios::jobctl::SignalJobAck ) {
+        IoNode::Map& io = _job->io();
+        std::size_t count = 0;
+        BOOST_FOREACH( IoNode::Map::value_type& i, io ) {
+            IoNode& node = i.second;
+            if ( !node.signalInFlight() ) ++count;
+        }
+        if ( count != io.size() ) {
+            const std::size_t remaining = io.size() - count;
+            LOG_DEBUG_MSG( "waiting for " << remaining << " I/O node" << (remaining == 1 ? "" : "s") << " to acknowledge signal");
+            return;
+        }
+
+        const int outstanding( _job->_outstandingSignal );
+        LOG_INFO_MSG( "signal " << outstanding << " acknowledged" );
+        _job->_outstandingSignal = 0;
+
+        // need to deliver KILL signal if it was requested while previous signal
+        // was oustanding
+        if (
+                outstanding != SIGKILL &&
+                outstanding != bgcios::jobctl::SIGHARDWAREFAILURE &&
+                !_job->killTimer().expires().is_not_a_date_time()
+           )
+        {
+            LOG_INFO_MSG( "delivering delayed KILL signal" );
+            Signal::create( _job, SIGKILL );
+        }
+
         return;
     }
 

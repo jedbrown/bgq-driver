@@ -84,9 +84,9 @@ private:
 	      XMLEntity* parent);
     void* parser() const { return _parser; }
     XMLEntity* parent() const { return _parent; }
-    static void _startXML (void* ud, const char* name, const char** atts);
-    static void _endXML   (void* ud, const char* name);
-    static void _startCDATA (void* ud, const char* s, int len);
+    static void _startXML(void* ud, const char* name, const char** atts);
+    static void _endXML(void* ud, const char* name);
+    static void _startCDATA(void* ud, const char* s, int len);
 };
 
 inline std::ostream &operator<<(std::ostream &os, const XMLException& ex)

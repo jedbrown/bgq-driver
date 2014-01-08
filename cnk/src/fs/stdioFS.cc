@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
+#include "NodeController.h"
 
 using namespace bgcios::stdio;
 
@@ -103,14 +104,10 @@ int stdioFS::init(void)
    destAddress.sin_port = BaseRdmaPort;
    destAddress.sin_addr.s_addr = NodeState.ServiceDeviceAddr;
    err = cnv_connect(&_queuePair, (struct sockaddr *)&destAddress);
+   Node_ReportConnect(err, destAddress.sin_addr.s_addr, destAddress.sin_port);
    if (err != 0) {
-       RASBEGIN(2);
-       RASPUSH(NodeState.ServiceDeviceAddr);
-       RASPUSH(BaseRdmaPort);
-       RASFINAL(RAS_KERNELCNVCONNECTFAIL);
-       
        TRACE( TRACE_StdioFS, ("(E) stdioFS::init%s: cnv_connect() failed, error %d\n", whoami(), err) );
-       return err;
+       Kernel_Crash(RAS_KERNELCNVCONNECTFAIL);
    }
 
    TRACE( TRACE_StdioFS, ("(I) stdioFS::init%s: connected to stdiod\n", whoami()) );

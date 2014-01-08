@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_GEN_MIDPLANE_BLOCK_H_
 #define MMCS_SERVER_COMMAND_GEN_MIDPLANE_BLOCK_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
 ** gen_midplane_block <blockid> <corner> <asize> <bsize> <csize> <dsize> [aPT bPT cPT dPT]
@@ -48,9 +44,8 @@ class GenMidplaneBlock : public common::AbstractCommand
 {
 public:
     GenMidplaneBlock (const char* name, const char* description, const Attributes& attributes)
-    : AbstractCommand(name,description,attributes) { usage = "gen_midplane_block <blockid> <corner> <asize> <bsize> <csize> <dsize> [aPT bPT cPT dPT]";}
+    : AbstractCommand(name,description,attributes) { _usage = "gen_midplane_block <blockid> <corner> <asize> <bsize> <csize> <dsize> [aPT bPT cPT dPT]";}
     static  GenMidplaneBlock* build();    // factory method
-    static  std::string cmdname() { return "gen_midplane_block"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -60,13 +55,11 @@ public:
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
              BlockControllerTarget* pTarget);
-    bool checkArgs(std::deque<std::string>& args) { if((args.size() != 6) && (args.size() != 10)) return false; else return true;}
+    bool checkArgs(std::deque<std::string>& args) { if ((args.size() != 6) && (args.size() != 10)) return false; else return true;}
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

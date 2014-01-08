@@ -44,9 +44,6 @@ command_libshort      = lib$(command_libbase).so
 command_libvers       = $(command_libshort).$(command_libmajor_vers)
 command_libfull       = $(command_libvers).$(command_libminor_vers).$(command_libminor_rev)
 
-MAPPING_STRING_SIZE = $(shell ../samples/database_column_sizes/mapping)
-Mapping.o: CXXFLAGS += -DMAPPING_STRING_SIZE=$(MAPPING_STRING_SIZE)
-
 CXXFLAGS += -fpic
 CXXFLAGS += -fvisibility=default
 
@@ -56,6 +53,7 @@ LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
 LDFLAGS  += -lbgutility
 LDFLAGS  += -lboost_program_options-mt
 LDFLAGS  += -shared
+LDFLAGS  += -lboost_filesystem-mt
 
 # linker flags for common library
 COMMON_LDFLAGS  += $(LDFLAGS)
@@ -64,14 +62,12 @@ COMMON_LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/bgq_util/lib
 COMMON_LDFLAGS  += -lbgq_util
 COMMON_LDFLAGS  += -lboost_date_time-mt
 COMMON_LDFLAGS  += -Wl,-soname,$(common_libvers)
-COMMAND_LDFLAGS += -lboost_filesystem-mt
 
 # linker flags for command library
 COMMAND_LDFLAGS += $(LDFLAGS)
 COMMAND_LDFLAGS += -L. -l$(common_libbase)
 COMMAND_LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib
 COMMAND_LDFLAGS += -Wl,-soname,$(command_libvers)
-COMMAND_LDFLAGS += -lboost_filesystem-mt
 
 
 COMMON_SRC  = $(wildcard *.cc) $(wildcard tool/*.cc)
@@ -87,7 +83,7 @@ all: $(common_libshort) $(command_libshort)
 
 $(common_libfull): $(COMMON_SRC:%.cc=%.o) Makefile
 	@echo "link $@"
-	$(SILENT)$(CXX) $(COMMON_LDFLAGS) $(filter-out Makefile, $^) -o $@
+	$(SILENT)$(CXX) $(filter-out Makefile, $^) -o $@ $(COMMON_LDFLAGS) 
 
 
 $(common_libvers): $(common_libfull)
@@ -100,7 +96,7 @@ $(common_libshort): $(common_libvers)
 
 $(command_libfull): $(COMMAND_SRC:%.cc=%.o) Makefile | $(common_libshort)
 	@echo "link $@"
-	$(SILENT)$(CXX) $(COMMAND_LDFLAGS) $(filter-out Makefile, $^) -o $@
+	$(SILENT)$(CXX) $(filter-out Makefile, $^) -o $@ $(COMMAND_LDFLAGS) 
 
 
 $(command_libvers): $(command_libfull)

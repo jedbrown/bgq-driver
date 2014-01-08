@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 # begin_generated_IBM_copyright_prolog                             
 #                                                                  
 # This is an automatically generated copyright prolog.             
@@ -33,7 +33,7 @@
 
 DISTROFS_LOC=/tftpboot/images/distrofs.ppc64
 YACI_RPM=yaci-12-7.4.ch4.noarch.rpm
-RPMLIST=BGQ_RAMDISK_PATH/tools/bgqDistrofs.rpmlist
+RPMLIST=BGQ_RAMDISK_PATH/tools/bgqDistrofs-BGQ_DISTRO.rpmlist
 POSTINSTALL=BGQ_RAMDISK_PATH/tools/bgqDistrofsPostInstall.sh
 SKIP_POSTINSTALL=0
 INSTALL_DIR=/bgsys/linux
@@ -43,6 +43,7 @@ IONFLOOR=0
 USER_BGSYS=0
 LOGFILE=`hostname -s`-bgqDistrofsInstall-$BGSYS_DIR-`date +%Y-%m%d-%H:%M:%S`.log
 SUCCESS=1
+RHEL6_PATH=BGQ_DISTRO_REPO_PATH
 
 usage () {
 
@@ -50,7 +51,7 @@ usage () {
     LOG=0
 
     echo -en "\n\nUsage: $0 [OPTIONS] (NOTE: Must be run as root)\n"
-    echo -en "\t[-p <path to $CURR_RHEL rpms>] (default: $RHEL6_PATH)\n"
+    echo -en "\t[-p <path to BGQ_DISTRO rpms>] (default: $RHEL6_PATH)\n"
     echo -en "\t[-d <name of BG/Q Distrofs directory to create>] (default: $BGSYS_DIR)\n"
     echo -en "\t[-n <path to install BG/Q Distrofs at> ] (default: /bgsys/linux)\n"
     echo -en "\t[-r <rpm list file>] (default: $RPMLIST)\n"
@@ -123,13 +124,13 @@ else
 fi    
     
 if [ -z $RHEL6_PATH ] ; then
-   echo -en "\n\n\tERROR: No path to $CURR_RHEL package repository specified"
+   echo -en "\n\n\tERROR: No path to BGQ_DISTRO package repository specified"
    echo -en "\n\t       Run bgqDistroInstall.sh with the -p option and a valid path to a package repository.\n\n"
    exit 1
 fi
 
 # Print out basic information for debug, etc.
-echo -en "\n\tUsing $CURR_RHEL RPMs in:  $RHEL6_PATH"
+echo -en "\n\tUsing BGQ_DISTRO RPMs in:  $RHEL6_PATH"
 echo -en "\n\tInstalling to: $INSTALL_DIR"
 echo -en "\n\tBG/Q Linux Distribution:  $BGSYS_DIR"
 echo -en "\n\tRPM list file:  $RPMLIST"
@@ -148,7 +149,7 @@ fi
 
 # Still check the RHEL6_PATH incase we are called directly.
 if [ ! -d $RHEL6_PATH ] && [ ! -d $INSTALL_DIR/$BGSYS_DIR ] ; then
-    echo -en "\n\n\tERROR: Cannot find $CURR_RHEL RPM path: $RHEL6_PATH\n\n"
+    echo -en "\n\n\tERROR: Cannot find BGQ_DISTRO RPM path: $RHEL6_PATH\n\n"
     exit 1
 fi
 
@@ -187,7 +188,7 @@ fi
 
 if [ ! -e $INSTALL_DIR/$BGSYS_DIR ] ; then
 
-   echo -en "\n\n\t$CURR_RHEL base image $INSTALL_DIR/$BGSYS_DIR not found.\n"
+   echo -en "\n\n\tBGQ_DISTRO base image $INSTALL_DIR/$BGSYS_DIR not found.\n"
    echo -en "\n\tPreparing the service node for image installation ...\n"   
 
     # Make sure that yaci is already installed ...
@@ -325,12 +326,12 @@ if [ ! -e $INSTALL_DIR/$BGSYS_DIR ] ; then
     fi
     
     #If we get here we were successful.
-    echo -en "\n\n\tInstallation of $CURR_RHEL base distro $BGSYS_DIR completed successfully.\n"
+    echo -en "\n\n\tInstallation of BGQ_DISTRO base distro $BGSYS_DIR completed successfully.\n"
     if [ $SKIP_POSTINSTALL -eq 0 ] ; then
        echo -en "\tContinuing to Post Installation to apply BG/Q Linux Distribution customizations.\n\n"
     fi
 else
-    echo -en "\n\n\t$CURR_RHEL Base installation $INSTALL_DIR/$BGSYS_DIR is already installed.\n"
+    echo -en "\n\n\tBGQ_DISTRO Base installation $INSTALL_DIR/$BGSYS_DIR is already installed.\n"
     echo -en "\t\tChecking for any package updates ...\n\n"
 
     for RPM in `rpm --root=$INSTALL_DIR/$BGSYS_DIR -qa | sort` ; do 

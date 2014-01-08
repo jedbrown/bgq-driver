@@ -51,9 +51,12 @@ LDFLAGS += -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/bgq_util/lib -lbgq_util
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/bgq_util/lib
+LDFLAGS += -L $(BGQ_INSTALL_DIR)/control/lib -lmcserver
+LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/control/lib
 LDFLAGS += -Wl,-rpath,$(libbgqdb_dir)
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/ras/lib -lras
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/ras/lib
+LDFLAGS += -lboost_program_options-mt
 
 UNIT_TEST_LDFLAGS = $(LDFLAGS) -lboost_unit_test_framework-mt
 
@@ -67,7 +70,8 @@ UNIT_TESTS = \
  insert_colons \
  test_GenBlockParams \
  test_getJobs \
- test_TimeInterval
+ test_TimeInterval \
+ test_hexConversion
 
 UNIT_TESTS_RUN = $(addsuffix .run,$(UNIT_TESTS))
 
@@ -107,10 +111,10 @@ insert_colons: insert_colons.o $(libbgqdb_so)
 	$(CXX) -o $@ $^ $(UNIT_TEST_LDFLAGS)
 
 test_genblock: test_genblock.o $(libbgqdb_so)
-	$(CXX) -o $@ $(UNIT_TEST_LDFLAGS) $^
+	$(CXX) -o $@ $^ $(UNIT_TEST_LDFLAGS) -lbgutility
 
 test_putras: test_putras.o $(libbgqdb_so)
-	$(CXX) -o $@ $(UNIT_TEST_LDFLAGS) $^
+	$(CXX) -o $@ $^ $(UNIT_TEST_LDFLAGS)
 
 test_putras.run: test_putras
 	./$<
@@ -122,23 +126,25 @@ test_genblock.run: test_genblock
 
 
 test_GenBlockParams: test_GenBlockParams.o $(libbgqdb_so)
-	$(CXX) -o $@ $(UNIT_TEST_LDFLAGS) $^
+	$(CXX) -o $@ $^ $(UNIT_TEST_LDFLAGS) -lbgutility
 
 test_pool_connections: test_pool_connections.o $(libbgqdb_so) good.properties garbage.properties
-	$(CXX) -o $@ $(UNIT_TEST_LDFLAGS) test_pool_connections.o $(libbgqdb_so)
+	$(CXX) -o $@ test_pool_connections.o $(libbgqdb_so) $(UNIT_TEST_LDFLAGS) -lbgutility
 
 test_performance_counters: test_performance_counters.o $(libbgqdb_so)
-	$(CXX) -o $@ $(UNIT_TEST_LDFLAGS) $^
+	$(CXX) -o $@ $^ $(UNIT_TEST_LDFLAGS) -lbgutility -llog4cxx
 
 test_getJobs: test_getJobs.o $(libbgqdb_so)
-	$(CXX) -o $@ $(UNIT_TEST_LDFLAGS) $^
+	$(CXX) -o $@ $^ $(UNIT_TEST_LDFLAGS) -lbgutility -lboost_date_time-mt
 
 test_job: test_job.o $(libbgqdb_so)
-	$(CXX) -o $@ $(UNIT_TEST_LDFLAGS) $^
+	$(CXX) -o $@ $^ $(UNIT_TEST_LDFLAGS) -lbgutility
 
 test_TimeInterval: test_TimeInterval.o $(libbgqdb_so)
-	$(CXX) -o $@ $(UNIT_TEST_LDFLAGS) $^
+	$(CXX) -o $@ $^ $(UNIT_TEST_LDFLAGS) -lboost_date_time-mt
 
+test_hexConversion: test_hexConversion.o $(libbgqdb_so)
+	$(CXX) -o $@ $^ $(UNIT_TEST_LDFLAGS) -lbgutility
 
 install: dblibdriver $(UNIT_TESTS_RUN) $(REGRESSION_TESTS)
 

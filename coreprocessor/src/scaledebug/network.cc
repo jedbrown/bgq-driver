@@ -23,12 +23,11 @@
 #include "network.h"
 
 int number_of_clients = 0;
+
 #if USE_SECURE_CERTIFICATE
 std::vector<CxxSockets::SecureTCPSocketPtr> SocketVector;
-CxxSockets::SecureTCPSocketPtr side_sock;
 #else
 std::vector<CxxSockets::TCPSocketPtr> SocketVector;
-CxxSockets::TCPSocketPtr side_sock;
 #endif
 
 void findIPs(std::vector<string>& IPs) 
@@ -87,22 +86,25 @@ int connectToTool(int argc, char* argv[])
     
     try 
     {
-        CxxSockets::SockAddr remote(AF_INET, argv[1], "34543");        
+        CxxSockets::SockAddrList side_salist(AF_INET, "", "34543");
+        CxxSockets::ListenerSetPtr side_listener(new CxxSockets::ListenerSet(side_salist));
+
 #if USE_SECURE_CERTIFICATE
-        side_sock.reset(new CxxSockets::SecureTCPSocket(remote.family(), 0, CxxSockets::SECURE, CxxSockets::CERTIFICATE));
-        bgq::utility::ClientPortConfiguration port_config(0);
+        CxxSockets::SecureTCPSocketPtr sock(new CxxSockets::SecureTCPSocket());
+        bgq::utility::ServerPortConfiguration port_config(0);
         port_config.setProperties(props, "");
         port_config.notifyComplete();
-        side_sock->Connect(remote, port_config);
+        side_listener->AcceptNew(sock, port_config);
 #else
-        side_sock.reset(new CxxSockets::TCPSocket(remote.family(), 0));
-        side_sock->Connect(remote);
+        CxxSockets::TCPSocketPtr sock = (CxxSockets::TCPSocketPtr)new CxxSockets::TCPSocket();
+        side_listener->AcceptNew(sock);
+        {
+            CxxSockets::Message side_msg("READY");
+            sock->Send(side_msg);
+            side_msg.str().clear();
+            SocketVector.push_back(sock);
+        }
 #endif
-        
-        CxxSockets::Message side_msg;
-        side_sock->Receive(side_msg);
-        assert(side_msg.str() == "READY");
-        side_msg.str().clear();
     }
     catch(CxxSockets::Error& err)
     {

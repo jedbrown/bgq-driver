@@ -465,6 +465,9 @@ runjob --block R00-M0 --exe /home/user/hello
  * \namespace runjob::server::performance
  * \brief performance counter objects used by the %runjob %server
  *
+ * \namespace runjob::server::realtime
+ * \brief real-time API objects used by the %runjob %server
+ *
  * \namespace runjob::server::sim
  * \brief job simulation objects used by the %runjob %server
  */

@@ -88,41 +88,6 @@ Properties::Properties(
     this->read();
 }
 
-Properties::Properties(
-        const Properties& other
-        ) :
-    _filename( other._filename ),
-    _map(),
-    _mutex()
-{
-    // acquire other's read lock
-    boost::shared_lock<Mutex> lock( other._mutex );
-
-    // copy their map
-    _map = other._map;
-}
-
-Properties&
-Properties::operator=(
-        const Properties& other
-        )
-{
-    // don't allow self assignment
-    if ( this != &other ) {
-        // acquire our write lock
-        boost::unique_lock<Mutex> unique( _mutex );
-
-        // acquire other's read lock
-        boost::shared_lock<Mutex> their_lock( other._mutex );
-
-        // set our members
-        _filename = other._filename;
-        _map = other._map;
-    }
-
-    return *this;
-}
-
 void
 Properties::read()
 {
@@ -321,7 +286,6 @@ Properties::getValueImpl(
                     " of properties file " + _filename
                     )
                 );
-        assert( !"shouldn't get here" );
     } else {
         return keyIterator->second;
     }

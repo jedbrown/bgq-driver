@@ -33,9 +33,9 @@
 
 
 //! \brief ClientManager class maintains a list of all of the BGMaster clients
-class ClientManager {
+class ClientManager
+{
 public:
-
     ClientManager();
 
     //! \brief end thread processing of all clients

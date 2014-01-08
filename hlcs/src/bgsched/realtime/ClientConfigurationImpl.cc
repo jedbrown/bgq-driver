@@ -29,6 +29,10 @@ namespace realtime {
 
 const ClientConfigurationImpl ClientConfigurationImpl::INSTANCE;
 
+ClientConfigurationImpl::ClientConfigurationImpl()
+{
+
+}
 
 const ClientConfigurationImpl::Hosts& ClientConfigurationImpl::getHost() const
 {

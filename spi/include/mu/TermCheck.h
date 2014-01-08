@@ -221,9 +221,7 @@ __INLINE__ int MUSPI_TERMCHECK_IsSenderEnabled(int i) {
 }
 
 /*__INLINE__*/ uint64_t getMCSRAM_BD_FETCHING_DESCm(int i) {
-  uint64_t m = 0x01UL;
-  MU_DCR__MCSRAM_BD_FETCHING_DESC__USR_set(m);
-  return m;
+  return MU_DCR__MCSRAM_BD_FETCHING_DESC__USR_set(1);
 }
 
 

@@ -232,8 +232,10 @@ int vmm_MapUserSpace(uint64_t flags, void* physicaladdress, void* virtualaddress
         mas3 |= MAS3_U1(1);
     if(flags & APP_FLAGS_LISTENABLE)
         mas3 |= MAS3_U3(1);
-    if(flags & APP_FLAGS_GUARDEDINHIBITED)
-        mas2 |= MAS2_I(1) | MAS2_G(1);
+    if(flags & APP_FLAGS_GUARDED)
+        mas2 |= MAS2_G(1);
+    if(flags & APP_FLAGS_INHIBITED)
+        mas2 |= MAS2_I(1);
     
     Kernel_WriteFlightLog(FLIGHTLOG, FL_MAPTLB___, (uint64_t)virtualaddress, (uint64_t)physicaladdress, tlbsize, (flags<<32) | pid);  // exclusion range is encoded
 
@@ -361,7 +363,7 @@ void VMM_Init()
     {
         vmm_tlbwe_slot(2,
                    MAS1_V(1) | MAS1_TID(0) | MAS1_TS(0) | MAS1_TSIZE_16MB,
-                   MAS2_EPN(  l2addr >> 12) | MAS2_W(0) | MAS2_I(1) |	MAS2_M(1) | MAS2_G(1) | MAS2_E(0),
+                   MAS2_EPN(  l2addr >> 12) | MAS2_W(0) | MAS2_I(1) |	MAS2_M(1) | MAS2_G(0) | MAS2_E(0),
                    MAS7_3_RPN(l2addr >> 12) | MAS3_SR(1) | MAS3_SW(1) | MAS3_SX(0) | MAS3_UR(0) | MAS3_UW(0) | MAS3_UX(0) | MAS3_U1(1) | MAS3_U0(1),
                    MAS8_TGS(0) | MAS8_VF(0) | MAS8_TLPID(0),
                    MMUCR3_X(0) | MMUCR3_R(1) |	MMUCR3_C(1) | MMUCR3_ECL(0) | MMUCR3_CLASS(1) |MMUCR3_ThdID(0xF)

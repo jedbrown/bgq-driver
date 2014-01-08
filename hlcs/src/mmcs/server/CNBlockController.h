@@ -28,7 +28,6 @@
 #ifndef MMCS_SERVER_CN_BLOCK_CONTROLLER_H
 #define MMCS_SERVER_CN_BLOCK_CONTROLLER_H
 
-
 #include "BlockControllerBase.h"
 
 #include "RackBitset.h"
@@ -41,16 +40,11 @@
 #include <string>
 #include <map>
 
-
 namespace mmcs {
 namespace server {
 
-
 class CNBlockController : public BlockControllerBase
 {
-    std::map<std::string, RackBitset>   _rackbits;                      // Bitset map rack location to corresponding bitset
-    bool _io_notified;
-
 public:
     /*!
      * \brief ctor.
@@ -82,21 +76,12 @@ public:
             );
 
     void build_shutdown_req(
-            MCServerMessageSpec::ShutdownBlockRequest& mcShutdownBlockRequest,
-            MCServerMessageSpec::ShutdownBlockReply& mcShutdownBlockReply,
-            mmcs_client::CommandReply& reply
-            );
-
-    bool notify_io(
-            MCServerMessageSpec::NotifyIoRequest& mcNotifyIoRequest,
-            MCServerMessageSpec::NotifyIoReply& mcNotifyIoReply,
-            mmcs_client::CommandReply& reply,
-            std::vector<BCNodeInfo*>& targetargs
+            MCServerMessageSpec::ShutdownBlockRequest& mcShutdownBlockRequest
             );
 
     void shutdown_block(
             mmcs_client::CommandReply& reply,
-            BlockControllerTarget* target
+            const std::deque<std::string>& args
             );
 
     void show_barrier(
@@ -106,8 +91,7 @@ public:
     void connect(
             std::deque<std::string> args,
             mmcs_client::CommandReply& reply,
-            const BlockControllerTarget* pTarget,
-            bool add_targets = false
+            const BlockControllerTarget* pTarget
             );
 
     void disconnect(
@@ -119,11 +103,11 @@ public:
             RasEvent& rasEvent
             );
 
-    void setReconnected() { _isstarted = true; _io_notified = true; }
+    void setReconnected() { _isstarted = true; }
+
+private:
+    std::map<std::string, RackBitset> _rackbits;  // Bitset map rack location to corresponding bitset
 };
-
-typedef boost::shared_ptr<CNBlockController> CNBlockPtr;
-
 
 } } // namespace mmcs::server
 

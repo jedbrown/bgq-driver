@@ -1016,8 +1016,15 @@ int cnv_destroy_qp(struct cnv_qp *qp)
    // Disconnect from the I/O node.
    if (qplist[qp->handle].conn_context){
        mudm_disconnect(qplist[qp->handle].conn_context);
+#if 0
        qplist[handle].conn_context = NULL;
+#endif
    }
+
+//race conditions exist where freeing or zeroing or setting to NULL storage causes exceptions
+//For example, if the job processing hardware thread 66 is processing a signal and the shutdown thread 65 is running this code, a valid pointer 
+//will become NULL in 66 and result in an exception and RAS.
+#if 0
    // Decrement use count on protection domain.
    if (qp->pd->handle >= CNV_MAX_PD) {
       TRACE( TRACE_Verbs, ("(E) cnv_destroy_qp(): protection domain handle %u is invalid\n", qp->pd->handle) );
@@ -1036,6 +1043,7 @@ int cnv_destroy_qp(struct cnv_qp *qp)
    // Clear queue pair structure.
    memset(qp, 0,  sizeof(struct cnv_qp));
    qp->state = CNV_QPS_RESET;
+#endif
 
    TRACE( TRACE_Verbs, ("(I) cnv_destroy_qp(): destroyed queue pair %u\n", handle) );
    return 0;
@@ -1046,6 +1054,7 @@ int cnv_destroy_qp(struct cnv_qp *qp)
 int cnv_connect(struct cnv_qp *qp, struct sockaddr *remote_addr)
 {
    int rc;
+   uint64_t endtime;
    struct cnv_context *context = qp->context;  // fix
    struct ionet_connect conn_request; // This parameter is deprecated.
 
@@ -1090,12 +1099,15 @@ int cnv_connect(struct cnv_qp *qp, struct sockaddr *remote_addr)
       printf("(E) cnv_connect(): mudm_connect failed with rc=%d\n", rc);
       return rc;
    }
-
+   
+   endtime = GetTimeBase() + 1000000ull * CONFIG_MUDMCONNECTTIMEOUT * GetPersonality()->Kernel_Config.FreqMHz;
    // Spin until connect is completed.
-   while (fetch(&(qplist[qp->handle].connected)) == 0) {
+   while ((fetch(&(qplist[qp->handle].connected)) == 0) && (GetTimeBase() < endtime)) {
       Delay(1000);
    }
-
+   if(GetTimeBase() > endtime)
+       rc = ETIMEDOUT;
+   
    TRACE( TRACE_Verbs, ("(I) cnv_connect(): queue pair %u (handle %u) is connected\n", qp->qp_num, qp->handle) );
    return rc;
 }

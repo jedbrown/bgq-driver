@@ -24,42 +24,36 @@
 #ifndef MMCS_SERVER_BLOCK_HELPER_H_
 #define MMCS_SERVER_BLOCK_HELPER_H_
 
-
 #include "types.h"
 
 #include "libmmcs_client/CommandReply.h"
 
 #include <bgq_util/include/pthreadmutex.h>
 
-#include <ras/include/RasEvent.h>
-
 #include <xml/include/c_api/MCServerMessageSpec.h>
 
+class RasEvent;
 
 namespace mmcs {
 namespace server {
 
-
-class BlockHelper {
-protected:
-    BlockPtr _base;
+class BlockHelper
+{
+private:
+    const BlockPtr _base;
 public:
     BlockHelper(BlockControllerBase* b);
     BlockHelper(BlockPtr b);
-    void setBase(BlockPtr b);
-    BlockPtr& getBase() { return _base; }
     const BlockPtr& getBase() const { return _base; }
     PthreadMutex& getMutex();
     virtual void initMachineConfig(mmcs_client::CommandReply& reply) { reply << mmcs_client::OK << mmcs_client::DONE; }
-    virtual int processRASMessage(RasEvent& rasEvent) { return false; };
+    virtual int processRASMessage(RasEvent& rasEvent) { return 0; };
     virtual void postProcessRASMessage(int recid) { return; };
     virtual void processConsoleMessage(MCServerMessageSpec::ConsoleMessage& consoleMessage) {}
     virtual void setAllocateStartTime(time_t time) {}
     virtual ~BlockHelper() {}
 };
 
-
 } } // namespace mmcs::server
-
 
 #endif

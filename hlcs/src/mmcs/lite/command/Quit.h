@@ -34,18 +34,12 @@ namespace lite {
 namespace command {
 
 
-/*!
-** quit
-** quit
-** Ends mmcs_hw. The block is implicitly destroyed and the ido connections are dropped.
-*/
 class Quit : public common::AbstractCommand
 {
 public:
     Quit(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "quit";}
+      : AbstractCommand(name,description,attributes) { _usage = "quit";}
     static  Quit* build();    // factory method
-    static  std::string cmdname() { return "quit"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,

@@ -38,15 +38,6 @@ using namespace XML;
 //#define XML_BUFFER_SIZE 16384
 #define XML_RETRY 20
 
-std::vector<pthread_t> Parser::_stopping_ids;
-
-// Allocate the mmcsThread_key
-static void stop_init()
-{
-#if 0
-    pthread_key_create(&stop_key, NULL);
-#endif
-}
 
 /* ********************************************************************** */
 /*              Parser constructor, destructor                            */
@@ -72,15 +63,6 @@ int Parser::getCol() {
   return XML_GetCurrentColumnNumber(_parser);
 }
 
-#define CHECK_TID(ret) {                                                       \
-    std::vector<pthread_t>::iterator it =                                      \
-        std::find(_stopping_ids.begin(), _stopping_ids.end(), pthread_self()); \
-    if(it != _stopping_ids.end()) {                                            \
-        _stopping_ids.erase(it);                                               \
-        if(ret) return;                                                        \
-    }                                                                          \
-}
-
 void Parser::parse(std::istream &s, Serializable * root) {
   _root = root;
   _xmlstack.push(_root); // insert the root in the stack; this prevents early termination of the do/while loop below
@@ -93,7 +75,6 @@ void Parser::parse(std::istream &s, Serializable * root) {
 
     // first check how many bytes are in the input buffer
     bytes_available = s.rdbuf()->in_avail();
-    CHECK_TID(true);
     if (bytes_available == 0) { // if we have none, we force another read by trying to read 1 byte. 
         // This solves the problem of blocking waiting for bytes that will never arrive (i.e. in sockets)
         bytes_read = s.rdbuf()->sgetn(_buffer, 1);
@@ -104,11 +85,10 @@ void Parser::parse(std::istream &s, Serializable * root) {
         if ( s.eof() || s.fail() || retry > XML_RETRY ) { // don't loop forever on incomplete xml object
             char buf[256];
             snprintf(buf, sizeof(buf)-1,
-                     "XML unexpected EOF at: %s at line %d, col %d",
+                     "XML unexpected EOF at: %s at line %ld, col %ld",
                      XML_ErrorString(XML_GetErrorCode(_parser)),
                      XML_GetCurrentLineNumber(_parser),
                      XML_GetCurrentColumnNumber(_parser));
-            CHECK_TID(false);
             throw Exception(buf);
         }
 
@@ -131,11 +111,10 @@ void Parser::parse(std::istream &s, Serializable * root) {
     if (!s || s.fail()) {
       char buf[256];
       snprintf(buf, sizeof(buf)-1,
-	       "XML read error at: %s at line %d, col %d",
+	       "XML read error at: %s at line %ld, col %ld",
 	       XML_ErrorString(XML_GetErrorCode(_parser)),
 	       XML_GetCurrentLineNumber(_parser),
 	       XML_GetCurrentColumnNumber(_parser));
-      CHECK_TID(false);
       throw Exception(buf);
     }
 
@@ -144,18 +123,16 @@ void Parser::parse(std::istream &s, Serializable * root) {
     if (!XML_Parse(_parser, _buffer, bytes_read, 0)) {
       char buf[256];
       snprintf(buf, sizeof(buf)-1,
-	       "XML syntax error: %s at line %d, col %d",
+	       "XML syntax error: %s at line %ld, col %ld",
 	       XML_ErrorString(XML_GetErrorCode(_parser)),
 	       XML_GetCurrentLineNumber(_parser),
 	       XML_GetCurrentColumnNumber(_parser));
-      CHECK_TID(false);
       throw Exception(buf);
     }
 
   } while (_xmlstack.size() > 0 ); // until we have gone through all the hierarchy, or reached the end
 
   //  cerr << "XML- stack size=" << _xmlstack.size() << endl;
-  CHECK_TID(false);
 }
 
 

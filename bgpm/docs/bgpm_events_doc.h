@@ -8,7 +8,7 @@
 /*                                                                  */
 /* Blue Gene/Q                                                      */
 /*                                                                  */
-/* (C) Copyright IBM Corp.  2012, 2012                              */
+/* (C) Copyright IBM Corp.  2010, 2012                              */
 /*                                                                  */
 /* US Government Users Restricted Rights -                          */
 /* Use, duplication or disclosure restricted                        */
@@ -20,7 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-
+/*!
     
     
 
@@ -1185,7 +1185,7 @@
    
  * <TD style="text-align:left"><a class="anchor" id="A_PEVT_IU_AXU_FXU_DEP_HIT_CYC"></a>PEVT_IU_AXU_FXU_DEP_HIT_CYC</TD>   
    
- * <TD style="text-align:left">AXU CR Instruction Committed</TD>
+ * <TD style="text-align:left">Cycles the FP unit is stalled</TD>
       
  * <TD title="events attributable to current sw/hw thread">thread</TD>
  
@@ -7999,7 +7999,7 @@
     
  
  * <TD class="detail" style="text-align:left" title="click to toggle" onclick="toggleDetail(event)">A new packet has been injected...</TD> 
- * <TD style="display:none">A new packet has been injected (Packet has been stored to ND FIFO) </TD>
+ * <TD style="display:none">A new packet has been injected (Packet has been stored to ND FIFO).Does not count first packet in message, so to get total injected packet count, must sum PEVT_MU_PKT_INJ + PEVT_MU_MSG_INJ events. </TD>
  
  * </TR>
  * <TR>
@@ -8099,7 +8099,7 @@
     
  
  * <TD class="detail" style="text-align:left" title="click to toggle" onclick="toggleDetail(event)">A new PUT packet has been rece...</TD> 
- * <TD style="display:none">A new PUT packet has been received (rME has started to process the packet). Note that this counter is incremented before packet has been completely processed (stored to L2). This is because event is checked by RPUT SRAM access but it is accessed only when </TD>
+ * <TD style="display:none">A new PUT packet has been received (rME has started to process the packet). Note that this counter is incremented before packet has been completely processed (stored to L2). This is because event is checked by RPUT SRAM access but it is accessed only when rME starts to process packet. </TD>
  
  * </TR>
  * <TR>

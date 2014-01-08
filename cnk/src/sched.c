@@ -161,10 +161,14 @@ __C_LINKAGE void __NORETURN Scheduler( void )
                 StoreConditional( pHWT->dummyStwcx.data, 0);
                 // Load the context. Note that the return never occurs, the rfi at the end of the 
                 // context load will transition this hardware thread to begin executing in the new context.
-                Kernel_WriteFlightLog(FLIGHTLOG, FL_SCHEDDISP,  GetTID(pKThr_Run) | (slotIndex<<16) | (((uint64_t)pKThr_Run->physical_pid) << 32), // TID and slot index 
-                                                pKThr_Run->Reg_State.ip,   // instruction pointer
-                                                mfspr(SPRG_SPIinfo),       // spi info spr
-                                                temp.SchedOrder);          // ordering data
+                Kernel_WriteFlightLog(FLIGHTLOG, FL_SCHEDDISP,  
+                                      GetTID(pKThr_Run) |                        // TID  
+                                      (slotIndex<<16) |                          // Slot index 
+                                      (((uint64_t)pKThr_Run->physical_pid)<<32), // physical PID 
+                                      pKThr_Run->Reg_State.ip,                   // instruction pointer
+                                      mfspr(SPRG_SPIinfo),                       // active and runnable thread counts
+                                      (temp.SchedOrder |                         // ordering mask (upper 5 bytes)
+                                      pKThr_Run->Pending));                      // pending condition (lower 1 byte)
 
 
                 dcache_block_touch( &(pKThr_Run->Reg_State) ); // start bringing in the context

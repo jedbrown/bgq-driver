@@ -29,7 +29,6 @@
 #ifndef MMCS_SERVER_RECONNECT_BLOCKS_H_
 #define MMCS_SERVER_RECONNECT_BLOCKS_H_
 
-
 #include "../MMCSCommandProcessor.h"
 
 #include <control/include/mcServer/MCServerRef.h>
@@ -38,7 +37,6 @@
 
 namespace mmcs {
 namespace server {
-
 
 typedef boost::shared_ptr<MCServerRef> MCRefPtr;
 

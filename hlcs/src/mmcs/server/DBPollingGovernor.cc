@@ -21,17 +21,13 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "DBPollingGovernor.h"
-
 
 namespace mmcs {
 namespace server {
 
-
 log4cxx::LoggerPtr dbPollingGovernorLogger(
       log4cxx::Logger::getLogger( "ibm.mmcs.server.DBPollingGovernor" )
     );
-
 
 } } // namespace mmcs::server

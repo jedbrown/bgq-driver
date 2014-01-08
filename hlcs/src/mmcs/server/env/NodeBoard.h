@@ -25,6 +25,7 @@
 #define MMCS_ENV_NODE_BOARD_H
 
 #include "Polling.h"
+#include "Token.h"
 #include "types.h"
 
 #include <db/include/api/cxxdb/fwd.h>
@@ -51,6 +52,19 @@ processNB(
         const cxxdb::UpdateStatementPtr& linkChipInsert
         );
 
+/*!
+ * \brief Handle node board environmentals
+ *
+ * This class will create one connection to mc_server for each
+ * row or column in the system, whichever is greater. For example:
+ *
+ * - a 15x8 (120 rack) system will use 15 connections
+ *
+ * - a 3x16 (48 rack) system will use 16 connections
+ *
+ * This is done to improve environmental data collection performance. A Token
+ * object manages the lifetime of each polling instance.
+ */
 class NodeBoard : public Polling
 {
 public:
@@ -77,39 +91,57 @@ private:
     void connectHandler(
             const bgq::utility::Connector::Error::Type error,
             const std::string& message,
-            const boost::shared_ptr<McServerConnection>& mc_server
+            const boost::shared_ptr<McServerConnection>& mc_server,
+            const Token::Ptr& token
             );
 
     void makeTargetSet(
-            const boost::shared_ptr<McServerConnection>& mc_server
+            const boost::shared_ptr<McServerConnection>& mc_server,
+            const Token::Ptr& token
             );
 
     void makeTargetSetHandler(
             std::istream& response,
             const boost::shared_ptr<McServerConnection>& mc_server,
-            const std::string& name
+            const std::string& name,
+            const Token::Ptr& token
         );
 
     void openTargetHandler(
             std::istream& response,
             const boost::shared_ptr<McServerConnection>& mc_server,
-            const std::string& name
+            const std::string& name,
+            const Token::Ptr& token
             );
 
     void readHandler(
             std::istream& response,
             const std::string& name,
             const int handle,
-            const boost::shared_ptr<McServerConnection>& mc_server
+            const boost::shared_ptr<McServerConnection>& mc_server,
+            const Token::Ptr& token
             );
+
+    void closeTargetHandler(
+            const boost::shared_ptr<MCServerMessageSpec::ReadNodeCardEnvReply>& reply,
+            const std::string& name,
+            const boost::shared_ptr<McServerConnection>& mc_server,
+            const Token::Ptr& token
+            );
+
+    void insertData(
+            const boost::shared_ptr<MCServerMessageSpec::ReadNodeCardEnvReply>& reply,
+            const std::string& name,
+            const boost::shared_ptr<McServerConnection>& mc_server,
+            const Token::Ptr& token
+        );
 
     void createTimers();
 
 private:
-    unsigned _connections;                          //!< outstanding connections to mc_server, protected by _strand
-    Racks _racks;                                   //!< compute rack location strings
-    boost::asio::io_service::strand _strand;        //!< serialized access to _connections and _racks
-    boost::mutex _mutex;                            //!< serialized access to database connection
+    Racks _racks;                                       //!< compute rack location strings
+    boost::asio::io_service::strand _strand;            //!< serialized access to _racks
+    boost::asio::io_service::strand _databaseStrand;    //!< serialized access to database connection
     cxxdb::ConnectionPtr _connection;
     cxxdb::UpdateStatementPtr _nodeBoardInsert;
     cxxdb::UpdateStatementPtr _nodeInsert;

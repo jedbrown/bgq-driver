@@ -24,17 +24,15 @@
 #ifndef MMCS_COMMON_SUBNET_H_
 #define MMCS_COMMON_SUBNET_H_
 
-
 #include <utility/include/Properties.h>
 
 #include <string>
 
-
 namespace mmcs {
 namespace common {
 
-
-class Subnet {
+class Subnet
+{
 public:
     std::string _name;
     std::string _hw_to_manage;
@@ -57,9 +55,8 @@ public:
 
     const std::string& get_name() const { return _name; }
 
-    //! \brief Sets the "home" flag to indicate whether the
-    //!  subnet is running on its primary IP.
-    //! \param ip An ip address as a string to compare with the primary IP.
+    //! \brief Sets the "home" flag to indicate whether the subnet is running on its primary IP.
+    //! \param ip An IP address as a string to compare with the primary IP.
     //! \returns True if at home.
     bool set_home(const std::string& ip);
 

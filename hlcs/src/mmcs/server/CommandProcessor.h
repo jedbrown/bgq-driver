@@ -21,17 +21,13 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_PROCESSOR_H_
 #define MMCS_SERVER_COMMAND_PROCESSOR_H_
 
-
 #include "../MMCSCommandProcessor.h"
-
 
 namespace mmcs {
 namespace server {
-
 
 #ifdef WITH_DB
 
@@ -71,7 +67,7 @@ protected:
                          server::BlockControllerTarget* pTarget,
                          common::AbstractCommand* pCmd,
                          procstat status,
-                                             std::vector<std::string>& validnames);
+                         std::vector<std::string>& validnames);
 };
 
 #endif // WITH_DB

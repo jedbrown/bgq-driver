@@ -21,14 +21,11 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "Wc.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 Wc*
 Wc::build()

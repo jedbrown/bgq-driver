@@ -36,13 +36,16 @@ MLXFWUPDATE_FILES=$(addprefix ${BGQ_RAMDISK_PATH}/tools/, ${FILES})
 
 default: install
 
-install: MAKE_TOOLS_DIR ${MLXFWUPDATE_DIRS} ${MLXFWUPDATE_FILES} bgqDistrofsInstall bgqDistrofsPostInstall bgqPopulateInitramfs bgqDistrofsUninstall bgqDistrofsPreInstall
+install: MAKE_TOOLS_DIR ${MLXFWUPDATE_DIRS} ${MLXFWUPDATE_FILES} bgqDistrofsInstall.sh bgqDistrofsPostInstall.sh bgqPopulateInitramfs.sh bgqDistrofsUninstall.sh bgqDistrofsPreInstall.sh
 	@${CP} ./*.sh ${BGQ_RAMDISK_PATH}/tools
 	@${CP} ./*.rpmlist ${BGQ_RAMDISK_PATH}/tools
 	@${CP} ./functions ${BGQ_RAMDISK_PATH}/tools
+	chmod o+rx ${BGQ_RAMDISK_PATH}/tools/*.sh
+	chmod o+r ${BGQ_RAMDISK_PATH}/tools/*
 
 MAKE_TOOLS_DIR:
 	@${MKDIR} -p ${BGQ_RAMDISK_PATH}/tools
+	chmod o+rx ${BGQ_RAMDISK_PATH}/tools
 
 # Create directories in the mlxFwUpdate directory.
 ${MLXFWUPDATE_DIRS}: | ${MAKE_TOOLS_DIR}
@@ -52,22 +55,24 @@ ${MLXFWUPDATE_DIRS}: | ${MAKE_TOOLS_DIR}
 ${MLXFWUPDATE_FILES}: ${BGQ_RAMDISK_PATH}/tools/% : % | ${MLXFWUPDATE_DIRS}
 	@${CP} -d $< $@
 
-bgqDistrofsPostInstall: bgqDistrofsPostInstall.sh.templ
-	@sed 's,BGQ_LINUX_PATH,${BGQ_LINUX_PATH}, ; s,BGQ_INSTALL_DIR,${BGQ_INSTALL_DIR}, ; s,BGQ_DISTROFS_BASE_PATH,${BGQ_DISTROFS_BASE_PATH}, ; s,BGQ_LINUX_OS_PATH,${BGQ_LINUX_OS_PATH}, ; s,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH}, ; s,BGQ_INITRAMFS_PATH,${BGQ_INITRAMFS_PATH}, ; s,BGQ_LINUX_KERNEL_VERSION,${BGQ_LINUX_KERNEL_VERSION},' < bgqDistrofsPostInstall.sh.templ > bgqDistrofsPostInstall.sh
+bgqDistrofsPostInstall.sh: bgqDistrofsPostInstall.sh.templ
+	sed 's,BGQ_LINUX_PATH,${BGQ_LINUX_PATH},g ; s,BGQ_INSTALL_DIR,${BGQ_INSTALL_DIR},g ; s,BGQ_DISTROFS_BASE_PATH,${BGQ_DISTROFS_BASE_PATH},g ; s,BGQ_LINUX_OS_PATH,${BGQ_LINUX_OS_PATH},g ; s,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH},g ; s,BGQ_INITRAMFS_PATH,${BGQ_INITRAMFS_PATH},g ; s,BGQ_LINUX_KERNEL_VERSION,${BGQ_LINUX_KERNEL_VERSION},g ; s,BGQ_DISTRO_REPO_PATH,${BGQ_DISTRO_REPO_PATH},g; s,BGQ_DISTRO,${BGQ_DISTRO},g ' < bgqDistrofsPostInstall.sh.templ > bgqDistrofsPostInstall.sh
 	@chmod a+x bgqDistrofsPostInstall.sh
-bgqDistrofsInstall: bgqDistrofsInstall.sh.templ
-	@sed 's,BGQ_DISTROFS_BASE_PATH,${BASE_PATH}, ; s,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH}, ' < bgqDistrofsInstall.sh.templ > bgqDistrofsInstall.sh
+
+bgqDistrofsInstall.sh: bgqDistrofsInstall.sh.templ
+	sed 's,BGQ_DISTROFS_BASE_PATH,${BASE_PATH},g ; s,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH},g; s,BGQ_DISTRO_REPO_PATH,${BGQ_DISTRO_REPO_PATH},g; s,BGQ_DISTRO,${BGQ_DISTRO},g ' < bgqDistrofsInstall.sh.templ > bgqDistrofsInstall.sh
 	@chmod a+x bgqDistrofsInstall.sh
-bgqPopulateInitramfs: bgqPopulateInitramfs.sh.templ
-	@sed 's,BGQ_INITRAMFS_PATH,${BGQ_INITRAMFS_PATH}, ; s,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH}, ; s,BGQ_LINUX_PATH,${BGQ_LINUX_PATH}, ; s,BGQ_LINUX_KERNEL_VERSION,${BGQ_LINUX_KERNEL_VERSION}, ; s,BGQ_DISTROFS_BASE_PATH,${BGQ_DISTROFS_BASE_PATH}, ' < bgqPopulateInitramfs.sh.templ > bgqPopulateInitramfs.sh
+
+bgqPopulateInitramfs.sh: bgqPopulateInitramfs.sh.templ
+	sed  's,BGQ_INITRAMFS_PATH,${BGQ_INITRAMFS_PATH},g; s,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH},g; s,BGQ_LINUX_PATH,${BGQ_LINUX_PATH},g; s,BGQ_LINUX_KERNEL_VERSION,${BGQ_LINUX_KERNEL_VERSION},g; s,BGQ_DISTROFS_BASE_PATH,${BGQ_DISTROFS_BASE_PATH},g' < bgqPopulateInitramfs.sh.templ > bgqPopulateInitramfs.sh
 	@chmod a+x bgqPopulateInitramfs.sh
 
-bgqDistrofsUninstall: bgqDistrofsUninstall.sh.templ
-	@sed 's,BGQ_LINUX_OS_PATH,${BGQ_LINUX_OS_PATH}, ; s,BGQ_INITRAMFS_PATH,${BGQ_INITRAMFS_PATH}, ; s,BGQ_INSTALL_DIR,${BGQ_INSTALL_DIR}, ; s,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH}, ' < bgqDistrofsUninstall.sh.templ > bgqDistrofsUninstall.sh
+bgqDistrofsUninstall.sh: bgqDistrofsUninstall.sh.templ
+	sed 's,BGQ_LINUX_OS_PATH,${BGQ_LINUX_OS_PATH},g ; s,BGQ_INITRAMFS_PATH,${BGQ_INITRAMFS_PATH},g ; s,BGQ_INSTALL_DIR,${BGQ_INSTALL_DIR},g ; s,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH},g ' < bgqDistrofsUninstall.sh.templ > bgqDistrofsUninstall.sh
 	@chmod a+x bgqDistrofsUninstall.sh
 
-bgqDistrofsPreInstall: bgqDistrofsPreInstall.sh.templ
-	@sed 's,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH}, ; s,BGQ_DISTROFS_BASE_PATH,${BGQ_DISTROFS_BASE_PATH}, ' < bgqDistrofsPreInstall.sh.templ > bgqDistrofsPreInstall.sh
+bgqDistrofsPreInstall.sh: bgqDistrofsPreInstall.sh.templ
+	sed 's,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH},g ; s,BGQ_DISTROFS_BASE_PATH,${BGQ_DISTROFS_BASE_PATH},g; s,BGQ_DISTRO_REPO_PATH,${BGQ_DISTRO_REPO_PATH},g; s,BGQ_DISTRO,${BGQ_DISTRO},g ' < bgqDistrofsPreInstall.sh.templ > bgqDistrofsPreInstall.sh
 	@chmod a+x bgqDistrofsPreInstall.sh
 
 clean:
@@ -78,6 +83,7 @@ clean:
 	@${RM} -rf mlxFwUpdate/usr/bin/*
 	@${RM} -rf mlxFwUpdate/usr/lib64/*
 	@${RM} -f bgqDistrofsPostInstall.sh	
+	@${RM} -f bgqDistrofsPreInstall.sh
 	@${RM} -f bgqDistrofsInstall.sh
 	@${RM} -f bgqPopulateInitramfs.sh
 	@${RM} -r bgqDistrofsUninstall.sh

@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "GrantBlockAuthority.h"
 
 #include "../DBConsoleController.h"
@@ -35,14 +34,11 @@
 #include <ras/include/RasEventImpl.h>
 #include <ras/include/RasEventHandlerChain.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 GrantBlockAuthority*
 GrantBlockAuthority::build()
@@ -60,10 +56,12 @@ GrantBlockAuthority::build()
 }
 
 void
-GrantBlockAuthority::execute(deque<string> args,
-                                           mmcs_client::CommandReply& reply,
-                                           DBConsoleController* pController,
-                                           BlockControllerTarget* pTarget)
+GrantBlockAuthority::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        DBConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
     std::string block = args[0];
     std::string newuser = args[1];
@@ -71,14 +69,13 @@ GrantBlockAuthority::execute(deque<string> args,
     // An administrator can do anything, anybody else has to be the block owner
     std::string blockowner;
 
-    if(BGQDB::getBlockOwner(block, blockowner) != BGQDB::OK) {
+    if (BGQDB::getBlockOwner(block, blockowner) != BGQDB::OK) {
         reply << mmcs_client::FAIL << "Cannot get block owner for " << block
               << " from database.  Is it a valid block?" << mmcs_client::DONE;
         return;
     }
 
-    if(pController->getUserType() == CxxSockets::Administrator ||
-       blockowner == pController->getUser().getUser()) {
+    if (pController->getUserType() == CxxSockets::Administrator || blockowner == pController->getUser().getUser()) {
         hlcs::security::Action::Type action_type;
         if(action == "read")
             action_type = hlcs::security::Action::Read;
@@ -96,18 +93,18 @@ GrantBlockAuthority::execute(deque<string> args,
             hlcs::security::Object blockobj(hlcs::security::Object::Block, block);
             hlcs::security::Authority auth(newuser, action_type);
             hlcs::security::grant(blockobj, auth, pController->getUser());
-        } catch(hlcs::security::exception::ObjectNotFound& e) {
+        } catch(const hlcs::security::exception::ObjectNotFound& e) {
             reply << mmcs_client::FAIL << "Database block object error for " << block << " : " << e.what() << mmcs_client::DONE;
             return;
-        } catch(hlcs::security::exception::DatabaseError& e) {
+        } catch(const hlcs::security::exception::DatabaseError& e) {
             reply << mmcs_client::FAIL << "Database error detected: " << e.what() << mmcs_client::DONE;
             return;
-        } catch(std::invalid_argument& e) {
+        } catch(const std::invalid_argument& e) {
             reply << mmcs_client::FAIL << "Object " << block << " is not a block." << e.what() << mmcs_client::DONE;
             return;
-        } catch(std::logic_error& e) {
+        } catch(const std::logic_error& e) {
             reply << mmcs_client::FAIL << "Action " << action << " not valid for object "
-                  << block << ": " << e.what() << mmcs_client::DONE;
+                << block << ": " << e.what() << mmcs_client::DONE;
             return;
         }
         reply << mmcs_client::OK << mmcs_client::DONE;
@@ -122,8 +119,10 @@ GrantBlockAuthority::execute(deque<string> args,
 }
 
 void
-GrantBlockAuthority::help(deque<string> args,
-                                        mmcs_client::CommandReply& reply)
+GrantBlockAuthority::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
           << ";Grants authority to perform < action > to < user > on < blockid > object."
@@ -131,6 +130,5 @@ GrantBlockAuthority::help(deque<string> args,
           << ";This does NOT affect special authorities created in the properties file."
           << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

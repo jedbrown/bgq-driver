@@ -34,7 +34,8 @@
 #include <unistd.h>
 
 
-class LockFile {
+class LockFile
+{
 public:
     std::ofstream *pout;
     std::string fname;

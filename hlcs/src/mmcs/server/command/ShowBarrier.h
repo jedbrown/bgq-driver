@@ -24,14 +24,11 @@
 #ifndef MMCS_SERVER_COMMAND_SHOW_BARRIER_H_
 #define MMCS_SERVER_COMMAND_SHOW_BARRIER_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
 //  show_barrier
@@ -42,14 +39,13 @@ class ShowBarrier: public common::AbstractCommand
 {
 public:
     ShowBarrier(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "show_barrier";}
-    static  ShowBarrier* build();	// factory method
-    static  std::string cmdname() { return "show_barrier"; }
+      : AbstractCommand(name,description,attributes) { _usage = "show_barrier";}
+    static ShowBarrier* build();	// factory method
     virtual void execute(std::deque<std::string> args,
 			 mmcs_client::CommandReply& reply,
 			 common::ConsoleController* pController,
 			 BlockControllerTarget* pTarget=NULL);
-    //    bool checkArgs(std::deque<std::string>& args) { if(args.size() > 1) return false; else return true;}
+    //    bool checkArgs(std::deque<std::string>& args) { if (args.size() > 1) return false; else return true;}
     virtual void help(std::deque<std::string> args,
 		      mmcs_client::CommandReply& reply);
 };

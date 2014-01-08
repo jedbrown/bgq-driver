@@ -28,7 +28,7 @@
 #include <utility/include/LoggingProgramOptions.h>
 #include <utility/include/Properties.h>
 
-#include <boost/exception.hpp>
+#include <boost/exception/all.hpp>
 #include <boost/function.hpp>
 #include <boost/program_options.hpp>
 #include <boost/utility.hpp>
@@ -60,7 +60,7 @@ public:
      * \brief ctor.
      */
     AbstractOptions(
-            unsigned int argc,                          //!< [in] number of arguments
+            int argc,                                   //!< [in] number of arguments
             char** argv,                                //!< [in] argument array
             const std::string& log_name                 //!< [in] logger name to pass to bgq::utility::LoggingProgramOptions
             );
@@ -136,7 +136,7 @@ protected:
 
 protected:
     boost::program_options::variables_map _vm;                              //!< variables map for option storage
-    unsigned int _argc;                                                     //!< argument count
+    int _argc;                                                              //!< argument count
     char** _argv;                                                           //!< argument vector
     boost::program_options::positional_options_description _positionalArgs; //!< positional args
 

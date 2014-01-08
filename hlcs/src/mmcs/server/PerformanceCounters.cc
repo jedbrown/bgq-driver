@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "PerformanceCounters.h"
 
 #include "BCNodeInfo.h"
@@ -32,13 +31,10 @@
 #include <boost/foreach.hpp>
 #include <boost/make_shared.hpp>
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
-
 
 PerformanceCounters::PerformanceCounters(
             const BlockPtr& block
@@ -53,7 +49,7 @@ PerformanceCounters::PerformanceCounters(
 void
 PerformanceCounters::getBlockSize()
 {
-    // count number of nodes that are not used for link training in the block
+    // Count number of nodes that are not used for link training in the block
     const size_t computes = std::count_if(
             _block->getNodes().begin(),
             _block->getNodes().end(),
@@ -67,13 +63,13 @@ PerformanceCounters::getBlockSize()
                 )
             );
 
-    // set detail based on I/O or compute block
-    if ( _block->isIOBlock() ) {
+    // Set detail based on I/O or compute block
+    if ( _block->isIoBlock() ) {
         _otherData = std::string(
                 "c0i" + boost::lexical_cast<std::string>( computes )
                 );
     } else {
-        // compute number of link training I/O nodes
+        // Compute number of link training I/O nodes
         const size_t io = _block->getNodes().size() - computes;
 
         _otherData = std::string(
@@ -96,20 +92,20 @@ PerformanceCounters::output(
         )
 {
     if ( !cookie ) {
-        // when the cookie is zero, this means mmcs_server was restarted
+        // When the cookie is zero, this means mmcs_server was restarted
         // and reconnected to this block. We don't want to store
         // performance counters for this scenario
         return;
     }
 
-    // set other data based on size of block
+    // Set other data based on size of block
     this->getBlockSize();
 
-    // get contents of our container
+    // Get contents of our container
     Container::StoragePolicy::Container container;
     _container->get( container );
 
-    // update each entry with the boot cookie
+    // Update each entry with the boot cookie
     try {
         const std::string qualifier = boost::lexical_cast<std::string>( cookie );
         BOOST_FOREACH( Container::StoragePolicy::Container::value_type& i, container ) {
@@ -118,7 +114,7 @@ PerformanceCounters::output(
             _container->add( i );
         }
     } catch ( const boost::bad_lexical_cast& e ) {
-        LOG_WARN_MSG( "could not convert cookie (" << cookie << ") to a string" );
+        LOG_WARN_MSG( "Could not convert boot cookie (" << cookie << ") to a string" );
     }
 
     try {

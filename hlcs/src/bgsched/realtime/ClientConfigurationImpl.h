@@ -31,6 +31,7 @@ namespace realtime {
 class ClientConfigurationImpl : public ClientConfiguration
 {
 public:
+    ClientConfigurationImpl();
 
     static const ClientConfigurationImpl INSTANCE;
 

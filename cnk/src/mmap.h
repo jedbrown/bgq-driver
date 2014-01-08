@@ -21,7 +21,7 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 #ifndef _MMAP_H_ // Prevent multiple inclusion
-#define _MMAP__H_
+#define _MMAP_H_
 
 #if !defined(__ASSEMBLY__)
 

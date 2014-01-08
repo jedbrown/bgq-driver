@@ -2,8 +2,8 @@
 To build the open source Blue Gene software, perform the following steps.
 
 The software is available in two tar files:
-o bgq-V1R2M0.tar.gz
-o bgq-V1R2M0-gpl.tar.gz
+o bgq-V1R2M1.tar.gz
+o bgq-V1R2M1-gpl.tar.gz
 
 Both of these must be downloaded.
 
@@ -62,6 +62,7 @@ To create the database, use the following commands:
 
 $ su - bgqsysdb
 $ mkdir ~bgqsysdb/data/ts
+$ cd  ~bgqsysdb/data/ts
 $ db2 "CREATE DATABASE bgdb0scr PAGESIZE 8192"
 $ db2 connect to bgdb0scr user bgqsysdb using db24bgq
 $ db2 "create bufferpool bp3scr size 100000 pagesize 16k"
@@ -75,10 +76,10 @@ $ db2 "create temporary tablespace userspace3scrtemp pagesize 16k managed by sys
 When the system has the required software and configuration, build the source code by by running the following steps:
 
 Un-tar the two tar files in the same directory, the second will add more files to the directories created by the first un-tar.
-$ tar -xzf bgq-V1R2M0.tar.gz
-$ tar -xzf bgq-V1R2M0-gpl.tar.gz
+$ tar -xzf bgq-V1R2M1.tar.gz
+$ tar -xzf bgq-V1R2M1-gpl.tar.gz
 
-$ cd bgq-V1R2M0
+$ cd bgq-V1R2M1
 
 $ scripts/configure \
  --with-floor=/bgsys/drivers/ppcfloor \

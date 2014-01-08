@@ -23,35 +23,31 @@
 
 #include "common/ArgParse.h"
 
-#include "lib/BGMasterClientApi.h"
+#include "lib/BGMasterClient.h"
 #include "lib/exceptions.h"
 
 #include <utility/include/Log.h>
 
-#include <csignal>
 
-#include <boost/tokenizer.hpp>
 
 LOG_DECLARE_FILE( "master" );
 
-BGMasterClient client;
-Args* pargs;
-
 void
 doReload(
-        std::string& config_file
+        const BGMasterClient& client,
+        const std::string& config_file
         )
 {
     try {
         client.reload_config(config_file);
-    } catch(exceptions::ConfigError& e) {
+    } catch ( const exceptions::ConfigError& e ) {
         std::cerr << e.what() << std::endl;
         if (e.errcode == exceptions::FATAL) {
             exit(EXIT_FAILURE);
         } else {
             exit(0);
         }
-    } catch(exceptions::CommunicationError& e) {
+    } catch ( const exceptions::CommunicationError& e ) {
         std::cerr <<  "Configuration file not reloaded, error is: " << e.what() << std::endl;
         if (e.errcode == exceptions::FATAL) {
             exit(EXIT_FAILURE);
@@ -75,28 +71,28 @@ usage()
     std::cerr << "bgmaster_server_refresh_config [ --help ] [ --host host:port ] [ --verbose verbosity ] filename" << std::endl;
 }
 
-int main(int argc, const char** argv)
+int
+main(int argc, const char** argv)
 {
     std::vector<std::string> validargs;
     std::vector<std::string> singles;
     validargs.push_back("*"); // One argument without a "--" is allowed
-    Args largs(argc, argv, &usage, &help, validargs, singles);
-    pargs = &largs;
-    client.initProperties(pargs->get_props());
+    const Args largs(argc, argv, &usage, &help, validargs, singles);
+    BGMasterClient client;
 
     try {
-        client.connectMaster(pargs->get_portpairs());
-    } catch(exceptions::BGMasterError& e) {
-        std::cerr << "Unable to contact bgmaster_server, server may be down." << std::endl;
+        client.connectMaster(largs.get_props(), largs.get_portpairs());
+    } catch ( const exceptions::BGMasterError& e ) {
+        std::cerr << "Unable to contact bgmaster_server: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    if (pargs->size() == 0) {
-        std::string empty = "";
-        doReload(empty);
+    if (largs.size() == 0) {
+        const std::string empty;
+        doReload(client, empty);
     } else {
-        std::cout << "Reloading configuration using file " << *(pargs->begin()) << "." << std::endl;
-        doReload(*(pargs->begin()));
+        std::cout << "Reloading configuration using file " << *largs.begin() << "." << std::endl;
+        doReload(client, *largs.begin());
     }
     std::cout << "Successfully reloaded configuration." << std::endl;
 }

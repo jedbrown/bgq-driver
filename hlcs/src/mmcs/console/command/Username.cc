@@ -32,14 +32,11 @@
 
 #include <boost/foreach.hpp>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 Username*
 Username::build()
@@ -49,7 +46,7 @@ Username::build()
     commandAttributes.requiresConnection(false);       // does not require  mc_server connections
     commandAttributes.requiresTarget(false);           // does not require a BlockControllerTarget object
     commandAttributes.mmcsServerCommand(true);
-    commandAttributes.mmcsConsoleCommand(true);
+    commandAttributes.bgConsoleCommand(true);
     commandAttributes.internalAuth(true);
     commandAttributes.helpCategory(common::DEFAULT);
     return new Username("username", "username [-v]", commandAttributes);
@@ -75,10 +72,10 @@ Username::execute(
                 reply << ";" << group.second;
             }
         } else {
-            reply << mmcs_client::FAIL << "args? " << usage;
+            reply << mmcs_client::FAIL << "args? " << _usage;
         }
     } else {
-        reply << mmcs_client::FAIL << "args? " << usage;
+        reply << mmcs_client::FAIL << "args? " << _usage;
     }
 
     reply << mmcs_client::DONE;

@@ -53,7 +53,6 @@ PerfData::prepareInserts(
 {
     const cxxdb::ConnectionPtr result = BGQDB::DBConnectionPool::Instance().getConnection();
     if ( !result ) {
-        LOG_INFO_MSG("unable to connect to database");
         return result;
     }
 
@@ -79,7 +78,7 @@ PerfData::impl(
     connection = this->prepareInserts( insert );
 
     if ( !connection ) {
-        LOG_ERROR_MSG( "could not get database connection" );
+        LOG_ERROR_MSG("Could not get database connection.");
         return;
     }
 
@@ -89,7 +88,7 @@ PerfData::impl(
             request,
             boost::bind(
                 &PerfData::readHandler,
-                this,
+                boost::static_pointer_cast<PerfData>( shared_from_this() ),
                 _1,
                 mc_server,
                 connection,
@@ -134,11 +133,11 @@ PerfData::readHandler(
             try {
                 insert->execute();
             } catch ( const std::exception& e ) {
-                LOG_DEBUG_MSG( e.what() );
+                LOG_ERROR_MSG( e.what() );
             }
         }
     }
-        
+
     this->wait();
 }
 

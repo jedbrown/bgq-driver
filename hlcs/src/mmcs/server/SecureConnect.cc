@@ -21,12 +21,10 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "SecureConnect.h"
 
 #include "common/Properties.h"
 
-#include <utility/include/cxxsockets/error.h>
 #include <utility/include/cxxsockets/SockAddrList.h>
 #include <utility/include/cxxsockets/SecureTCPSocket.h>
 #include <utility/include/portConfiguration/ClientPortConfiguration.h>
@@ -34,16 +32,12 @@
 
 #include <boost/foreach.hpp>
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
 
-
 namespace SecureConnect {
-
 
 void
 Connect(
@@ -53,60 +47,59 @@ Connect(
 {
     result.reset();
 
-    if ( portpairs.empty() ) return;
+    if ( portpairs.empty() ) {
+        return;
+    }
 
     using namespace bgq::utility;
 
     BOOST_FOREACH( const PortConfiguration::Pair& portpair, portpairs) {
-        if ( result )  break;
+        if ( result )  {
+            break;
+        }
 
         try {
             CxxSockets::SockAddrList remote_list(AF_UNSPEC, portpair.first, portpair.second);
             BOOST_FOREACH( const CxxSockets::SockAddr& remote, remote_list ) {
-                if ( result ) break;
+                if ( result ) {
+                    break;
+                }
 
                 bool done = false;
                 while ( !done ) {
                     try {
-                        CxxSockets::SecureTCPSocketPtr sock(
-                                new CxxSockets::SecureTCPSocket(remote.family(), 0)
-                                );
-
-                        ClientPortConfiguration port_config(
-                                0,
-                                ClientPortConfiguration::ConnectionType::Administrative
-                                );
+                        const CxxSockets::SecureTCPSocketPtr sock(new CxxSockets::SecureTCPSocket(remote.family(), 0));
+                        ClientPortConfiguration port_config(0, ClientPortConfiguration::ConnectionType::Administrative);
                         port_config.setProperties(common::Properties::getProperties(), "");
                         port_config.notifyComplete();
                         sock->Connect(remote, port_config);
                         result = sock;
                         LOG_DEBUG_MSG(
-                                "connected to " << remote.getHostAddr() << ":" << remote.getServicePort() <<
-                                " successfully"
+                                "Connected to " << remote.getHostAddr() << ":" << remote.getServicePort() <<
+                                " successfully."
                                 );
                         done = true;
                     } catch ( const CxxSockets::SoftError& e ) {
-                        LOG_INFO_MSG( e.what() << ", trying again" );
-                        sleep(1);
+                        LOG_WARN_MSG( e.what() << ", trying again." );
+                        sleep(3);
                     } catch ( const CxxSockets::Error& e ) {
-                        LOG_WARN_MSG(
-                                "connecting to " << remote.getHostAddr() << ":" << remote.getServicePort() <<
-                                " failed: " << e.what()
-                                );
+                        LOG_ERROR_MSG(
+                                "Connecting to " << remote.getHostAddr() << ":" << remote.getServicePort()
+                                << " failed.");
                         done = true;
                     }
                 }
             }
         } catch ( const CxxSockets::Error& e ) {
-            LOG_INFO_MSG(
-                "connect attempt failed to " << portpair.first << ":" << portpair.second  <<
+            LOG_ERROR_MSG(
+                "Connect attempt failed to " << portpair.first << ":" << portpair.second  <<
                 " " << e.what()
                 );
         }
     }
 
     if ( !result ) {
-        throw std::runtime_error("unable to connect");
+        throw std::runtime_error("Unable to connect.");
     }
 }
 

@@ -24,13 +24,13 @@
 #ifndef MMCS_CLIENT_COMMAND_REPLY_H_
 #define MMCS_CLIENT_COMMAND_REPLY_H_
 
-#include <cassert>
-#include <cstdio>
-#include <iostream>
-#include <iomanip>
-#include <streambuf>
 #include <boost/utility.hpp>
 
+#include <cassert>
+#include <cstdio>
+#include <iomanip>
+#include <iostream>
+#include <streambuf>
 
 namespace mmcs_client {
 
@@ -94,7 +94,6 @@ public:
     ** Default constructor - replies are written to stdout, format 0, write disabled
     */
     CommandReply(unsigned fd=1, int replyFormat=0, bool enableWrite=false);
-
 
     /*!
     ** Base destructor
@@ -197,14 +196,14 @@ protected:
 
 private:
     ConsolePort* _consolePort;      // console port to write to
-    int _fd;	                        // file descriptor to write to instead of server port
-    bool _enableWrite;			// data is allowed to be written
-    bool _done;			        // DONE was sent
-    unsigned _replyFormat;		// 0 or 1
-    unsigned _bufsize;
-    unsigned _replylen;                 // set by send_buf(), used by str(): amount of data in buffer
-    unsigned _totreplylen;              // set by send_buf(), checked by send_buf(): total amount of data sent for this reply
-    char* _outbuf;
+    int          _fd;	            // file descriptor to write to instead of server port
+    bool         _enableWrite;  	// data is allowed to be written
+    bool         _done;		        // DONE was sent
+    unsigned     _replyFormat;		// 0 or 1
+    unsigned     _bufsize;
+    unsigned     _replylen;         // set by send_buf(), used by str(): amount of data in buffer
+    unsigned     _totreplylen;      // set by send_buf(), checked by send_buf(): total amount of data sent for this reply
+    char*        _outbuf;
     int send_buf();
     void parseString(std::string& s, unsigned startPos); // helper function used by assign() and append()
     friend std::ostream& OK(std::ostream& stream);

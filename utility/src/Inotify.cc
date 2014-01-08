@@ -51,10 +51,10 @@ namespace utility {
 
 
 //---------------------------------------------------------------------
-// class Inotify::_Watch
+// class Inotify::WatchImpl
 
 
-Inotify::_Watch::_Watch(
+Inotify::WatchImpl::WatchImpl(
         int id,
         uint32_t mask,
         Inotify& inotify
@@ -67,7 +67,7 @@ Inotify::_Watch::_Watch(
 }
 
 
-Inotify::_Watch::~_Watch()
+Inotify::WatchImpl::~WatchImpl()
 {
     if ( _id == -1 ) {
         // already invalidated.
@@ -86,7 +86,10 @@ Inotify::_Watch::~_Watch()
 //---------------------------------------------------------------------
 // class Inotify
 
-string Inotify::formatMask( uint32_t mask )
+string
+Inotify::formatMask(
+        uint32_t mask
+        )
 {
     ostringstream oss;
 
@@ -112,20 +115,23 @@ string Inotify::formatMask( uint32_t mask )
 }
 
 
-Inotify::Inotify( boost::asio::io_service& io )
-    : boost::asio::posix::stream_descriptor( io )
+Inotify::Inotify(
+        boost::asio::io_service& io
+        ) :
+    boost::asio::posix::stream_descriptor( io )
 {
-    // looks like assign checks the fd.
-    this->assign( 
-            inotify_init()
-            );
-
+#ifdef IN_CLOEXEC
+    this->assign( inotify_init1(IN_CLOEXEC) );
+#else
+    this->assign( inotify_init() );
+    
     // enable close on exec
     (void)fcntl(
             this->native(),
             F_SETFD,
             fcntl(this->native(), F_GETFD) | FD_CLOEXEC
             );
+#endif
 }
 
 
@@ -134,7 +140,13 @@ Inotify::Watch Inotify::watch(
         uint32_t mask
     )
 {
-    int watch_id(inotify_add_watch( native(), path.file_string().c_str(), mask ));
+    int watch_id(inotify_add_watch( native(),
+#if BOOST_FILESYSTEM_VERSION == 3
+                path.native().c_str(),
+#else
+                path.file_string().c_str(),
+#endif
+                mask));
 
     if ( watch_id == -1 ) {
         BOOST_THROW_EXCEPTION( boost::system::system_error( boost::system::errc::make_error_code( boost::system::errc::errc_t( errno ) ) ) );
@@ -142,7 +154,7 @@ Inotify::Watch Inotify::watch(
 
     // Add the Watch to my map of watches.
 
-    Watch watch_ptr(boost::make_shared<_Watch>( watch_id, mask, boost::ref(*this) ));
+    Watch watch_ptr(boost::make_shared<WatchImpl>( watch_id, mask, boost::ref(*this) ));
 
     _watches[watch_id] = watch_ptr;
 
@@ -150,7 +162,11 @@ Inotify::Watch Inotify::watch(
 }
 
 
-void Inotify::read( Events& events_out, boost::system::error_code& err_out )
+void
+Inotify::read( 
+        Events& events_out, 
+        boost::system::error_code& err_out
+        )
 {
     read_some( boost::asio::null_buffers(), err_out ); // will block if there's nothing to read.
 
@@ -162,7 +178,11 @@ void Inotify::read( Events& events_out, boost::system::error_code& err_out )
 }
 
 
-void Inotify::async_read( Events& events_out, ReadHandler handler )
+void
+Inotify::async_read( 
+        Events& events_out, 
+        ReadHandler handler
+        )
 {
     events_out.clear();
 
@@ -178,7 +198,11 @@ void Inotify::async_read( Events& events_out, ReadHandler handler )
 }
 
 
-void Inotify::_readEvents( Events& events_out, boost::system::error_code& err_out )
+void 
+Inotify::_readEvents( 
+        Events& events_out, 
+        boost::system::error_code& err_out
+        )
 {
     bytes_readable bytes_readable;
 
@@ -204,7 +228,11 @@ void Inotify::_readEvents( Events& events_out, boost::system::error_code& err_ou
 }
 
 
-void Inotify::_parseEvents( const _Buffer& buf, Events& events_out )
+void
+Inotify::_parseEvents( 
+        const Buffer& buf, 
+        Events& events_out
+        )
 {
     const struct inotify_event *begin(reinterpret_cast<const struct inotify_event*> ( &(buf[0]) ));
     const struct inotify_event *end(reinterpret_cast<const struct inotify_event*> ( &(buf[buf.size()]) ));
@@ -225,7 +253,8 @@ void Inotify::_parseEvents( const _Buffer& buf, Events& events_out )
 }
 
 
-bool Inotify::_parseEvent(
+bool
+Inotify::_parseEvent(
         const struct inotify_event* event_struct,
         Event& event_out,
         const struct inotify_event*& next_event_struct_out
@@ -245,7 +274,7 @@ bool Inotify::_parseEvent(
         return true;
     }
 
-    _Watches::iterator watch_i(_watches.find( event_struct->wd ));
+    Watches::iterator watch_i(_watches.find( event_struct->wd ));
     if ( watch_i == _watches.end() ) {
         // Ignore because not watching.
         return false;
@@ -276,7 +305,8 @@ bool Inotify::_parseEvent(
 }
 
 
-void Inotify::_readHandler(
+void
+Inotify::_readHandler(
         const boost::system::error_code& error,
         std::size_t /* bytes_transferred */,
         Events& events_out,
@@ -296,7 +326,10 @@ void Inotify::_readHandler(
 }
 
 
-void Inotify::_endWatch( int id )
+void
+Inotify::_endWatch( 
+        int id
+        )
 {
     if ( ! _watches.erase( id ) ) {
         // Wasn't even watching.

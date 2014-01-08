@@ -74,6 +74,15 @@ public:
 
    int32_t getJobEpilogProgramTimeout(void) const;
 
+   //! \brief  Get the value of the jobctl_heartbeat configuration variable.
+   //! \return Number of seconds between heartbeats
+
+   int32_t getHeartbeatTimeout(void) const;
+   
+   //! \brief  Get the value of the start_time_threshold configuration variable.
+   //! \return Number of seconds between heartbeats
+
+   uint32_t getStartTimeThreshold(void) const;
 };
 
 //! Smart pointer for JobctlConfig object.

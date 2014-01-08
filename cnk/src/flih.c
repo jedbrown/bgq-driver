@@ -439,6 +439,7 @@ void gea_init()
     int i,j;
     uint64_t firmware_usage_mask[FLIH_GEA_NUM_STATUS_REGS];
     uint64_t localMappingRegister[FLIH_GEA_NUM_MAP_REGS]; // hold a local copy of the GEA mapping registers
+    int init_clockstop = 0;
     for (i=0; i<FLIH_GEA_NUM_MAP_REGS; i++)
     {
         // Initialize the local mapping registers to what was set by firmware
@@ -455,10 +456,14 @@ void gea_init()
         for (j=0; j<FLIH_GEA_NUM_STATUS_BITS; j++)
         {
             // do we have a valid entry to process
-            if (!(_BN(j) & firmware_usage_mask[i])  && // Is this entry not under the control of the firmware?
+            if ((!(_BN(j) & firmware_usage_mask[i]) || (gea_stat_table[i][j].gea_bit_position == GEA_CS)) &&  // Is this entry not under the control of the firmware?
                 (gea_stat_table[i][j].gea_bit_position >= 0)
                )
             {
+                if(gea_stat_table[i][j].gea_bit_position == GEA_CS)
+                {
+                    init_clockstop = 1;
+                }
                 int shift_amount = 63 - gea_stat_table[i][j].map_offset;
                 // Initialize the mapping register bits for this entry to zero
                 localMappingRegister[gea_stat_table[i][j].map_reg] &=  (~(((uint64_t)0xF) << shift_amount));
@@ -471,6 +476,13 @@ void gea_init()
     for (i=0; i<FLIH_GEA_NUM_MAP_REGS; i++)
     {
         BIC_WriteGeaInterruptMap(i,localMappingRegister[i]);
+    }
+    
+    
+    if(init_clockstop)
+    {
+        DCRWritePriv( CS_DCR(CONTROLREG_0), CS_DCR__CONTROLREG_0__ENABLE_BIC_CS_STOP_set(1) | CS_DCR__CONTROLREG_0__ENABLE_STOP_OUTPUT_set(1));
+        ppc_msync();
     }
 }
 
@@ -627,7 +639,7 @@ void IntHandler_IPI_FLIH(int intrp_sum_bitnum)
             // Make a local copy of the message data so we can release the IPI message data structure prior to calling the handler
             IPI_Message_t* pIPImsg = (IPI_Message_t*)&(NodeState.CoreState[i/4].HWThreads[i%4].ipi_message[ProcessorID()]);
             IPI_Message_t IPImsg_local = *pIPImsg;
-            BIC_WriteClearExternalRegister0(ProcessorThreadID(), mask);                    
+            BIC_WriteClearExternalRegister0(ProcessorThreadID(), mask); 
             // Reset fnc field in the IPI message data to enable subsequent IPIs
             pIPImsg->fcn = NULL;
             ppc_msync();
@@ -638,6 +650,13 @@ void IntHandler_IPI_FLIH(int intrp_sum_bitnum)
             if (IPImsg_local.fcn)
             {
                 IPImsg_local.fcn(IPImsg_local.param1, IPImsg_local.param2);
+                // The following refresh of the c2c_status is necessary when the previously called
+                // function attempt to send an IPI to another hwt and the IPI Deadlock Avoidance
+                // code processes a pending IPI that is still indicated in our now stale c2c_status. Note
+                // that a new interrupt could arrive from a hwt we have already processed, We are not
+                // concerned about that now. That interrupt will still be pending so we will process it 
+                // when we re-enter this interrupt handler. 
+                c2c_status = BIC_ReadStatusExternalRegister0(ProcessorThreadID());
             }
             else
             {

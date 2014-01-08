@@ -21,27 +21,21 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_BC_SERVICECARD_INFO_H_
 #define MMCS_SERVER_BC_SERVICECARD_INFO_H_
 
-
 #include "BCIconInfo.h"
-
 
 namespace mmcs {
 namespace server {
 
-
-class BCServicecardInfo: public BCIconInfo
+class BCServicecardInfo : public BCIconInfo
 {
 public:
     BCServicecardInfo(const std::string& loc) : BCIconInfo(loc) {}
     std::string cardName() { return "S"; }
 };
 
-
 } } // namespace mmcs::server
-
 
 #endif

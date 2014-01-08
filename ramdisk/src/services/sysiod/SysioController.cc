@@ -138,6 +138,12 @@ SysioController::eventMonitor(void)
    const int numFds       = 2;
 
    pollfd pollInfo[numFds];
+   _RAS4SyscallTimeout = 1;
+   //No RAS messages for slow or hung syscalls while running for when either timeout is zero
+   if (_SlowSyscallTimeout == 0)_RAS4SyscallTimeout=0; 
+   if (_HungSyscallTimeout == 0)_RAS4SyscallTimeout=0; 
+   //No RAS messages for syscalls still in progress when job is ending (signal)
+   if (_RAS4SyscallTimeout==0) _doRasOnce = 0; 
    int timeout = 1000; // Wakeup every 1 seconds
 
    // Initialize the pollfd structure.
@@ -180,7 +186,7 @@ SysioController::eventMonitor(void)
 
 	       if (diff >= _SlowSyscallTimeout) {
 		   _timeOfSlowSyscall = sysCallStart;
-		   reportHangNoSignal();
+		   if (_RAS4SyscallTimeout) reportHangNoSignal();
 	       }
 	   }
 
@@ -201,7 +207,7 @@ SysioController::eventMonitor(void)
 
 		   if ( ( _timeOfHungSyscall == 0 ) && ( diff > _HungSyscallTimeout ) ) {
 		       _timeOfHungSyscall = sysCallStart;
-		       reportHangNoSignal();
+		       if (_RAS4SyscallTimeout) reportHangNoSignal();
 		   }
 	       }
 	   }

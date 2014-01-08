@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_BLOCK_STATUS_H_
 #define MMCS_SERVER_COMMAND_BLOCK_STATUS_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
  ** block_status
@@ -44,9 +40,8 @@ class BlockStatus: public common::AbstractCommand
 {
 public:
     BlockStatus(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "[<target>] block_status";}
+      : AbstractCommand(name,description,attributes) { _usage = "[<target>] block_status";}
     static  BlockStatus* build();    // factory method
-    static  std::string cmdname() { return "block_status"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -55,8 +50,6 @@ public:
               mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

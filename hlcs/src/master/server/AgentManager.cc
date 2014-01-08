@@ -26,27 +26,30 @@
 #include "Alias.h"
 #include "AliasList.h"
 #include "MasterController.h"
-#include "Policy.h"
 
-#include "common/AgentBase.h"
-#include "common/AgentProtocol.h"
 #include "common/BinaryController.h"
-#include "common/Ids.h"
 
 #include "../lib/exceptions.h"
 
-#include <utility/include/Log.h>
 
-#include <boost/foreach.hpp>
 
-#include <sstream>
-#include <vector>
 
 LOG_DECLARE_FILE( "master" );
 
-AgentManager::AgentManager(): _ending_agents(false)
+AgentManager::AgentManager(): 
+    _ending_agents(false),
+    _agents_per_host( 1 )
 {
     // Nothing to do
+}
+
+void
+AgentManager::setCount(
+        const unsigned count
+        )
+{
+    _agents_per_host = count;
+    LOG_DEBUG_MSG( "set maximum agents per host to " << _agents_per_host );
 }
 
 bool
@@ -106,9 +109,13 @@ AgentManager::removeAgent(
                         AgentRepPtr rep_p = al->evaluatePolicy(t, failing, reqbid, binptr);
                         if (rep_p && !rep_p->runningAlias(al->get_name())) {
                             // Now we've got a new agent that isn't already running this alias.
-                            BGMasterAgentProtocolSpec::StartRequest agentreq(al->get_path(), al->get_args(),
-                                                                             al->get_logdir(), al->get_name(),
-                                                                             al->get_user());
+                            const BGMasterAgentProtocolSpec::StartRequest agentreq(
+                                    al->get_path(), 
+                                    al->get_args(),
+                                    al->get_logdir(), 
+                                    al->get_name(),
+                                    al->get_user()
+                                    );
                             std::ostringstream logmsg;
                             logmsg << "start request path=" << agentreq._path << " "
                                    << "arguments=" << agentreq._arguments << " "
@@ -179,7 +186,7 @@ AgentManager::findAgentRep(
     boost::mutex::scoped_lock scoped_lock(_agent_manager_mutex);
     AgentRepPtr p;
     BOOST_FOREACH(const AgentRepPtr& agent, _agents) {
-        CxxSockets::Host lname = agent->get_host();
+        const CxxSockets::Host lname = agent->get_host();
         if (lname == host) {
             p = agent;
         }
@@ -194,8 +201,8 @@ AgentManager::pickAgent()
     boost::mutex::scoped_lock scoped_lock(_agent_manager_mutex);
     // We'll start simple and use either the first one with zero
     // binaries or the one with the smallest number of binaries.
-    std::vector<AgentRepPtr>::iterator smallest = _agents.begin();
-    for (std::vector<AgentRepPtr>::iterator it = _agents.begin(); it != _agents.end(); ++it) {
+    std::vector<AgentRepPtr>::const_iterator smallest = _agents.begin();
+    for (std::vector<AgentRepPtr>::const_iterator it = _agents.begin(); it != _agents.end(); ++it) {
         if ((*smallest)->binCount() > (*it)->binCount()) {
             smallest = it;
         }
@@ -249,7 +256,7 @@ AgentManager::findBinary(
 
     BOOST_FOREACH(const AgentRepPtr& agent, _agents) {
         // Now loop through the binaries it controls
-        std::vector<BinaryControllerPtr> binaries = agent->get_binaries();
+        const std::vector<BinaryControllerPtr> binaries = agent->get_binaries();
         BOOST_FOREACH(const BinaryControllerPtr& binary, binaries) {
             if (binary->get_alias_name() == alias) {
                 // Got one
@@ -265,7 +272,7 @@ AgentManager::findBinary(
 void
 AgentManager::cancel(
         const bool end_binaries,
-        const unsigned signal
+        const int signal
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
@@ -273,10 +280,10 @@ AgentManager::cancel(
     // Loop through the agents and call the cancel for each
     std::vector<AgentRepPtr> agents;
     {
-      boost::mutex::scoped_lock lock(_agent_manager_mutex);
-      BOOST_FOREACH(const AgentRepPtr& agent, _agents) {
-         agents.push_back(agent);
-      }
+        boost::mutex::scoped_lock lock(_agent_manager_mutex);
+        BOOST_FOREACH(const AgentRepPtr& agent, _agents) {
+            agents.push_back(agent);
+        }
     }
 
     for (unsigned i = 0; i < agents.size(); ++i) {

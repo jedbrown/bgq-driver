@@ -40,7 +40,8 @@ LDFLAGS += \
  -L$(BGQ_INSTALL_DIR)/db/lib -lbgdb \
   -Wl,-rpath,'$$ORIGIN/../../db/lib' \
  -L$(BGQ_INSTALL_DIR)/extlib/lib -lboost_filesystem-mt -lboost_program_options-mt -lboost_regex-mt \
-  -Wl,-rpath,'$$ORIGIN/../../extlib/lib'
+  -Wl,-rpath,'$$ORIGIN/../../extlib/lib' \
+ -llog4cxx
 
 
 exes := \

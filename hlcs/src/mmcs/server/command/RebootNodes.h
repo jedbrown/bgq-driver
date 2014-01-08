@@ -28,22 +28,18 @@
 #ifndef MMCS_SERVER_COMMAND_REBOOT_NODES_H_
 #define MMCS_SERVER_COMMAND_REBOOT_NODES_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 class RebootNodes : public common::AbstractCommand
 {
 public:
     RebootNodes(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "[<target>] reboot_nodes";}
-    static  RebootNodes* build();
-    static  std::string cmdname() { return "reboot_nodes"; }
+      : AbstractCommand(name,description,attributes) { _usage = "[<target>] reboot_nodes [no_check]";}
+    static RebootNodes* build();
 
     void execute(
             std::deque<std::string> args,
@@ -52,7 +48,7 @@ public:
             BlockControllerTarget* pTarget=NULL
             );
 
-    bool checkArgs(std::deque<std::string>& args) { return true; }
+    bool checkArgs(std::deque<std::string>& args) { return args.size() <= 1; }
 
     void help(
             std::deque<std::string> args,

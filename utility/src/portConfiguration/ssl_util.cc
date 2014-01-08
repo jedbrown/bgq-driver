@@ -52,7 +52,7 @@ string getSslErrorString()
     char *buf;
     long data_len(BIO_get_mem_data( bio, &buf ));
 
-    string err_str( buf, data_len );
+    string err_str( buf, static_cast<size_t>(data_len) );
 
     BIO_free( bio );
 

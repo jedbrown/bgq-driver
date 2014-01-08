@@ -95,7 +95,7 @@ void MailboxHandler::handleMailbox(RasEvent& event, const std::string& mboxPaylo
 
   if (mboxType == "ASCII")
   {
-    rasEvent.mboxBinary.message_id = descriptor;
+    rasEvent.mboxBinary.message_id = static_cast<uint32_t>(descriptor);
 
     // remove the leading space
     char space;
@@ -120,7 +120,7 @@ void MailboxHandler::handleMailbox(RasEvent& event, const std::string& mboxPaylo
   } // End ASCII message format
   else
   {
-    rasEvent.mboxBinary.message_id = descriptor >> 32;
+    rasEvent.mboxBinary.message_id = static_cast<uint32_t>(descriptor >> 32);
     rasEvent.mboxBinary.num_details = descriptor & 0xFFFF;
 
     unsigned i = 0;
@@ -165,7 +165,7 @@ void MailboxHandler::handleNonMailbox(RasEvent& event, const RasEventMetadata& m
  */
 void MailboxHandler::defaultAscii(RasEvent& event, const MailBoxPayload_Common_RAS_t& rasEvent, const RasEventMetadata& metadata)
 {
-  unsigned int replaceCount = 0;
+  size_t replaceCount = 0;
   unsigned int varsReplaced = 0;
 
   // Get the variables to set for substitution
@@ -242,7 +242,7 @@ void MailboxHandler::defaultBinary(RasEvent& event, const MailBoxPayload_Common_
 {
   ostringstream subString;
 
-  unsigned int replaceCount = 0;
+  size_t replaceCount = 0;
 
   char buf[256];
 
@@ -294,7 +294,7 @@ void MailboxHandler::defaultNonMailbox(RasEvent& event, const RasEventMetadata& 
   // Get the variables to set for substitution
   const vector<string>& vars = metadata.vars();
 
-  unsigned int replaceCount = vars.size();
+  size_t replaceCount = vars.size();
 
   for (unsigned int i = 0; i < replaceCount; i++)
   {
@@ -316,10 +316,10 @@ void MailboxHandler::defaultNonMailbox(RasEvent& event, const RasEventMetadata& 
       const char *formatStr = format.c_str();
 
       // Determine the length of the format string.
-      int formatLen = strlen(formatStr);
+      size_t formatLen = strlen(formatStr);
 
       // Determine the data type based on the format string.
-      char type = toupper(formatStr[formatLen - 1]);
+      int type = toupper(formatStr[formatLen - 1]);
 
       LOG_TRACE_MSG("formatStr=" << formatStr << ", formatStrLen=" << formatLen << ", dataType=" << type);
 

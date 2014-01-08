@@ -31,11 +31,9 @@
 
 #include "common/AbstractCommand.h"
 
-
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 /*!
 ** username <username> - returns the username
@@ -46,7 +44,6 @@ public:
     Username(const char* name, const char* description, const Attributes& attributes)
 	: AbstractCommand(name,description,attributes) {}
     static  Username* build();	// factory method
-    static  std::string cmdname() { return "username"; }
     void execute(std::deque<std::string> args,
 			 mmcs_client::CommandReply& reply,
 			 common::ConsoleController* pController,

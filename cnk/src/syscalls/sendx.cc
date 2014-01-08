@@ -39,11 +39,8 @@ uint64_t  sc_SENDX(SYSCALL_FCN_ARGS)
     char  * mInput = (char *)r3;
 
     int rc_sendx = File_GetFSPtrFromType(FD_FILE)->sendx(mInput);
-    if (rc_sendx == -1){    
-      //! \todo TODO How to return errno in the SPI macro after it was set in sendx?
-      return CNK_RC_SPI(EINVAL);
-    }  
-    return CNK_RC_SPI(0);
+
+    return CNK_RC_SPI(rc_sendx);
 
 }
 

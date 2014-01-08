@@ -23,10 +23,8 @@
 
 #include "ConsolePort.h"
 
-#include <utility/include/cxxsockets/error.h>
 #include <utility/include/cxxsockets/exception.h>
 #include <utility/include/cxxsockets/ListenerSet.h>
-#include <utility/include/cxxsockets/PollingSocketSet.h>
 #include <utility/include/cxxsockets/SockAddr.h>
 #include <utility/include/cxxsockets/SockAddrList.h>
 #include <utility/include/cxxsockets/SecureTCPSocket.h>
@@ -38,21 +36,20 @@
 #include <sstream>
 #include <errno.h>
 #include <assert.h>
+#include <poll.h>
 
 #define RCVBUF_SIZE 4096
 
 LOG_DECLARE_FILE("mmcs_client");
 
-
 namespace mmcs_client {
-
 
 ConsolePort::ConsolePort(
         const CxxSockets::TCPSocketPtr& sock
         ) :
     _sock(sock)
 {
-
+    // Nothing to do
 }
 
 void
@@ -72,8 +69,7 @@ ConsolePort::procMessage(
         std::string& m,
         char* buf,
         bool& done,
-        const int rcvsz,
-        const unsigned timeout
+        const int rcvsz
         )
 {
     // make cr/lf just a newline
@@ -87,24 +83,23 @@ ConsolePort::procMessage(
     // them new lines (\n).
     // j is the counter of characters that are not \n
     // and not \r
-    for ( i=0, j=0; i < rcvsz; ++i )
-    {
+    for ( i=0, j=0; i < rcvsz; ++i ) {
         // See if it's a magic probe message
         if (buf[i] == '*' && buf[i+1] == '~' && buf[i+2] == '@'
-                && buf[i+3] == '~' && buf[i+4] == '*') {
+            && buf[i+3] == '~' && buf[i+4] == '*') {
             bzero(buf, sizeof(buf));
             done = false;
             nullTerm = false;
             break;
         }
-        if (buf[i] == '\0')
-        {
+
+        if (buf[i] == '\0') {
             done = true;        // end of buffer
             nullTerm = true;    // end of reply
             break;
         }
-        if (buf[i] != '\r')
-        {
+
+        if (buf[i] != '\r') {
             // We have to be a char other than \r
             // to get here.  If it =is= a \r, then
             // we don't hit this code and we don't ++j.
@@ -117,6 +112,7 @@ ConsolePort::procMessage(
             }
             ++j;
         }
+
         if (buf[i] == '\n') {
             // We are going to finish iterating the buffer,
             // but this signals the caller that we're not
@@ -124,30 +120,31 @@ ConsolePort::procMessage(
             done = true;
         }
     }
+
     if (j > 0) {
         m.append(buf,j);
         bzero(buf, RCVBUF_SIZE);
     }
+
     return nullTerm;
 }
 
-int
+void
 ConsolePort::checkConnection() const
 {
-    CxxSockets::Message msg;
-    msg << "*~@~*";
+    static const CxxSockets::Message ping( "*~@~*\n" );
     try {
-        std::string m = msg.str();
-        if(_sock)
-            sendMessage(m);
+        if (_sock)
+            this->write(ping);
     } catch (const CxxSockets::SoftError& a) {
-        return 0;
+        return;
     } catch (const CxxSockets::HardError& b) {
         throw ConsolePort::Error(b.errcode, b.what());
     } catch (const CxxSockets::CloseUnexpected& c) {
         throw ConsolePort::Error(c.errcode, c.what());
     }
-    return 0;
+
+    return;
 }
 
 int
@@ -160,7 +157,7 @@ ConsolePort::receiveMessage(
     char buf[RCVBUF_SIZE];      // initially allocate a 4K buffer for receiving messages
 
 
-    while(!done) {
+    while (!done) {
         bzero(buf, RCVBUF_SIZE);
         m.clear();            // clear out the message
         CxxSockets::Message msg;
@@ -174,17 +171,16 @@ ConsolePort::receiveMessage(
             throw ConsolePort::Error(c.errcode, c.what());
         }
 
-        if(msg.str().length() == 0) {
+        if (msg.str().length() == 0) {
             return -1;
         }
 
-        if(msg.str().find("*~@~*") != std::string::npos) {
-            msg.str().clear();
+        if (msg.str().find("*~@~*") != std::string::npos) {
             continue;  // Probe.  We don't care.
         }
 
         strncpy(buf, msg.str().c_str(), msg.str().length());
-        nullTerm = procMessage(m, buf, done, msg.str().length(), 0);
+        nullTerm = procMessage(m, buf, done, msg.str().length());
     }
     return nullTerm;
 }
@@ -199,23 +195,39 @@ ConsolePort::pollReceiveMessage(
     bool done = false;
     bool nullTerm = false;
 
-    m = "";            // clear out the message
-    while (!done)
-    {
+    struct pollfd pfd;
+    pfd.fd = _sock->getFileDescriptor();
+    pfd.events = 0;
+    pfd.events |= POLLIN;
+    pfd.events |= POLLPRI;
+    m.clear();
+
+    while (!done) {
         bzero(buf, RCVBUF_SIZE);
-        CxxSockets::PollingSocketSet pollset;
-        pollset.AddSock(_sock);
         try {
-            int rc = pollset.Poll(timeout * 1000);
-            if ( rc  == 0) return 0;
+            int rc = poll( &pfd, 1, timeout * 1000);
+            if ( rc < 0 ) {
+                char buf[256];
+                LOG_DEBUG_MSG( "poll: " << strerror_r(errno, buf, sizeof(buf)) );
+                if ( errno == EINTR ) {
+                    throw CxxSockets::SoftError(errno, buf);
+                } else {
+                    throw CxxSockets::HardError(errno, buf);
+                }
+            } else if ( rc == 0 ) {
+                return 0;
+            } else {
+                // fall through, descriptor has data
+            }
+
             CxxSockets::Message msg;
             rc = boost::dynamic_pointer_cast<CxxSockets::SecureTCPSocket>(_sock)->Receive(msg);
-            if ( rc == 0 ) return -1;
+            if ( rc == 0 )
+                return -1;
 
             strncpy(buf, msg.str().c_str(), RCVBUF_SIZE);
-            nullTerm = procMessage(m, buf, done, rc, timeout);
-            if(msg.str().find("*~@~*") != std::string::npos) {
-                msg.str().clear();
+            nullTerm = procMessage(m, buf, done, rc);
+            if (msg.str().find("*~@~*") != std::string::npos) {
                 return 0; // Probe.  Treat it as an poll timeout.
             }
         } catch ( const CxxSockets::Error& e ) {
@@ -228,7 +240,7 @@ ConsolePort::pollReceiveMessage(
 
 void
 ConsolePort::write(
-        CxxSockets::Message& msg
+        const CxxSockets::Message& msg
         ) const
 {
     try {
@@ -261,37 +273,35 @@ ConsolePortClient::ConsolePortClient(
 
         // Create a socket.
         try {
-            CxxSockets::SockAddrList remote_list(AF_UNSPEC, connected_host, connected_port);
-            BOOST_FOREACH(CxxSockets::SockAddr& remote, remote_list) {
-                CxxSockets::SecureTCPSocketPtr sock(
-                        new CxxSockets::SecureTCPSocket(remote.family(), 0)
-                        );
+            const CxxSockets::SockAddrList remote_list(AF_UNSPEC, connected_host, connected_port);
+            BOOST_FOREACH(const CxxSockets::SockAddr& remote, remote_list) {
+                const CxxSockets::SecureTCPSocketPtr sock( new CxxSockets::SecureTCPSocket(remote.family(), 0) );
 
                 try {
                     ++attempts;
                     sock->Connect(remote, port_config);
                     _sock = sock;
                     failed = false;
-                    if(attempts > 1) // Let 'em know the nth try succeeded
+                    if (attempts > 1) // Let 'em know the nth try succeeded
                         LOG_INFO_MSG("Connected to mmcs_server successfully.");
                     break;
-                } catch(const CxxSockets::Error& e) {
-                    if(attempts < (remote_list.size() * port_config.getPairs().size())) {
+                } catch (const CxxSockets::Error& e) {
+                    if (attempts < (remote_list.size() * port_config.getPairs().size())) {
                         LOG_INFO_MSG("Connect attempt failed to " << connected_host
                                 << ":" << connected_port << " " << e.what()
-                                << ".  Will try other port pairs.");
+                                << ". Will try other port pairs.");
                     }
-                    continue;
                 }
             }
         } catch (const CxxSockets::Error& e) {
             throw ConsolePort::Error(e.errcode, e.what());
         }
 
-        if ( ! failed )  break;
+        if ( ! failed )
+            break;
     }
 
-    if(failed) {
+    if (failed) {
         std::ostringstream msg;
         msg << "Failed to connect. " << strerror(errno);
         LOG_ERROR_MSG(msg.str());
@@ -306,16 +316,15 @@ ConsolePortServer::ConsolePortServer(
     using namespace CxxSockets;
     SockAddrList masterlist; // One big list to rule them all!
     BOOST_FOREACH(const bgq::utility::PortConfiguration::Pair& curr_pair, portpairs) {
-        SockAddrList salist(AF_UNSPEC, curr_pair.first, curr_pair.second);
-        BOOST_FOREACH(SockAddr& curr_sockaddr, salist) { // Now copy every SockAddr in to the master list
+        const SockAddrList salist(AF_UNSPEC, curr_pair.first, curr_pair.second);
+        BOOST_FOREACH(const SockAddr& curr_sockaddr, salist) { // Now copy every SockAddr in to the master list
             masterlist.push_back(curr_sockaddr);
         }
     }
 
     try {
         LOG_INFO_MSG("Attempting to bind and listen on " << masterlist.size() << " port pairs.");
-        ListenerSetPtr ln(new ListenerSet(masterlist, SOMAXCONN));
-        _listener = ln;
+        _listener.reset( new ListenerSet(masterlist, SOMAXCONN) );
     } catch (const Error& e) {
         LOG_ERROR_MSG(e.what());
         throw ConsolePort::Error(e.errcode, e.what());
@@ -333,20 +342,20 @@ ConsolePortClient::ConsolePortClient(
 ConsolePortClient*
 ConsolePortServer::accept()
 {
-    LOG_DEBUG_MSG( __FUNCTION__ );
-    CxxSockets::TCPSocketPtr newsock(
+    const CxxSockets::TCPSocketPtr newsock(
             new CxxSockets::TCPSocket
             );
     bool accepted = false;
-    while(!accepted) {
+    while (!accepted) {
         try {
             accepted = _listener->AcceptNew(newsock);
         } catch (const CxxSockets::Error& e) {
             int error = 0;
-            if(e.errcode == -1)
+            if (e.errcode == -1)
                 // SSL gives us a -1 on a failed validation
                 error = ECONNABORTED;
-            else error = e.errcode;
+            else
+                error = e.errcode;
 
             throw ConsolePort::Error(error, e.what());
         }
@@ -355,6 +364,5 @@ ConsolePortServer::accept()
     ConsolePortClient* newConnection = new ConsolePortClient(newsock);
     return newConnection;
 }
-
 
 } // namespace mmcs_client

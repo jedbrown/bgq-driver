@@ -51,17 +51,13 @@ LDFLAGS  += -lboost_filesystem-mt
 LDFLAGS  += -lboost_program_options-mt
 LDFLAGS  += -lboost_serialization-mt
 LDFLAGS  += -lboost_system-mt
+LDFLAGS  += -llog4cxx -lboost_date_time-mt
 
 # compiler flags
 $(LIBRARY_SRC:%.cc=%.o): CXXFLAGS += -fpic -fvisibility=default
 bgsched/Client.o: CXXFLAGS += -DMAJOR_VERSION=$(client_libmajor_vers)
 bgsched/Client.o: CXXFLAGS += -DMINOR_VERSION=$(client_libminor_vers)
 bgsched/Client.o: CXXFLAGS += -DMOD_VERSION=$(client_libminor_rev)
-
-EXE_STRING_SIZE = $(shell ../samples/database_column_sizes/exe)
-BLOCK_STRING_SIZE = $(shell ../samples/database_column_sizes/block)
-options/Job.o: CXXFLAGS += -DEXE_STRING_SIZE=$(EXE_STRING_SIZE)
-options/Resource.o: CXXFLAGS += -DBLOCK_STRING_SIZE=$(BLOCK_STRING_SIZE)
 
 INSTALL_LIST          += $(call INSTALL_BIN_TARGET, $(CLIENT))
 INSTALL_LIST          += $(call INSTALL_LIB_TARGET, $(client_libshort) $(client_libvers) $(client_libfull))
@@ -73,7 +69,7 @@ all: $(CLIENT)
 clean:
 	$(RM) *.o */*.o
 	$(RM) $(CLIENT) 
-	$(RM) $(client_libhort) $(client_libvers) $(client_libfull)
+	$(RM) $(client_libshort) $(client_libvers) $(client_libfull)
 	$(RM) *.d */*.d
 
 
@@ -89,7 +85,7 @@ uninstall:
 
 $(client_libfull): $(LIBRARY_SRC:%.cc=%.o) Makefile
 	@echo "link $@"
-	$(SILENT)$(CXX) $(LDFLAGS) -shared -Wl,-soname,$(client_libvers) $(filter-out Makefile, $^) -o $@
+	$(SILENT)$(CXX) $(filter-out Makefile, $^) -o $@ $(LDFLAGS) -shared -Wl,-soname,$(client_libvers)
 
 
 $(client_libvers): $(client_libfull)
@@ -104,7 +100,7 @@ $(client_libshort): $(client_libvers)
 
 $(CLIENT): $(CLIENT_SRC:%.cc=%.o) Makefile $(client_libshort)
 	@echo "link $@"
-	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS) -L. -l$(client_libbase)
+	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) -L. -l$(client_libbase) $(LDFLAGS)
 
 
 #include our dependency rules

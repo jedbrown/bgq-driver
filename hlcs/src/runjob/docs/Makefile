@@ -53,30 +53,30 @@ LDFLAGS  += -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -Wl,-rpath,$(BGQ_INSTA
 MISC_FILTER = misc_filter
 $(MISC_FILTER): $(MISC_FILTER).o
 	@echo "link $@"
-	$(SILENT)$(CXX) $(LDFLAGS) -o $@ $^
+	$(SILENT)$(CXX) -o $@ $^ $(LDFLAGS)
 
 RUNJOB_FILTER = runjob_filter
 $(RUNJOB_FILTER): $(RUNJOB_FILTER).o
 	@echo "link $@"
-	$(SILENT)$(CXX) $(LDFLAGS) -o $@ $^
+	$(SILENT)$(CXX) -o $@ $^ $(LDFLAGS)
 
 
 RUNJOB_MUX_FILTER = runjob_mux_filter
 $(RUNJOB_MUX_FILTER): $(RUNJOB_MUX_FILTER).o
 	@echo "link $@"
-	$(SILENT)$(CXX) $(LDFLAGS) -o $@ $^
+	$(SILENT)$(CXX) -o $@ $^ $(LDFLAGS)
 
 
 RUNJOB_SERVER_FILTER = runjob_server_filter
 $(RUNJOB_SERVER_FILTER): $(RUNJOB_SERVER_FILTER).o
 	@echo "link $@"
-	$(SILENT)$(CXX) $(LDFLAGS) -o $@ $^
+	$(SILENT)$(CXX) -o $@ $^ $(LDFLAGS)
 
 
 RUNJOB_COMMAND_FILTER = runjob_command_filter
 $(RUNJOB_COMMAND_FILTER): $(RUNJOB_COMMAND_FILTER).o
 	@echo "link $@"
-	$(SILENT)$(CXX) $(LDFLAGS) -o $@ $^
+	$(SILENT)$(CXX) -o $@ $^ $(LDFLAGS)
 
 
 FILTERS += $(MISC_FILTER)

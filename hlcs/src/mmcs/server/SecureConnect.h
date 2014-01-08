@@ -21,6 +21,9 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
+#ifndef MMCS_SERVER_SECURE_CONNECT_H_
+#define MMCS_SERVER_SECURE_CONNECT_H_
+
 #include <utility/include/cxxsockets/types.h>
 #include <utility/include/portConfiguration/PortConfiguration.h>
 
@@ -43,3 +46,5 @@ Connect(
 }
 
 } } // namespace mmcs::server
+
+#endif

@@ -344,4 +344,15 @@ uint64_t Kernel_SetPowerConsumptionParam(uint64_t param, uint64_t value)
     return rc;
 }
 
+//================================================================================
+// Executes a command for Envmon2 FPGA&DCA interface for power measurement
+
+__INLINE__
+uint64_t Kernel_ExecEnvmon2Command(uint64_t command)
+{
+    DCRWritePriv(EN_DCR(USER), command & 0x0007FFFFFFFFFFFFUL); // mask unused bits for safety
+    return 0;
+}
+
+
 #endif /* _KERNEL_FIRMWARE_ENVMON_IMPL_H_ */

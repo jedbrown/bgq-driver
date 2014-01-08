@@ -26,7 +26,8 @@
 #include "common/logging.h"
 
 #include "server/block/Container.h"
-#include "server/block/Reconnect.h"
+
+#include "server/cios/Heartbeat.h"
 
 #include "server/database/Init.h"
 
@@ -101,10 +102,6 @@ Server::start()
                 shared_from_this()
                 );
 
-        _realtime = realtime::Connection::create(
-                shared_from_this()
-                );
-
         _command.reset(
                 new CommandListener(
                     shared_from_this()
@@ -130,7 +127,13 @@ Server::start()
                 shared_from_this()
                 );
 
-        block::Reconnect::create( shared_from_this() );
+        _realtime = realtime::Connection::create(
+                shared_from_this()
+                );
+
+        cios::Heartbeat::create(
+                shared_from_this()
+                );
     } catch ( const std::exception& e ) {
         LOG_FATAL_MSG( e.what() );
         return EXIT_FAILURE;

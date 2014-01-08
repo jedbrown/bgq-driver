@@ -37,7 +37,8 @@
 //! \brief Registrar joins new BGAgents and clients
 //! Registrar process new clients, validates them and
 //! starts new threads within the client manager
-class Registrar {
+class Registrar
+{
 public:
     Registrar();
     ~Registrar();

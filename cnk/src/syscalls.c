@@ -76,8 +76,7 @@ __C_LINKAGE uint64_t IntHandler_Syscall( uint64_t r3, uint64_t r4, uint64_t r5,
     {
         rc = sc_fcn( r3, r4, r5, r6, r7, r8 );
     }
-    else if ( (sc_num >= 0) &&
-              (sc_num < sizeof(GLIBC_SysCall_Table) / sizeof(GLIBC_SysCall_Table[0])) &&
+    else if ( (sc_num < sizeof(GLIBC_SysCall_Table) / sizeof(GLIBC_SysCall_Table[0])) &&
               (sc_fcn = GLIBC_SysCall_Table[ sc_num ].call) )
     {
         if((GLIBC_SysCall_Table[sc_num].generateJMV) && 

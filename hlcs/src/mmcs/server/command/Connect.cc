@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "Connect.h"
 
 #include "../BlockControllerBase.h"
@@ -29,14 +28,11 @@
 
 #include "common/ConsoleController.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 Connect*
 Connect::build()
@@ -55,17 +51,15 @@ Connect::build()
     return new Connect("connect", "[<target>] connect [ options ]", commandAttributes);
 }
 
-
 void
 Connect::execute(
         deque<string> args,
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     const BlockPtr pBlock = pController->getBlockHelper()->getBase();  // get selected block
-    log4cxx::MDC _blockid_mdc_( "blockId", std::string("{") + pBlock->getBlockName() + "} " );
     pBlock->connect(args, reply, pTarget);
 }
 
@@ -73,18 +67,19 @@ void
 Connect::help(
         deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     reply << mmcs_client::OK << description()
-          << ";connect to a set of the block's resources"
+          << ";Connect to a set of the block's resources"
           << ";options:"
-          << ";  targetset=[ temp | perm ]                                     - create the mcServer target set as temporary (default) or permanent"
-          << ";  outfile=<filename>                                            - direct the console messages to a file"
-          << ";  rasfile=<filename>                                            - direct the ras messages to a file"
-          << ";  mode=[control | debug | service | reserve | monitor]          - specify mode to open target set."
-          << ";  pgood                                                         - reset pgood on block hardware"
+          << ";  targetset=[ temp | perm ]                              - create the mcServer target set as temporary (default) or permanent"
+          << ";  outfile=<filename>                                     - direct the console messages to a file, must be fully qualified path"
+          << ";                                                           and not already exist"
+          << ";  rasfile=<filename>                                     - direct the RAS messages to a file, must be fully qualified path and"
+          << ";                                                           not already exist"
+          << ";  mode=[control | debug | service | reserve | monitor]   - specify mode to open target set."
+          << ";  pgood                                                  - reset pgood on block hardware"
           << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

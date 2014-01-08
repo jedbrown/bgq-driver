@@ -1,0 +1,41 @@
+# -*- mode: makefile-gmake; -*-
+# begin_generated_IBM_copyright_prolog                             #
+#                                                                  #
+# This is an automatically generated copyright prolog.             #
+# After initializing,  DO NOT MODIFY OR MOVE                       #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# (C) Copyright IBM Corp.  2007, 2008                              #
+# IBM CPL License                                                  #
+#                                                                  #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# end_generated_IBM_copyright_prolog                               #
+
+
+
+
+
+${BUILDDIR}/opa-gcc/Makefile: ${MPICH2DIR}/Makefile.in
+	mkdir -p $(dir $@)
+	cd $(dir $@) &&							\
+	  INSTALL="/usr/bin/install -C"					\
+	  CC="${HOST_CC}"						\
+	  CXX="${HOST_CXX}"						\
+	  AR="${HOST_AR}"						\
+	  LD="${HOST_LD}"						\
+	  CFLAGS="${HOST_CFLAGS}"					\
+	  CXXFLAGS="${HOST_CXXFLAGS}"					\
+	  LDFLAGS="${HOST_LDFLAGS}"					\
+	  OPALIBNAME=opa-gcc						\
+	  ${MPICH2DIR}/src/openpa/configure				\
+	  --prefix=${INSTALL_DIR}					\
+	  --host=${BUILD_HOST}						\
+	  --target=${BUILD_TARGET}					\
+	  --build=${BUILD_BUILD}					\
+	  --enable-static						\
+	  --enable-shared						
+
+
+
+

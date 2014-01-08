@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_CONSOLE_COMMAND_SLEEP_H_
 #define MMCS_CONSOLE_COMMAND_SLEEP_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 /*!
 ** sleep
@@ -43,9 +39,8 @@ class Sleep : public common::AbstractCommand
 {
 public:
     Sleep(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "sleep <seconds>" ;}
+      : AbstractCommand(name,description,attributes) { _usage = "sleep <seconds>" ;}
     static  Sleep* build();    // factory method
-    static  std::string cmdname() { return "sleep"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -55,8 +50,6 @@ public:
               mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::console::command
-
 
 #endif

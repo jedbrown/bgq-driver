@@ -24,12 +24,9 @@
 #ifndef MMCS_COMMON_CONSOLE_CONTROLLER_H_
 #define MMCS_COMMON_CONSOLE_CONTROLLER_H_
 
-
 #include "fwd.h"
 
 #include "libmmcs_client/ConsolePort.h"
-
-#include <bgq_util/include/pthreadmutex.h>
 
 #include <utility/include/UserId.h>
 
@@ -46,13 +43,11 @@
 
 #include <stdio.h>
 
-
 namespace mmcs {
 
 class MMCSCommandProcessor;
 
 namespace common {
-
 
 class ConsoleController : private boost::noncopyable
 {
@@ -121,32 +116,15 @@ public:
     bool getRedirecting() const { return _redirecting; }
 protected:
     bool   _redirecting; // this DBBlockController is being used for mailbox redirection
-    int    _fd;
-
-    //
-    // Reply format
-    //
-public:
-    unsigned getReplyFormat() const { return _replyFormat; }
-protected:
-    const unsigned         _replyFormat;      // command reply format
-
-protected:
-    mutable PthreadMutex  _midplaneControllerMutex; // to serialize access to fields in ConsoleController
-
 
 public:
     void setPortConfiguration( boost::shared_ptr<const bgq::utility::ClientPortConfiguration> portConfig_ptr )  { _portConfig_ptr = portConfig_ptr; }
     const boost::shared_ptr<const bgq::utility::ClientPortConfiguration>& getPortConfiguration() const  { return _portConfig_ptr; }
 
-
 private:
     boost::shared_ptr<const bgq::utility::ClientPortConfiguration> _portConfig_ptr;
-
 };
 
-
 } } // namespace mmcs::common
-
 
 #endif

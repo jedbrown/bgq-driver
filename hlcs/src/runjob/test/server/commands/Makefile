@@ -33,7 +33,10 @@ CXXFLAGS += -DBOOST_TEST_DYN_LINK
 CXXFLAGS += -DBOOST_TEST_MAIN
 
 LDFLAGS += -L ../../../common -lrunjob_common
+LDFLAGS += -llog4cxx
+LDFLAGS += -lboost_date_time-mt
 LDFLAGS += -lboost_filesystem-mt
+LDFLAGS += -lboost_serialization-mt
 LDFLAGS += -lboost_program_options-mt
 LDFLAGS += -lboost_system-mt
 LDFLAGS += -lboost_unit_test_framework-mt
@@ -52,7 +55,6 @@ out_%: test_%
 	$(SILENT)BG_PROPERTIES_FILE=$(BGQ_INSTALL_DIR)/utility/etc/bg.properties.tpl ./$< 1> $(patsubst test_%, out_%, $<)
 
 
-authority.o: CXXFLAGS += -DAUTHID_SIZE=$(shell ../../../samples/database_column_sizes/job_security_authid)
 test_authority: authority.o ../../../server/commands/grant_job_authority/Options.o ../../../server/commands/revoke_job_authority/Options.o Makefile
 	@echo "link $@"
 	$(SILENT)$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS) -L $(BGQ_BUILD_DIR)/hlcs/src/security -lsecurity -Wl,-rpath,$(BGQ_BUILD_DIR)/hlcs/src/security

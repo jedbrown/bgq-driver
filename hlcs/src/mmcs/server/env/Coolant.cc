@@ -57,7 +57,6 @@ Coolant::prepareInsert(
 {
     const cxxdb::ConnectionPtr result = BGQDB::DBConnectionPool::Instance().getConnection();
     if ( !result ) {
-        LOG_INFO_MSG("unable to connect to database");
         return result;
     }
 
@@ -88,7 +87,7 @@ Coolant::impl(
     connection = this->prepareInsert( insert );
 
     if ( !connection ) {
-        LOG_ERROR_MSG( "could not get database connection" );
+        LOG_ERROR_MSG("Could not get database connection.");
         this->wait();
         return;
     }
@@ -107,7 +106,7 @@ Coolant::impl(
             request,
             boost::bind(
                 &Coolant::makeTargetSetHandler,
-                this,
+                boost::static_pointer_cast<Coolant>( shared_from_this() ),
                 _1,
                 mc_server,
                 connection,
@@ -130,14 +129,14 @@ Coolant::makeTargetSetHandler(
     MCServerMessageSpec::MakeTargetSetReply reply;
     reply.read( response );
 
-    MCServerMessageSpec::OpenTargetRequest request( "EnvMonCoolant","EnvMonCoolant", MCServerMessageSpec::RAAW, true);
+    const MCServerMessageSpec::OpenTargetRequest request( "EnvMonCoolant","EnvMonCoolant", MCServerMessageSpec::RAAW, true);
 
     mc_server->send(
             request.getClassName(),
             request,
             boost::bind(
                 &Coolant::openTargetHandler,
-                this,
+                boost::static_pointer_cast<Coolant>( shared_from_this() ),
                 _1,
                 mc_server,
                 connection,
@@ -161,11 +160,11 @@ Coolant::openTargetHandler(
     reply.read( response );
 
     if (reply._rc) {
-        LOG_INFO_MSG("unable to open target set: " << reply._rt);
+        LOG_ERROR_MSG("Unable to open target set: " << reply._rt);
         this->wait();
         return;
     }
-    LOG_TRACE_MSG( "opened target set with handle " << reply._handle );
+    LOG_TRACE_MSG("Opened target set with handle " << reply._handle );
 
     timer->dismiss( false );
     timer->stop();
@@ -180,7 +179,7 @@ Coolant::openTargetHandler(
             request,
             boost::bind(
                 &Coolant::readHandler,
-                this,
+                boost::static_pointer_cast<Coolant>( shared_from_this() ),
                 _1,
                 reply._handle,
                 mc_server,
@@ -221,7 +220,7 @@ Coolant::readHandler(
         if (cmon->_error == CARD_NOT_PRESENT) continue;
         if (cmon->_error == CARD_NOT_UP) continue;
         if (cmon->_error) {
-            LOG_INFO_MSG("Error occurred reading environmentals from: " << cmon->_lctn);
+            LOG_ERROR_MSG("Error reading environmentals from: " << cmon->_lctn);
             RasEventImpl ras(0x00061005);
             ras.setDetail(RasEvent::LOCATION, cmon->_lctn);
             RasEventHandlerChain::handle(ras);
@@ -278,7 +277,7 @@ Coolant::readHandler(
             handle,
             boost::bind(
                 &Polling::wait,
-                this
+                boost::static_pointer_cast<Coolant>( shared_from_this() )
                 )
             );
 }

@@ -21,19 +21,13 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "GetBlockInfo.h"
 
 #include <db/include/api/BGQDBlib.h>
 
-
-using namespace std;
-
-
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 GetBlockInfo*
 GetBlockInfo::build()
@@ -44,7 +38,7 @@ GetBlockInfo::build()
     commandAttributes.requiresTarget(false);           // does not require a BlockControllerTarget object
     commandAttributes.requiresObjNames(true);
     commandAttributes.mmcsServerCommand(true);
-    commandAttributes.mmcsConsoleCommand(false);
+    commandAttributes.bgConsoleCommand(false);
     commandAttributes.helpCategory(common::DEFAULT);
     Attributes::AuthPair blockread(hlcs::security::Object::Block, hlcs::security::Action::Read);
     commandAttributes.addAuthPair(blockread);
@@ -52,8 +46,11 @@ GetBlockInfo::build()
 }
 
 std::vector<std::string>
-GetBlockInfo::getBlockObjects(std::deque<std::string>& cmdString,
-                                  DBConsoleController* pController) {
+GetBlockInfo::getBlockObjects(
+        std::deque<std::string>& cmdString,
+        DBConsoleController* pController
+)
+{
     std::vector<std::string> block_to_use;
     block_to_use.push_back(cmdString[0]);
     return block_to_use;
@@ -61,11 +58,11 @@ GetBlockInfo::getBlockObjects(std::deque<std::string>& cmdString,
 
 void
 GetBlockInfo::execute(
-        deque<string> args,
+        std::deque<std::string> args,
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     std::vector<std::string> validnames;
     if ( !args.empty() ) {
@@ -76,22 +73,20 @@ GetBlockInfo::execute(
 
 void
 GetBlockInfo::execute(
-        deque<string> args,
+        std::deque<std::string> args,
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget,
         std::vector<std::string>* validnames
-        )
+)
 {
     BGQDB::BlockInfo bInfo;
 
     const BGQDB::STATUS result = BGQDB::getBlockInfo(validnames->at(0), bInfo);
 
-
-    if(result == BGQDB::OK)
-    {
+    if (result == BGQDB::OK) {
         reply << mmcs_client::OK;
-        reply << "boot info for block " << args[0] << ":\n";
+        reply << "Boot info for block " << args[0] << ":\n";
         reply << "uloader: " << bInfo.uloaderImg << "\n";
         reply << "node config: " << bInfo.nodeConfig << "\n";
         reply << "status: " << bInfo.status << "\n";
@@ -99,7 +94,7 @@ GetBlockInfo::execute(
 
         if (bInfo.domains.size() > 0) {
             reply << "\n";
-            reply << "node config info for " << bInfo.nodeConfig << ":\n";
+            reply << "Node config info for " << bInfo.nodeConfig << ":\n";
             for(unsigned dm = 0 ; dm < bInfo.domains.size() ; ++dm) {
                 reply << " domain id: " << bInfo.domains[dm].id << "\n";
                 reply << "   images: " << bInfo.domains[dm].imageSet << "\n";
@@ -118,25 +113,26 @@ GetBlockInfo::execute(
 
         reply << mmcs_client::DONE;
         return;
+    } else if (result == BGQDB::NOT_FOUND) {
+        reply << mmcs_client::FAIL << "Block not found: " << args[0] << mmcs_client::DONE;
+    } else if (result == BGQDB::DB_ERROR) {
+        reply << mmcs_client::FAIL << "Database query failed" << mmcs_client::DONE;
+    } else if (result == BGQDB::INVALID_ID) {
+        reply << mmcs_client::FAIL << "Invalid id: " << args[0] << mmcs_client::DONE;
+    } else {
+        reply << mmcs_client::FAIL << "Unexpected database error" << mmcs_client::DONE; /* returned status should only be one of the above */
     }
-    else if(result == BGQDB::NOT_FOUND)
-        reply << mmcs_client::FAIL << "block not found: " << args[0] << mmcs_client::DONE;
-    else if(result == BGQDB::DB_ERROR)
-        reply << mmcs_client::FAIL << "DB query failed" << mmcs_client::DONE;
-    else if(result == BGQDB::INVALID_ID)
-        reply << mmcs_client::FAIL << "invalid id: " << args[0] << mmcs_client::DONE;
-    else
-        reply << mmcs_client::FAIL << "unexpected DB error" << mmcs_client::DONE; /* returned status should only be one of the above */
 }
 
 void
-GetBlockInfo::help(deque<string> args,
-                      mmcs_client::CommandReply& reply)
+GetBlockInfo::help(
+        std::deque<std::string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
           << ";Prints boot information, boot mode and status for the specified block."
           << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

@@ -30,6 +30,7 @@
 
 #include "cxxdb/cxxdb.h"
 
+#include "tableapi/DBConnectionPool.h"
 #include "tableapi/TxObject.h"
 
 #include "tableapi/gensrc/bgqtableapi.h"
@@ -1212,21 +1213,21 @@ genBlocks(
         return NOT_FOUND;
     }
 
-    char blockid[33];
-    if (prefix.size() > (sizeof(blockid) - sizeof(bp._bpid))
+    const DBTBlock block;
+    if (prefix.size() > (sizeof(block._blockid) - sizeof(bp._bpid))
             ||  (! checkIdentifierValidCharacters( prefix )))
     {
         LOG_ERROR_MSG(__FUNCTION__ << " block name prefix exceeds allowed size or has invalid characters");
         return INVALID_ID;
     }
 
-    for (;status == SQL_SUCCESS;)
-    {
+    for (;status == SQL_SUCCESS;) {
+        std::string blockid;
         if (prefix.empty()) {
-            strcpy(blockid, bp._bpid);
+            blockid.append(bp._bpid);
         } else {
-            strncpy(blockid, prefix.c_str(), sizeof(blockid));
-            strncat(blockid, bp._bpid, sizeof(blockid));
+            blockid.append(prefix);
+            blockid.append(bp._bpid);
         }
 
         GenBlockParams params;

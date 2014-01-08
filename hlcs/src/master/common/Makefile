@@ -48,7 +48,6 @@ parts := \
 
 objs := ${parts:%=%.o}
 
-clean_cmd := $(RM) *.o *.d
 
 default: all
 
@@ -57,9 +56,9 @@ all: $(objs)
 install: all
 
 clean:
-	$(clean_cmd)
+	$(RM) *.o *.d
 
-distclean:
+distclean: clean
 
 
 .PHONY: default all install clean distclean

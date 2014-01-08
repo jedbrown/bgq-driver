@@ -37,11 +37,13 @@
 #include <termios.h>
 #include <poll.h>
 
+#ifdef __cplusplus
 namespace bgcios
 {
 
 namespace sysio
 {
+#endif
 
 const uint16_t ErrorAck           = 4000;
 const uint16_t Access             = 4001;
@@ -107,7 +109,7 @@ const uint16_t SymlinkAck         = 4060;
 const uint16_t Truncate64         = 4061;
 const uint16_t Truncate64Ack      = 4062;
 const uint16_t Unlink             = 4063;
-const uint16_t UnlinkAck          = 4064;
+const uint16_t UnlinkAck          = 4064;//x0FE0
 const uint16_t Utimes             = 4065;
 const uint16_t UtimesAck          = 4066;
 const uint16_t Accept             = 4067;
@@ -119,13 +121,13 @@ const uint16_t FcntlAck           = 4072;
 const uint16_t Poll               = 4073;
 const uint16_t PollAck            = 4074;
 
-const uint16_t WriteRdmaVirt      = 4075;
-const uint16_t WriteRdmaVirtAck   = 4076;
+const uint16_t WriteImmediate     = 4075;
+const uint16_t WriteImmediateAck  = 4076;
 
 const uint16_t Pread64            = 4077;
 const uint16_t Pread64Ack         = 4078;
 const uint16_t Pwrite64           = 4079;
-const uint16_t Pwrite64Ack        = 4080;
+const uint16_t Pwrite64Ack        = 4080;//x0FF0
 const uint16_t Read               = 4081;
 const uint16_t ReadAck            = 4082;
 const uint16_t Recv               = 4083;
@@ -139,8 +141,38 @@ const uint16_t SendtoAck          = 4090;
 const uint16_t Write              = 4091;
 const uint16_t WriteAck           = 4092;
 
+const uint16_t FsetXattr          = 4912; //x1330
+const uint16_t FsetXattrAck       = 4913;
+const uint16_t FgetXattr          = 4914;
+const uint16_t FgetXattrAck       = 4915;
+const uint16_t FremoveXattr       = 4916;
+const uint16_t FremoveXattrAck    = 4917;
+const uint16_t FlistXattr         = 4918;
+const uint16_t FlistXattrAck      = 4919;
+
+const uint16_t LsetXattr          = 4922; //x133A
+const uint16_t LsetXattrAck       = 4923;
+const uint16_t LgetXattr          = 4924;
+const uint16_t LgetXattrAck       = 4925;
+const uint16_t LremoveXattr       = 4926;
+const uint16_t LremoveXattrAck    = 4927;
+const uint16_t LlistXattr         = 4928; //x1340
+const uint16_t LlistXattrAck      = 4929;
+
+const uint16_t PsetXattr          = 4932; //x1344
+const uint16_t PsetXattrAck       = 4933;
+const uint16_t PgetXattr          = 4934;
+const uint16_t PgetXattrAck       = 4935;
+const uint16_t PremoveXattr       = 4936;
+const uint16_t PremoveXattrAck    = 4937;
+const uint16_t PlistXattr         = 4938; 
+const uint16_t PlistXattrAck      = 4939;
+
+const uint16_t GpfsFcntl          = 4940;
+const uint16_t GpfsFcntlAck       = 4941;
+
 const uint16_t KINTERNALBIT         = 0x8000;
-const uint16_t WriteRdmaVirtKernelInternal  = 4075 | KINTERNALBIT;
+const uint16_t WriteImmediateKernelInternal  = WriteImmediate | KINTERNALBIT;
 const uint16_t WriteKernelInternal  = 4091 | KINTERNALBIT;
 const uint16_t OpenKernelInternal   = 4041 | KINTERNALBIT;
 const uint16_t CloseKernelInternal  = 4009 | KINTERNALBIT;
@@ -149,11 +181,78 @@ const uint16_t SetupJobAck          = 4094 | KINTERNALBIT;
 const uint16_t CleanupJob           = 4095 | KINTERNALBIT;
 const uint16_t CleanupJobAck        = 4096 | KINTERNALBIT;
 
+//! Request message for chmod system call.
+
+struct FsetOrRemoveXattrMessage
+{
+   struct MessageHeader header;        //!< Message header.
+   int fd;                             //!< file descriptor.
+   int flags;                          //!< flags for set
+   size_t valueSize;                   //!< Size of value and offset to attribute name string
+   int nameSize;                       //!<Size of attribute name
+   char value[0];                      //!<Mark location of value for attribute;
+   // char value[valueSize]
+   // char name[nameSize]
+};
+
+struct FretrieveXattrMessage
+{
+   struct MessageHeader header;        //!< Message header.
+   uint64_t address;                   //!< Caller provided area for retrieval
+   uint32_t rkey;                      //!< rkey of memory region
+   uint64_t userListNumBytes;          //!< Caller area size in bytes
+   int fd;                             //!< file descriptor if fd operation
+   int nameSize;                       //!<Size of attribute name (nonzero if appended)
+   int pathSize;                       //!<Size of pathName (nonzero if appended)
+   char pathname[0];                   //!<Path if pathname, appended
+   char name[0];                       //!<Name of attribute if get, appended to data
+};
+
+struct FxattrMessageAck
+{
+   struct MessageHeader header;        //!< Message header.
+   ssize_t returnValue;
+};
+
+struct PopXattrMessage
+{
+   struct MessageHeader header;        //!< Message header.
+   int pathNameSize;                   //!< Size of pathName
+   int flags;                          //!< flags for set
+   int valueSize;                      //!< Size of value and offset to attribute name string
+   int nameSize;                       //!<Size of attribute name
+   char value[0];                      //!<Mark location of value for attribute;
+   // char value[valueSize]
+   // char name[nameSize]
+   // char name[pathNameSize]
+};
+
+struct PathRemoveXattrMessage
+{
+   struct MessageHeader header;        //!< Message header.
+   int nameSize;                       //!<Size of attribute name (nonzero if appended)
+   int pathSize;                       //!<Size of pathName (nonzero if appended)
+   char pathname[0];                       //!< 
+   char name[0];
+};
+
+struct PathSetXattrMessage
+{
+   struct MessageHeader header;        //!< Message header.
+   int flags;                          //!< flags for set
+   size_t valueSize;                   //!< Size of value and offset to attribute name string
+   int nameSize;                       //!<Size of attribute name (nonzero if appended)
+   int pathSize;                       //!<Size of pathName (nonzero if appended)
+   char value[0];                      //!<Mark location of value for attribute
+   char pathname[0];                   //!< 
+   char name[0];
+};
+
 //! Base port number for RDMA connections.
 const uint16_t BaseRdmaPort = 7102;
 
 //! Current version of protocol.
-const uint8_t ProtocolVersion = 9;
+const uint8_t ProtocolVersion = 10;
 
 //! Maximum number of secondary groups.
 const int MaxGroups = 64;
@@ -866,6 +965,7 @@ struct Pwrite64AckMessage
 {
    struct MessageHeader header;        //!< Message header.
    ssize_t bytes;                      //!< Amount of data written to descriptor.
+   size_t  ION_rdma_buffer_offset;     //!< Track offset into rdma_buffer
 };
 
 struct ReadMessage
@@ -883,6 +983,7 @@ struct ReadAckMessage
 {
    struct MessageHeader header;        //!< Message header.
    ssize_t bytes;                      //!< Amount of data written to descriptor.
+   size_t  ION_rdma_buffer_offset;     //!< Track offset into rdma_buffer
 };
 
 //! Request message for recv system call.
@@ -946,6 +1047,7 @@ struct SendAckMessage
 {
    struct MessageHeader header;        //!< Message header.
    ssize_t bytes;                      //!< Amount of data written to descriptor.
+   size_t  ION_rdma_buffer_offset;     //!< Track offset into rdma_buffer
 };
 
 //! Request message for sendto system call.
@@ -985,28 +1087,40 @@ struct WriteAckMessage
 {
    struct MessageHeader header;        //!< Message header.
    ssize_t bytes;                      //!< Amount of data written to descriptor.
+   size_t  ION_rdma_buffer_offset;     //!< Track offset into rdma_buffer
 };
 
-//! Request message for write system call.
 
-struct WriteRdmaVirtMessage
+// int fd goes into returnCode
+struct WriteImmediateMessage
 {
    struct MessageHeader header;        //!< Message header.
-   int fd;                             //!< File descriptor.
-   ssize_t  data_length;               //!< Length of data to process
-   uint64_t bufferRdmaVirtaddress;     //!< Virtual Address of RDMA buffer
-   uint32_t offset;                    //!< offset into buffer       
+   char data[480];
 };
 
-struct WriteRdmaVirtAckMessage
+struct WriteImmediateAckMessage
 {
    struct MessageHeader header;        //!< Message header.
    ssize_t bytes;                      //!< Amount of data written to descriptor.
-   int fd;                             //!< File descriptor.
-   ssize_t  data_length;               //!< Length of data to process
-   uint64_t bufferRdmaVirtaddress;     //!< Virtual Address of RDMA buffer
-   uint32_t offset;                    //!< offset into buffer                     //!< Amount of data written to descriptor.
 };
+
+//! Request message for gpfs_fcntl system call.
+
+struct GpfsFcntlMessage
+{
+    struct MessageHeader header;        //!< Message header.
+    int fd;                             //!< File descriptor.
+    ssize_t data_length;                //!< Length of data to process
+    uint64_t address;                   //!< Address of data on requester
+    uint32_t rkey;                      //!< Remote key of memory region.        
+};
+
+struct GpfsFcntlAckMessage
+{
+    struct MessageHeader header;        //!< Message header.
+    int gpfsresult;                     //!< gpfs_fcntl result code
+};
+
 
 //! Message to setup for running a new job.
 
@@ -1052,9 +1166,11 @@ struct CleanupJobAckMessage
    struct MessageHeader header;        //!< Message header.
 };
 
+#ifdef __cplusplus
 } // namespace sysio
 
 } // namespace bgcios
+#endif
 
 #endif // SYSIOMESSAGETYPES_H
 

@@ -47,11 +47,12 @@ public:
    {
       _threadId = 0;
       pthread_attr_init(&_attributes);
-      pthread_attr_setdetachstate(&_attributes, PTHREAD_CREATE_JOINABLE);
+      pthread_attr_setdetachstate(&_attributes, PTHREAD_CREATE_DETACHED);
       _done = 0;
       _lastError = 0;
       _exitValue = NULL;
    }
+
 
    //! \brief  Default destructor.
 

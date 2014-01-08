@@ -46,11 +46,12 @@ ${RPMBUILD_SUBDIRS}:
 
 ${BGQ_RAMDISK_PATH}/rpms:
 	${MKDIR} -p $@
+	chmod o+rx $@
 
 INSTALL_RPMS: ./rpmbuild/RPMS/ppc64/bgq-distrofs_runtime-${BGQ_RPMVERSION}.${BGQ_RPMRELEASE}.${BGQ_RPMMODIFICATION}-${SVN_REVISION}.ppc64.rpm ./rpmbuild/RPMS/ppc64/bgq-cio_services_runtime-${BGQ_RPMVERSION}.${BGQ_RPMRELEASE}.${BGQ_RPMMODIFICATION}-${SVN_REVISION}.ppc64.rpm
 	${CP} -a ./rpmbuild/RPMS/ppc64/bgq-distrofs_runtime-${BGQ_RPMVERSION}.${BGQ_RPMRELEASE}.${BGQ_RPMMODIFICATION}-${SVN_REVISION}.ppc64.rpm ${BGQ_RAMDISK_PATH}/rpms/ 
 	${CP} -a ./rpmbuild/RPMS/ppc64/bgq-cio_services_runtime-${BGQ_RPMVERSION}.${BGQ_RPMRELEASE}.${BGQ_RPMMODIFICATION}-${SVN_REVISION}.ppc64.rpm ${BGQ_RAMDISK_PATH}/rpms/
-
+	chmod o+rx ${BGQ_RAMDISK_PATH}/rpms/*.rpm
 
 BUILD_RPMS: distrofs_runtime.spec cio_services_runtime.spec
 ifneq ($(PACKAGING_GPG_NAME),no)

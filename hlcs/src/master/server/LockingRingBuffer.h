@@ -36,11 +36,12 @@
 
 //! \brief This is just a locking version of boost's
 //! ring buffer.  It is specialized for strings.
-class LockingStringRingBuffer {
+class LockingStringRingBuffer
+{
     boost::circular_buffer<std::string> _ring_buff;
     boost::mutex _mutex;
 public:
-    LockingStringRingBuffer(int buffsize) : _ring_buff(buffsize) {
+    LockingStringRingBuffer(unsigned buffsize) : _ring_buff(buffsize) {
         // Nothing to do.
     }
     void push_back(const std::string& item) {
@@ -55,4 +56,5 @@ public:
         std::copy(_ring_buff.begin(), _ring_buff.end(), std::back_inserter(messages) );
     }
 };
+
 #endif

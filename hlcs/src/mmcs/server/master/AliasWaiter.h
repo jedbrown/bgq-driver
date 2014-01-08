@@ -26,7 +26,7 @@
 
 #include "common/Thread.h"
 
-#include "master/lib/BGMasterClientApi.h"
+#include "master/lib/BGMasterClient.h"
 
 #include <control/include/mcServer/MCServerRef.h>
 
@@ -37,7 +37,8 @@ namespace server {
 namespace master {
 
 // Waits for an alias to start
-class AliasWaiter : public common::Thread {
+class AliasWaiter : public common::Thread
+{
 public:
     AliasWaiter(const std::string& alias, bool update_mc = false);
     void* threadStart();
@@ -72,8 +73,7 @@ public:
     const BinaryId& getBinId() const { return _binid; }
 
 private:
-    BGMasterClient _client;
-    std::string _alias;
+    const std::string _alias;
     const bool _update_mc;
     BinaryId _binid;
 };

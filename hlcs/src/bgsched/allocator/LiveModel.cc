@@ -219,5 +219,23 @@ LiveModel::removeDrainedMidplane(
     impl->removeDrainedMidplane(midplaneLocation);
 }
 
+void
+LiveModel::monitorBlockAllocate(
+        const string& blockName
+        )
+{
+    Pimpl impl = boost::dynamic_pointer_cast<Impl>(_impl);
+    return impl->monitorBlockAllocate(blockName);
+}
+
+void
+LiveModel::monitorBlockDeallocate(
+        const string& blockName
+        )
+{
+    Pimpl impl = boost::dynamic_pointer_cast<Impl>(_impl);
+    return impl->monitorBlockDeallocate(blockName);
+}
+
 } // namespace bgsched::allocator
 } // namespace bgsched

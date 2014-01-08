@@ -21,21 +21,18 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "ListMidplanes.h"
 
 #include <db/include/api/BGQDBlib.h>
 
+#include <db/include/api/tableapi/DBConnectionPool.h>
 #include <db/include/api/tableapi/gensrc/bgqtableapi.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 ListMidplanes*
 ListMidplanes::build()
@@ -45,7 +42,7 @@ ListMidplanes::build()
     commandAttributes.requiresConnection(false);       // does not require  mc_server connections
     commandAttributes.requiresTarget(false);           // does not require a BlockControllerTarget object
     commandAttributes.mmcsServerCommand(true);
-    commandAttributes.mmcsConsoleCommand(false);
+    commandAttributes.bgConsoleCommand(false);
     commandAttributes.bgadminAuth(true);
     commandAttributes.helpCategory(common::ADMIN);
     return new ListMidplanes("list_midplanes", "list_midplanes", commandAttributes);
@@ -55,7 +52,8 @@ void
 ListMidplanes::execute(deque<string> args,
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
-        BlockControllerTarget* pTarget)
+        BlockControllerTarget* pTarget
+)
 {
     BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
     if (!tx.getConnection()) {
@@ -120,14 +118,16 @@ ListMidplanes::execute(deque<string> args,
 }
 
 void
-ListMidplanes::help(deque<string> args,
-        mmcs_client::CommandReply& reply)
+ListMidplanes::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
-        << ";Prints midplane information"
-        << ";for the machine, including blocks that are"
-        << ";booted on each midplane."
-        << mmcs_client::DONE;
+          << ";Prints midplane information"
+          << ";for the machine, including blocks that are"
+          << ";booted on each midplane."
+          << mmcs_client::DONE;
 }
 
 } } } // namespace mmcs::server::command

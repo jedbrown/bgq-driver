@@ -26,16 +26,16 @@
  *
  * \section toc Table of Contents
  *
- * - \ref overview
- * - \ref requirements
- * - \ref objects
- * - \ref trust
- * - \ref history
- * - \ref configuration
- * - \ref opensource
- * - \ref info
+ * - \ref security_overview
+ * - \ref security_requirements
+ * - \ref security_objects
+ * - \ref security_trust
+ * - \ref security_history
+ * - \ref security_configuration
+ * - \ref security_opensource
+ * - \ref security_info
  *
- * \section overview Overview
+ * \section security_overview Overview
  *
  * This documentation was generated for driver DRIVER_NAME with revision VERSION_NUMBER.
  *
@@ -49,7 +49,7 @@
  * from a high level, as well as links to some implementation details used in various
  * components.
  *
- * \section requirements Requirements
+ * \section security_requirements Requirements
  *
  * The requirements for the security model are listed below
  *
@@ -59,7 +59,7 @@
  * <li> can be configured to mimic lack of security like BG/L and BG/P
  * </ul>
  *
- * \section objects Objects and Owners
+ * \section security_objects Objects and Owners
  *
  * To implement the requirements, we chose an object based approach. Much of the control
  * system already has a heritage of using this concept for blocks and jobs, they've
@@ -81,7 +81,7 @@
  * <li> database contains per object permissions that can be granted and revoked
  * </ol>
  *
- * \section trust Trust
+ * \section security_trust Trust
  *
  * Establishing trust between a client and server (ex: bg_console and mmcs_server) requires
  * using encrypted communication to transmit the user's credentials. Three private
@@ -106,25 +106,25 @@
  *
  * \image html trust.png
  *
- * \section history Object History
+ * \section security_history Object History
  *
  * Blocks, jobs, and hardware  are preserved in a history table in the database after their 
  * destruction, death, or replacement.  It's not practical to also retain a snapshot permission 
  * information at the time of the object's demise. With that in mind, only an object's owner 
  * or a user with special permissions can view objects in the history tables.
  *
- * \section configuration Configuration
+ * \section security_configuration Configuration
  *
  * Various aspects of the security model must be configured for it to be effective. The two primary places
  * for this configuration information is in the properties file, and permissions of the private key
  * and certificate files.
  *
- * \subsection properties Properties file
+ * \subsection security_properties Properties file
  *
  * The \ref API provides detailed information for setting up security configuration settings in the
  * \link bgq::utility::Properties bg.properties \endlink file.
  *
- * \subsection permissions Permissions
+ * \subsection security_permissions Permissions
  *
  * To establish effective trust between components, the private keys must be kept secret to prevent 
  * unauthorized users from escalating their privileges. The administrative key is only readable
@@ -132,14 +132,14 @@
  * executed by non-administrative users are setuid to bgqcommand so they can read the command key
  * when required.
  *
- * \section opensource Open Source Considerations
+ * \section security_opensource Open Source Considerations
  *
  * Downloading open source BG/Q packages and rebuilding them to bypass the security mechanisms described
  * here is not concern due to the permissions imposed on the private key and certificate pairs. 
  * Regardless of where or how a binary is built, it will still have to authenticate with control system
  * daemons as described in the previous sections.
  *
- * \section info More Information
+ * \section security_info More Information
  *
  * <ul>
  * <li>\ref API "Security API"

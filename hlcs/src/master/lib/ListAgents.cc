@@ -23,28 +23,26 @@
 
 #include "ListAgents.h"
 
+#include "BGMasterClient.h"
+
 #include "common/BinaryController.h"
-#include "common/Ids.h"
 
 #include <utility/include/Log.h>
 
-#include <iomanip>
-#include <iostream>
-#include <map>
-#include <string>
-#include <vector>
 
 LOG_DECLARE_FILE( "master" );
 
+namespace ListAgents {
+
 void
-ListAgents::doListAgents(
-        BGMasterClient& client,
-        bool agents_only,
-        bool fancy
+doListAgents(
+        const BGMasterClient& client,
+        const bool agents_only,
+        const bool fancy
         )
 {
-    LOG_TRACE_MSG(__FUNCTION__);
-    std::map<BGAgentId, std::vector<BinaryControllerPtr>, Id::Comp > agentmap;
+    typedef std::map<BGAgentId, std::vector<BinaryControllerPtr>, Id::Comp> AgentMap;
+    AgentMap agentmap;
     client.get_agents(agentmap);
 
     LOG_DEBUG_MSG("Sending list_agents command");
@@ -54,20 +52,19 @@ ListAgents::doListAgents(
     bool foundbin = false;
 
     // Loop through the map and print the agents and associated binaries
-    for (std::map<BGAgentId, std::vector<BinaryControllerPtr>, Id::Comp >::iterator it = agentmap.begin(); it != agentmap.end(); ++it) {
+    for (AgentMap::const_iterator it = agentmap.begin(); it != agentmap.end(); ++it) {
         // Get the Id string
-        BGAgentId* id = const_cast<BGAgentId*>(&(it->first));
-        std::string idstr = *id;
+        const BGAgentId* id = &(it->first);
+        const std::string idstr = *id;
 
         if (!agents_only) {
             // Now iterate through the binary vector
             typedef std::vector<BinaryControllerPtr> BinVector;
-            BinVector vec = it->second;
+            const BinVector vec = it->second;
             if (vec.empty()) {
                 std::cout << "No binaries running on agent " << id->get_host().uhn() << "." << std::endl;
             }
-            for (BinVector::iterator bin_it = vec.begin();
-                bin_it != vec.end(); ++bin_it) {
+            for (BinVector::const_iterator bin_it = vec.begin(); bin_it != vec.end(); ++bin_it) {
                 foundbin = true;
                 if (fancy) {
                     if (firstbin) {
@@ -92,9 +89,9 @@ ListAgents::doListAgents(
     }
 
     // Now just the agents
-    for (std::map<BGAgentId, std::vector<BinaryControllerPtr>, Id::Comp >::iterator it = agentmap.begin(); it != agentmap.end(); ++it) {
-        BGAgentId* id = const_cast<BGAgentId*>(&(it->first));
-        std::string idstr = *id;
+    for (AgentMap::const_iterator it = agentmap.begin(); it != agentmap.end(); ++it) {
+        const BGAgentId* id = &(it->first);
+        const std::string idstr = *id;
         if (!fancy) {
             if (!foundbin)
                 std::cout << id->get_host().fqhn() << " " << idstr << std::endl;
@@ -109,3 +106,5 @@ ListAgents::doListAgents(
         }
     }
 }
+
+} // namespace ListAgents

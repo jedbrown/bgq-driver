@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "Comment.h"
 
 #include "common/Properties.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 Comment*
 Comment::build()
@@ -42,7 +38,7 @@ Comment::build()
     commandAttributes.requiresBlock(false);             // does not require a BlockController object
     commandAttributes.requiresConnection(false);        // does not require  mc_server connections
     commandAttributes.requiresTarget(false);            // does not require a BlockControllerTarget object
-    commandAttributes.mmcsConsoleCommand(true);
+    commandAttributes.bgConsoleCommand(true);
     commandAttributes.mmcsLiteCommand(true);
     commandAttributes.internalAuth(true);
     commandAttributes.helpCategory(common::DEFAULT);
@@ -55,7 +51,7 @@ Comment::execute(deque<string> ,//args,
                  common::ConsoleController* ,//pController,
                  server::BlockControllerTarget* /*pTarget*/)
 {
-    if(common::Properties::getProperty(NO_SHELL) == "true") {
+    if (common::Properties::getProperty(NO_SHELL) == "true") {
         reply << mmcs_client::FAIL << mmcs_client::DONE;
         return;
     }
@@ -70,6 +66,5 @@ Comment::help(deque<string> ,//args,
       << ";Indicates a comment line"
       << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::console::command

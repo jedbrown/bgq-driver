@@ -21,20 +21,16 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "AllocateBlock.h"
 
 #include "../DBBlockController.h"
 #include "../DBConsoleController.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 AllocateBlock*
 AllocateBlock::build()
@@ -53,67 +49,74 @@ AllocateBlock::build()
 }
 
 void
-AllocateBlock::execute(deque<string> args,
-                  mmcs_client::CommandReply& reply,
-                  DBConsoleController* pController,
-                  BlockControllerTarget* pTarget,
-                  std::vector<std::string>* validnames)
+AllocateBlock::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        DBConsoleController* pController,
+        BlockControllerTarget* pTarget,
+        std::vector<std::string>* validnames
+)
 {
     execute(args, reply, pController, pTarget);
 }
 
 void
-AllocateBlock::execute(deque<string> args,
-                    mmcs_client::CommandReply& reply,
-                    DBConsoleController* pController,
-                    BlockControllerTarget* pTarget)
+AllocateBlock::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        DBConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
-    BGQDB::STATUS result;    // getBlockStatus return code
-    BGQDB::BLOCK_STATUS bState;    // getBlockStatus return state
-
-    if (((result = BGQDB::getBlockStatus(args[0], bState)) == BGQDB::OK)
-    && (bState != BGQDB::FREE)) {
-      reply << mmcs_client::FAIL << "Block is not free" << mmcs_client::DONE;
-      return;
+    BGQDB::BLOCK_STATUS bState;
+    const BGQDB::STATUS result = BGQDB::getBlockStatus(args[0], bState);
+    if ( result != BGQDB::OK ) {
+        reply << mmcs_client::FAIL << "Could not get block status: " << result << mmcs_client::DONE;
+        return;
     }
 
-    if(!DBConsoleController::setAllocating(args[0])) {
-      reply << mmcs_client::FAIL << "Block is being allocated or freed in another thread" << mmcs_client::DONE;
-      return;
+    if ( bState != BGQDB::FREE ) {
+        reply << mmcs_client::FAIL << "Block is not free" << mmcs_client::DONE;
+        return;
     }
 
-    log4cxx::MDC _blockid_mdc_( "blockId", std::string("{") + args[0] + "} " );
+    if (!DBConsoleController::setAllocating(args[0])) {
+        reply << mmcs_client::FAIL << "Block is being allocated or freed in another thread" << mmcs_client::DONE;
+        return;
+    }
 
     //  select the block
     pController->selectBlock(args, reply, false);
     if (reply.getStatus() != 0) {
-      DBConsoleController::doneAllocating(args[0]);
-      return;
+        DBConsoleController::doneAllocating(args[0]);
+        return;
     }
 
     // allocate the block
-    DBBlockPtr pBlock = boost::dynamic_pointer_cast<DBBlockController>(pController->getBlockHelper()); // get the selected BlockController
+    const DBBlockPtr pBlock = boost::dynamic_pointer_cast<DBBlockController>(pController->getBlockHelper()); // get the selected BlockController
     pBlock->allocateBlock(args, reply);
-    if (reply.getStatus() != 0)
-    pController->deselectBlock();
+    if (reply.getStatus() != 0) {
+        pController->deselectBlock();
+    }
     DBConsoleController::doneAllocating(args[0]);
 }
 
 void
-AllocateBlock::help(deque<string> args,
-                 mmcs_client::CommandReply& reply)
+AllocateBlock::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
     reply << mmcs_client::OK << description()
-      << ";For specified <blockId>, marks block as allocated but does not boot the block."
-      << ";options:"
-      << ";  no_connect - don't connect to block hardware"
-      << ";  pgood - reset pgood on block hardware"
-      << ";  diags - enable block to be created when components are in Service status"
-      << ";  no_check - enable block to be created when nodes are in Error status"
-      << ";  shared - enable node board resources to be shared between blocks. Implies no_connect."
-      << ";  svchost_options=<svc_host_configuration_file>"
-      << mmcs_client::DONE;
+          << ";For specified <blockId>, marks block as allocated but does not boot the block."
+          << ";options:"
+          << ";  no_connect - don't connect to block hardware"
+          << ";  pgood - reset pgood on block hardware"
+          << ";  diags - enable block to be created when components are in Service status"
+          << ";  no_check - enable block to be created when nodes are in Error status"
+          << ";  shared - enable node board resources to be shared between blocks. Implies no_connect."
+          << ";  svchost_options=<svc_host_configuration_file>"
+          << mmcs_client::DONE;
 }
 
 } } } // namespace mmcs::server::command

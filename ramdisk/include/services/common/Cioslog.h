@@ -60,6 +60,7 @@ typedef struct BG_FlightRecorderFormatter
 #define CIOSLOGRDMA_REQ(ID,region,frags,fd) logCRdmaReg(ID, region->addr, region->length, region->lkey, frags, fd );
 #define CIOSLOGPLUGIN(ID,v0,v1,v2,v3) log4values(ID, (uint64_t)v0,(uint64_t)v1,(uint64_t)v2,(uint64_t)v3)
 #define CIOSLOGPOSTSEND(ID,send_wr,err) logPostSend( ID, send_wr,err)
+#define CIOSLOG4(ID,v0,v1,v2,v3) log4values(ID, (uint64_t)v0,(uint64_t)v1,(uint64_t)v2,(uint64_t)v3)
 
 void printMsg(const char * ID, bgcios::MessageHeader *mh);
 

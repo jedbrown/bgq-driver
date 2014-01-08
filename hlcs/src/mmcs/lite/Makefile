@@ -56,7 +56,10 @@ LDFLAGS += \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/xml/lib \
  -lboost_filesystem-mt \
  -ledit \
- -lsqlite3
+ -lsqlite3 \
+ -lboost_system-mt \
+ -lboost_thread-mt \
+ -lboost_program_options-mt
 
 
 clean_cmds := \
@@ -109,7 +112,7 @@ server_parts := \
  IOBlockController \
  RackBitset \
  SecureConnect \
- SecureMailboxMonitor \
+ MailboxMonitor \
  ${server_command_parts:%=command/%}
 
 
@@ -151,7 +154,7 @@ MMCSCommandProcessor_no_db.o: ../MMCSCommandProcessor.cc
 
 
 mmcs_lite: $(objs)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 
 $(BGQ_INSTALL_DIR)/hlcs/sbin/mmcs_lite: mmcs_lite

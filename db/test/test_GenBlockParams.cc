@@ -25,6 +25,7 @@
 
 #include "common.h"
 
+#include <control/include/mcServer/defaults.h>
 #include <boost/assign.hpp>
 
 #include <stdexcept>
@@ -67,6 +68,7 @@ BOOST_AUTO_TEST_CASE( test_setBlockId_invalid_id )
     BOOST_CHECK_THROW( params.setBlockId( "BLKTEST[{]}\\|" ), invalid_argument ); // Cannot have these characters.
     BOOST_CHECK_THROW( params.setBlockId( "BLKTEST'" ), invalid_argument ); // Cannot have '
     BOOST_CHECK_THROW( params.setBlockId( "BLKTEST;:'\",<.>/?" ), invalid_argument ); // Cannot have these characters.
+    BOOST_CHECK_THROW( params.setBlockId( mc_server::DefaultListener ), invalid_argument ); // Cannot be default event listener
     // BOOST_CHECK_THROW( params.setBlockId( "ALL" ), invalid_argument ); // Cannot be all?
 
     BOOST_CHECK_THROW( params.setBlockId( "123456789102345678920234567893023"), invalid_argument ); // Too long!

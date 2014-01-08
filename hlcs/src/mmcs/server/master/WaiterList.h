@@ -24,43 +24,46 @@
 #ifndef MASTER_WAITER_LIST_H
 #define MASTER_WAITER_LIST_H
 
-#include <bgq_util/include/pthreadmutex.h>
-
 #include <algorithm>
 #include <map>
 #include <string>
 #include <vector>
 
 #include <boost/utility.hpp>
+#include <boost/thread.hpp>
+#include <boost/circular_buffer.hpp>
 
 namespace mmcs {
 namespace server {
 namespace master {
 
-class WaiterList : private boost::noncopyable {
+class WaiterList : private boost::noncopyable
+{
 public:
     enum Status { STOPPED, WAIT_FOR_START, RUNNING, ERROR };
+
+public:
+    WaiterList();
+
     void init();
 
-    Status getStat(const std::string& alias);
+    Status getStat(const std::string& alias) const;
 
     void setStat(const std::string& alias, Status stat);
 
-    std::string getStopped();
+    std::string getStopped() const;
 
-    std::string getErrored();
+    std::string getErrored() const;
 
     void addBinId(const std::string& binid);
 
-    void removeBinId(const std::string& binid);
-
-    bool findBinId(const std::string& binid);
+    bool findBinId(const std::string& binid) const;
 
 private:
-    PthreadMutex _list_lock;
+    mutable boost::mutex _list_lock;
     std::map<std::string, Status> _list;
-    unsigned _used_binids_cap;
-    std::vector<std::string> _used_binids;
+    mutable boost::mutex _used_binids_lock;
+    boost::circular_buffer<std::string> _used_binids;
 };
 
 } } } // namespace mmcs::server::master

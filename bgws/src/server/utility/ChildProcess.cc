@@ -219,6 +219,10 @@ void ChildProcess::_childProcess(
     }
 
 
+    sigset_t mask;
+    sigemptyset( &mask );
+    rc = pthread_sigmask( SIG_SETMASK, &mask, NULL ); // Ignoring rc, do this for convenience.
+
     if ( _pre_exec_fn ) {
         _pre_exec_fn();
     }

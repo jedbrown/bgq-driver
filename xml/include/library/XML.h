@@ -147,12 +147,10 @@ inline std::ostream &operator<<(std::ostream& o, const Serializable& s) {
 
       int getLine();
       int getCol();
-      static void setstopping(pthread_t tid) { _stopping_ids.push_back(tid); }
       void parse(std::istream &is, Serializable *root);
   private:
     static void _startXML(void *ud, const XML_Char *name, const XML_Char **atts);
     static void _endXML  (void *ud, const XML_Char *name);
-    static std::vector<pthread_t> _stopping_ids;
 
   private:
     bool                        _multiline; // allow multiline input

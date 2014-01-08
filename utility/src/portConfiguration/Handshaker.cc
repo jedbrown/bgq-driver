@@ -160,7 +160,7 @@ Handshaker::_handleClientHandshake(
     bgq::utility::UserId user_id;
 
     string user_id_str( user_id.serialize() );
-    uint32_t user_id_str_len( user_id_str.size() );
+    const size_t  user_id_str_len( user_id_str.size() );
 
     ostringstream oss;
     oss.width( 4 );
@@ -312,7 +312,7 @@ Handshaker::_handleServerHandshake(
 
         // Read the user info off the socket.
 
-        _UserIdBufPtr user_id_buf_ptr( new _UserIdBuf );
+        UserIdBufPtr user_id_buf_ptr( new UserIdBuf );
         user_id_buf_ptr->resize( 4 ); // read 4 bytes off the socket, which is the length in ascii text.
 
         boost::asio::async_read(
@@ -338,7 +338,7 @@ Handshaker::_handleServerHandshake(
 void
 Handshaker::_handleReadUserLen(
         portConfig::SocketPtr socket_ptr,
-        _UserIdBufPtr user_id_buf_ptr,
+        UserIdBufPtr user_id_buf_ptr,
         portConfig::UserType::Value user_type,
         const std::string& client_cn,
         ServerHandler callback,
@@ -398,7 +398,7 @@ Handshaker::_handleReadUserLen(
 void
 Handshaker::_handleReadUserInfo(
         portConfig::SocketPtr socket_ptr,
-        _UserIdBufPtr user_id_buf_ptr,
+        UserIdBufPtr user_id_buf_ptr,
         portConfig::UserType::Value user_type,
         const std::string& client_cn,
         ServerHandler callback,

@@ -27,7 +27,6 @@
 
 #include <utility/include/Log.h>
 
-#include <boost/foreach.hpp>
 
 LOG_DECLARE_FILE( "master" );
 
@@ -39,7 +38,7 @@ AliasList::find_alias(
 {
     LOG_TRACE_MSG(__FUNCTION__);
     BOOST_FOREACH(const AliasPtr& curr_alias, _alias_list) {
-        if(curr_alias->get_name() == al) {
+        if (curr_alias->get_name() == al) {
             alias = curr_alias;
             return true;
         }

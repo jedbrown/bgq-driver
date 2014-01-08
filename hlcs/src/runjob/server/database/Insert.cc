@@ -116,10 +116,6 @@ Insert::execute(
         _operations->insert( db_info, &id );
         job->_id = id;
     } catch ( const std::exception& e ) {
-        job->setError(
-                e.what(),
-                runjob::error_code::database_error
-                );
         LOG_RUNJOB_EXCEPTION( runjob::error_code::database_error, e.what() );
     }
 }

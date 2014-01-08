@@ -34,6 +34,10 @@
  * This documentation was generated for driver DRIVER_NAME with revision VERSION_NUMBER on DOCUMENTATION_DATE.
  *
  * Delivers a signal to a job asynchronously. Signals other than SIGKILL can only be sent to a Running job.
+ * Only one outstanding signal can be delivered to a job. In other words, all I/O nodes participating in the
+ * job must acknowledge the signal was delivered before another signal can be sent. Attempting to send signals
+ * in quick succession with kill_job may result in subsequent invocations failing with a descriptive error
+ * indicating the first signal is still in flight.
  *
  * \section OPTIONS
  *
@@ -104,9 +108,13 @@
 #include "common/logging.h"
 #include "common/properties.h"
 
+#include <utility/include/UserId.h>
+
+#include <boost/asio/ip/host_name.hpp>
 #include <boost/assign.hpp>
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <iostream>
@@ -243,6 +251,7 @@ Options::doValidate() const
     request->_hostname = _hostname;
     request->_signal = signal;
     request->_timeout = _timeout;
+    request->_details = this->getDetails();
 }
    
 int
@@ -281,7 +290,7 @@ Options::convertSignal(
             result = boost::lexical_cast<int>(signal);
             if ( result <= 0 ) return 0;
         } catch ( const boost::bad_lexical_cast& e ) {
-            LOG_WARN_MSG( e.what() );
+            LOG_DEBUG_MSG( e.what() );
         }
     }
 
@@ -307,6 +316,21 @@ Options::signalParser(
     }
 
     return result;
+}
+
+std::string
+Options::getDetails() const
+{
+    std::ostringstream response;
+    try {
+        const bgq::utility::UserId uid;
+        response << "Delivered by " << boost::filesystem::basename(_argv[0]);
+        response << " user " << uid.getUser() << " on host " << boost::asio::ip::host_name();
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( e.what() );
+    }
+
+    return response.str();
 }
 
 } // kill_job

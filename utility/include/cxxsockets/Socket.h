@@ -20,6 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+
 /*!
  * \file utility/include/cxxsockets/Socket.h
  */
@@ -32,14 +33,14 @@
 
 namespace CxxSockets {
 
-//! \brief Base class for all types of sockets.  
+//! \brief Base class for all types of sockets.
 //!
 //! Locking strategy.
 //! 1)  There are three classes of socket lock operations:
 //!     a) sending
 //!     b) receiving
 //!     c) global socket ops
-//! 2)  Sending locks provide mutual exclusion on sending and 
+//! 2)  Sending locks provide mutual exclusion on sending and
 //!     polling for sending operations
 //! 3)  Receiving locks provide mutual exclusion on receiving
 //!     and polling for receiving operations
@@ -47,20 +48,16 @@ namespace CxxSockets {
 //!     like socket(), bind(), connect() and close().
 class Socket : public File
 {
-    friend class SocketReceiveSide;
-    friend class SocketSendSide;
 protected:
     Socket() : File() {}
 
     //! \brief Protected, non-locking bind.  Called from locking ops.
     void pBind(const SockAddr& addr);
-    bool internal_getSockName(SockAddr& sa);
-    bool internal_getPeerName(SockAddr& sa);
+
+    bool internal_getSockName(SockAddr& sa) const;
+    bool internal_getPeerName(SockAddr& sa) const;
 
 public:
-    //! \brief copy constructor
-    Socket(const Socket& sock);
-
     //! \brief Which side of the connection to shut down
     enum ShutDownSide { RECEIVE, SEND };
 
@@ -71,10 +68,10 @@ public:
     void Bind(const SockAddr& addr);
 
     //! \brief Wraps get getsockname
-    bool getSockName(SockAddr& sa);
+    bool getSockName(SockAddr& sa) const;
 
     //! \brief Wraps get getpeername
-    bool getPeerName(SockAddr& sa);
+    bool getPeerName(SockAddr& sa) const;
 
     //! \brief Shutdown one side of the connection.
     bool Shutdown(ShutDownSide rw);

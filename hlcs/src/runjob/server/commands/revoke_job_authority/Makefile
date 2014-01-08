@@ -29,6 +29,10 @@ include ../../../../../../Make.rules
 
 
 LDFLAGS += -L../../../../security -lsecurity
+LDFLAGS += -lrunjob_common
+LDFLAGS += -lboost_program_options-mt
+LDFLAGS += -lboost_date_time-mt
+LDFLAGS += -llog4cxx
 
 
 COMMAND              = $(shell basename `pwd`)
@@ -38,9 +42,6 @@ COMMAND_SRC         += Options.cc
 
 INSTALL_LIST          += $(call INSTALL_BIN_TARGET, $(COMMAND))
 bg_bin_links          := $(COMMAND)
-
-AUTHID_SIZE = $(shell ../../../samples/database_column_sizes/job_security_authid)
-CXXFLAGS += -DAUTHID_SIZE=$(AUTHID_SIZE)
 
 $(COMMAND): $(COMMAND_SRC:%.cc=%.o) Makefile
 	@echo "link $@"

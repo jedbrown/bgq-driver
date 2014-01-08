@@ -35,6 +35,7 @@
 #include "server/Job.h"
 
 #include <ramdisk/include/services/JobctlMessages.h>
+#include <ramdisk/include/services/ServicesConstants.h>
 #include <ramdisk/include/services/StdioMessages.h>
 
 LOG_DECLARE_FILE( runjob::server::log );
@@ -46,7 +47,7 @@ namespace job {
 void
 Start::create(
         const Job::Ptr& job,
-        uint8_t service
+        const uint8_t service
         )
 {
     const Start::Ptr result( 
@@ -56,7 +57,7 @@ Start::create(
 
 Start::Start(
         const Job::Ptr& job,
-        uint8_t service
+        const uint8_t service
         ) :
     _job( job ),
     _message( cios::Message::create(bgcios::jobctl::StartJob, _job->id()) )
@@ -80,6 +81,14 @@ Start::Start(
     uint32_t simulation_starting_rank = 0;
     const unsigned ranks_per_node = _job->info().getRanksPerNode();
 
+    // CNK needs to know current time stamp
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    const uint64_t currentTime = now.tv_sec * bgcios::MicrosecondsPerSecond + now.tv_usec;
+    if ( service == bgcios::JobctlService ) {
+        LOG_DEBUG_MSG( "current time 0x" << std::hex << currentTime );
+    }
+
     // send message to each node
     BOOST_FOREACH( IoNode::Map::value_type& i, _job->io() ) {
         IoNode& node = i.second;
@@ -97,6 +106,7 @@ Start::Start(
             msg = cios::Message::create( bgcios::jobctl::StartJob, _job->id() );
             msg->as<bgcios::jobctl::StartJobMessage>()->header.rank = simulation_starting_rank;
             msg->as<bgcios::jobctl::StartJobMessage>()->numRanksForIONode = num_ranks;
+            msg->as<bgcios::jobctl::StartJobMessage>()->currentTime = currentTime;
             if ( _job->pacing() ) {
                 _job->pacing()->add( msg, _job );
             } else {

@@ -210,7 +210,7 @@ uint32_t putData(uint64_t address, uint32_t rkey, uint32_t length)
       uint64_t& localAddress = reqID;
       uint32_t lkey = _largeRegion->getLocalKey();
       int err = _client->postRdmaWrite(reqID, rkey, address, //remote key and address
-                     lkey,  localAddress, (ssize_t)length);
+                     lkey,  localAddress, (ssize_t)length,IBV_SEND_SIGNALED);
       if (err) return (rc=(uint32_t)err);
 
       // Wait for notification that the rdma read completed.
@@ -223,6 +223,37 @@ uint32_t putData(uint64_t address, uint32_t rkey, uint32_t length)
 
    return rc;
 }
+
+   //! \brief  Transfer data to the client from the large memory region without posting a completion
+   //! \param  address Address of remote memory region.
+   //! \param  rkey Key of remote memory region.
+   //! \param  length Length of data to transfer.
+   //! \return 0 when successful, error when unsuccessful.
+   //! \note  Any postSend should really have the fence flag set
+
+uint32_t putDataNoCompletion(uint64_t address, uint32_t rkey, uint32_t length)
+{
+   uint32_t rc = 0;
+   try {
+      // Post a rdma write request to the send queue using the large message region.
+      _largeRegion->setMessageLength(length);
+      uint64_t reqID = (uint64_t)_largeRegion->getAddress();
+      uint64_t& localAddress = reqID;
+      uint32_t lkey = _largeRegion->getLocalKey();
+      int err = _client->postRdmaWriteWithAck(reqID, rkey, address, //remote key and address
+                     lkey,  localAddress, (ssize_t)length,
+                     _outMessageRegion , _ackMessage, _ackMessage->length); 
+      _ackMessage=NULL;
+      if (err) return (rc=(uint32_t)err);
+   }
+
+   catch (const RdmaError& e) {
+      rc = (uint32_t)e.errcode();
+   }
+
+   return rc;
+}
+
 
    //! \brief  Transfer data from the client into the large memory region.
    //! \param  address Address of remote memory region.
@@ -273,7 +304,7 @@ uint32_t getUserRdmaData( uint64_t address, uint32_t rkey, uint32_t length, uint
                      lkey,  localAddress, (ssize_t)length);
       if (err) return (rc=(uint32_t)err);
 
-      // Wait for notification that the rdma read completed.
+      // Wait for notification that the rdma read completed (IBV_SEND_SIGNALED)
       while (!completionChannelHandler(reqID));
    }
 
@@ -300,10 +331,10 @@ uint32_t putUserRdmaData( uint64_t address, uint32_t rkey, uint32_t length, uint
       uint64_t& localAddress = reqID;
       uint32_t lkey = _largeRegion->getLocalKey();
       int err = _client->postRdmaWrite(reqID, rkey, address, //remote key and address
-                     lkey,  localAddress, (ssize_t)length);
+                     lkey,  localAddress, (ssize_t)length,IBV_SEND_SIGNALED);
       if (err) return (rc=(uint32_t)err);
 
-      // Wait for notification that the rdma read completed.
+      // Wait for notification that the rdma read completed (IBV_SEND_SIGNALED)
       while (!completionChannelHandler(reqID));
    }
 
@@ -425,6 +456,12 @@ uint32_t putUserRdmaData( uint64_t address, uint32_t rkey, uint32_t length, uint
    //! \return Nothing.
 
    void getsockopt(const ClientMessagePtr& message);
+
+   //! \brief  Handle a gpfs_fcntl message recevied from completion channel.
+   //! \param  message Message from client.
+   //! \return Nothing.
+
+   void gpfsfcntl(const ClientMessagePtr& message);
 
    //! \brief  Handle an Ioctl message received from completion channel.
    //! \param  message Message from client.
@@ -582,17 +619,11 @@ uint32_t putUserRdmaData( uint64_t address, uint32_t rkey, uint32_t length, uint
 
    void write(const ClientMessagePtr& message);
 
-   //! \brief  Handle a Write message recevied from completion channel.
+   //! \brief  Handle a WriteImmediate message recevied from completion channel.
    //! \param  message Message from client.
    //! \return Nothing.
 
-   void writeRdmaVirt(const ClientMessagePtr& message);
-
-   //! \brief  Handle a WriteAck message recevied from rdma or blocked message (Write in progress)
-   //! \param  message Message from client.
-   //! \return Nothing.
-
-   void writeRdmaVirtAck(const ClientMessagePtr& message);
+   void writeImmediate(const ClientMessagePtr& message);
 
    //! \brief  Handle a SetupJob message received from completion channel.
    //! \param  message Message from client.
@@ -613,6 +644,36 @@ uint32_t putUserRdmaData( uint64_t address, uint32_t rkey, uint32_t length, uint
    //! \return Slot in poll set for specified descriptor.
 
    size_t addBlockedMessage(int fd, short events, ClientMessagePtr message);
+
+   //! \brief  Handle a message FsetXattr or FremoveXattr received from completion channel.
+   //! \param  message Message from client.
+   //! \return Nothing.
+   void fxattr_setOrRemove(const ClientMessagePtr& message);
+
+   //! \brief  Handle a message FgetXattr or FlistXattr received from completion channel.
+   //! \param  message Message from client.
+   //! \return Nothing.
+   void ffxattr_retrieve(const ClientMessagePtr& message);
+
+   //! \brief  Handle a message PsetXattr or LsetXattr received from completion channel.
+   //! \param  message Message from client.
+   //! \return Nothing.
+   void pathsetxattr(const ClientMessagePtr& message);
+
+   //! \brief  Handle a message PremoveXattr or LremoveXattr received from completion channel.
+   //! \param  message Message from client.
+   //! \return Nothing.
+   void pathremovexattr(const ClientMessagePtr& message);
+
+   //! \brief  Handle a message PgetXattr or LgetXattr received from completion channel.
+   //! \param  message Message from client.
+   //! \return Nothing.
+   void pathgetxattr(const ClientMessagePtr& message);
+
+   //! \brief  Handle a message PlistXattr or LlistXattr received from completion channel.
+   //! \param  message Message from client.
+   //! \return Nothing.
+   void pathlistxattr(const ClientMessagePtr& message);
 
 
    //! Counter to increment when thread initialization is complete.
@@ -672,13 +733,10 @@ uint32_t putUserRdmaData( uint64_t address, uint32_t rkey, uint32_t length, uint
    static const nfds_t MaxPollSetSize = 128;
 
    //! Number of fixed entries in poll set.
-   static const nfds_t FixedPollSetSize = 2;
+   static const nfds_t FixedPollSetSize = 1;
 
    //! Index of completion channel descriptor in poll set.
    static const int CompChannel = 0;
-
-   //! Index of event channel descriptor in poll set.
-   static const int EventChannel = 1;
 
    //! Set of descriptors to poll.
    struct pollfd _pollSet[MaxPollSetSize];
@@ -744,7 +802,8 @@ uint32_t putUserRdmaData( uint64_t address, uint32_t rkey, uint32_t length, uint
     };  
 
      bgcios::MessageHeader * allocateClientAckMessage(bgcios::MessageHeader * header,uint16_t inType, uint32_t inReturnCode=0, uint32_t inLength=sizeof(bgcios::MessageHeader) ){
-
+      // Should be plenty of outbound ack regions, so assert list is notempty
+      assert(!_ackMemFreeList.empty());
       // Build ack message in outbound message region.
       bgcios::MessageHeader * mh = _ackMemFreeList.front();
       memcpy(mh,header,sizeof(bgcios::MessageHeader) );
@@ -810,12 +869,12 @@ size_t getSyscallAccessLength() const {
 
 private:
 uint64_t setSyscallStart(MessageHeader * mh, int fd=-1, char * pathname1=BLANK,char * pathname2=BLANK, size_t accessLength=0){
-    _syscall_mh = mh;
-    _syscallStartTimestamp = GetTimeBase();
+    _syscall_mh = mh;    
     _syscallFileString1 = pathname1;
     _syscallFileString2 = pathname2;
     _syscallFd=fd;
     _syscallAccessLength = accessLength;
+    _syscallStartTimestamp = GetTimeBase();
   return _syscallStartTimestamp;
 }
 
@@ -838,6 +897,17 @@ PluginHandleSharedPtr _pluginHandlePtr;
 
 
 void updatePlugin();
+
+//internal class to monitor for disconnect from compute node
+class EventWaiter : public Thread
+{ 
+  friend class ClientMonitor;
+  EventWaiter(ClientMonitor& cm):_clientMonitor(cm){}
+  void * run(void);
+  ClientMonitor& _clientMonitor;
+};
+friend class ClientMonitor::EventWaiter;
+
 
 };
 //! Smart pointer for ClientMonitor object.

@@ -939,6 +939,8 @@
      message="ND Receiver Correctable Error : $(LINK)  count=$(%d,2)  $(DETAILS)"
      description="A correctable error has been reported by the Network Device unit of a BQC."
      decoder="fw_ND_correctableDecoder"
+     threshold_count="5"
+     threshold_period="1 hour"
      />
  */
 
@@ -967,11 +969,12 @@
      category="BQC" 
      component="FIRMWARE"
      severity="WARN"
-     message="A2 TLB Parity Error : MMUCR1=$(MMUCR1)"
+     message="A2 TLB Parity Error : MMUCR1=$(MMUCR1) MCSR=$(MCSR) : $(MCSR_DETAILS)"
      description="A TLB parity error machine check was reported by the A2.  Recovery will be attempted."
      service_action="$(Diagnostics)"
      relevant_diags="processor"
      threshold_count="10"
+     decoder="fw_A2_tlbParityErrorDecoder"
      />
 */
 

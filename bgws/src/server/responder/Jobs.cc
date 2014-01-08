@@ -93,6 +93,7 @@ If the query parameters contains serviceLocation, the user must be an administra
     "username" : &quot;<i>string</i>&quot;,
     "block" : <i>blockID</i>,
     "executable" : &quot;<i>path</i>&quot;, // Optional
+    "cwd" : &quot;<i>path</i>&quot;, // Optional
     "startTime" : &quot;<i>\ref timestampFormat "timestamp"</i>&quot;,
     "endTime" : &quot;<i>\ref timestampFormat "timestamp"</i>&quot;, // Optional
     "status" : &quot;<i>jobStatus</i>&quot;,
@@ -604,6 +605,7 @@ void Jobs::_queryComplete(
             obj.set( "username", cols[DBTJob::USERNAME_COL].getString() );
             obj.set( "block", cols[DBTJob::BLOCKID_COL].getString() );
             obj.set( "executable", cols[DBTJob::EXECUTABLE_COL].getString() );
+            obj.set( "cwd", cols[DBTJob::WORKINGDIR_COL].getString() );
             obj.set( "startTime", cols[DBTJob::STARTTIME_COL].getTimestamp() );
             if ( cols[DBTJob_history::ENTRYDATE_COL] ) {
                 obj.set( "endTime", cols[DBTJob_history::ENTRYDATE_COL].getTimestamp() );
@@ -749,6 +751,7 @@ void Jobs::_serviceQueryComplete(
             obj.set( "username", cols[DBTJob::USERNAME_COL].getString() );
             obj.set( "block", cols[DBTJob::BLOCKID_COL].getString() );
             obj.set( "executable", cols[DBTJob::EXECUTABLE_COL].getString() );
+            obj.set( "cwd", cols[DBTJob::WORKINGDIR_COL].getString() );
             obj.set( "startTime", cols[DBTJob::STARTTIME_COL].getTimestamp() );
             obj.set( "status", cols[DBTJob::STATUS_COL].getString() );
             obj.set( "nodesUsed", cols[DBTJob::NODESUSED_COL].as<uint64_t>() );

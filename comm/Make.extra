@@ -18,12 +18,11 @@ ifeq (${ENV},System)
 DEFAULT_PAMI=sys
 DEFAULT_MPI =gcc.legacy
 SHARED_OBJECTS =					\
-	${INSTALL_DIR}/${DEFAULT_MPI}/lib/*.so*		\
-	${INSTALL_DIR}/${DEFAULT_PAMI}/lib/*.so*
+	${INSTALL_DIR}/lib/*.so*		\
+	${INSTALL_DIR}/lib/*.so*
 ${INSTALL_DIR}/shared-objects.tgz: all
-	mkdir -p build/packaging/
-	rsync -av --del ${SHARED_OBJECTS} build/packaging/
-	-cd build/packaging/ && tar -zvc -f $@ *
+	@mkdir -p build/packaging/
+	-cd build/packaging/ && tar -zc -f $@ *
 $(INSTALL_DIR)/README: doc/bgq/README
 	cp doc/bgq/README $(INSTALL_DIR)/README
 

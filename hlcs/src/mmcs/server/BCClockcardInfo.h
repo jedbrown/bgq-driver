@@ -21,28 +21,23 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_BC_CLOCKCARD_INFO_H_
 #define MMCS_SERVER_BC_CLOCKCARD_INFO_H_
 
-
 #include "BCIconInfo.h"
-
 
 namespace mmcs {
 namespace server {
 
-
-class BCClockcardInfo: public BCIconInfo
+class BCClockcardInfo : public BCIconInfo
 {
 public:
     BCClockcardInfo(const std::string& loc) : BCIconInfo(loc) {}
-    std::string midplanePos() { return _location.substr(0,3); }
+    std::string midplanePos() const { return _location.substr(0,3); }
     std::string cardName() { return "K"; }
 };
 
 
 } } // namespace mmcs::server
-
 
 #endif

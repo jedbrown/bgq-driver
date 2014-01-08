@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 # begin_generated_IBM_copyright_prolog                             
 #                                                                  
 # This is an automatically generated copyright prolog.             
@@ -205,7 +205,7 @@ else
 	if [ $? -eq 0 ] ; then
 		KERNEL_RPM_ARCH='ppc64'
 	else
-		KERNEL_RPM_ARCH='ppc64bgq'
+		echo "No kernel RPMs found in $KERNEL_RPM_LOC"	
 	fi
 fi
 
@@ -414,24 +414,10 @@ if [ $ONLY_ADDPKGS -eq 0 ] ; then
      rm $DISTROFS_LOC/etc/rc.d/rc3.d/S09bgsys
   fi 
 
-  # If the default RHEL6/RHEL6.1 RPMs are installed we need to remove them.
-  for RPM in "kernel-debug-devel-2.6.32-71.el6.ppc64" "kernel-debug-2.6.32-71.el6.ppc64" "kernel-2.6.32-71.el6.ppc64" \
- 	   "kernel-devel-2.6.32-71.el6.ppc64" "kernel-bootwrapper-2.6.32-71.el6.ppc64" "kernel-headers-2.6.32-71.el6.ppc64" \
-	   "kernel-debug-2.6.32-131.0.15.el6.ppc64" "kernel-headers-2.6.32-131.0.15.el6.ppc64" \
-	   "kernel-debug-devel-2.6.32-131.0.15.el6.ppc64" "kernel-2.6.32-131.0.15.el6.ppc64" \
-	   "kernel-devel-2.6.32-131.0.15.el6.ppc64" "kernel-bootwrapper-2.6.32-131.0.15.el6.ppc64" \
-	   "kernel-firmware-2.6.32-131.0.15.el6.noarch" "kernel-2.6.32-220.el6.ppc64" "kernel-doc-2.6.32-220.el6.noarch" \
-	   "kernel-headers-2.6.32-220.el6.ppc64" "kernel-debug-devel-2.6.32-220.el6.ppc64" \
-	   "kernel-bootwrapper-2.6.32-220.el6.ppc64" "kernel-devel-2.6.32-220.el6.ppc64" \
-	   "kernel-firmware-2.6.32-220.el6.noarch" "kernel-debug-2.6.32-220.el6.ppc64" \
-	   "kernel-bootwrapper-2.6.32-279.el6.ppc64" "kernel-devel-2.6.32-279.el6.ppc64" \
-	   "kernel-firmware-2.6.32-279.el6.noarch" "kernel-headers-2.6.32-279.el6.ppc64" \
-	   "kernel-2.6.32-279.el6.ppc64" ; do
-
-	   rpm --root $DISTROFS_LOC -qa | grep $RPM &> /dev/null 
-	   if [ $? -eq 0 ] ; then
-		 rpm --root $DISTROFS_LOC -e --nodeps $RPM 2>&1 | tee -a $LOG_DIR/$LOGFILE
-	   fi
+  # If the default RHEL6.x RPMs are installed we need to remove them.
+  for RPM in `rpm --root $DISTROFS_LOC -qa | grep kernel- | grep ppc64 | grep -v bgq`; do
+	echo "removing kernel RPM [$RPM]"
+	rpm --root $DISTROFS_LOC -e --nodeps $RPM 2>&1 | tee -a $LOG_DIR/$LOGFILE
   done
 
   INSTALL_RPMS=0
@@ -678,7 +664,7 @@ if [ -e $ADDPKGS_LOC ] ; then
 
 	if [ $? -eq 0 ] ; then
 		if [ -e $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/bin/new_install ] && 
-		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446 ] ; then
+		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.4.gcc447 ] ; then
 			echo -en "\n\tFound the full IBM XL C/C++ Compiler RPM set.  Configuring ...\n"
 			echo "1" > $DISTROFS_LOC/tempKeyFile
 			mount --bind /bgsys $DISTROFS_LOC/bgsys
@@ -687,9 +673,9 @@ if [ -e $ADDPKGS_LOC ] ; then
 				./new_install < /tempKeyFile ; \
 				exit " 2>&1 | tee -a $LOG_DIR/$LOGFILE
 			umount $DISTROFS_LOC/bgsys
-                        mv $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446 \
-			   $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
-                        cat $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        mv $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.4.gcc447 \
+			   $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.4.gcc447.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        cat $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.4.gcc447.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.4.gcc447 2>&1 | tee -a $LOG_DIR/$LOGFILE
 			rm $DISTROFS_LOC/tempKeyFile
 		fi
 	fi
@@ -698,7 +684,7 @@ if [ -e $ADDPKGS_LOC ] ; then
 
 	if [ $? -eq 0 ] ; then
 		if [ -e $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/bin/new_install ] &&
-		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446 ] ; then
+		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.4.gcc447 ] ; then
 			echo -en "\n\tFound the full IBM XL Fortran Compiler RPM set.  Configuring ...\n"
 			echo "1" > $DISTROFS_LOC/tempKeyFile
 			mount --bind /bgsys $DISTROFS_LOC/bgsys
@@ -706,9 +692,9 @@ if [ -e $ADDPKGS_LOC ] ; then
 			chroot $DISTROFS_LOC /bin/bash -c "cd opt/ibmcmp/xlf/bg/14.1/bin/ ; \
 				./new_install < /tempKeyFile ; \
 				exit " 2>&1 | tee -a $LOG_DIR/$LOGFILE
-                        mv $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446 \
-			   $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
-                        cat $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        mv $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.4.gcc447 \
+			   $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.4.gcc447.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        cat $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.4.gcc447.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.4.gcc447 2>&1 | tee -a $LOG_DIR/$LOGFILE
 			rm $DISTROFS_LOC/tempKeyFile
 			umount $DISTROFS_LOC/bgsys
 		fi
@@ -758,7 +744,7 @@ if [ ! -e BGQ_RAMDISK_PATH/bin/ramdisk.gz ] ; then
 
 		# Also put a copy in the BG/Q Linux Distro for future use.
 		echo -en "\n\n\t Ramdisk build successful.  Putting a copy in $DISTROFS_LOC/boot ...\n\n"
-		cp -a BGQ_RAMDISK_PATH/bin/ramdisk.gz $DISTROFS_LOC/boot
+		cp -a BGQ_RAMDISK_PATH/bin/ramdisk.gz $DISTROFS_LOC/boot/ramdisk
 
 	    fi
 	else
@@ -768,7 +754,7 @@ if [ ! -e BGQ_RAMDISK_PATH/bin/ramdisk.gz ] ; then
 elif [ ! -e $DISTROFS_LOC/boot/ramdisk.gz ] ; then
 
     echo -en "\n\n\tNo ramdisk.gz found in $DISTROFS_LOC/boot .  Putting one there ...\n\n"
-    cp -a BGQ_RAMDISK_PATH/bin/ramdisk.gz $DISTROFS_LOC/boot
+    cp -a BGQ_RAMDISK_PATH/bin/ramdisk.gz $DISTROFS_LOC/boot/.
 
 fi
 
@@ -779,10 +765,10 @@ if [ ! -e BGQ_RAMDISK_PATH/bin/mlxFwUpdate ] ; then
     	BGQ_RAMDISK_PATH/tools/bgqPopulateInitramfs.sh 2>&1 | tee -a $LOG_DIR/$LOGFILE
     fi
     # Make sure the addtree is populated
-    cp /lib64/libm-2.12.so BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
-    cp -a /lib64/libm.so.6 BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
-    cp /lib64/libz.so.1.2.3 BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
-    cp -a /lib64/libz.so.1 BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
+    cp -af /lib64/libm-*.so* BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
+    cp -af /lib64/libm.so* BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
+    cp -af /lib64/libz.so* BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
+    cp -af /lib64/libz.so* BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
     cp /usr/bin/mstflint BGQ_RAMDISK_PATH/tools/mlxFwUpdate/usr/bin
     if [ -e BGQ_INSTALL_DIR/baremetal/firmware/mlxFwUpdate ] ; then
 	cp -a BGQ_INSTALL_DIR/baremetal/firmware/mlxFwUpdate/* BGQ_RAMDISK_PATH/tools/mlxFwUpdate/bin
@@ -794,7 +780,7 @@ if [ ! -e BGQ_RAMDISK_PATH/bin/mlxFwUpdate ] ; then
     fi
     # If the initramfs still isn't populated, something is wrong.
     if [ ! -e BGQ_INITRAMFS_PATH/bin/busybox ] ; then                             
-        echo -en "\n\n\tERROR: bgqPopulateInitramfs.sh encountered a failure.\n"  
+        echo -en "\n\n\tERROR: bgqPopulateInitramfs.sh - BGQ_INITRAMFS_PATH/bin/busybox is missing.\n"  
         echo -en "\t       Consult the logs above for further details.\n\n"       
         SUCCESS=0                                                                 
     else                                                                          
@@ -803,6 +789,7 @@ if [ ! -e BGQ_RAMDISK_PATH/bin/mlxFwUpdate ] ; then
 	    BGQ_RAMDISK_PATH/bin/build-ramdisk --saveimg --verbose \
 		--rootfs BGQ_INITRAMFS_PATH --addtree BGQ_RAMDISK_PATH/tools/mlxFwUpdate \
 		-o BGQ_RAMDISK_PATH/bin/mlxFwUpdate 2>&1 | tee -a $LOG_DIR/$LOGFILE
+	    chmod o+rx BGQ_RAMDISK_PATH/bin/mlxFwUpdate
             if [ ! -e BGQ_RAMDISK_PATH/bin/mlxFwUpdate ] ; then
                 echo -en "\n\n\tERROR: build-ramdisk failed to run properly.\n"   
                 echo -en "\t       Consult the logs above and correct the problem.\n"
@@ -830,7 +817,6 @@ elif [ ! -e $DISTROFS_LOC/boot/mlxFwUpdate ] ; then
 
     echo -en "\n\n\tNo mlxFwUpdate ramdisk found in $DISTROFS_LOC/boot .  Putting one there ...\n\n"
     cp -a BGQ_RAMDISK_PATH/bin/mlxFwUpdate $DISTROFS_LOC/boot                               
-
 fi
 
 ################################################################

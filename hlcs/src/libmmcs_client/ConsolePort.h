@@ -34,9 +34,7 @@
 #include <stdexcept>
 #include <string>
 
-
 namespace mmcs_client {
-
 
 /*!
  * \brief An interface between the mmcs server and the mmcs console.
@@ -47,8 +45,7 @@ class ConsolePort : private boost::noncopyable
             std::string& m,
             char* buf,
             bool& done,
-            const int rcvsz,
-            const unsigned timeout = 0
+            const int rcvsz
             );
 public:
     /*!
@@ -75,10 +72,10 @@ public:
             std::string&
             );
 
-    int checkConnection() const;
+    void checkConnection() const;
 
     void write(
-            CxxSockets::Message& msg
+            const CxxSockets::Message& msg
             ) const;
 
     void setSock(const CxxSockets::TCPSocketPtr& sock) { _sock = sock; }
@@ -121,7 +118,6 @@ public:
 
     ConsolePortClient* accept();
 };
-
 
 } // namespace mmcs_client
 

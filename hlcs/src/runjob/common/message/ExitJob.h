@@ -32,6 +32,7 @@
 #include <boost/archive/binary_oarchive.hpp>
 
 #include <boost/serialization/base_object.hpp>
+#include <boost/serialization/map.hpp>
 #include <boost/serialization/vector.hpp>
 
 namespace runjob {
@@ -90,8 +91,9 @@ public:
         _error( error_code::success ),
         _message(),
         _nodes(),
-        _rasCount( 0 ),
-        _rasMessage()
+        _rasCount(),
+        _rasMessage(),
+        _rasSeverity()
     {
         this->setType(Message::ExitJob);
     }
@@ -108,8 +110,9 @@ public:
     error_code::rc _error;
     std::string _message;
     Nodes _nodes;
-    unsigned _rasCount;
+    std::map<std::string, unsigned> _rasCount;
     std::string _rasMessage;
+    std::string _rasSeverity;
 
 private:
     friend class boost::serialization::access;
@@ -126,6 +129,7 @@ private:
         ar & _nodes;
         ar & _rasCount;
         ar & _rasMessage;
+        ar & _rasSeverity;
     }
 };
 

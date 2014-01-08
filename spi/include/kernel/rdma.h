@@ -169,7 +169,7 @@ int Kernel_RDMAPollCQ(int RDMA_fd, int* num_entries, Kernel_RDMAWorkCompletion_t
 typedef 
 struct Kernel_RDMARegion{
    void * address;                  /*> The start of the memory region    */
-   size_t length;                 /*> The length of the memory region   */
+   size_t length;                   /*> The length of the memory region   */
    uint32_t lkey;                   /*> contains or will contain the key for the memory region for RDMA between IO node and compute node */             
 } Kernel_RDMARegion_t;
 

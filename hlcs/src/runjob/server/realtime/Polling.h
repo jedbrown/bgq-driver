@@ -35,6 +35,7 @@
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/function.hpp>
+#include <boost/utility.hpp>
 #include <boost/weak_ptr.hpp>
 
 namespace runjob {
@@ -42,9 +43,13 @@ namespace server {
 namespace realtime {
 
 /*!
- * \brief
+ * \brief Poll for block status changes that have happened since a provided sequence ID
+ *
+ * \see EventHandler
+ *
+ * \note noncopyable because destructor does actual work
  */
-class Polling : public boost::enable_shared_from_this<Polling>
+class Polling : public boost::enable_shared_from_this<Polling>, private boost::noncopyable
 {
 public:
     /*!
@@ -129,7 +134,6 @@ private:
             error_code::rc error,
             const std::string& message
             ) const;
-
 
 private:
     const boost::weak_ptr<Server> _server;

@@ -2278,7 +2278,6 @@ void printHelp()
     printf("  -listblockIOlinksbrief block        - Display a summary count of available/unavailable I/O links for a compute block\n");
     printf("  -checkblockIO block                 - Indicates unconnected I/O nodes and midplanes failing I/O rules for compute block\n");
     printf("  -checkblockIOconnected block        - Indicates if all I/O nodes are available for compute block\n");
-    printf("  -getNodeMidplaneCoordinates loc     - Display coordinate for the node relative to the midplane.\n");
     printf("  -dumpxml                            - Set BG_DUMP_XML=true envvar\n");
     printf("                                          This option causes Core API internal XML files to\n");
     printf("                                          be dumped to files in /tmp\n");

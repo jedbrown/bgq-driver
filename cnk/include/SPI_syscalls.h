@@ -154,6 +154,9 @@ __END_DECLS
     SYSCALL(SENDX)                          // 1099
     SYSCALL(ISGUESTTHREAD)                  // 1100
     SYSCALL(RDMA_OPEN)                      // 1101
+    SYSCALL(GETMAPPING)                     // 1102
+    SYSCALL(EXECENVMON2COMMAND)             // 1103
+    SYSCALL(GPFSFCNTL)                      // 1104
 
     // IMPORTANT!!!  Place new syscalls at the end of this list to avoid binary incompatibility breakage.  
 

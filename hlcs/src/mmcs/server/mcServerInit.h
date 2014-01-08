@@ -25,10 +25,9 @@
  * \file mcServerInit.h
  * \brief Initialize MMCS' interface with MCServer
  *
- * establish a generic listener for RAS events that are not handled by
- * any other RAS listener
+ * Establish a generic listener for RAS events that are not handled by any other RAS listener.
  *
- * Send a Bringup command to MCServer to initialize the hardware
+ * Send a Bringup command to MCServer to initialize the hardware.
  */
 
 #ifndef MC_SERVER_INIT_H
@@ -39,19 +38,13 @@
 
 #include "libmmcs_client/CommandReply.h"
 
-
 namespace mmcs {
 namespace server {
-
 
 void mcServerInit(
         const std::vector<std::string>& bringup_options,
         mmcs_client::CommandReply& reply,
         const bool blocks_are_booted
-        );
-
-void mcServerTerm(
-        mmcs_client::CommandReply& reply
         );
 
 } } // namespace mmcs::server

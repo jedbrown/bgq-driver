@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_DATABASE_BLOCK_COMMAND_THREAD_H_
 #define MMCS_SERVER_DATABASE_BLOCK_COMMAND_THREAD_H_
 
@@ -32,10 +31,8 @@
 
 #include <db/include/api/BGQDBlib.h>
 
-
 namespace mmcs {
 namespace server {
-
 
 /*!
  * \class DatabaseBlockCommandThread
@@ -46,6 +43,7 @@ class DatabaseBlockCommandThread : public common::Thread
 public:
     DatabaseBlockCommandThread() :
         Thread(),
+        _creationId( 0 ),
         _action(BGQDB::NO_BLOCK_ACTION),
         _transactions(NULL),
         _commands(NULL)
@@ -61,7 +59,6 @@ public:
     BlockDBPollingGovernor* _transactions;
     MMCSCommandMap* _commands;
 };
-
 
 } } // namespace mmcs::server
 

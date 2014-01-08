@@ -21,12 +21,12 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#ifndef MASTER_WAITER_H
-#define MASTER_WAITER_H
+#ifndef MASTER_SUBNET_WAITER_H
+#define MASTER_SUBNET_WAITER_H
 
 #include "common/Thread.h"
 
-#include "master/lib/BGMasterClientApi.h"
+#include "master/lib/BGMasterClient.h"
 #include "master/common/BinaryController.h"
 
 #include <string>
@@ -36,14 +36,14 @@ namespace server {
 namespace master {
 
 // Waits for a specific subnet_mc to end
-class SubnetWaiter : public common::Thread {
+class SubnetWaiter : public common::Thread
+{
 public:
     SubnetWaiter() : Thread() {}
     void* threadStart();
     void setBin(BinaryControllerPtr bin) { _bin_to_wait = bin; }
     void setAlias(const std::string& alias) { _alias = alias; }
 private:
-    BGMasterClient _client;
     BinaryControllerPtr _bin_to_wait;
     std::string _alias;
 };

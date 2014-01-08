@@ -28,6 +28,7 @@
 #include "common/Mapping.h"
 #include "common/properties.h"
 
+#include "server/job/CopyMappingFile.h"
 #include "server/job/ValidateMappingFile.h"
 
 #include "test/make_argv.h"
@@ -257,3 +258,4 @@ BOOST_FIXTURE_TEST_CASE( small_block_32_nodes, MyFixture )
             job::ValidateMappingFile(_id, _info, _size)
             );
 }
+

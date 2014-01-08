@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
    bgcios::SignalHandler sigillHandler(SIGILL);
    bgcios::SignalHandler sigsysHandler(SIGSYS);
    bgcios::SignalHandler sigabrtHandler(SIGABRT);
-   bgcios::SigtermHandler sigtermHandler();//SIGTERM
+   bgcios::SigtermHandler sigtermHandler;
    bgcios::Sigusr2Handler sigusr2Handler;
 
     

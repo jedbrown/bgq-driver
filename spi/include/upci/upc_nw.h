@@ -34,7 +34,6 @@
 
 #include "node_parms.h"
 
-
 __BEGIN_DECLS
 
 //! \addtogroup upc_spi
@@ -239,7 +238,7 @@ __INLINE__ void UPC_NW_SetCtrVChannel(unsigned link, unsigned ctr, uint8_t vcMas
     UPC_NW_PRINT_DEBUG(" link=%02d, ctr=%d, vcMask=%02x, mask=0x%016lx, endMask=0x%016lx\n",
             link, ctr, vcMask, mask, val);
 
-    DCRWriteUser(ND_RESE_DCR(link, UPC_CTRL), val);
+    DCRWriteCommon(ND_RESE_DCR(link, UPC_CTRL), val);
 
     #if 0
     unsigned retries=0;
@@ -280,8 +279,8 @@ void UPC_NW_SetLinkCtrVChannel(uint16_t linkMask, unsigned ctr, uint8_t vcMask);
 __INLINE__ void UPC_NW_Clear(uint64_t ctrCtlMask)
 {
     uint64_t curCtl = DCRReadUser(ND_500_DCR(CTRL_UPC_CLEAR));
-    DCRWriteUser(ND_500_DCR(CTRL_UPC_CLEAR), (curCtl | ctrCtlMask) );
-    DCRWriteUser(ND_500_DCR(CTRL_UPC_CLEAR), (curCtl & ~ctrCtlMask) );
+    DCRWriteCommon(ND_500_DCR(CTRL_UPC_CLEAR), (curCtl | ctrCtlMask) );
+    DCRWriteCommon(ND_500_DCR(CTRL_UPC_CLEAR), (curCtl & ~ctrCtlMask) );
     mbar();
 }
 
@@ -297,7 +296,7 @@ __INLINE__ void UPC_NW_Clear(uint64_t ctrCtlMask)
 __INLINE__ void UPC_NW_Stop(uint64_t ctrCtlMask)
 {
     uint64_t curCtl = DCRReadUser(ND_500_DCR(CTRL_UPC_STOP));
-    DCRWriteUser(ND_500_DCR(CTRL_UPC_STOP), (curCtl | ctrCtlMask) );
+    DCRWriteCommon(ND_500_DCR(CTRL_UPC_STOP), (curCtl | ctrCtlMask) );
     mbar();
 }
 
@@ -313,7 +312,7 @@ __INLINE__ void UPC_NW_Stop(uint64_t ctrCtlMask)
 __INLINE__ void UPC_NW_Start(uint64_t ctrCtlMask)
 {
     uint64_t curCtl = DCRReadUser(ND_500_DCR(CTRL_UPC_STOP));
-    DCRWriteUser(ND_500_DCR(CTRL_UPC_STOP), (curCtl & ~ctrCtlMask) );
+    DCRWriteCommon(ND_500_DCR(CTRL_UPC_STOP), (curCtl & ~ctrCtlMask) );
     mbar();
 }
 

@@ -28,7 +28,6 @@
 
 #include <utility/include/Log.h>
 
-#include <string>
 
 LOG_DECLARE_FILE("master");
 

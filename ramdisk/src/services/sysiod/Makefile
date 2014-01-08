@@ -42,7 +42,7 @@ endif
 
 # Additional linker flags
 LDFLAGS  += -L $(IOS_LIBRARY_DIR) -lbgcios
-LDFLAGS += -L -ldl
+LDFLAGS += -L -ldl -lrdmacm
 
 all: $(SYSIOD)
 

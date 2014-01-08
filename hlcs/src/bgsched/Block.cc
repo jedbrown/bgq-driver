@@ -39,15 +39,18 @@
 #include <db/include/api/Exception.h>
 #include <db/include/api/genblock.h>
 #include <db/include/api/GenBlockParams.h>
+#include <db/include/api/tableapi/DBConnectionPool.h>
 #include <db/include/api/tableapi/gensrc/bgqtableapi.h>
 
 #include <hlcs/include/security/privileges.h>
 
 #include <utility/include/Log.h>
+#include <utility/include/Symlink.h>
 #include <utility/include/UserId.h>
 #include <utility/include/XMLEntity.h>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
 
 #include <pthread.h>
@@ -813,7 +816,7 @@ Block::checkIOLinks(
                 // Get location for I/O link constructor
                 string location((*iter)->attrByName("source"));
                 // Construct the I/O link object from XML stream
-                IOLinkImplPtr.reset(new IOLink::Impl::Impl(location,*iter));
+                IOLinkImplPtr.reset(new IOLink::Impl(location,*iter));
                 IOLink::Ptr IOLinkPtr(new IOLink(IOLinkImplPtr));
                 // Add I/O link to the vector
                 IOLinksVector.push_back(IOLinkPtr);
@@ -971,7 +974,7 @@ Block::checkAvailableIOLinks(
                 // Get location for I/O link constructor
                 string location((*iter)->attrByName("source"));
                 // Construct the I/O link object from XML stream
-                IOLinkImplPtr.reset(new IOLink::Impl::Impl(location,*iter));
+                IOLinkImplPtr.reset(new IOLink::Impl(location,*iter));
                 // Add the I/O link if both the I/O link hardware state and destination I/O node are available
                 if ((IOLinkImplPtr->getState() == Hardware::Available) && (IOLinkImplPtr->getIONodeState() == Hardware::Available)) {
                     IOLink::Ptr IOLinkPtr(new IOLink(IOLinkImplPtr));
@@ -1503,9 +1506,37 @@ Block::initiateFree(
 
     BGQDB::BLOCK_STATUS state;
 
+    // create useful error message by gathering the program name from the first token of /proc/self/cmdline
+    std::string errmsg( "errmsg=Deallocated by Scheduler API ");
+    try {
+        const std::string path( std::string("/proc/self/cmdline") );
+        std::ifstream proc( path.c_str(), std::ifstream::in );
+        if ( !proc ) {
+            char buf[256];
+            LOG_WARN_MSG( "Could not open " << path << ": " << strerror_r(errno, buf, sizeof(buf)) );
+        } else {
+            char c;
+            std::string line;
+            while ( proc.get(c) ) {
+                if ( c == '\0' ) break;
+                line += c;
+            }
+            if ( !proc ) {
+                char buf[256];
+                LOG_WARN_MSG( "Could not read a line from  " << path << ": " << strerror_r(errno, buf, sizeof(buf)) );
+            } else {
+                errmsg += line;
+                errmsg += " ";
+            }
+        }
+    } catch ( const std::exception& e ) {
+        LOG_DEBUG_MSG( e.what() );
+    }
+    errmsg += "with pid " + boost::lexical_cast<std::string>( getpid() );
+
     // Serialize compute block deallocate requests
     pthread_mutex_lock(&blockaction_lock);
-    BGQDB::STATUS result = BGQDB::setBlockAction(blockName, BGQDB::DEALLOCATE_BLOCK);
+    BGQDB::STATUS result = BGQDB::setBlockAction(blockName, BGQDB::DEALLOCATE_BLOCK, std::deque<std::string>(1, errmsg));
     pthread_mutex_unlock(&blockaction_lock);
     switch (result) {
     case BGQDB::OK:

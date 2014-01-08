@@ -658,12 +658,6 @@ public:
         //! Device context.
         cnv_context *_context;
 
-        //! Protection domain.
-        cnv_pd _protectionDomain;
-
-        //! Completion queue.
-        cnv_cq _completionQ;
-
         //! Queue pair connected to jobctld.
         cnv_qp _queuePair;
 

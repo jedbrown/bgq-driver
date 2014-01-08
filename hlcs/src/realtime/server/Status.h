@@ -29,6 +29,8 @@
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
 
+#include <string>
+
 namespace realtime {
 namespace server {
 
@@ -39,6 +41,7 @@ public:
     struct Details {
         int connected_clients;
         DbChangesMonitor::State::Value db_changes_monitor_state;
+        std::string db2_version;
     };
 
     typedef boost::function<void ( Details details )> StatusCallback;

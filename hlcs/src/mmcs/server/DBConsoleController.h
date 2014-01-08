@@ -26,17 +26,16 @@
 
 
 #include "common/ConsoleController.h"
-#include "common/Thread.h"
 
 #include "types.h"
 
 #include "libmmcs_client/CommandReply.h"
 
 #include <bgq_util/include/pthreadmutex.h>
-
+#include <extlib/include/log4cxx/mdc.h>
 #include <utility/include/UserId.h>
 
-#include <boost/shared_ptr.hpp>
+#include <boost/scoped_ptr.hpp>
 
 #include <deque>
 #include <list>
@@ -45,10 +44,14 @@
 
 #include <pthread.h>
 
-
 namespace mmcs {
-namespace server {
+namespace common {
 
+class Thread;
+
+} // common
+
+namespace server {
 
 namespace command {
     class ListBlocks;
@@ -56,18 +59,14 @@ namespace command {
     class Status;
 }
 
-
 typedef std::map<std::string, BlockHelperPtr> BlockMap;
 typedef std::map<std::string, pthread_t> AllocateMap;
-typedef std::list<DBConsoleController*> MidplaneControllerList;
-
-typedef boost::shared_ptr<DBBlockController> DBBlockPtr;
-
+typedef std::list<DBConsoleController*> ConsoleControllerList;
 
 /*!
- * \brief control a midplane.
+ * \brief Control a console.
  */
-class DBConsoleController: public common::ConsoleController
+class DBConsoleController : public common::ConsoleController
 {
     friend class command::ListBlocks;
     friend class command::ListUsers;
@@ -90,11 +89,8 @@ public:
 
     void run();
 private:
-    void   serviceCommands();
+    void serviceCommands();
 
-    //
-    // Block selection and deselection
-    //
 public:
     DBBlockPtr selectBlock(std::deque<std::string> args, mmcs_client::CommandReply& reply, bool allocated);
     void deselectBlock();
@@ -107,10 +103,11 @@ public:
 
 private:
     common::Thread* _mmcsThread; // for debugging mmcs_server - thread using this DBConsoleController
+    boost::scoped_ptr<log4cxx::MDC> _blockMdc;
 
 private:
-    static PthreadMutex       _midplaneControllerListMutex;    // for serializing access to MidplaneControllerList
-    static MidplaneControllerList  _midplaneControllerList;    // keeps track of all DBMidplaneControllers
+    static PthreadMutex       _consoleControllerListMutex;    // for serializing access to ConsoleControllerList
+    static ConsoleControllerList  _consoleControllerList;    // keeps track of all DBConsoleControllers
 
 public:
     static DBBlockPtr findBlock(const std::string& blockId);

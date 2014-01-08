@@ -164,7 +164,7 @@ public:
     void setRDMAop(RDMAop op){_rdmaRequest.rdmaOp=op;}
 
     //! \brief Getter of the errnoReturn from the internal RDMArequest structure
-    uint64_t getRDMAerrno(){ return _rdmaRequest.errnoReturn; }
+    uint32_t getRDMAerrno(){ return (uint32_t)_rdmaRequest.errnoReturn; }
 
     //! \brief Getter of the bytesMoved from the internal RDMArequest structure
     uint64_t getBytesMoved(){ return _rdmaRequest.bytesMoved; }
@@ -204,7 +204,10 @@ public:
      * \param[in] receivedMsg  Is the UserMessageFdRDMA sent from the compute node application, format in UserMessages.h
      * \param[in] replyMsg Is the reply message returned to the compute node application.
      * \param[in] RDMAbuffer Is the address of the RDMA region used by sysiod for RDMA transfer
-     * \param[in] size Is the size of the RDMA buffer used by sysiod for RDMA transfer
+     * \param[in] size Is the size of the RDMA buffer on the IO node used by sysiod for RDMA transfer.  The size will be the current value of
+     *            of large_region size in bg.properties.  For example, 
+     * [cios]
+     * large_regions_size=1048576
      * \note Expected to have a derived class in a plugin which overrides this.  Default of base class is to send back an error
      *
      * \section RDMA Write Advice
@@ -238,7 +241,7 @@ public:
      * \param[in] RDMAbuffer Is the address of the RDMA region used by sysiod for RDMA transfer
      * \param[in] size Is the size of the RDMA buffer used by sysiod for RDMA transfer
      *
-     * \note Expected to have a derived class in a plugin which overrides this.  Default of base class is to send back an error
+     * \note Expect to have a derived class in a plugin which overrides this.  Default of base class is to send back an error
      * 
      * \section RDMA Write Advice
      * Inspect the RDMArequest for any errors noted in returnErrno or statusReturn and validate the bytesMoved is what was expected.

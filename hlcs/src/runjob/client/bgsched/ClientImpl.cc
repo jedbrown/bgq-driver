@@ -39,10 +39,9 @@ Client::Impl::Impl(
         const int argc,
         char** const argv
         ) :
-    _io_service(),
+    _io_service( 1 ), // concurrency hint of 1 will disable locking around epoll operations
     _options( boost::make_shared< ::runjob::client::options::Parser>(argc, argv) ),
-    _job( ),
-    _started( false )
+    _job( )
 {
     LOG_TRACE_MSG( __FUNCTION__ ); 
 }
@@ -54,9 +53,9 @@ Client::Impl::~Impl()
 
 bgq::utility::ExitStatus
 Client::Impl::start(
-            const int input,
-            const int output,
-            const int error
+        const int input,
+        const int output,
+        const int error
         )
 {
     // second byte is what WEXITSTATUS looks at, so we want it to be 1
@@ -67,15 +66,15 @@ Client::Impl::start(
     BOOST_ASSERT( result.getExitStatus() == 1 );
 
     {
-        const boost::shared_ptr< ::runjob::client::Job> job(
-                new ::runjob::client::Job(_io_service, _options, result)
+        const boost::shared_ptr<JobImpl> job(
+                new JobImpl(_io_service, _options, result)
                 );
         _job = job;
-        _started = true;
         job->start( input, output, error );
     }
 
-    _io_service.run();
+    const std::size_t handlers = _io_service.run();
+    LOG_DEBUG_MSG( "ran " << handlers << " handlers" );
 
     return result;
 }
@@ -85,13 +84,13 @@ Client::Impl::kill(
         const int signal
         )
 {
-    if ( !_started ) {
+    if ( _job.expired() ) {
         BOOST_THROW_EXCEPTION(
                 std::logic_error( "job has not been started" )
                 );
     }
 
-    const boost::shared_ptr< ::runjob::client::Job> job( _job.lock() );
+    const boost::shared_ptr<JobImpl> job( _job.lock() );
     if ( !job ) {
         BOOST_THROW_EXCEPTION(
                 std::logic_error( "job already terminated" )
@@ -100,7 +99,7 @@ Client::Impl::kill(
 
     _io_service.post(
             boost::bind(
-                &::runjob::client::Job::kill,
+                &JobImpl::kill,
                 job,
                 signal
                 )

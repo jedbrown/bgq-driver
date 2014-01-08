@@ -114,7 +114,7 @@ $(install_dir)/WebContent/resources/doc/bgws:
 $(install_dir)/WebContent/resources/doc/pami:
 	$(MKDIR) -p $(dir $@)
 	$(RM) $@
-	$(LN) -sf ../../../../comm/doc/html $@
+	$(LN) -sf ../../../../comm/share/doc/pami/html $@
 
 $(install_dir)/WebContent/resources/doc/spi:
 	$(MKDIR) -p $(dir $@)
@@ -150,7 +150,7 @@ setup_devel:
 	$(MKDIR) -p WebContent/resources/diags/
 	$(LN) -sf ../../../../work/diags/etc/tests.properties WebContent/resources/diags/
 	$(LN) -sf ../../../../work/bgsched/external WebContent/resources/doc/bgsched
-	$(LN) -sf ../../../../work/comm/doc/html WebContent/resources/doc/pami
+	$(LN) -sf ../../../../work/comm/share/doc/pami/html WebContent/resources/doc/pami
 	$(LN) -sf ../../../../work/bgpm/docs/html WebContent/resources/doc/bgpm
 	$(LN) -sf ../../../../work/ras/etc/RasEventBook.htm WebContent/resources/doc/
 	$(LN) -sf ../../../../work/bgws/doc/html WebContent/resources/doc/bgws

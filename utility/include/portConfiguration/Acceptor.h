@@ -190,9 +190,9 @@ public:
 
 private:
 
-    typedef boost::shared_ptr<boost::asio::ip::tcp::acceptor> _AcceptorPtr; //!< An acceptor pointer.
+    typedef boost::shared_ptr<boost::asio::ip::tcp::acceptor> AcceptorPtr; //!< An acceptor pointer.
 
-    typedef std::vector<_AcceptorPtr> _Acceptors; //!< Collection of acceptor pointers.
+    typedef std::vector<AcceptorPtr> Acceptors; //!< Collection of acceptor pointers.
 
 
     boost::asio::io_service &_io_service;
@@ -205,7 +205,7 @@ private:
 
     AcceptHandler _accept_handler;
 
-    _Acceptors _acceptors;
+    Acceptors _acceptors;
 
 
     void _startResolve(
@@ -219,11 +219,11 @@ private:
         );
 
     void _startAccept(
-            _AcceptorPtr acceptor_ptr
+            AcceptorPtr acceptor_ptr
         );
 
     void _handleAccept(
-            _AcceptorPtr acceptor_ptr,
+            AcceptorPtr acceptor_ptr,
             portConfig::SocketPtr socket_ptr,
             const boost::system::error_code& err
         );

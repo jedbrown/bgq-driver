@@ -765,8 +765,7 @@ sub worksheet
                printUsage() if ($optHelp);
 
                if (!defined($bgPropertiesFile)) {
-                  print "--properties is required\n";
-                  exit(0);
+                  $bgPropertiesFile = "/bgsys/local/etc/bg.properties";
                }
                 
                # ensure we can write to bg.properties
@@ -898,7 +897,7 @@ sub worksheet
                # this assumes the hardware is managed by a single subnet, multiple subnets
                # will need to be manually updated.
                print "adding '$hardware' to HardwareToManage in $bgPropertiesFile\n";
-               `sed -i 's/HardwareToManage.*=.*/HardwareToManage = $hardware/' $bgPropertiesFile`;
+               `sed -i 's/^HardwareToManage.*=.*/HardwareToManage = $hardware/' $bgPropertiesFile`;
                if ( $? ) {
                    die "sed failed with $?";
                }
@@ -922,8 +921,7 @@ Options:
 --input [path to configs directory ] | Specifies path where configuration files are found.
 
 --properties [properties-file-name] | properties file, used to obtain database name, schema, username, and
-password.  Also used to obtain machine size if --size is not given. If --properties is not given,
-the BG_PROPERTIES_FILE environment variable will be used. Note, your uid will need permission to
+password.  Also used to obtain machine size if --size is not given. Your uid will need permission to 
 write to this file since it will be updated with the rack locations to manage.
 
 --size [XxY] | Size of system to build. Either "number of rows" x "number of racks per row" or mid for a half
@@ -952,9 +950,8 @@ This utility should be used to populate the BlueGene/Q database records when ins
 
 NOTE: This utility requires the perl DBI module and DB2 database driver. 
 
-=head1 BUGS
-
-None.
+NOTE: The BG_PROPERTIES_FILE environment variable will be used if --properties is not supplied. If that 
+environment is not specified, it will use /bgsys/local/etc/bg.properties by default. 
 
 =head1 AUTHOR
 

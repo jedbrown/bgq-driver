@@ -50,7 +50,6 @@ LOG_DECLARE_FILE( "database" );
 namespace BGQDB {
 
 const unsigned DBConnectionPool::DefaultSize = 10;
-const unsigned DBConnectionPool::MaximumSize = 100;
 
 
 void
@@ -128,13 +127,6 @@ DBConnectionPool::DBConnectionPool(
         _size = DefaultSize;
     }
 
-    if ( ! validateSize() ) {
-        // use default value if properties file is not configured correctly
-        _size = std::min( MaximumSize, _size );
-        LOG_WARN_MSG( "The size provided for connection_pool_size in " << section_name << " is too large, using maximum size " << _size );
-    }
-
-
     try {
         _extraConnectionParameters = _properties->getValue( section_name, "extra_connection_parameters");
     } catch ( const std::exception& e ) {
@@ -158,29 +150,10 @@ DBConnectionPool::DBConnectionPool(
         throw std::invalid_argument( "properties" );
     }
 
-    // validate maximum
-    if ( ! validateSize() ) {
-        throw std::invalid_argument( "size" );
-    }
-
     // init pool
     this->initCxxdbPool();
 }
 
-
-bool
-DBConnectionPool::validateSize()
-{
-    if ( _size > MaximumSize ) {
-        LOG_WARN_MSG(
-                "size value (" << _size <<
-                ") larger than allowed maximum size (" << MaximumSize << ")"
-                );
-        return false;
-    } else {
-        return true;
-    }
-}
 
 void
 DBConnectionPool::initCxxdbPool()
@@ -225,7 +198,8 @@ DBConnectionPool::checkout()
     return DBConnection::Ptr();
 }
 
-cxxdb::ConnectionPtr DBConnectionPool::getConnection()
+cxxdb::ConnectionPtr
+DBConnectionPool::getConnection()
 {
     if ( ! _connection_pool_ptr ) {
         BOOST_THROW_EXCEPTION( BGQDB::Exception( BGQDB::CONNECTION_ERROR, "connection pool not initialized" ) );

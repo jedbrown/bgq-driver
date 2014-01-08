@@ -26,7 +26,14 @@
 #define THREADS_PER_CORE 4
 #define MAX_THREADS      ( MAX_CORES * THREADS_PER_CORE )
 
-#define TRACE(x)
+#define PERS() ( FIRMWARE()->deprecated.personalityPtr )
+#define IS_ROOT_NODE() ( ( PERS()->Network_Config.Acoord == 0 ) && ( PERS()->Network_Config.Bcoord == 0 ) && ( PERS()->Network_Config.Ccoord == 0 ) && ( PERS()->Network_Config.Dcoord == 0 ) && ( PERS()->Network_Config.Ecoord == 0 ) )
+
+
+#define DEBUG(x)
+#define TRACE(x) if ( IS_ROOT_NODE() ) printf x 
+#define ERROR(x) printf x 
+
 //#define TRACE(x) if (beQuiet==0) printf x
 //#define TRACE(x) printf x
 

@@ -37,23 +37,23 @@
 //! is related back to a binary alias.  A Trigger is a cause, a
 //! Behavior is what to do about it.  Policies also govern the
 //! number of instances an alias is allowed and its dependencies.
-class Policy {
+class Policy 
+{
 public:
-
     //! \brief Acceptable triggers.
     enum Trigger { INVALID_TRIGGER, KILL_REQUESTED, BINARY_ABEND, AGENT_ABEND };
 
 
-    Policy(short max_count = 1) : _occurences(max_count) {}
-    Policy(Trigger& t, Behavior& b, short max_count = 1) :
-        _occurences(max_count)
+    Policy(unsigned short max_count = 1) : _occurrences(max_count) {}
+    Policy(Trigger& t, Behavior& b, unsigned short max_count = 1) :
+        _occurrences(max_count)
     {
         _action_policies[t] = b;
     }
 
     //! \brief Change the number of allowable instances.
     void changeInstances(unsigned short instances) {
-        _occurences = instances;
+        _occurrences = instances;
     }
 
     bool addBehavior(Trigger t, const Behavior& b) {
@@ -78,7 +78,7 @@ public:
         return false;
     }
 
-    unsigned short limit() const { return _occurences; }
+    unsigned short limit() const { return _occurrences; }
 
     static Trigger string_to_trigger(const std::string& st) {
         Trigger t;
@@ -94,12 +94,11 @@ public:
     }
 
 private:
-
     //! \brief map of Behaviors to triggers
     std::map<Trigger, Behavior> _action_policies;
 
     //! \brief Number of instances of the associated binary allowed.
-    unsigned short _occurences;
+    unsigned short _occurrences;
 };
 
 

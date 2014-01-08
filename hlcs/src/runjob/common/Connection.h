@@ -33,6 +33,9 @@ namespace runjob {
 
 /*!
  * \brief Base class for connections.
+ *
+ * The _outgoingMessage stream buffer member is used to provide the buffer lifetime
+ * gurantee required by boost::asio::async_write. 
  */
 class Connection
 {
@@ -131,7 +134,7 @@ protected:
 
 private:
     boost::asio::deadline_timer _timer;                 //!< timer to cancel async_resolve
-    boost::asio::strand _strand;                        //!< strand for protecting _hostname
+    boost::asio::strand _strand;                        //!< strand for protecting resolving hostname
 };
 
 } // runjob

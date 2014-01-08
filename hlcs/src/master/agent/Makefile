@@ -44,18 +44,23 @@ CXXFLAGS += \
 
 
 LDFLAGS += \
- -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility -lcxxsockets \
+ -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -lcxxsockets \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib \
- -L$(BGQ_INSTALL_DIR)/xml/lib -lXML \
+ -L $(BGQ_INSTALL_DIR)/xml/lib -lXML \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/xml/lib \
  -lboost_date_time-mt \
  -lboost_filesystem-mt \
- -lboost_program_options-mt
+ -lboost_program_options-mt \
+ -lboost_system-mt \
+ -lboost_thread-mt \
+ -llog4cxx
 
 
 parts := \
  bgagentd \
- Agent 
+ Agent \
+ MasterConnection \
+ SignalHandler
 
 objs := ${parts:%=%.o}
 
@@ -77,18 +82,17 @@ exe := bgagentd
 bg_sbin_links = $(exe)
 
 
-clean_cmd := $(RM) *.o *.d
 
 
 default: all
 
-all: $(exe) $(call INSTALL_SBIN_TARGET, $(exe)) $(bg_links_targets) $(MODULE_INIT_DIR)/bgagent $(MODULE_INIT_DIR)/bgagent.v1r1m0 $(MODULE_INIT_DIR)/bgagent.v1r1m1 $(MODULE_INIT_DIR)/bgagent.v1r1m2
+all: $(exe)
 
-install: all
+install: $(call INSTALL_SBIN_TARGET, $(exe)) $(bg_links_targets) $(MODULE_INIT_DIR)/bgagent $(MODULE_INIT_DIR)/bgagent.v1r1m0 $(MODULE_INIT_DIR)/bgagent.v1r1m1 $(MODULE_INIT_DIR)/bgagent.v1r1m2 $(MODULE_INIT_DIR)/bgagent.v1r2m0
 
 
 $(exe): $(objs) $(common_objs) $(protocol_objs)
-	$(CXX) $(LDFLAGS) -o $@ $^
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 
 $(MODULE_INIT_DIR):
@@ -99,10 +103,9 @@ $(MODULE_INIT_DIR)/%: % | $(MODULE_INIT_DIR)
 
 
 clean:
-	$(clean_cmd)
+	$(RM) *.o *.d
 
-distclean:
-	$(clean_cmd)
+distclean: clean
 
 
 .PHONY: default all install clean distclean

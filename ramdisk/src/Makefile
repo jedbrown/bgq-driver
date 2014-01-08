@@ -118,6 +118,7 @@ Make.rules:	../../Make.rules
 
 MAKE_BIN_PATH:
 	@${MKDIR} -p ${INSTALL_RAMDISK}
+	chmod o+rx ${INSTALL_RAMDISK}
 
 # The zipped ramdisk is now the default.
 ${INSTALL_RAMDISK}: ramdisk.gz
@@ -129,20 +130,21 @@ ${INSTALL_BUILD_RAMDISK}: build-ramdisk
 distrofs.tar: distrofs initramfs ramdisk.gz build-ramdisk
 	@cd ${BGQ_DISTROFS_PATH}/tar ; echo -en "Building distrofs.tar\n" ; sleep 5 ; \
 		until tar --exclude=.svn -cvf ${BGQ_BUILD_DIR}/ramdisk/src/$@ ./* &> /dev/null ; do sleep 5 ; done
-	${CP} $@ ${BGQ_RAMDISK_PATH}/bin
+	${CP} $@ ${INSTALL_RAMDISK}/.
+	chmod o+rx ${INSTALL_RAMDISK}/$@ 
 
 build-rpms:
 	@${MAKE} -C rpms 
 
 # Optional uncompressed ramdisk build
-ramdisk: ${SUBDIRS} build-ramdisk $(TOOLSDIR) FORCE
+ramdisk: ${SUBDIRS} build-ramdisk $(TOOLSDIR)/gen_init_cpio $(TOOLSDIR)/gen_initramfs_list.sh FORCE
 	./build-ramdisk --nocompress --saveimg --verbose --rootfs ${BGQ_INITRAMFS_PATH} ${RDOPTS} -o $@
 	@${CP} $@ ${INSTALL_RAMDISK}
 	@${LN} -sf ../ramdisk/bin/ramdisk $(BGQ_INSTALL_DIR)/boot
 
 
 # Default compressed ramdisk build
-ramdisk.gz: ${SUBDIRS} build-ramdisk $(TOOLSDIR) FORCE
+ramdisk.gz: ${SUBDIRS} build-ramdisk $(TOOLSDIR)/gen_init_cpio $(TOOLSDIR)/gen_initramfs_list.sh FORCE
 	if [ -e $@ ] ; then rm -f $@ ; fi
 	if [ -e $@.cpio.gz ] ; then rm -f $@.cpio.gz ; fi
 	if [ -e ${INSTALL_RAMDISK}/$@ ] ; then rm -f ${INSTALL_RAMDISK}/$@ ; fi
@@ -158,7 +160,7 @@ ramdisk.gz: ${SUBDIRS} build-ramdisk $(TOOLSDIR) FORCE
 
 # Build a ramdisk to update the mlx firmwarei
 # For development we copy the firmware images from baremetal before making the mlxFwUpdate ramdisk.
-mlxFwUpdate: ${SUBDIRS} build-ramdisk $(TOOLSDIR) ../tools/mlxFwUpdate $(BGQ_INSTALL_DIR)/baremetal/firmware/mlxFwUpdate FORCE
+mlxFwUpdate: ${SUBDIRS} build-ramdisk $(TOOLSDIR)/gen_init_cpio $(TOOLSDIR)/gen_initramfs_list.sh ../tools/mlxFwUpdate $(BGQ_INSTALL_DIR)/baremetal/firmware/mlxFwUpdate FORCE
         # Need to copy a couple of files into the mlxFwUpdate path.
 	cp /lib64/libm-2.12.so ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/lib64/
 	cp -a /lib64/libm.so.6 ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/lib64/
@@ -166,7 +168,7 @@ mlxFwUpdate: ${SUBDIRS} build-ramdisk $(TOOLSDIR) ../tools/mlxFwUpdate $(BGQ_INS
 	cp -a /lib64/libz.so.1 ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/lib64/
 	cp -a /usr/lib64/libstdc++.so.6* ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/usr/lib64
 	cp /usr/bin/mstflint ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/usr/bin
-	if [ ! -e ${INSTALL_RAMDISK}/$@ ] ; then cp -a $(BGQ_INSTALL_DIR)/baremetal/firmware/mlxFwUpdate/* $(BGQ_BUILD_DIR)/ramdisk/tools/mlxFwUpdate/bin/ ; ./build-ramdisk --saveimg --verbose --rootfs ${BGQ_INITRAMFS_PATH} --addtree ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate ${RDOPTS} -o $@ ; cp $@ ${INSTALL_RAMDISK} ; fi
+	if [ ! -e ${INSTALL_RAMDISK}/$@ ] ; then cp -a $(BGQ_INSTALL_DIR)/baremetal/firmware/mlxFwUpdate/* $(BGQ_BUILD_DIR)/ramdisk/tools/mlxFwUpdate/bin/ ; ./build-ramdisk --saveimg --verbose --rootfs ${BGQ_INITRAMFS_PATH} --addtree ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate ${RDOPTS} -o $@ ; cp $@ ${INSTALL_RAMDISK} ; chmod og=rx ${INSTALL_RAMDISK}/$@ ; fi
 #	@${CP} $@ ${INSTALL_RAMDISK}
 #	@${LN} -sf ${INSTALL_RAMDISK}/$@ ${INSTALL_RAMDISK}/ramdisk
 #	@${LN} -sf ../ramdisk/bin/$@ $(BGQ_INSTALL_DIR)/boot/ramdisk

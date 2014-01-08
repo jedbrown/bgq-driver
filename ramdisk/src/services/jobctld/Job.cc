@@ -483,7 +483,6 @@ Job::runPrologProgram(std::string prologProgramPath, int32_t timeout)
 {
    // Start a thread to run and monitor the prolog program.
    _prologProgramMonitor = PrologProgramMonitorPtr(new PrologProgramMonitor(prologProgramPath, timeout, _jobId, loadJobAckAccumulator.get()));
-   _prologProgramMonitor->setDetached();
    int err = _prologProgramMonitor->start();
    if (err != 0) {
       LOG_ERROR_MSG("Job " << _jobId << ": error starting prolog program monitor thread: " << bgcios::errorString(err));
@@ -497,7 +496,6 @@ Job::runEpilogProgram(std::string epilogProgramPath, int32_t timeout)
 {
    // Start a thread to run and monitor the epilog program.
    _epilogProgramMonitor = EpilogProgramMonitorPtr(new EpilogProgramMonitor(epilogProgramPath, timeout, _jobId, cleanupJobAckAccumulator.get()));
-   _epilogProgramMonitor->setDetached();
    int err = _epilogProgramMonitor->start();
    if (err != 0) {
       LOG_ERROR_MSG("Job " << _jobId << ": error starting epilog program monitor thread: " << bgcios::errorString(err));

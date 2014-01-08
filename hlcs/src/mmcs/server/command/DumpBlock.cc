@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "DumpBlock.h"
 
 #include "../DBBlockController.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 DumpBlock*
 DumpBlock::build()
@@ -45,7 +41,7 @@ DumpBlock::build()
     commandAttributes.requiresObjNames(true);
     commandAttributes.internalCommand(true);           // this is an internal use command
     commandAttributes.mmcsServerCommand(true);
-    commandAttributes.mmcsConsoleCommand(false);
+    commandAttributes.bgConsoleCommand(false);
     Attributes::AuthPair blockread(hlcs::security::Object::Block, hlcs::security::Action::Read);
     commandAttributes.addAuthPair(blockread);
     commandAttributes.helpCategory(common::SPECIAL);
@@ -53,10 +49,12 @@ DumpBlock::build()
 }
 
 void
-DumpBlock::execute(deque<string> args,
-                    mmcs_client::CommandReply& reply,
-                    common::ConsoleController* pController,
-                    BlockControllerTarget* pTarget)
+DumpBlock::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        common::ConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
     std::vector<std::string> validnames;
     validnames.push_back(args[0]);
@@ -64,13 +62,15 @@ DumpBlock::execute(deque<string> args,
 }
 
 void
-DumpBlock::execute(deque<string> args,
-                    mmcs_client::CommandReply& reply,
-                    common::ConsoleController* pController,
-                    BlockControllerTarget* pTarget,
-                    std::vector<std::string>* validnames)
+DumpBlock::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        common::ConsoleController* pController,
+        BlockControllerTarget* pTarget,
+        std::vector<std::string>* validnames
+)
 {
-    //write XML file into stream object
+    // Write XML file into stream object
     std::ostringstream blockStreamXML;
     BGQDB::STATUS result = BGQDB::OK;
     try {
@@ -80,32 +80,35 @@ DumpBlock::execute(deque<string> args,
             return;
         }
     } catch(...) {
-        reply << mmcs_client::FAIL << "Database error.  Could not dump block " << validnames->at(0) << ". " << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Database error, could not dump block " << validnames->at(0) << ". " << mmcs_client::DONE;
         return;
     }
 
-    reply
-        << mmcs_client::FAIL <<
-        "generation of XML failed for block " << validnames->at(0) << ": " <<
-        DBBlockController::strDBError(result) <<
-        mmcs_client::DONE
-        ;
+    reply << mmcs_client::FAIL
+          << "Generation of XML failed for block " << validnames->at(0) << ": "
+          << DBBlockController::strDBError(result) << mmcs_client::DONE;
 }
 
 std::vector<std::string>
-DumpBlock::getBlockObjects(std::deque<std::string>& cmdString, DBConsoleController* pController) {
+DumpBlock::getBlockObjects(
+        std::deque<std::string>& cmdString,
+        DBConsoleController* pController
+)
+{
     std::vector<std::string> retvec;
     retvec.push_back(cmdString[0]);
     return retvec;
 }
 
 void
-DumpBlock::help(deque<string> args,
-                 mmcs_client::CommandReply& reply)
+DumpBlock::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
-      << ";Export a block <blockId> from the database into <file.xml>"
-      << mmcs_client::DONE;
+          << ";Export a block <blockId> from the database into <file.xml>"
+          << mmcs_client::DONE;
 }
 
 } } } // namespace mmcs::server::command

@@ -47,7 +47,12 @@ LDFLAGS += \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib \
  -L$(BGQ_INSTALL_DIR)/xml/lib -lXML \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/xml/lib \
- -lboost_program_options-mt
+ -lboost_program_options-mt \
+ -lboost_date_time-mt \
+ -lboost_system-mt \
+ -lboost_thread-mt \
+ -lboost_filesystem-mt \
+ -llog4cxx
 
 
 parts := \
@@ -67,6 +72,7 @@ objs := ${parts:%=%.o}
 
 common_parts := \
  AgentBase \
+ BinaryController \
  Ids \
  Protocol
 
@@ -83,24 +89,25 @@ exe := bgmaster_server
 bg_sbin_links = $(exe)
 
 
-clean_cmds := $(RM) *.o *.d $(exe)
-
-
 default: all
 
-all: $(exe) $(call INSTALL_SBIN_TARGET, $(exe)) $(bg_links_targets)
+all: $(exe)
 
 $(exe): $(objs) $(common_objs) $(protocol_objs)
-	$(CXX) $(LDFLAGS) -o $@ $^
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
-install: all
+install: $(call INSTALL_SBIN_TARGET, $(exe)) $(bg_links_targets) all ras_scan
 
 clean:
-	$(clean_cmds)
+	$(RM) *.o *.d $(exe)
+	$(RM) ras_scan
 
-distclean:
-	$(clean_cmds)
+distclean: clean
 
+
+ras_scan: ras.h
+	$(BGQ_BUILD_DIR)/scripts/rasScan.py '$(BGQ_BUILD_DIR)/hlcs/src/master' '$(BGQ_INSTALL_DIR)/hlcs/ras/metadata' 'bgmaster_ras.xml' '$(BGQ_INSTALL_DIR)/ras/include/ras.xml'
+	@touch $@
 
 .PHONY: default all install clean distclean
 

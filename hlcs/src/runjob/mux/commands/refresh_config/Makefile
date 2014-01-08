@@ -27,6 +27,10 @@ include ../../../../../../Make.rules
 
 .PHONY: clean
 
+LDFLAGS += -lrunjob_common
+LDFLAGS += -lboost_program_options-mt
+LDFLAGS += -lboost_date_time-mt
+LDFLAGS += -llog4cxx
 
 COMMAND              = runjob_mux_refresh_config
 COMMAND_SRC          = main.cc
@@ -39,7 +43,7 @@ bg_sbin_links         := $(COMMAND)
 
 $(COMMAND): $(COMMAND_SRC:%.cc=%.o) Makefile
 	@echo "link $@"
-	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS)
+	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS) 
 
 
 all: $(COMMAND) 

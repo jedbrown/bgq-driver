@@ -24,25 +24,36 @@
 #ifndef MMCSEnvMonitor_H
 #define MMCSEnvMonitor_H
 
-#include "common/Thread.h"
-
 #include <boost/asio/io_service.hpp>
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/thread.hpp>
 
 namespace mmcs {
 namespace server {
 namespace env {
 
-class Monitor : public common::Thread
+class Monitor : public boost::enable_shared_from_this<Monitor>
 {
 public:
-    Monitor();
-    void* threadStart();
+    /*!
+     * \brief pointer type.
+     */
+    typedef boost::shared_ptr<Monitor> Ptr;
+
+public:
+    static Ptr create();
+    void stop();
+    ~Monitor();
 
 private:
+    Monitor();
+    void start();
     unsigned calculateThreadPool();
+    void run();
 
 private:
     boost::asio::io_service _io_service;
+    boost::thread_group _threads;
 };
 
 } } } // namespace mmcs::server::env

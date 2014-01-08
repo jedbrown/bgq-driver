@@ -45,13 +45,16 @@ typedef void (*_BG_RAS_Decoder_Fcn_t) (RasEvent& event, const vector<uint64_t>& 
 pthread_mutex_t RasDecoder::_dcLock = PTHREAD_MUTEX_INITIALIZER;
 map<string, RasDecoder*> RasDecoder::_decoders;
 
-RasDecoder::RasDecoder()
-  : _name("RasDecoder")
+RasDecoder::RasDecoder() :
+  _name("RasDecoder"),
+  _libName(),
+  _decoder(),
+  _dlhandle(NULL)
 {
 }
 
 RasDecoder::RasDecoder (const string& lib, const string& decoder)
-  : _libName(lib), _decoder(decoder), _dlhandle(NULL), _dlsym(NULL)
+  : _libName(lib), _decoder(decoder), _dlhandle(NULL)
 {
 }
 

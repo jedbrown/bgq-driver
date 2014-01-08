@@ -31,6 +31,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <dirent.h>
+#include "NodeController.h"
 
 
 using namespace bgcios::sysio;
@@ -107,14 +108,10 @@ sysioFS::init(void)
    destAddress.sin_addr.s_addr = NodeState.ServiceDeviceAddr;
    
    err = cnv_connect(&_queuePair, (struct sockaddr *)&destAddress);
+   Node_ReportConnect(err, destAddress.sin_addr.s_addr, destAddress.sin_port);
    if (err != 0) {
-       RASBEGIN(2);
-       RASPUSH(NodeState.ServiceDeviceAddr);
-       RASPUSH(destAddress.sin_port);
-       RASFINAL(RAS_KERNELCNVCONNECTFAIL);
-       
        TRACE( TRACE_SysioFS, ("(E) sysioFS::init%s: cnv_connect() failed, error %d\n", whoami(), err) );
-       return err;
+       Kernel_Crash(RAS_KERNELCNVCONNECTFAIL);
    }
 
    _rdmaBufferVirtAddr = (uint64_t)-1;  
@@ -1391,6 +1388,61 @@ sysioFS::getsockopt(int sockfd, int level, int optname, void *optval, socklen_t 
 }
 
 uint64_t
+sysioFS::gpfsfcntl(int fd, const void *buffer, size_t length, int* result)
+{
+   // \note gpfsfcntl behaves according to SPI return codes.  Not errno.
+   
+   // Make sure file descriptor is valid.
+   int rfd = File_GetRemoteFD(fd);
+   if ( __UNLIKELY(rfd < 0) ) {
+      return CNK_RC_SPI(EBADF);
+   }
+   
+   // Register a memory region for the caller's data.
+   struct cnv_mr userRegion;
+   int err = cnv_reg_mr(&userRegion, &_protectionDomain, (void *)buffer, length, CNV_ACCESS_LOCAL_WRITE);
+   if (__UNLIKELY (err != 0) ){
+      Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVREGMRE, (uint64_t)buffer, length, _protectionDomain.handle, err);
+      return CNK_RC_SPI(err);
+   }
+
+   // Obtain the lock to serialize message exchange with sysiod.
+   Kernel_Lock(&_lock);
+
+   // Build request message in outbound message buffer.
+   int procID=ProcessorID();
+   GpfsFcntlMessage *requestMsg = (GpfsFcntlMessage *)getSendBuffer(procID);
+   fillHeader(&(requestMsg->header), GpfsFcntl, sizeof(GpfsFcntlMessage));
+   requestMsg->fd = rfd;
+   requestMsg->data_length = length;
+   requestMsg->address = (uint64_t)userRegion.addr;
+   requestMsg->rkey = userRegion.rkey;
+
+   // Exchange messages with I/O node.
+   void *inRegion;
+   uint64_t rc = exchange(requestMsg, &inRegion);
+
+   GpfsFcntlAckMessage *replyMsg = (GpfsFcntlAckMessage *)inRegion;
+   if (__LIKELY  (replyMsg->header.returnCode == bgcios::Success) ){
+         *result = replyMsg->gpfsresult;
+   }
+   rc = CNK_RC_SPI(replyMsg->header.errorCode);
+   
+   // Release the lock.
+   Kernel_Unlock(&_lock);
+
+   // Deregister memory region for caller's data.
+   err = cnv_dereg_mr(&userRegion);
+   if (err != 0) {
+      Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVDRGMRE, (uint64_t)userRegion.addr, userRegion.length, userRegion.lkey, err);
+   }
+   
+   TRACE( TRACE_SysioFS, ("(I) sysioFS::gpfsFcntl%s: fd=%d buffer=%p length=%ld rc=%ld\n",
+                          whoami(), fd, buffer, length, rc) );
+   return rc;
+}
+
+uint64_t
 sysioFS::ioctl(int fd, unsigned long int cmd, void *parm3)
 {
    // Make sure file descriptor is valid.
@@ -2618,6 +2670,12 @@ sysioFS::utime(const char *pathname, const struct utimbuf *buf)
 uint64_t
 sysioFS::write(int fd, const void *buffer, size_t length)
 {
+
+#if 0
+   if (length <= 480){
+     return writeImmediate(fd, buffer, length);
+   }
+#endif
    // Make sure file descriptor is valid.
    int rfd = File_GetRemoteFD(fd);
    if ( __UNLIKELY(rfd < 0) ) {
@@ -2696,57 +2754,37 @@ sysioFS::writev(int fd, const struct iovec *iov, int iovcnt)
 
 
 uint64_t
-sysioFS::writeRdmaVirt(int fd, const void *buffer, size_t length)
+sysioFS::writeImmediate(int fd, const void *buffer, size_t length)
 {
    // Make sure file descriptor is valid.
    int rfd = File_GetRemoteFD(fd);
    if (rfd < 0) {
       return CNK_RC_FAILURE(EBADF);
    }
-
-   // Register a memory region for the caller's data.
-   struct cnv_mr userRegion;
-   int err = cnv_reg_mr(&userRegion, &_protectionDomain, (void *)buffer, length, CNV_ACCESS_LOCAL_WRITE);
-   if (err != 0) {
-      Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVREGMRE, (uint64_t)buffer, length, _protectionDomain.handle, err);
-      return CNK_RC_FAILURE(err);
+   if (length > 480){
+      return CNK_RC_FAILURE(ERANGE);
    }
-
-   // Obtain the lock to serialize message exchange with sysiod.
-   Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
    int procID=ProcessorID();
-   WriteRdmaVirtMessage *requestMsg = (WriteRdmaVirtMessage *)getSendBuffer(procID);
+   WriteImmediateMessage *requestMsg = (WriteImmediateMessage *)getSendBuffer(procID);
    if ( GetMyKThread()->KernelInternal == 1){
-     fillHeader(&(requestMsg->header), WriteRdmaVirtKernelInternal, sizeof(WriteRdmaVirtMessage));
+     fillHeader(&(requestMsg->header), WriteImmediateKernelInternal, sizeof(requestMsg->header)+length);
    }
    else{
-     fillHeader(&(requestMsg->header), WriteRdmaVirt, sizeof(WriteMessage));
+     fillHeader(&(requestMsg->header), WriteImmediate, sizeof(requestMsg->header)+length);
    }
-   requestMsg->fd = rfd;
-   if (length <= _rdmaBufferLength)
-     requestMsg->data_length = length;
-   else 
-     requestMsg->data_length = _rdmaBufferLength;
+   requestMsg->header.returnCode= (uint32_t)rfd;
+   memcpy(requestMsg->data,buffer,length);
 
-   requestMsg->bufferRdmaVirtaddress=_rdmaBufferVirtAddr;
-   requestMsg->offset = 0;  //offset into buffer;
-   
-   // Do the RDMA write ...
-
-   struct cnv_sge sge;
-   sge.addr =   (uint64_t)userRegion.addr;
-   sge.length = length;
-   sge.lkey =   userRegion.rkey;
-
-  postRdmaWrite(&sge, 1, requestMsg->header.sequenceId , _rdmaBufferVirtAddr,_remotekey);
-
-   // Exchange messages with I/O node.
    void *inRegion;
-   uint64_t rc = exchange(requestMsg, &inRegion);
+   // Obtain the lock to serialize message exchange with sysiod.
+   Kernel_Lock(&_lock);
+   uint64_t rc = exchangeInline(requestMsg, &inRegion);
+   // Release the lock.
+   Kernel_Unlock(&_lock);
 
-   WriteRdmaVirtAckMessage *replyMsg = (WriteRdmaVirtAckMessage *)inRegion;
+   WriteImmediateAckMessage *replyMsg = (WriteImmediateAckMessage *)inRegion;
    if (bgcios::RequestIncomplete == replyMsg->header.returnCode){
       rc = CNK_RC_SUCCESS(replyMsg->bytes);
    }
@@ -2761,19 +2799,6 @@ sysioFS::writeRdmaVirt(int fd, const void *buffer, size_t length)
    }
 
 
-   // Release the lock.
-   Kernel_Unlock(&_lock);
-
-   // Deregister memory region for caller's data.
-   err = cnv_dereg_mr(&userRegion);
-   if (err != 0) {
-      Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVDRGMRE, (uint64_t)userRegion.addr, userRegion.length, userRegion.lkey, err);
-   }
-
-   if ( (length >_rdmaBufferLength) & (rc==_rdmaBufferLength) ){
-     char * nextBuffer= (char *)buffer + _rdmaBufferLength;
-     rc = writeRdmaVirt(fd, nextBuffer, length - _rdmaBufferLength);
-   }
    return rc;
 }
 
@@ -2809,13 +2834,13 @@ sysioFS::sendxDataOnly(struct MsgInputs * msgInput){
   if ( (msgInput->data_length>0) && !VMM_IsAppAddress(msgInput->dataRegion,msgInput->data_length ) ) {
             return CNK_RC_FAILURE(EFAULT);
   }
-  if ( msgInput->data_length > bgcios::UserMessageDataSize ){
+  if ( msgInput->data_length > UserMessageDataSize ){
         return CNK_RC_FAILURE(ERANGE);
   }
   if ( (msgInput->recv_length>0) && !VMM_IsAppAddress(msgInput->recvMessage,msgInput->recv_length ) ) {
             return CNK_RC_FAILURE(EFAULT);
   }
-  printf("sendxDataOnly msgInput->recv_length=%ld\n",(long int)msgInput->recv_length);
+  //printf("sendxDataOnly msgInput->recv_length=%ld\n",(long int)msgInput->recv_length);
    // Obtain the lock to serialize message exchange with sysiod.
    Kernel_Lock(&_lock);
 
@@ -2831,9 +2856,9 @@ sysioFS::sendxDataOnly(struct MsgInputs * msgInput){
    void *inRegion;
    uint64_t rc = exchange(requestMsg, &inRegion);
    bgcios::UserMessage *replyMsg = (bgcios::UserMessage *)inRegion;
-   printf("UserMessage rc=%lld \n",(long long unsigned int)rc);
-   printf(" msgInput->recv_length=%lld ",(long long unsigned int)msgInput->recv_length);
-   printf(" replyMsg->header.length=%lld ",(long long unsigned int)replyMsg->header.length);
+   //printf("UserMessage rc=%lld \n",(long long unsigned int)rc);
+   //printf(" msgInput->recv_length=%lld ",(long long unsigned int)msgInput->recv_length);
+   //printf(" replyMsg->header.length=%lld ",(long long unsigned int)replyMsg->header.length);
       if (msgInput->recv_length){
         
         if (msgInput->recv_length<replyMsg->header.length)
@@ -2855,13 +2880,13 @@ sysioFS::sendxDataPlus(struct MsgInputs * msgInput){
   if ( (msgInput->data_length>0) && !VMM_IsAppAddress(msgInput->dataRegion,msgInput->data_length ) ) {
             return CNK_RC_FAILURE(EFAULT);
   }
-  if ( msgInput->data_length > bgcios::UserMessageFdRDMADataSize){
+  if ( msgInput->data_length > UserMessageFdRDMADataSize){
         return CNK_RC_FAILURE(ERANGE);
   }
   if ( (msgInput->recv_length>0) && !VMM_IsAppAddress(msgInput->recvMessage,msgInput->recv_length ) ) {
             return CNK_RC_FAILURE(EFAULT);
   }
-  if ( msgInput->numberOfRdmaRegions > bgcios::MostRdmaRegions){
+  if ( msgInput->numberOfRdmaRegions > MostRdmaRegions){
         return CNK_RC_FAILURE(ERANGE);
   }
 
@@ -2883,7 +2908,6 @@ sysioFS::sendxDataPlus(struct MsgInputs * msgInput){
 
 
    for (int i=0;i<msgInput->numberOfRdmaRegions;i++){
-      if ( msgInput->data_length==0) return CNK_RC_FAILURE(EFAULT);
       if (!VMM_IsAppAddress( msgInput->cnkUserRDMA[i].cnk_address, msgInput->cnkUserRDMA[i].cnk_bytes) )
          return CNK_RC_FAILURE(EFAULT);
    }
@@ -2914,7 +2938,7 @@ sysioFS::sendxDataPlus(struct MsgInputs * msgInput){
    int procID=ProcessorID();
    bgcios::UserMessageFdRDMA * requestMsg = (bgcios::UserMessageFdRDMA *)getSendBuffer(procID);
    fillUserHeader( (bgcios::UserMessage *)requestMsg, msgInput->version, msgInput->type, bgcios::SysioUserServiceFdRDMA);
-   requestMsg->header.length = sizeof(bgcios::UserMessageFdRDMA) - bgcios::UserMessageFdRDMADataSize;
+   requestMsg->header.length = sizeof(bgcios::UserMessageFdRDMA) - UserMessageFdRDMADataSize;
    requestMsg->ionode_fd[0]=rfd1;
    requestMsg->ionode_fd[1]=rfd2;
 
@@ -2956,3 +2980,341 @@ sysioFS::sendxDataPlus(struct MsgInputs * msgInput){
 
 }
 
+uint64_t
+sysioFS::pathgetXattr(const char *path, const char *name, void *value, size_t size, uint16_t type){
+   if (name==NULL) return CNK_RC_FAILURE(EINVAL);
+   int nameLen = strlen(name);
+   if (nameLen==0) return CNK_RC_FAILURE(EINVAL); 
+
+   if (path==NULL) return CNK_RC_FAILURE(EINVAL);
+   int pathLen = strlen(path);
+   if (pathLen==0) return CNK_RC_FAILURE(EINVAL);
+
+   // Register a memory region .
+   struct cnv_mr userRegion;
+   //An empty buffer of size 0 can be passed to get the current size
+   if ( (size!=0) && (value!=NULL) ){
+     int err = cnv_reg_mr(&userRegion, &_protectionDomain, (void *)value, size, CNV_ACCESS_LOCAL_WRITE);
+     if (__UNLIKELY (err != 0) ){
+        Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVREGMRE, (uint64_t)value, size, _protectionDomain.handle, err);
+        return CNK_RC_FAILURE(err);
+     }
+   }
+
+   // Obtain the lock to serialize message exchange with sysiod.
+   Kernel_Lock(&_lock);
+   int procID=ProcessorID();
+   FretrieveXattrMessage *requestMsg = (FretrieveXattrMessage *)getSendBuffer(procID);
+   fillHeader(&(requestMsg->header), type,  sizeof(FretrieveXattrMessage));
+   if ( (size!=0) && (value!=NULL) ){
+     requestMsg->address = (uint64_t)userRegion.addr;
+     requestMsg->rkey = userRegion.rkey;
+     requestMsg->userListNumBytes = (uint64_t)size;
+   }
+   else {
+     requestMsg->address = 0;
+     requestMsg->rkey = 0;
+     requestMsg->userListNumBytes = 0;
+   }
+   requestMsg->fd= -1;
+   memcpy(requestMsg->pathname,path,pathLen+1);
+   requestMsg->header.length += pathLen+1;
+   memcpy(requestMsg->pathname+pathLen+1,name,nameLen+1);
+   requestMsg->header.length += nameLen + 1;
+   requestMsg->nameSize = nameLen;
+   requestMsg->pathSize = pathLen;
+
+      // Exchange messages with I/O node.
+   void *inRegion;
+   uint64_t rc = exchange(requestMsg,&inRegion);
+
+   if ( (size!=0) && (value!=NULL) ){
+     // Deregister memory region for caller's data.
+     int err = cnv_dereg_mr(&userRegion);
+     if (err != 0) {
+        Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVDRGMRE, (uint64_t)userRegion.addr, userRegion.length, userRegion.lkey, err);
+     }
+   }
+
+   FxattrMessageAck *replyMsg = (FxattrMessageAck *)inRegion;
+   if (__LIKELY  (replyMsg->header.returnCode == bgcios::Success) ){
+         rc = CNK_RC_SUCCESS(replyMsg->returnValue);
+   }
+   else {
+      rc = CNK_RC_FAILURE(replyMsg->header.errorCode);
+   }
+   // Release the lock.
+   Kernel_Unlock(&_lock);
+   return rc;
+}
+
+uint64_t 
+sysioFS::pathlistXattr(const char *path, char *list, size_t size, uint16_t type){
+   if (path==NULL) return CNK_RC_FAILURE(EINVAL);
+   int pathLen = strlen(path);
+   if (pathLen==0) return CNK_RC_FAILURE(EINVAL);
+
+   // Register a memory region .
+   struct cnv_mr userRegion;
+   //An empty buffer of size 0 can be passed to get the current size of the named extended attribute
+   if ( (size!=0) && (list!=NULL) ){
+     int err = cnv_reg_mr(&userRegion, &_protectionDomain, (void *)list, size, CNV_ACCESS_LOCAL_WRITE);
+     if (__UNLIKELY (err != 0) ){
+        Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVREGMRE, (uint64_t)list, size, _protectionDomain.handle, err);
+        return CNK_RC_FAILURE(err);
+     }
+   } 
+
+
+   // Obtain the lock to serialize message exchange with sysiod.
+   Kernel_Lock(&_lock);
+   int procID=ProcessorID();
+   FretrieveXattrMessage *requestMsg = (FretrieveXattrMessage *)getSendBuffer(procID);
+   fillHeader(&(requestMsg->header), type,  sizeof(FretrieveXattrMessage));
+
+   if ( (size!=0) && (list!=NULL) ){
+     requestMsg->address = (uint64_t)userRegion.addr;
+     requestMsg->rkey = userRegion.rkey;
+     requestMsg->userListNumBytes = (uint64_t)size;
+   }
+   else {
+     requestMsg->address = 0;
+     requestMsg->rkey = 0;
+     requestMsg->userListNumBytes = 0;
+   }
+
+   requestMsg->fd= -1;
+   requestMsg->nameSize = 0;
+   requestMsg->pathSize = pathLen;
+   memcpy(requestMsg->pathname,path,pathLen+1);
+   requestMsg->header.length += pathLen+1;
+
+      // Exchange messages with I/O node.
+   void *inRegion;
+   uint64_t rc = exchange(requestMsg, &inRegion);
+
+
+   // Deregister memory region for caller's data.
+   if ( (size!=0) && (list!=NULL) ){
+     int err = cnv_dereg_mr(&userRegion);
+     if (err != 0) {
+        Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVDRGMRE, (uint64_t)userRegion.addr, userRegion.length, userRegion.lkey, err);
+     }
+   }
+
+   FxattrMessageAck *replyMsg = (FxattrMessageAck *)inRegion;
+   if (__LIKELY  (replyMsg->header.returnCode == bgcios::Success) ){
+         rc = CNK_RC_SUCCESS(replyMsg->returnValue);
+   }
+   else {
+      rc = CNK_RC_FAILURE(replyMsg->header.errorCode);
+   }
+   // Release the lock.
+   Kernel_Unlock(&_lock);
+   return rc;
+}
+
+uint64_t 
+sysioFS::pathsetXattr(const char *path, const char *name, const void *value, size_t size, int flags, uint16_t type){
+   if (name==NULL) return CNK_RC_FAILURE(EINVAL);
+   int nameLen = strlen(name);
+   if (nameLen==0) return CNK_RC_FAILURE(EINVAL); 
+
+   if (path==NULL) return CNK_RC_FAILURE(EINVAL);
+   int pathLen = strlen(path);
+   if (pathLen==0) return CNK_RC_FAILURE(EINVAL);
+   
+   // Obtain the lock to serialize message exchange with sysiod.
+   Kernel_Lock(&_lock);
+   int procID=ProcessorID();
+   PathSetXattrMessage *requestMsg = (PathSetXattrMessage *)getSendBuffer(procID);
+   fillHeader(&(requestMsg->header), type,  sizeof(PathSetXattrMessage));
+   requestMsg->flags = flags;
+   requestMsg->valueSize = 0;
+   requestMsg->nameSize = nameLen;
+   requestMsg->pathSize = pathLen;
+   if (value){
+     if (size){
+        requestMsg->valueSize = size;
+        requestMsg->header.length += size;
+        memcpy(requestMsg->value,value,size);
+     }
+   }
+   
+   // Exchange messages with I/O node.
+   void *inRegion;
+   uint64_t rc = exchange(requestMsg, path, name, &inRegion);
+   
+   FxattrMessageAck *replyMsg = (FxattrMessageAck *)inRegion;
+   if (__LIKELY  (replyMsg->header.returnCode == bgcios::Success) ){
+         rc = CNK_RC_SUCCESS(0);
+   }
+   else {
+      rc = CNK_RC_FAILURE(replyMsg->header.errorCode);
+   }
+
+   // Release the lock.
+   Kernel_Unlock(&_lock);
+   return rc;
+} 
+
+uint64_t 
+sysioFS::pathRemoveXattr(const char *path, const char *name, uint16_t type){
+   if (name==NULL) return CNK_RC_FAILURE(EINVAL);
+   int nameLen = strlen(name);
+   if (nameLen==0) return CNK_RC_FAILURE(EINVAL); 
+
+   if (path==NULL) return CNK_RC_FAILURE(EINVAL);
+   int pathLen = strlen(path);
+   if (pathLen==0) return CNK_RC_FAILURE(EINVAL);
+   
+   // Obtain the lock to serialize message exchange with sysiod.
+   Kernel_Lock(&_lock);
+   int procID=ProcessorID();
+   PathRemoveXattrMessage *requestMsg = (PathRemoveXattrMessage *)getSendBuffer(procID);
+   fillHeader(&(requestMsg->header), type,  sizeof(PathRemoveXattrMessage));
+   requestMsg->nameSize = nameLen;
+   requestMsg->pathSize = pathLen;
+   
+   // Exchange messages with I/O node.
+   void *inRegion;
+   uint64_t rc = exchange(requestMsg, path, name, &inRegion);
+   
+   FxattrMessageAck *replyMsg = (FxattrMessageAck *)inRegion;
+   if (__LIKELY  (replyMsg->header.returnCode == bgcios::Success) ){
+         rc = CNK_RC_SUCCESS(0);
+   }
+   else {
+      rc = CNK_RC_FAILURE(replyMsg->header.errorCode);
+   }
+
+   // Release the lock.
+   Kernel_Unlock(&_lock);
+   return rc;
+} 
+
+uint64_t 
+sysioFS::fxattr_setOrRemove(int fd, const char *name, uint16_t type, const void *value, size_t size, int flags){
+   int rfd = File_GetRemoteFD(fd);
+   if ( __UNLIKELY(rfd < 0) ) {
+      return CNK_RC_FAILURE(EBADF);
+   }
+   if (name==NULL) return CNK_RC_FAILURE(EINVAL);
+   int nameLen = strlen(name);
+   if (nameLen==0) return CNK_RC_FAILURE(EINVAL);
+
+   //printf("name=%s\n",name);
+   //printf("nameLen=%d\n",nameLen);
+
+   // Obtain the lock to serialize message exchange with sysiod.
+   Kernel_Lock(&_lock);
+   int procID=ProcessorID();
+   FsetOrRemoveXattrMessage *requestMsg = (FsetOrRemoveXattrMessage *)getSendBuffer(procID);
+   fillHeader(&(requestMsg->header), type,  sizeof(FsetOrRemoveXattrMessage));
+   requestMsg->nameSize = nameLen;
+   requestMsg->fd=rfd;
+   requestMsg->flags = flags;
+
+   requestMsg->valueSize=0;
+   if (value){
+     if (size){
+       requestMsg->valueSize=size;
+       requestMsg->header.length += size;
+       memcpy(requestMsg->value,value,size);
+     }
+   }
+   char * namecpy = requestMsg->value + size;
+   memcpy(namecpy,name,requestMsg->nameSize+1);
+   requestMsg->header.length += requestMsg->nameSize + 1;
+   
+   // Exchange messages with I/O node.
+   void *inRegion;
+   uint64_t rc = exchange(requestMsg, &inRegion);
+
+   FxattrMessageAck *replyMsg = (FxattrMessageAck *)inRegion;
+   if (__LIKELY  (replyMsg->header.returnCode == bgcios::Success) ){
+         rc = CNK_RC_SUCCESS(0);
+   }
+   else {
+      rc = CNK_RC_FAILURE(replyMsg->header.errorCode);
+   }
+
+   // Release the lock.
+   Kernel_Unlock(&_lock);
+   return rc;
+}
+
+uint64_t 
+sysioFS::fxattr_retrieve(int fd, const char *name, uint16_t type, void *target, size_t size){
+   int rfd = File_GetRemoteFD(fd);
+   if ( __UNLIKELY(rfd < 0) ) {
+      return CNK_RC_FAILURE(EBADF);
+   }
+
+   // Register a memory region .
+   struct cnv_mr userRegion;
+   //An empty buffer of size 0 can be passed to get the current size of the named extended attribute
+   if ( (size!=0) && (target!=NULL) ){
+     int err = cnv_reg_mr(&userRegion, &_protectionDomain, (void *)target, size, CNV_ACCESS_LOCAL_WRITE);
+     if (__UNLIKELY (err != 0) ){
+        Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVREGMRE, (uint64_t)target, size, _protectionDomain.handle, err);
+        return CNK_RC_FAILURE(err);
+     }
+   }
+
+   // Obtain the lock to serialize message exchange with sysiod.
+   Kernel_Lock(&_lock);
+   int procID=ProcessorID();
+   FretrieveXattrMessage *requestMsg = (FretrieveXattrMessage *)getSendBuffer(procID);
+   fillHeader(&(requestMsg->header), type,  sizeof(FretrieveXattrMessage));
+   if ( (size!=0) && (target!=NULL) ){
+     requestMsg->address = (uint64_t)userRegion.addr;
+     requestMsg->rkey = userRegion.rkey;
+     requestMsg->userListNumBytes = (uint64_t)size;
+   }
+   else {
+     requestMsg->address = 0;
+     requestMsg->rkey = 0;
+     requestMsg->userListNumBytes = 0;
+   }
+
+   requestMsg->fd=rfd;
+
+   if (name) {
+     requestMsg->nameSize = strlen(name);
+     memcpy(requestMsg->name,name,requestMsg->nameSize + 1);
+     requestMsg->header.length += requestMsg->nameSize + 1;
+   }
+   else {
+     requestMsg->nameSize = 0;
+   }
+   requestMsg->pathSize = 0;
+      // Exchange messages with I/O node.
+   void *inRegion;
+   uint64_t rc =0;
+   if (requestMsg->nameSize){
+     rc = exchange(requestMsg, name, &inRegion);
+   }
+   else {
+     rc = exchange(requestMsg, &inRegion);
+   }
+
+   FxattrMessageAck *replyMsg = (FxattrMessageAck *)inRegion;
+   if (__LIKELY  (replyMsg->header.returnCode == bgcios::Success) ){
+         rc = CNK_RC_SUCCESS(replyMsg->returnValue);
+   }
+   else {
+      rc = CNK_RC_FAILURE(replyMsg->header.errorCode);
+   }
+
+   // Deregister memory region for caller's data.
+   if ( (size!=0) && (target!=NULL) ){
+     int err = cnv_dereg_mr(&userRegion);
+     if (err != 0) {
+        Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVDRGMRE, (uint64_t)userRegion.addr, userRegion.length, userRegion.lkey, err);
+     }
+   }
+   // Release the lock.
+   Kernel_Unlock(&_lock);
+   return rc;
+}

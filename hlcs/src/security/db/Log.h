@@ -76,7 +76,6 @@ private:
     const cxxdb::ConnectionPtr _connection;
     cxxdb::UpdateStatementPtr _statement;
     const Object _object;
-    const Action::Type _action;
 };
 
 

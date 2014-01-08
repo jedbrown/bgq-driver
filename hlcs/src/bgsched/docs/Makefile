@@ -48,10 +48,10 @@ RUNJOB_PLUGIN_SAMPLE = runjob_plugin_sample
 RUNJOB_PLUGIN_FILTER = runjob_plugin_filter
 
 $(RUNJOB_PLUGIN_FILTER): $(RUNJOB_PLUGIN_FILTER).o
-	$(CXX) $(LDFLAGS) -o $@ $^
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(RUNJOB_PLUGIN_SAMPLE): $(RUNJOB_PLUGIN_SAMPLE).o
-	$(CXX) $(LDFLAGS) -o $@ $^ -L $(BGQ_BUILD_DIR)/hlcs/src/bgsched -lbgsched
+	$(CXX) -o $@ $^ -L $(BGQ_BUILD_DIR)/hlcs/src/bgsched -lbgsched $(LDFLAGS)
 
 FILTERS += $(RUNJOB_PLUGIN_FILTER)
 SAMPLES += $(RUNJOB_PLUGIN_SAMPLE)

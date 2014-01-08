@@ -41,13 +41,12 @@ namespace lite {
 //  syntax:
 //     gen_block <block> <midplane> <cnodes> <nodecard> [ options ] - define a block of nodes to be controlled by mmcs
 */
-class MMCSCommand_gen_block: public common::AbstractCommand
+class MMCSCommand_gen_block : public common::AbstractCommand
 {
 public:
     MMCSCommand_gen_block(const char* name, const char* description, const Attributes& attributes)
-      : common::AbstractCommand(name,description,attributes) { usage = "gen_block <blockid> <midplane>  <cnodes> <nodecard> [ node ] [ options ]";}
-    static  MMCSCommand_gen_block* build();    // factory method
-    static  std::string cmdname() { return "gen_block"; }
+      : common::AbstractCommand(name,description,attributes) { _usage = "gen_block <blockid> <midplane>  <cnodes> <nodecard> [ node ] [ options ]";}
+    static MMCSCommand_gen_block* build();    // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -63,13 +62,12 @@ public:
 //  syntax:
 //     gen_io_block <block> <drawer> <ionodes> <node> [ options ] - define a block of nodes to be controlled by mmcs
 */
-class MMCSCommand_gen_io_block: public common::AbstractCommand
+class MMCSCommand_gen_io_block : public common::AbstractCommand
 {
 public:
     MMCSCommand_gen_io_block(const char* name, const char* description, const Attributes& attributes)
-      : common::AbstractCommand(name,description,attributes) { usage = "gen_io_block <blockid> <drawer> <ionodes> <node> [ options ]";}
-    static  MMCSCommand_gen_io_block* build();    // factory method
-    static  std::string cmdname() { return "gen_io_block"; }
+      : common::AbstractCommand(name,description,attributes) { _usage = "gen_io_block <blockid> <drawer> <ionodes> <node> [ options ]";}
+    static MMCSCommand_gen_io_block* build();    // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -85,13 +83,12 @@ public:
 //     dump_ras [filename]
 //
 */
-class MMCSCommand_dump_ras: public common::AbstractCommand
+class MMCSCommand_dump_ras : public common::AbstractCommand
 {
 public:
     MMCSCommand_dump_ras(const char* name, const char* description, const Attributes& attributes)
-      : common::AbstractCommand(name,description,attributes) { usage = "dump_ras [filename]";}
-    static  MMCSCommand_dump_ras* build();    // factory method
-    static  std::string cmdname() { return "dump_ras"; }
+      : common::AbstractCommand(name,description,attributes) { _usage = "dump_ras [filename]";}
+    static MMCSCommand_dump_ras* build();    // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -108,13 +105,12 @@ public:
 //     show_envs <location>
 //
 */
-class MMCSCommand_show_envs: public common::AbstractCommand
+class MMCSCommand_show_envs : public common::AbstractCommand
 {
 public:
     MMCSCommand_show_envs(const char* name, const char* description, const Attributes& attributes)
-      : common::AbstractCommand(name,description,attributes) { usage = "show_envs <type> <location>";}
-    static  MMCSCommand_show_envs* build();    // factory method
-    static  std::string cmdname() { return "show_envs"; }
+      : common::AbstractCommand(name,description,attributes) { _usage = "show_envs <type> <location>";}
+    static MMCSCommand_show_envs* build();    // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -131,13 +127,12 @@ public:
 //     bringup [options]
 //
 */
-class MMCSCommand_bringup: public common::AbstractCommand
+class MMCSCommand_bringup : public common::AbstractCommand
 {
 public:
     MMCSCommand_bringup(const char* name, const char* description, const Attributes& attributes)
-      : common::AbstractCommand(name,description,attributes) { usage = "bringup [options]";}
-    static  MMCSCommand_bringup* build();    // factory method
-    static  std::string cmdname() { return "bringup"; }
+      : common::AbstractCommand(name,description,attributes) { _usage = "bringup [options]";}
+    static MMCSCommand_bringup* build();    // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -154,13 +149,12 @@ public:
 //     wait_for_terminate [seconds]
 //
 */
-class MMCSCommand_wait_for_terminate: public common::AbstractCommand
+class MMCSCommand_wait_for_terminate : public common::AbstractCommand
 {
 public:
     MMCSCommand_wait_for_terminate(const char* name, const char* description, const Attributes& attributes)
-      : common::AbstractCommand(name,description,attributes) { usage = "wait_for_terminate [seconds]";}
-    static  MMCSCommand_wait_for_terminate* build();    // factory method
-    static  std::string cmdname() { return "wait_for_terminate"; }
+      : common::AbstractCommand(name,description,attributes) { _usage = "wait_for_terminate [seconds]";}
+    static MMCSCommand_wait_for_terminate* build();    // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -173,13 +167,12 @@ public:
 //
 
 // this is an alias for disconnect
-class MMCSCommand_d: public common::AbstractCommand
+class MMCSCommand_d : public common::AbstractCommand
 {
 public:
     MMCSCommand_d(const char* name, const char* description, const Attributes& attributes)
-      : common::AbstractCommand(name,description,attributes) { usage = "d";}
-    static  MMCSCommand_d* build();    // factory method
-    static  std::string cmdname() { return "d"; }
+      : common::AbstractCommand(name,description,attributes) { _usage = "d";}
+    static MMCSCommand_d* build();    // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -194,13 +187,12 @@ public:
 ** Perform a disconnect on all the connections associated with the current block
 ** and delete the current block
 */
-class MMCSCommand_delete_block: public common::AbstractCommand
+class MMCSCommand_delete_block : public common::AbstractCommand
 {
 public:
     MMCSCommand_delete_block(const char* name, const char* description, const Attributes& attributes)
-      : common::AbstractCommand(name,description,attributes) { usage = "delete_block";}
-    static  MMCSCommand_delete_block* build();    // factory method
-    static  std::string cmdname() { return "delete_block"; }
+      : common::AbstractCommand(name,description,attributes) { _usage = "delete_block";}
+    static MMCSCommand_delete_block* build();    // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -209,13 +201,12 @@ public:
               mmcs_client::CommandReply& reply);
 };
 
-class MMCSCommand_boot_block: public common::AbstractCommand
+class MMCSCommand_boot_block : public common::AbstractCommand
 {
 public:
     MMCSCommand_boot_block(const char* name, const char* description, const Attributes& attributes)
-      : common::AbstractCommand(name,description,attributes) { usage = "boot_block [ options ]";}
-    static  MMCSCommand_boot_block* build();	// factory method
-    static  std::string cmdname() { return "boot_block"; }
+      : common::AbstractCommand(name,description,attributes) { _usage = "boot_block [ options ]";}
+    static MMCSCommand_boot_block* build();	// factory method
     void execute(std::deque<std::string> args,
 		 mmcs_client::CommandReply& reply,
 		 common::ConsoleController* pController,

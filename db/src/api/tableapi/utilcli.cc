@@ -45,17 +45,24 @@ HandleDiagnosticsPrint(
     i = 1;
 
     // Get multiple field settings of diagnostic record
-    while (SQLGetDiagRec(htype,
-            hndl,
-            i,
-            sqlstate,
-            &sqlcode,
-            message,
-            SQL_MAX_MESSAGE_LENGTH + 1,
-            &length) == SQL_SUCCESS)
+    while (SQLGetDiagRec(
+                htype,
+                hndl,
+                i,
+                sqlstate,
+                &sqlcode,
+                message,
+                SQL_MAX_MESSAGE_LENGTH + 1,
+                &length) == SQL_SUCCESS)
     {
         LOG_ERROR_MSG("  SQLSTATE          = " << sqlstate );
         LOG_ERROR_MSG("  Native Error Code = " << sqlcode );
+
+        // strip extra carriage return in message if present
+        const size_t length( strlen(reinterpret_cast<char*>(message)) );
+        if ( message[length-1] == '\n' ) {
+            message[length-1] = '\0';
+        }
         LOG_ERROR_MSG(message);
         i++;
     }
@@ -71,15 +78,15 @@ HandleLocationPrint(
 )
 {
     LOG_ERROR_MSG("  cliRC = " << cliRC );
-    LOG_ERROR_MSG("  line  = " << line );
-    LOG_ERROR_MSG("  file  = " << file );
+    LOG_ERROR_MSG("  file  = " << file << "(" << line << ")" );
 } // HandleLocationPrint
 
 namespace BGQDB {
 
 // Logs messages from CLI functions
 void
-HandleInfoPrint(SQLSMALLINT htype, // handle type identifier
+HandleInfoPrint(
+        SQLSMALLINT htype,         // handle type identifier
         SQLHANDLE hndl,            // handle used by the CLI function
         SQLRETURN cliRC,           // return code of the CLI function
         int line,

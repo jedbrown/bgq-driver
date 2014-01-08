@@ -31,11 +31,11 @@ LIBS =  pthread
 
 MPIBIN = $(BGQ_INSTALL_DIR)/comm/gcc/bin
 
-CFLAGS := -I$(BGQ_INSTALL_DIR)/comm/sys/include -I$(BGQ_INSTALL_DIR)/comm/gcc/include $(CFLAGS)
-LIB_DIRS += $(BGQ_INSTALL_DIR)/comm/gcc/lib $(BGQ_INSTALL_DIR)/comm/sys/lib 
-LDFLAGS += -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/gcc/lib -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/sys/lib \
+CFLAGS := -I$(BGQ_INSTALL_DIR)/comm/include -I$(BGQ_INSTALL_DIR)/comm/include/gnu $(CFLAGS)
+LIB_DIRS += $(BGQ_INSTALL_DIR)/comm/lib 
+LDFLAGS += -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/lib \
            -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/spi/lib
-LIBS += cxxmpich mpich opa mpl dl pami SPI SPI_cnk rt stdc++ pthread
+LIBS += mpichcxx-gcc mpich-gcc opa-gcc mpl-gcc dl pami-gcc SPI SPI_cnk rt stdc++ pthread
 
 #LD      = $(MPIBIN)/mpicxx
 #CXX     = $(MPIBIN)/mpicxx

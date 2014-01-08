@@ -40,7 +40,7 @@ struct InitializeLoggingFixture
     InitializeLoggingFixture()
     {
         // initialize logging
-        bgq::utility::initializeLogging( Properties() );
+        bgq::utility::initializeLogging( *Properties::create() );
     
         // initialize performance API
         _properties = Properties::create( "good.properties");

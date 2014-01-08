@@ -45,7 +45,7 @@ out_%: test_% $(etc_install_dir)/bg.properties.tpl
 
 test_bool_alpha: LDFLAGS += -lboost_unit_test_framework-mt
 test_bool_alpha: bool_alpha.o Makefile
-	$(CXX) $(LDFLAGS) -o $@ $(filter-out Makefile, $^)
+	$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS)
 
 bool_alpha.o: CXXFLAGS += -DBOOST_TEST_DYN_LINK -DBOOST_TEST_MAIN
 

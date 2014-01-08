@@ -29,7 +29,7 @@ RM_F = /bin/rm -f
 
 BEAM_RESULTS += --beam::ipa=all --beam::data=$(BGQ_INSTALL_DIR)/firmware/beam
 
-FW_KFLAGS    = -D__KERNEL__
+FW_KFLAGS    = -D__KERNEL__ -DFW_DUAL_DOMAIN=1
 FW_AFLAGS    = -D__ASSEMBLY__
 FW_INCLUDES  = -I$(BGQ_INSTALL_DIR) -I$(BGQ_INSTALL_DIR)/spi/include/kernel/firmware
 FW_CPU_FLAGS = -m64 -g -Os

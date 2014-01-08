@@ -21,24 +21,21 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "ListIoLinks.h"
 
 #include <db/include/api/BGQDBlib.h>
 #include <db/include/api/dataconv.h>
 
+#include <db/include/api/tableapi/DBConnectionPool.h>
 #include <db/include/api/tableapi/gensrc/bgqtableapi.h>
 
 #include <boost/assign.hpp>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 ListIoLinks*
 ListIoLinks::build()
@@ -48,7 +45,7 @@ ListIoLinks::build()
     commandAttributes.requiresConnection(false);       // does not require  mc_server connections
     commandAttributes.requiresTarget(false);           // does not require a BlockControllerTarget object
     commandAttributes.mmcsServerCommand(true);
-    commandAttributes.mmcsConsoleCommand(false);
+    commandAttributes.bgConsoleCommand(false);
     commandAttributes.helpCategory(common::ADMIN);
     Attributes::AuthPair blockread(hlcs::security::Object::Block, hlcs::security::Action::Read);
     commandAttributes.addAuthPair(blockread);
@@ -59,7 +56,7 @@ std::vector<std::string>
 ListIoLinks::getBlockObjects(
         std::deque<std::string>& cmdString,
         DBConsoleController* pController
-        )
+)
 {
     std::vector<std::string> block_to_use;
     block_to_use.push_back(cmdString[0]);
@@ -72,7 +69,7 @@ ListIoLinks::execute(
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     std::vector<std::string> validnames;
     if ( !args.empty() ) {
@@ -88,14 +85,14 @@ ListIoLinks::execute(
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget,
         std::vector<std::string>* validnames
-        )
+)
 {
     if ( args.empty() ) {
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         return;
     }
     if ( !validnames ) {
-        reply << mmcs_client::FAIL << "empty valid names?" << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Empty valid names?" << mmcs_client::DONE;
         return;
     }
 
@@ -103,18 +100,17 @@ ListIoLinks::execute(
     const BGQDB::STATUS result = BGQDB::getBlockInfo(validnames->at(0), bInfo);
 
     if ( result == BGQDB::CONNECTION_ERROR ) {
-        reply << mmcs_client::FAIL << "could not get database connection." << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Could not get database connection." << mmcs_client::DONE;
         return;
     } else if ( result == BGQDB::NOT_FOUND ) {
-        reply << mmcs_client::FAIL << "block " << validnames->at(0) << " not found" << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Block " << validnames->at(0) << " not found" << mmcs_client::DONE;
         return;
     } else if ( result == BGQDB::DB_ERROR ) {
-        reply << mmcs_client::FAIL << "DB query failed" << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Database query failed" << mmcs_client::DONE;
         return;
     } else if ( result == BGQDB::OK && bInfo.ionodes > 0 ) {
         string sqlstr;
         SQLLEN ind[3];
-        SQLRETURN sqlrc;
         SQLHANDLE hstmt;
         char ion[11], cnstatus[2], cnblock[33];
 
@@ -123,24 +119,23 @@ ListIoLinks::execute(
             + string("  and ioblock = '") + validnames->at(0) + string("' ")
             + string("    order by ion ");
         BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
-        sqlrc = tx.execQuery(sqlstr.c_str(), &hstmt);
-        sqlrc = SQLBindCol(hstmt, 1, SQL_C_CHAR, cnblock, 33, &ind[0]);
-        sqlrc = SQLBindCol(hstmt, 2, SQL_C_CHAR, cnstatus, 2, &ind[1]);
-        sqlrc = SQLBindCol(hstmt, 3, SQL_C_CHAR, ion,     11, &ind[2]);
+        tx.execQuery(sqlstr.c_str(), &hstmt);
+        SQLBindCol(hstmt, 1, SQL_C_CHAR, cnblock, 33, &ind[0]);
+        SQLBindCol(hstmt, 2, SQL_C_CHAR, cnstatus, 2, &ind[1]);
+        SQLBindCol(hstmt, 3, SQL_C_CHAR, ion,     11, &ind[2]);
 
-
-        sqlrc = SQLFetch(hstmt);
+        SQLRETURN sqlrc = SQLFetch(hstmt);
 
         if (sqlrc == SQL_SUCCESS) {
             reply << mmcs_client::OK;
             reply << "CNBLOCK                           STATUS  ION\n";
-            trim_right_spaces(cnblock);
-            trim_right_spaces(ion);
+            BGQDB::trim_right_spaces(cnblock);
+            BGQDB::trim_right_spaces(ion);
         } else {
-            reply << mmcs_client::FAIL << "no IO links for block: " << validnames->at(0) << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "No I/O links for block: " << validnames->at(0) << mmcs_client::DONE;
         }
 
-        for (;sqlrc==SQL_SUCCESS;)   {
+        for (;sqlrc==SQL_SUCCESS;) {
             reply.setf( ios::left);
             reply << setw(33)  << cnblock << " " << setw(7) << cnstatus << " "
                 << setw(12) << ion << "\n";
@@ -197,18 +192,20 @@ ListIoLinks::execute(
             return;
         }
     } else {
-        reply << mmcs_client::FAIL << "unknown database error." << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Unknown database error." << mmcs_client::DONE;
         return;
     }
 }
 
 void
-ListIoLinks::help(deque<string> args,
-                   mmcs_client::CommandReply& reply)
+ListIoLinks::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
-        << ";Prints IO link information for a specific block."
-        << mmcs_client::DONE;
+          << ";Prints I/O link information for a specific block."
+          << mmcs_client::DONE;
 }
 
 

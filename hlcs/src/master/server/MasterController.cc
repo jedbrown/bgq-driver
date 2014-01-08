@@ -26,42 +26,24 @@
 #include "Alias.h"
 #include "AliasList.h"
 #include "ClientManager.h"
-#include "DBUpdater.h"
 #include "LockFile.h"
-#include "LockingRingBuffer.h"
 #include "MasterController.h"
-#include "Policy.h"
 #include "ras.h"
 #include "Registrar.h"
 
 #include "../lib/exceptions.h"
 
-#include "common/ClientProtocol.h"
-#include "common/Ids.h"
 
 #include <db/include/api/tableapi/DBConnectionPool.h>
 
 #include <ras/include/RasEventImpl.h>
 #include <ras/include/RasEventHandlerChain.h>
 
-#include <utility/include/Log.h>
 #include <utility/include/version.h>
 
-#include <boost/date_time.hpp>
-#include <boost/foreach.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/tokenizer.hpp>
 
-#include <boost/algorithm/string.hpp>
 
-#include <algorithm>
-#include <map>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <utility>
 
-#include <errno.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -75,7 +57,7 @@ extern LockFile* lock_file;
 
 //! \brief static member instantiations
 boost::mutex MasterController::_policy_build_mutex;
-bgq::utility::Properties::Ptr MasterController::_master_props;
+bgq::utility::Properties::Ptr MasterController::_props;
 bool MasterController::_master_terminating = false;
 bool MasterController::_end_requested = false;
 bool MasterController::_start_servers = false;
@@ -86,7 +68,7 @@ bool MasterController::_master_db;
 bool MasterController::_stop_once = false;
 bool MasterController::_start_once = true;
 boost::posix_time::ptime MasterController::_start_time;
-std::string MasterController::_version_string = "";
+std::string MasterController::_version_string;
 LockingStringRingBuffer MasterController::_err_buff(CIRC_BUFFER_SIZE);
 LockingStringRingBuffer MasterController::_history_buff(CIRC_BUFFER_SIZE);
 std::vector<ClientProtocolPtr> MasterController::_monitor_prots;
@@ -100,10 +82,12 @@ DBUpdater MasterController::_updater;
 Registrar MasterController::_agent_registrar;
 Registrar MasterController::_client_registrar;
 
-MasterController::MasterController() :
+MasterController::MasterController(
+        const bgq::utility::Properties::Ptr& properties
+        ) :
     _pid( getpid() )
 {
-    // Nothing to do
+    _props = properties;
 }
 
 void
@@ -136,7 +120,7 @@ MasterController::putRAS(
 void
 MasterController::stopThreads(
         const bool end_binaries,
-        const unsigned signal
+        const int signal
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
@@ -172,7 +156,7 @@ MasterController::handleErrorMessage(
         const std::string& msg
         )
 {
-    LOG_ERROR_MSG(msg);
+    LOG_ERROR_MSG( __FUNCTION__ << ": " << msg);
     std::ostringstream errmsg;
     std::vector<ClientProtocolPtr> deadClients;
     boost::posix_time::ptime now(boost::posix_time::second_clock::local_time());
@@ -184,7 +168,7 @@ MasterController::handleErrorMessage(
     BOOST_FOREACH(const ClientProtocolPtr& prot, _monitor_prots) {
         try {
 	  prot->sendOnly(error.getClassName(), error);
-        } catch(const CxxSockets::Error& e) {
+        } catch (const CxxSockets::Error& e) {
             // If we get an error we assume that the client has been killed and should be removed
 	    // otherwise we have a potential memory leak.
             LOG_WARN_MSG(e.what());
@@ -228,7 +212,7 @@ MasterController::addHistoryMessage(
     BOOST_FOREACH(const ClientProtocolPtr& prot, _monitor_prots) {
         try {
 	  prot->sendOnly(event.getClassName(), event);
-        } catch(const CxxSockets::Error& e) {
+        } catch (const CxxSockets::Error& e) {
             // If we get an error we assume that the client has been killed and should be removed
 	    // otherwise we have a potential memory leak.
             LOG_WARN_MSG(e.what());
@@ -298,7 +282,7 @@ MasterController::buildHostList(
                             first = false;
                             LOG_DEBUG_MSG("Adding host " << h.uhn() << " to alias " << al->get_name());
                             al->add_host(h);
-                        } catch( const CxxSockets::Error& e ) {
+                        } catch ( const CxxSockets::Error& e ) {
                             throw exceptions::APIUserError(exceptions::INFO, e.what());
                         }
                     }
@@ -383,15 +367,14 @@ MasterController::buildFailover(
         }
 
         std::ostringstream msg;
-        short retries = 0;
+        unsigned short retries = 0;
         try {
-            retries = boost::lexical_cast<short>(*curr_tok);
-        } catch(const boost::bad_lexical_cast& e) {
-            retries = -1;
+            retries = boost::lexical_cast<unsigned short>(*curr_tok);
+        } catch (const boost::bad_lexical_cast& e) {
             msg << e.what();
         }
 
-        if (retries <= 0) {
+        if (retries == 0) {
             // Bad.  No action specified
             msg << "Invalid retry configuration for " << keyval.first <<  ". Number of retries, " << retries << ", must be greater than zero.";
             handleErrorMessage(msg.str());
@@ -459,7 +442,7 @@ MasterController::buildFailover(
                     LOG_DEBUG_MSG("Created failover pair for " << from_host.uhn() << " to "
                                   << to_host.uhn() << " for alias " << keyval.first);
                     failpairs[from_host] = to_host;
-                } catch( const CxxSockets::Error& e ) {
+                } catch ( const CxxSockets::Error& e ) {
                     throw exceptions::APIUserError(exceptions::INFO, e.what());
                 }
             }
@@ -468,7 +451,6 @@ MasterController::buildFailover(
         // Now create the behavior to associate with the trigger
         Behavior my_behavior(keyval.first, act, failpairs, retries);
         behaviors.insert(std::pair<Policy::Trigger,Behavior>(my_trigger,my_behavior));
-        //        behaviors[my_trigger] = my_behavior;
     }
 }
 
@@ -488,7 +470,7 @@ MasterController::buildInstances(
         BOOST_FOREACH(const AliasPtr& al, _aliases) {
             const std::string &instance_policy(keyval.second);
             if (keyval.first == al->get_name()) {
-                std::vector<std::string>::const_iterator it = std::find(exclude_list.begin(), exclude_list.end(), al->get_name());
+                const std::vector<std::string>::const_iterator it = std::find(exclude_list.begin(), exclude_list.end(), al->get_name());
                 if (it != exclude_list.end()) {
                     // This was defined previously. Refresh is additive. We don't want to mess with this on a running system.
                     std::ostringstream msg;
@@ -504,13 +486,13 @@ MasterController::buildInstances(
                     try {
                         const int ip = boost::lexical_cast<int>(instance_policy);
                         al->policy().changeInstances(static_cast<unsigned short>(ip));
-                        if (ip < 0) {
+                        if (ip <= 0 || ip > std::numeric_limits<unsigned short>::max()) {
                             std::ostringstream msg;
                             msg << "Bad instance value " << instance_policy << " defined for " << al->get_name();
                             LOG_WARN_MSG(msg.str());
                             throw exceptions::ConfigError(exceptions::WARN, msg.str());
                         }
-                    } catch(const boost::bad_lexical_cast& e) {
+                    } catch (const boost::bad_lexical_cast& e) {
                         std::ostringstream msg;
                         msg << "Bad instance value " << instance_policy << " defined. " << e.what();
                         LOG_WARN_MSG(msg.str());
@@ -726,16 +708,16 @@ MasterController::buildPolicies(
 
     Sect master, args, hosts, instances, failover, failmap, startlist, uidlist, logdirs;
     try {
-        master = _master_props->getValues("master.binmap");
-        args = _master_props->getValues("master.binargs");
-        hosts = _master_props->getValues("master.policy.host_list");
-        instances = _master_props->getValues("master.policy.instances");
-        failover = _master_props->getValues("master.policy.failure");
-        failmap = _master_props->getValues("master.policy.map");
-        startlist = _master_props->getValues("master.startup");
-        uidlist = _master_props->getValues("master.user");
+        master = _props->getValues("master.binmap");
+        args = _props->getValues("master.binargs");
+        hosts = _props->getValues("master.policy.host_list");
+        instances = _props->getValues("master.policy.instances");
+        failover = _props->getValues("master.policy.failure");
+        failmap = _props->getValues("master.policy.map");
+        startlist = _props->getValues("master.startup");
+        uidlist = _props->getValues("master.user");
         _start_once = false;
-    } catch(const std::invalid_argument& e) {
+    } catch (const std::invalid_argument& e) {
         std::ostringstream msg;
         msg << "Properties file error. " << e.what();
         handleErrorMessage(msg.str());
@@ -750,9 +732,9 @@ MasterController::buildPolicies(
 
     bool dologdirs = false;
     try {
-        logdirs = _master_props->getValues("master.logdirs");
+        logdirs = _props->getValues("master.logdirs");
         dologdirs = true;
-    } catch(const std::invalid_argument& e) {
+    } catch (const std::invalid_argument& e) {
         std::ostringstream msg;
         msg << "Properties file error. " << e.what();
         handleErrorMessage(msg.str());
@@ -771,7 +753,7 @@ MasterController::buildPolicies(
 
     // Need to get preferred_host_wait time to send to the alias constructor.
     try {
-        preferredHostWait=boost::lexical_cast<int>(_master_props->getValue("master.server","preferred_host_wait"));
+        preferredHostWait = boost::lexical_cast<int>(_props->getValue("master.server", "preferred_host_wait"));
 	if (  preferredHostWait <= 0 ) {
 	    std::ostringstream msg;
 	    msg << "Invalid preferred_host_wait setting in [master.server] section: Value must be an integer greater than 0.";
@@ -782,13 +764,13 @@ MasterController::buildPolicies(
 	    msg << "Found user preferred_host_wait key with value: " << preferredHostWait << " in [master.server] section.";
 	    LOG_DEBUG_MSG(msg.str());
 	}
-    } catch(const std::invalid_argument& e) {
+    } catch (const std::invalid_argument& e) {
         // It is ok if it is not set.  We default it to 15 here.
         std::ostringstream msg;
         msg << "Did not find optional preferred_host_wait key in [master.server] section. Setting default of 15 seconds.";
         LOG_DEBUG_MSG(msg.str());
 	preferredHostWait=15;
-    } catch(const boost::bad_lexical_cast& e) {
+    } catch (const boost::bad_lexical_cast& e) {
         std::ostringstream msg;
         msg << "Invalid preferred_host_wait setting in [master.server] section: " << e.what();
         LOG_ERROR_MSG(msg.str());
@@ -814,7 +796,7 @@ MasterController::buildPolicies(
         // The $BG_DRIVER environment variable can be part of the path.
         // We need to replace what's in the property file with the env var.
         std::string path = keyval.second;
-        size_t path_loc = path.find("$BG_DRIVER");
+        const size_t path_loc = path.find("$BG_DRIVER");
         if (path_loc != std::string::npos) { // If $BG_DRIVER is in the path...
             path.replace(path_loc, 10, driver); // ...replace it with the driver variable
         }
@@ -823,13 +805,19 @@ MasterController::buildPolicies(
     }
 
     try {
-        _agent_manager.setCount(boost::lexical_cast<unsigned>(_master_props->getValue("master.server","max_agents_per_host")));
-    } catch(std::invalid_argument& e) {
-        std::ostringstream msg;
-        msg << "Invalid max_agents_per_host setting in [master.server] section: " << e.what();
-        LOG_ERROR_MSG(msg.str());
-        throw exceptions::ConfigError(exceptions::WARN, msg.str());
-    } catch(boost::bad_lexical_cast& e) {
+        const std::string value( _props->getValue("master.server","max_agents_per_host") );
+        const int max_agents( boost::lexical_cast<int>(value) );
+        if ( max_agents <= 0 ) {
+            std::ostringstream msg;
+            msg << "Invalid max_agents_per_host setting in [master.server] section: value must be greater than zero";
+            LOG_ERROR_MSG(msg.str());
+            throw exceptions::ConfigError(exceptions::WARN, msg.str());
+        }
+        _agent_manager.setCount(static_cast<unsigned>(max_agents));
+    } catch (const std::invalid_argument& e) {
+        // this is OK, missing means default to 1
+        LOG_DEBUG_MSG( "missing max_agents_per_host setting in [master.server] section, using default value of 1" );
+    } catch (const boost::bad_lexical_cast& e) {
         std::ostringstream msg;
         msg << "Invalid max_agents_per_host setting in [master.server] section: " << e.what();
         LOG_ERROR_MSG(msg.str());
@@ -898,13 +886,17 @@ MasterController::startServers(
 
         if (agent) {
             // If we got here, we have an agent ready.
-            BGMasterAgentProtocolSpec::StartRequest agentreq(al->get_path(), al->get_args(),
-                                                             al->get_logdir(), al->get_name(),
-                                                             al->get_user());
+            const BGMasterAgentProtocolSpec::StartRequest agentreq(
+                    al->get_path(), 
+                    al->get_args(),
+                    al->get_logdir(), 
+                    al->get_name(),
+                    al->get_user()
+                    );
             BGMasterAgentProtocolSpec::StartReply reply;
             reply._rc = exceptions::OK;
 
-            BinaryId bid = agent->startBin(agentreq, reply);
+            const BinaryId bid = agent->startBin(agentreq, reply);
             if (bid.str() == "0") {
                 std::ostringstream msg;
                 msg << "Attempt to start binary for alias " << al->get_name() << " failed, check RAS.";
@@ -925,7 +917,6 @@ MasterController::startServers(
 
 void
 MasterController::startup(
-        const bgq::utility::Properties::Ptr& props,
         const int signal_fd
         )
 {
@@ -935,30 +926,30 @@ MasterController::startup(
     version << " " << bgq::utility::DriverName;
     version << "(revision " << bgq::utility::Revision << ")";
     version << " " << __DATE__ << " " << __TIME__;
-    LOG_INFO_MSG("bgmaster_server [" << getpid() << "] " << version.str() << " starting...");;
-    LOG_INFO_MSG("Using " << props->getFilename() << " for properties.");
-    _master_props = props;
+    _version_string = version.str();
+    LOG_INFO_MSG("bgmaster_server [" << getpid() << "] " << _version_string << " starting...");;
+    LOG_INFO_MSG("Using " << _props->getFilename() << " for properties.");
     _master_db = false;
     std::string db_val = "true";
     _start_time = boost::posix_time::second_clock::local_time();
 
     try {
-        db_val = _master_props->getValue("master.server", "db");
-    } catch(const std::invalid_argument& e) {
-        LOG_DEBUG_MSG("Invalid or missing db= parameter in [master.server] section of properties file. " << e.what());
+        db_val = _props->getValue("master.server", "db");
+    } catch (const std::invalid_argument& e) {
+        LOG_DEBUG_MSG("Invalid or missing db parameter in [master.server] section of properties file: " << e.what());
     }
 
-    if (db_val.length() == 0)
+    if (db_val.empty()) {
         db_val = "true";
+    }
 
     if (db_val == "true") {
         // Initialize the database for the process
         // This must be done before starting any threads, due to the initialization of static variables
         LOG_DEBUG_MSG("Initializing database connection pool");
-        bgq::utility::Properties::ConstPtr p = props;
         BGQDB::DBConnectionPool::reset();
         // We aren't cutting RAS very often, just one DB pool thread.
-        BGQDB::DBConnectionPool::init(p, 1);
+        BGQDB::DBConnectionPool::init(_props, 1);
         _updater.start(); // Start the DB updater.
         _master_db = true;
     } else {
@@ -970,14 +961,14 @@ MasterController::startup(
     }
 
     try {
-        _master_logdir = _master_props->getValue("master.server", "logdir");
+        _master_logdir = _props->getValue("master.server", "logdir");
         if (access(_master_logdir.c_str(), R_OK|W_OK) < 0) {
             std::ostringstream errmsg;
             errmsg << "Log directory " << _master_logdir << " is not accessible to bgmaster_server.";
             handleErrorMessage(errmsg.str());
             throw exceptions::ConfigError(exceptions::FATAL, errmsg.str());
         }
-    } catch(const std::invalid_argument& e) {
+    } catch (const std::invalid_argument& e) {
         LOG_WARN_MSG("No log directory found. Will use default.");
     }
 
@@ -1000,7 +991,6 @@ MasterController::startup(
     details["PID"] = boost::lexical_cast<std::string>(_pid);
     putRAS(MASTER_STARTUP_RAS, details);
     std::ostringstream startmsg;
-    boost::posix_time::ptime now(boost::posix_time::second_clock::local_time());
     startmsg << "bgmaster_server startup completed";
     addHistoryMessage(startmsg.str());
 
@@ -1050,17 +1040,9 @@ MasterController::startup(
                     lock_file = NULL;
                 }
 
-                // Reset to default action for our signal
-                struct sigaction sigact;
-                sigact.sa_handler = SIG_DFL;
-                int rc = sigaction(siginfo.si_signo, &sigact, 0);
-                if (rc < 0) {
-                    char errorText[256];
-                    LOG_FATAL_MSG( "Error resetting default action for bgmaster_server signal handler: " << std::string(strerror_r(errno, errorText, 256)));
-                    exit(1);
-                }
-                // Now raise it again
-                raise(siginfo.si_signo);
+                // use _exit instead of exit since other threads are running and we don't want to
+                // run global destructors 
+                _exit( 128 + siginfo.si_signo );
             }
         } else if ( !rc ) {
             // Check if either registrar has failed. If so, restart it.
@@ -1070,7 +1052,7 @@ MasterController::startup(
                 _agent_registrar.run(true);
                 _client_registrar.run(false);
                 reregister = true;
-            } else if(_client_registrar.get_failed()) {
+            } else if (_client_registrar.get_failed()) {
                 _agent_registrar.cancel();
                 _client_registrar.run(false);
                 _agent_registrar.run(true);

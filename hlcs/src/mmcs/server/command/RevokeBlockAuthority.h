@@ -21,23 +21,18 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_REVOKE_BLOCK_AUTHORITY_H_
 #define MMCS_SERVER_COMMAND_REVOKE_BLOCK_AUTHORITY_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 // This command 'does' its own security instead
 // of going through the command processor.  While it operates
 // on security objects, blocks, they don't use CRUDE actions.
-
 
 /*!
  * Revoke authority to security objects
@@ -46,9 +41,8 @@ class RevokeBlockAuthority: public common::AbstractCommand
 {
 public:
     RevokeBlockAuthority(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "revoke_block_authority < block > < user > < action >";}
-    static  RevokeBlockAuthority* build();    // factory method
-    static  std::string cmdname() { return "revoke_block_authority"; }
+      : AbstractCommand(name,description,attributes) { _usage = "revoke_block_authority < block > < user > < action >";}
+    static RevokeBlockAuthority* build();    // factory method
     void execute(std::deque<std::string> args,
                  mmcs_client::CommandReply& reply,
                  DBConsoleController* pController,
@@ -57,7 +51,6 @@ public:
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };
-
 
 } } } // namespace mmcs::server::command
 

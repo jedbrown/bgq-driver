@@ -54,6 +54,12 @@ const int32_t DefaultJobEpilogProgramTimeout = -1;
 //! Default number of seconds to wait for a tool to end.
 const int32_t DefaultEndToolTimeout = 10;
 
+//! Default number of seconds between heartbeats.
+const int32_t DefaultHeartbeatTimeout = 60;
+
+//! Default number of seconds for start time threshold.
+const int32_t DefaultStartTimeThreshold = 0;
+
 
 JobctlConfig::JobctlConfig(int argc, char **argv) : bgcios::CiosConfig()
 {
@@ -287,5 +293,45 @@ JobctlConfig::getJobEpilogProgramTimeout(void) const
    }
    
    return timeout;
+}
+
+int32_t
+JobctlConfig::getHeartbeatTimeout(void) const
+{
+    int32_t timeout = DefaultHeartbeatTimeout;
+    try {
+        timeout = boost::lexical_cast<int32_t>( _properties->getValue("runjob.server", "jobctl_heartbeat") );
+    } catch (const boost::bad_lexical_cast& e) {
+         LOG_CIOS_WARN_MSG(
+                 "jobctl_heartbeat property is invalid, using default value " << 
+                 DefaultHeartbeatTimeout << " (" << e.what() << ")"
+                 );
+    } catch (const std::exception& e) {
+         // not found, or invalid. Use default.
+    }
+
+    return timeout;
+}
+
+uint32_t
+JobctlConfig::getStartTimeThreshold(void) const
+{
+    int32_t timeout = DefaultStartTimeThreshold;
+    try {
+        timeout = boost::lexical_cast<int32_t>( _properties->getValue("cios.jobctld", "start_time_threshold") );
+        if ( timeout < 0 ) {
+            timeout = DefaultStartTimeThreshold;
+            LOG_CIOS_WARN_MSG("start_time_threshold property is invalid, using default value " << timeout );
+        }
+    } catch (const boost::bad_lexical_cast& e) {
+         LOG_CIOS_WARN_MSG(
+                 "start_time_threshold property is invalid, using default value " << 
+                 DefaultStartTimeThreshold << " (" << e.what() << ")"
+                 );
+    } catch (const std::exception& e) {
+         // not found, or invalid. Use default.
+    }
+
+    return static_cast<uint32_t>(timeout);
 }
 

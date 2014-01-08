@@ -24,43 +24,27 @@
 #ifndef MMCS_SERVER_COMMAND_STATUS_H_
 #define MMCS_SERVER_COMMAND_STATUS_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
 
-/*!
- * \brief
- */
 class Status : public common::AbstractCommand
 {
 public:
-    /*!
-     * \brief
-     */
     Status(
             const char* name,
             const char* description,
             const Attributes& attributes
             );
-
-    /*!
-     * \brief
-     */
     void execute(
             std::deque<std::string> args,
             mmcs_client::CommandReply& reply,
             common::ConsoleController* pController,
             BlockControllerTarget* pTarget=NULL
             );
-
-    /*!
-     * \brief
-     */
     void help(
             std::deque<std::string> args,
             mmcs_client::CommandReply& reply
@@ -69,8 +53,7 @@ public:
     bool checkArgs(std::deque<std::string>&) { return true; }
 
 public:
-    static  Status* build();
-    static  std::string cmdname() { return "status"; }
+    static Status* build();
 };
 
 } } } // namespace mmcs::server::command

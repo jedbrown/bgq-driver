@@ -32,6 +32,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
 
 namespace bgsched {
 namespace runjob {
@@ -41,6 +42,12 @@ namespace runjob {
  */
 class Client::Impl
 {
+public:
+    /*!
+     * \brief Job implementation type.
+     */
+    typedef ::runjob::client::Job JobImpl;
+
 public:
     /*!
      * \brief Ctor.
@@ -86,13 +93,12 @@ public:
     /*!
      * \brief
      */
-    const boost::weak_ptr< ::runjob::client::Job >& job() const { return _job; }
+    const boost::weak_ptr<JobImpl>& job() const { return _job; }
 
 private:
     boost::asio::io_service _io_service;
-    boost::shared_ptr<const ::runjob::client::options::Parser > _options;
-    boost::weak_ptr< ::runjob::client::Job > _job;
-    bool _started;
+    boost::shared_ptr<const ::runjob::client::options::Parser> _options;
+    boost::weak_ptr<JobImpl> _job;
 };
 
 } // runjob

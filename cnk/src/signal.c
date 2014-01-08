@@ -21,8 +21,21 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 #include "Kernel.h"
+
+#if __clang__
+#define malloc(n) NULL
+#define free(n)
+#endif
+
 #include <spi/include/l1p/pprefetch.h>
 #include <asm/unistd.h>
+
+#if __clang__
+L1P_SPIContext           _L1P_Context[68];
+L1P_PatternLimitPolicy_t _L1P_PatternLimitMode;
+uint64_t                 _L1P_PatternLimit;
+uint64_t                 _L1P_PatternCount;
+#endif
 
 // implemented in fs/shmFS.cc
 void FLock_Interrupt(KThread_t *kthr);

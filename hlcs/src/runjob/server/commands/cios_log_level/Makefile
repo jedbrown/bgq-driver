@@ -30,6 +30,10 @@ include ../../../../../../Make.rules
 
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/bgq_util/lib -lbgq_util
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/bgq_util/lib
+LDFLAGS += -lrunjob_common
+LDFLAGS += -lboost_program_options-mt
+LDFLAGS += -lboost_date_time-mt
+LDFLAGS += -llog4cxx
 
 COMMAND              = $(shell basename `pwd`)
 COMMAND_SRC          = main.cc

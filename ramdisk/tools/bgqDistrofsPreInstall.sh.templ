@@ -136,18 +136,18 @@ else
 		rm -f /tftpboot/testFile
 	fi
 
-	echo -en "\n\n\tChecking for $CURR_RHEL package repository at $RHEL6_PATH or an existing BGQ_DISTROFS_BASE_PATH .\n"
-	if [ ! -e $RHEL6_PATH ] && [ ! -e BGQ_DISTROFS_BASE_PATH ] ; then
-		echo -en "\n\n\t\tERROR: The required $CURR_RHEL package repository could not be found at $RHEL6_PATH"
+	echo -en "\n\n\tChecking for BGQ_DISTRO package repository at BGQ_DISTRO_REPO_PATH or an existing BGQ_DISTROFS_BASE_PATH .\n"
+	if [ ! -e BGQ_DISTRO_REPO_PATH ] && [ ! -e BGQ_DISTROFS_BASE_PATH ] ; then
+		echo -en "\n\n\t\tERROR: The required BGQ_DISTRO package repository could not be found at BGQ_DISTRO_REPO_PATH"
 		echo -en "\n\t\t       and there is not a pre-existing BGQ_DISTROFS_BASE_PATH installation."
 		echo -en "\n\t\t       Please make the repository available and then install the bgq-distrofs and bgq-diags rpms.\n\n"
 		exit 1
 	else
-		if [ -e $RHEL6_PATH ] ; then
-			echo -en "\n\t\t$CURR_RHEL package repository found."
+		if [ -e BGQ_DISTRO_REPO_PATH ] ; then
+			echo -en "\n\t\tBGQ_DISTRO package repository found."
 		fi
 		if [ -e BGQ_DISTROFS_BASE_PATH ] ; then
-			echo -en "\n\t\t$CURR_RHEL base installation found."
+			echo -en "\n\t\tBGQ_DISTRO base installation found."
 		fi
 	fi
 

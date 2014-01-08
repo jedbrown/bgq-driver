@@ -20,9 +20,11 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+
 /*!
  * \file utility/include/cxxsockets/SockAddr.h
  */
+
 #ifndef SOCK_ADDRS_H
 #define SOCK_ADDRS_H
 
@@ -37,21 +39,21 @@
 
 namespace CxxSockets {
 
-const int AF_INET6_ONLY = 21;
+const short AF_INET6_ONLY = 21;
 
 //! \brief SockAddr class for representing IP address structures.
 //!
 //! Inherit from sockaddr_storage and provide wrappers
-//! for generic address calls like getnameinfo()
+//! for generic address calls like getnameinfo().
 //! There are no data members.  This allows us to pass a pointer
 //! to this object to the BSD C API.
 class SockAddr : sockaddr_storage
 {
     friend class SockAddrList;
     static bool Addrinf(
-            struct addrinfo*& addrinf, 
-            unsigned short family, 
-            const std::string& nodename, 
+            struct addrinfo*& addrinf,
+            unsigned short family,
+            const std::string& nodename,
             const std::string& service
             );
 
@@ -59,7 +61,7 @@ public:
     //! Constructors:
     SockAddr() { memset(this, 0, sizeof(sockaddr_storage)); }
 
-    //! \brief Constructor based on a sockaddr struct
+    //! \brief Constructor based on a sockaddr struct.
     explicit SockAddr(sockaddr* sa);
 
     //! \brief Build a SockAddr from passed in data.
@@ -84,13 +86,13 @@ public:
     std::string getHostName() const;
 
     //! \brief Returns real address family
-    int family() const { return ss_family == AF_INET6_ONLY ? AF_INET6 : ss_family; }
+    unsigned short family() const { return ss_family == AF_INET6_ONLY ? AF_INET6 : ss_family; }
 
     //! \brief Returns real address family OR cached AF_INET6_ONLY value
-    int fm() const { return ss_family; }
+    short fm() const { return ss_family; }
 
     //! \brief Set the address family
-    void setFamily(const int fam) { ss_family = fam; }
+    void setFamily(const short fam) { ss_family = fam; }
 };
 
 }

@@ -57,7 +57,7 @@ static SocketPtr connect( Connector& connector )
     try {
         return connector.connect();
     } catch ( std::exception& e ) {
-        throw std::runtime_error( "failed to connect to the real-time server. It may be down." );
+        throw std::runtime_error( string("failed to connect to the real-time server: ") + e.what() );
     }
 }
 
@@ -172,10 +172,15 @@ int main( int argc, char* argv[] )
 
         iss >> db_monitor_state_str;
 
+        string db2_version;
+        
+        iss >> db2_version;
+
 
         cout << "Server status: " << status << "\n"
                 "Connected clients: " << connected_clients << "\n"
-                "DB monitor state: " << db_monitor_state_str << "\n";
+                "DB monitor state: " << db_monitor_state_str << "\n"
+                "Compiled against DB2 " << db2_version << "\n";
 
         exit( 0 );
     } catch ( std::exception& e ) {

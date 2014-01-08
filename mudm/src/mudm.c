@@ -67,6 +67,11 @@ int mudm_rdma_write(void* conn_context,
   CHECK_CONN_MAGIC(ccontext);
 
   MUDM_LOG_RDMA_WRITE(ccontext->flight_recorder,remoteRequestID,ccontext, (void*)rdma_object, (LLUS)bytes_xfer);
+  if ( unlikely(0==ccontext->injfifo_ctls->state) ){
+      MUDM_REQUEST_CANCELED(ccontext -> flight_recorder,ECANCELED,0,conn_context,(uint64_t)remoteRequestID);
+      MUDM_ERROR_HIT(ccontext -> flight_recorder,ECANCELED,__LINE__,0,(uint64_t)remoteRequestID);
+      return -ECANCELED;
+  }
 
   totalbytes=0;
 
@@ -135,6 +140,11 @@ while( (cur_local_pa !=0 ) && (cur_remote_pa != 0)  )
          
          
       }
+      if ( unlikely(0==ccontext->injfifo_ctls->state) ){
+          MUDM_REQUEST_CANCELED(ccontext -> flight_recorder,ECANCELED,0,conn_context,(uint64_t)remoteRequestID);
+          MUDM_ERROR_HIT(ccontext -> flight_recorder,ECANCELED,__LINE__,0,(uint64_t)remoteRequestID);
+          return -ECANCELED;
+      }
 
   }/* endwhile */
   if ( likely(totalbytes == bytes_xfer) ){
@@ -150,7 +160,7 @@ BADRDMA:
                                               rdma_object+offsetof(struct mu_element,error ),
                                               rdma_object,  
                                               ccontext->flight_recorder);
-    //! \todo: consider printing/tracing/logging invalid parms .....  
+    MUDM_ERROR_HIT(ccontext -> flight_recorder,EINVAL,__LINE__,totalbytes,bytes_xfer); 
     return -EINVAL;
     
   }
@@ -175,11 +185,10 @@ ENTER;
     desc_count = conn_memfifo(ccontext,type,(uint64_t)payload_paddr,(uint64_t)payload_length);
 
     do{
-      //! \todo check state inactive
       if ( MUSPI_CheckDescComplete(ccontext->injfifo_ctls->injfifo, desc_count) == 1){
          return 0;
       }
-      if ( unlikely( (uint64_t)(-1) == desc_count) ){
+      if ( unlikely(0==ccontext->injfifo_ctls->state) ){//link inactive?
         MUDM_REQUEST_CANCELED(ccontext -> flight_recorder,ECANCELED,type,conn_context,requestID);
         return -ECANCELED;
       }
@@ -238,8 +247,8 @@ ENTER;
         return -ECANCELED;
     }
     pktd = alloc_pkt_message(ccontext->packetcontrols);
-    if (pktd == NULL){
-     MPRINT("pktd==NULL %s line %d \n",__FUNCTION__,__LINE__);
+    if ( unlikely(pktd == NULL) ){
+     PRINT("pktd==NULL %s line %d \n",__FUNCTION__,__LINE__);
      return -EBUSY;
     }
 
@@ -307,6 +316,8 @@ ENTER;
       {
 
         release_pkt_to_free(pktd, 0);
+        MUDM_REQUEST_CANCELED(ccontext -> flight_recorder,EINVAL,type,conn_context,mudm_payload->RequestID);
+        MUDM_ERROR_HIT(ccontext -> flight_recorder,EINVAL,__LINE__,type,mudm_payload->RequestID);
         return -EINVAL;
       }
     }
@@ -314,6 +325,18 @@ ENTER;
     DPRINT("Past case statements in FILE %s FUNCTION %s LINE %d DATE %s\n",__FILE__,__FUNCTION__,__LINE__, __DATE__);   
 
     desc_count = conn_memfifo(ccontext,type,physaddr,(uint64_t)payload_length);
+
+    if ( unlikely(0==ccontext->injfifo_ctls->state) ){//link state is inactive
+        MUDM_REQUEST_CANCELED(ccontext -> flight_recorder,ECANCELED,type,conn_context,mudm_payload->RequestID);
+        MUDM_ERROR_HIT(ccontext -> flight_recorder,ECANCELED,__LINE__,type,mudm_payload->RequestID);
+        release_pkt_to_free(pktd, 0);
+        //cancel RDMA object already in poll
+        rdma_obj_item->local_request_id = 0;
+        my_ppc_msync();//just to be overly cautious
+        rdma_obj_item->mue->mu_counter = 0;
+        my_ppc_msync();//just to be overly cautious
+        return -ECANCELED;
+    }
     
     PRINT("desc_count=%llu @ line=%d \n",(long long unsigned int)desc_count,__LINE__);
 
@@ -357,18 +380,23 @@ int mudm_rdma_read(void* conn_context ,
   CHECK_CONN_MAGIC(ccontext);
   
   DPRINT("FUNCTION %s local_sgl=%p remote_sgl=%p bytes_xfer=%llu \n",__FUNCTION__,local_sgl,remote_sgl,(LLUS)bytes_xfer);
-
+  
+  if ( unlikely(0==ccontext->injfifo_ctls->state) ){
+        MUDM_REQUEST_CANCELED(ccontext -> flight_recorder,ECANCELED,0,conn_context,requestID);
+        MUDM_ERROR_HIT(ccontext -> flight_recorder,ECANCELED,__LINE__,0,requestID);
+        return -ECANCELED;
+  }
   pktd = alloc_pkt_message(ccontext->packetcontrols);
   
-  if (pktd == NULL){
-     MPRINT("pktd==NULL %s line %d \n",__FUNCTION__,__LINE__);
+  if ( unlikely (pktd == NULL) ){
+     PRINT("pktd==NULL %s line %d \n",__FUNCTION__,__LINE__);
      EXIT;
      return -EBUSY;
   }
   rdma_obj_item = allocate_rdma_object(ccontext->rdma_obj_ctls);
   if (NULL==rdma_obj_item){
       release_pkt_to_free(pktd,0);
-      MPRINT("rdma_obj_item is NULL \n");
+      PRINT("rdma_obj_item is NULL \n");
       EXIT;
       return -EBUSY;
   }
@@ -393,8 +421,13 @@ while( (cur_local_pa !=0 ) && (cur_remote_pa != 0)  )
           // use memfifo to emulate remote get operation
           desc_count = dput_memfifo(ccontext,MUDM_DPUT,pktd->message_pa,(uint64_t)(sizeof(MUHWI_Descriptor_t) )*putdesc_count,
                                     &ccontext->rget_memfifo_sent );
-          //! \todo TODO: add logic to try for another pktd and if NULL then reuse the previous pktd
-          //! \todo TODO check state inactive injfifo
+          if ( unlikely(0==ccontext->injfifo_ctls->state) ){//IO link is inactive
+              MUDM_REQUEST_CANCELED(ccontext -> flight_recorder,ECANCELED,0,conn_context,requestID);
+              MUDM_ERROR_HIT(ccontext -> flight_recorder,ECANCELED,__LINE__,0,requestID);
+              release_pkt_to_free(pktd,0);
+              free_rdma_obj(rdma_obj_item);
+              return -ECANCELED;
+          }
           while( MUSPI_CheckDescComplete(ccontext->injfifo_ctls->injfifo, desc_count) == 0);  //plan to reuse pktd memory region
           putdesc_count = 0;  // restart on sending bundle
       }
@@ -464,13 +497,18 @@ while( (cur_local_pa !=0 ) && (cur_remote_pa != 0)  )
      if ( likely(putdesc_count > 0) ){
        // use memfifo to emulate remote get operation
        desc_count = dput_memfifo(ccontext,MUDM_DPUT,pktd->message_pa,(uint64_t)(sizeof(MUHWI_Descriptor_t) * putdesc_count ),&ccontext->rget_memfifo_sent ); 
+       if ( unlikely(0==ccontext->injfifo_ctls->state) ){
+              MUDM_REQUEST_CANCELED(ccontext -> flight_recorder,ECANCELED,0,conn_context,requestID);
+              MUDM_ERROR_HIT(ccontext -> flight_recorder,ECANCELED,__LINE__,0,requestID);
+              release_pkt_to_free(pktd,0);
+              free_rdma_obj(rdma_obj_item);
+              return -ECANCELED;
+       }
      }
      
-
      // 12/15/2010 counter rarely hits zero here--archived that check in archive_inline.h
      release_rdma_obj_to_poll(rdma_obj_item, COUNTER);
-     //release of rdma_obj long enough to have packet taken by MU
-     //! \todo TODO check for inactive injfifo 
+     //release of rdma_obj long enough to have packet taken by MU 
      if ( MUSPI_CheckDescComplete(ccontext->injfifo_ctls->injfifo, desc_count) == 1){
             RPRINT("mudm_rdma_read free pktd=%p \n",pktd);
             release_pkt_to_free(pktd, desc_count);
@@ -492,8 +530,10 @@ while( (cur_local_pa !=0 ) && (cur_remote_pa != 0)  )
                                sizeof(mcontext->rdma_EINVAL_source),
                                rdma_obj_item ->remote_rdma_obj_pa );
      }  
-     release_pkt_to_free(pktd, desc_count);
+     release_pkt_to_free(pktd, 0);
      free_rdma_obj(rdma_obj_item);
+     MUDM_REQUEST_CANCELED(ccontext -> flight_recorder,EINVAL,0,conn_context,requestID);
+     MUDM_ERROR_HIT(ccontext -> flight_recorder,EINVAL,__LINE__,0,requestID);
      MEXIT;
      return -EINVAL;
   }
@@ -506,7 +546,15 @@ while( (cur_local_pa !=0 ) && (cur_remote_pa != 0)  )
        desc_count = dput_memfifo(ccontext,MUDM_DPUT,pktd->message_pa,(uint64_t)(sizeof(MUHWI_Descriptor_t) * putdesc_count ),&ccontext->rget_memfifo_sent ); 
      }
      //! \todo re-evaluate while looping--in io-link reset, ensure counter is zeroed
-     while(rdma_obj_item ->mue-> mu_counter); //wait on counter to hit zero
+     while(rdma_obj_item ->mue-> mu_counter){//wait on counter to hit zero unless link goes inactive
+       if ( unlikely(0==ccontext->injfifo_ctls->state) ){//IO link inactive?
+              MUDM_REQUEST_CANCELED(ccontext -> flight_recorder,ECANCELED,0,conn_context,requestID);
+              MUDM_ERROR_HIT(ccontext -> flight_recorder,ECANCELED,__LINE__,0,requestID);
+              release_pkt_to_free(pktd,0);
+              free_rdma_obj(rdma_obj_item);
+              return -ECANCELED;
+       }
+     } 
      release_pkt_to_free(pktd, desc_count);
      
      if (rdma_obj_item ->remote_rdma_obj_pa){ //tell other side about the error 
@@ -520,6 +568,7 @@ while( (cur_local_pa !=0 ) && (cur_remote_pa != 0)  )
      }
      free_rdma_obj(rdma_obj_item);
      MEXIT;
+     MUDM_ERROR_HIT(ccontext -> flight_recorder,EINVAL,__LINE__,0,requestID);
      return -EINVAL;
   }
   else { // (totalbytes < bytes_xfer 
@@ -542,9 +591,10 @@ while( (cur_local_pa !=0 ) && (cur_remote_pa != 0)  )
                                rdma_obj_item ->remote_rdma_obj_pa );
        /* no waiting for RDMA write notice to be completed */
        release_pkt_to_free(pktd, desc_count);
-       free_rdma_obj(rdma_obj_item);
+       free_rdma_obj(rdma_obj_item);  
      }
      MEXIT;
+     MUDM_ERROR_HIT(ccontext -> flight_recorder,EINVAL,__LINE__,0,requestID);
      return -EINVAL;
   }
   
@@ -608,6 +658,14 @@ void reject_packet_ras(int return_code,void * hdr, uint32_t message_id){
      int i = 0;
      MUDM_RASBEGIN(5);
      MUDM_RASPUSH(-return_code);
+     for(i=0;i<4;i++) MUDM_RASPUSH(bytes8[i]);
+     MUDM_RASFINAL(message_id);    
+}
+
+void took2long_ras(void * hdr, uint32_t message_id){
+     uint64_t * bytes8 = (uint64_t *)hdr;
+     int i = 0;
+     MUDM_RASBEGIN(4);
      for(i=0;i<4;i++) MUDM_RASPUSH(bytes8[i]);
      MUDM_RASFINAL(message_id);    
 }
@@ -737,7 +795,7 @@ int mudm_recv_packet (struct my_context * mcontext, MUHWI_PacketHeader_t * hdr, 
      case MUDM_PKT_EILSEQ:
      case MUDM_PKT_ERROR:
      case MUDM_PKT_ENOTCONN:
-       reject_packet_ras(sw_hdr->ionet_hdr.type,(void *)hdr,MUDMRAS_PKT_REJECTED);
+       if (ok2RAS_pacing(mcontext) ) reject_packet_ras(sw_hdr->ionet_hdr.type,(void *)hdr,MUDMRAS_PKT_REJECTED);
      break;
 
      case MUDM_IP_IMMED :
@@ -890,9 +948,10 @@ int poll_iolink(void* mudm_context, uint32_t io_link){
      struct mudm_connection * ccontext= mcontext->conn_pendlist[io_link];
      if (ccontext->my_timestamp){
          uint64_t now_timestamp=GetTimeBase2(); 
-         if ( (now_timestamp - ccontext->my_timestamp)> (1*96000000000ull) ){//NUM * 1 minute of cyecles
+         if ( (now_timestamp - ccontext->my_timestamp)> (2*96000000000ull) ){//NUM * 2 minute of cycles
              // \todo: TODO actions of RAS, quit?
-             MPRINT("CN_TOOK2LONG now timestamp=%llu conn timestamp=%llu \n",(LLUS)now_timestamp,(LLUS)ccontext->my_timestamp);
+             //if (ok2RAS_pacing(mcontext) ) took2long_ras((void *)&ccontext->mu_iMemoryFifoDescriptor.PacketHeader,MUDMRAS_CN_TOOK2LONG);      
+             //MPRINT("CN_TOOK2LONG now timestamp=%llu conn timestamp=%llu \n",(LLUS)now_timestamp,(LLUS)ccontext->my_timestamp);
              MUDM_CN_TOOK2LONG(&mcontext->mudm_hi_wrap_flight_recorder,&ccontext->mu_iMemoryFifoDescriptor.PacketHeader);
              ccontext->my_timestamp = 0; //take actions only once
          }

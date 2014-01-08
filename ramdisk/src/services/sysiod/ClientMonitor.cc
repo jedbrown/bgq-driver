@@ -36,6 +36,7 @@
 #include <ramdisk/include/services/common/SignalHandler.h>
 #include <ramdisk/include/services/common/logging.h>
 #include <ramdisk/include/services/common/Cioslog.h>
+#include <sys/xattr.h>
 
 using namespace bgcios::sysio;
 
@@ -193,7 +194,32 @@ ClientMonitor::startup(void)
 
    return 0;
 }
+void * ClientMonitor::EventWaiter::run(void)
+{ 
 
+   
+   struct pollfd _pollSetEventChannel;
+
+   _pollSetEventChannel.fd = _clientMonitor._rdmaListener->getEventChannelFd();
+   _pollSetEventChannel.events = POLLIN;
+   _pollSetEventChannel.revents = 0;
+   for(;;)
+   {
+     int rc = poll(&_pollSetEventChannel, 1, -1);
+     if (rc == -1) {
+         int err = errno;
+         if (err == EINTR) continue;
+         else {
+            printf("died on pollSetEventChannel errno=%d\n",err);
+            _exit(EXIT_SUCCESS);
+         }
+     }
+     _clientMonitor.eventChannelHandler(); 
+     _pollSetEventChannel.revents = 0;
+   }
+
+   return NULL;
+}
 void *
 ClientMonitor::run(void)
 {
@@ -208,6 +234,9 @@ ClientMonitor::run(void)
 
    updatePlugin();
 
+   ClientMonitor::EventWaiter eventWaiter(*this);
+   eventWaiter.start();  //call the thread wrapper which invokes run
+
    // Initialize the set of descriptors to monitor.
    _pollSet[CompChannel].fd = _completionChannel->getChannelFd();
    _pollSet[CompChannel].events = POLLIN;
@@ -215,11 +244,7 @@ ClientMonitor::run(void)
    _freePollSetSlots.flip(CompChannel);
    LOG_CIOS_DEBUG_MSG("added completion channel using fd " << _pollSet[CompChannel].fd << " to poll descriptor list");
 
-   _pollSet[EventChannel].fd = _rdmaListener->getEventChannelFd();
-   _pollSet[EventChannel].events = POLLIN;
-   _pollSet[EventChannel].revents = 0;
-   _freePollSetSlots.flip(EventChannel);
-   LOG_CIOS_DEBUG_MSG("added event channel using fd " << _pollSet[EventChannel].fd << " to poll descriptor list");
+
 
 
    int timeout = -1; // -1 = forever, 10000 = 10 second, 1000 = 1 second, 500 = 1/2 second, 250 = 1/4 second, 100 = 1/10 second
@@ -268,13 +293,6 @@ ClientMonitor::run(void)
          _pollSet[CompChannel].revents = 0;
       }
 
-      // Check for an event on the event channel.
-      if (_pollSet[EventChannel].revents & POLLIN) {
-         LOG_CIOS_TRACE_MSG("event available on rdma event channel");
-         eventChannelHandler();
-         _pollSet[EventChannel].revents = 0;
-      }
-
       
       for (nfds_t index = FixedPollSetSize; index < _pollSetSize; ++index) {
          if (_pollSet[index].fd == -1) continue;
@@ -299,6 +317,7 @@ ClientMonitor::run(void)
 
             // Remove the blocked message from the list and free the poll set slot.
             _blockedMessages.remove(_pollSet[index].fd);
+            CIOSLOGMSG(BGV_RLSE_MSG, message->getAddress() );
             _pollSet[index].fd = -1;
             _pollSet[index].events = 0;
             _pollSet[index].revents = 0;
@@ -749,12 +768,28 @@ ClientMonitor::routeMessage(const ClientMessagePtr& message)
                        outMsg->header.errorCode = EINTR;
                    }                  
               }
-         case WriteRdmaVirt: writeRdmaVirt(message); break;
-         case WriteRdmaVirtKernelInternal: writeRdmaVirt(message); break;         
-
+         case WriteImmediate: 
+         case WriteImmediateKernelInternal:       
+             writeImmediate(message);break;
          case SetupJob: setupJob(message); break;
          case CleanupJob: cleanupJob(message); break;
+//NEW!
+         case FsetXattr: fxattr_setOrRemove(message); break;
+         case FgetXattr: ffxattr_retrieve(message); break;
+         case FremoveXattr: fxattr_setOrRemove(message); break;
+         case FlistXattr: ffxattr_retrieve(message); break;
 
+         case LsetXattr: pathsetxattr(message); break;
+         case LgetXattr: pathgetxattr(message);  break;
+         case LremoveXattr: pathremovexattr(message); break;
+         case LlistXattr: pathlistxattr(message); break;
+
+         case PsetXattr: pathsetxattr(message); break;
+         case PgetXattr: pathgetxattr(message); break;
+         case PremoveXattr: pathremovexattr(message); break;
+         case PlistXattr: pathlistxattr(message); break;
+         case GpfsFcntl: gpfsfcntl(message); break;
+             
          default: return false; break;
       }
  }
@@ -850,6 +885,7 @@ ClientMonitor::access(const ClientMessagePtr& message)
    // Run the operation.
    setSyscallStart( (struct  MessageHeader * )inMsg,inMsg->dirfd,pathname);
    int rc = ::faccessat(inMsg->dirfd, pathname, inMsg->type, inMsg->flags);
+   //if (rc) printf("faccessat fd=%d pathname=%s type=%d flags=%d rc=%d errno=%d\n", inMsg->dirfd, pathname, inMsg->type, inMsg->flags,rc,errno);
    clearSyscallStart();
 
    if (rc == 0) {
@@ -1581,16 +1617,34 @@ ClientMonitor::pollForCN(const ClientMessagePtr& message)
   return;
 }
 
+
 void
-ClientMonitor::pread64(const ClientMessagePtr& message)
+ClientMonitor::pread64(const ClientMessagePtr& message) //post pread to file system
 {
    // Get pointer to message from inbound message region.
    Pread64Message *inMsg = (Pread64Message *)message->getAddress();
 
-   // Build ack message in outbound message region.
-   _ackMessage =   allocateClientAckMessage(message,   Pread64Ack, sizeof(Pread64AckMessage));
+   // Save the message so inbound message region is available for next message.
+   if (!message->isSaved()) {
+      inMsg = (Pread64Message *)message->save();
+   }
+
+   //keep reference to Ack Message storage for tracking information
+   _ackMessage = message->getAck();
    Pread64AckMessage *outMsg = (Pread64AckMessage *)_ackMessage;
-   outMsg->bytes = 0;
+   if (_ackMessage == NULL){
+     // Build ack message in outbond message region.
+     _ackMessage =   allocateClientAckMessage(message,   Pread64Ack, sizeof(Pread64AckMessage));
+     outMsg = (Pread64AckMessage *)_ackMessage;
+     message->saveAck(_ackMessage);
+     outMsg->bytes = 0;
+     //outMsg->ION_rdma_buffer_offset = 0;
+   }
+
+   // When message is first received, let client know operation is in progress.
+   if (!message->isInProgress()) {
+      message->setInProgress(true);
+   }
 
    // Validate the job id.
    JobPtr job = _jobs.get(inMsg->header.jobId);
@@ -1599,7 +1653,6 @@ ClientMonitor::pread64(const ClientMessagePtr& message)
    // Run the operation until all of the data is read or an error occurs.
    uint64_t address = inMsg->address;
    size_t length = 0;
-   off64_t position = inMsg->position;
    size_t bytesLeft = inMsg->length;
 
    while (bytesLeft > 0) {
@@ -1614,19 +1667,21 @@ ClientMonitor::pread64(const ClientMessagePtr& message)
       // Run the operation, putting the data in the large memory region.
       LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Pread64 message started syscall, fd=" << inMsg->fd <<
                     " length=" << length << " position=" << position);
-      if (job-> logJobStatistics() ) job->preadTimer.start();
+      if (job-> logJobStatistics() ) job->readTimer.start();
       ssize_t rc;
       uint32_t error = 0;
       if (inMsg->fd != job->getShortCircuitFd()) {
+         CIOSLOG4(SYS_CALL_PRD,_largeRegion->getAddress(),length,0,inMsg->position);
          setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length);
-         rc = ::pread64(inMsg->fd, _largeRegion->getAddress(), length, position);
+         rc = ::pread64(inMsg->fd, _largeRegion->getAddress(), length, inMsg->position);
          error = (uint32_t)errno;
          clearSyscallStart();
+         CIOSLOG4(SYS_RSLT_PRD,rc,errno,outMsg->bytes,bytesLeft);
       }
       else {
          rc = (ssize_t)length;
       }
-      if (job-> logJobStatistics() ) job->preadTimer.stop();
+      job->readTimer.stop();
       LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Pread64 message completed syscall, fd=" << inMsg->fd <<
                     " rc=" << rc << " errno=" << error);
 
@@ -1635,22 +1690,30 @@ ClientMonitor::pread64(const ClientMessagePtr& message)
          outMsg->header.returnCode = bgcios::Success;
          outMsg->bytes += rc;
 
-         error = putData( address, inMsg->rkey, (uint32_t)rc); 
-         if (error != 0) {
-            outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-            outMsg->header.errorCode = error;
-            bytesLeft = 0; // Force exit from loop because there was an error
-            continue;
-         }
-
          // Adjust for next operation.
          if (job->posixMode()) {
             bytesLeft = 0; // Force exit from loop because only one operation per message
+            error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
+            if (error != 0) {
+              outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+              outMsg->header.errorCode = error;
+              bytesLeft = 0; // Force exit from loop because there was an error
+              continue;
+           }
          }
          else {
-            address += (uint64_t)rc;
-            position += (off64_t)rc;
             bytesLeft -= (size_t)rc;
+            inMsg->length -= (size_t)rc;
+            inMsg->position += (off64_t)rc;
+            if (bytesLeft){
+              error = putData( address, inMsg->rkey, (uint32_t)rc); 
+            }
+            else {//not waiting for the RDMA completion and the ACK will be fenced
+              // error = putData( address, inMsg->rkey, (uint32_t)rc); 
+              error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
+            }
+            address += (uint64_t)rc;
+            inMsg->address = address; //Need this if a addBlockedMessage for EWOULDBLOCK
          }
       }
 
@@ -1662,102 +1725,26 @@ ClientMonitor::pread64(const ClientMessagePtr& message)
 
       // There was an error reading from the descriptor.
       else {
-         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-         outMsg->header.errorCode = error;
+         if (error == EWOULDBLOCK) {
+            addBlockedMessage(inMsg->fd, POLLIN, message);
+            _ackMessage=NULL;  //No ack message yet
+            LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": pread message is blocked for fd=" << inMsg->fd);
+         }
+         else {
+            outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+            outMsg->header.errorCode = error;
+         }
          bytesLeft = 0; // Force exit from loop
       }
    }
 
-   // Pead64Ack message is ready in the outbound message region.
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Pread64Ack message is ready, fd=" << inMsg->fd <<
-                 " length=" << inMsg->length << " bytes=" << outMsg->bytes << " rc=" << outMsg->header.returnCode << " errno=" << outMsg->header.errorCode);
 
    return;
 }
 
-void
-ClientMonitor::pwrite64(const ClientMessagePtr& message)
-{
-   // Get pointer to message from inbound message region.
-   Pwrite64Message *inMsg = (Pwrite64Message *)message->getAddress();
-
-   // Build ack message in outbound message region.
-   _ackMessage =   allocateClientAckMessage(message,   Pwrite64Ack, sizeof(Pwrite64AckMessage));
-   Pwrite64AckMessage *outMsg = (Pwrite64AckMessage *)_ackMessage;
-   outMsg->bytes = 0;
-
-   // Validate the job id.
-   JobPtr job = _jobs.get(inMsg->header.jobId);
-   // For performance, I'm not logging an error if the job is not found.
-
-   // Run the operation until all of the data is written or an error occurs.
-   uint64_t address = inMsg->address;
-   size_t length = 0;
-   off64_t position = inMsg->position;
-   size_t bytesLeft = inMsg->length;
-
-   while (bytesLeft > 0) {
-      // Calculate the length of data for this operation.
-      if (bytesLeft > _largeRegion->getLength()) {
-         length = _largeRegion->getLength();
-      }
-      else {
-         length = bytesLeft;
-      }
-
-      // Receive the data from the compute node.
-      uint32_t error = getData( address, inMsg->rkey, (uint32_t)length);
-      if (error != 0) {
-         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-         outMsg->header.errorCode = error;
-         bytesLeft = 0; // Force exit from loop
-         continue;
-      }
-
-      // Run the operation.
-      LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Pwrite64 message started syscall, fd=" << inMsg->fd <<
-                    " length=" << length << " position=" << position);
-      ssize_t rc;
-      error = 0;
-      if (job-> logJobStatistics() ) job->pwriteTimer.start();
-      if (inMsg->fd != job->getShortCircuitFd()) {
-         setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length );
-         rc = ::pwrite64(inMsg->fd, _largeRegion->getAddress(), length, position);
-         error = (uint32_t)errno;
-         clearSyscallStart();
-      }
-      else {
-         rc = (ssize_t)length;
-      }
-      job->pwriteTimer.stop();
-      LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Pwrite64 message completed syscall, fd=" << inMsg->fd <<
-                    " rc=" << rc << " errno=" << error);
-
-      if (rc >= 0) {
-         outMsg->header.returnCode = bgcios::Success;
-         outMsg->bytes += rc;
-         address += (uint64_t)rc;
-         position += (off64_t)rc;
-         bytesLeft -= (size_t)rc;
-      }
-      else {
-         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-         outMsg->header.errorCode = (uint32_t)errno;
-         bytesLeft = 0; // Force exit from loop
-         continue;
-      }
-   }
-
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Pwrite64Ack message is ready, fd=" << inMsg->fd <<
-                 " length=" << inMsg->length << " bytes=" << outMsg->bytes << " rc=" << outMsg->header.returnCode << " errno=" << outMsg->header.errorCode);
-   return;
-}
-
-
-//! Response message for read system call.
 
 void
-ClientMonitor::read(const ClientMessagePtr& message)
+ClientMonitor::read(const ClientMessagePtr& message) //post read to file system
 {
    // Get pointer to message from inbound message region.
    ReadMessage *inMsg = (ReadMessage *)message->getAddress();
@@ -1767,10 +1754,17 @@ ClientMonitor::read(const ClientMessagePtr& message)
       inMsg = (ReadMessage *)message->save();
    }
 
-   // Build ack message in outbond message region.
-   _ackMessage = allocateClientAckMessage(message,   ReadAck, sizeof(ReadAckMessage));
+   //keep reference to Ack Message storage for tracking information
+   _ackMessage = message->getAck();
    ReadAckMessage *outMsg = (ReadAckMessage *)_ackMessage;
-   outMsg->bytes = 0;
+   if (_ackMessage == NULL){
+     // Build ack message in outbond message region.
+     _ackMessage = allocateClientAckMessage(message,   ReadAck, sizeof(ReadAckMessage));
+     outMsg = (ReadAckMessage *)_ackMessage;
+     message->saveAck(_ackMessage);
+     outMsg->bytes = 0;
+     //outMsg->ION_rdma_buffer_offset = 0;
+   }
 
    // When message is first received, let client know operation is in progress.
    if (!message->isInProgress()) {
@@ -1802,29 +1796,12 @@ ClientMonitor::read(const ClientMessagePtr& message)
       ssize_t rc;
       uint32_t error = 0;
       if (inMsg->fd != job->getShortCircuitFd()) {
+         CIOSLOG4(SYS_CALL_RED,_largeRegion->getAddress(),length,0,inMsg->fd);
          setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length);
          rc = ::read(inMsg->fd, _largeRegion->getAddress(), length);
          error = (uint32_t)errno;
-#if 0
-	 if ( _syscall_mh->rank == 1 ) {
-	     static int toggle = 0;
-	     uint64_t timeout = 1600ull * 1000ull * 1000ull; // one second
-	     if ( toggle == 0 ) {
-		 timeout *= 33ull;
-		 toggle = 1;
-	     }
-	     else {
-		 timeout *= 94ull;
-		 toggle = 0;
-	     }
-
-	     LOG_CIOS_WARN_MSG_FORCED("[HEY] sleeping for " << timeout << "  in  " << __func__ << " " << _syscall_mh->type << " from rank " << _syscall_mh->rank );
-
-	     timeout += GetTimeBase();
-	     while ( GetTimeBase() < timeout );
-	 }
-#endif
          clearSyscallStart();
+         CIOSLOG4(SYS_RSLT_RED,rc,errno,outMsg->bytes,bytesLeft);
       }
       else {
          rc = (ssize_t)length;
@@ -1838,22 +1815,29 @@ ClientMonitor::read(const ClientMessagePtr& message)
          outMsg->header.returnCode = bgcios::Success;
          outMsg->bytes += rc;
 
-         error = putData( address, inMsg->rkey, (uint32_t)rc); 
-         if (error != 0) {
-            outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-            outMsg->header.errorCode = error;
-            bytesLeft = 0; // Force exit from loop because there was an error
-            continue;
-         }
-
          // Adjust for next operation.
          if (job->posixMode()) {
             bytesLeft = 0; // Force exit from loop because only one operation per message
+            error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
+            if (error != 0) {
+              outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+              outMsg->header.errorCode = error;
+              bytesLeft = 0; // Force exit from loop because there was an error
+              continue;
+           }
          }
          else {
-            address += (uint64_t)rc;
             bytesLeft -= (size_t)rc;
             inMsg->length -= (size_t)rc;
+            if (bytesLeft){
+              error = putData( address, inMsg->rkey, (uint32_t)rc); 
+            }
+            else {//not waiting for the RDMA completion and the ACK will be fenced
+              // error = putData( address, inMsg->rkey, (uint32_t)rc); 
+              error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
+            }
+            address += (uint64_t)rc;
+            inMsg->address = address; //Need this if a addBlockedMessage for EWOULDBLOCK
          }
       }
 
@@ -1878,9 +1862,126 @@ ClientMonitor::read(const ClientMessagePtr& message)
       }
    }
 
-   // ReadAck message is ready in the outbound message region.
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": ReadAck message is ready, fd=" << inMsg->fd <<
-                 " length=" << inMsg->length << " bytes=" << outMsg->bytes << " rc=" << outMsg->header.returnCode << " errno=" << outMsg->header.errorCode);
+
+   return;
+}
+
+void
+ClientMonitor::recv(const ClientMessagePtr& message) //post read to file system
+{
+   // Get pointer to message from inbound message region.
+   RecvMessage *inMsg = (RecvMessage *)message->getAddress();
+
+   // Save the message so inbound message region is available for next message.
+   if (!message->isSaved()) {
+      inMsg = (RecvMessage  *)message->save();
+   }
+
+   //keep reference to Ack Message storage for tracking information
+   _ackMessage = message->getAck();
+   RecvAckMessage *outMsg = (RecvAckMessage *)_ackMessage;
+   if (_ackMessage == NULL){
+     // Build ack message in outbond message region.
+     _ackMessage =   allocateClientAckMessage(message,   RecvAck, sizeof(RecvAckMessage));
+     outMsg = (RecvAckMessage *)_ackMessage;
+     message->saveAck(_ackMessage);
+     outMsg->bytes = 0;
+     //outMsg->ION_rdma_buffer_offset = 0;
+   }
+
+   // When message is first received, let client know operation is in progress.
+   if (!message->isInProgress()) {
+      message->setInProgress(true);
+   }
+
+   // Validate the job id.
+   JobPtr job = _jobs.get(inMsg->header.jobId);
+   // For performance, I'm not logging an error if the job is not found.
+
+   // Run the operation until all of the data is read or an error occurs.
+   uint64_t address = inMsg->address;
+   size_t length = 0;
+   size_t bytesLeft = inMsg->length;
+
+   while (bytesLeft > 0) {
+      // Calculate the length of data for this operation.
+      if (bytesLeft > _largeRegion->getLength()) {
+         length = _largeRegion->getLength();
+      }
+      else {
+         length = bytesLeft;
+      }
+
+      // Run the operation, putting the data in the large memory region.
+      LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Recv message started syscall, sockfd="<< inMsg->sockfd<<                 " length=" << inMsg->length);
+      if (job-> logJobStatistics() ) job->readTimer.start();
+      ssize_t rc;
+      uint32_t error = 0;
+      if (inMsg->sockfd != job->getShortCircuitFd()) {
+         CIOSLOG4(SYS_CALL_RCV,_largeRegion->getAddress(),length,0,inMsg->flags);
+         setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->sockfd, BLANK, BLANK, length);
+         rc = ::recv(inMsg->sockfd, _largeRegion->getAddress(), length, inMsg->flags);
+         error = (uint32_t)errno;
+         clearSyscallStart();
+         CIOSLOG4(SYS_RSLT_RCV,rc,errno,outMsg->bytes,bytesLeft);
+      }
+      else {
+         rc = (ssize_t)length;
+      }
+      job->readTimer.stop();
+
+      // Send the data to the compute node when successful and there is data.
+      if (rc > 0) {
+         outMsg->header.returnCode = bgcios::Success;
+         outMsg->bytes += rc;
+
+         // Adjust for next operation.
+         if (job->posixMode()) {
+            bytesLeft = 0; // Force exit from loop because only one operation per message
+            error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
+            if (error != 0) {
+              outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+              outMsg->header.errorCode = error;
+              bytesLeft = 0; // Force exit from loop because there was an error
+              continue;
+           }
+         }
+         else {
+            bytesLeft -= (size_t)rc;
+            inMsg->length -= (size_t)rc;
+            if (bytesLeft){
+              error = putData( address, inMsg->rkey, (uint32_t)rc); 
+            }
+            else {//not waiting for the RDMA completion and the ACK will be fenced
+              // error = putData( address, inMsg->rkey, (uint32_t)rc); 
+              error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
+            }
+            address += (uint64_t)rc;
+            inMsg->address = address; //Need this if a addBlockedMessage for EWOULDBLOCK
+         }
+      }
+
+      // There is no more data available from the descriptor.
+      else if (rc == 0) {
+         outMsg->header.returnCode = bgcios::Success;
+         bytesLeft = 0; // Force exit from loop
+      }
+
+      // There was an error reading from the descriptor.
+      else {
+         if (error == EWOULDBLOCK) {
+            addBlockedMessage(inMsg->sockfd, POLLIN, message);
+            _ackMessage=NULL;  //No ack message yet
+            LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Read message is blocked for sockfd=" << inMsg->sockfd);
+         }
+         else {
+            outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+            outMsg->header.errorCode = error;
+         }
+         bytesLeft = 0; // Force exit from loop
+      }
+   }
+
 
    return;
 }
@@ -1928,77 +2029,7 @@ ClientMonitor::readlink(const ClientMessagePtr& message)
    return;
 }
 
-void
-ClientMonitor::recv(const ClientMessagePtr& message)
-{
-   // Get pointer to message from inbound message region.
-   RecvMessage *inMsg = (RecvMessage *)message->getAddress();
 
-   // Save the message so inbound message region is available for next message.
-   if (!message->isSaved()) {
-      inMsg = (RecvMessage *)message->save();
-   }
-
-   // Build ack message in outbound message region.
-   _ackMessage =   allocateClientAckMessage(message,   RecvAck, sizeof(RecvAckMessage));
-   RecvAckMessage *outMsg = (RecvAckMessage *)_ackMessage;
-   outMsg->bytes = 0;
-
-   // Truncate the length to fit in the large memory region.
-   if (inMsg->length > _largeRegion->getLength()) {
-      inMsg->length = _largeRegion->getLength();
-   }
-
-   // When message is first received, let client know operation is in progress.
-   if (!message->isInProgress()) {
-      message->setInProgress(true);
-   }
-
-   // Validate the job id.
-   JobPtr job = _jobs.get(inMsg->header.jobId);
-   // For performance, I'm not logging an error if the job is not found.
-
-   // Run the operation (put the data in the large memory region).
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Recv message started syscall, sockfd=" << inMsg->sockfd <<
-                 " length=" << inMsg->length);
-   if (job-> logJobStatistics() ) job->recvTimer.start();
-   ssize_t rc = ::recv(inMsg->sockfd, _largeRegion->getAddress(), inMsg->length, inMsg->flags);
-   uint32_t err = (uint32_t)errno;
-   if (job-> logJobStatistics() ) job->recvTimer.stop();
-   if (rc >= 0) {
-      outMsg->header.returnCode = bgcios::Success;
-      outMsg->bytes = rc;
-   }
-   else {
-      if (err == EWOULDBLOCK) {
-         addBlockedMessage(inMsg->sockfd, POLLIN, message);
-         _ackMessage=NULL; // Reset so second RecvAck message is not sent yet
-         LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Recv message is blocked, sockfd=" << inMsg->sockfd);
-      }
-      else {
-         outMsg->header.returnCode = bgcios::RequestFailed;
-         outMsg->header.errorCode = err;
-      }
-   }
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Recv message completed syscall, sockfd=" << inMsg->sockfd <<
-                 " rc=" << rc << " errno=" << outMsg->header.errorCode);
-
-   // Send the data to the remote node when successful and there is data.
-   if ((outMsg->header.returnCode == bgcios::Success) && (outMsg->bytes > 0)) {
-      err = putData( inMsg->address, inMsg->rkey, (uint32_t)outMsg->bytes);
-      if (err != 0) {
-         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-         outMsg->header.errorCode = (uint32_t)err;
-      }
-   }
-
-   // RecvAck message is ready in the outbound message region.
-   if (_ackMessage != NULL) {
-      LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": RecvAck message is ready, sockfd=" << inMsg->sockfd <<
-                    " length=" << inMsg->length << " bytes=" << outMsg->bytes << " rc=" << outMsg->header.returnCode << " errno=" << outMsg->header.errorCode);
-   }
-   return;
-}
 
 void
 ClientMonitor::recvfrom(const ClientMessagePtr& message)
@@ -2103,82 +2134,7 @@ ClientMonitor::rename(const ClientMessagePtr& message)
    return;
 }
 
-void
-ClientMonitor::send(const ClientMessagePtr& message)
-{
-   // Get pointer to message from inbound message region.
-   SendMessage *inMsg = (SendMessage *)message->getAddress();
 
-   //LOG_CIOS_DEBUG_MSG("entry to ClientMonitor::send "<<message);
-   // Save the message so inbound message region is available for next message.
-   if (!message->isSaved()) {
-      inMsg = (SendMessage *)message->save();
-   }
-
-   // Build ack message in outbound message region.
-   _ackMessage =   allocateClientAckMessage(message,   SendAck, sizeof(SendAckMessage));
-   SendAckMessage *outMsg = (SendAckMessage *)_ackMessage;
-   outMsg->bytes = 0;
-
-   // Truncate the length to fit in the large memory region.
-   if (inMsg->length > _largeRegion->getLength()) {
-      inMsg->length = _largeRegion->getLength();
-      //truncation!  Need to note whether truncation happened...
-   }
-
-   // Get the data from the remote node.
-   LOG_CIOS_DEBUG_MSG("getData-pre ClientMonitor::send "<<message);
-   uint32_t err = getData( inMsg->address, inMsg->rkey, (uint32_t)inMsg->length);
-   LOG_CIOS_DEBUG_MSG("getData-post ClientMonitor::send "<<message);
-
-   // When message is first received, let client know operation is in progress.
-   if (!message->isInProgress()) {
-      message->setInProgress(true);
-   }
-
-   // Validate the job id.
-   JobPtr job = _jobs.get(inMsg->header.jobId);
-   // For performance, I'm not logging an error if the job is not found.
-
-   // Run the operation.
-   ssize_t rc = -1;
-   if (err == 0) {
-      LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Send message started syscall, sockfd=" << inMsg->sockfd <<
-                    " length=" << inMsg->length);
-      if (job-> logJobStatistics() ) job->sendTimer.start();
-      rc = ::send(inMsg->sockfd, _largeRegion->getAddress(), inMsg->length, inMsg->flags);
-      err = (uint32_t)errno;
-      if (job-> logJobStatistics() ) job->sendTimer.stop();
-      if (rc >= 0) {
-         outMsg->header.returnCode = bgcios::Success;
-         outMsg->bytes = rc;
-      }
-      else {
-         // Add descriptor to the poll set to monitor for ability to write.
-         if (err == EWOULDBLOCK) {
-            _ackMessage=NULL; // Reset so second SendAck message is not sent yet
-           LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Send message is blocked and added to poll set slot " <<
-                          addBlockedMessage(inMsg->sockfd, POLLOUT, message) << ", sockfd=" << inMsg->sockfd);
-         }
-         else {
-            outMsg->header.returnCode = bgcios::RequestFailed;
-            outMsg->header.errorCode = err; 
-         }
-      }
-   }
-   else {
-      outMsg->header.returnCode = bgcios::RequestFailed;
-      outMsg->header.errorCode = err;
-   }
-
-   // If operation completed, message is ready in outbound message region.
-   if (_ackMessage != NULL) {
-      LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": SendAck message is ready, sockfd=" << inMsg->sockfd <<
-                    " length=" << inMsg->length << " bytes=" << outMsg->bytes << " rc=" << rc << " errno=" << outMsg->header.errorCode);
-   }
-   //LOG_CIOS_DEBUG_MSG("exit to ClientMonitor::send "<<message);
-   return;
-}
 
 void
 ClientMonitor::sendto(const ClientMessagePtr& message)
@@ -2316,10 +2272,7 @@ ClientMonitor::socket(const ClientMessagePtr& message)
    outMsg->sockfd = ::socket(inMsg->domain, inMsg->type, inMsg->protocol);
    if (outMsg->sockfd >= 0) {
       outMsg->header.returnCode = bgcios::Success;
-
-      // A socket is implicitly non-blocking.
-      int nonblock = 1;
-      ::ioctl(outMsg->sockfd, FIONBIO, &nonblock);
+      //socket is blocking by default
    }
    else {
       outMsg->header.returnCode = bgcios::RequestFailed;
@@ -2563,9 +2516,16 @@ ClientMonitor::write(const ClientMessagePtr& message)
       inMsg = (WriteMessage *)message->save();
    }
 
-   _ackMessage =   allocateClientAckMessage(message,   WriteAck, sizeof(WriteAckMessage));
+   //keep reference to Ack Message storage for tracking information
+   _ackMessage = message->getAck();
    WriteAckMessage *outMsg = (WriteAckMessage *)_ackMessage;
-   outMsg->bytes = 0;
+   if (_ackMessage == NULL){
+     _ackMessage =   allocateClientAckMessage(message,   WriteAck, sizeof(WriteAckMessage));
+     outMsg = (WriteAckMessage *)_ackMessage;
+     message->saveAck(_ackMessage);
+     outMsg->bytes = 0;
+     outMsg->ION_rdma_buffer_offset = 0;
+   }
 
    // When message is first received, let client know operation is in progress.
    if (!message->isInProgress()) {
@@ -2577,26 +2537,34 @@ ClientMonitor::write(const ClientMessagePtr& message)
    // For performance, I'm not logging an error if the job is not found.
 
    // Run the operation until all of the data is written or an error occurs.
-   uint64_t address = inMsg->address;
-   size_t length = 0;
+ uint64_t address = inMsg->address;
    size_t bytesLeft = (size_t)inMsg->data_length;
+   size_t rdma_buffer_offset = outMsg->ION_rdma_buffer_offset;
+   uint32_t err = 0;
+   //length of RDMA'd data residing in large region buffer if nonzero offset
+   size_t length = bytesLeft + rdma_buffer_offset; 
+   if (length > _largeRegion->getLength()) {
+         length = _largeRegion->getLength();
+   }
 
    while (bytesLeft > 0) {
-      // Calculate the length of data for this operation.
-      if (bytesLeft > _largeRegion->getLength()) {
-         length = _largeRegion->getLength();
-      }
-      else {
-         length = bytesLeft;
-      }
 
       // Receive the data from the compute node.
-      uint32_t err = getData( address, inMsg->rkey, (uint32_t)length);
-      if (err != 0) {
+      if (rdma_buffer_offset == 0){
+        
+        if (bytesLeft > _largeRegion->getLength()) {
+         length = _largeRegion->getLength();
+        }
+        else {
+          length = bytesLeft;
+        }
+        err = getData( address, inMsg->rkey, (uint32_t)length);
+        if (err != 0) {
          outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
          outMsg->header.errorCode = (uint32_t)err;
          bytesLeft = 0; // Force exit from loop
          continue;
+        }
       }
 
       // Run the operation.
@@ -2608,9 +2576,19 @@ ClientMonitor::write(const ClientMessagePtr& message)
          rc = -1;
          err = EINTR;
       }else if (inMsg->fd != job->getShortCircuitFd()) {
-	   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length);
-           rc = ::write(inMsg->fd, _largeRegion->getAddress(), length);
+           CIOSLOG4(SYS_CALL_WRT,_largeRegion->getAddress()+rdma_buffer_offset,length-rdma_buffer_offset,rdma_buffer_offset,inMsg->fd);
+	   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length-rdma_buffer_offset);
+           rc = ::write(inMsg->fd, (char *)_largeRegion->getAddress()+rdma_buffer_offset, length-rdma_buffer_offset);
            clearSyscallStart();
+           CIOSLOG4(SYS_RSLT_WRT,rc,errno,outMsg->bytes,bytesLeft);
+
+           if ( (size_t)rc == (length - rdma_buffer_offset) ){
+             rdma_buffer_offset = 0;
+           }
+           else if (rc > 0){
+              rdma_buffer_offset += (long unsigned int)rc;
+           }
+           
            err = (uint32_t)errno;
       }
       else {
@@ -2628,12 +2606,14 @@ ClientMonitor::write(const ClientMessagePtr& message)
          }
          else {
             address += (uint64_t)rc;
+            inMsg->address = address; //saved in case of addBlockedMessage
             bytesLeft -= (size_t)rc;
             inMsg->data_length -= (ssize_t)rc;
          }
       }
       else {
          if (err == EWOULDBLOCK) {
+            outMsg->ION_rdma_buffer_offset=rdma_buffer_offset;
             addBlockedMessage(inMsg->fd, POLLOUT, message);
             _ackMessage=NULL; // Reset so second WriteAck message is not sent yet  
             LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Write message is blocked for fd=" << inMsg->fd);
@@ -2652,47 +2632,285 @@ ClientMonitor::write(const ClientMessagePtr& message)
 }
 
 void
-ClientMonitor::writeRdmaVirt(const ClientMessagePtr& message)
+ClientMonitor::send(const ClientMessagePtr& message)
 {
    // Get pointer to message from inbound message region.
-    message->setInProgress(true); 
-    bgcios::MessageHeader * ackMessage =  allocateClientAckMessage(message,   WriteRdmaVirtAck, sizeof(WriteRdmaVirtAckMessage));
-    WriteRdmaVirtAckMessage *outMsg = (WriteRdmaVirtAckMessage *)ackMessage;
-    WriteRdmaVirtMessage *inMsg = (WriteRdmaVirtMessage *)message->getAddress(); 
-    {
-      outMsg->fd = inMsg->fd;
-      outMsg->data_length = inMsg->data_length;
-      outMsg->bufferRdmaVirtaddress = inMsg->bufferRdmaVirtaddress;
-      outMsg->offset = inMsg->offset;
-      outMsg->bytes = 0;
-    }
-    message->setMessage(ackMessage);  //lose context of inMsg, using ackMessage for context hereon
+   SendMessage *inMsg = (SendMessage *)message->getAddress();
+
+   // Save the message so inbound message region is available for next message.
+   if (!message->isSaved()) {
+      inMsg = (SendMessage *)message->save();
+   }
+
+   //keep reference to Ack Message storage for tracking information
+   _ackMessage = message->getAck();
+   SendAckMessage *outMsg = (SendAckMessage *)_ackMessage;
+   if (_ackMessage == NULL){
+     _ackMessage =   allocateClientAckMessage(message,   SendAck, sizeof(SendAckMessage));
+     outMsg = (SendAckMessage *)_ackMessage;
+     message->saveAck(_ackMessage);
+     outMsg->bytes = 0;
+     outMsg->ION_rdma_buffer_offset = 0;
+   }
+
+   // When message is first received, let client know operation is in progress.
+   if (!message->isInProgress()) {
+      message->setInProgress(true);
+   }
 
    // Validate the job id.
-   JobPtr job = _jobs.get(outMsg->header.jobId);
-   // For performance, not logging an error if the job is not found.
+   JobPtr job = _jobs.get(inMsg->header.jobId);
+   // For performance, I'm not logging an error if the job is not found.
 
-   size_t bytesLeft = (size_t)outMsg->data_length;
-   uint64_t address   = outMsg->bufferRdmaVirtaddress + outMsg->offset;
+   // Run the operation until all of the data is written or an error occurs.
+   uint64_t address = inMsg->address;
+   size_t bytesLeft = (size_t)inMsg->length;
+   size_t rdma_buffer_offset = outMsg->ION_rdma_buffer_offset;
    uint32_t err = 0;
+   //length of RDMA'd data residing in large region buffer if nonzero offsetr
+   size_t length = bytesLeft + rdma_buffer_offset;
+   if (length > _largeRegion->getLength()) {
+         length = _largeRegion->getLength();
+   }
+
    while (bytesLeft > 0) {
+
+      // Receive the data from the compute node.
+      if (rdma_buffer_offset == 0){
+        
+        if (bytesLeft > _largeRegion->getLength()) {
+         length = _largeRegion->getLength();
+        }
+        else {
+          length = bytesLeft;
+        }
+        err = getData( address, inMsg->rkey, (uint32_t)length);
+        if (err != 0) {
+         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+         outMsg->header.errorCode = (uint32_t)err;
+         bytesLeft = 0; // Force exit from loop
+         continue;
+        }
+      }
+
+      // Run the operation.
+      ssize_t rc;
+      if (job-> logJobStatistics() ) job->writeTimer.start();
+      if (job->getTimedOutForKernelWrite()){
+         rc = -1;
+         err = EINTR;
+      }else if (inMsg->sockfd != job->getShortCircuitFd()) {
+           CIOSLOG4(SYS_CALL_SND,_largeRegion->getAddress()+rdma_buffer_offset,length-rdma_buffer_offset,rdma_buffer_offset,inMsg->flags);
+	   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->sockfd, BLANK, BLANK, length-rdma_buffer_offset);
+           rc = ::send(inMsg->sockfd, (char *)_largeRegion->getAddress()+rdma_buffer_offset, length-rdma_buffer_offset, inMsg->flags);
+           clearSyscallStart();
+           CIOSLOG4(SYS_RSLT_SND,rc,errno,outMsg->bytes,bytesLeft);
+
+           if ( (size_t)rc == (length - rdma_buffer_offset) ){
+             rdma_buffer_offset = 0;
+           }
+           else if (rc > 0){
+              rdma_buffer_offset += (long unsigned int)rc;
+           }
+           
+           err = (uint32_t)errno;
+      }
+      else {
+         rc = (ssize_t)length;
+      }
+      if (job-> logJobStatistics() ) job->writeTimer.stop();
+
+      if (rc >= 0) {
+         outMsg->header.returnCode = bgcios::Success;
+         outMsg->bytes += rc;
+         if ( job->posixMode() ) {
+            bytesLeft = 0; // Force exit from loop because only one operation per message
+         }
+         else {
+            address += (uint64_t)rc;
+            inMsg->address = address; //saved in case of addBlockedMessage
+            bytesLeft -= (size_t)rc;
+            inMsg->length -= (size_t)rc;
+         }
+      }
+      else {
+         if (err == EWOULDBLOCK) {
+            outMsg->ION_rdma_buffer_offset=rdma_buffer_offset;
+            addBlockedMessage(inMsg->sockfd, POLLOUT, message);
+            _ackMessage=NULL; // Reset so second WriteAck message is not sent yet  
+            LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Write message is blocked for fd=" << inMsg->fd);
+         }
+         else {
+            outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+            outMsg->header.errorCode = err;
+         }
+         bytesLeft = 0; // Force exit from loop
+      }
+   }
+
+   return;
+}
+
+
+void
+ClientMonitor::pwrite64(const ClientMessagePtr& message)
+{
+   // Get pointer to message from inbound message region.
+   Pwrite64Message *inMsg = (Pwrite64Message *)message->getAddress();
+
+   // Save the message so inbound message region is available for next message.
+   if (!message->isSaved()) {
+      inMsg = (Pwrite64Message *)message->save();
+   }
+
+   //keep reference to Ack Message storage for tracking information
+   _ackMessage = message->getAck();
+   Pwrite64AckMessage  *outMsg = (Pwrite64AckMessage *)_ackMessage;
+   if (_ackMessage == NULL){
+     _ackMessage =   allocateClientAckMessage(message,   Pwrite64Ack, sizeof(Pwrite64AckMessage));
+     outMsg = (Pwrite64AckMessage *)_ackMessage;
+     message->saveAck(_ackMessage);
+     outMsg->bytes = 0;
+     outMsg->ION_rdma_buffer_offset = 0;
+   }
+
+   // When message is first received, let client know operation is in progress.
+   if (!message->isInProgress()) {
+      message->setInProgress(true);
+   }
+
+   // Validate the job id.
+   JobPtr job = _jobs.get(inMsg->header.jobId);
+   // For performance, I'm not logging an error if the job is not found.
+
+   // Run the operation until all of the data is written or an error occurs.
+   uint64_t address = inMsg->address;
+   size_t bytesLeft = (size_t)inMsg->length;
+   size_t rdma_buffer_offset = outMsg->ION_rdma_buffer_offset;
+   uint32_t err = 0;
+   //length of RDMA'd data residing in large region buffer if nonzero offset
+   size_t length = bytesLeft + rdma_buffer_offset;
+   if (length > _largeRegion->getLength()) {
+         length = _largeRegion->getLength();
+   }
+
+   while (bytesLeft > 0) {
+
+      // Receive the data from the compute node.
+      if (rdma_buffer_offset == 0){
+        
+        if (bytesLeft > _largeRegion->getLength()) {
+         length = _largeRegion->getLength();
+        }
+        else {
+          length = bytesLeft;
+        }
+        err = getData( address, inMsg->rkey, (uint32_t)length);
+        if (err != 0) {
+         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+         outMsg->header.errorCode = (uint32_t)err;
+         bytesLeft = 0; // Force exit from loop
+         continue;
+        }
+      }
 
       ssize_t rc;
       if (job-> logJobStatistics() ) job->writeTimer.start();
-      setSyscallStart( (struct  MessageHeader * )inMsg,outMsg->fd, BLANK, BLANK, bytesLeft );
-      rc = ::write(outMsg->fd, (void *)address, bytesLeft);
+      if (job->getTimedOutForKernelWrite()){
+         rc = -1;
+         err = EINTR;
+      }else if (inMsg->fd != job->getShortCircuitFd()) {
+           CIOSLOG4(SYS_CALL_PWR,_largeRegion->getAddress()+rdma_buffer_offset,length-rdma_buffer_offset,rdma_buffer_offset,inMsg->position);
+	   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length-rdma_buffer_offset);           
+           rc = ::pwrite64(inMsg->fd, (char *)_largeRegion->getAddress()+rdma_buffer_offset, length-rdma_buffer_offset,inMsg->position);       
+           clearSyscallStart();
+           CIOSLOG4(SYS_RSLT_PWR,rc,errno,outMsg->bytes,bytesLeft);
+
+           if ( (size_t)rc == (length - rdma_buffer_offset) ){
+             rdma_buffer_offset = 0;
+           }
+           else if (rc > 0){
+              rdma_buffer_offset += (long unsigned int)rc;
+           }
+           
+           err = (uint32_t)errno;
+      }
+      else {
+         rc = (ssize_t)length;
+      }
+      if (job-> logJobStatistics() ) job->writeTimer.stop();
+      LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Pwrite64 message completed syscall, fd=" << inMsg->fd <<
+                    " rc=" << rc << " errno=" << error);
+
+      if (rc >= 0) {
+         outMsg->header.returnCode = bgcios::Success;
+         outMsg->bytes += rc;
+         if ( job->posixMode()  ) {
+            bytesLeft = 0; // Force exit from loop because only one operation per message
+         }
+         else {
+            address += (uint64_t)rc;
+            bytesLeft -= (size_t)rc;
+            inMsg->address = address; //saved in case of addBlockedMessage
+            inMsg->length -= (size_t)rc;
+            inMsg->position += (off64_t)rc;
+         }
+      }
+      else {
+         if (err == EWOULDBLOCK) {
+            outMsg->ION_rdma_buffer_offset=rdma_buffer_offset;
+            addBlockedMessage(inMsg->fd, POLLOUT, message);
+            _ackMessage=NULL; // Reset so second WriteAck message is not sent yet  
+         }
+         else {
+            outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+            outMsg->header.errorCode = err;
+         }
+         bytesLeft = 0; // Force exit from loop
+      }
+   }
+
+   return;
+}
+
+void
+ClientMonitor::writeImmediate(const ClientMessagePtr& message)
+{
+   // Get pointer to message from inbound message region.
+    message->setInProgress(true); 
+    WriteImmediateMessage *inMsg = (WriteImmediateMessage *)message->getAddress();
+    bgcios::MessageHeader * ackMessage =  allocateClientAckMessage(message,   WriteImmediateAck, sizeof(WriteImmediateAckMessage));
+    WriteImmediateAckMessage *outMsg = (WriteImmediateAckMessage *)ackMessage;
+    outMsg->bytes = 0;
+
+   // Validate the job id.
+   JobPtr job = _jobs.get(inMsg->header.jobId);
+
+   size_t bytesLeft = (size_t)( inMsg->header.length - sizeof(inMsg->header) );
+   char * address   = inMsg->data;
+   int fd = (int)inMsg->header.returnCode;
+   uint32_t err = 0;
+   ssize_t rc = 0;
+   errno = 0;
+   while (bytesLeft > 0) {
+
+
+      if (job-> logJobStatistics() ) job->writeTimer.start();
+      setSyscallStart( (struct  MessageHeader * )inMsg,fd, BLANK, BLANK, bytesLeft );
+      
+      rc = ::write(fd, (void *)address, bytesLeft);
       clearSyscallStart();
       err = (uint32_t)errno;
+      //printf(" fd=%d bytesLeft=%d rc=%d errno=%d\n",fd,(int)bytesLeft,(int)rc,errno);
       if (job-> logJobStatistics() ) job->writeTimer.stop();
 
       if (rc >= 0) {
          outMsg->bytes += rc;
-         address += (uint64_t)rc;
+         address += rc;
          bytesLeft -= (size_t)rc;
       }
-      else if ( (err == EWOULDBLOCK) && (!(job->posixMode() ) ) ) {
-           addBlockedMessage(outMsg->fd, POLLOUT, message);
-           return;
+      else if (err == EWOULDBLOCK) {
+           continue;
       }
       else {
             outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
@@ -2704,6 +2922,120 @@ ClientMonitor::writeRdmaVirt(const ClientMessagePtr& message)
    _ackMessage = ackMessage; //Sending the ack
    return;
 }
+
+
+static pthread_once_t gpfs_once_control = PTHREAD_ONCE_INIT;
+static union
+{
+    void* dl_gpfs_fcntl_ptr;
+    int(*dl_gpfs_fcntl)(int fd, void* payload);
+};
+
+void loadGpfs_fcntl()
+{
+    void* handle;
+    char* error;
+    void* ptr;
+    
+    handle = dlopen("/usr/lpp/mmfs/lib/libgpfs.so", RTLD_LAZY);  // \todo make libgpfs.so path configurable?
+    if(handle == NULL)
+    {
+        LOG_INFO_MSG_FORCED("Error loading /usr/lpp/mmfs/lib/libgpfs.so  errno=%d" << errno);
+        return;
+    }
+    dlerror();
+    
+    ptr = dlsym(handle, "gpfs_fcntl");
+    
+    if ((error = dlerror()) != NULL)  {
+        LOG_INFO_MSG_FORCED("Error loading /usr/lpp/mmfs/lib/libgpfs.so  errtext=" << error);
+        return;
+    }
+    else
+    {
+        dl_gpfs_fcntl_ptr = ptr;
+    }
+}
+
+void
+ClientMonitor::gpfsfcntl(const ClientMessagePtr& message)
+{
+   // on first call to gpfsfcntl, dynamically load the gpfs library.
+   pthread_once(&gpfs_once_control, loadGpfs_fcntl);
+   
+   // Get pointer to message from inbound message region.
+    GpfsFcntlMessage *inMsg = (GpfsFcntlMessage *)message->getAddress();
+
+   // Save the message so inbound message region is available for next message.
+   if (!message->isSaved()) {
+      inMsg = (GpfsFcntlMessage *)message->save();
+   }
+   
+   _ackMessage =   allocateClientAckMessage(message,   GpfsFcntlAck, sizeof(GpfsFcntlAckMessage));
+   GpfsFcntlAckMessage *outMsg = (GpfsFcntlAckMessage *)_ackMessage;
+   outMsg->gpfsresult = -1;
+   
+   // When message is first received, let client know operation is in progress.
+   if (!message->isInProgress()) {
+      message->setInProgress(true);
+   }
+   
+   // Validate the job id.
+   JobPtr job = _jobs.get(inMsg->header.jobId);
+   // For performance, I'm not logging an error if the job is not found.
+   
+   // Run the operation until all of the data is written or an error occurs.
+   uint64_t address = inMsg->address;
+   size_t length = (size_t)inMsg->data_length;
+   
+   // Calculate the length of data for this operation.
+   if (length > _largeRegion->getLength()) {
+       // failure.  maxsize=65536 bytes.  
+       outMsg->header.returnCode = bgcios::RequestFailed;
+       outMsg->header.errorCode = EINVAL;
+   }
+   else
+   {
+       // Receive the data from the compute node.
+       uint32_t err = getData( address, inMsg->rkey, (uint32_t)length);
+       if (err != 0) {
+           outMsg->header.returnCode = bgcios::RequestFailed;
+           outMsg->header.errorCode = (uint32_t)err;
+       }
+       else
+       {
+           // Run the operation.
+           LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": gpfs_fcntl message started syscall, fd=" << inMsg->fd <<
+                              " length=" << length);
+           int rc;
+           err = 0;
+           
+           setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length);
+           if(dl_gpfs_fcntl == NULL)
+           {
+               rc = -1;
+               err = ENOSYS;
+           }
+           else
+           {
+               rc = (*dl_gpfs_fcntl)(inMsg->fd, _largeRegion->getAddress());
+           }
+           clearSyscallStart();
+           
+           LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": gpfs_fcntl message completed syscall, fd=" << inMsg->fd <<
+                              " rc=" << rc << " errno=" << err);
+           
+           outMsg->header.returnCode = bgcios::Success;
+           outMsg->header.errorCode  = (uint32_t)err;
+           outMsg->gpfsresult = rc;
+       }
+   }
+
+   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": GpfsFcntlAck message is ready, fd=" << inMsg->fd <<
+                 " length=" << inMsg->length << " gpfsresult=" << outMsg->gpfsresult << " rc=" << outMsg->header.returnCode << " errno=" << outMsg->header.errorCode);
+   return;
+}
+
  
 void
 ClientMonitor::setupJob(const ClientMessagePtr& message)
@@ -2894,7 +3226,7 @@ ClientMonitor::cleanupJob(const ClientMessagePtr& message)
 }
 
 size_t
-ClientMonitor::addBlockedMessage(int fd, short events, ClientMessagePtr message)
+ClientMonitor::addBlockedMessage(int fd, short events, const ClientMessagePtr message)
 {
    // Find the first free slot in the set.
    size_t slot = _freePollSetSlots.find_first();
@@ -2909,6 +3241,8 @@ ClientMonitor::addBlockedMessage(int fd, short events, ClientMessagePtr message)
        LOG_CIOS_TRACE_MSG("poll set size increased to " << _pollSetSize);
    }
 
+   // Log blocked message
+   CIOSLOGMSG(BGV_BLOK_MSG, message->getAddress() ); 
    // Add the message to the list of blocked messages.
    _blockedMessages.add(fd, message);
 
@@ -2957,3 +3291,228 @@ ClientMonitor::updatePlugin(){
     _handle4PluginClass = PluginPtr(new Plugin);
   }
 }
+void 
+ClientMonitor::ffxattr_retrieve(const ClientMessagePtr& message){
+   FretrieveXattrMessage *inMsg = (FretrieveXattrMessage *)message->getAddress();
+
+   // Build ack message in outbound message region.
+   _ackMessage =  allocateClientAckMessage(message, FlistXattrAck, sizeof(FxattrMessageAck) );
+   FxattrMessageAck *outMsg = (FxattrMessageAck *)_ackMessage;
+   ssize_t rc = 0;
+   if (inMsg->header.type == FlistXattr){
+      setSyscallStart( (struct  MessageHeader * )inMsg,inMsg->fd,BLANK,BLANK,inMsg->userListNumBytes);
+      rc = flistxattr(inMsg->fd,(char *)_largeRegion->getAddress(),inMsg->userListNumBytes);
+      clearSyscallStart();
+   }
+   else {
+      outMsg->header.type = FgetXattrAck;
+      setSyscallStart( (struct  MessageHeader * )inMsg,inMsg->fd,BLANK,BLANK,inMsg->userListNumBytes);
+      rc = fgetxattr(inMsg->fd,inMsg->name,_largeRegion->getAddress(),inMsg->userListNumBytes);
+      //if (rc)printf("fd=%d name=%s,value=%s,size=%d\n", inMsg->fd,inMsg->name, (char *)_largeRegion->getAddress(),(int)inMsg->userListNumBytes);
+      clearSyscallStart();
+   }
+   outMsg->returnValue = rc;
+   if (rc >= 0) {
+      outMsg->header.returnCode = bgcios::Success;
+      if (rc==0) return; 
+      if (inMsg->userListNumBytes==0) return; //just wanted to know the length of data available (see man page)
+      if (inMsg->address==0) return;
+   }
+   else {
+      outMsg->header.returnCode = bgcios::RequestFailed;
+      outMsg->header.errorCode = (uint32_t)errno; 
+      return;
+   }
+   // Send the data to the remote node when successful and there is data.
+   uint32_t err = putData( inMsg->address, inMsg->rkey, (uint32_t)outMsg->returnValue);
+   if (err != 0) {
+      outMsg->header.returnCode =  bgcios::RequestFailed ;
+      outMsg->header.errorCode = err;
+   }
+   
+}
+void 
+ClientMonitor::fxattr_setOrRemove(const ClientMessagePtr& message){
+      FsetOrRemoveXattrMessage *inMsg = (FsetOrRemoveXattrMessage *)message->getAddress();
+
+   // Build ack message in outbound message region.
+   _ackMessage =  allocateClientAckMessage(message, FsetXattrAck, sizeof(FxattrMessageAck) );
+   FxattrMessageAck *outMsg = (FxattrMessageAck *)_ackMessage;
+   ssize_t rc = 0;
+   if (inMsg->header.type == FsetXattr){
+      char * name = inMsg->value+inMsg->valueSize;
+      setSyscallStart( (struct  MessageHeader * )inMsg,inMsg->fd);
+      rc = fsetxattr(inMsg->fd,name, inMsg->value,inMsg->valueSize,inMsg->flags);
+      clearSyscallStart();
+      //if (rc printf("fd=%d name=%s,value=%s,size=%d,flags=%d \n", inMsg->fd,name, inMsg->value,(int)inMsg->valueSize,(int)inMsg->flags);
+   }
+   else {
+      outMsg->header.type = FremoveXattrAck;
+      setSyscallStart( (struct  MessageHeader * )inMsg,inMsg->fd);
+      rc = fremovexattr(inMsg->fd,inMsg->value);
+      clearSyscallStart();
+   }
+   outMsg->returnValue = rc;
+   if (rc == 0) {
+      outMsg->header.returnCode = bgcios::Success;
+   }
+   else {
+      outMsg->header.returnCode = bgcios::RequestFailed;
+      outMsg->header.errorCode = (uint32_t)errno;
+   }
+   
+}
+
+void 
+ClientMonitor::pathsetxattr(const ClientMessagePtr& message){
+      PathSetXattrMessage *inMsg = (PathSetXattrMessage *)message->getAddress();
+
+   // Build ack message in outbound message region.
+   _ackMessage =  allocateClientAckMessage(message, PsetXattrAck, sizeof(FxattrMessageAck) );
+   FxattrMessageAck *outMsg = (FxattrMessageAck *)_ackMessage;
+   ssize_t rc = 0;
+   char * pathName = inMsg->value+inMsg->valueSize;
+   char * name = pathName + (inMsg->pathSize +1); //one more past \0 termination
+   if (inMsg->header.type == PsetXattr){
+      setSyscallStart( (struct  MessageHeader * )inMsg,(-1), pathName, BLANK, inMsg->valueSize );
+      rc = setxattr(pathName   ,name, inMsg->value,inMsg->valueSize,inMsg->flags);
+      //printf("setxattr fname=%s name=%s,value=%s,size=%d,flags=%d  rc=%d\n", pathName,name, inMsg->value,(int)inMsg->valueSize,(int)inMsg->flags,(int)rc);
+      clearSyscallStart();
+   }
+   else {
+      outMsg->header.type = LsetXattrAck;
+      setSyscallStart( (struct  MessageHeader * )inMsg,(-1), pathName, BLANK, inMsg->valueSize );
+      rc = lsetxattr(pathName   ,name, inMsg->value,inMsg->valueSize,inMsg->flags);
+      //printf("lsetxattr fname=%s name=%s,value=%s,size=%d,flags=%d  rc=%d\n", pathName,name, inMsg->value,(int)inMsg->valueSize,(int)inMsg->flags,(int)rc);
+      clearSyscallStart();
+   }
+   outMsg->returnValue = rc;
+   if (rc == 0) {
+      outMsg->header.returnCode = bgcios::Success;
+   }
+   else {
+      outMsg->header.returnCode = bgcios::RequestFailed;
+      outMsg->header.errorCode = (uint32_t)errno;
+   }
+   
+}
+
+void 
+ClientMonitor::pathremovexattr(const ClientMessagePtr& message){
+      PathRemoveXattrMessage *inMsg = (PathRemoveXattrMessage *)message->getAddress();
+
+   // Build ack message in outbound message region.
+   _ackMessage =  allocateClientAckMessage(message, PremoveXattrAck, sizeof(FxattrMessageAck) );
+   FxattrMessageAck *outMsg = (FxattrMessageAck *)_ackMessage;
+   ssize_t rc = 0;
+   char * pathName = inMsg->pathname;
+   char * name = inMsg->name + inMsg->pathSize + 1; //name after path string with \0 termination
+   if (inMsg->header.type == PremoveXattr){
+      setSyscallStart( (struct  MessageHeader * )inMsg,(-1), pathName, BLANK, 0 );
+      rc = removexattr(pathName   ,name);
+      clearSyscallStart();
+   }
+   else {
+      outMsg->header.type = LremoveXattrAck;
+      setSyscallStart( (struct  MessageHeader * )inMsg,(-1), pathName, BLANK, 0 );
+      rc = lremovexattr(pathName   ,name);
+      clearSyscallStart();
+   }
+   outMsg->returnValue = rc;
+   if (rc == 0) {
+      outMsg->header.returnCode = bgcios::Success;
+   }
+   else {
+      outMsg->header.returnCode = bgcios::RequestFailed;
+      outMsg->header.errorCode = (uint32_t)errno;
+   }
+   
+}
+
+void 
+ClientMonitor::pathgetxattr(const ClientMessagePtr& message){
+      FretrieveXattrMessage *inMsg = (FretrieveXattrMessage *)message->getAddress();
+
+   // Build ack message in outbound message region.
+   _ackMessage =  allocateClientAckMessage(message, PgetXattrAck, sizeof(FxattrMessageAck) );
+   FxattrMessageAck *outMsg = (FxattrMessageAck *)_ackMessage;
+   ssize_t rc = 0;
+   char * pathName = inMsg->pathname;
+   char * name = (char *)inMsg->pathname + strlen(inMsg->pathname) +1; //one more past \0 termination
+   if (inMsg->header.type == PgetXattr){
+      setSyscallStart( (struct  MessageHeader * )inMsg,(-1), pathName, BLANK, inMsg->userListNumBytes );
+      rc = getxattr(pathName,name,_largeRegion->getAddress(),inMsg->userListNumBytes);
+      //printf("getxattr pathName=%s name=%s,size=%d rc=%d\n", pathName,name,(int)inMsg->userListNumBytes,(int)rc);
+      clearSyscallStart();
+   }
+   else {
+      outMsg->header.type = LgetXattrAck;
+      setSyscallStart( (struct  MessageHeader * )inMsg,(-1), pathName, BLANK, inMsg->userListNumBytes );
+      rc = lgetxattr(pathName   ,name,_largeRegion->getAddress(),inMsg->userListNumBytes);
+      //printf("lgetxattr pathName=%s name=%s,size=%d rc=%d\n", pathName,name,(int)inMsg->userListNumBytes,(int)rc);
+      clearSyscallStart();
+   }
+   outMsg->returnValue = rc;
+   if (rc >= 0) {
+      outMsg->header.returnCode = bgcios::Success;
+      if (rc==0) return;
+      if (inMsg->userListNumBytes==0) return; //just wanted to know the length of data available (see man page)
+      if (inMsg->address==0) return;
+   }
+   else {
+      outMsg->header.returnCode = bgcios::RequestFailed;
+      outMsg->header.errorCode = (uint32_t)errno;
+      return;
+   }
+      // Send the data to the remote node when successful and there is data.
+   uint32_t err = putData( inMsg->address, inMsg->rkey, (uint32_t)outMsg->returnValue);
+   if (err != 0) {
+      outMsg->header.returnCode =  bgcios::RequestFailed ;
+      outMsg->header.errorCode = err;
+   }
+   
+}
+
+void 
+ClientMonitor::pathlistxattr(const ClientMessagePtr& message){
+      FretrieveXattrMessage *inMsg = (FretrieveXattrMessage *)message->getAddress();
+
+   // Build ack message in outbound message region.
+   _ackMessage =  allocateClientAckMessage(message, PlistXattrAck, sizeof(FxattrMessageAck) );
+   FxattrMessageAck *outMsg = (FxattrMessageAck *)_ackMessage;
+   ssize_t rc = 0;
+   char * pathName = inMsg->pathname;
+   if (inMsg->header.type == PlistXattr){
+      setSyscallStart( (struct  MessageHeader * )inMsg,(-1), pathName, BLANK, inMsg->userListNumBytes );
+      rc = listxattr(pathName, (char *)_largeRegion->getAddress(),inMsg->userListNumBytes);
+      //printf("listxattr pathName=%s name=%s,size=%d rc=%d\n", pathName,(char *)_largeRegion->getAddress(),(int)inMsg->userListNumBytes,(int)rc);
+      clearSyscallStart();
+   }
+   else {
+      outMsg->header.type = LlistXattrAck;
+      setSyscallStart( (struct  MessageHeader * )inMsg,(-1), pathName, BLANK, inMsg->userListNumBytes );
+      rc = llistxattr(pathName, (char *)_largeRegion->getAddress(),inMsg->userListNumBytes);
+      //printf("llistxattr pathName=%s name=%s,size=%d rc=%d\n", pathName,(char *)_largeRegion->getAddress(),(int)inMsg->userListNumBytes,(int)rc);
+      clearSyscallStart();
+   }
+   outMsg->returnValue = rc;
+   if (rc >= 0) {
+      outMsg->header.returnCode = bgcios::Success;
+      if (rc==0) return;
+      if (inMsg->userListNumBytes==0) return; //just wanted to know the length of data available (see man page)
+      if (inMsg->address==0) return;
+   }
+   else {
+      outMsg->header.returnCode = bgcios::RequestFailed;
+      outMsg->header.errorCode = (uint32_t)errno;
+      return;
+   }
+   // Send the data to the remote node when successful and there is data.
+   uint32_t err = putData( inMsg->address, inMsg->rkey, (uint32_t)outMsg->returnValue);
+   if (err != 0) {
+      outMsg->header.returnCode =  bgcios::RequestFailed ;
+      outMsg->header.errorCode = err;
+   }
+   
+}
+

@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_DUMP_MACHINE_H_
 #define MMCS_SERVER_COMMAND_DUMP_MACHINE_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*
 ** dump_machine <file.xml>
@@ -42,9 +38,8 @@ class DumpMachine : public common::AbstractCommand
 {
 public:
     DumpMachine(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "dump_machine <file.xml>"; }
+      : AbstractCommand(name,description,attributes) { _usage = "dump_machine <file.xml>"; }
     static  DumpMachine* build();    // factory method
-    static  std::string cmdname() { return "dump_machine"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -53,8 +48,6 @@ public:
               mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

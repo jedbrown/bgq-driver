@@ -87,6 +87,10 @@ private:
             const Timer::Ptr& timer
             );
 
+    void closeTargetHandler(
+            const boost::shared_ptr<MCServerMessageSpec::ReadIoCardEnvReply>& reply
+            );
+    
     std::string getDescription() const { return "IO card"; }
 
 private:

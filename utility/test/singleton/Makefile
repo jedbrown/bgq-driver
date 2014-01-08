@@ -46,7 +46,7 @@ out_%: test_%
 singleton.o: CXXFLAGS += -DBOOST_TEST_DYN_LINK -DBOOST_TEST_MAIN
 test_singleton: LDFLAGS += -lboost_unit_test_framework-mt
 test_singleton: singleton.o Makefile
-	$(CXX) $(LDFLAGS) -o $@ $(filter-out Makefile, $^)
+	$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS)
 
 install: all 
 

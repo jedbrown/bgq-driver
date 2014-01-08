@@ -497,8 +497,8 @@ Midplane::validateCornerCoordinates(
             job->error(
                     "corner " +
                     boost::lexical_cast<std::string>( coordinates ) +
-                    " does not exist within midplane " +
-                    boost::lexical_cast<std::string>( _location ),
+                    " does not exist within " +
+                    ( _smallBlock ? "block " + _block : "midplane " + boost::lexical_cast<std::string>(_location) ),
                     error_code::corner_invalid
                     );
 

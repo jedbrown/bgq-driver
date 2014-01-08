@@ -25,9 +25,7 @@
 
 #include "ClientController.h"
 
-#include <utility/include/Log.h>
 
-#include <vector>
 
 LOG_DECLARE_FILE( "master" );
 
@@ -59,7 +57,7 @@ ClientManager::removeClient(
 {
     LOG_TRACE_MSG(__FUNCTION__);
     boost::mutex::scoped_lock lock( _clientMutex );
-    _clients.erase(remove(_clients.begin(),_clients.end(), c), _clients.end());
+    _clients.erase(remove(_clients.begin(), _clients.end(), c), _clients.end());
 }
 
 std::vector<ClientControllerPtr>

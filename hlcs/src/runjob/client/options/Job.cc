@@ -24,10 +24,12 @@
 
 #include "common/Environment.h"
 #include "common/ExportedEnvironment.h"
+#include "common/logging.h"
 #include "common/JobInfo.h"
 #include "common/MaximumLengthString.h"
 #include "common/WorkingDir.h"
 
+#include <db/include/api/tableapi/gensrc/DBTJob.h>
 #include <ramdisk/include/services/JobctlMessages.h>
 
 #include <boost/spirit/home/phoenix/bind/bind_member_function.hpp>
@@ -37,6 +39,8 @@
 
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
+
+LOG_DECLARE_FILE( runjob::client::log );
 
 namespace runjob {
 namespace client {
@@ -54,8 +58,14 @@ Job::Job(
     typedef std::vector<std::string> StringVector;
     typedef std::vector<Environment> EnvironmentVector;
     typedef std::vector<ExportedEnvironment> ExportedEnvironmentVector;
-    typedef MaximumLengthString<EXE_STRING_SIZE - 1> ExeString;
+    typedef MaximumLengthString<BGQDB::DBTJob::EXECUTABLE_SIZE> ExeString;
 
+    std::string current_wdir;
+    try {
+        current_wdir = boost::filesystem::current_path().string();
+    } catch ( const std::exception& e ) {
+        LOG_DEBUG_MSG( "could not get working dir: " << e.what() );
+    }
     _options.add_options()
         (
          "exe",
@@ -103,7 +113,7 @@ Job::Job(
         (
          "cwd",
          po::value<WorkingDir>()
-         ->default_value( boost::filesystem::current_path().string(), "current wdir" )
+         ->default_value( current_wdir, "current wdir" )
          ->notifier( boost::bind(&JobInfo::setCwd, boost::ref(info), _1) ),
          "current working directory"
         )

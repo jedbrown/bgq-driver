@@ -47,6 +47,7 @@ install: ${BGQ_DISTROFS_CIOS_PATH} ${INSTALL_DIRS} ${INSTALL_BG_FILES} INSTALL_B
 
 ${BGQ_DISTROFS_CIOS_PATH}:
 	@${MKDIR} -p ${BGQ_DISTROFS_CIOS_PATH}
+	@chmod 777 ${BGQ_DISTROFS_CIOS_PATH}
 
 # Create directories in the install directory.
 ${INSTALL_DIRS}:  

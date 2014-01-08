@@ -28,11 +28,9 @@
 
 #include <vector>
 
-
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 class RefreshConfig : public common::AbstractCommand
 {
@@ -44,10 +42,6 @@ public:
             );
 
     static  RefreshConfig* build();
-
-    static  std::string cmdname() {
-        return "refresh_config";
-    }
 
     void execute(
             std::deque<std::string> args,

@@ -43,7 +43,8 @@ endif
 LDFLAGS += \
  -L$(boost_lib_dir) -lboost_date_time-mt -lboost_filesystem-mt -lboost_program_options-mt -lboost_regex-mt -lboost_system-mt \
  -Wl,-rpath,$(boost_lib_dir) \
- -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
+ -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib \
+ -llog4cxx
 
 
 parts = \
@@ -87,7 +88,7 @@ doc doc.%:
 
 
 $(exe):	$(objs)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 
 install: $(install_files) doc.install $(bg_links_targets)

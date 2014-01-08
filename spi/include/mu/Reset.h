@@ -236,11 +236,11 @@ int32_t MUSPI_ResetDisableUserReception(MUSPI_RESET_t* reset)
     
     // dummy read from MMIO space.  ptr is volatile so compiler shouldn't optimize out.
     ptr = (uint64_t*)BGQ_MU_iDMA_IS_ENABLED_OFFSET(0,0);
-    *ptr;
+    value = *ptr;
 
     // dummy read from DCR space.  ptr is volatile so compiler shouldn't optimize out.
     ptr = (uint64_t*)BGQ_MU_DCR_rDMA_ENABLED_OFFSET(0);
-    *ptr;
+    value = *ptr;
     
     // note:  this does not need to be re-enabled since the user task won't be resuming.
     return 0;

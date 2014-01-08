@@ -19,6 +19,7 @@
 <!--                                                                  -->
 <!-- end_generated_IBM_copyright_prolog                               -->
   <decoder name="fw_A2_machineCheckDecoder" />
+  <decoder name="fw_A2_tlbParityErrorDecoder" />
   <decoder name="fw_BeDRAM_machineCheckDecoder" />
   <decoder name="fw_ClockStop_machineCheckDecoder" />
   <decoder name="fw_DcrArbiter_machineCheckDecoder" />

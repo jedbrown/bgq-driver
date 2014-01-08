@@ -47,9 +47,9 @@ class RasDecoder : public RasEventHandler
   static void clearDecoder();
 
  private:
-  std::string _name;
-  std::string _libName;
-  std::string _decoder;
+  const std::string _name;
+  const std::string _libName;
+  const std::string _decoder;
   void* _dlhandle;
   void* _dlsym;
   static std::string _installLibPath;

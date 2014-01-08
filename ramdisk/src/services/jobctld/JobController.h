@@ -71,6 +71,11 @@ public:
    //! \return Nothing.
 
    virtual void eventMonitor(void) { return; }
+   
+   //! \brief  Handle a Heartbeat message.
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int heartbeat(void);
 
 protected:
 

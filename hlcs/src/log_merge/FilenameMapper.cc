@@ -69,7 +69,11 @@ const FilenameMapper::_PatternToName FilenameMapper::_pattern_to_name(_buildPatt
 std::string FilenameMapper::map( const boost::filesystem::path& file_path ) const
 {
     if ( _map_filenames == MapFilenames::Disabled ) {
+#if BOOST_FILESYSTEM_VERSION == 3
+        return file_path.leaf().native();
+#else
         return file_path.leaf();
+#endif
     }
 
     boost::smatch m;

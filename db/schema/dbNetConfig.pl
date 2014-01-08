@@ -47,7 +47,7 @@ my $ipAddress=undef;
 #  Input Variables
 my $verify;
 my %options;
-my $dbprop=undef;
+my $dbprop=$ENV{BG_PROPERTIES_FILE};
 my $interface=undef;
 my $locparm=undef;
 my $itemname=undef;
@@ -309,18 +309,16 @@ sub processIntf {
         my $loc = $rows->{LOCATION};
 
         if ($incr) {
+            die "IP range exceeded" if (!defined($ip));
             print "$loc $value \n";
         }
         $sql = qq( insert into bgqnetconfig values('$loc', '$interface', '$itemname' , '$value') );
         my $sth_ins = getDbHandle()->prepare($sql);
-        # Run the SQL against the db engine
         $sth_ins->execute() || die "DB error";
         
         if ($incr) {
             $ip++;
-            if  (!defined($ip))  {
-                die  "IP range exceeded \n";
-            } else {
+            if (defined($ip))  {
                 $value = $ip->ip();
             }
         }
@@ -357,9 +355,9 @@ dbNetConfig.pl will connect to the BGQ database and insert the network configura
 
 This help text
 
-=item B<--properties> <properties-file-name>
+=item B<--properties> properties-file-name
 
-DB properties file, defaults to /bgsys/local/etc/bg.properties
+Blue Gene properties file.
 
 =item B<--interface> I<interface-name>
 
@@ -395,6 +393,10 @@ Display configuration values rather than insert or clear them.
 =back
 
 NOTE: This utility requires the perl DBI module and DB2 database driver, as well as the perl Net::IP module.  
+
+NOTE: Database connection information will be obtained from the bg.properties file specified by
+BG_PROPERTIES_FILE environment variable. If that environment is not defined, it will use 
+/bgsys/local/etc/bg.properties by default.
 
 =head1 AUTHOR
 

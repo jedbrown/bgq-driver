@@ -202,6 +202,7 @@ Polling::impl(
             if ( status == BGQDB::BLOCK_BOOTING || status == BGQDB::BLOCK_INITIALIZED ) {
                 server->getBlocks()->create( 
                         id,
+                        boost::shared_ptr<BGQMachineXML>(),
                         boost::bind(
                             &Polling::createCallback,
                             shared_from_this(),

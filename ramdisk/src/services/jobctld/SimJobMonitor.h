@@ -54,6 +54,7 @@ public:
    {
       _sim = sim;
       _simProc = proc;
+      pthread_attr_setdetachstate(&_attributes, PTHREAD_CREATE_JOINABLE);
    }
 
    //! \brief  Default destructor.

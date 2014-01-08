@@ -42,7 +42,8 @@
 
 //! \brief Alias class.  Represents the association between a name,
 //! an executable, its policies, and its active instances.
-class Alias : private boost::noncopyable {
+class Alias : private boost::noncopyable
+{
 public:
     Alias(
             const std::string& name, 
@@ -50,7 +51,7 @@ public:
             const Policy& p, 
             const std::string& user = std::string(),
             const std::string& logdir = std::string(),
-	    const int& preferredHostWait = int()
+	    const int preferredHostWait = int()
          );
 
     void set_path(const std::string& path) {
@@ -90,7 +91,7 @@ public:
     //! \return AgentRepPtr of the agent which must run this Alias next (if any)
     AgentRepPtr evaluatePolicy(Policy::Trigger trig, BGAgentId& agent, const BinaryId& failed_bid, BinaryControllerPtr bptr);
 
-    bool check_instances() { if(policy().limit() <= _binaries.size()) return false; else return true; }
+    bool check_instances() const { if (_my_policy.limit() <= _binaries.size()) return false; else return true; }
 
     //! \brief See if this alias has a specific binary id associated
     //! \param id Binary id to look for
@@ -98,7 +99,7 @@ public:
     bool find_binary(const BinaryId& id) {
         boost::mutex::scoped_lock scoped_lock(_mutex);
         BOOST_FOREACH(BinaryId idit, _binaries) {
-            if(id == idit) return true;
+            if (id == idit) return true;
         }
         return false;
     }
@@ -107,15 +108,18 @@ public:
     //! \param id ID of first binary running under this alias will be returned
     //! \return true if we have an associated binary id
     bool running(BinaryId& id) const {
-        if(!_binaries.empty()) {
+        boost::mutex::scoped_lock scoped_lock(_mutex);
+        if (!_binaries.empty()) {
             id = _binaries.front();
             return true;
-        } return false;
+        }
+        return false;
     }
 
     //! \brief See if there are any running binaries, don't return any either.
     //! \return true if there are any associated binaries.
     bool running() const {
+        boost::mutex::scoped_lock scoped_lock(_mutex);
         return !_binaries.empty();
     }
 
@@ -129,26 +133,25 @@ public:
         return _my_policy;
     }
 
-    std::string get_name() const { return _name; }
-    std::string get_path() const { return _path; }
-    std::string get_args() const { return _args; }
-    std::string get_user() const { return _user; }
-    std::string get_logdir() const { return _logdir; }
-    int get_preferredHostWait() const { return _preferredHostWait; }
-private:
+    const std::string& get_name() const { return _name; }
+    const std::string& get_path() const { return _path; }
+    const std::string& get_args() const { return _args; }
+    const std::string& get_user() const { return _user; }
+    const std::string& get_logdir() const { return _logdir; }
 
+private:
     AgentRepPtr runPolicy(const BGAgentId& agent_id, bool restart);
     
     //! \brief If the passed host is in our list return true
     bool find_host_internal(const CxxSockets::Host& host) {
         BOOST_FOREACH(CxxSockets::Host h, _hosts) {
-            if(h == host) return true;
+            if (h == host) return true;
         }
         return false;
     }
 
     //! This is the identifier name associated with a specific bin
-    std::string _name;
+    const std::string _name;
 
     std::string _path;
     std::string _args;
@@ -160,7 +163,7 @@ private:
     std::string _logdir;
 
     //! \brief time in seconds to wait for the preferred host's bgagent to become available.
-    int _preferredHostWait;
+    const int _preferredHostWait;
 
     //! \brief hosts on which alias can run
     std::list<CxxSockets::Host> _hosts;
@@ -168,8 +171,6 @@ private:
     //! \brief List of binary instances associated with this alias
     std::list<BinaryId> _binaries;
 
-    // Must be mutable even when the rest of the world is
-    // const because locks don't get copied.
     mutable boost::mutex _mutex;
 
     //! \brief policy associated with this binary

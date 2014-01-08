@@ -182,7 +182,6 @@ Runjob::handlePlugin(
                 );
     }
 
-
     LOG_TRACE_MSG( "timing out after " << timeout << " seconds" );
     _timer.expires_from_now( boost::posix_time::seconds(timeout) );
     _timer.async_wait(
@@ -206,7 +205,10 @@ Runjob::handleRequest(
     LOGGING_DECLARE_USER_MDC( _credentials->getUid()->getUser() );
     LOG_TRACE_MSG( __FUNCTION__ );
     
-    if ( !message && error ) {
+    if ( !message ) {
+        if ( error ) {
+            LOG_WARN_MSG( "Could not read: " << error.message() );
+        }
         if ( _status == Status::Terminated || _status == Status::Error ) { 
             // this is ok
         } else if ( _startTool && _status == Status::Debug ) {
@@ -217,7 +219,7 @@ Runjob::handleRequest(
             boost::system::error_code ec;
             _timer.cancel( ec );
             if ( ec ) {
-                LOG_WARN_MSG( "could not cancel: " << boost::system::system_error(ec).what() );
+                LOG_WARN_MSG( __FUNCTION__ << "(" << __LINE__ << ") could not cancel: " << boost::system::system_error(ec).what() );
             }
         } else {
             // assume client forcefully aborted
@@ -244,16 +246,11 @@ Runjob::handleRequest(
         return;
     }
 
-    if ( !message ) {
-        LOG_WARN_MSG( "invalid request" );
-        return;
-    }
-
     if ( _status == Status::Initializing ) {
         boost::system::error_code ec;
         _timer.cancel( ec );
         if ( ec ) {
-            LOG_WARN_MSG( "could not cancel: " << boost::system::system_error(ec).what() );
+            LOG_WARN_MSG( __FUNCTION__ << "(" << __LINE__ << ") could not cancel: " << boost::system::system_error(ec).what() );
         }
 
         runjob::Message::Ptr out;
@@ -499,9 +496,9 @@ Runjob::handleDebug(
         _connection->write( msg, _status );
 
         boost::system::error_code ec;
-        _timer.cancel();
+        _timer.cancel( ec );
         if ( ec ) {
-            LOG_WARN_MSG( "could not cancel: " << boost::system::system_error(ec).what() );
+            LOG_WARN_MSG( __FUNCTION__ << "(" << __LINE__ << ") could not cancel: " << boost::system::system_error(ec).what() );
         }
     } else {
         LOG_WARN_MSG(
@@ -580,9 +577,9 @@ Runjob::handleStarting(
         _connection->write( msg, _status );
 
         boost::system::error_code ec;
-        _timer.cancel();
+        _timer.cancel( ec );
         if ( ec ) {
-            LOG_WARN_MSG( "could not cancel: " << boost::system::system_error(ec).what() );
+            LOG_WARN_MSG( __FUNCTION__ << "(" << __LINE__ << ") could not cancel: " << boost::system::system_error(ec).what() );
         }
 
         return;
@@ -634,9 +631,9 @@ Runjob::handleRunning(
                 );
 
         boost::system::error_code ec;
-        _timer.cancel();
+        _timer.cancel( ec );
         if ( ec ) {
-            LOG_WARN_MSG( "could not cancel: " << boost::system::system_error(ec).what() );
+            LOG_WARN_MSG( __FUNCTION__ << "(" << __LINE__ << ") could not cancel: " << boost::system::system_error(ec).what() );
         }
 
         return;

@@ -62,9 +62,9 @@ public:
     int readSegment(Elf64_Phdr *phdr, void *buffer, size_t size, const char *name);
     void getInterpreter(char *interpreter, size_t interpreter_size);
     int checkBGQNote(Elf64_Phdr *phdr);
-    int readRegion(void *buffer, Elf64_Off offset, Elf64_Word size);
+    int readRegion(void *buffer, uint64_t offset, uint64_t size);
     int addSegment(AppState_t *appState, Elf64_Phdr *phdr, uint64_t poffset, uint32_t base_flags);
-    int placeSegment(Elf64_Phdr *phdr, uint64_t poffset);
+    int placeSegment(Elf64_Phdr *phdr, uint64_t poffset, uint64_t *next_avail_paddr);
 
     //! \brief  Return pathname string for the executable.
     //! \return String with pathname.

@@ -23,23 +23,18 @@
 
 #include "common/ArgParse.h"
 
-#include "lib/BGMasterClientApi.h"
+#include "lib/BGMasterClient.h"
 #include "lib/exceptions.h"
 
 #include <utility/include/Log.h>
 
-#include <boost/tokenizer.hpp>
-#include <boost/lexical_cast.hpp>
 
-#include <csignal>
 
 LOG_DECLARE_FILE( "master" );
 
-BGMasterClient client;
-Args* pargs;
-
 void
 doAliasWait(
+        BGMasterClient& client,
         std::string& target,
         std::string& timeout
         )
@@ -48,8 +43,8 @@ doAliasWait(
     int to = 0;
     if (timeout.length() != 0) {
         try {
-            to = boost::lexical_cast<unsigned>(timeout);
-        } catch(boost::bad_lexical_cast& e) {
+            to = boost::lexical_cast<int>(timeout);
+        } catch (const boost::bad_lexical_cast& e) {
             std::cerr << "Invalid timeout value " << timeout << ". " << e.what() << std::endl;
             exit(EXIT_FAILURE);
         }
@@ -60,8 +55,8 @@ doAliasWait(
     }
 
     try {
-        id = client.alias_wait(target, to);
-    } catch(exceptions::BGMasterError& e) {
+        id = client.alias_wait(target, static_cast<unsigned>(to));
+    } catch (const exceptions::BGMasterError& e) {
         std::cerr << e.what() << std::endl;
         return;
     }
@@ -78,7 +73,8 @@ void usage()
     std::cerr << "alias_wait [alias] [ --timeout seconds ] [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]" << std::endl;
 }
 
-int main(int argc, const char** argv) {
+int
+main(int argc, const char** argv) {
 
     std::string timeout = "--timeout";
     std::vector<std::string> validargs;
@@ -87,26 +83,24 @@ int main(int argc, const char** argv) {
     validargs.push_back("*"); // One argument without a "--" is allowed
     validargs.push_back(timeout);
 
-    Args largs(argc, argv, &usage, &help, validargs, singles);
-    pargs = &largs;
-    client.initProperties(pargs->get_props());
+    const Args largs(argc, argv, &usage, &help, validargs, singles);
+    BGMasterClient client;
 
-    std::string time_out = (*pargs)[timeout];
+    std::string time_out = largs[timeout];
     std::string target;
-    if (pargs->size() != 0)
-        target = *(pargs->begin());
+    if (largs.size() != 0)
+        target = *largs.begin();
     else {
         std::cerr << "No alias specified." << std::endl;
         exit(EXIT_FAILURE);
     }
 
     try {
-        client.connectMaster(pargs->get_portpairs());
-    }
-    catch(exceptions::BGMasterError& e) {
-        std::cerr << "Unable to contact bgmaster_server, server may be down." << std::endl;
+        client.connectMaster(largs.get_props(), largs.get_portpairs());
+    } catch (const exceptions::BGMasterError& e) {
+        std::cerr << "Unable to contact bgmaster_server: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    doAliasWait(target, time_out);
+    doAliasWait(client, target, time_out);
 }

@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_DELETE_H_
 #define MMCS_SERVER_COMMAND_DELETE_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
 ** delete <db2table> <id>
@@ -44,9 +40,8 @@ class Delete: public common::AbstractCommand
 {
 public:
     Delete(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "delete <db2table> <id>";}
+      : AbstractCommand(name,description,attributes) { _usage = "delete <db2table> <id>";}
     static  Delete* build();    // factory method
-    static  std::string cmdname() { return "delete"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,

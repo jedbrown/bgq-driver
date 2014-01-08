@@ -93,6 +93,12 @@ Multiplexer::start()
         return EXIT_FAILURE;
     }
 
+    _runjobListener->start();
+    _plugin->start();
+    _commandListener->start();
+    _server->start();
+    _counters->start();
+
     // create thread pool to invoke io_service
     LOG_DEBUG_MSG("creating " << _options.getThreadPoolSize() << " threads");
     boost::thread_group threads;
@@ -105,12 +111,6 @@ Multiplexer::start()
                     )
                 );
     }
-
-    _runjobListener->start();
-    _plugin->start();
-    _commandListener->start();
-    _server->start();
-    _counters->start();
 
     // run service from main thread
     _io_service.run();

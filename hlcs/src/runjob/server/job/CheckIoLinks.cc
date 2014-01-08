@@ -97,15 +97,12 @@ CheckIoLinks::create(
     guard.dismiss();
 
     ioLink->status(
-            job->strand().wrap(
-                boost::bind(
-                    &CheckIoLinks::execute,
-                    result,
-                    _1
-                    )
+            boost::bind(
+                &CheckIoLinks::execute,
+                result,
+                _1
                 )
             );
-
 }
 
 CheckIoLinks::CheckIoLinks(
@@ -120,6 +117,21 @@ CheckIoLinks::CheckIoLinks(
 
 void
 CheckIoLinks::execute( 
+        const cios::Connection::SocketPtr& socket
+        )
+{
+    // use post instead of dispatch to start a new callstack
+    _job->strand().post(
+            boost::bind(
+                &CheckIoLinks::executeImpl,
+                shared_from_this(),
+                socket
+                )
+            );
+}
+
+void
+CheckIoLinks::executeImpl(
         const cios::Connection::SocketPtr& socket
         )
 {
@@ -146,12 +158,10 @@ CheckIoLinks::execute(
         mux->clients()->update(
                 _job->client(),
                 _job,
-                _job->strand().wrap(
-                    boost::bind(
-                        &CheckIoLinks::updateClient,
-                        shared_from_this(),
-                        _1
-                        )
+                boost::bind(
+                    &CheckIoLinks::updateClient,
+                    shared_from_this(),
+                    _1
                     )
                 );
 
@@ -172,18 +182,30 @@ CheckIoLinks::execute(
     }
 
     ioLink->status(
-            _job->strand().wrap(
-                boost::bind(
-                    &CheckIoLinks::execute,
-                    shared_from_this(),
-                    _1
-                    )
+            boost::bind(
+                &CheckIoLinks::execute,
+                shared_from_this(),
+                _1
                 )
             );
 }
 
 void
 CheckIoLinks::updateClient(
+        const bool result
+        )
+{
+    _job->strand().post(
+            boost::bind(
+                &CheckIoLinks::updateClientImpl,
+                shared_from_this(),
+                result
+                )
+            );
+}
+
+void
+CheckIoLinks::updateClientImpl(
         const bool result
         )
 {

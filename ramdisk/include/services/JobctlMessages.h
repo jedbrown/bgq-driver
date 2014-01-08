@@ -71,6 +71,8 @@ const uint16_t CheckToolStatus    = 2027;
 const uint16_t CheckToolStatusAck = 2028;
 const uint16_t ExitTool           = 2029;
 const uint16_t ExitToolAck        = 2030;
+const uint16_t Heartbeat          = 2031;
+const uint16_t HeartbeatAck       = 2032;
 const uint16_t Completed          = 2099; // Always last since there is not a corresponding ack message.
 
 
@@ -78,7 +80,7 @@ const uint16_t Completed          = 2099; // Always last since there is not a co
 const uint16_t BaseRdmaPort = 7100;
 
 //! Current version of protocol.
-const uint8_t ProtocolVersion = 8;
+const uint8_t ProtocolVersion = 10;
 
 //! Size of unencrypted (plain text) data in Authenticate message.
 const size_t PlainDataSize = 32;
@@ -264,6 +266,7 @@ struct SignalJobAckMessage
 struct CleanupJobMessage
 {
    struct MessageHeader header;        //!< Message header.
+   uint8_t killTimeout;                //!< flag indicating signal delivery has timed out
 };
 
 //! Message to acknowledge cleaning up job.
@@ -423,6 +426,20 @@ struct ExitToolAckMessage
 //! Message to indicate previous message exchange has completed.
 
 struct CompletedMessage
+{
+   struct MessageHeader header;        //!< Message header.
+};
+
+//! Message to check status of jobctld
+
+struct HeartbeatMessage
+{
+   struct MessageHeader header;        //!< Message header.
+};
+
+//! Message to acknowledge heartbeat
+
+struct HeartbeatAckMessage
 {
    struct MessageHeader header;        //!< Message header.
 };

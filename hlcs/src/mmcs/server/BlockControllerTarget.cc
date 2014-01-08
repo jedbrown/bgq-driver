@@ -36,13 +36,10 @@
 #include "BCServicecardInfo.h"
 #include "BlockControllerBase.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
-
 
 BlockControllerTarget::BlockControllerTarget(BlockPtr blockController, const string& spec, mmcs_client::CommandReply& reply)
     : _blockController(blockController),
@@ -66,110 +63,99 @@ BlockControllerTarget::BlockControllerTarget(BlockPtr blockController, const str
 bool
 BlockControllerTarget::parseSpec(mmcs_client::CommandReply& reply)
 {
-    if (_spec == "{*}")
-    {
-	for (unsigned i = 0; i < _blockController->getNodes().size(); ++i)
-	{
-	    _nodes.push_back(_blockController->getNodes()[i]);
-	}
-	for (unsigned i = 0; i < _blockController->getIcons().size(); ++i)
-	    _icons.push_back(_blockController->getIcons()[i]);
-	for (unsigned i = 0; i < _blockController->getLinkchips().size(); ++i)
-	    _linkchips.push_back(_blockController->getLinkchips()[i]);
-    }
-    else
-    {
-	if (_spec == "{i}")
-	{
-	    for (unsigned i = 0; i < _blockController->getNodes().size(); ++i)
-	    {
-		if (_blockController->getNodes()[i]->isIOnode())
-		    _nodes.push_back(_blockController->getNodes()[i]);
-	    }
-	}
+    if (_spec == "{*}") {
+        for (unsigned i = 0; i < _blockController->getNodes().size(); ++i) {
+            _nodes.push_back(_blockController->getNodes()[i]);
+        }
+        for (unsigned i = 0; i < _blockController->getIcons().size(); ++i) {
+            _icons.push_back(_blockController->getIcons()[i]);
+        }
+        for (unsigned i = 0; i < _blockController->getLinkchips().size(); ++i) {
+            _linkchips.push_back(_blockController->getLinkchips()[i]);
+        }
+    } else {
+        if (_spec == "{i}") {
+            for (unsigned i = 0; i < _blockController->getNodes().size(); ++i) {
+                if (_blockController->getNodes()[i]->isIOnode()) {
+                    _nodes.push_back(_blockController->getNodes()[i]);
+                }
+            }
+        }
+        else if (_spec == "{c}") {
+            for (unsigned i = 0; i < _blockController->getNodes().size(); ++i) {
+                if (!_blockController->getNodes()[i]->isIOnode()) {
+                    _nodes.push_back(_blockController->getNodes()[i]);
+                }
+            }
+        }
+        else if (_spec == "{l}") {	// link chips
+            for (unsigned i = 0; i < _blockController->getLinkchips().size(); ++i) {
+                _linkchips.push_back(_blockController->getLinkchips()[i]);
+            }
+        }
+        else if (_spec == "{nc}") {	// node_card icon chips
+            for (unsigned i = 0; i < _blockController->getIcons().size(); ++i) {
+                if (typeid(*(_blockController->getIcons()[i])) == typeid(BCNodecardInfo)) {
+                    _icons.push_back(_blockController->getIcons()[i]);
+                }
+            }
+        }
+        else if (_spec == "{sc}") {	// service_card icon chips
+            for (unsigned i = 0; i < _blockController->getIcons().size(); ++i) {
+                if (typeid(*(_blockController->getIcons()[i])) == typeid(BCServicecardInfo)) {
+                    _icons.push_back(_blockController->getIcons()[i]);
+                }
+            }
+        }
+        else if (_spec == "{cc}") {	// clock_card icon chips
+            for (unsigned i = 0; i < _blockController->getIcons().size(); ++i) {
+                if (typeid(*(_blockController->getIcons()[i])) == typeid(BCClockcardInfo)) {
+                    _icons.push_back(_blockController->getIcons()[i]);
+                }
+            }
+        }
+        else if (*_cur != '{')
+            return error("`{' expected", reply);
+        else {
+            ++_cur;
+            for (;;) {
+                if (*_cur == 'R' || *_cur == 'Q') {	// regular expression
+                    if (!parseRegexp(reply)) {
+                        return false;
+                    }
+                }
+                else if (isdigit(*_cur)) { // group expression
+                    if (!parseGroup(reply))
+                        return false;
+                }
+                else {		// invalid
+                    break;
+                }
 
-	else if (_spec == "{c}")
-	{
-	    for (unsigned i = 0; i < _blockController->getNodes().size(); ++i) {
-		if (!_blockController->getNodes()[i]->isIOnode()) {
-		    _nodes.push_back(_blockController->getNodes()[i]);
-		}
-	    }
-	}
-
-	else if (_spec == "{l}")		// link chips
-	{
-	    for (unsigned i = 0; i < _blockController->getLinkchips().size(); ++i)
-		_linkchips.push_back(_blockController->getLinkchips()[i]);
-	}
-
-	else if (_spec == "{nc}")	// node_card icon chips
-	{
-	    for (unsigned i = 0; i < _blockController->getIcons().size(); ++i)
-		if (typeid(*(_blockController->getIcons()[i])) == typeid(BCNodecardInfo))
-		    _icons.push_back(_blockController->getIcons()[i]);
-	}
-
-	else if (_spec == "{sc}")	// service_card icon chips
-	{
-	    for (unsigned i = 0; i < _blockController->getIcons().size(); ++i)
-		if (typeid(*(_blockController->getIcons()[i])) == typeid(BCServicecardInfo))
-		    _icons.push_back(_blockController->getIcons()[i]);
-	}
-
-	else if (_spec == "{cc}")	// clock_card icon chips
-	{
-	    for (unsigned i = 0; i < _blockController->getIcons().size(); ++i)
-		if (typeid(*(_blockController->getIcons()[i])) == typeid(BCClockcardInfo))
-		    _icons.push_back(_blockController->getIcons()[i]);
-	}
-
-	else if (*_cur != '{')
-	    return error("`{' expected", reply);
-
-	else
-	{
-	    ++_cur;
-
-	    for (;;)
-	    {
-
-		if (*_cur == 'R' || *_cur == 'Q')	// regular expression
-		{
-		    if (!parseRegexp(reply))
-			return false;
-		}
-		else if (isdigit(*_cur)) // group expression
-		{
-		    if (!parseGroup(reply))
-			return false;
-		}
-		else		// invalid
-		    break;
-
-		if (*_cur == ',')	// separator
-		{
-		    ++_cur;
-		    continue;
-		}
-	    }
-
-	    if (*_cur != '}') {
-		return error("`}' expected", reply);
-	    }
-
-	    ++_cur;
-	}
-
+                if (*_cur == ',') {	// separator
+                    ++_cur;
+                    continue;
+                }
+            }
+            if (*_cur != '}') {
+                return error("`}' expected", reply);
+            }
+            ++_cur;
+        }
     }
 
     // add all BCNodeInfo, BCIconInfo, and BCLinkchipInfo objects to BlockControllerTarget::_targets
-    for (unsigned i = 0; i < getNodes().size(); ++i)
-	_targets.push_back(getNodes()[i]);
-    for (unsigned i = 0; i < getIcons().size(); ++i)
-	_targets.push_back(getIcons()[i]);
-    for (unsigned i = 0; i < getLinkchips().size(); ++i)
-	_targets.push_back(getLinkchips()[i]);
+    for (unsigned i = 0; i < getNodes().size(); ++i) {
+        _targets.push_back(getNodes()[i]);
+    }
+
+    for (unsigned i = 0; i < getIcons().size(); ++i) {
+        _targets.push_back(getIcons()[i]);
+    }
+
+    for (unsigned i = 0; i < getLinkchips().size(); ++i) {
+        _targets.push_back(getLinkchips()[i]);
+    }
 
     return true;
 }
@@ -183,13 +169,14 @@ BlockControllerTarget::parseRegexp(mmcs_client::CommandReply& reply)
 
     // create a string from the regexp
     for (delim = _cur; *delim != '\0' && *delim != '}' && *delim != ',' && !isspace(*delim); ++delim)
-	;
+        ;
     string regexp(_cur, delim-_cur);
 
     Regexp regularExp(regexp);
     for (unsigned i = 0; i < _blockController->getNodes().size(); ++i) {
-        if (regularExp.matches(_blockController->getNodes()[i]->location()))
+        if (regularExp.matches(_blockController->getNodes()[i]->location())) {
             _nodes.push_back(_blockController->getNodes()[i]);
+        }
     }
 
     _cur = delim;			// skip to the character following the regexp
@@ -204,30 +191,31 @@ bool
 BlockControllerTarget::parseGroup(mmcs_client::CommandReply& reply)
 {
     unsigned n, m;
-    if (!parseIndex(&n, reply))
-	return false;
-    if (*_cur == '-')
-    {
-	++_cur;
-	if (!parseIndex(&m, reply))
-	    return false;
+    if (!parseIndex(&n, reply)) {
+        return false;
     }
-    else
-	m = n;
-    for (unsigned i = n; i <= m; ++i)
-    {
-	if (typeid(*(_blockController->getTargets()[i])) == typeid(BCNodeInfo))
-	{
-	    _nodes.push_back(dynamic_cast<BCNodeInfo*>(_blockController->getTargets()[i]));
-	}
-	else if (typeid(*(_blockController->getTargets()[i])) == typeid(BCNodecardInfo))
-	    _icons.push_back(dynamic_cast<BCNodecardInfo*>(_blockController->getTargets()[i]));
-	else if (typeid(*_blockController->getTargets()[i]) == typeid(BCServicecardInfo))
-	    _icons.push_back(dynamic_cast<BCServicecardInfo*>(_blockController->getTargets()[i]));
-	else if (typeid(*_blockController->getTargets()[i]) == typeid(BCClockcardInfo))
-	    _icons.push_back(dynamic_cast<BCClockcardInfo*>(_blockController->getTargets()[i]));
-	else if (typeid(*_blockController->getTargets()[i]) == typeid(BCLinkchipInfo))
-	    _linkchips.push_back(dynamic_cast<BCLinkchipInfo*>(_blockController->getTargets()[i]));
+
+    if (*_cur == '-') {
+        ++_cur;
+        if (!parseIndex(&m, reply)) {
+            return false;
+        }
+    } else {
+        m = n;
+    }
+
+    for (unsigned i = n; i <= m; ++i) {
+        if (typeid(*(_blockController->getTargets()[i])) == typeid(BCNodeInfo)) {
+            _nodes.push_back(dynamic_cast<BCNodeInfo*>(_blockController->getTargets()[i]));
+        }
+        else if (typeid(*(_blockController->getTargets()[i])) == typeid(BCNodecardInfo))
+            _icons.push_back(dynamic_cast<BCNodecardInfo*>(_blockController->getTargets()[i]));
+        else if (typeid(*_blockController->getTargets()[i]) == typeid(BCServicecardInfo))
+            _icons.push_back(dynamic_cast<BCServicecardInfo*>(_blockController->getTargets()[i]));
+        else if (typeid(*_blockController->getTargets()[i]) == typeid(BCClockcardInfo))
+            _icons.push_back(dynamic_cast<BCClockcardInfo*>(_blockController->getTargets()[i]));
+        else if (typeid(*_blockController->getTargets()[i]) == typeid(BCLinkchipInfo))
+            _linkchips.push_back(dynamic_cast<BCLinkchipInfo*>(_blockController->getTargets()[i]));
     }
     return true;
 }
@@ -237,16 +225,19 @@ BlockControllerTarget::parseGroup(mmcs_client::CommandReply& reply)
 bool
 BlockControllerTarget::parseIndex(unsigned *index, mmcs_client::CommandReply& reply)
 {
-    if (!isdigit(*_cur))
-	return error("index expected", reply);
+    if (!isdigit(*_cur)) {
+        return error("Index expected", reply);
+    }
 
     *index = atoi(_cur);
 
-    if (*index < 0 || *index >= _blockController->getTargets().size())
-	return error("index out of range", reply);
+    if (*index >= _blockController->getTargets().size()) {
+        return error("Index out of range", reply);
+    }
 
-    while (isdigit(*_cur))
-	++_cur;
+    while (isdigit(*_cur)) {
+        ++_cur;
+    }
     return true;
 }
 
@@ -255,7 +246,7 @@ BlockControllerTarget::parseIndex(unsigned *index, mmcs_client::CommandReply& re
 bool
 BlockControllerTarget::error(const string& message, mmcs_client::CommandReply& reply)
 {
-    reply << mmcs_client::FAIL << "invalid target " << _spec << " : " << message << " near column " << _cur - _spec.c_str() + 1 << mmcs_client::DONE;
+    reply << mmcs_client::FAIL << "Invalid target " << _spec << " : " << message << " near column " << _cur - _spec.c_str() + 1 << mmcs_client::DONE;
     _nodes.clear();
     return false;
 }

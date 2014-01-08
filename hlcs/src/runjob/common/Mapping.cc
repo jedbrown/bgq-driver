@@ -25,6 +25,8 @@
 #include "common/error.h"
 #include "common/logging.h"
 
+#include <db/include/api/tableapi/gensrc/DBTJob.h>
+
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
@@ -46,30 +48,21 @@ Mapping::Mapping(
         const bool performValidation
         ) :
     _type( t ),
-    _value( value ),
-    _maxDimensions( ),
-    _lineCount( 0 )
+    _value( value )
 {
-    if ( _value.size() > MAPPING_STRING_SIZE ) {
+    if ( _value.size() > BGQDB::DBTJob::MAPPING_SIZE ) {
         BOOST_THROW_EXCEPTION(
                 std::length_error(
                     "string length " +
                     boost::lexical_cast<std::string>( _value.size() ) +
                     " is greater than maximum length " +
-                    boost::lexical_cast<std::string>( MAPPING_STRING_SIZE )
+                    boost::lexical_cast<std::string>( BGQDB::DBTJob::MAPPING_SIZE )
                     )
                 );
     }
 
-    if ( t == Mapping::Type::File ) {
-        _maxDimensions.insert(
-                _maxDimensions.begin(),
-                6,
-                std::make_pair( 0,0 )
-                );
-        if ( performValidation ) {
-            this->validateFile();
-        }
+    if ( t == Mapping::Type::File && performValidation ) {
+        this->validateFile();
     }
 }
 
@@ -111,37 +104,29 @@ Mapping::validateFile()
     }
 
     std::string line;
-    while( std::getline(file, line) ) {
+    size_t lineCount( 0 );
+    while ( std::getline(file, line) ) {
         try {
-            this->analyzeLine( line, ranks );
-            ++_lineCount;
-        } catch( const std::exception& e ) {
+            this->analyzeLine( line, ranks, lineCount );
+            ++lineCount;
+        } catch ( const std::exception& e ) {
             LOG_WARN_MSG( e.what() );
             throw;
         }
     }
 
-    LOG_DEBUG_MSG( "read " << _lineCount << " lines" );
+    LOG_DEBUG_MSG( "read " << lineCount << " lines" );
 
-    for ( Dimensions::iterator i = _maxDimensions.begin(); i != _maxDimensions.end(); ++i ) {
-        const size_t dimension = std::distance( _maxDimensions.begin(), i );
-        switch (dimension) {
-            case 5:
-                LOG_DEBUG_MSG( "maximum T dimension " << i->first << " on line " << i->second );
-                break;
-            default:
-                LOG_DEBUG_MSG(
-                        "maximum " << static_cast<char>('A' + dimension) << " dimension " << i->first << 
-                        " on line " << i->second
-                        );
-        }
-    }
+    // remember encoded contents of mapping file
+    std::vector<uint32_t> contents( ranks.begin(), ranks.end() );
+    _fileContents.swap( contents );
 }
 
 void
 Mapping::analyzeLine(
         std::string& line,
-        Rank& ranks
+        Rank& ranks,
+        const size_t lineNumber
         )
 {
     // strip comments
@@ -166,28 +151,22 @@ Mapping::analyzeLine(
                     std::logic_error(
                         (is.eof() ? std::string("Missing") : std::string("Garbage")) + " " + names[i] + 
                         " coordinate on line " +
-                        boost::lexical_cast<std::string>(_lineCount)
+                        boost::lexical_cast<std::string>(lineNumber)
                         )
                     );
         }
     }
 
-    // line was valid, compare the coordinates to see if any of these
-    // dimensions are greater than what we've seen before
+    // line was valid, ensure all the coordinates are positive
     for ( unsigned i = 0; i < 6; ++i ) {
         if ( coords[i] < 0 ) {
             BOOST_THROW_EXCEPTION(
                     std::logic_error(
                         names[i] + " coordinate on line " + 
-                        boost::lexical_cast<std::string>(_lineCount) +
+                        boost::lexical_cast<std::string>(lineNumber) +
                         " must be zero or greater"
                         )
                 );
-        }
-
-        if ( coords[i] > _maxDimensions[i].first ) {
-            _maxDimensions[i].first = coords[i];
-            _maxDimensions[i].second = _lineCount;
         }
     }
 
@@ -203,8 +182,8 @@ Mapping::analyzeLine(
          ;
 
     // ensure these coordinates do not exist in the mapping already
-    const std::pair<Rank::iterator,bool> result = ranks.insert( nodeId );
-    if ( !result.second ) {
+    const Rank::iterator result = std::find( ranks.begin(), ranks.end(), nodeId );
+    if ( result != ranks.end() ) {
         BOOST_THROW_EXCEPTION(
                 std::logic_error(
                     "Coordinates (" +
@@ -214,15 +193,16 @@ Mapping::analyzeLine(
                     boost::lexical_cast<std::string>(coords[3]) + "," +
                     boost::lexical_cast<std::string>(coords[4]) + "," +
                     boost::lexical_cast<std::string>(coords[5]) + ") on line " +
-                    boost::lexical_cast<std::string>(_lineCount) +
+                    boost::lexical_cast<std::string>(lineNumber) +
                     " already exists for rank " + 
-                    boost::lexical_cast<std::string>(std::distance( ranks.begin(), result.first ))
+                    boost::lexical_cast<std::string>(std::distance( ranks.begin(), result ))
                     )
                 );
     }
+    ranks.push_back( nodeId );
 
     LOG_TRACE_MSG(
-            _lineCount << " (" <<
+            lineNumber << " (" <<
             coords[0] << "," <<
             coords[1] << "," <<
             coords[2] << "," <<

@@ -51,11 +51,17 @@ typedef struct ShmMgrEntry_t
     char      FileName[256];    // Name of file to associate as handle for the file descriptor
     int       Oflags;           // Open flags
     int       Mode;             // Permissions 
-    int       pinned;           // Whether the virtual address has been pinned or not.
-    int       locked;           // Boolean.  Set if file is locked
-    int       needAtomic;       // Boolean.  Atomic region needed
+    int       isHardLink : 1;   // Boolean.  This ShmMgrEntry_t is a hard link elsewhere.
+    int       pinned     : 1;   // Boolean.  Whether the virtual address has been pinned or not.
+    int       locked     : 1;   // Boolean.  Set if file is locked
+    int       needAtomic : 1;   // Boolean.  Atomic region needed
+    int       markForDelete : 1;// Boolean.  Mark this entry for deletion once linkCount==0
     uint32_t  LinkCount;        // Number of links to this memory area
-    uint64_t  lastAccess;       // Timebase of last access
+    union
+    {
+        uint64_t  lastAccess;       // Timebase of last access
+        struct ShmMgrEntry_t* hardLinkPtr; // Pointer to the hard link ShmMgrEntry_t
+    };
     uint64_t  lastMod;          // Timebase of last modification
     uint64_t  AllocatedAddr;    // Address given for this entry
     size_t    AllocatedSize;    // Size of this memory area

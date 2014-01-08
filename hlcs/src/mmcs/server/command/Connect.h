@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_CONNECT_H_
 #define MMCS_SERVER_COMMAND_CONNECT_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
 //  connect
@@ -43,9 +39,8 @@ class Connect: public common::AbstractCommand
 {
 public:
     Connect(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "[<target>] connect [ options ]";}
+      : AbstractCommand(name,description,attributes) { _usage = "[<target>] connect [ options ]";}
     static  Connect* build();   // factory method
-    static  std::string cmdname() { return "connect"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -55,8 +50,6 @@ public:
               mmcs_client::CommandReply& reply);
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

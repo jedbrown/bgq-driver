@@ -348,7 +348,7 @@ ElfImage::checkBGQNote(Elf64_Phdr *phdr)
 //! \return 0 when successful, errno when unsuccessful.
 
 int
-ElfImage::readRegion(void *buffer, Elf64_Off offset, Elf64_Word size)
+ElfImage::readRegion(void *buffer, uint64_t offset, uint64_t size)
 {
     // Read the region from the file.
     uint64_t cnk_rc;
@@ -358,13 +358,13 @@ ElfImage::readRegion(void *buffer, Elf64_Off offset, Elf64_Word size)
        cnk_rc = internal_pread64(_fd, bufp, bytesLeft, offset);
        if (CNK_RC_IS_FAILURE(cnk_rc)) {
 	   int errnum = CNK_RC_ERRNO(cnk_rc);
-	   TRACE( TRACE_Jobctl, ("(E) ElfImage::readRegion: pread failed for %u bytes at offset %lu, %d\n", size, offset, errnum) );
-	   _errorReason = bgcios::AppReadError;
+	   TRACE( TRACE_Jobctl, ("(E) ElfImage::readRegion: pread failed for %lu bytes at offset %lu, %d\n", size, offset, errnum) );
+           _errorReason = bgcios::AppReadError;
 	   return errnum;
        }
-       int nbytes = (int) CNK_RC_VALUE(cnk_rc);
+       int64_t nbytes = (int64_t) CNK_RC_VALUE(cnk_rc);
        if (nbytes <= 0) {
-	   TRACE( TRACE_Jobctl, ("(E) ElfImage::readRegion: pread returned %d bytes when %u bytes were requested at offset %lu\n",
+	   TRACE( TRACE_Jobctl, ("(E) ElfImage::readRegion: pread returned %ld bytes when %lu bytes were requested at offset %lu\n",
                                  nbytes, size, offset) );
 	   _errorReason = bgcios::AppReadError;
 	   return ENODATA;
@@ -479,20 +479,31 @@ ElfImage::addSegment(AppState_t *appState, Elf64_Phdr *phdr, uint64_t poffset, u
 }
 
 int
-ElfImage::placeSegment(Elf64_Phdr *phdr, uint64_t poffset)
+ElfImage::placeSegment(Elf64_Phdr *phdr, uint64_t poffset, uint64_t *poffset_adjust)
 {
     int rc = 0;
 
     // Map a TLB for the segment.
     uint64_t paddr = ROUND_DN_1G(phdr->p_paddr + poffset);
     uint64_t vaddr = ROUND_DN_1G(phdr->p_vaddr + VMM_APP_LOAD_VADDR);
-    rc = vmm_MapUserSpace( APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_ESEL(3) | APP_FLAGS_NONSPECULATIVE,
-			  (void*)paddr,
-			  (void*)vaddr,
-			  VMM_PAGE_SIZE_1G,
-			  0,
-			  0); // needs to be kernel size
-
+    uint64_t last_tlb_vaddr  = ROUND_DN_1G(phdr->p_vaddr + VMM_APP_LOAD_VADDR + phdr->p_filesz);
+    while(vaddr <= last_tlb_vaddr) {
+        rc = vmm_MapUserSpace( APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_ESEL(3) | APP_FLAGS_NONSPECULATIVE,
+                               (void*)paddr,
+                               (void*)vaddr,
+                               VMM_PAGE_SIZE_1G,
+                               0,
+                               0); // needs to be kernel size
+        vaddr += VMM_PAGE_SIZE_1G;
+        paddr += VMM_PAGE_SIZE_1G;
+    }
+    if (poffset_adjust)
+    {
+        if ((paddr - VMM_PAGE_SIZE_1G) > *poffset_adjust)
+        {
+            *poffset_adjust = paddr - VMM_PAGE_SIZE_1G;
+        }
+    }
     // Temporarily set text address range so address validation is successful.
     AppProcess_t* p = GetMyProcess();
     vaddr = phdr->p_vaddr + VMM_APP_LOAD_VADDR;
@@ -574,7 +585,10 @@ ElfImage::placeSegment(Elf64_Phdr *phdr, uint64_t poffset)
     vaddr = ROUND_DN_1G(phdr->p_vaddr + VMM_APP_LOAD_VADDR);
 
     // Unmap TLB.
-    vmm_UnmapUserSpace((void*)vaddr, VMM_PAGE_SIZE_1G, 0);
+    while(vaddr <= last_tlb_vaddr) {
+        vmm_UnmapUserSpace((void*)vaddr, VMM_PAGE_SIZE_1G, 0);
+        vaddr += VMM_PAGE_SIZE_1G;
+    }
 
     return rc;
 }
@@ -592,7 +606,7 @@ ElfImage::getPhdr(int index)
     return (Elf64_Phdr *) (_segmentTable + (index * _ehdr.e_phentsize));
 }
 
-int elf_loadimage(AppState_t *appState, uint64_t physical_offset)
+int elf_loadimage(AppState_t *appState, uint64_t physical_offset, uint64_t *poffset_adjust)
 {
     int rc;
     bgcios::ReturnCode error = bgcios::Success;
@@ -601,7 +615,12 @@ int elf_loadimage(AppState_t *appState, uint64_t physical_offset)
     int dynamic = false;
     int code_seg_found = false;
     uint64_t next_avail_pa = 0;
+    uint64_t local_poffset_adjust = 0;
     char interpreter[bgcios::jobctl::MaxPathSize] = "";
+    if (poffset_adjust)
+    {
+        local_poffset_adjust = *poffset_adjust;
+    }
 
     const char* filename = (char*)&appState->App_Args[0];
     TRACE( TRACE_Jobctl, ("(I) elf_loadimage: loading elf file '%s'\n", filename) );
@@ -620,7 +639,7 @@ int elf_loadimage(AppState_t *appState, uint64_t physical_offset)
 	{
 	    case PT_LOAD:
 	    case PT_TLS:
-		rc = elf->addSegment(appState, phdr, 0, 0);
+		rc = elf->addSegment(appState, phdr, local_poffset_adjust, 0);
 		if (rc != 0) goto done;
 		break;
 	    case PT_NOTE:
@@ -660,7 +679,7 @@ int elf_loadimage(AppState_t *appState, uint64_t physical_offset)
 	    }
 	    else
 	    {
-		rc = elf->placeSegment(phdr, physical_offset);
+		rc = elf->placeSegment(phdr, physical_offset, poffset_adjust);
 		if (rc != 0) goto done;
 	    }
 	}
@@ -703,7 +722,7 @@ int elf_loadimage(AppState_t *appState, uint64_t physical_offset)
 	    {
 		rc = elf->addSegment(appState, phdr, next_avail_pa, APP_FLAGS_DYN);
 		if (rc != 0) goto done;
-		rc = elf->placeSegment(phdr, next_avail_pa + physical_offset);
+		rc = elf->placeSegment(phdr, next_avail_pa + physical_offset, NULL);
 		if (rc != 0) goto done;
 	    }
 	}

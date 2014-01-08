@@ -98,14 +98,12 @@ void BgParam::parseOptions(const std::string sExeName, const std::string options
  
   for (unsigned n = 0; n < size; n++)
     {
-      const char *c = optionVector[n].c_str();
-      char *p = (char*) malloc(sizeof(char)* (optionVector[n].size()+1));
-      strcpy(p, c);
+      std::string p(optionVector[n]);
       if (p[0] == '-')         // parse options.
         {   
-	  p++;                // skip the 1st -
-	  if (*p == '-')      // skip the optional -- character..
-	    p++;
+	  p.erase(p.begin());  // skip the 1st -
+	  if (p[0] == '-')      // skip the optional -- character..
+	    p.erase(p.begin());
 	}
       //cout << __FUNCTION__ << "() Parsing: " << p << endl;
       parseParm(p);

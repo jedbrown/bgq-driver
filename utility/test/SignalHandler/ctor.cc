@@ -28,6 +28,8 @@
 
 #include "utility/include/SignalHandler.h"
 
+#include <iostream>
+
 using namespace bgq::utility;
 
 class InitializeLoggingFixture

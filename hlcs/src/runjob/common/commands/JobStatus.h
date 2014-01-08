@@ -119,7 +119,7 @@ public:
     /*!
      * \brief Protocol version.
      */
-    static const unsigned ProtocolVersion = 5;
+    static const unsigned ProtocolVersion = 6;
 
     /*!
      * \brief pointer type.
@@ -143,7 +143,8 @@ public:
             _loaded( false ),
             _outputStarted( false ),
             _running( false ),
-            _hardwareFailure( false )
+            _hardwareFailure( false ),
+            _signalInFlight( false )
         {
 
         }
@@ -159,6 +160,7 @@ public:
         bool _outputStarted;    //!<
         bool _running;          //!<
         bool _hardwareFailure;  //!<
+        bool _signalInFlight;   //!<
 
     private:
         friend class boost::serialization::access;
@@ -176,6 +178,7 @@ public:
             ar & _outputStarted;
             ar & _running;
             ar & _hardwareFailure;
+            ar & _signalInFlight;;
         }
     };
 

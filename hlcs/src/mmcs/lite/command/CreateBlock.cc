@@ -47,7 +47,7 @@ CreateBlock::build()
     commandAttributes.requiresTarget(false);           // does not require a BlockControllerTarget object
     commandAttributes.mmcsLiteCommand(true);
     commandAttributes.mmcsServerCommand(false);
-    commandAttributes.mmcsConsoleCommand(false);
+    commandAttributes.bgConsoleCommand(false);
     commandAttributes.helpCategory(common::ADMIN);             // 'help admin'  will include this command's summary
     Attributes::AuthPair hardwarecreate(hlcs::security::Object::Hardware,
                                                    hlcs::security::Action::Create);
@@ -67,7 +67,7 @@ CreateBlock::execute(
     server::BlockPtr pBlock = pController->getBlockHelper()->getBase();    // get selected block
     pBlock->create_block(args, reply);
     if(reply.str() == "args?")
-      reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+      reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
 }
 
 void

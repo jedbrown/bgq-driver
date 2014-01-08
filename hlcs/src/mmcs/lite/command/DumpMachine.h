@@ -43,9 +43,8 @@ class DumpMachine: public common::AbstractCommand
 {
 public:
     DumpMachine(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "dump_machine"; }
+      : AbstractCommand(name,description,attributes) { _usage = "dump_machine"; }
     static  DumpMachine* build();  // factory method
-    static  std::string cmdname() { return "dump_machine"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,

@@ -85,13 +85,13 @@ char *strncat( char *dest, const char *src, size_t n )
    return( dest );
 }
 
-const char* strstr(const char* source, const char* substr)
+char* strstr(const char* source, const char* substr)
 {
     size_t len = strlen(substr);
     while(*source)
     {
         if(strncmp(source, substr, len) == 0)
-            return source;
+            return (char*)source;
         source++;
     }
     return NULL;

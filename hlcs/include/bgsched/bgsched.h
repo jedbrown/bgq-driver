@@ -28,6 +28,8 @@
  * \defgroup V1R1M1 New content in V1R1M1
  *
  * \defgroup V1R2 New content in V1R2
+ 
+ * \defgroup V1R2M1 New content in V1R2M1
  */
 
 #ifndef BGSCHED_H_
@@ -102,6 +104,39 @@ extern const unsigned mod;
 extern const char* driver;
 
 } // version
+
+/*!
+ * \brief Methods for database connection pooling.
+ *
+ * \ingroup V1R2M1
+ */
+namespace connection_pool {
+
+/*!
+ * \brief Get the number of connections available in the connection pool.
+ * \ingroup V1R2M1
+ */
+unsigned getAvailable();
+
+/*!
+ * \brief Get the number of connections used in the connection pool.
+ * \ingroup V1R2M1
+ */
+unsigned getUsed();
+
+/*!
+ * \brief Get the maximum number of connections used in the connection pool since startup.
+ * \ingroup V1R2M1
+ */
+unsigned getMax();
+
+/*!
+ * \brief Get the configured number of connections in the connection pool.
+ * \ingroup V1R2M1
+ */
+unsigned getConfigured();
+
+} // connection_pool
 
 } // namespace bgsched
 

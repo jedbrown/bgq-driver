@@ -87,7 +87,7 @@ const uint32_t DefaultLargeRegionSize = 1048576;
 const uint32_t MinLargeRegionSize = 65536;
 
 //! Maximum size of large message memory regions.
-const uint32_t MaxLargeRegionSize = 8388608;
+const uint32_t MaxLargeRegionSize = 16777216;
 
 //! Default number of large message memory regions.
 const uint16_t DefaultNumLargeRegions = 16;

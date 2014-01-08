@@ -25,17 +25,18 @@
 
 #include "common/Properties.h"
 
-#include <control/include/mcServer/MCServerPorts.h>
+#include <control/include/mcServer/defaults.h>
 
 #include <utility/include/portConfiguration/Connector.h>
 #include <utility/include/Log.h>
+#include <xml/include/c_api/MCServerMessageSpec.h>
 
+#include <boost/bind.hpp>
+#include <boost/lexical_cast.hpp>
 
 using mmcs::common::Properties;
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
@@ -74,6 +75,7 @@ McServerConnection::McServerConnection(
 
 void
 McServerConnection::start(
+        const std::string& user,
         const ConnectCallback& callback
         )
 {
@@ -82,14 +84,14 @@ McServerConnection::start(
     using bgq::utility::PortConfiguration;
 
     ClientPortConfiguration config(
-            CLIENT_PORT,
+            mc_server::ClientPort,
             ClientPortConfiguration::ConnectionType::Administrative
             );
     config.setProperties( Properties::getProperties(), std::string() );
     PortConfiguration::Pairs portpairs;
     PortConfiguration::parsePortsStr(
             Properties::getProperty(MC_SERVER_IP) + ":" + Properties::getProperty(MC_SERVER_PORT),
-            CLIENT_PORT_STR,
+            boost::lexical_cast<std::string>(mc_server::ClientPort),
             portpairs
             );
     config.setPairs( portpairs );
@@ -108,21 +110,23 @@ McServerConnection::start(
                 shared_from_this(),
                 _1,
                 connector,
-                callback
+                callback,
+                user
                 )
             );
 }
 
 McServerConnection::~McServerConnection()
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
+    // LOG_TRACE_MSG( __FUNCTION__ );
 }
 
 void
 McServerConnection::connectHandler(
         const bgq::utility::Connector::ConnectResult& result,
         const boost::shared_ptr<bgq::utility::Connector>& connector,
-        const ConnectCallback& callback
+        const ConnectCallback& callback,
+        const std::string& user
         )
 {
     if ( result.error ) {
@@ -130,9 +134,42 @@ McServerConnection::connectHandler(
         return;
     }
 
-    LOG_DEBUG_MSG( "connected to mc_server at " << result.socket_ptr->lowest_layer().remote_endpoint() );
+    LOG_DEBUG_MSG("Connected to mc_server at " << result.socket_ptr->lowest_layer().remote_endpoint() );
     _socket = result.socket_ptr;
-    callback( result.error, result.error_str );
+
+    MCServerMessageSpec::ConnectRequest request;
+    request._version = boost::lexical_cast<unsigned>(MCServerMessageSpec::VERSION);
+    request._user = "env mon " + user;
+    request._hostname = boost::lexical_cast<std::string>( result.socket_ptr->lowest_layer().local_endpoint().address() );
+
+    LOG_DEBUG_MSG("Connecting as " << request._user << "@" << request._hostname );
+    this->send(
+            request.getClassName(),
+            request,
+            boost::bind(
+                &McServerConnection::connectRequestHandler,
+                shared_from_this(),
+                _1,
+                callback
+                )
+            );
+}
+
+void
+McServerConnection::connectRequestHandler(
+        std::istream& response,
+        const ConnectCallback& callback
+        )
+{
+    MCServerMessageSpec::ConnectReply reply;
+    reply.read( response );
+    if ( reply._rc ) {
+        LOG_ERROR_MSG( reply._rt );
+        callback( bgq::utility::Connector::Error::ConnectError, reply._rt );
+        return;
+    }
+
+    callback( bgq::utility::Connector::Error::Success, std::string() );
 }
 
 void
@@ -177,9 +214,10 @@ McServerConnection::writeHandler(
     _outgoingMessage.consume( bytesTransferred );
 
     if ( error ) {
-        LOG_WARN_MSG( "could not write: " << boost::system::system_error(error).what() );
+        LOG_WARN_MSG("Could not write: " << boost::system::system_error(error).what() );
         return;
     }
+    LOG_TRACE_MSG( __FUNCTION__ << " " << bytesTransferred << " bytes transferred" );
 
     boost::asio::async_read(
             *_socket,
@@ -202,9 +240,10 @@ McServerConnection::readHeaderSizeHandler(
         )
 {
     if ( error ) {
-        LOG_ERROR_MSG( "could not read header size: " << boost::system::system_error(error).what() );
+        LOG_ERROR_MSG("Could not read header size: " << boost::system::system_error(error).what());
         return;
     }
+    LOG_TRACE_MSG( __FUNCTION__ << " " << bytesTransferred << " bytes transferred" );
 
     _incomingHeader.resize( _incomingHeaderSize );
     boost::asio::async_read(
@@ -228,9 +267,10 @@ McServerConnection::readHeaderHandler(
         )
 {
     if ( error ) {
-        LOG_ERROR_MSG( "could not read header: " << boost::system::system_error(error).what() );
+        LOG_ERROR_MSG("Could not read header: " << boost::system::system_error(error).what());
         return;
     }
+    LOG_TRACE_MSG( __FUNCTION__ << " " << bytesTransferred << " bytes transferred" );
 
     boost::asio::async_read(
             *_socket,
@@ -253,9 +293,10 @@ McServerConnection::readMessageSizeHandler(
         )
 {
     if ( error ) {
-        LOG_ERROR_MSG( "could not read message size: " << boost::system::system_error(error).what() );
+        LOG_ERROR_MSG("Could not read message size: " << boost::system::system_error(error).what());
         return;
     }
+    LOG_TRACE_MSG( __FUNCTION__ << " " << bytesTransferred << " bytes transferred" );
 
     boost::asio::async_read(
             *_socket,
@@ -279,9 +320,10 @@ McServerConnection::readMessageHandler(
 {
     _incomingMessage.commit( bytesTransferred );
     if ( error ) {
-        LOG_ERROR_MSG( "could not read message: " << boost::system::system_error(error).what() );
+        LOG_ERROR_MSG("Could not read message: " << boost::system::system_error(error).what());
         return;
     }
+    LOG_TRACE_MSG( __FUNCTION__ << " " << bytesTransferred << " bytes transferred" );
 
     std::istream is( &_incomingMessage );
     callback( is );

@@ -29,8 +29,6 @@
 
 #include "server/job/Reconnect.h"
 
-#include "server/realtime/Connection.h"
-
 #include "common/logging.h"
 
 #include "server/Options.h"
@@ -38,6 +36,7 @@
 
 #include <db/include/api/tableapi/gensrc/DBTBlock.h>
 #include <db/include/api/tableapi/gensrc/DBTBpblockmap.h>
+#include <db/include/api/tableapi/gensrc/DBTMidplane.h>
 #include <db/include/api/tableapi/gensrc/DBTNode.h>
 #include <db/include/api/tableapi/gensrc/DBTSmallblock.h>
 
@@ -46,7 +45,7 @@
 #include <db/include/api/tableapi/DBConnectionPool.h>
 
 #include <boost/assign/list_of.hpp>
-
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/bind.hpp>
 
 LOG_DECLARE_FILE( runjob::server::log );
@@ -57,54 +56,45 @@ namespace block {
 
 void
 Reconnect::create(
-        const Server::Ptr& server
+        const Server::Ptr& server,
+        const Callback& callback
         )
 {
     try {
-        const Reconnect::Ptr result(
+        const Ptr result(
                 new Reconnect( server )
                 );
 
-        if ( server->getOptions().reconnect().scope() == runjob::server::Reconnect::Scope::None ) {
-            LOG_INFO_MSG( "skipping" );
-            return;
-        }
-
-        result->nextBlock();
+        server->getBlocks()->loadMachine(
+                boost::bind(
+                    &Reconnect::loadMachineCallback,
+                    result,
+                    _1,
+                    _2,
+                    callback
+                )
+            );
     } catch ( const std::exception& e ) {
         LOG_WARN_MSG( e.what() );
     }
+
+    return;
 }
 
 Reconnect::~Reconnect()
 {
+    const boost::posix_time::ptime now( boost::posix_time::microsec_clock::local_time() );
+
+    LOG_INFO_MSG(
+            "Reconnected to " <<
+            _computeBlockCount << " compute block" << (_computeBlockCount == 1 ? "" : "s") <<
+            " and " << _ioBlockCount << " I/O block" << (_ioBlockCount == 1 ? "" : "s") <<
+            " in " << boost::posix_time::to_simple_string(now - _startTime) 
+            );
     const Server::Ptr server( _server.lock() );
     if ( !server ) return;
 
     job::Reconnect::create( server );
-
-    try {
-        if ( !_sequence ) {
-            // special case when no blocks are reconnected, we don't want to poll for
-            // every block that has changed since sequence ID zero so we find the 
-            // maximum
-            const cxxdb::ResultSetPtr results(
-                    _connection->query(
-                        "SELECT max(" +
-                        BGQDB::DBTBlock::SEQID_COL + ") AS " +
-                        BGQDB::DBTBlock::SEQID_COL + " FROM " +
-                        BGQDB::DBTBlock().getTableName()
-                        )
-                    );
-            if ( results->fetch() ) {
-                _sequence = results->columns()[ BGQDB::DBTBlock::SEQID_COL ].getInt64();
-            }
-        }
-    } catch ( const std::exception& e ) {
-        LOG_ERROR_MSG( e.what() );
-    }
-
-    server->getRealtimeConnection()->start( _sequence );
 }
 
 Reconnect::Reconnect(
@@ -113,6 +103,14 @@ Reconnect::Reconnect(
     _server( server ),
     _connection( BGQDB::DBConnectionPool::instance().getConnection() ),
     _results(),
+    _strand( server->getIoService() ),
+    _smallBlock(),
+    _largeBlockNodes(),
+    _largeBlockMidplanes(),
+    _machine(),
+    _ioBlockCount( 0 ),
+    _computeBlockCount( 0 ),
+    _startTime( boost::posix_time::microsec_clock::local_time() ),
     _sequence( 0 )
 {
     if ( !_connection ) {
@@ -120,70 +118,143 @@ Reconnect::Reconnect(
         return;
     }
 
+    using namespace BGQDB;
+
     // order I/O blocks first so we reconnect to them before compute blocks
     _results = _connection->query(
             "SELECT "
-            + BGQDB::DBTBlock::BLOCKID_COL + "," + BGQDB::DBTBlock::STATUS_COL + ","
-            + BGQDB::DBTBlock::NUMCNODES_COL + "," + BGQDB::DBTBlock::NUMIONODES_COL + ","
-            + BGQDB::DBTBlock::SEQID_COL + "," + BGQDB::DBTBlock::QUALIFIER_COL +
-            " FROM " + BGQDB::DBTBlock().getTableName() +
-            " WHERE " + BGQDB::DBTBlock::STATUS_COL + " in ('" + BGQDB::BLOCK_INITIALIZED + "','" + BGQDB::BLOCK_BOOTING + "')"
-            " ORDER BY " + BGQDB::DBTBlock::NUMIONODES_COL + " DESC"
+            + DBTBlock::BLOCKID_COL + "," + DBTBlock::STATUS_COL + ","
+            + DBTBlock::NUMCNODES_COL + "," + DBTBlock::NUMIONODES_COL + ","
+            + DBTBlock::SEQID_COL +
+            " FROM " + DBTBlock().getTableName() +
+            " ORDER BY " + DBTBlock::NUMIONODES_COL + " DESC, " + DBTBlock::SEQID_COL + " DESC"
+            );
+       
+    // these queries are used to find any nodes in a Software (F)ailure status in both
+    // small and large blocks
+    _smallBlock = _connection->prepareQuery(
+            std::string("SELECT ") +
+            DBTNode().getTableName() + "." + DBTNode::MIDPLANEPOS_COL + "," + 
+            DBTNode().getTableName() + "." + DBTNode::NODECARDPOS_COL + "," + 
+            DBTNode().getTableName() + "." + DBTNode::POSITION_COL+ 
+            " FROM " + DBTNode().getTableName() + 
+            " INNER JOIN " + DBTSmallblock().getTableName() + " ON " +
+            DBTNode().getTableName() + "." + DBTNode::MIDPLANEPOS_COL + "=" + 
+            DBTSmallblock().getTableName() + "." + DBTSmallblock::POSINMACHINE_COL+ 
+            " AND " + 
+            DBTNode().getTableName() + "." + DBTNode::NODECARDPOS_COL + "=" + 
+            DBTSmallblock().getTableName() + "." + DBTSmallblock::NODECARDPOS_COL+ 
+            " AND " + 
+            DBTSmallblock().getTableName() + "." + DBTSmallblock::BLOCKID_COL + "=?" +
+            " AND " + DBTNode().getTableName() + "." + DBTNode::STATUS_COL + " = '" + SOFTWARE_FAILURE + "'",
+            boost::assign::list_of( DBTSmallblock::BLOCKID_COL)
+            );
+
+    _largeBlockNodes = _connection->prepareQuery(
+            std::string("SELECT ") +
+            DBTNode().getTableName() + "." + DBTNode::MIDPLANEPOS_COL + "," + 
+            DBTNode().getTableName() + "." + DBTNode::NODECARDPOS_COL + "," + 
+            DBTNode().getTableName() + "." + DBTNode::POSITION_COL+ 
+            " FROM " + DBTNode().getTableName() + 
+            " INNER JOIN " + DBTBpblockmap().getTableName() + " ON " +
+            DBTNode().getTableName() + "." + DBTNode::MIDPLANEPOS_COL + "=" + 
+            DBTBpblockmap().getTableName() + "." + DBTBpblockmap::BPID_COL+ 
+            " AND " + 
+            DBTBpblockmap().getTableName() + "." + DBTBpblockmap::BLOCKID_COL + "=?" +
+            " AND " + DBTNode().getTableName() + "." + DBTNode::STATUS_COL + " = '" + SOFTWARE_FAILURE + "'",
+            boost::assign::list_of( DBTBpblockmap::BLOCKID_COL )
+            );
+
+    // this query handles midplanes in a Software (F)ailure status
+    _largeBlockMidplanes = _connection->prepareQuery(
+            std::string("SELECT ") +
+            "BGQMidplane.LOCATION"
+            " FROM " + DBTMidplane().getTableName() + 
+            " INNER JOIN " + DBTBpblockmap().getTableName() + " ON " +
+            "BGQMidplane.LOCATION=" +
+            DBTBpblockmap().getTableName() + "." + DBTBpblockmap::BPID_COL +
+            " AND " + 
+            DBTBpblockmap().getTableName() + "." + DBTBpblockmap::BLOCKID_COL + "=?" +
+            " AND " + DBTMidplane().getTableName() + "." + DBTMidplane::STATUS_COL + " = '" + SOFTWARE_FAILURE + "'",
+            boost::assign::list_of( DBTBpblockmap::BLOCKID_COL )
             );
 }
 
 void
-Reconnect::nextBlock()
+Reconnect::start()
 {
-    if ( !_results->fetch() ) {
-        LOG_INFO_MSG( "done" );
-        return;
-    }
+    BOOST_ASSERT( _results );
+    BOOST_ASSERT( _machine );
 
     const Server::Ptr server( _server.lock() );
     if ( !server ) return;
 
-    const cxxdb::Columns& columns = _results->columns();
-    const std::string id =  columns[ BGQDB::DBTBlock::BLOCKID_COL ].getString();
-    LOGGING_DECLARE_BLOCK_MDC( id );
+    while ( _results->fetch() ) {
+        const cxxdb::Columns& columns = _results->columns();
+        const std::string id = columns[ BGQDB::DBTBlock::BLOCKID_COL ].getString();
+        LOGGING_DECLARE_BLOCK_MDC( id );
+                
+        const int cnodes = columns[ BGQDB::DBTBlock::NUMCNODES_COL ].as<int32_t>();
+        const int ionodes = columns[ BGQDB::DBTBlock::NUMIONODES_COL ].as<int32_t>();
+        const std::string status = columns[ BGQDB::DBTBlock::STATUS_COL ].getString();
 
-    LOG_DEBUG_MSG( 
-            " (" << columns[ BGQDB::DBTBlock::STATUS_COL ].getChar() << ")" <<
-            " (" << columns[ BGQDB::DBTBlock::NUMCNODES_COL ].as<int32_t>() << "c)" <<
-            " (" << columns[ BGQDB::DBTBlock::NUMIONODES_COL ].as<int32_t>() << "i)"
-            " sequence " << columns[ BGQDB::DBTBlock::SEQID_COL ].getInt64() <<
-            " qualifier " << columns[ BGQDB::DBTBlock::QUALIFIER_COL ].getString()
-            );
-    if ( columns[ BGQDB::DBTBlock::SEQID_COL ].getInt64() > _sequence ) {
-        _sequence = columns[ BGQDB::DBTBlock::SEQID_COL ].getInt64();
-        LOG_DEBUG_MSG( "updated sequence ID to " << _sequence );
+        if ( columns[ BGQDB::DBTBlock::SEQID_COL ].getInt64() > _sequence ) {
+            _sequence = columns[ BGQDB::DBTBlock::SEQID_COL ].getInt64();
+        }
+
+        if ( server->getOptions().reconnect().scope() == runjob::server::Reconnect::Scope::None ) continue;
+
+        // we only care about booting and initialized blocks
+        if ( status != BGQDB::BLOCK_INITIALIZED && status != BGQDB::BLOCK_BOOTING ) {
+            LOG_TRACE_MSG( 
+                    " (" << status << ")" <<
+                    " (" << (cnodes ? cnodes : ionodes) << " nodes)" <<
+                    " sequence " << columns[ BGQDB::DBTBlock::SEQID_COL ].getInt64()
+                );
+            continue;
+        }
+        
+        LOG_DEBUG_MSG( 
+                "(" << status << ")" <<
+                " (" << (cnodes ? cnodes : ionodes) << " nodes)" <<
+                " sequence " << columns[ BGQDB::DBTBlock::SEQID_COL ].getInt64()
+                );
+
+        if ( cnodes ) ++_computeBlockCount;
+        if ( ionodes ) ++_ioBlockCount;
+
+        server->getBlocks()->create(
+                id,
+                _machine,
+                boost::bind(
+                    &Reconnect::createCallback,
+                    shared_from_this(),
+                    _1,
+                    _2,
+                    id,
+                    ionodes,
+                    cnodes,
+                    status
+                    )
+                );
     }
-
-    server->getBlocks()->create(
-            columns[ BGQDB::DBTBlock::BLOCKID_COL ].getString(),
-            boost::bind(
-                &Reconnect::createCallback,
-                shared_from_this(),
-                _1,
-                _2
-                )
-            );
 }
 
 void
 Reconnect::createCallback(
         const error_code::rc error,
-        const std::string& message
+        const std::string& message,
+        const std::string& name,
+        const size_t numionodes,
+        const size_t numcnodes,
+        const std::string& status
         )
 {
-    const cxxdb::Columns& columns = _results->columns();
-    const std::string& id = columns[ BGQDB::DBTBlock::BLOCKID_COL ].getString();
-    LOGGING_DECLARE_BLOCK_MDC( id );
+    LOGGING_DECLARE_BLOCK_MDC( name );
 
     if ( error ) {
         LOG_ERROR_MSG( "could not create block" );
         LOG_ERROR_MSG( error_code::toString(error) << ": " << message );
-        this->nextBlock();
         return;
     }
 
@@ -192,21 +263,20 @@ Reconnect::createCallback(
     
     LOG_DEBUG_MSG( __FUNCTION__ );
 
-    const bool io = columns[ BGQDB::DBTBlock::NUMIONODES_COL ].as<int32_t>() != 0;
-    if ( io ) {
+    if ( numionodes != 0 ) {
         LOG_DEBUG_MSG( "skipping Software Failure query" );
 
         // I/O blocks that are booting do not need to be initialized
-        if ( columns[ BGQDB::DBTBlock::STATUS_COL ].getString() != BGQDB::BLOCK_INITIALIZED ) {
-            this->nextBlock();
+        if ( status != BGQDB::BLOCK_INITIALIZED ) {
             return;
         }
 
         server->getBlocks()->initialized(
-                id,
+                name,
                 boost::bind(
                     &Reconnect::initializedCallback,
                     shared_from_this(),
+                    name,
                     _1,
                     _2
                     )
@@ -217,115 +287,118 @@ Reconnect::createCallback(
 
     // get compute block so we can find any nodes that have a status of Software (F)ailure
     server->getBlocks()->find(
-            id,
-            boost::bind(
-                &Reconnect::findCallback,
-                shared_from_this(),
-                _1
+            name,
+            _strand.wrap(
+                boost::bind(
+                    &Reconnect::findCallback,
+                    shared_from_this(),
+                    _1,
+                    name,
+                    numcnodes
+                    )
                 )
             );
 }
 
 void
 Reconnect::initializedCallback(
+        const std::string& name,
         const error_code::rc error,
         const std::string& message
         )
 {
-    const cxxdb::Columns& columns = _results->columns();
-    const std::string& id = columns[ BGQDB::DBTBlock::BLOCKID_COL ].getString();
-    LOGGING_DECLARE_BLOCK_MDC( id );
+    LOGGING_DECLARE_BLOCK_MDC( name );
 
     if ( error ) {
         LOG_ERROR_MSG( "could not initialize block" );
         LOG_ERROR_MSG( error_code::toString(error) << ": " << message );
-        this->nextBlock();
         return;
     }
 
     LOG_INFO_MSG( __FUNCTION__ );
-    this->nextBlock();
 }
 
 void
 Reconnect::findCallback(
-        const block::Compute::Ptr& block
+        const block::Compute::Ptr& block,
+        const std::string& name,
+        const size_t numcnodes
         )
 {
-    const cxxdb::Columns& columns = _results->columns();
-    const std::string& id = columns[ BGQDB::DBTBlock::BLOCKID_COL ].getString();
-    LOGGING_DECLARE_BLOCK_MDC( id );
+    // assume this handler is protected by _strand
+    BOOST_ASSERT( _smallBlock );
+    BOOST_ASSERT( _largeBlockNodes );
+    BOOST_ASSERT( _largeBlockMidplanes );
+    LOGGING_DECLARE_BLOCK_MDC( name );
 
     if ( !block ) {
         LOG_WARN_MSG( "could not find block" );
-        this->nextBlock();
         return;
     }
 
-    std::ostringstream sql;
-    sql <<
-        "SELECT " <<
-        BGQDB::DBTNode().getTableName() << "." << BGQDB::DBTNode::MIDPLANEPOS_COL << "," <<
-        BGQDB::DBTNode().getTableName() << "." << BGQDB::DBTNode::NODECARDPOS_COL << "," <<
-        BGQDB::DBTNode().getTableName() << "." << BGQDB::DBTNode::POSITION_COL <<
-        " FROM " << BGQDB::DBTNode().getTableName() <<
-        " INNER JOIN "
-        ;
-    if ( static_cast<uint32_t>(columns[ BGQDB::DBTBlock::NUMCNODES_COL ].getInt32()) < BGQDB::Nodes_Per_Midplane ) {
-        // small block, join on the smallblock table
-        sql <<
-                BGQDB::DBTSmallblock().getTableName() <<
-                " ON " <<
-                BGQDB::DBTNode().getTableName() << "." << BGQDB::DBTNode::MIDPLANEPOS_COL << "=" <<
-                BGQDB::DBTSmallblock().getTableName() << "." << BGQDB::DBTSmallblock::POSINMACHINE_COL <<
-                " AND " <<
-                BGQDB::DBTNode().getTableName() << "." << BGQDB::DBTNode::NODECARDPOS_COL << "=" <<
-                BGQDB::DBTSmallblock().getTableName() << "." << BGQDB::DBTSmallblock::NODECARDPOS_COL <<
-                " AND " <<
-                BGQDB::DBTSmallblock().getTableName() << "." << BGQDB::DBTSmallblock::BLOCKID_COL << "=?"
-                ;
+    cxxdb::QueryStatementPtr query;
+    if ( numcnodes < BGQDB::Nodes_Per_Midplane ) {
+        query = _smallBlock;
+        _smallBlock->parameters()[ BGQDB::DBTSmallblock::BLOCKID_COL ].set( name );
     } else {
-        // large block, join on the bpblockmap table
-        sql <<
-            BGQDB::DBTBpblockmap().getTableName() <<
-            " ON " <<
-            BGQDB::DBTNode().getTableName() << "." << BGQDB::DBTNode::MIDPLANEPOS_COL << "=" <<
-            BGQDB::DBTBpblockmap().getTableName() << "." << BGQDB::DBTBpblockmap::BPID_COL <<
-            " AND " <<
-            BGQDB::DBTBpblockmap().getTableName() << "." << BGQDB::DBTBpblockmap::BLOCKID_COL << "=?"
-            ;
+        query = _largeBlockNodes;
+        _largeBlockNodes->parameters()[ BGQDB::DBTBpblockmap::BLOCKID_COL ].set( name );
     }
     
-    // and we only care about nodes that have a status of SOFTWARE (F)AILURE
-    sql <<
-        " AND " <<
-        BGQDB::DBTNode().getTableName() << "." << BGQDB::DBTNode::STATUS_COL << " = '" << BGQDB::SOFTWARE_FAILURE << "'"
-        ;
-
     try {
-        const cxxdb::QueryStatementPtr query = _connection->prepareQuery(
-                sql.str(),
-                boost::assign::list_of( "BLOCK" )
-                );
-        query->parameters()[ "BLOCK" ].set( id );
-
         const cxxdb::ResultSetPtr results = query->execute();
-
-        this->softwareFailures( block, results );
+        this->nodeSoftwareFailures( block, results );
     } catch ( const std::exception& e ) {
-        LOG_WARN_MSG( e.what() );
-        LOG_TRACE_MSG( sql.str() );
+        LOG_WARN_MSG( "node software failures: " << e.what() );
     }
-        
-    this->nextBlock();
+    
+    if ( numcnodes >= BGQDB::Nodes_Per_Midplane ) {
+        this->midplaneSoftwareFailures( block );
+    }
 }
 
 void
-Reconnect::softwareFailures(
+Reconnect::midplaneSoftwareFailures(
+        const block::Compute::Ptr& block
+        )
+{
+    BOOST_ASSERT( block );
+
+    _largeBlockMidplanes->parameters()[ BGQDB::DBTBpblockmap::BLOCKID_COL ].set( block->name() );
+    try {
+        const cxxdb::ResultSetPtr result = _largeBlockMidplanes->execute();
+        size_t count = 0;
+        while ( result->fetch() && ++count ) {
+            const std::string location( result->columns()[ "LOCATION" ].getString() );
+            const block::Compute::Midplanes::iterator mp = block->_midplanes.find( location );
+            if (  mp == block->_midplanes.end() ) {
+                LOG_WARN_MSG( "could not find midplane " << location );
+                continue;
+            }
+
+            const Midplane::NodeArray& nodes = mp->second._nodes;
+            for ( auto i = nodes.origin(); i < (nodes.origin() + nodes.num_elements()); ++i ) {
+                (*i)->unavailable();
+            }
+        }
+        if ( count ) {
+            LOG_INFO_MSG( 
+                    "found " << count << " Software Failure midplane" <<
+                    (count == 1 ? "" : "s")
+                    );
+        }
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( "midplane software failures: " << e.what() );
+    }
+}
+
+void
+Reconnect::nodeSoftwareFailures(
         const block::Compute::Ptr& block,
         const cxxdb::ResultSetPtr& results
         )
 {
+    // assume this handler is protected by _strand
     size_t count = 0;
     while ( results->fetch() && ++count) {
         const cxxdb::Columns& columns = results->columns();
@@ -357,7 +430,6 @@ Reconnect::softwareFailures(
 
         // remember this node is now unavailable
         node->unavailable();
-        LOG_DEBUG_MSG( location );
     }
 
     if ( count ) {
@@ -366,6 +438,26 @@ Reconnect::softwareFailures(
                 (count == 1 ? "" : "s")
                 );
     }
+}
+
+void
+Reconnect::loadMachineCallback(
+        const boost::shared_ptr<BGQMachineXML>& machine,
+        const error_code::rc error,
+        const Callback& callback
+        )
+{
+    if ( error ) {
+        LOG_WARN_MSG( "could not get machine description: " << error );
+        callback( _sequence );
+        return;
+    }
+    LOG_INFO_MSG( "machine XML description loaded" );
+    _machine = machine;
+
+    this->start();
+
+    callback( _sequence );
 }
 
 } // block

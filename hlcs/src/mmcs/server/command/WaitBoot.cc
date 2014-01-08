@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "WaitBoot.h"
 
 #include "../DBBlockController.h"
@@ -29,14 +28,11 @@
 
 #include <utility/include/Log.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 WaitBoot*
 WaitBoot::build()
@@ -53,34 +49,35 @@ WaitBoot::build()
 }
 
 void
-WaitBoot::execute(std::deque<std::string> args,
-                   mmcs_client::CommandReply& reply,
-                   DBConsoleController* pController,
-                   BlockControllerTarget* pTarget)
+WaitBoot::execute(
+        std::deque<std::string> args,
+        mmcs_client::CommandReply& reply,
+        DBConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
     const DBBlockPtr pBlock = boost::dynamic_pointer_cast<DBBlockController>(pController->getBlockHelper());    // get selected block
 
-    log4cxx::MDC _blockid_mdc_( "blockId", std::string("{") + pBlock->getBlockName() + "} " );
-
     pBlock->waitBoot(args, reply, true);
-    if(reply.str() == "args?") {
-      reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
-      return;
+    if (reply.str() == "args?") {
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
+        return;
     }
 }
 
-
 void
-WaitBoot::help(deque<string> args,
-                mmcs_client::CommandReply& reply)
+WaitBoot::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
-        << ";Wait for the selected block to complete booting."
-        << ";<minutes> specifies the maximum time to wait, in minutes. The default is 20 minutes."
-        << ";The command does not complete until the block is fully initialized to the point"
-        << ";that kernels are ready for job submission or the wait time has expired."
-        << mmcs_client::DONE;
+          << ";Wait for the selected block to complete booting."
+          << ";<minutes> specifies the maximum time to wait, in minutes. The default is 20 minutes."
+          << ";<minutes> can be a fraction, example: 1.25 for 75 seconds."
+          << ";The command does not complete until the block is fully initialized to the point"
+          << ";that kernels are ready for job submission or the wait time has expired."
+          << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

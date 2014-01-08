@@ -60,10 +60,13 @@ LOG_DECLARE_FILE( "realtime.server" );
 
 const unsigned LogRecordTypeOffset = 4;
 const unsigned LogRecordGeneralFlagOffset = 6;
-const unsigned RecordOffset = 16;
 const unsigned LogRecordTidOffset = 16;
+#ifdef DB2READLOG_LRI_1
+const unsigned LogRecordNonCompensationHeaderSize = 40;
+#else
 const unsigned LogRecordNonCompensationHeaderSize = 24;
   // I don't know why this has to be 24 since the doc says it should be 22.
+#endif
 
 
 //-------------------------------------------------------------------------
@@ -226,498 +229,6 @@ char* RID::getString()
   this->toString();
   return ridString;
 }
-
-
-//-------------------------------------------------------------------------
-// functions for displaying log records (copied from DB2 sample program)
-
-
-#if 0 // unused
-static void SimpleLogRecordDisplay(
-    sqluint16 recordType,
-    sqluint16 /* recordFlag */,
-    char      *recordDataBuffer,
-    sqluint32 recordDataSize
-  )
-{
-  sqluint32 timeTransactionCommited = 0;
-  sqluint16 authIdLen = 0;
-  char      *authId = NULL;
-
-  switch (recordType)
-  {
-    case 138:
-      cout << "\n    Record type: Local pending list" << endl;
-      timeTransactionCommited = *(sqluint32 *) (recordDataBuffer);
-      authIdLen = *(sqluint16 *) (recordDataBuffer + 2*sizeof(sqluint32));
-      authId = (char *)malloc(authIdLen + 1);
-      memset(authId, '\0', (authIdLen + 1 ));
-      memcpy(authId, (char *)(recordDataBuffer + 2*sizeof(sqluint32) +
-          sizeof(sqluint16)), authIdLen);
-      authId[authIdLen] = '\0';
-      cout << "      UTC transaction committed(in secs since 70-01-01)" << ": "
-          << dec << timeTransactionCommited << endl;
-      cout << "      authorization ID of the application: " << authId << endl;
-      break;
-    case 132:
-      cout << "\n    Record type: Normal commit" << endl;
-      timeTransactionCommited = *(sqluint32 *) (recordDataBuffer);
-      authIdLen = *(sqluint16 *) (recordDataBuffer + 2*sizeof(sqluint32));
-      authId = (char *)malloc(authIdLen + 1);
-      memset( authId, '\0', (authIdLen + 1 ));
-      memcpy(authId, (char *)(recordDataBuffer + 2*sizeof(sqluint32) +
-          sizeof(sqluint16)), authIdLen);
-      authId[authIdLen] = '\0';
-      cout << "      UTC transaction committed(in secs since 70-01-01)" << ": "
-          << dec << timeTransactionCommited << endl;
-      cout << "      authorization ID of the application: " << authId << endl;
-      break;
-    case 65:
-      cout << "\n    Record type: Normal abort" << endl;
-      authIdLen = (sqluint16) (recordDataSize);
-      authId = (char *)malloc(authIdLen + 1);
-      memset( authId, '\0', (authIdLen + 1 ));
-      memcpy(authId, (char *)(recordDataBuffer + sizeof(sqluint16)), authIdLen);
-      authId[authIdLen] = '\0';
-      cout << "      authorization ID of the application: " << authId << endl;
-      break;
-    default:
-      cout << "    Unknown simple log record: "
-          << (char)recordType << " " << recordDataSize << endl;
-      break;
-  }
-} // SimpleLogRecordDisplay()
-
-
-static void UserDataDisplay(
-    char      *dataBuffer,
-    sqluint16 dataSize
-  )
-{
-  sqluint16 line = 0;
-  sqluint16 col = 0;
-  const int rowLength = 10;
-
-  cout << "        user data:" << endl;
-
-  for (line = 0; line * rowLength < dataSize; line = line + 1)
-  {
-    cout << "        ";
-    for (col = 0; col < rowLength; col = col + 1)
-    {
-      if (line * rowLength + col < dataSize)
-      {
-        cout.fill('0');
-        cout.width(2);
-        cout.setf(ios::uppercase);
-        cout.setf(ios_base::hex,ios_base::basefield);
-        cout << (int)(dataBuffer[line * rowLength + col] & 0x0ff) << " ";
-      }
-      else
-      {
-        cout << "   ";
-      }
-    }
-    cout << "*";
-    for (col = 0; col < rowLength; col = col + 1)
-    {
-      if (line * rowLength + col < dataSize)
-      {
-        if (isalpha(dataBuffer[line * rowLength + col]) ||
-            isdigit(dataBuffer[line * rowLength + col]))
-        {
-          cout << dataBuffer[line * rowLength + col];
-        }
-        else
-        {
-          cout << ".";
-        }
-      }
-      else
-      {
-        cout << " ";
-      }
-    }
-    cout << "*" << endl;
-  }
-  cout.setf(ios::dec);
-}
-
-
-static void LogSubRecordDisplay(
-    char      *recordBuffer,
-    sqluint16 recordSize
-  )
-{
-  sqluint8  recordType = 0;
-  sqluint8  updatableRecordType = 0;
-  sqluint16 userDataFixedLength = 0;
-  char      *userDataBuffer = NULL;
-  sqluint16 userDataSize = 0;
-
-  recordType = *(sqluint8 *) (recordBuffer);
-  if ((recordType != 0) && (recordType != 4) && (recordType != 16))
-  {
-    cout << "        Unknown subrecord type." << endl;
-  }
-  else if (recordType == 4)
-  {
-    cout << "        subrecord type: Special control" << endl;
-  }
-  else
-    // recordType == 0 or recordType == 16
-    // record Type 0 indicates a normal record
-    // record Type 16, for the purposes of this program, should be treated
-    // as type 0
-  {
-    cout << "        subrecord type: Updatable, ";
-    updatableRecordType = *(sqluint8 *) (recordBuffer + 4);
-    if (updatableRecordType != 1)
-    {
-      cout << "Internal control" << endl;
-    }
-    else
-    {
-      cout << "Formatted user data" << endl;
-      userDataFixedLength = *(sqluint16 *) (recordBuffer + 6);
-      cout << "        user data fixed length: "
-          << dec << userDataFixedLength << endl;
-      userDataBuffer = recordBuffer + 8;
-      userDataSize = recordSize - 8;
-      UserDataDisplay(userDataBuffer, userDataSize);
-    }
-  }
-} // LogSubRecordDisplay()
-
-
-static void ComplexLogRecordDisplay(
-    sqluint16 recordType,
-    sqluint16 /* recordFlag */,
-    char      *recordHeaderBuffer,
-    sqluint32 recordHeaderSize,
-    sqluint8  componentIdentifier,
-    char      *recordDataBuffer,
-    sqluint32 /* recordDataSize */
-  )
-{
-  sqluint8 functionIdentifier = 0;
-
-  // for insert, delete, undo delete
-  RID       recid;
-  sqluint16 subRecordLen = 0;
-  sqluint16 subRecordOffset = 0;
-  char      *subRecordBuffer = NULL;
-
-  // for update
-  RID       newRID;
-  sqluint16 newSubRecordLen = 0;
-  sqluint16 newSubRecordOffset = 0;
-  char      *newSubRecordBuffer = NULL;
-  RID       oldRID;
-  sqluint16 oldSubRecordLen = 0;
-  sqluint16 oldSubRecordOffset = 0;
-  char      *oldSubRecordBuffer = NULL;
-
-  // for alter table attributes
-  sqluint64 alterBitMask = 0;
-  sqluint64 alterBitValues = 0;
-
-  switch( recordType )
-  {
-    case 0x004E:
-      cout << "\n    Record type: Normal" << endl;
-      break;
-    case 0x0043:
-      cout << "\n    Record type: Compensation." << endl;
-      break;
-    default:
-      cout << "\n    Unknown complex log record type: " << recordType << endl;
-      break;
-  }
-
-  switch (componentIdentifier)
-  {
-    case 1:
-      cout << "      component ID: DMS log record" << endl;
-      break;
-    default:
-      cout << "      unknown component ID: " << componentIdentifier << endl;
-      break;
-  }
-
-  functionIdentifier = *(sqluint8 *) (recordHeaderBuffer + 1);
-  switch (functionIdentifier)
-  {
-    case 161:
-      cout << "      function ID: Delete Record" << endl;
-      subRecordLen = *( (sqluint16 *)( recordDataBuffer + sizeof(sqluint16) ) );
-      recid.set( recordDataBuffer + 3 * sizeof(sqluint16) );
-      subRecordOffset = *( (sqluint16 *)( recordDataBuffer + 3 * sizeof(sqluint16) +
-          recid.size() ) );
-      cout << "        RID: " << dec << recid.getString() << endl;
-      cout << "        subrecord length: " << subRecordLen << endl;
-      cout << "        subrecord offset: " << subRecordOffset << endl;
-      subRecordBuffer = recordDataBuffer + 3 * sizeof(sqluint16) +
-          recid.size() + sizeof(sqluint16);
-      LogSubRecordDisplay( subRecordBuffer, subRecordLen );
-      break;
-    case 111:
-      cout << "      function ID: Undo Delete Record" << endl;
-      subRecordLen = *( (sqluint16 *)( recordDataBuffer + sizeof(sqluint16) ) );
-      recid.set( recordDataBuffer + 3 * sizeof(sqluint16) );
-      subRecordOffset = *( (sqluint16 *)( recordDataBuffer + 3 * sizeof(sqluint16) +
-          recid.size() ) );
-      cout << "        RID: " << dec << recid.getString() << endl;
-      cout << "        subrecord length: " << subRecordLen << endl;
-      cout << "        subrecord offset: " << subRecordOffset << endl;
-      subRecordBuffer = recordDataBuffer + 3 * sizeof(sqluint16) +
-          recid.size() + sizeof(sqluint16);
-      LogSubRecordDisplay(subRecordBuffer, subRecordLen);
-      break;
-    case 162:
-      cout << "      function ID: Insert Record" << endl;
-      subRecordLen = *( (sqluint16 *)( recordDataBuffer + sizeof(sqluint16) ) );
-      recid.set( recordDataBuffer + 3 * sizeof(sqluint16) );
-      subRecordOffset = *( (sqluint16 *)( recordDataBuffer + 3 * sizeof(sqluint16) +
-          recid.size() ) );
-      cout << "        RID: " << dec << recid.getString() << endl;
-      cout << "        subrecord length: " << subRecordLen << endl;
-      cout << "        subrecord offset: " << subRecordOffset << endl;
-      subRecordBuffer = recordDataBuffer + 3 * sizeof(sqluint16) + recid.size() +
-          sizeof(sqluint16);
-      LogSubRecordDisplay( subRecordBuffer, subRecordLen );
-      break;
-    case 163:
-      cout << "      function ID: Update Record" << endl;
-      oldSubRecordLen = *( (sqluint16 *)( recordDataBuffer + sizeof(sqluint16) ) );
-      oldRID.set( recordDataBuffer + 3 * sizeof(sqluint16) );
-      oldSubRecordOffset = *( (sqluint16 *)( recordDataBuffer + 3 * sizeof(sqluint16) +
-          oldRID.size() ) );
-      newSubRecordLen = *( (sqluint16 *)( recordDataBuffer  +
-          sizeof(sqluint16) +
-          oldRID.size()     +
-          sizeof(sqluint32) +
-          sizeof(sqluint16) +
-          oldSubRecordLen   +
-          recordHeaderSize  +
-          sizeof(sqluint16) ) );
-      newRID.set( recordDataBuffer + 3 * sizeof(sqluint16) +
-          oldRID.size() + sizeof(sqluint16) + oldSubRecordLen +
-          recordHeaderSize + sizeof(sqluint16) );
-
-      newSubRecordOffset = *(sqluint16 *)( recordDataBuffer      +
-          3 * sizeof(sqluint16) +
-          oldRID.size()         +
-          sizeof(sqluint16)     +
-          oldSubRecordLen       +
-          recordHeaderSize      +
-          newRID.size()         +
-          sizeof(sqluint16) );
-      cout << "        oldRID: " << dec << oldRID.getString() << endl;
-      cout << "        old subrecord length: " << oldSubRecordLen << endl;
-      cout << "        old subrecord offset: " << oldSubRecordOffset << endl;
-      oldSubRecordBuffer = recordDataBuffer + 3 * sizeof(sqluint16) +
-          oldRID.size() + sizeof(sqluint16);
-      LogSubRecordDisplay( oldSubRecordBuffer, oldSubRecordLen );
-      cout << "        newRID: " << dec << newRID.getString() << endl;
-      cout << "        new subrecord length: " << newSubRecordLen << endl;
-      cout << "        new subrecord offset: " << newSubRecordOffset << endl;
-      newSubRecordBuffer = recordDataBuffer      +
-          3 * sizeof(sqluint16) +
-          oldRID.size()         +
-          sizeof(sqluint16)     +
-          oldSubRecordLen       +
-          recordHeaderSize      +
-          3 * sizeof(sqluint16) +
-          newRID.size()         +
-          sizeof(sqluint16) ;
-      LogSubRecordDisplay( newSubRecordBuffer, newSubRecordLen );
-      break;
-    case 124:
-      cout << "      function ID:  Alter Table Attribute" << endl;
-      alterBitMask = *(sqluint64 *) (recordDataBuffer);
-      alterBitValues = *( (sqluint64 *)(recordDataBuffer + sizeof(sqluint64) ) );
-      if( alterBitMask & 0x00000001 )
-      {
-                // Propagation attribute altered
-        cout << "        Propagation attribute is changed to ";
-        if (alterBitValues & 0x00000001)
-        {
-          cout << "ON" << endl;
-        }
-        else
-        {
-          cout << "OFF" << endl;
-        }
-      }
-      if (alterBitMask & 0x00000002)
-      {
-                // Check Pending attribute altered
-        cout << "        Check Pending attr. changed to: ";
-        if (alterBitValues & 0x00000002)
-        {
-          cout << "ON" << endl;
-        }
-        else
-        {
-          cout << "OFF" << endl;
-        }
-      }
-      if (alterBitMask & 0x00010000)
-      {
-                // Append Mode attribute altered
-        cout << "        Append Mode attr. changed to: ";
-        if (alterBitValues & 0x00010000)
-        {
-          cout << "ON" << endl;
-        }
-        else
-        {
-          cout << "OFF" << endl;
-        }
-      }
-      if (alterBitMask & 0x00200000)
-      {
-                // LF Propagation attribute altered
-        cout << "        LF Propagation attribute is changed to ";
-        if (alterBitValues & 0x00200000)
-        {
-          cout << "ON" << endl;
-        }
-        else
-        {
-          cout << "OFF" << endl;
-        }
-      }
-      if (alterBitMask & 0x00400000)
-      {
-                // LOB Propagation attribute altered
-        cout << "        LOB Propagation attr.changed to: ";
-        if (alterBitValues & 0x00400000)
-        {
-          cout << "ON" << endl;
-        }
-        else
-        {
-          cout << "OFF" << endl;
-        }
-      }
-      break;
-    default:
-      cout << "      unknown function identifier: " << functionIdentifier << endl;
-      break;
-  }
-} // ComplexLogRecordDisplay()
-
-
-static void LogRecordDisplay(
-    char      *recordBuffer,
-    sqluint32 recordSize,
-    sqluint16 recordType,
-    sqluint16 recordFlag
-  )
-{
-  sqluint32 logManagerLogRecordHeaderSize = 0;
-  char      *recordDataBuffer = NULL;
-  sqluint32 recordDataSize = 0;
-  char      *recordHeaderBuffer = NULL;
-  sqluint8  componentIdentifier = 0;
-  sqluint32 recordHeaderSize = 0;
-
-  // determine the logManagerLogRecordHeaderSize
-  logManagerLogRecordHeaderSize = LogRecordNonCompensationHeaderSize;
-  if( recordType == 0x0043 )  // compensation
-  {
-    logManagerLogRecordHeaderSize += sizeof(db2LSN);
-    if( recordFlag & 0x0002 )    // propagatable
-    {
-      logManagerLogRecordHeaderSize += sizeof(db2LSN);
-    }
-  }
-
-  switch (recordType)
-  {
-    case 0x008A:                // Local Pending List
-    case 0x0084:                // Normal Commit
-    case 0x0041:                // Normal Abort
-      recordDataBuffer = recordBuffer + logManagerLogRecordHeaderSize;
-      recordDataSize = recordSize - logManagerLogRecordHeaderSize;
-      SimpleLogRecordDisplay( recordType,
-                              recordFlag,
-                              recordDataBuffer,
-                              recordDataSize );
-      break;
-    case 0x004E:                // Normal
-    case 0x0043:                // Compensation
-      recordHeaderBuffer = recordBuffer + logManagerLogRecordHeaderSize;
-      componentIdentifier = *(sqluint8 *) recordHeaderBuffer;
-      switch (componentIdentifier)
-      {
-        case 1:                 // Data Manager Log Record
-          recordHeaderSize = 6;
-          break;
-        default:
-          cout << "    Unknown complex log record: size=" << recordSize
-               << " type=" << std::hex << recordType << " " << componentIdentifier << endl;
-          return;
-      }
-      recordDataBuffer = recordBuffer +
-          logManagerLogRecordHeaderSize + recordHeaderSize;
-      recordDataSize = recordSize -
-          logManagerLogRecordHeaderSize - recordHeaderSize;
-      ComplexLogRecordDisplay( recordType,
-                               recordFlag,
-                               recordHeaderBuffer,
-                               recordHeaderSize,
-                               componentIdentifier,
-                               recordDataBuffer,
-                               recordDataSize );
-      break;
-    default:
-      cout << "    Unknown log record: size=" << recordSize <<
-              " type=" << std::hex << recordType << endl;
-      break;
-  }
-
-  return;
-} // LogRecordDisplay()
-
-
-static void LogBufferDisplay(
-    char      *logBuffer,
-    sqluint32 numLogRecords
-  )
-{
-  sqluint32 logRecordNb = 0;
-  sqluint32 recordSize = 0;
-  sqluint16 recordType = 0;
-  sqluint16 recordFlag = 0;
-  char      *recordBuffer = NULL;
-
-  // initialize the recordBuffer
-  recordBuffer = logBuffer + RecordOffset;
-
-  for (logRecordNb = 0; logRecordNb < numLogRecords; logRecordNb++)
-  {
-    recordSize = *(sqluint32 *) (recordBuffer);
-    recordType = *(sqluint16 *) (recordBuffer + LogRecordTypeOffset);
-    recordFlag = *(sqluint16 *) (recordBuffer + LogRecordGeneralFlagOffset);
-
-    const tid_t *tid_p((tid_t*) (recordBuffer + LogRecordTidOffset));
-    LOG_TRACE_MSG( "tid is " << *tid_p );
-
-    LogRecordDisplay( recordBuffer, recordSize, recordType, recordFlag );
-
-    // update the recordBuffer
-    recordBuffer = recordBuffer + recordSize + RecordOffset;
-  }
-} // LogBufferDisplay()
-#endif
-
-
-//---------------------------------------------------------------------
-// class DbChangesMonitor
-
 
 const unsigned int DbChangesMonitor::_LOG_BUF_SIZE(64 * 1024 * 1024);
 
@@ -958,6 +469,7 @@ db2LSN DbChangesMonitor::_initCurLsn( const Configuration& configuration )
 #ifdef DB2READLOG_LRI_1
         db2LRI end_lsn;
         memset( &end_lsn, -1, sizeof ( end_lsn ) );
+        end_lsn.lriType = cur_lsn.lriType;
 #else
         db2LSN end_lsn;
         end_lsn.lsnU64 = db2Uint64(-1);
@@ -1026,6 +538,7 @@ void DbChangesMonitor::_processChanges()
 #ifdef DB2READLOG_LRI_1
   db2LRI end_lsn;
   memset( &end_lsn, -1, sizeof ( end_lsn ) );
+  end_lsn.lriType = _cur_lsn.lriType;
 #else
   db2LSN end_lsn;
   end_lsn.lsnU64 = db2Uint64(-1);
@@ -1100,7 +613,7 @@ void DbChangesMonitor::_processLogBuffer(
         DbChanges& db_changes
     )
 {
-  const char *record_p(&_log_buf[0] + RecordOffset);
+  const char *record_p(&_log_buf[0] + sizeof(struct db2ReadLogFilterData));
 
   for ( db2Uint32 record_i(0); record_i < log_rec_count; ++record_i ) {
     sqluint32 record_size(*(reinterpret_cast<const sqluint32*>(record_p)));
@@ -1108,7 +621,7 @@ void DbChangesMonitor::_processLogBuffer(
     _processLogRecord( record_p, db_changes );
 
     // Move to the next record.
-    record_p = record_p + record_size + RecordOffset;
+    record_p = record_p + record_size + sizeof(struct db2ReadLogFilterData);
   }
 } // db_changes_monitor_t::_processLogBuffer()
 
@@ -1154,8 +667,12 @@ void DbChangesMonitor::_processLogRecord(
       case 0x0041: // Rollback
           _transactions.rollback( tid );
           break;
+      case 0x0043:
+          // compensation, ignore this
+          LOG_DEBUG_MSG( "Ignoring compensation record" );
+          break;
       default:
-          LOG_INFO_MSG( "Ignoring record because record_type is " << record_type );
+          LOG_INFO_MSG( "Ignoring record because record_type is " << std::hex << record_type );
   }
 }
 

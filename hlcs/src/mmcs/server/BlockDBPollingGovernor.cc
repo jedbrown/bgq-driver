@@ -24,12 +24,10 @@
 
 #include "BlockDBPollingGovernor.h"
 
+#include <db/include/api/tableapi/DBConnectionPool.h>
 #include <db/include/api/tableapi/TxObject.h>
 
 #include <utility/include/Log.h>
-
-
-using namespace std;
 
 
 LOG_DECLARE_FILE( "mmcs.server" );
@@ -41,39 +39,39 @@ namespace server {
 
 BGQDB::STATUS
 BlockDBPollingGovernor::beginTransaction(
-        string& blockName, 
-        string& userName, 
-        BGQDB::BLOCK_ACTION& action, 
-        unsigned int& creationId
+        std::string& blockName,
+        std::string& userName,
+        BGQDB::BLOCK_ACTION& action
         )
 {
     BGQDB::STATUS result;
-    const string excludedBlocks = dbExcludedBlockList->getSqlListQuoted();
+    const std::string excludedBlocks = dbExcludedBlockList.getSqlListQuoted();
 
     // get the next block transaction from the database
     result = BGQDB::getBlockAction(
             blockName,
             action,
-            creationId,
             excludedBlocks
     );
-    if (result != BGQDB::OK || action == BGQDB::NO_BLOCK_ACTION)
+    if (result != BGQDB::OK || action == BGQDB::NO_BLOCK_ACTION) {
         return result;
+    }
 
     // get the user name
     int notused;
     result = BGQDB::getBlockUser(blockName, userName, notused);
-    if (result != BGQDB::OK)
+    if (result != BGQDB::OK) {
         return result;
+    }
 
     // check whether transactions are being limited
-    result = DBPollingGovernor<string, BGQDB::BLOCK_ACTION>::beginTransaction(blockName, action);
+    result = DBPollingGovernor<std::string, BGQDB::BLOCK_ACTION>::beginTransaction(blockName, action);
     if (result == BGQDB::NOT_FOUND) {
         result = BGQDB::OK;
         action = BGQDB::NO_BLOCK_ACTION;
     } else {
         // exclude the block from polling until the transaction is done
-        dbExcludedBlockList->add(blockName);
+        dbExcludedBlockList.add(blockName);
     }
 
     // move the block to the end of the polling list to keep from repolling immediately
@@ -82,20 +80,20 @@ BlockDBPollingGovernor::beginTransaction(
         LOG_ERROR_MSG("Unable to obtain database connection");
         return BGQDB::CONNECTION_ERROR;
     }
-    const string message("update bgqblock set statuslastmodified=CURRENT TIMESTAMP where blockid='" + blockName + "'");
+    const std::string message("update bgqblock set statuslastmodified=CURRENT TIMESTAMP where blockid='" + blockName + "'");
     tx.execStmt(message.c_str());
     return result;
 }
 
 void
 BlockDBPollingGovernor::endTransaction(
-        string& blockName, 
-        BGQDB::BLOCK_ACTION& action, 
+        std::string& blockName,
+        BGQDB::BLOCK_ACTION& action,
         bool exclude
         )
 {
-    DBPollingGovernor<string, BGQDB::BLOCK_ACTION>::endTransaction(blockName, action);
-    dbExcludedBlockList->remove(blockName);
+    DBPollingGovernor<std::string, BGQDB::BLOCK_ACTION>::endTransaction(blockName, action);
+    dbExcludedBlockList.remove(blockName);
 }
 
 

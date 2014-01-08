@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "Quit.h"
 
 #include "common/ConsoleController.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 Quit*
 Quit::build()
@@ -42,7 +38,7 @@ Quit::build()
     commandAttributes.requiresBlock(false);             // does not require a BlockController object
     commandAttributes.requiresConnection(false);        // does not require  mc_server connections
     commandAttributes.requiresTarget(false);            // does not require a BlockControllerTarget object
-    commandAttributes.mmcsConsoleCommand(true);
+    commandAttributes.bgConsoleCommand(true);
     commandAttributes.internalAuth(true);
     commandAttributes.helpCategory(common::DEFAULT);
     return new Quit("quit", "quit", commandAttributes);
@@ -67,6 +63,5 @@ Quit::help(deque<string> args,
       << ";This command does not change the status of any allocated blocks"
       << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::console::command

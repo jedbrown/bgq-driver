@@ -76,6 +76,7 @@ endif
 
 ifeq ($(OS_ARCH),ppc64)
   DIRS+= toolchain
+  DIRS+= toolchain-4.7.2
   DIRS+= linux
   DIRS+= hlcs
   DIRS += navigator
@@ -245,6 +246,7 @@ build.install: $(addsuffix .install,$(filter-out build,$(DIRS))) build_ras_gen
 agents.install: hwi.install spi.install cnk.install
 coreprocessor.install: ramdisk.install utility.install
 toolchain.install: gnu.install
+toolchain-4.7.2.install: gnu.install
 teal.install: hlcs.install
 
 

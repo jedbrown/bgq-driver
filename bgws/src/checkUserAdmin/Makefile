@@ -31,7 +31,8 @@ CXXFLAGS += \
 
 LDFLAGS += \
  -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib \
- -lboost_program_options-mt
+ -lboost_program_options-mt \
+ -lboost_system-mt
 
 
 default all: checkUserAdmin

@@ -25,7 +25,6 @@
 
 #include "../lib/exceptions.h"
 
-#include <utility/include/cxxsockets/Host.h>
 #include <utility/include/cxxsockets/exception.h>
 
 #include <sstream>
@@ -51,7 +50,8 @@ Id::Id(
     _id = id_string;
 }
 
-Id::Id& Id::operator=(
+Id&
+Id::operator=(
         const Id& id
         )
 {
@@ -92,7 +92,7 @@ Id::get_host() const
     try {
         CxxSockets::Host h(_id.substr(index, newindex - index));
         return h;
-    } catch( CxxSockets::Error& e ) {
+    } catch ( CxxSockets::Error& e ) {
         throw exceptions::APIUserError(exceptions::INFO, e.what());
     }
 }

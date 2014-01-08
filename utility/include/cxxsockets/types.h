@@ -20,6 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+
 /*!
  * \file utility/include/cxxsockets/types.h
  */
@@ -36,9 +37,8 @@ namespace CxxSockets {
 class File;
 class FileLocker;
 class FileSet;
-class ListenerSet;;
+class ListenerSet;
 class ListeningSocket;
-class PollingSocketSet;
 class SecureTCPSocket;
 class SockAddr;
 class SockAddrList;
@@ -49,7 +49,6 @@ typedef boost::shared_ptr<File> FilePtr;
 typedef boost::shared_ptr<FileSet> FileSetPtr;
 typedef boost::shared_ptr<ListenerSet> ListenerSetPtr;
 typedef boost::shared_ptr<ListeningSocket> ListeningSocketPtr;
-typedef boost::shared_ptr<PollingSocketSet> PollingSocketSetPtr;
 typedef boost::shared_ptr<SecureTCPSocket> SecureTCPSocketPtr;
 typedef boost::shared_ptr<Socket> SocketPtr;
 typedef boost::shared_ptr<TCPSocket> TCPSocketPtr;

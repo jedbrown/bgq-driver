@@ -21,21 +21,18 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "Sql.h"
 
 #include <db/include/api/BGQDBlib.h>
 
+#include <db/include/api/tableapi/DBConnectionPool.h>
 #include <db/include/api/tableapi/TxObject.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 Sql*
 Sql::build()
@@ -51,14 +48,15 @@ Sql::build()
 }
 
 void
-Sql::execute(deque<string> args,
-                    mmcs_client::CommandReply& reply,
-                    common::ConsoleController* pController,
-                    BlockControllerTarget* pTarget)
+Sql::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        common::ConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
     string sqlstmt;
-    for (unsigned i = 0; i < args.size(); i++)
-    {
+    for (unsigned i = 0; i < args.size(); i++) {
         sqlstmt += args[i] + " ";
     }
 
@@ -72,18 +70,20 @@ Sql::execute(deque<string> args,
     if (rc == SQL_SUCCESS)
         reply << mmcs_client::OK << mmcs_client::DONE;
     else
-        reply << mmcs_client::FAIL << "error code=" << rc << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Error code=" << rc << mmcs_client::DONE;
     return;
 }
 
 void
-Sql::help(deque<string> args,
-                 mmcs_client::CommandReply& reply)
+Sql::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
-      << ";execute <sql-string>"
-      << ";This command cannot be used to run any sql statement that returns output (i.e., queries)."
-      << mmcs_client::DONE;
+          << ";execute <sql-string>"
+          << ";This command cannot be used to run any SQL statement that returns output (i.e., queries)."
+          << mmcs_client::DONE;
 }
 
 

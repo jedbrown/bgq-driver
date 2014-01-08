@@ -42,5 +42,18 @@ extern "C" {
     event.setDetail( "DETAILS", details.str() );
   }
 
+  void fw_A2_tlbParityErrorDecoder(RasEvent& event, const vector<uint64_t>& mbox ) {
+
+    ostringstream details;
+    
+    if ( mbox.size() < 2 ) {
+	details << "INTERNAL ERROR: missing details.";
+    }
+    else {
+	decode_A2_MCSR( details, mbox[1], -1 );
+    }
+    event.setDetail( "MCSR_DETAILS", details.str() );
+  }
+
 }
 

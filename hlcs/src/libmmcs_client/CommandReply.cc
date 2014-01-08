@@ -35,9 +35,7 @@
 #include <sstream>
 #include <stdio.h>
 
-
 LOG_DECLARE_FILE( "mmcs_client" );
-
 
 #define BUFSIZE 1024
 #define FORMAT0_REPLY_LIMIT 1024*16	// max size for a format 0 reply
@@ -50,9 +48,7 @@ LOG_DECLARE_FILE( "mmcs_client" );
 #define DONE_TOKEN '\0'
 #define DONE_TOKEN_LEN 1
 
-
 namespace mmcs_client {
-
 
 /*!
 ** ios_base::xalloc() returns a unique index associated with the ostream
@@ -65,7 +61,6 @@ int mmcsCommandStatusIndex = std::ios_base::xalloc();
 ** that we can use with ios_base::pword() to keep track of the CommandReply object associated with the stream
 */
 int mmcsCommandReplyIndex = std::ios_base::xalloc();
-
 
 /*!
 ** Default constructor - replies are written to stdout, format 0, write disabled
@@ -85,7 +80,6 @@ CommandReply::CommandReply(unsigned fd, int replyFormat, bool enableWrite)
     std::ostream::pword(mmcsCommandReplyIndex) = this;
     reset();
 }
-
 
 /*!
 ** Base constructor
@@ -113,13 +107,16 @@ CommandReply::CommandReply(ConsolePort* consolePort, int replyFormat, bool enabl
 */
 CommandReply::~CommandReply()
 {
-    if (_enableWrite &&			// OK to write reply?
-	pptr() - pbase() > 0)		// is there data in the buffer?
+    if (_enableWrite &&	 	       // OK to write reply?
+            pptr() - pbase() > 0)  // Is there data in the buffer?
     {
-	assert(_done);			// make sure DONE was sent
-	sync();
+        assert(_done);             // Make sure DONE was sent
+        sync();
     }
-    if (_outbuf) delete[] _outbuf;
+
+    if (_outbuf) {
+        delete[] _outbuf;
+    }
     std::ostream::pword(mmcsCommandReplyIndex) = NULL;
 }
 
@@ -140,13 +137,13 @@ CommandReply::~CommandReply()
 bool
 CommandReply::enableWrite(bool enable)
 {
-    bool priorstate = _enableWrite;	// save prior state
-    _enableWrite = enable;		// set new state
-    if (enable &&			// did we enable from a disabled state?
-	priorstate == false &&
-	pptr() - pbase() > 0)		// is there data in the buffer?
+    bool priorstate = _enableWrite;	// Save prior state
+    _enableWrite = enable;	    	// Set new state
+    if (enable &&			        // Did we enable from a disabled state?
+            priorstate == false &&
+            pptr() - pbase() > 0)   // Is there data in the buffer?
     {
-	sync();				// write the data
+        sync();			            // Write the data
     }
     return priorstate;
 }
@@ -181,32 +178,24 @@ CommandReply::assign(std::string& s)
 {
     reset();
 
-    if (!s.empty())
-    {
-	// 'normalize' string to replyformat 1
-	for (unsigned i = 0; i < s.length(); ++i)
-	    if (s[i] == ';')
-		s[i] = '\n';
+    if (!s.empty()) {
+        // 'normalize' string to replyformat 1
+        for (unsigned i = 0; i < s.length(); ++i)
+            if (s[i] == ';')
+                s[i] = '\n';
 
-	if (s.compare(0,OK_TOKEN_LEN, OK_TOKEN) == 0)
-	{
-	    *this << OK;
-	    parseString(s, OK_TOKEN_LEN); // look for "\nABORT\n" or '\0' and add text to buffer
-	}
-	else if (s.compare(0, FAIL_TOKEN_LEN, FAIL_TOKEN) == 0)
-	{
-	    *this << FAIL;
-	    parseString(s, FAIL_TOKEN_LEN); // look for "\nABORT\n" or '\0' and add text to buffer
-	}
-	else
-	{
-	    throw std::logic_error("invalid use of CommandReply::assign()");
-	}
-    }
-    else
-    {
+        if (s.compare(0,OK_TOKEN_LEN, OK_TOKEN) == 0) {
+            *this << OK;
+            parseString(s, OK_TOKEN_LEN); // look for "\nABORT\n" or '\0' and add text to buffer
+        } else if (s.compare(0, FAIL_TOKEN_LEN, FAIL_TOKEN) == 0) {
+            *this << FAIL;
+            parseString(s, FAIL_TOKEN_LEN); // look for "\nABORT\n" or '\0' and add text to buffer
+        } else  {
+            throw std::logic_error("Invalid use of CommandReply::assign()");
+        }
+    } else {
         LOG_ERROR_MSG("Bad reply string: " << s);
-	throw std::logic_error("invalid use of CommandReply::assign()");
+        throw std::logic_error("Invalid use of CommandReply::assign()");
     }
 }
 
@@ -221,18 +210,17 @@ CommandReply::assign(std::string& s)
 void
 CommandReply::append(std::string& s)
 {
-    if (getStatus() == CommandReply::STATUS_NOT_SET || _done)
-    {
-	throw std::logic_error("invalid use of CommandReply::append()");
+    if (getStatus() == CommandReply::STATUS_NOT_SET || _done) {
+        throw std::logic_error("Invalid use of CommandReply::append()");
     }
-    if (!s.empty())
-    {
-	// 'normalize' string to replyformat 1
-	for (unsigned i = 0; i < s.length(); ++i)
-	    if (s[i] == ';')
-		s[i] = '\n';
 
-	parseString(s, 0); // look for "\nABORT\n" or '\0' and add text to buffer
+    if (!s.empty()) {
+        // 'normalize' string to replyformat 1
+        for (unsigned i = 0; i < s.length(); ++i)
+            if (s[i] == ';')
+                s[i] = '\n';
+
+        parseString(s, 0); // look for "\nABORT\n" or '\0' and add text to buffer
     }
 }
 
@@ -249,31 +237,24 @@ CommandReply::parseString(std::string& s, unsigned startPos)
     endPos2 = s.find(DONE_TOKEN, startPos);
 
     if (endPos1 != std::string::npos)
-	if (endPos2 != std::string::npos) // found ABORT & DONE
-	{
-	    assert(endPos2 > endPos1);
-	    *this << s.substr(startPos, endPos1 - startPos); // copy up to ABORT
-	    *this << ABORT;
-	    startPos2 = endPos1 + ABORT_TOKEN_LEN;
-	    *this << s.substr(startPos2, endPos2 - startPos2);	// copy up to DONE
-	    *this << DONE;
-	}
-	else			  // found ABORT but not DONE
-	{
-	    *this << s.substr(startPos, endPos1 - startPos); // copy up to ABORT
-	    *this << ABORT;
-	    startPos2 = endPos1 + ABORT_TOKEN_LEN;
-	    if (startPos2 < s.size())
-		*this << s.substr(startPos2, s.size() - startPos2); // copy rest of string
-	}
-    else if (endPos2 != std::string::npos) // found DONE but not ABORT
-    {
-	*this << s.substr(startPos, endPos2 - startPos);	// copy up to DONE
-	*this << DONE;
-    }
-    else			   // neither DONE nor ABORT
-    {
-	*this << s.substr(startPos);;
+        if (endPos2 != std::string::npos) { // found ABORT & DONE
+            assert(endPos2 > endPos1);
+            *this << s.substr(startPos, endPos1 - startPos); // copy up to ABORT
+            *this << ABORT;
+            startPos2 = endPos1 + ABORT_TOKEN_LEN;
+            *this << s.substr(startPos2, endPos2 - startPos2);	// copy up to DONE
+            *this << DONE;
+        } else {		  // found ABORT but not DONE
+            *this << s.substr(startPos, endPos1 - startPos); // copy up to ABORT
+            *this << ABORT;
+            startPos2 = endPos1 + ABORT_TOKEN_LEN;
+            if (startPos2 < s.size())
+                *this << s.substr(startPos2, s.size() - startPos2); // copy rest of string
+    } else if (endPos2 != std::string::npos) { // found DONE but not ABORT
+        *this << s.substr(startPos, endPos2 - startPos);	// copy up to DONE
+        *this << DONE;
+    } else {		   // neither DONE nor ABORT
+        *this << s.substr(startPos);;
     }
 }
 
@@ -286,50 +267,40 @@ CommandReply::str(bool with_status, unsigned replyFormat)
     char* reply_start = _outbuf;       // start of reply data in _outbuf
     int  reply_len = pptr() - pbase(); // length of data in _outbuf
     if (reply_len == 0)		       // handle case where _outbuf has already been emptied
-	reply_len = _replylen;	       // use previous length of _outbuf data
+        reply_len = _replylen;	       // use previous length of _outbuf data
     else if (*(reply_start+reply_len-1) == DONE_TOKEN) // don't include DONE_TOKEN in reply string
-	--reply_len;
+        --reply_len;
 
-    if (reply_len > 0 && !with_status) // caller doesn't wants 'OK','FAIL','ABORT' status in reply
-    {
-	if (strncmp(_outbuf, OK_TOKEN, OK_TOKEN_LEN) == 0)
-	{
-	    reply_start +=  OK_TOKEN_LEN;
-	    reply_len -= OK_TOKEN_LEN;
-	}
-	else if (strncmp(_outbuf, FAIL_TOKEN, FAIL_TOKEN_LEN) == 0)
-	{
-	    reply_start += FAIL_TOKEN_LEN;
-	    reply_len -= FAIL_TOKEN_LEN;
-	}
-	else if (strncmp(_outbuf, ABORT_TOKEN, ABORT_TOKEN_LEN) == 0)
-	{
-	    reply_start += ABORT_TOKEN_LEN;
-	    reply_len -= ABORT_TOKEN_LEN;
-	}
+    if (reply_len > 0 && !with_status) { // caller doesn't wants 'OK','FAIL','ABORT' status in reply
+        if (strncmp(_outbuf, OK_TOKEN, OK_TOKEN_LEN) == 0) {
+            reply_start +=  OK_TOKEN_LEN;
+            reply_len -= OK_TOKEN_LEN;
+        } else if (strncmp(_outbuf, FAIL_TOKEN, FAIL_TOKEN_LEN) == 0) {
+            reply_start += FAIL_TOKEN_LEN;
+            reply_len -= FAIL_TOKEN_LEN;
+        } else if (strncmp(_outbuf, ABORT_TOKEN, ABORT_TOKEN_LEN) == 0) {
+            reply_start += ABORT_TOKEN_LEN;
+            reply_len -= ABORT_TOKEN_LEN;
+        }
     }
 
     std::string replystr(reply_start, reply_len);
-    if (reply_len > 0)		// return data in reply format
-    {
-	char from, to;
-	if (replyFormat == 0)	// replace newlines with semicolons
-	{
-	    from = '\n';
-	    to = ';';
-	}
-	else			// replace semicolons with newlines
-	{
-	    from = ';';
-	    to = '\n';
-	}
-	for (int i = 0; i < reply_len; ++i)
-	{
-	    if (replystr[i] == from)
-		replystr[i] = to;
-	}
-	if (replystr[reply_len-1] == to) // remove trailing ';' or '\n'
-	    replystr.resize(reply_len-1);
+    if (reply_len > 0) {	// return data in reply format
+        char from, to;
+        if (replyFormat == 0) {	// replace newlines with semicolons
+            from = '\n';
+            to = ';';
+        } else {		// replace semicolons with newlines
+            from = ';';
+            to = '\n';
+        }
+
+        for (int i = 0; i < reply_len; ++i) {
+            if (replystr[i] == from)
+                replystr[i] = to;
+        }
+        if (replystr[reply_len-1] == to) // remove trailing ';' or '\n'
+            replystr.resize(reply_len-1);
     }
     return replystr;
 }
@@ -341,11 +312,11 @@ int
 CommandReply::overflow (int c)
 {
     if (send_buf() < 0) 	    // write the output
-	return EOF;
+        return EOF;
     else if (c != EOF)
-	return sputc(c);
+        return sputc(c);
     else
-	return std::streambuf::traits_type::not_eof(c); // don't return eof, it indicates an error
+        return std::streambuf::traits_type::not_eof(c); // don't return eof, it indicates an error
 }
 
 /*!
@@ -367,162 +338,135 @@ CommandReply::send_buf()
     int replyStatus = getStatus();  // get the current reply status set by OK, FAIL, or ABORT
     int i;			    // loop index
     bool found_null = false;        // true if this buffer contains terminating null (note: this is not the same meaning as CommandReply::_done)
-    if (len > 0)
-    {
-	assert(replyStatus != STATUS_NOT_SET);
-	if (!_enableWrite)          // don't write the data if _enableWrite is false
-	{
-	    _totreplylen = len;	    // total reply length == current data length because we aren't writing
+    if (len > 0) {
+        assert(replyStatus != STATUS_NOT_SET);
+        if (!_enableWrite) {         // don't write the data if _enableWrite is false
+            _totreplylen = len;	    // total reply length == current data length because we aren't writing
 
-	    if (len == (int) _bufsize)        // extend the buffer if it is full
-	    {
-		int newbufsize = _bufsize + BUFSIZE;
-		char* newbuf = new char[newbufsize+1]; // allocate bufsize plus additional byte for terminating null
-		memcpy(newbuf, _outbuf, len);
-		delete[] _outbuf;
-		_outbuf = newbuf;
-		_bufsize = newbufsize;
-		setp(_outbuf, _outbuf + _bufsize);
-		pbump(len);
-	    }
-
-	    // return an error when the reply length limit is exceeded
-	    if (_totreplylen >= FORMAT0_REPLY_LIMIT && !_done && replyStatus == 0)
-	    {
-		*this << ABORT << "reply limit exceeded" << DONE;
-		return -1;
-	    }
-	}
-	else
-	{
-	    // format output
-	    if (_replyFormat == 0)	// replace newlines with semicolons, '\0' with newline
-	    {
-		for (i = 0; i < len; ++i)
-		{
-		    if (_outbuf[i] == '\n')
-			_outbuf[i] = ';';
-		    if (_outbuf[i] == DONE_TOKEN)
-                    {
-			if (_done)
-			{
-			    len = i+1; // stop at first null
-			    found_null = true;
-			}
-			else
-			{
-			    _outbuf[i] = '@';
-			}
-                    }
-		}
-
-		if (found_null)		// This buffer contains '\0' added by DONE
-		{
-		    --i;		// index to last character ('\0')
-		    assert(_outbuf[i] == DONE_TOKEN);
-
-		    if (_outbuf[i-1] == ';') // don't send double newlines at end
-			--i;
-
-		    // send a terminating newline at the end of the last buffer
-		    _outbuf[i++] = '\n'; // add a terminating newline
-		    len = i;		 // set length for write
-		}
-	    }
-	    else // _replyFormat == 1:  replace semicolons with newlines, '\0' with newline
-	    {
-		for (i = 0; i < len; ++i)
-		{
-		    if (_outbuf[i] == ';')
-			_outbuf[i] = '\n';
-		    if (_outbuf[i] == DONE_TOKEN)
-                    {
-			if (_done)
-			{
-			    len = i+1; // stop at first null
-			    found_null = true;
-			}
-			else
-			{
-			    _outbuf[i] = '@';
-			}
-                    }
-		}
-
-		if (found_null)		// This buffer contains '\0' added by DONE
-		{
-		    --i;		// index to last character
-		    assert(_outbuf[i] == DONE_TOKEN);
-
-		    if (_outbuf[i-1] == '\n') // don't send double newlines at end
-			--i;
-
-		    // send a terminating newline at the end of the last buffer
-		    _outbuf[i++] = '\n'; // add a terminating newline
-
-		    // send a terminating null at the end of the last buffer
-		    _outbuf[i++] = DONE_TOKEN; // in format1, add a terminating null
-		    _outbuf[i++] = '\n'; // perl scripts also need a terminating newline
-		    len = i;		 // set length for write
-		}
-	    }
-
-	    _replylen = len;		// save the replylen for str()
-	    if (*(_outbuf+len-2) == DONE_TOKEN) {
-		_replylen -= 2;		// don't include terminating null in str()
+            if (len == (int) _bufsize) {        // extend the buffer if it is full
+                int newbufsize = _bufsize + BUFSIZE;
+                char* newbuf = new char[newbufsize+1]; // allocate bufsize plus additional byte for terminating null
+                memcpy(newbuf, _outbuf, len);
+                delete[] _outbuf;
+                _outbuf = newbuf;
+                _bufsize = newbufsize;
+                setp(_outbuf, _outbuf + _bufsize);
+                pbump(len);
             }
-	    _totreplylen += _replylen;  // keep track of total reply length
 
-	    // write output
-	    if (_consolePort != NULL)	// write to mmcs server port
-	    {
-		try
-		{
+            // return an error when the reply length limit is exceeded
+            if (_totreplylen >= FORMAT0_REPLY_LIMIT && !_done && replyStatus == 0 && _replyFormat == 0) {
+                *this << ABORT << "Reply limit exceeded" << DONE;
+                return -1;
+            }
+        } else {
+            // format output
+            if (_replyFormat == 0) { // replace newlines with semicolons, '\0' with newline
+                for (i = 0; i < len; ++i) {
+                    if (_outbuf[i] == '\n')
+                        _outbuf[i] = ';';
+                    if (_outbuf[i] == DONE_TOKEN) {
+                        if (_done) {
+                            len = i+1; // stop at first null
+                            found_null = true;
+                        } else {
+                            _outbuf[i] = '@';
+                        }
+                    }
+                }
+
+                if (found_null)	{ // This buffer contains '\0' added by DONE
+                    --i;		// index to last character ('\0')
+                    assert(_outbuf[i] == DONE_TOKEN);
+
+                    if (_outbuf[i-1] == ';') // don't send double newlines at end
+                        --i;
+
+                    // send a terminating newline at the end of the last buffer
+                    _outbuf[i++] = '\n'; // add a terminating newline
+                    len = i;		 // set length for write
+                }
+            }
+            else  { // _replyFormat == 1:  replace semicolons with newlines, '\0' with newline
+                for (i = 0; i < len; ++i) {
+                    if (_outbuf[i] == ';')
+                        _outbuf[i] = '\n';
+                    if (_outbuf[i] == DONE_TOKEN) {
+                        if (_done) {
+                            len = i+1; // stop at first null
+                            found_null = true;
+                        } else {
+                            _outbuf[i] = '@';
+                        }
+                    }
+                }
+
+                if (found_null)	{	// This buffer contains '\0' added by DONE
+                    --i;		// index to last character
+                    assert(_outbuf[i] == DONE_TOKEN);
+
+                    if (_outbuf[i-1] == '\n') // don't send double newlines at end
+                        --i;
+
+                    // send a terminating newline at the end of the last buffer
+                    _outbuf[i++] = '\n'; // add a terminating newline
+
+                    // send a terminating null at the end of the last buffer
+                    _outbuf[i++] = DONE_TOKEN; // in format1, add a terminating null
+                    _outbuf[i++] = '\n'; // perl scripts also need a terminating newline
+                    len = i;		 // set length for write
+                }
+            }
+
+            _replylen = len;		// save the replylen for str()
+            if (*(_outbuf+len-2) == DONE_TOKEN) {
+                _replylen -= 2;		// don't include terminating null in str()
+            }
+            _totreplylen += _replylen;  // keep track of total reply length
+
+            // write output
+            if (_consolePort != NULL) {	// write to mmcs server port
+                try {
                     CxxSockets::Message msg;
                     msg.write(_outbuf, len);
                     if(_outbuf[len - 1] == '\0' || (len > 1 && _outbuf[len - 2] == '\0')) {
                         msg << std::ends;
                     }
                     LOG_TRACE_MSG("msg=" << msg.str());
-                    LOG_TRACE_MSG(" msg.len()=" << msg.str().length() << " len=" << len
-                                  << " replylen=" << _replylen << " totreply=" << _totreplylen);
-		    _consolePort->write(msg);
-		}
-		catch (ConsolePort::Error e)
-		{
+                    LOG_TRACE_MSG("msg.len()=" << msg.str().length() << " len=" << len
+                            << " replylen=" << _replylen << " totreply=" << _totreplylen);
+                    _consolePort->write(msg);
+                } catch (const ConsolePort::Error& e) {
                     std::ostringstream msg;
-		    msg << __FUNCTION__ << " - " << e.what() << ", errno=" << e.errcode;
-		    LOG_ERROR_MSG( msg.str() );
-		    setp(_outbuf, _outbuf + _bufsize); // reset buffer pointers
-		    *this << ABORT << msg.str() << DONE;
-		    return -1;
-		}
-	    }
-	    else				// write to stdout
-	    {
+                    msg << __FUNCTION__ << " - " << e.what() << ", errno=" << e.errcode;
+                    LOG_ERROR_MSG( msg.str() );
+                    setp(_outbuf, _outbuf + _bufsize); // reset buffer pointers
+                    *this << ABORT << msg.str() << DONE;
+                    return -1;
+                }
+            } else {			// write to stdout
                 ssize_t rc = ::write(_fd, _outbuf, _replylen);	// use _replylen so terminating null won't be written to stdout
-		if (rc != (int) _replylen)
-		{
+                if (rc != (int) _replylen) {
                     std::ostringstream msg;
-		    msg << __FUNCTION__ << " - " << strerror(errno);
-		    LOG_ERROR_MSG(msg.str());
-		    setp(_outbuf, _outbuf + _bufsize); // reset buffer pointers
-		    *this << ABORT << msg.str() << DONE;
-		    return -1;
-		}
-	    }
-	    setp(_outbuf, _outbuf + _bufsize); // reset buffer pointers
+                    msg << __FUNCTION__ << " - " << strerror(errno);
+                    LOG_ERROR_MSG(msg.str());
+                    setp(_outbuf, _outbuf + _bufsize); // reset buffer pointers
+                    *this << ABORT << msg.str() << DONE;
+                    return -1;
+                }
+            }
+            setp(_outbuf, _outbuf + _bufsize); // reset buffer pointers
 
-	    // return an error when the reply length limit is exceeded
-	    if (_totreplylen >= FORMAT0_REPLY_LIMIT && // reply limit exceeded?
-		!_done &&		// reply not done?
-		_replyFormat == 0 &&	// only applies to reply format 0
-		replyStatus == 0)	// bend  the rules to enable ABORT error messages
-	    {
-		*this << ABORT << "reply limit exceeded" << DONE;
-		return -1;
-	    }
-	}
+            // return an error when the reply length limit is exceeded
+            if (_totreplylen >= FORMAT0_REPLY_LIMIT && // reply limit exceeded?
+                    !_done &&		// reply not done?
+                    _replyFormat == 0 &&	// only applies to reply format 0
+                    replyStatus == 0)	// bend  the rules to enable ABORT error messages
+            {
+                *this << ABORT << "Reply limit exceeded" << DONE;
+                return -1;
+            }
+        }
     }
     return 0;
 }
@@ -591,11 +535,11 @@ ABORT(std::ostream& stream)
 
     // If a reply is complete (ie, DONE has been sent), ABORT resets the status and state
     if (reply->_done)
-	reply->reset();
+        reply->reset();
 
     // ABORT becomes FAIL if no status has been set
     if (stream.iword(mmcsCommandStatusIndex) == CommandReply::STATUS_NOT_SET)
-	return FAIL(stream);
+        return FAIL(stream);
 
     stream.iword(mmcsCommandStatusIndex) = CommandReply::STATUS_ABORT; // save the MMCS command status
     stream << ABORT_TOKEN;
@@ -609,14 +553,12 @@ DONE(std::ostream& stream)
     assert(reply != NULL);
 
     // Only one DONE can be sent
-    if (!reply->_done)
-    {
-	assert(stream.iword(mmcsCommandStatusIndex) != CommandReply::STATUS_NOT_SET);
-	reply->_done = true;
-	stream << DONE_TOKEN;
+    if (!reply->_done) {
+        assert(stream.iword(mmcsCommandStatusIndex) != CommandReply::STATUS_NOT_SET);
+        reply->_done = true;
+        stream << DONE_TOKEN;
     }
     return stream;
 }
-
 
 } // namespace mmcs_client

@@ -67,6 +67,7 @@ stdiod.install:: common.install
 sysiod.install:: common.install
 toolctld.install:: common.install
 gdbtool.install:: common.install
+ofedtest.install:: common.install
 docs.install:: common.install iosd.install jobctld.install stdiod.install sysiod.install toolctld.install gdbtool.install
 
 # +++

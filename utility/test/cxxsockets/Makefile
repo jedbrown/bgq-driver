@@ -37,6 +37,9 @@ install: all
 listen_both46: listen_both46.o
 	$(CXX) -lboost_thread-mt $(LDFLAGS) -o $@ $(filter-out Makefile, $^)
 
+clientAssignAddrError: clientAssignAddrError.o
+	$(CXX) -lboost_thread-mt $(LDFLAGS) -o $@ $(filter-out Makefile, $^)
+
 asio: asio.o
 	$(CXX) -lboost_thread-mt -lboost_system $(LDFLAGS) -o $@ $(filter-out Makefile, $^)
 
@@ -60,7 +63,7 @@ test_user_error_exception: user_error_exception.o $(LIBRARY)
 	$(CXX) $(LDFLAGS) -o $@ $(filter-out $(LIBRARY), $^)
 user_error_exception.o: CXXFLAGS += -DBOOST_TEST_DYN_LINK -DBOOST_TEST_MAIN
 
-clean:
+distclean clean:
 	$(RM) *o *d $(SAMPLES) $(TESTERS)
 
 -include *.d

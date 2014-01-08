@@ -20,6 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+
 #include "cxxsockets/SockAddrList.h"
 
 #include "cxxsockets/exception.h"
@@ -34,55 +35,32 @@ namespace CxxSockets {
 LOG_DECLARE_FILE( "utility.cxxsockets" );
 
 SockAddrList::SockAddrList(
-        const unsigned short family, 
-        const std::string& nodename, 
+        const unsigned short family,
+        const std::string& nodename,
         const std::string& service
         )
 {
-    if(service.empty() && nodename.empty()) {
+    if (service.empty() && nodename.empty()) {
         std::ostringstream msg;
-        msg << "both service and node cannot be zero";
-        LOG_ERROR_MSG(msg.str());
+        msg << "Both service and node cannot be zero.";
+        LOG_DEBUG_MSG(msg.str());
         throw UserError(-1, msg.str());
     }
 
     struct addrinfo* addrinf = 0;
     SockAddr::Addrinf(addrinf, family, nodename, service);
     const boost::shared_ptr<struct addrinfo> guard( addrinf, boost::bind(&freeaddrinfo, _1) );
-    int addrinfs = 0;
     while (addrinf) {
-        ++addrinfs;
         SockAddr sa(addrinf->ai_addr);
-        if(family == AF_INET6_ONLY)
+        if (family == AF_INET6_ONLY) {
             sa.setFamily( AF_INET6_ONLY );
-        if(sa.family() == AF_INET)
-            _sockque.push_back(sa);
-        else if(sa.family() == AF_INET6) // v6 goes first
-            _sockque.push_front(sa);
-        addrinf = addrinf->ai_next;
-    }
-}
-
-SockAddrList::SockAddrList(
-        const unsigned short family, 
-        const std::vector<std::string>& nodenames, 
-        const std::string& service
-        )
-{
-    struct addrinfo* addrinf = 0;
-    for (std::vector<std::string>::const_iterator it = nodenames.begin(); it != nodenames.end(); ++it) {
-        SockAddr::Addrinf(addrinf, family, (*it), service);
-        while (addrinf) {
-            SockAddr sa(addrinf->ai_addr);
-            if(family == AF_INET6_ONLY)
-                sa.setFamily( AF_INET6_ONLY );
-            if(sa.family() == AF_INET)
-                _sockque.push_back(sa);
-            else if(sa.family() == AF_INET6) // v6 goes first
-                _sockque.push_front(sa);
-            addrinf = addrinf->ai_next;
         }
-        freeaddrinfo(addrinf);
+        if (sa.family() == AF_INET) {
+            _sockque.push_back(sa);
+        } else if (sa.family() == AF_INET6) { // v6 goes first
+            _sockque.push_front(sa);
+        }
+        addrinf = addrinf->ai_next;
     }
 }
 

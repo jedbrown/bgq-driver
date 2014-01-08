@@ -99,9 +99,10 @@ void mbox_poll(int dopoll)
                     threadmask[PhysicalProcessorID()/16] = _BN(PhysicalThreadIndex()%64);
                     DCRWritePriv( TESTINT_DCR(THREAD_ACTIVE0), threadmask[0]);
                     DCRWritePriv( TESTINT_DCR(THREAD_ACTIVE1), threadmask[1]);
-
+                    uint64_t origtraceconfig = NodeState.TraceConfig;
+                    NodeState.TraceConfig |= TRACE_FlightLog;
                     dumpThreadState();
-
+                    NodeState.TraceConfig = origtraceconfig;
                     DCRWritePriv( TESTINT_DCR(THREAD_ACTIVE0), ~0ull);
                     DCRWritePriv( TESTINT_DCR(THREAD_ACTIVE1), 0xf000000000000000ull);
                 }

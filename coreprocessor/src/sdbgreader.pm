@@ -25,6 +25,7 @@
 package sdbgreader;
 
 use warnings;
+use Socket;
 require Exporter;
 
 @ISA         = qw(Exporter);
@@ -46,8 +47,10 @@ sub new
       "options" => $options
   };
   
+  $self->{"skiphostcheck"} = 0;
   $self->{"jobid"} = $$options{"-j"}  if(exists $$options{"-j"});
   $self->{"pid"} = $$options{"-pid"}  if(exists $$options{"-pid"});
+  $self->{"skiphostcheck"} = $$options{"-skiphostcheck"}  if(exists $$options{"-skiphostcheck"});
   $self->{"options"}{"debugionode"}=0;
   $self->{"options"}{"debugcomputenode"}=1;
   
@@ -55,7 +58,7 @@ sub new
   {
       if(exists $self->{"pid"})
       {
-	  $self->{"jobid"} = getJobIDFromPID($self->{"pid"});
+	  $self->{"jobid"} = getJobIDFromPID($self->{"pid"}, $self->{"skiphostcheck"});
 	  printf("jobid: %d\n", $self->{"jobid"});
       }
   }
@@ -69,8 +72,8 @@ sub new
   chomp($driver);
   print "driver path: $driver\n";
   my $job = $self->{"jobid"};
-  my $sdebug_proxy = "/bgsys/drivers/ppcfloor/coreprocessor/bin/sdebug_proxy";
-#  $sdebug_proxy = "/bgusr/tgooding/sdebug_proxy";
+  my $sdebug_proxy = "$driver/coreprocessor/bin/sdebug_proxy";
+  # $sdebug_proxy = "/bgusr/tgooding/sdebug_proxy";
   $self->{"options"}{"dump_server"} = "$driver/coreprocessor/bin/sdebug --id=$job --tool=$sdebug_proxy 2>&1";
   
   $self->{"state"} = "run?";
@@ -94,10 +97,15 @@ sub new
 
 sub getJobIDFromPID
 {
-    my($pid) = @_;
+    my($pid, $SKIPHOSTCHECK) = @_;
     $hosts = `hostname -IA`;
     %validhosts = map { $_ => 1 } split(/\s+/, $hosts);
     
+    print "skipHostCheck=$SKIPHOSTCHECK\n";
+    foreach $host (sort keys %validhosts)
+    {
+	print "hostname: $host\n";
+    }
     $validhosts{"localhost"} = 1;
     foreach $line (split("\n", `/sbin/ifconfig 2>&1`))
     {
@@ -112,12 +120,21 @@ sub getJobIDFromPID
 	next if($line =~ /\d+ job/);
 	next if($line =~ /ID Status/);
 	($id) = $line =~ /(\d+)/;
-	$data = `/bgsys/drivers/ppcfloor/bin/list_jobs $id`;
-	($jobhost,$jobpid) = $data =~ /Client:\s+(\S+):(\d+)/;
-	if(($pid == $jobpid) && (exists $validhosts{$jobhost}))
+	if(defined $id)
 	{
-	    close(TMP);
-	    return $id;
+	    $data = `/bgsys/drivers/ppcfloor/bin/list_jobs $id`;
+	    ($jobhost,$jobpid) = $data =~ /Client:\s+(\S+):(\d+)/;
+	    my $jobip = "";
+	    my $jobip_raw = gethostbyname($jobhost);
+	    $jobip = inet_ntoa($jobip_raw) if(defined $jobip_raw);
+	    print "jobhost=$jobhost   jobpid=$jobpid  jobip=$jobip\n";
+	    if(($pid == $jobpid) && ((exists $validhosts{$jobhost}) ||
+				     (exists $validhosts{$jobip}) ||
+				     ($SKIPHOSTCHECK)))
+	    {
+		close(TMP);
+		return $id;
+	    }
 	}
     }
     close(TMP);

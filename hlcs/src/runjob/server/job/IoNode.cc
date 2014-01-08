@@ -97,6 +97,7 @@ IoNode::IoNode(
     _loaded( false ),
     _setup( false ),
     _output_started( false ),
+    _signalInFlight( false ),
     _node( node )
 {
 
@@ -127,6 +128,9 @@ IoNode::writeControl(
             break;
         case bgcios::jobctl::CleanupJob:
             _flags.set( Status::Cleanup );
+            break;
+        case bgcios::jobctl::SignalJob:
+            _signalInFlight = true;
             break;
         default:
             break;
@@ -203,7 +207,7 @@ IoNode::handleControl(
 
         this->ended( true );
     } else if ( header->type == bgcios::jobctl::SignalJobAck ) {
-        // nothing to do
+        _signalInFlight = false;
     } else if ( header->type == bgcios::jobctl::StartToolAck ) {
         const boost::shared_ptr<bgcios::jobctl::StartToolAckMessage> ack(
                 message->as<bgcios::jobctl::StartToolAckMessage>()
@@ -277,27 +281,6 @@ IoNode::handleData(
             this->output_started( true );
         }
         callback();
-    } else if (
-            header->type == bgcios::stdio::WriteStdout ||
-            header->type == bgcios::stdio::WriteStderr
-            )
-    {
-        const boost::shared_ptr<bgcios::stdio::WriteStdioMessage> msg(
-                message->as<bgcios::stdio::WriteStdioMessage>()
-                );
-
-        // note: length of stdout message is contained within the header
-        const message::StdIo::Ptr outmsg( new message::StdIo() );
-        outmsg->setClientId( job->client() );
-        outmsg->setJobId( job->id() );
-        outmsg->setData( msg->data, header->length - sizeof(*header) );
-        outmsg->setRank( header->rank );
-        outmsg->setType( 
-                header->type == bgcios::stdio::WriteStdout ? runjob::Message::StdOut : runjob::Message::StdError
-                );
-
-        // add it to our queue
-        job->queue().add( outmsg, callback );
     } else if ( header->type == bgcios::stdio::CloseStdio ) {
         this->drained( true );
         callback();

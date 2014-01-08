@@ -24,21 +24,25 @@
 #ifndef MMCS_SERVER_DB_STATICS_H_
 #define MMCS_SERVER_DB_STATICS_H_
 
-
-#include "libmmcs_client/CommandReply.h"
+#include <bgq_util/include/Location.h>
 
 #include <string>
 #include <vector>
 
-
 namespace mmcs {
 namespace server {
 
-
 namespace DBStatics {
-    enum Status { AVAILABLE, ERROR, MISSING };
-    enum Type { ION, CN, IOCARD, COMPUTECARD, SERVICECARD };
-    void setLocationStatus(const std::vector<std::string>& locations, mmcs_client::CommandReply& reply, Status status, Type type);
+    enum Status { AVAILABLE, ERROR, MISSING, SOFTWARE_FAILURE };
+
+    bool setLocationStatus(
+            const std::vector<std::string>& locations, 
+            const Status status, 
+            const bgq::util::Location::Type type
+            );
+
+    /*! \brief Given a hardware state return as a string. */
+    std::string hardwareStatusToString(const Status status);
 }
 
 } } // namespace mmcs::server

@@ -270,7 +270,7 @@ Tool::exited(
     if ( !job ) return;
 
     std::ostringstream error;
-    error << "Tool " << etm->toolId << " exited on " << location << ": ";
+    error << "Tool " << etm->toolId << ": ";
     if ( WIFEXITED(etm->status) ) {
         error << "exited with status " << WEXITSTATUS(etm->status) << ".";
     } else if ( WIFSIGNALED(etm->status) ) {

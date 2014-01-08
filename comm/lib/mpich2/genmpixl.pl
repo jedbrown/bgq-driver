@@ -26,45 +26,50 @@ use File::Copy;
 
 $xlcomp_conf="mpixl.conf";
 
-($prefix_path = shift) or (die "Must provide location of existing bin/mpixxx and etc/mpixxx.conf\n");
+($bin_path = shift) or (die "Must provide location of existing mpixxx\n");
 ($target      = shift) or (die "Must provide target name (e.g. BGP or BGQ)\n");
 
-(-e "$prefix_path/bin/mpicc") or (die "Must provide location of existing bin/mpixxx and etc/mpixxx.conf\n");
+(-e "$bin_path/mpicc") or (die "Must provide location of existing mpixxx\n");
 (-e $xlcomp_conf) or (die "Couldn't find $xlcomp_conf\n");
 
 
-$mpicc="$prefix_path/bin/mpicc";
-$mpif77="$prefix_path/bin/mpif77";
-$mpicxx="$prefix_path/bin/mpicxx";
+$mpicc="$bin_path/mpicc";
+$mpif77="$bin_path/mpif77";
+$mpif90="$bin_path/mpif90";
+$mpicxx="$bin_path/mpicxx";
 
-$mpixlc="$prefix_path/bin/mpixlc";
-$mpixlf77="$prefix_path/bin/mpixlf77";
-$mpixlcxx="$prefix_path/bin/mpixlcxx";
-$mpixlf90="$prefix_path/bin/mpixlf90";
-$mpixlf95="$prefix_path/bin/mpixlf95";
-$mpixlf2003="$prefix_path/bin/mpixlf2003";
+$mpixlc="$bin_path/mpixlc";
+$mpixlf77="$bin_path/mpixlf77";
+$mpixlcxx="$bin_path/mpixlcxx";
+$mpixlf90="$bin_path/mpixlf90";
+$mpixlf95="$bin_path/mpixlf95";
+$mpixlf2003="$bin_path/mpixlf2003";
+$mpixlf2008="$bin_path/mpixlf2008";
 
-$mpixlc_r="$prefix_path/bin/mpixlc_r";
-$mpixlf77_r="$prefix_path/bin/mpixlf77_r";
-$mpixlcxx_r="$prefix_path/bin/mpixlcxx_r";
-$mpixlf90_r="$prefix_path/bin/mpixlf90_r";
-$mpixlf95_r="$prefix_path/bin/mpixlf95_r";
-$mpixlf2003_r="$prefix_path/bin/mpixlf2003_r";
+$mpixlc_r="$bin_path/mpixlc_r";
+$mpixlf77_r="$bin_path/mpixlf77_r";
+$mpixlcxx_r="$bin_path/mpixlcxx_r";
+$mpixlf90_r="$bin_path/mpixlf90_r";
+$mpixlf95_r="$bin_path/mpixlf95_r";
+$mpixlf2003_r="$bin_path/mpixlf2003_r";
+$mpixlf2008_r="$bin_path/mpixlf2008_r";
 
 # something to start with
 copy($mpicc,  $mpixlc);     chmod(0755,$mpixlc);
 copy($mpicxx, $mpixlcxx);   chmod(0755,$mpixlcxx);
 copy($mpif77, $mpixlf77);   chmod(0755,$mpixlf77);
-copy($mpif77, $mpixlf90);   chmod(0755,$mpixlf90);
-copy($mpif77, $mpixlf95);   chmod(0755,$mpixlf95);
-copy($mpif77, $mpixlf2003); chmod(0755,$mpixlf2003);
+copy($mpif90, $mpixlf90);   chmod(0755,$mpixlf90);
+copy($mpif90, $mpixlf95);   chmod(0755,$mpixlf95);
+copy($mpif90, $mpixlf2003); chmod(0755,$mpixlf2003);
+copy($mpif90, $mpixlf2008); chmod(0755,$mpixlf2008);
 
 copy($mpicc,  $mpixlc_r);     chmod(0755,$mpixlc_r);
 copy($mpicxx, $mpixlcxx_r);   chmod(0755,$mpixlcxx_r);
 copy($mpif77, $mpixlf77_r);   chmod(0755,$mpixlf77_r);
-copy($mpif77, $mpixlf90_r);   chmod(0755,$mpixlf90_r);
-copy($mpif77, $mpixlf95_r);   chmod(0755,$mpixlf95_r);
-copy($mpif77, $mpixlf2003_r); chmod(0755,$mpixlf2003_r);
+copy($mpif90, $mpixlf90_r);   chmod(0755,$mpixlf90_r);
+copy($mpif90, $mpixlf95_r);   chmod(0755,$mpixlf95_r);
+copy($mpif90, $mpixlf2003_r); chmod(0755,$mpixlf2003_r);
+copy($mpif90, $mpixlf2008_r); chmod(0755,$mpixlf2008_r);
 
 
 # read in config variables
@@ -135,24 +140,12 @@ close MPIXLCXXR;
 
 open MPIF77,      "<$mpif77"       || die;
 open MPIXLF77,    ">$mpixlf77"     || die;
-open MPIXLF90,    ">$mpixlf90"     || die;
-open MPIXLF95,    ">$mpixlf95"     || die;
-open MPIXLF2003,  ">$mpixlf2003"   || die;
 open MPIXLF77R,   ">$mpixlf77_r"   || die;
-open MPIXLF90R,   ">$mpixlf90_r"   || die;
-open MPIXLF95R,   ">$mpixlf95_r"   || die;
-open MPIXLF2003R, ">$mpixlf2003_r" || die;
 while(<MPIF77>)
 {
     if (/^F77=/) {
         print MPIXLF77    "F77=$vars{$target.'_F77'}\n";
         print MPIXLF77R   "F77=$vars{$target.'_F77R'}\n";
-        print MPIXLF90    "F77=$vars{$target.'_F90'}\n";
-        print MPIXLF90R   "F77=$vars{$target.'_F90R'}\n";
-        print MPIXLF95    "F77=$vars{$target.'_F95'}\n";
-        print MPIXLF95R   "F77=$vars{$target.'_F95R'}\n";
-        print MPIXLF2003  "F77=$vars{$target.'_F2003'}\n";
-        print MPIXLF2003R "F77=$vars{$target.'_F2003R'}\n";
     }
     else {
         if (/^MPI_OTHERLIBS=/ && defined($vars{'MPI_OTHERLIBS'})) {
@@ -165,21 +158,61 @@ while(<MPIF77>)
             $_="MPI_FFLAGS=$vars{'MPI_FFLAGS'}\n";
         }
         print MPIXLF77    $_;
-        print MPIXLF90    $_;
-        print MPIXLF95    $_;
-        print MPIXLF2003  $_;
         print MPIXLF77R   $_;
-        print MPIXLF90R   $_;
-        print MPIXLF95R   $_;
-        print MPIXLF2003R $_;
    }
 }
 close MPIF77;
 close MPIXLF77;
+close MPIXLF77R;
+
+
+open MPIF90,      "<$mpif90"       || die;
+open MPIXLF90,    ">$mpixlf90"     || die;
+open MPIXLF95,    ">$mpixlf95"     || die;
+open MPIXLF2003,  ">$mpixlf2003"   || die;
+open MPIXLF2008,  ">$mpixlf2008"   || die;
+open MPIXLF90R,   ">$mpixlf90_r"   || die;
+open MPIXLF95R,   ">$mpixlf95_r"   || die;
+open MPIXLF2003R, ">$mpixlf2003_r" || die;
+open MPIXLF2008R, ">$mpixlf2008_r" || die;
+while(<MPIF90>)
+{
+    if (/^FC=/) {
+        print MPIXLF90    "FC=$vars{$target.'_F90'}\n";
+        print MPIXLF90R   "FC=$vars{$target.'_F90R'}\n";
+        print MPIXLF95    "FC=$vars{$target.'_F95'}\n";
+        print MPIXLF95R   "FC=$vars{$target.'_F95R'}\n";
+        print MPIXLF2003  "FC=$vars{$target.'_F2003'}\n";
+        print MPIXLF2003R "FC=$vars{$target.'_F2003R'}\n";
+        print MPIXLF2008  "FC=$vars{$target.'_F2008'}\n";
+        print MPIXLF2008R "FC=$vars{$target.'_F2008R'}\n";
+    }
+    else {
+        if (/^MPI_OTHERLIBS=/ && defined($vars{'MPI_OTHERLIBS'})) {
+            $_="MPI_OTHERLIBS=$vars{'MPI_OTHERLIBS'}\n";
+        }
+        elsif (/^MPI_LDFLAGS=/ && defined($vars{'MPI_LDFLAGS'})) {
+            $_="MPI_LDFLAGS=$vars{'MPI_LDFLAGS'}\n";
+        }
+        elsif (/^MPI_FFLAGS=/ && defined($vars{'MPI_FFLAGS'})) {
+            $_="MPI_FFLAGS=$vars{'MPI_FFLAGS'}\n";
+        }
+        print MPIXLF90    $_;
+        print MPIXLF95    $_;
+        print MPIXLF2003  $_;
+        print MPIXLF2008  $_;
+        print MPIXLF90R   $_;
+        print MPIXLF95R   $_;
+        print MPIXLF2003R $_;
+        print MPIXLF2008R $_;
+   }
+}
+close MPIF90;
 close MPIXLF90;
 close MPIXLF95;
 close MPIXLF2003;
-close MPIXLF77R;
+close MPIXLF2008;
 close MPIXLF90R;
 close MPIXLF95R;
 close MPIXLF2003R;
+close MPIXLF2008R;

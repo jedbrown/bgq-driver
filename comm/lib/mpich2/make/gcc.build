@@ -17,10 +17,10 @@
 # totalview support.
 #
 
-gcc: autoconf
-	mkdir -p ${MPICH2BUILD}-$@
-	cd ${MPICH2BUILD}-$@ &&						\
-	if [ ! -f Makefile ] ; then					\
+${MPICH2BUILD}-gcc/Makefile: ${MPICH2DIR}/Makefile.in ${INSTALL_DIR}/lib/libopa-gcc.a ${INSTALL_DIR}/lib/libmpl-gcc.a
+	mkdir -p $(dir $@)
+	cd $(dir $@) &&							\
+	  INSTALL="/usr/bin/install -C"					\
 	  CC="${HOST_CC}"						\
 	  CXX="${HOST_CXX}"						\
 	  F77="${HOST_F77}"						\
@@ -28,38 +28,46 @@ gcc: autoconf
 	  AR="${HOST_AR}"						\
 	  LD="${HOST_LD}"						\
 	  RANLIB="${HOST_RANLIB}"					\
-	  F77_OTHER_LIBS="${HOST_F77_OTHER_LIBS}"			\
+	  F77_OTHER_LIBS="-lmpichf90-$(lastword $(subst -, ,$(subst /, ,$(dir $@))))"				\
 	  MPICH2LIB_CFLAGS="${HOST_CFLAGS}"				\
 	  MPICH2LIB_CXXFLAGS="${HOST_CXXFLAGS}"				\
 	  MPICH2LIB_FFLAGS="${HOST_FFLAGS}"				\
 	  MPICH2LIB_F90FLAGS="${HOST_FFLAGS}"				\
 	  MPICH2LIB_LDFLAGS="${HOST_LDFLAGS}"				\
-	  CFLAGS="${MPI_CFLAGS}"					\
-	  CXXFLAGS="${MPI_CXXFLAGS}"					\
+	  CFLAGS="${MPI_CFLAGS} -I${INSTALL_DIR}/lib/gnu"		\
+	  CXXFLAGS="${MPI_CXXFLAGS} -I${INSTALL_DIR}/lib/gnu"		\
 	  FFLAGS="${MPI_FFLAGS}"					\
 	  FCFLAGS="${MPI_FFLAGS}"					\
 	  LDFLAGS="${MPI_LDFLAGS}"					\
-	  MPICXXLIBNAME="cxxmpich"					\
+	  MPICXXLIBNAME="mpichcxx-$(lastword $(subst -, ,$(subst /, ,$(dir $@))))"					\
+	  MPILIBNAME="mpich-$(lastword $(subst -, ,$(subst /, ,$(dir $@))))"					\
+	  MPLLIBNAME="mpl-gcc"						\
+	  OPALIBNAME="opa-gcc"						\
+	  PAMILIBNAME="pami-gcc"					\
 	  ${MPICH2DIR}/configure					\
 	  --enable-static						\
 	  --enable-shared						\
 	  --enable-cache						\
-	  --prefix=${INSTALL_DIR}/$@					\
-	  --mandir=${INSTALL_DIR}/$@/man				\
-	  --htmldir=${INSTALL_DIR}/$@/www				\
+	  --prefix=${INSTALL_DIR}					\
+	  --bindir=${INSTALL_DIR}/bin/$(lastword $(subst -, ,$(subst /, ,$(dir $@))))				\
+	  --sysconfdir=${INSTALL_DIR}/etc/$(lastword $(subst -, ,$(subst /, ,$(dir $@))))				\
+	  modincdir=${INSTALL_DIR}/include/gnu				\
+	  pkgconfigdir=${INSTALL_DIR}/lib/pkgconfig/$(lastword $(subst -, ,$(subst /, ,$(dir $@))))			\
 	  --host=${BUILD_HOST}						\
 	  --target=${BUILD_TARGET}					\
 	  --build=${BUILD_BUILD}					\
 	  --enable-dependencies						\
 	  --enable-g=debug						\
 	  --with-device=pamid:${PLATFORM}				\
+	  --with-pami=${INSTALL_DIR}					\
 	  --enable-romio=yes						\
 	  --enable-f77=yes						\
 	  --enable-fc=yes						\
 	  --with-file-system=${FILE_SYSTEM}				\
 	  --enable-timer-type=device					\
 	  --enable-threads=${THREAD_LEVEL}				\
-	  --with-fwrapname=fmpich					\
+	  --with-fwrapname="mpichf77-$(lastword $(subst -, ,$(subst /, ,$(dir $@))))"				\
+	  --with-fcwrapname="mpichf90-$(lastword $(subst -, ,$(subst /, ,$(dir $@))))"				\
 	  --with-cross=${MPICH2DIR}/src/mpid/pamid/cross/${PLATFORMlc}8	\
 	  --with-pm=none						\
 	  --with-mpe=no							\
@@ -69,12 +77,16 @@ gcc: autoconf
 	  --disable-rlog						\
 	  --disable-sample						\
 	  --disable-rpath						\
+	  --disable-wrapper-rpath					\
 	  --with-aint-size=8						\
+	  --with-openpa-prefix=${INSTALL_DIR}				\
+	  --with-mpl-prefix=${INSTALL_DIR}				\
+	  --with-mpl-includedir=${INSTALL_DIR}/include/gnu		\
 									\
 	  --with-assert-level=2						\
 	  --enable-fast=O3						\
 	  --enable-error-messages					\
-	  --disable-debuginfo						\
+	  --enable-debuginfo						\
 									\
 	  --with-atomic-primitives					\
 	  --enable-thread-cs=per-object					\
@@ -82,7 +94,4 @@ gcc: autoconf
 	  --enable-refcount=lock-free					\
 	  --disable-predefined-refcount					\
 									\
-	  ${HOST_OTHER_CONFIGURE}					\
-	; fi
-
-	${MAKE} -C ${MPICH2BUILD}-$@
+	  ${HOST_OTHER_CONFIGURE}					

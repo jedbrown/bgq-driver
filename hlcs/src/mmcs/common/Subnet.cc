@@ -27,13 +27,10 @@
 
 #include <utility/include/cxxsockets/Host.h>
 
-
 LOG_DECLARE_FILE( "mmcs.common" );
-
 
 namespace mmcs {
 namespace common {
-
 
 Subnet::Subnet(
         const bgq::utility::Properties::Ptr& _properties,
@@ -60,8 +57,10 @@ Subnet::set_home(
         )
 {
     CxxSockets::Host prim(_primary_ip);
-    if(ip == prim.ip()) _home = true;
-    else _home = false;
+    if (ip == prim.ip())
+        _home = true;
+    else
+        _home = false;
     return _home;
 }
 
@@ -72,14 +71,15 @@ Subnet::getBGEthForIP(
 {
     CxxSockets::Host prim(_primary_ip);
     CxxSockets::Host bup(_backup_ip);
-    if(ip == prim.ip()) return _primary_bgeth;
-    else if(ip == bup.ip()) return _backup_bgeth;
+    if (ip == prim.ip())
+        return _primary_bgeth;
+    else if (ip == bup.ip())
+            return _backup_bgeth;
     else {
         std::string ex = "Invalid IP " + ip;
         throw std::runtime_error(ex.c_str());
     }
 }
-
 
 void
 Subnet::output() const

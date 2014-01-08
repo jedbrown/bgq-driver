@@ -20,6 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+
 #include "cxxsockets/FileSet.h"
 
 #include "cxxsockets/exception.h"
@@ -30,12 +31,30 @@ LOG_DECLARE_FILE( "utility.cxxsockets" );
 
 namespace CxxSockets {
 
-bool
+FileSet::FileSet() :
+    _filevec(),
+    _setLock()
+{
+
+}
+
+FileSet::~FileSet()
+{
+
+}
+
+void
 FileSet::LockSet(
         PthreadMutexHolder& mutex
         )
 {
-    return mutex.Lock(&_setLock);
+    const int rc = mutex.Lock(&_setLock);
+    if ( rc ) {
+        std::ostringstream msg;
+        char buf[256];
+        msg << "Could not lock set: " << strerror_r(rc, buf, sizeof(buf));
+        throw SoftError(rc, msg.str());
+    }
 }
 
 // Do not lock.  Private method called by public methods that lock.
@@ -48,7 +67,8 @@ FileSet::pAddFile(
     if (f != _filevec.end()) {
         std::ostringstream msg;
         msg << "Socket already added" << std::endl;
-	throw UserError(-1, msg.str());
+        LOG_DEBUG_MSG( msg.str() );
+        throw UserError(-1, msg.str());
     }
     _filevec.push_back(file);
 }
@@ -58,7 +78,8 @@ FileSet::AddFile(
         FilePtr file
         )
 {
-    PthreadMutexHolder mutex; LockSet(mutex);
+    PthreadMutexHolder mutex;
+    LockSet(mutex);
     pAddFile(file);
 }
 
@@ -66,10 +87,10 @@ void
 FileSet::RemoveFile(
         FilePtr file
         )
-{ 
-    PthreadMutexHolder mutex; 
-    LockSet(mutex); 
-    _filevec.erase(remove(_filevec.begin(),_filevec.end(),file), _filevec.end()); 
+{
+    PthreadMutexHolder mutex;
+    LockSet(mutex);
+    _filevec.erase(remove(_filevec.begin(),_filevec.end(),file), _filevec.end());
 }
 
 }

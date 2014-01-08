@@ -33,6 +33,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
 
 #include <string>
 #include <vector>
@@ -58,12 +59,12 @@ namespace utility {
 class Inotify : public boost::asio::posix::stream_descriptor
 {
 private:
-    class _Watch;
+    class WatchImpl;
 
 public:
 
-    typedef boost::shared_ptr<_Watch> Watch; //!< Represents a watch on a path.
-    typedef boost::weak_ptr<_Watch> WatchRef; //!< Weak reference to a Watch.
+    typedef boost::shared_ptr<WatchImpl> Watch; //!< Represents a watch on a path.
+    typedef boost::weak_ptr<WatchImpl> WatchRef; //!< Weak reference to a Watch.
 
 
     /*! \brief inotify event, see the inotify man page for field descriptions. */
@@ -121,15 +122,15 @@ public:
 
 private:
 
-    typedef std::vector< uint8_t > _Buffer;
+    typedef std::vector< uint8_t > Buffer;
 
-    typedef std::map< int, WatchRef > _Watches;
+    typedef std::map< int, WatchRef > Watches;
 
 
     /*! \brief Ignore this internal class. */
-    class _Watch {
+    class WatchImpl {
     public:
-        explicit _Watch(
+        explicit WatchImpl(
                 int id,
                 uint32_t mask,
                 Inotify& inotify
@@ -139,7 +140,7 @@ private:
 
         void invalidate()  { _id = -1; }
 
-        ~_Watch();
+        ~WatchImpl();
 
     private:
         int _id;
@@ -148,12 +149,12 @@ private:
     };
 
 
-    _Watches _watches;
+    Watches _watches;
 
 
     void _readEvents( Events& events_out, boost::system::error_code& err_out );
 
-    void _parseEvents( const _Buffer& buf, Events& events_out );
+    void _parseEvents( const Buffer& buf, Events& events_out );
 
     bool _parseEvent(
             const struct inotify_event* event_struct,
@@ -169,7 +170,7 @@ private:
         );
 
     void _endWatch( int id );
-        // Called by _Watch's destructor.
+        // Called by WatchImpl's destructor.
 };
 
 

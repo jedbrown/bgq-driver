@@ -29,6 +29,7 @@ include ../../../Make.rules
 CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)
 CXXFLAGS += -fPIC
 CXXFLAGS += -MD -MP
+CXXFLAGS += -Wall -Wextra
 
 LDFLAGS += -shared
 LDFLAGS += -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility -lcxxsockets -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
@@ -68,13 +69,13 @@ all: $(all_targets)
 
 
 $(full_name): $(objs)
-	$(CXX) $(LDFLAGS) $(CXXFLAGS) -Wl,-soname,$(short_name) -o $@ $^
+	$(CXX) $(CXXFLAGS) -Wl,-soname,$(short_name) -o $@ $^ $(LDFLAGS)
 
-$(short_name):
-	$(LN) -s $(full_name) $@
+$(short_name): $(full_name)
+	$(LN) -sf $(full_name) $@
 
-$(dev_name):
-	$(LN) -s $(short_name) $@
+$(dev_name): $(short_name)
+	$(LN) -sf $(short_name) $@
 
 
 install: $(install_targets)

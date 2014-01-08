@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_CREATE_NODE_CONFIG_H_
 #define MMCS_SERVER_COMMAND_CREATE_NODE_CONFIG_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*
 ** create_node_config
@@ -42,9 +38,8 @@ class CreateNodeConfig : public common::AbstractCommand
 {
 public:
     CreateNodeConfig (const char* name, const char* description, const Attributes& attributes)
-    : AbstractCommand(name,description,attributes) { usage = "create_node_config <configname> [<raspolicy>] [<nodeoptions>] <domaininfo>";}
+    : AbstractCommand(name,description,attributes) { _usage = "create_node_config <configname> [<raspolicy>] [<nodeoptions>] <domaininfo>";}
     static  CreateNodeConfig* build();    // factory method
-    static  std::string cmdname() { return "create_node_config"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -63,8 +58,6 @@ public:
     }
 };
 
-
 } } } // namespace mmcs::server::command
-
 
 #endif

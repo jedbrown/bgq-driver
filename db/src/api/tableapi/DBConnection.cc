@@ -147,7 +147,18 @@ cxxdb::ConnectionPtr DBConnection::createConnection(
         if ( (! user) || (*schema != *user) ) {
             LOG_DEBUG_MSG( "Setting schema to '" << *schema << "'" );
             connection_ptr->execute(string("set schema ") + *schema);
-            connection_ptr->execute(string("set path = current path, ") + *schema);
+            try {
+                connection_ptr->execute(string("set path = current path, ") + *schema);
+            } catch ( cxxdb::DatabaseException& dbe ) {
+                static const string DUPLICATE_SCHEMA_NAME("42732");
+                const cxxdb::DiagnosticRecord &dr(dbe.getDiagnosticRecords().front());
+                if ( dr.sqlstate == DUPLICATE_SCHEMA_NAME ) {
+                    LOG_DEBUG_MSG( "current path already has schema name of " << *schema );
+                    // fall through
+                } else {
+                    throw;
+                }
+            }
         }
     }
     return connection_ptr;

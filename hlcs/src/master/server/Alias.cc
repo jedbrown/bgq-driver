@@ -24,30 +24,17 @@
 #include "Alias.h"
 #include "AgentManager.h"
 #include "AgentRep.h"
-#include "Behavior.h"
 #include "MasterController.h"
-#include "Policy.h"
 #include "ras.h"
 
 #include "common/BinaryController.h"
-#include "common/Ids.h"
 
 #include "../lib/exceptions.h"
 
-#include <utility/include/Log.h>
 
-#include <boost/date_time.hpp>
-#include <boost/foreach.hpp>
 #include <boost/scope_exit.hpp>
 
-#include <map>
-#include <sstream>
-#include <string>
-#include <vector>
 
-#include <arpa/inet.h>
-#include <ifaddrs.h>
-#include <string.h>
 #include <unistd.h>
 
 LOG_DECLARE_FILE( "master" );
@@ -63,7 +50,7 @@ Alias::Alias(
         const Policy& p, 
         const std::string& user,
         const std::string& logdir,
-	const int& preferredHostWait
+	const int preferredHostWait
         ) :
     _name(name),
     _path(path),
@@ -188,19 +175,19 @@ Alias::runPolicy(
                 // Now we need to find out if we care whether it's a preferred host.
                 if (curr_host.get_primary() == false) {
                     if ( _preferred_start_time.is_not_a_date_time() ) {
-		      LOG_INFO_MSG( "waiting " << get_preferredHostWait() << " seconds for primary host" );
+		      LOG_INFO_MSG( "waiting " << _preferredHostWait << " seconds for primary host" );
                         _preferred_start_time = boost::posix_time::microsec_clock::local_time();
                     }
 
                     const boost::posix_time::ptime now( boost::posix_time::microsec_clock::local_time() );
                     const boost::posix_time::time_duration duration( now - _preferred_start_time );
-                    if ( duration.total_seconds() > get_preferredHostWait() ) {
+                    if ( duration.total_seconds() > _preferredHostWait ) {
                         winner = true;
-                        LOG_INFO_MSG("Giving up after " << get_preferredHostWait() << " seconds waiting for the preferred agent host.");
+                        LOG_INFO_MSG("Giving up after " << _preferredHostWait << " seconds waiting for the preferred agent host.");
                         LOG_INFO_MSG("Starting on agent " << curr_host.uhn() << ".");
                     } else {
                         LOG_INFO_MSG("Agent " << curr_host.uhn() << " is not the preferred agent host.");
-                        LOG_INFO_MSG("waiting " << get_preferredHostWait() - duration.total_seconds() << " seconds");
+                        LOG_INFO_MSG("waiting " << _preferredHostWait - duration.total_seconds() << " seconds");
                     }
                 } else {
                     winner = true;
@@ -234,9 +221,6 @@ Alias::runPolicy(
                     }
                 }
                 msg << "No agent " << hosts.str() << " specified by configuration for " << get_name() << " is running.";
-                std::map<std::string, std::string> details;
-                details["ALIAS"] = get_name();
-                MasterController::putRAS(ALIAS_FAIL_RAS, details);
                 MasterController::handleErrorMessage(msg.str());
                 throw exceptions::InternalError(exceptions::WARN, msg.str());
             }

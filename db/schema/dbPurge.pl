@@ -124,7 +124,7 @@ if (defined $options{"security"}) {
   purgeTables("SECURITYLOG","ENTRYDATE");
 }
 if (defined $options{"diags"}) {
-    purgeTables("DIAGRUNS","ENDTIME");
+    purgeTables("DIAGTESTS","ENDTIME");
     purgeTables("DIAGBLOCKS","ENDTIME");
     purgeTables("DIAGRESULTS","ENDTIME");
     purgeTables("DIAGRUNS","ENDTIME");
@@ -318,26 +318,29 @@ sub purgeTables {
         print "$tablename - \t$rows->{1} Rows over $months months old\n";
 
         } else {
-      
+            print "\nDeleting from $tablename\n";
 
-        print "\nDeleting from $tablename\n";
+            my $xactSize = 100000;
+            if ( $tablename eq "TBGQBLOCK_HISTORY" ) {
+                $xactSize = 1;
+            }
 
-      	while ( $counter <= $numrows ) {
+            $sql = qq( delete from \( select 1 from $db_schema.$tablename where date\($time\) <= CURRENT DATE - $months MONTHS FETCH FIRST $xactSize ROWS ONLY\) AS D);
+            my $sth_delete = getDbHandle()->prepare($sql);
 
-	     if ( $counter != 0 ) {
-        	print "$counter Rows Deleted out of $numrows for table - $tablename\n";
-	     }
-        	$sql = qq( delete from \( select 1 from $db_schema.$tablename where date\($time\) <= CURRENT DATE - $months MONTHS FETCH FIRST 100000 ROWS ONLY\) AS D);
-        	my $sth_delete = getDbHandle()->prepare($sql);
-        	# Run the SQL against the db engine
-        	$sth_delete->execute();
+            while ( $counter <= $numrows ) {
+                if ( $xactSize != 1 && $counter != 0 ) {
+                    print "$counter Rows Deleted out of $numrows for table - $tablename\n";
+                } elsif ( $xactSize == 1 && ($counter % 100 == 0) ) {
+                    print "$counter Rows Deleted out of $numrows for table - $tablename\n";
+                }
+                $sth_delete->execute();
 
-        	$counter = $counter + 100000;
-     	  }
-          #print "$numrows Rows Deleted out of $numrows for table - $tablename\n";
-          print "COMPLETED Deleting $numrows rows for table - $tablename\n";
-	
-      }
+                $counter = $counter + $xactSize;
+            }
+
+            print "COMPLETED Deleting $numrows rows for table - $tablename\n";
+        }
     }
   }
 

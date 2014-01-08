@@ -21,21 +21,17 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_BC_NODECARD_INFO_H_
 #define MMCS_SERVER_BC_NODECARD_INFO_H_
-
 
 #include "BCIconInfo.h"
 
 #include "types.h"
 
-
 namespace mmcs {
 namespace server {
 
-
-class BCNodecardInfo: public BCIconInfo
+class BCNodecardInfo : public BCIconInfo
 {
 public:
     BCNodecardInfo() : BCIconInfo() {}
@@ -44,9 +40,7 @@ public:
     {
         if (nc) {
             _location = nc->posInMachine();
-        }
-        else if (midplaneNodeConfig())
-        {
+        } else if (midplaneNodeConfig()) {
             std::ostringstream ostr;
             ostr << midplaneNodeConfig()->posInMachine() << "-" << BGQTopology::nodeCardNameFromPos(_card);
             _location = ostr.str();
@@ -55,21 +49,24 @@ public:
         }
     }
     std::string cardName() {
-        if(midplaneNodeConfig()) return _location.substr(7,3).c_str();
-        else if(ioboardNodeConfig()) return _location.substr(4,2).c_str();
-        else return "00";
+        if (midplaneNodeConfig())
+            return _location.substr(7,3);
+        else if (ioboardNodeConfig())
+            return _location.substr(4,2);
+        else
+            return "00";
     }
     bool isIOcard() {
-        if(midplaneNodeConfig()) return false;
-        else if(ioboardNodeConfig()) return true;
+        if (midplaneNodeConfig())
+            return false;
+        else if (ioboardNodeConfig())
+            return true;
         return false;
     }
 
     std::vector<BCLinkchipInfo*> _linkChips;
 };
 
-
 } } // namespace mmcs::server
-
 
 #endif

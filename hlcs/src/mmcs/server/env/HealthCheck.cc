@@ -52,19 +52,16 @@
 
 #include <xml/include/c_api/MCServerMessageSpec.h>
 
-
 using namespace std;
 
 using mmcs::common::Properties;
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
 namespace env {
-    
+
 HealthCheck::HealthCheck() :
     seconds(ENVS_POLLING_PERIOD),
     _skipModules()
@@ -83,15 +80,16 @@ HealthCheck::threadStart()
     // a 5 minute (300 second) interval. This hidden option was added because early hardware has been generating too many
     // RAS events to deal with.
     unsigned int pollProperty = strtol(Properties::getProperty("health_check_seconds").c_str(), NULL, 10);
-    if (pollProperty > 0)
+    if (pollProperty > 0) {
         seconds = pollProperty;
+    }
 
-    LOG_INFO_MSG("interval is " << seconds << " seconds");
+    LOG_DEBUG_MSG("Health check Interval is " << seconds << " seconds.");
 
     mmcs_client::CommandReply rep;
     BlockControllerBase::mcserver_connect(server, "EnvMonHC", rep);
-    if(!server) {
-        LOG_ERROR_MSG("failed to connect to mc_server");
+    if (!server) {
+        LOG_ERROR_MSG("Failed to connect to mc_server.");
         return NULL;
     }
 
@@ -105,8 +103,8 @@ HealthCheck::threadStart()
 
     BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
     if (!tx.getConnection()) {
-        LOG_INFO_MSG("unable to connect to database");
-            return NULL;
+        LOG_ERROR_MSG("Unable to connect to database.");
+        return NULL;
     }
 
     // Get list of midplanes from tbgqmidplane
@@ -286,8 +284,9 @@ HealthCheck::threadStart()
     boost::posix_time::ptime  start;
     boost::posix_time::time_duration duration;
 
-    // loop until someone stops us
-    while (isThreadStopping() == false)         {
+    // Loop until someone stops us
+    while (!isThreadStopping()) {
+        LOG_DEBUG_MSG("Performing full system health check." );
 
         // start the clock
         start = boost::posix_time::microsec_clock::local_time();
@@ -295,7 +294,7 @@ HealthCheck::threadStart()
         try {
             this->getBadWireMasks();
         } catch ( const std::exception& e ) {
-            LOG_WARN_MSG( "getting bad wire masks: " << e.what() );
+            LOG_ERROR_MSG("Error getting bad wire masks: " << e.what() );
         }
 
         // *********  HANDLE SERVICE CARDS   ***************
@@ -306,7 +305,7 @@ HealthCheck::threadStart()
         server->openTarget(scOpenRequest, scOpenReply);
 
         if (scOpenReply._rc != 0) {
-            LOG_INFO_MSG("unable to open target set in mcServer, for service card health check: " << scOpenReply._rt);
+            LOG_ERROR_MSG("Unable to open target set in mcServer, for service card health check: " << scOpenReply._rt);
         } else {
             // read values from cards
             MCServerMessageSpec::ReadServiceCardEnvRequest mcSCRequest;
@@ -325,7 +324,7 @@ HealthCheck::threadStart()
                 if (static_cast<int>(mcSCReply._serviceCardsShort[sc]._error) == CARD_NOT_PRESENT) { } else  // do nothing if the card is not present
                 if (static_cast<int>(mcSCReply._serviceCardsShort[sc]._error) == CARD_NOT_UP) { } else  // do nothing if the card is not up
                 if (mcSCReply._serviceCardsShort[sc]._error != 0) {
-                    LOG_INFO_MSG("Error occurred reading environmentals from: " << mcSCReply._serviceCardsShort[sc]._location);
+                    LOG_ERROR_MSG("Error reading environmentals from: " << mcSCReply._serviceCardsShort[sc]._location);
                     RasEventImpl noContact(0x00061002);
                     noContact.setDetail(RasEvent::LOCATION, mcSCReply._serviceCardsShort[sc]._location.c_str());
                     RasEventHandlerChain::handle(noContact);
@@ -338,7 +337,7 @@ HealthCheck::threadStart()
                     // All the rest of the health check logic is for checking against expected values and issuing RAS events
                     rc = tx.insert(&sct);
                     if(rc != SQL_SUCCESS) {
-                        LOG_INFO_MSG("Error writing service card temps: location " << string(sct._location)  << " return code " << rc);
+                        LOG_ERROR_MSG("Error writing service card temps: location " << string(sct._location)  << " return code " << rc);
                     }
 
                     if (mcSCReply._serviceCardsShort[sc]._leakDetectorFaultBpe0 ||
@@ -380,9 +379,8 @@ HealthCheck::threadStart()
         server->openTarget(ioOpenRequest, ioOpenReply);
 
         if (ioOpenReply._rc != 0) {
-            LOG_INFO_MSG("unable to open target set in mcServer, for IO board health check: " << ioOpenReply._rt);
+            LOG_ERROR_MSG("Unable to open target set in mcServer, for I/O board health check: " << ioOpenReply._rt);
         } else {
-
             // process env data
             MCServerMessageSpec::ReadIoCardEnvRequest mcIORequest;
             MCServerAPIHelpers::copyTargetRequest ( ioOpenRequest, mcIORequest );
@@ -400,7 +398,7 @@ HealthCheck::threadStart()
                 if (mcIOReply._ioCardsShort[io]._error == CARD_NOT_PRESENT) { } else  // do nothing if the card is not present
                 if (mcIOReply._ioCardsShort[io]._error == CARD_NOT_UP) { } else       // do nothing if the card is not up
                 if (mcIOReply._ioCardsShort[io]._error != 0) {
-                    LOG_INFO_MSG("Error occurred reading environmentals from: " << mcIOReply._ioCardsShort[io]._lctn);
+                    LOG_ERROR_MSG("Error reading environmentals from: " << mcIOReply._ioCardsShort[io]._lctn);
                     RasEventImpl noContact(0x00061004);
                     noContact.setDetail(RasEvent::LOCATION, mcIOReply._ioCardsShort[io]._lctn);
                     RasEventHandlerChain::handle(noContact);
@@ -497,7 +495,7 @@ HealthCheck::threadStart()
                     for(unsigned iod = 0 ; iod < mcIOReply._ioCardsShort[io]._dcas.size() ; iod++) {
                         if(isThreadStopping() == true) return 0;
                         if (mcIOReply._ioCardsShort[io]._dcas[iod]._error != 0) {
-                            LOG_INFO_MSG("Error occurred reading environmentals from: " <<  mcIOReply._ioCardsShort[io]._dcas[iod]._lctn);
+                            LOG_ERROR_MSG("Error reading environmentals from: " <<  mcIOReply._ioCardsShort[io]._dcas[iod]._lctn);
                             // put RAS
                             RasEventImpl ras(0x0006100B);
                             ras.setDetail(RasEvent::LOCATION, mcIOReply._ioCardsShort[io]._dcas[iod]._lctn.c_str());
@@ -510,7 +508,6 @@ HealthCheck::threadStart()
                                 if(isThreadStopping() == true) return 0;
                                 if ((mcIOReply._ioCardsShort[io]._dcas[iod]._domains[iodp]._status != 0x90 &&
                                      mcIOReply._ioCardsShort[io]._dcas[iod]._domains[iodp]._status != 0xB0) ||
-                                    mcIOReply._ioCardsShort[io]._dcas[iod]._domains[iodp]._domain < 0 ||
                                     mcIOReply._ioCardsShort[io]._dcas[iod]._domains[iodp]._domain > 9) {
                                     // put RAS
                                     RasEventImpl ras(0x0006100B);
@@ -538,8 +535,7 @@ HealthCheck::threadStart()
                                         BGQDB::putRAS(ras);
                                     }
                                     if (MAXDCACURRENT_I[mcIOReply._ioCardsShort[io]._dcas[iod]._domains[iodp]._domain] != 0.0 &&
-                                        (mcIOReply._ioCardsShort[io]._dcas[iod]._domains[iodp]._current < 0 ||
-                                         mcIOReply._ioCardsShort[io]._dcas[iod]._domains[iodp]._current > MAXDCACURRENT_I[mcIOReply._ioCardsShort[io]._dcas[iod]._domains[iodp]._domain])) {
+                                        mcIOReply._ioCardsShort[io]._dcas[iod]._domains[iodp]._current > MAXDCACURRENT_I[mcIOReply._ioCardsShort[io]._dcas[iod]._domains[iodp]._domain]) {
                                         // put RAS
                                         RasEventImpl ras(0x0006100B);
                                         ras.setDetail(RasEvent::LOCATION, mcIOReply._ioCardsShort[io]._dcas[iod]._lctn.c_str());
@@ -560,12 +556,12 @@ HealthCheck::threadStart()
                                 _skipModules.find( mcIOReply._ioCardsShort[io]._optics[ioo]._lctn ) != _skipModules.end()
                                 );
                         if ( skip ) {
-                            LOG_DEBUG_MSG( "skipping " << mcIOReply._ioCardsShort[io]._optics[ioo]._lctn );
+                            LOG_TRACE_MSG("Skipping health check for " << mcIOReply._ioCardsShort[io]._optics[ioo]._lctn);
                             continue;
                         }
                         if(isThreadStopping() == true) return 0;
                         if (mcIOReply._ioCardsShort[io]._optics[ioo]._error != 0) {
-                            LOG_INFO_MSG("Error occurred reading environmentals from: " <<  mcIOReply._ioCardsShort[io]._optics[ioo]._lctn);
+                            LOG_ERROR_MSG("Error reading environmentals from: " <<  mcIOReply._ioCardsShort[io]._optics[ioo]._lctn);
                             // put RAS
                             RasEventImpl ras(0x0006100D);
                             ras.setDetail(RasEvent::LOCATION, mcIOReply._ioCardsShort[io]._optics[ioo]._lctn.c_str());
@@ -657,7 +653,7 @@ HealthCheck::threadStart()
         server->openTarget(bpOpenRequest, bpOpenReply);
 
         if (bpOpenReply._rc != 0) {
-            LOG_INFO_MSG("unable to open target set in mcServer, for bulk power health check: " << bpOpenReply._rt);
+            LOG_ERROR_MSG("Unable to open target set in mcServer, for bulk power health check: " << bpOpenReply._rt);
         } else {
             // read values from cards
             MCServerMessageSpec::ReadBulkPowerEnvRequest mcBPRequest;
@@ -673,18 +669,19 @@ HealthCheck::threadStart()
             MCServerMessageSpec::CloseTargetReply   bpCloseReply;
             server->closeTarget(bpCloseRequest, bpCloseReply);
 
+            std::set<std::string> modulesToClear;
+
             for(unsigned bp = 0 ; bp < mcBPReply._bpms.size() ; ++bp) {
                 if(isThreadStopping() == true) return 0;
                 if (static_cast<int>(mcBPReply._bpms[bp]._error) == CARD_NOT_PRESENT) { } else  // do nothing if the card is not present
                 if (static_cast<int>(mcBPReply._bpms[bp]._error) == CARD_NOT_UP) { } else       // do nothing if the card is not up
                 if (mcBPReply._bpms[bp]._error != 0) {
-                    LOG_INFO_MSG("Error occurred reading environmentals from: " << mcBPReply._bpms[bp]._location);
+                    LOG_ERROR_MSG("Error reading environmentals from: " << mcBPReply._bpms[bp]._location);
                     RasEventImpl noContact(0x00061003);
                     noContact.setDetail(RasEvent::LOCATION, mcBPReply._bpms[bp]._location.c_str());
                     RasEventHandlerChain::handle(noContact);
                     BGQDB::putRAS(noContact);
                 } else {
-
                     std::map<std::string, int> failedBpms;
 
                     for(unsigned bpm = 0 ; bpm < mcBPReply._bpms[bp]._bpms.size() ; ++bpm) {
@@ -722,7 +719,7 @@ HealthCheck::threadStart()
                                 // clear the failure, so we don't get duplicate RAS events
                                 failedBpms[mcBPReply._bpms[bp]._bpms[bpm]._location.substr(0,6)] = 0;
 
-                                LOG_INFO_MSG("Multiple BPM failures from: " << mcBPReply._bpms[bp]._bpms[bpm]._location.substr(0,6) );
+                                LOG_ERROR_MSG("Multiple BPM failures from: " << mcBPReply._bpms[bp]._bpms[bpm]._location.substr(0,6) );
 
                                 if(mcBPReply._bpms[bp]._bpms[bpm]._location.substr(0,1) == "R") {  //this is a compute rack
                                     for (int card = 0; card < 8; card++) {
@@ -750,7 +747,7 @@ HealthCheck::threadStart()
                                         BGQDB::putRAS(bpmFails, block, job, qualifier, &jobs, &recid);
 
                                         for (unsigned i = 0; i < jobs.size(); ++i) {
-                                            RunJobConnection::instance().Kill(jobs[i], signal, recid);
+                                            RunJobConnection::instance().kill(jobs[i], signal, recid);
                                         }
                                     }
 
@@ -813,6 +810,8 @@ HealthCheck::threadStart()
                              ( mcBPReply._bpms[bp]._bpms[bpm]._statusCml != 0 ) ||
                              ( mcBPReply._bpms[bp]._bpms[bpm]._status5V != 0 ) ||
                              ( (mcBPReply._bpms[bp]._bpms[bpm]._statusFans & 0xF3) != 0 )) {
+
+                            modulesToClear.insert( mcBPReply._bpms[bp]._bpms[bpm]._location );
 
                             stringstream badval;
 
@@ -934,7 +933,7 @@ HealthCheck::threadStart()
 
                             rc = tx.insert(&bpt);
                             if(rc != SQL_SUCCESS) {
-                                LOG_INFO_MSG("Error writing bulk power temperatures: location " << string(bpt._location)  << " return code " << rc);
+                                LOG_ERROR_MSG("Error writing bulk power temperatures: location " << string(bpt._location)  << " return code " << rc);
                             }
 
                         }
@@ -988,9 +987,50 @@ HealthCheck::threadStart()
                             RasEventHandlerChain::handle(ras);
                             BGQDB::putRAS(ras);
                         }
-
                     }
+                }
+            }
 
+            if ( !modulesToClear.empty() ) {
+                const std::string setName( "EnvMonBulkHealthFaults" );
+                MCServerMessageSpec::MakeTargetSetRequest makeRequest( setName, "EnvMonHC",  true);
+                MCServerMessageSpec::MakeTargetSetReply makeReply;
+                LOG_DEBUG_MSG("Clearing BPM faults for " << modulesToClear.size() << " BPMs" );
+                BOOST_FOREACH( const std::string& i, modulesToClear ) {
+                    makeRequest._location.push_back( i );
+                    LOG_DEBUG_MSG( i );
+                }
+                server->makeTargetSet( makeRequest, makeReply );
+
+                const MCServerMessageSpec::OpenTargetRequest openRequest( setName, "EnvMonHC", MCServerMessageSpec::WUAR, true);
+                MCServerMessageSpec::OpenTargetReply openReply;
+                server->openTarget( openRequest, openReply );
+
+                MCServerMessageSpec::BpmCommandRequest bpmRequest;
+                bpmRequest._set = setName;
+                bpmRequest._operation = MCServerMessageSpec::BPM_ClearFaults;
+                MCServerMessageSpec::BpmCommandReply bpmReply;
+                server->bpmCommand( bpmRequest, bpmReply );
+                if ( bpmReply._rc ) {
+                    LOG_WARN_MSG("Could not clear BPM faults: " << bpmReply._rt );
+                } else {
+                    LOG_DEBUG_MSG("Cleared BPM faults");
+                }
+
+                const MCServerMessageSpec::CloseTargetRequest closeRequest(
+                        MCServerAPIHelpers::createCloseRequest( openRequest, openReply )
+                        );
+                MCServerMessageSpec::CloseTargetReply closeReply;
+                server->closeTarget( closeRequest, closeReply );
+                if ( closeReply._rc ) {
+                    LOG_WARN_MSG("Could not close target set " << setName << ": " << closeReply._rt);
+                }
+
+                const MCServerMessageSpec::DeleteTargetSetRequest deleteRequest( setName, "EnvMonHC" );
+                MCServerMessageSpec::DeleteTargetSetReply deleteReply;
+                server->deleteTargetSet( deleteRequest, deleteReply );
+                if ( deleteReply._rc ) {
+                    LOG_WARN_MSG("Could not delete target set " << setName << ": " << deleteReply._rt);
                 }
             }
         }
@@ -1005,7 +1045,7 @@ HealthCheck::threadStart()
             server->openTarget(ncOpenRequest, ncOpenReply);
 
             if (ncOpenReply._rc != 0) {
-                LOG_INFO_MSG("unable to open target set in mcServer: " << ncOpenReply._rt);
+                LOG_ERROR_MSG("Unable to open target set in mcServer: " << ncOpenReply._rt);
             } else {
                 // read values from cards
                 MCServerMessageSpec::ReadNodeCardEnvRequest mcNCRequest;
@@ -1024,7 +1064,7 @@ HealthCheck::threadStart()
                     if (mcNCReply._nodeCardsShort[nc]._error == CARD_NOT_PRESENT) { } else  // do nothing if the card is not present
                     if (mcNCReply._nodeCardsShort[nc]._error == CARD_NOT_UP) { } else  // do nothing if the card is not up
                     if (mcNCReply._nodeCardsShort[nc]._error != 0) {
-                        LOG_INFO_MSG("Error occurred reading environmentals from: " << mcNCReply._nodeCardsShort[nc]._lctn);
+                        LOG_ERROR_MSG("Error reading environmentals from: " << mcNCReply._nodeCardsShort[nc]._lctn);
                         RasEventImpl noContact(0x00061001);
                         noContact.setDetail(RasEvent::LOCATION, mcNCReply._nodeCardsShort[nc]._lctn.c_str());
                         RasEventHandlerChain::handle(noContact);
@@ -1167,7 +1207,7 @@ HealthCheck::threadStart()
                         for(unsigned ncd = 0 ; ncd < mcNCReply._nodeCardsShort[nc]._dcas.size() ; ncd++) {
                             if(isThreadStopping() == true) return 0;
                             if (mcNCReply._nodeCardsShort[nc]._dcas[ncd]._error != 0) {
-                                LOG_INFO_MSG("Error occurred reading environmentals from: " <<  mcNCReply._nodeCardsShort[nc]._dcas[ncd]._lctn);
+                                LOG_ERROR_MSG("Error reading environmentals from: " <<  mcNCReply._nodeCardsShort[nc]._dcas[ncd]._lctn);
                                 // put RAS
                                 RasEventImpl ras(0x0006100C);
                                 ras.setDetail(RasEvent::LOCATION, mcNCReply._nodeCardsShort[nc]._dcas[ncd]._lctn.c_str());
@@ -1180,7 +1220,6 @@ HealthCheck::threadStart()
                                     if(isThreadStopping() == true) return 0;
                                     if ((mcNCReply._nodeCardsShort[nc]._dcas[ncd]._domains[ncdp]._status != 0x90 &&
                                          mcNCReply._nodeCardsShort[nc]._dcas[ncd]._domains[ncdp]._status != 0xB0) ||
-                                        mcNCReply._nodeCardsShort[nc]._dcas[ncd]._domains[ncdp]._domain < 0 ||
                                         mcNCReply._nodeCardsShort[nc]._dcas[ncd]._domains[ncdp]._domain > 9) {
                                         // put RAS
                                         RasEventImpl ras(0x0006100C);
@@ -1208,8 +1247,7 @@ HealthCheck::threadStart()
                                             BGQDB::putRAS(ras);
                                         }
                                         if (MAXDCACURRENT_N[mcNCReply._nodeCardsShort[nc]._dcas[ncd]._domains[ncdp]._domain] != 0.0 &&
-                                            (mcNCReply._nodeCardsShort[nc]._dcas[ncd]._domains[ncdp]._current < 0 ||
-                                             mcNCReply._nodeCardsShort[nc]._dcas[ncd]._domains[ncdp]._current > MAXDCACURRENT_N[mcNCReply._nodeCardsShort[nc]._dcas[ncd]._domains[ncdp]._domain])) {
+                                            mcNCReply._nodeCardsShort[nc]._dcas[ncd]._domains[ncdp]._current > MAXDCACURRENT_N[mcNCReply._nodeCardsShort[nc]._dcas[ncd]._domains[ncdp]._domain]) {
                                             // put RAS
                                             RasEventImpl ras(0x0006100C);
                                             ras.setDetail(RasEvent::LOCATION, mcNCReply._nodeCardsShort[nc]._dcas[ncd]._lctn.c_str());
@@ -1229,12 +1267,12 @@ HealthCheck::threadStart()
                                     _skipModules.find( mcNCReply._nodeCardsShort[nc]._optics[nco]._lctn ) != _skipModules.end()
                                     );
                             if ( skip ) {
-                                LOG_DEBUG_MSG( "skipping " << mcNCReply._nodeCardsShort[nc]._optics[nco]._lctn );
+                                LOG_DEBUG_MSG("Skipping health check for " << mcNCReply._nodeCardsShort[nc]._optics[nco]._lctn );
                                 continue;
                             }
                             if(isThreadStopping() == true) return 0;
                             if (mcNCReply._nodeCardsShort[nc]._optics[nco]._error != 0) {
-                                LOG_INFO_MSG("Error occurred reading environmentals from: " << mcNCReply._nodeCardsShort[nc]._optics[nco]._lctn);
+                                LOG_ERROR_MSG("Error reading environmentals from: " << mcNCReply._nodeCardsShort[nc]._optics[nco]._lctn);
                                 // put RAS
                                 RasEventImpl ras(0x0006100E);
                                 ras.setDetail(RasEvent::LOCATION, mcNCReply._nodeCardsShort[nc]._optics[nco]._lctn.c_str());
@@ -1341,7 +1379,7 @@ HealthCheck::threadStart()
         server->openTarget(cmOpenRequest, cmOpenReply);
 
         if (cmOpenReply._rc != 0) {
-            LOG_INFO_MSG("unable to open target set in mcServer, for coolant monitor health check: " << cmOpenReply._rt);
+            LOG_ERROR_MSG("Unable to open target set in mcServer, for coolant monitor health check: " << cmOpenReply._rt);
         } else {
             // read values from cards
 
@@ -1362,7 +1400,7 @@ HealthCheck::threadStart()
                 if (mcCMReply._coolMons[cmon]._error == CARD_NOT_PRESENT) { } else  // do nothing if the card is not present
                 if (mcCMReply._coolMons[cmon]._error == CARD_NOT_UP) { } else  // do nothing if the card is not up
                 if (mcCMReply._coolMons[cmon]._error != 0) {
-                    LOG_INFO_MSG("Error occurred reading environmentals from: " << mcCMReply._coolMons[cmon]._lctn);
+                    LOG_ERROR_MSG("Error reading environmentals from: " << mcCMReply._coolMons[cmon]._lctn);
                     RasEventImpl ras(0x00061005);
                     ras.setDetail(RasEvent::LOCATION, mcCMReply._coolMons[cmon]._lctn.c_str());
                     RasEventHandlerChain::handle(ras);
@@ -1519,6 +1557,7 @@ HealthCheck::threadStart()
             }     //  end loop through coolant monitors
         }
 
+        LOG_DEBUG_MSG("Full system health check completed.");
         // **********  END OF HEALTH CHECK LOOP ***************
 
         if (mode != bgq::utility::performance::Mode::Value::None) {
@@ -1550,7 +1589,7 @@ HealthCheck::getBadWireMasks()
             BGQDB::DBConnectionPool::Instance().getConnection()
             );
     if ( !database ) {
-        LOG_WARN_MSG( "could not get database connection" );
+        LOG_ERROR_MSG("Could not get database connection." );
         return;
     }
 
@@ -1567,7 +1606,7 @@ HealthCheck::getBadWireMasks()
                 )
             );
     if ( !cables ) {
-        LOG_DEBUG_MSG( "no cables with bad wire masks" );
+        LOG_DEBUG_MSG("No cables with bad wire masks.");
         return;
     }
 
@@ -1577,7 +1616,7 @@ HealthCheck::getBadWireMasks()
         const std::string toPort( columns[ BGQDB::DBTCable::TOLOCATION_COL ].getString() );
         const int64_t mask( columns[ BGQDB::DBTCable::BADWIREMASK_COL ].getInt64() );
 
-        LOG_DEBUG_MSG( 
+        LOG_DEBUG_MSG(
                 fromPort << " --> " << toPort << " mask: " <<
                 std::setw(8) << std::setfill('0') << std::hex << "0x" << mask
                 );

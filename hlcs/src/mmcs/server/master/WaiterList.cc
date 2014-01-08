@@ -33,11 +33,25 @@ namespace mmcs {
 namespace server {
 namespace master {
 
+WaiterList::WaiterList() :
+    _list_lock(),
+    _list(),
+    _used_binids_lock(),
+    _used_binids()
+{
+
+}
+
 void
 WaiterList::init()
 {
+    // circular buffer capacity is the number of configured subnets plus
+    // an arbitrary number
     std::string dont_care = "not_init";
-    _used_binids_cap = common::Properties::getSubnets(dont_care) + 10;
+    _used_binids.resize(
+            common::Properties::getSubnets(dont_care) + 10
+            );
+    LOG_DEBUG_MSG( "Setting used binary ID capacity to " << _used_binids.capacity() );
 }
 
 void
@@ -46,27 +60,32 @@ WaiterList::setStat(
         Status stat
         )
 {
-    PthreadMutexHolder _holder(&_list_lock);
+    boost::mutex::scoped_lock lock( _list_lock );
     LOG_DEBUG_MSG(alias << " status set to " << stat);
     _list[alias] = stat;
 }
 
 WaiterList::Status
 WaiterList::getStat(
-        const std::string& alias)
+        const std::string& alias
+        ) const
 {
-    PthreadMutexHolder _holder(&_list_lock);
-    return _list[alias];
+    boost::mutex::scoped_lock lock( _list_lock );
+    const std::map<std::string, Status>::const_iterator result = _list.find( alias );
+    if ( result == _list.end() ) {
+        throw std::invalid_argument( alias + " not found" );
+    }
+
+    return result->second;
 }
 
 std::string
-WaiterList::getStopped()
+WaiterList::getStopped() const
 {
-    PthreadMutexHolder _holder(&_list_lock);
-    for(std::map<std::string, Status>::const_iterator li = _list.begin();
-            li != _list.end(); ++li) {
-        if(li->second == STOPPED) {
-            return li->first;
+    boost::mutex::scoped_lock lock( _list_lock );
+    for (std::map<std::string, Status>::const_iterator i = _list.begin(); i != _list.end(); ++i) {
+        if (i->second == STOPPED) {
+            return i->first;
         }
     }
 
@@ -74,13 +93,12 @@ WaiterList::getStopped()
 }
 
 std::string
-WaiterList::getErrored()
+WaiterList::getErrored() const
 {
-    PthreadMutexHolder _holder(&_list_lock);
-    for(std::map<std::string, Status>::const_iterator li = _list.begin();
-            li != _list.end(); ++li) {
-        if(li->second == ERROR) {
-            return li->first;
+    boost::mutex::scoped_lock lock( _list_lock );
+    for (std::map<std::string, Status>::const_iterator i = _list.begin(); i != _list.end(); ++i) {
+        if (i->second == ERROR) {
+            return i->first;
         }
     }
 
@@ -92,28 +110,25 @@ WaiterList::addBinId(
         const std::string& binid
         )
 {
-    _used_binids.push_back(binid);
-    if(_used_binids.size() > _used_binids_cap) {
-        _used_binids.pop_back();
-    }
-}
+    boost::mutex::scoped_lock lock( _used_binids_lock );
+    LOG_DEBUG_MSG( "Adding used binary ID " << binid );
 
-void
-WaiterList::removeBinId(
-        const std::string& binid
-        )
-{
-    _used_binids.erase(std::remove(_used_binids.begin(), _used_binids.end(), binid));
+    _used_binids.push_back(binid);
 }
 
 bool
 WaiterList::findBinId(
         const std::string& binid
-        )
+        ) const
 {
-    if(std::find(_used_binids.begin(), _used_binids.end(), binid) != _used_binids.end())
-        return true;
-    else return false;
+    boost::mutex::scoped_lock lock( _used_binids_lock );
+    LOG_DEBUG_MSG( "Finding used binary ID " << binid );
+
+    return std::find(
+            _used_binids.begin(),
+            _used_binids.end(),
+            binid
+            ) != _used_binids.end();
 }
 
 } } } // namespace mmcs::server::master

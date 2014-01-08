@@ -21,87 +21,137 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "DBStatics.h"
 
 #include <db/include/api/BGQDBlib.h>
-
-#include <db/include/api/tableapi/TxObject.h>
+#include <db/include/api/tableapi/DBConnectionPool.h>
+#include <db/include/api/tableapi/gensrc/DBTIonode.h>
+#include <db/include/api/tableapi/gensrc/DBTIodrawer.h>
+#include <db/include/api/tableapi/gensrc/DBTNode.h>
+#include <db/include/api/tableapi/gensrc/DBTNodecard.h>
+#include <db/include/api/tableapi/gensrc/DBTServicecard.h>
+#include <db/include/api/cxxdb/cxxdb.h>
 
 #include <utility/include/Log.h>
 
+#include <boost/assign/list_of.hpp>
 #include <boost/foreach.hpp>
-
 
 LOG_DECLARE_FILE( "mmcs.server" );
 
-
 namespace mmcs {
 namespace server {
+namespace DBStatics {
 
+std::string
+hardwareStatusToString(
+        const Status status
+        )
+{
+    typedef std::map<Status, std::string> hardwareStatusMap;
+    static const hardwareStatusMap hardwareStatusStrings = boost::assign::map_list_of
+        (AVAILABLE, "AVAILABLE")
+        (ERROR, "ERROR")
+        (MISSING, "MISSING")
+        (SOFTWARE_FAILURE, "SOFTWARE FAILURE")
+        ;
+    return hardwareStatusStrings.at(status);
+}
 
-void
-DBStatics::setLocationStatus(
-         const std::vector<std::string>& locations, 
-         mmcs_client::CommandReply& reply, 
-         const Status status, 
-         const Type type
+bool
+setLocationStatus(
+         const std::vector<std::string>& locations,
+         const Status status,
+         const bgq::util::Location::Type type
          )
  {
-    LOG_DEBUG_MSG(__FUNCTION__);
-    if(locations.empty()) {
-        LOG_INFO_MSG("no locations to update");
-        return;
+    if (locations.empty()) {
+        LOG_WARN_MSG("No locations to update.");
+        return false;
     }
 
-    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
-    if (!tx.getConnection()) {
-        LOG_INFO_MSG("unable to connect to database");
-        reply << mmcs_client::FAIL << "Unable to connect to database." << mmcs_client::DONE;
-        return;
+    const cxxdb::ConnectionPtr connection( BGQDB::DBConnectionPool::instance().getConnection() );
+    if ( !connection ) {
+        LOG_ERROR_MSG("Unable to connect to database.");
+        return false;
     }
 
     std::ostringstream sqlstrm;
-    sqlstrm << "update ";
-    if(type == DBStatics::ION) {
-        sqlstrm << "BGQIONODE";
-    } else if(type == DBStatics::CN) {
-        sqlstrm << "BGQNODE";
-    } else if(type == DBStatics::IOCARD) {
-        sqlstrm << "BGQIODRAWER";
-    } else if(type == COMPUTECARD) {
-        sqlstrm << "BGQNODECARD";
-    } else if(type == SERVICECARD) {
-        sqlstrm << "BGQSERVICECARD";
+    sqlstrm << "UPDATE ";
+    switch ( type ) {
+        case bgq::util::Location::ComputeCardOnIoBoard:
+            sqlstrm << BGQDB::DBTIonode().getTableName();
+            break;
+        case bgq::util::Location::ComputeCardOnNodeBoard:
+            sqlstrm << BGQDB::DBTNode().getTableName();
+            break;
+        case bgq::util::Location::IoBoardOnComputeRack:
+        case bgq::util::Location::IoBoardOnIoRack:
+            sqlstrm << BGQDB::DBTIodrawer().getTableName();
+            break;
+        case bgq::util::Location::NodeBoard:
+            sqlstrm << BGQDB::DBTNodecard().getTableName();
+            break;
+        case bgq::util::Location::ServiceCard:
+            sqlstrm << BGQDB::DBTServicecard().getTableName();
+            break;
+        default:
+            throw std::invalid_argument(
+                    boost::lexical_cast<std::string>(type) + " is not a supported location type"
+                    );
     }
 
-    if(status == DBStatics::AVAILABLE) {
-        sqlstrm << " set status='A' where ";
-    } else if(status == DBStatics::ERROR)
-        sqlstrm << " set status='E' where ";
-    else if(status == DBStatics::MISSING)
-        sqlstrm << " set status='M' where ";
+    if (status == AVAILABLE) {
+        sqlstrm << " set status='" << BGQDB::HARDWARE_AVAILABLE << "'";
+    } else if(status == ERROR) {
+        sqlstrm << " set status='" << BGQDB::HARDWARE_ERROR << "'";
+    } else if(status == MISSING) {
+        sqlstrm << " set status='" << BGQDB::HARDWARE_MISSING << "'";
+    } else if(status == SOFTWARE_FAILURE) {
+        sqlstrm << " set status='" << BGQDB::SOFTWARE_FAILURE << "'";
+    }
+    sqlstrm << " WHERE LOCATION=?";
 
-    bool first = true;
-    BOOST_FOREACH(const std::string& node, locations) {
-        if(first) {
-            sqlstrm << "LOCATION=\'" << node;
-            first = false;
+    LOG_TRACE_MSG( "Preparing " << sqlstrm.str() );
+    const cxxdb::UpdateStatementPtr update(
+            connection->prepareUpdate(
+                sqlstrm.str(),
+                boost::assign::list_of("LOCATION")
+                )
+            );
+    if ( !update ) {
+        LOG_ERROR_MSG( "Could not prepare update." );
+        return false;
+    }
+
+    cxxdb::Transaction tx( *connection );
+
+    unsigned txcount(0);
+    BOOST_FOREACH( const std::string& i, locations ) {
+        update->parameters()[ "LOCATION" ].set( i );
+        try {
+            update->execute();
+            LOG_TRACE_MSG( "Updated " << i << " to status " << hardwareStatusToString(status) );
+        } catch ( const std::exception& e ) {
+            LOG_ERROR_MSG( e.what() );
+            return false;
         }
-        else sqlstrm << "\' OR LOCATION=\'" << node;
+        if ( txcount++ == 25 ) {
+            // 25 rows per transaction is an arbitrary choice
+            connection->commit();
+            txcount = 0;
+        }
+    }
+    if ( txcount ) {
+        connection->commit();
     }
 
-    sqlstrm << "\'";
+    LOG_INFO_MSG(
+            "Updated " << locations.size() << " node" << (locations.size() == 1 ? "" : "s") <<
+            " to status " << hardwareStatusToString(status)
+            );
 
-    LOG_DEBUG_MSG("Sending query \"" << sqlstrm.str() << "\" to database.");
-    SQLRETURN sqlresult = tx.execStmt( sqlstrm.str().c_str());
-    if(sqlresult != 0) {
-        std::ostringstream errstrm;
-        errstrm << "SQL query to set node states to " << status << " failed.";
-        LOG_ERROR_MSG(errstrm.str());
-        reply << mmcs_client::FAIL << errstrm.str() << mmcs_client::DONE;
-        return;
-    }
+    return true;
 }
 
-} } // namespace mmcs::server
+} } } // namespace mmcs::server::DBStatics

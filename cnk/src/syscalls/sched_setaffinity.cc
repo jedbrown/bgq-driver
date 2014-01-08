@@ -30,9 +30,9 @@ Lock_Atomic_t runtimeMmuTableUpdate;
 uint64_t sc_sched_setaffinity(SYSCALL_FCN_ARGS)
 {
     int  tid   = (int)r3;
-    unsigned int cpusetsize = (unsigned int)r4;
+    size_t cpusetsize = (size_t)r4;
     cpu_set_t *cpu_mask = (cpu_set_t*)r5;
-    unsigned int AffinityMaskSize = ((CONFIG_MAX_APP_CORES * CONFIG_HWTHREADS_PER_CORE)+7)/8;
+    
     // Get the Kthread associated with this tid. Function will return a NULL if this is an invalid tid
     // printf("set_affinity tid from app: %d\n",pid_or_tid);
     KThread_t* targetKThread = GetKThreadFromTid(tid);
@@ -49,19 +49,15 @@ uint64_t sc_sched_setaffinity(SYSCALL_FCN_ARGS)
         //printf("setaffinity EINVAL due to target set to the process leader thread id\n");
         return CNK_RC_FAILURE(EINVAL); // A process leader thread is not a valid target
     }
-    if (cpusetsize < AffinityMaskSize)
-    {
-        //printf("setaffinity EINVAL due to cpusetsize= %d and kernel mask size=%d\n",cpusetsize, AffinityMaskSize);
-        return CNK_RC_FAILURE(EINVAL); // No cpu bit was set in the mask
-    }
+    
     // Determine the requested target hardware thread
     uint32_t hwthread_index;
-    for (hwthread_index=0; hwthread_index < AffinityMaskSize*8; hwthread_index++)
+    for (hwthread_index=0; hwthread_index < CONFIG_MAX_APP_THREADS; hwthread_index++)
     {
-        if (CPU_ISSET(hwthread_index, cpu_mask)) break;
+        if (CPU_ISSET_S(hwthread_index, cpusetsize, cpu_mask)) break;
     }
     // Did we find a valid bit on in the cpu mask?
-    if (hwthread_index/8 >= AffinityMaskSize)
+    if (hwthread_index >= CONFIG_MAX_APP_THREADS)
     {
         //printf("setaffinity EINVAL due to request to set hwthread %d greater than mask size.\n",hwthread_index);
         return CNK_RC_FAILURE(EINVAL); // No cpu bit was set in the mask

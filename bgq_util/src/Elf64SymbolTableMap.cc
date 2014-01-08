@@ -154,7 +154,7 @@ int Elf64SymbolTableMap::includeSymbolInformation(const string& sElfFileName)
    }
 
    // Close pipe.
-   int iRc = pclose(pPipe);
+   int iRc = fclose(pPipe);
    if (iRc != 0)
    {
       cout << "! " << now.curTimeString(true) << " Elf64SymbolTableMap::includeSymbolInformation failed - pclose failed with rc = " << iRc << flush << endl;

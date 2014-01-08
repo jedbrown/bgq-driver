@@ -49,22 +49,19 @@ class Args
     bgq::utility::Properties::ConstPtr _props;
 
 public:
-    //! \brief ctor
-    //! \param argc standard c-style argument count
-    //! \param argv standard c-style argument vector
-    //! \param usage function pointer to usage function
-    //! \param help function pointer to help function
-    //! \param valargs vector of options to be followed with
-    //  parameters.  Ex: "--foo bar".  "--foo" is in the valargs vector.
-    //! \param singles Vector of arguments that don't take a parameter
+    /*!
+     * \brief ctor
+     *
+     * - A single "*" entry in valargs indicates the option is positional.
+     * - A single "**" entry in valargs indicates unlimited positional options.
+     */
     Args(
-            const unsigned int argc,
-            const char** argv,
-            void (*usage)(),
-            void (*help)(),
-            std::vector<std::string>& valargs,
-            const std::vector<std::string>& singles,
-            const bool ignore_defaults = false
+            const int argc,                         //!< [in] standard c-style argument count
+            const char** argv,                      //!< [in] standard c-style argument vector
+            void (*usage)(),                        //!< [in] function pointer to usage function
+            void (*help)(),                         //!< [in] function pointer to help function
+            std::vector<std::string>& valargs,      //!< [in] options to be followed with parameters
+            const std::vector<std::string>& singles //!< [in] arguments that don't take a parameter
         );
 
     const bgq::utility::Properties::ConstPtr& get_props() const { return _props; }

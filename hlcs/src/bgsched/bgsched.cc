@@ -28,6 +28,7 @@
 
 #include "bgsched/utility.h"
 
+#include <db/include/api/tableapi/DBConnectionPool.h>
 #include <db/include/api/BGQDBlib.h>
 #include <db/include/api/ioUsage.h>
 
@@ -131,4 +132,31 @@ const char* driver = bgq::utility::DriverName;
 
 } // namespace version
 
+namespace connection_pool {
+
+unsigned
+getAvailable()
+{
+    return BGQDB::DBConnectionPool::instance().availableCount();
+}
+
+unsigned
+getUsed()
+{
+    return BGQDB::DBConnectionPool::instance().usedCount();
+}
+
+unsigned
+getMax()
+{
+    return BGQDB::DBConnectionPool::instance().maxCount();
+}
+
+unsigned
+getConfigured()
+{
+    return BGQDB::DBConnectionPool::instance().size();
+}
+
+} // connection_pool
 } // namespace bgsched

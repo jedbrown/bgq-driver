@@ -63,8 +63,16 @@ private:
     void execute( 
             const cios::Connection::SocketPtr& socket
             );
+    
+    void executeImpl( 
+            const cios::Connection::SocketPtr& socket
+            );
 
     void updateClient(
+            bool result
+            );
+    
+    void updateClientImpl(
             bool result
             );
 

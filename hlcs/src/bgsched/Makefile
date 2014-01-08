@@ -34,7 +34,7 @@ SUBDIRS = allocator realtime core runjob samples docs
 lib_base=bgsched
 lib_major_vers=1
 lib_minor_vers=2
-lib_minor_rev=0
+lib_minor_rev=1
 
 lib_short=lib$(lib_base).so
 lib_vers=$(lib_short).$(lib_major_vers)
@@ -133,10 +133,10 @@ default: all samples
 samples: install
 	$(MAKE) -C $@
 
-all: $(lib_short) test_core test_main test_filter realtime_client test_kill_job reboot_io_node
+all: $(lib_short) test_core test_main test_filter realtime_client test_kill_job reboot_io_node test_query_block_action test_deallocate
 
 $(lib_full): $(lib_objs)
-	$(CXX) -shared $(CXXFLAGS) $(LDFLAGS) $^ -o $@
+	$(CXX) -shared $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 $(lib_vers): $(lib_full)
 	ln -sf $< $@
@@ -153,7 +153,7 @@ uninstall:
 clean:
 	$(RM) *.o *.o_64 $(lib_short) $(lib_vers) $(lib_full)
 	$(RM) *.d
-	$(RM) test_main realtime_client test_filter test_core plugin_tester test_kill_job
+	$(RM) test_main realtime_client test_filter test_core plugin_tester test_kill_job test_query_block_action test_deallocate
 	@for i in $(SUBDIRS); do $(MAKE) -C $$i $@; done
 
 distclean: clean
@@ -176,6 +176,12 @@ realtime_client: realtime_client.o $(lib_short)
 	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/extlib/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/db/lib -o $@ $^
 
 test_core: test_core.o $(lib_short)
+	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^
+
+test_query_block_action: test_query_block_action.o $(lib_short)
+	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^
+
+test_deallocate: test_deallocate.o $(lib_short)
 	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^
 
 reboot_io_node: reboot_io_node.o $(lib_short)

@@ -40,6 +40,8 @@
 #include <list>
 #include <string>
 
+class MasterConnection;
+
 //! \brief Class for the concrete implementation.
 //! The base class provides the definition common
 //! to the master and the agent.  This provides the
@@ -47,65 +49,54 @@
 class Agent : public AgentBase
 {
 private:
-    //! \brief Socket for listening for master to connect back.
-    CxxSockets::ListeningSocketPtr _masterListener;
-
-    //! \brief When the master goes down, buffer messages here
-    std::list<MsgBasePtr> _buffered_messages;
-
     BGMasterAgentProtocolSpec::JoinRequest build_join_request(
             const std::string& hostaddr,
-            int servname) const;
+            int servname
+            ) const;
 
-protected:
-    //! \brief Send messages buffered while the master connection is down.
+    void doEndAgentRequest(
+            const int signal
+            );
+
     void sendBuffered();
 
-    //! \brief Received a start request from the master, act on it.
     void processStartRequest(const BGMasterAgentProtocolSpec::StartRequest& startreq);
 
-    //! \brief Stop the binary requested by the master.
     void doStopRequest(const BGMasterAgentProtocolSpec::StopRequest& stopreq);
-
-    //! \brief Master wants the agent to die.
-    //! \param signal The signal that was sent to bgagent, to propagate to all the running binaries..
-    void doEndAgentRequest(const int signal);
 
 public:
     //! \brief Constructor.
-    //! This will initiate the registration process
-    Agent();
+    Agent(
+            const bgq::utility::Properties::ConstPtr& props
+         );
 
-    //! \brief Set the pairs used to connect to bgmaster_server.
-    void set_pairs(const bgq::utility::PortConfiguration::Pairs& pairs) { _portpairs = pairs; }
+    //! \brief initiate the registration process
+    void start(
+            const bgq::utility::PortConfiguration::Pairs& pairs //!< [in]
+            );
 
     //! \brief Set list of users this agent can be.
     void set_users(const std::string& users) { _user_list = users; }
 
-    //! \brief Start the main bgagent process.
-    void startup(const bgq::utility::Properties::ConstPtr& props);
-
     //! \brief set up communication with BGMaster.
-    void join();
-
-    //! \brief Poll the socket for new messages from bgmaster
-    void waitMessages();
+    int join(
+            const bgq::utility::PortConfiguration::Pair& port   //!< [in]
+            );
 
     //! \brief Figure out what to do with a new request from the master.
     void processRequest();
-
-    //! \brief Clean this up and die
-    void cleanup(const int signal);
 
     //! \brief Get the host name
     const CxxSockets::Host& get_hostname() const { return _hostname; }
 
 private:
+    friend class MasterConnection;
     boost::mutex _uid_mutex;
     std::string _user_list;
-    bgq::utility::PortConfiguration::Pairs _portpairs;
     const CxxSockets::Host _hostname;
-    bgq::utility::Properties::ConstPtr _properties;
+    const bgq::utility::Properties::ConstPtr _properties;
+    boost::mutex _buffered_messages_mutex;
+    std::list<MsgBasePtr> _buffered_messages; //! \brief When the master goes down, buffer messages here
 };
 
 #endif

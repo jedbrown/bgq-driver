@@ -22,31 +22,22 @@
 /* end_generated_IBM_copyright_prolog                               */
 
 #include "BinaryController.h"
-#include "Ids.h"
 
+#include "types.h"
 #include "../lib/exceptions.h"
 
 #include <utility/include/Exec.h>
 #include <utility/include/Log.h>
 
-#include <boost/date_time.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/scope_exit.hpp>
-#include <boost/tokenizer.hpp>
 
-#include <sstream>
-#include <string>
-
-#include <errno.h>
 #include <pwd.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 LOG_DECLARE_FILE("master");
-
-#define LOGGING_DECLARE_ID_MDC(value) \
-    log4cxx::MDC _location_mdc( "ID", std::string("{") + boost::lexical_cast<std::string>(value) + "} " );
 
 void
 switchBackUID(
@@ -82,6 +73,81 @@ switchBackUID(
     LOG_DEBUG_MSG("Current uid: " << geteuid() << " Current gid: " << getegid());
 }
 
+BinaryController::BinaryController() : 
+    _status(UNINITIALIZED), 
+    _exit_status(0), 
+    _binary_bin_path(""),
+    _alias_name(""), 
+    _stop_requested(false)
+{
+    _start_time = boost::posix_time::second_clock::local_time();
+    _user = "";
+}
+
+BinaryController::BinaryController(
+        const BinaryId& id, 
+        const std::string& bin_path, 
+        const std::string& alias,
+        const std::string& user, 
+        int exit_status,
+        Status stat,
+        const std::string& start_time
+        ) :
+    _status(stat),
+    _exit_status(exit_status),
+    _binary_bin_path(bin_path), 
+    _alias_name(alias), 
+    _host(), 
+    _binid(id), 
+    _user(user)
+{
+    _stop_requested = false;
+    if (start_time.length() == 0)
+        _start_time = boost::posix_time::second_clock::local_time();
+    else
+        _start_time = boost::posix_time::time_from_string(start_time);
+    _stop_requested = false;
+}
+
+BinaryController::BinaryController(
+        const std::string& path, 
+        const std::string& arguments, 
+        const std::string& logfile,
+        const std::string& alias, 
+        const CxxSockets::Host& host, 
+        const std::string& user
+        )
+{
+    _binary_bin_path = path + (arguments.empty() ? "" : " " + arguments);
+    _logfile = logfile;
+    _alias_name = alias;
+    _host = host;
+    _start_time = boost::posix_time::second_clock::local_time();
+    _stop_requested = false;
+    _user = user;
+    _exit_status = 0;
+}
+
+BinaryController::BinaryController(
+        const std::string& id, 
+        const std::string& bin_path, 
+        const std::string& alias,
+        const std::string& user, 
+        int exit_status, 
+        int stat, 
+        const std::string& start_time
+        ) :
+    _binary_bin_path(bin_path), 
+    _alias_name(alias), 
+    _user(user)
+{
+    _exit_status = exit_status;
+    _status = (Status)stat;
+    _binid = id;
+    _stop_requested = false;
+    _start_time = boost::posix_time::time_from_string(start_time);
+}
+
 BinaryId
 BinaryController::startBinary(
         const std::string& user_list,
@@ -101,8 +167,8 @@ BinaryController::startBinary(
     } else {
         if (user_list.find(_user) == std::string::npos) {
             std::ostringstream err;
-            err << "Invalid user id " << _user << " specified.";
-            LOG_ERROR_MSG(err.str());
+            err << "Invalid user id " << _user << " specified";
+            LOG_ERROR_MSG(err.str() << ".");
             _exec_error = err.str();
             BinaryId badid(-1, "");
             return badid;
@@ -168,7 +234,7 @@ isRunning(
 }
 
 int
-BinaryController::stopBinary(
+BinaryController::stop(
         int signal
         )
 {
@@ -233,14 +299,14 @@ BinaryController::stopBinary(
 	        if (signal == 0) {
 	            signal = SIGTERM;
 		    LOG_DEBUG_MSG("Killing " << pid << " with a SIGTERM");
-		    int killrc = ::kill(pid, SIGTERM);
+		    const int killrc = ::kill(pid, SIGTERM);
 		    if (killrc < 0) {
 		        LOG_WARN_MSG("Failed to kill " << pid << " with SIGTERM.");
 		    }
 		    signalSent = true;
 		} else {
 		    LOG_DEBUG_MSG("Killing " << pid << " with signal " << signal);
-		    int killrc = ::kill(pid, signal);
+		    const int killrc = ::kill(pid, signal);
 		    if (killrc < 0) {
 		        LOG_WARN_MSG("Failed to kill " << pid << " with signal " << signal);
 		    }
@@ -254,7 +320,7 @@ BinaryController::stopBinary(
             if (td.total_seconds() > 300) { // Five minute timeout.
                 LOG_INFO_MSG("Initial signal failed. Killing " << pid << " with a SIGKILL.");
                 signal = SIGKILL;
-                int killrc = ::kill(pid, SIGKILL);
+                const int killrc = ::kill(pid, SIGKILL);
                 if (killrc < 0) {
                     LOG_ERROR_MSG("Failed to kill " << pid << " with SIGKILL.");
                 }
@@ -268,5 +334,6 @@ BinaryController::stopBinary(
             }
         }
     }
+
     return signal;
 }

@@ -45,9 +45,8 @@ class CreateBlock: public common::AbstractCommand
 {
 public:
     CreateBlock(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "create_block <bgqblock.xml> [ options ]";}
+      : AbstractCommand(name,description,attributes) { _usage = "create_block <bgqblock.xml> [ options ]";}
     static  CreateBlock* build();  // factory method
-    static  std::string cmdname() { return "create_block"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,

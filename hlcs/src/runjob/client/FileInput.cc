@@ -48,8 +48,8 @@ FileInput::FileInput(
 
 void
 FileInput::read(
-        uint32_t rank,
-        size_t length,
+        const uint32_t rank,
+        const size_t length,
         const Uci& location
         )
 {
@@ -59,7 +59,7 @@ FileInput::read(
     const ssize_t rc = ::read( _fd, buf.get(), length );
     const int error = errno;
 
-    if ( rc  ==  0 ) {
+    if ( rc == 0 ) {
         // done reading
         LOG_TRACE_MSG( "eof on stdin" );
 

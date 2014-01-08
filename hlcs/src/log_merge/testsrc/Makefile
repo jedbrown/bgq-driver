@@ -72,7 +72,7 @@ endef
 
 
 %: %.o
-	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
+	$(CXX) $^ $(LOADLIBES) $(LDLIBS) -o $@ $(LDFLAGS)
 
 
 generated_files = *.o *.d *.result $(testers)

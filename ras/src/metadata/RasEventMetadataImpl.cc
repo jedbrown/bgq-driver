@@ -44,7 +44,7 @@ RasEventMetadataImpl(const string& msgId,
   // parse message for labels (vars)
   string var_start = "$(";
   string var_end = ")";
-  unsigned cur = 0;
+  size_t cur = 0;
   string::size_type ve_index = 0;
   string::size_type vs_index = _message.find(var_start, cur);
   while (vs_index != string::npos) { 

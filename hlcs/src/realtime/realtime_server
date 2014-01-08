@@ -44,23 +44,70 @@
 
 exec="/bgsys/drivers/ppcfloor/sbin/bg_realtime_server"
 prog=$(basename $exec)
+prog2=$prog"97"
+prog3=$prog"101"
 
 [ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
 
 lockfile=/var/lock/subsys/$prog
 
 start() {
-    echo -n $"Starting $prog: "
-    daemon $DAEMON_ARGS $exec $REALTIME_SERVER_ARGS
-    retval=$?
-    echo
-    [ $retval -eq 0 ] && touch $lockfile
-    return $retval
+    # Start daemon.
+    if [ ! -e $lockfile ] ; then
+        echo -n $"Starting $prog: "
+        daemon $DAEMON_ARGS $exec $REALTIME_SERVER_ARGS
+        retval=$?
+        echo
+        [ $retval -eq 0 ] && touch $lockfile
+        return $retval
+    else
+        echo $"Lockfile $lockfile for $prog found. bg_realtime_server is already running or was terminated improperly!"
+        return 0
+    fi
 }
 
 stop() {
-    echo -n $"Stopping $prog: "
-    killproc $prog
+    # Determine which of the realtime servers is active.
+     tempProgToKill=$prog
+
+    # Check for the db2 10.1 version of the realtime server.
+    __pids_var_run "$prog3" "$pid_file"
+    RC=$?
+    if [ -z "$pid" ]; then
+            if [ -z "$pid_file" ]; then
+                    pid="$(__pids_pidof "$prog3")"
+            fi
+    fi
+    if [ -n "$pid" ] ; then
+        # The db2 10.1 version of the realtime server is active.
+        ##echo $"$prog - $prog3 is active"
+        tempProgToKill=$prog3
+    else
+        # The db2 10.1 version of the realtime server is not active.
+        ##echo $"$prog - $prog3 is not active"
+        # Check for the db2 9.7 version of the realtime server.
+        pid_file=
+        __pids_var_run "$prog2" "$pid_file"
+        RC=$?
+        if [ -z "$pid" ]; then
+                if [ -z "$pid_file" ]; then
+                        pid="$(__pids_pidof "$prog2")"
+                fi
+        fi
+        if [ -n "$pid" ] ; then
+            # The db2 9.7 version of the realtime server is active.
+            ##echo $"$prog - $prog2 is active"
+            tempProgToKill=$prog2
+        ##else
+        ##    # The db2 9.7 version of the realtime server is not active.
+        ##    echo $"$prog - $prog2 is not active"
+        fi
+    fi
+    echo $"$prog - going to kill $tempProgToKill"
+
+    # Actually kill the appropriate realtime server.
+    echo -n $"Stopping $tempProgToKill: "
+    killproc $tempProgToKill
     retval=$?
     echo
     [ $retval -eq 0 ] && rm -f $lockfile
@@ -80,7 +127,46 @@ case "$1" in
         restart
         ;;
     status)
-        status $prog
+        # Determine which of the realtime servers is active.
+        pid= 
+        pid_file= 
+        tempProgToGetStatusFor=$prog
+        # Check for the db2 10.1 version of the realtime server.
+        __pids_var_run "$prog3" "$pid_file"
+        RC=$?
+        if [ -z "$pid" ]; then
+                if [ -z "$pid_file" ]; then
+                        pid="$(__pids_pidof "$prog3")"
+                fi
+        fi
+        if [ -n "$pid" ] ; then
+            # The db2 10.1 version of the realtime server is active.
+            ##echo $"$prog - $prog3 is active"
+            tempProgToGetStatusFor=$prog3
+        else
+            # The db2 10.1 version of the realtime server is not active.
+            ###echo $"$prog - $prog3 is not active"
+            # Check for the db2 9.7 version of the realtime server.
+            pid_file=
+            __pids_var_run "$prog2" "$pid_file"
+            RC=$?
+            if [ -z "$pid" ]; then
+                    if [ -z "$pid_file" ]; then
+                            pid="$(__pids_pidof "$prog2")"
+                    fi
+            fi
+            if [ -n "$pid" ] ; then
+                # The db2 9.7 version of the realtime server is active.
+                ##echo $"$prog - $prog2 is active"
+                tempProgToGetStatusFor=$prog2
+            ##else
+            ##    # The db2 9.7 version of the realtime server is not active.
+            ##    echo $"$prog - $prog2 is not active"
+            fi
+        fi
+        # Actually check the status of this realtime server.
+        echo $"$prog - going to check the status of $tempProgToGetStatusFor"
+        status $tempProgToGetStatusFor
         ;;
     try-restart|condrestart)
         if status $prog >/dev/null ; then

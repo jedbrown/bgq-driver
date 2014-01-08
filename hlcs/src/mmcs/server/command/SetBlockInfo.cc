@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "SetBlockInfo.h"
 
 #include <db/include/api/BGQDBlib.h>
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 SetBlockInfo*
 SetBlockInfo::build()
@@ -43,7 +39,7 @@ SetBlockInfo::build()
     commandAttributes.requiresConnection(false);       // does not require  mc_server connections
     commandAttributes.requiresTarget(false);           // does not require a BlockControllerTarget object
     commandAttributes.mmcsServerCommand(true);
-    commandAttributes.mmcsConsoleCommand(false);
+    commandAttributes.bgConsoleCommand(false);
     commandAttributes.helpCategory(common::ADMIN);             // 'help admin'  will include this command's summary
     Attributes::AuthPair blockupdate(hlcs::security::Object::Block, hlcs::security::Action::Update);
     commandAttributes.addAuthPair(blockupdate);
@@ -51,26 +47,31 @@ SetBlockInfo::build()
 }
 
 void
-SetBlockInfo::execute(deque<string> args,
-                       mmcs_client::CommandReply& reply,
-                       common::ConsoleController* pController,
-                       BlockControllerTarget* pTarget) {
+SetBlockInfo::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        common::ConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
+{
     std::vector<std::string>* validnames = 0;
     return execute(args, reply, pController, pTarget, validnames);
 }
 
 void
-SetBlockInfo::execute(deque<string> args,
-                     mmcs_client::CommandReply& reply,
-                     common::ConsoleController* pController,
-                     BlockControllerTarget* pTarget,
-                     std::vector<std::string>* validnames)
+SetBlockInfo::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        common::ConsoleController* pController,
+        BlockControllerTarget* pTarget,
+        std::vector<std::string>* validnames
+)
 {
     BGQDB::STATUS result;
     BGQDB::BlockInfo bInfo;
 
     if (args.size() < 3) {
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         return;
     }
 
@@ -94,7 +95,7 @@ SetBlockInfo::execute(deque<string> args,
         }
         strcpy(bInfo.bootOptions, args[3].c_str());
     } else {
-        strcpy(bInfo.bootOptions, " ");
+        strcpy(bInfo.bootOptions, "\0");
     }
 
     if (args.size() == 5) {
@@ -107,48 +108,46 @@ SetBlockInfo::execute(deque<string> args,
     } else if (args.size() < 5) {
         strcpy(bInfo.options, " ");
     } else {
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         return;
     }
 
     result = BGQDB::setBlockInfo(args[0], bInfo);
     switch (result) {
-    case BGQDB::OK:
-        reply << mmcs_client::OK << mmcs_client::DONE;
-        break;
-    case BGQDB::INVALID_ID:
-        reply << mmcs_client::FAIL << "invalid block id " << args[0] << mmcs_client::DONE;
-        break;
-    case BGQDB::INVALID_ARG:
-        reply << mmcs_client::FAIL << "invalid argument" << mmcs_client::DONE;
-        break;
-    case BGQDB::CONNECTION_ERROR:
-        reply << mmcs_client::FAIL << "unable to connect to database" << mmcs_client::DONE;
-        break;
-    case BGQDB::DB_ERROR:
-        reply << mmcs_client::FAIL << "database failure or invalid node config specified" << mmcs_client::DONE;
-        break;
-    case BGQDB::NOT_FOUND:
-        reply << mmcs_client::FAIL << "block " << args[0] << " not found or not in valid state" << mmcs_client::DONE;
-        break;
-    case BGQDB::FAILED:
-        reply << mmcs_client::FAIL << "invalid block state" << mmcs_client::DONE;
-        break;
-    default:
-        reply << mmcs_client::FAIL << "unexpected return code from BGQDB::setBlockBootInfo : " << result << mmcs_client::DONE;
-        break;
+        case BGQDB::OK:
+            reply << mmcs_client::OK << mmcs_client::DONE;
+            break;
+        case BGQDB::INVALID_ID:
+            reply << mmcs_client::FAIL << "Invalid block id " << args[0] << mmcs_client::DONE;
+            break;
+        case BGQDB::INVALID_ARG:
+            reply << mmcs_client::FAIL << "Invalid argument" << mmcs_client::DONE;
+            break;
+        case BGQDB::CONNECTION_ERROR:
+            reply << mmcs_client::FAIL << "Unable to connect to database" << mmcs_client::DONE;
+            break;
+        case BGQDB::DB_ERROR:
+            reply << mmcs_client::FAIL << "Database failure or invalid node config specified" << mmcs_client::DONE;
+            break;
+        case BGQDB::NOT_FOUND:
+            reply << mmcs_client::FAIL << "Block " << args[0] << " not found or not in valid status" << mmcs_client::DONE;
+            break;
+        case BGQDB::FAILED:
+            reply << mmcs_client::FAIL << "Invalid block status" << mmcs_client::DONE;
+            break;
+        default:
+            reply << mmcs_client::FAIL << "Unexpected return code from BGQDB::setBlockInfo : " << result << mmcs_client::DONE;
+            break;
     }
 }
 
 void
-SetBlockInfo::help(deque<string> args,
-                      mmcs_client::CommandReply& reply)
+SetBlockInfo::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
-    reply << mmcs_client::OK << description()
-          << ";Set boot details for a block."
-           << mmcs_client::DONE;
+    reply << mmcs_client::OK << description() << ";Set boot details for a block." << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

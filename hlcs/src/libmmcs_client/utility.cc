@@ -21,19 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "utility.h"
 
 #include <string>
 
 #include <errno.h>
 
-
 using std::string;
 
-
 namespace mmcs_client {
-
 
 static void sendCommand(
         ConsolePortClient& client,
@@ -46,8 +42,7 @@ static void sendCommand(
         try {
             client.sendMessage( cmdStringCopy );
         } catch ( ConsolePort::Error &e ) {
-            switch ( e.errcode )
-            {
+            switch ( e.errcode ) {
                 case EINTR:
                 case EAGAIN:
                     continue;
@@ -71,16 +66,11 @@ static void receiveReply(
     bool   eom = false;
     reply.reset();
 
-    do
-    {
+    do {
         try {
-
             nullTerm = client.receiveMessage( replyString ); // nullTerm == true if '\0' received
-
         } catch( ConsolePort::Error &e ) {
-
-            switch (e.errcode)
-            {
+            switch (e.errcode) {
                 case EINTR:
                 case EAGAIN:
                     continue;
@@ -91,7 +81,7 @@ static void receiveReply(
         }
 
         if (replyString.length() == 0) {
-            reply << ABORT << "internal error: null reply from server" << DONE;
+            reply << ABORT << "Internal error: null reply from server" << DONE;
             return;
         }
 
@@ -103,8 +93,7 @@ static void receiveReply(
         }
 
         replyString.clear();
-        // exit loop if
-        // a null terminator was received
+        // exit loop if a null terminator was received
         eom = nullTerm;
 
     } while (!eom);
@@ -124,6 +113,5 @@ void sendCommandReceiveReply(
     sendCommand( client, cmdString );
     receiveReply( client, reply );
 }
-
 
 } // namespace mmcs_client

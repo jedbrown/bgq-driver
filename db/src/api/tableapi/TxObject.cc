@@ -24,6 +24,7 @@
 #include "tableapi/TxObject.h"
 
 #include "tableapi/gensrc/bgqtableapi.h"
+#include "tableapi/DBConnectionPool.h"
 #include "tableapi/utilcli.h"
 
 #include <utility/include/Log.h>

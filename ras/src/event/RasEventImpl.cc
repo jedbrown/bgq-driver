@@ -116,9 +116,9 @@ RasEventImpl::RasEventImpl(uint32_t msgId,
   _time.tv_sec = time_secs;
   _time.tv_usec = time_usecs;
   // set the size to the smaller of the two vectors
-  int size = keys.size();
+  size_t size = keys.size();
   if (values.size() < keys.size()) size = values.size();
-  for (int i = 0; i < size; ++i)
+  for (size_t i = 0; i < size; ++i)
     _details[ keys[i] ] = values[i];
   ostringstream ss;
   ss << hex << setw(8) << uppercase << setfill('0') << msgId;

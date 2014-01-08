@@ -24,7 +24,6 @@
 #ifndef MMCS_SERVER_RACK_BITSET_H
 #define MMCS_SERVER_RACK_BITSET_H
 
-
 #include <bitset>
 
 #include <string>
@@ -32,13 +31,11 @@
 
 #include <stddef.h>
 
-
 namespace mmcs {
 namespace server {
 
-
-// Every node in a rack (or io drawer) is represented by a bit in a bit vector
-// implemented as a standard bitset.  The encode/decode methods implement
+// Every node in a rack (or I/O drawer) is represented by a bit in a bit vector
+// implemented as a standard bitset. The encode/decode methods implement
 // the algorithms for mapping locations to specific bits.
 
 // Compute constants
@@ -46,14 +43,15 @@ const unsigned int NODES_PER_RACK = 1024;
 const unsigned int NODES_PER_BOARD = 32;
 const unsigned int NODES_PER_MIDPLANE = 512;
 
-// IO constants
-// Note: IO boards may be drawers in a compute rack
+// I/O constants
+// Note: I/O boards may be drawers in a compute rack
 // Note: Likely only to have 12 boards/rack, but use 16 anyway.
 const unsigned int IO_NODES_PER_RACK = 128;
 const unsigned int IO_NODES_PER_BOARD = 8;
 const unsigned int IO_BOARDS_PER_RACK = 16;
 
-class RackBitsetBase {
+class RackBitsetBase
+{
 protected:
     std::bitset<NODES_PER_RACK> _nodes; // 1024 nodes in a rack
     std::string _rack_loc;
@@ -63,21 +61,21 @@ protected:
     virtual void decode(unsigned bit, unsigned& midplane, unsigned& board, unsigned& node) const = 0;
 public:
     virtual ~RackBitsetBase() = 0;
-    //! \brief set the rack location for the bitset
+    //! \brief Set the rack location for the bitset
     //! \param rack The location of the rack (e.g. R00 or Q00)
     void SetRackLoc(const std::string& rack) { _rack_loc = rack; }
-    //! \brief get the rack location string
+    //! \brief Get the rack location string
     //! \returns rack location string
     std::string GetRackLoc() { return _rack_loc; }
-    //! \brief set the flag for the specified location
+    //! \brief Set the flag for the specified location
     //! \param location Node location string (e.g. R00-M0-N00-J00 or Q00-I0-N00-J00) to set
     void Set(const std::string& location);
-    //! \brief reset the flag (zero) for the specified location
+    //! \brief Reset the flag (zero) for the specified location
     //! \param location Node location string (e.g. R00-M0-N00-J00 or Q00-I0-N00-J00) to reset
     void Reset(const std::string& location);
-    //! \brief clear all bits in bitset
+    //! \brief Clear all bits in bitset
     void Reset() { _nodes.reset(); }
-    //! \brief return whether the flag is set for the specified location
+    //! \brief Return whether the flag is set for the specified location
     //! \param location Node location string (e.g. R00-M0-N00-J00 or Q00-I0-N00-J00) to check
     bool Flagged(const std::string& location) const;
     //! \brief The number of bits that are set
@@ -85,8 +83,9 @@ public:
     size_t BitsSet() const { return _nodes.count(); }
 };
 
-//! \brief flag for each node in a rack
-class RackBitset : public RackBitsetBase {
+//! \brief Flag for each node in a rack
+class RackBitset : public RackBitsetBase
+{
     std::string find_location(unsigned bit) const;
     int encode(const std::string& location) const;
     void decode(unsigned bit, unsigned& midplane, unsigned& board, unsigned& node) const;
@@ -103,7 +102,8 @@ public:
     void FindUnset(std::vector<std::string>& locations) const;
 };
 
-class IOBoardBitset : public RackBitsetBase {
+class IOBoardBitset : public RackBitsetBase
+{
     std::string find_location(unsigned bit) const;
     int encode(const std::string& location) const;
     void decode(unsigned bit, unsigned& midplane, unsigned& board, unsigned& node) const;

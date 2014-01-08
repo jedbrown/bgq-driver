@@ -124,7 +124,7 @@ MMCSCommand_gen_block::execute(deque<string> args,
     deque<string> blockArgs;
 
     if (args.size() < 4) {
-        reply << mmcs_client::FAIL << "not enough args " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "not enough args " << _usage << mmcs_client::DONE;
         return;
     }
 
@@ -160,32 +160,32 @@ MMCSCommand_gen_block::execute(deque<string> args,
     try {
         cNodes = boost::lexical_cast<unsigned>( args[2] );
     } catch ( const boost::bad_lexical_cast& e ) {
-        reply << mmcs_client::FAIL << "Number of compute nodes must be a valid number;" << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Number of compute nodes must be a valid number;" << _usage << mmcs_client::DONE;
         return;
     }
 
     // validate compute node count
     if ((args.size() == 4) && (cNodes != 512) && (cNodes != 256) && (cNodes != 128) && (cNodes != 64) && (cNodes != 32)) {
-        reply << mmcs_client::FAIL << "Number of compute nodes must be 512, 256, 128, 64, or 32;Unless compute node is provided;" << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Number of compute nodes must be 512, 256, 128, 64, or 32;Unless compute node is provided;" << _usage << mmcs_client::DONE;
         return;
     }
 
     // validate compute node count
     if ((args.size() > 4) && (cNodes != 16) && (cNodes != 8) && (cNodes != 4) && (cNodes != 2) && (cNodes != 1)) {
-        reply << mmcs_client::FAIL << "Number of compute nodes must be 1, 2, 4, 8, or 16 if compute node is provided;" << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Number of compute nodes must be 1, 2, 4, 8, or 16 if compute node is provided;" << _usage << mmcs_client::DONE;
         return;
     }
 
     // get starting node board
     unsigned startNb = 0;
     if ( args[3].size() < 3 ) {
-        reply << mmcs_client::FAIL << "Node Board must be one of N00 through N15;" << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Node Board must be one of N00 through N15;" << _usage << mmcs_client::DONE;
         return;
     }
     try {
         startNb = boost::lexical_cast<unsigned>( args[3].substr(1,2) );
     } catch ( const boost::bad_lexical_cast& e ) {
-        reply << mmcs_client::FAIL << "Node Board must be one of N00 through N15;" << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Node Board must be one of N00 through N15;" << _usage << mmcs_client::DONE;
         return;
     }
 
@@ -193,18 +193,18 @@ MMCSCommand_gen_block::execute(deque<string> args,
     if (cNodes < 32) {
         unsigned startNode = 0;
         if ( args[4].size() < 3 ) {
-            reply << mmcs_client::FAIL << "Node must be one of J00 through J31;" << usage << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Node must be one of J00 through J31;" << _usage << mmcs_client::DONE;
             return;
         }
         try {
             startNode = boost::lexical_cast<unsigned>( args[4].substr(1,2) );
         } catch ( const boost::bad_lexical_cast& e ) {
-            reply << mmcs_client::FAIL << "Node must be one of J00 through J31;" << usage << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Node must be one of J00 through J31;" << _usage << mmcs_client::DONE;
             return;
         }
 
         if ((startNode % cNodes) != 0) {
-            reply << mmcs_client::FAIL << "Invalid starting node for block size;" << usage << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Invalid starting node for block size;" << _usage << mmcs_client::DONE;
             return;
         }
 
@@ -257,7 +257,7 @@ MMCSCommand_gen_block::execute(deque<string> args,
     else ((lite::ConsoleController*)(pController))->genCNBlockController(args, blockName, os, reply);
 
     if(reply.str() == "args?")
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
 }
 
 void
@@ -300,7 +300,7 @@ MMCSCommand_gen_io_block::execute(
     deque<string> blockArgs;
 
     if (args.size() < 4) {
-        reply << mmcs_client::FAIL << "not enough args;" << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "not enough args;" << _usage << mmcs_client::DONE;
         return;
     }
 
@@ -309,32 +309,32 @@ MMCSCommand_gen_io_block::execute(
     try {
         ioNodes = boost::lexical_cast<unsigned>( args[2] );
     } catch ( const boost::bad_lexical_cast& e ) {
-        reply << mmcs_client::FAIL << "Number of io nodes must be from 1 to 8;" << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Number of io nodes must be from 1 to 8;" << _usage << mmcs_client::DONE;
         return;
     }
 
     // validate node count
     if ((ioNodes < 1) || (ioNodes > 8)) {
-        reply << mmcs_client::FAIL << "Number of io nodes must be from 1 to 8;" << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Number of io nodes must be from 1 to 8;" << _usage << mmcs_client::DONE;
         return;
     }
 
     // get starting I/O node
     unsigned startNode = 0;
     if ( args[3].size() < 3 ) {
-        reply << mmcs_client::FAIL << "I/O node must be between J00 and J07;" << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "I/O node must be between J00 and J07;" << _usage << mmcs_client::DONE;
         return;
     }
     try {
         startNode = boost::lexical_cast<unsigned>( args[3].substr(1,2) );
     } catch ( const boost::bad_lexical_cast& e ) {
-        reply << mmcs_client::FAIL << "I/O node must be between J00 and J07;" << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "I/O node must be between J00 and J07;" << _usage << mmcs_client::DONE;
         return;
     }
 
     // validate starting I/O node
     if ( (startNode + ioNodes) > 8 ) {
-        reply << mmcs_client::FAIL << "Number of io nodes and starting node goes beyond 8;" << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Number of io nodes and starting node goes beyond 8;" << _usage << mmcs_client::DONE;
         return;
     }
 
@@ -382,7 +382,7 @@ MMCSCommand_gen_io_block::execute(
     else((lite::ConsoleController*)(pController))->genIOBlockController(args, blockName, os, reply);
 
     if(reply.str() == "args?")
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
 }
 
 void
@@ -421,7 +421,7 @@ MMCSCommand_dump_ras::execute(
 {
 
     if (args.size() < 1) {
-        reply << mmcs_client::FAIL << "not enough args: " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "not enough args: " << _usage << mmcs_client::DONE;
         return;
     }
 
@@ -479,7 +479,7 @@ MMCSCommand_show_envs::execute(
         )
 {
     if (args.size() < 2) {
-        reply << mmcs_client::FAIL << "not enough args: " << usage << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "not enough args: " << _usage << mmcs_client::DONE;
         return;
     }
 
@@ -1263,7 +1263,7 @@ MMCSCommand_wait_for_terminate::execute(
         try {
             timeout = boost::lexical_cast<unsigned>( args[0] );
         } catch ( const boost::bad_lexical_cast& e ) {
-            reply << mmcs_client::FAIL << "Invalid timeout value specified;" << usage << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Invalid timeout value specified;" << _usage << mmcs_client::DONE;
             return;
         }
     }
@@ -1370,7 +1370,7 @@ MMCSCommand_delete_block::execute(deque<string> args,
     BlockPtr pBlock = pController->getBlockHelper()->getBase();	// get selected block
     pBlock->disconnect(args, reply);  // will this work?
 
-    pBlock->delete_block(args, reply); // delete the block
+    pBlock->delete_block(); // delete the block
     lite::ConsoleController* lite = dynamic_cast<lite::ConsoleController*>( pController );
     if ( lite ) {
         lite->setBlockInitialized(false);
@@ -1381,7 +1381,6 @@ void
 MMCSCommand_delete_block::help(deque<string> args,
 			       mmcs_client::CommandReply& reply)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
     reply << mmcs_client::OK << description()
 	  << ";Disconnect the block connections and delete the block"
 	  << mmcs_client::DONE;
@@ -1476,7 +1475,6 @@ MMCSCommand_boot_block::help(deque<string> args,
     // Needs to change for the domain syntax.  uloader option stays, ioload and cnload
     // go in favor of domain syntax.
     // domain={cores=0-1  memory=0-3fff  images=/path/to/image;/path/to/another/image}
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
     reply << mmcs_client::OK << description()
           << ";Initialize, load, and start the block's resources"
           << ";options:"

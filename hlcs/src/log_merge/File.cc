@@ -61,19 +61,37 @@ File::File(
       _has_current_line(false)
 {
     struct stat64 stat_buf;
-    int rc(stat64( _path.file_string().c_str(), &stat_buf ));
+    int rc(stat64(
+#if BOOST_FILESYSTEM_VERSION == 3
+                _path.native().c_str(),
+#else
+                _path.file_string().c_str(),
+#endif
+                &stat_buf ));
 
     if ( -1 == rc ) {
         char strerror_buf[128];
 
         BOOST_THROW_EXCEPTION( runtime_error( string() +
-                "failed to open '" + _path.file_string() + "', error is '" + strerror_r( errno, strerror_buf, sizeof ( strerror_buf ) ) + "'"
+                "failed to open '" +
+#if BOOST_FILESYSTEM_VERSION == 3
+                _path.native()
+#else
+                _path.file_string()
+#endif
+                + "', error is '" + strerror_r( errno, strerror_buf, sizeof ( strerror_buf ) ) + "'"
             ) );
     }
 
     if ( ! S_ISREG( stat_buf.st_mode ) ) {
         BOOST_THROW_EXCEPTION( runtime_error( string() +
-                "file '" + _path.file_string() + "' is not a regular file"
+                "file '" +
+#if BOOST_FILESYSTEM_VERSION == 3
+                _path.native()
+#else
+                _path.file_string()
+#endif
+                + "' is not a regular file"
             ) );
     }
 

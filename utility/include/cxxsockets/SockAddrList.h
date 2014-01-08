@@ -20,15 +20,18 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+
 /*!
  * \file utility/include/cxxsockets/SockAddrList.h
  */
+
 #ifndef CXXSOCKET_SOCK_ADDR_LIST_H
 #define CXXSOCKET_SOCK_ADDR_LIST_H
 
 #include <utility/include/cxxsockets/SockAddr.h>
 
 #include <deque>
+#include <string>
 #include <vector>
 
 namespace CxxSockets {
@@ -36,8 +39,6 @@ namespace CxxSockets {
 //! \brief List of SockAddrs
 class SockAddrList
 {
-    //! \brief double-ended-queue of SockAddrs
-    std::deque<SockAddr> _sockque;
 public:
     typedef std::deque<SockAddr>::iterator iterator;
     typedef std::deque<SockAddr>::const_iterator const_iterator;
@@ -47,31 +48,22 @@ public:
 
     //! \brief Constructor
     SockAddrList(
-            const unsigned short family,                    //!< [in] Address family e.g. AF_INET, AF_INET6, AF_UNSPEC
-            const std::string& nodename = std::string(),    //!< [in] hostname or IP address string
-            const std::string& service = std::string()      //!< [in] port or service name from /etc/services
-            );
-
-    //! \brief Constructor
-    SockAddrList(
-            const unsigned short family,                      //!< [in] Address family e.g. AF_INET, AF_INET6, AF_UNSPEC
-            const std::vector<std::string>& nodenames,        //!< [in] vector of hostnames or IP address strings
-            const std::string& service = std::string()        //!< [in] port or service name from /etc/services
+            const unsigned short family,    //!< [in] Address family e.g. AF_INET, AF_INET6, AF_UNSPEC
+            const std::string& nodename,    //!< [in] hostname or IP address string
+            const std::string& service      //!< [in] port or service name from /etc/services
             );
 
     //! forwarded operations
     size_t size() const { return _sockque.size(); }
-    iterator begin() { return _sockque.begin(); }                                        
-    iterator end() { return _sockque.end(); }                                            
-    const_iterator begin() const { return _sockque.begin(); }                            
-    const_iterator end() const { return _sockque.end(); }        
+    iterator begin() { return _sockque.begin(); }
+    iterator end() { return _sockque.end(); }
+    const_iterator begin() const { return _sockque.begin(); }
+    const_iterator end() const { return _sockque.end(); }
     void push_back(const SockAddr& sa) { _sockque.push_back(sa); }
-#if 0
-    SockAddr& front() { return _sockque.front(); }
-    void pop_back() { _sockque.pop_back(); }
-    void push_front(const SockAddr& sa) { _sockque.push_front(sa); }
-    iterator insert ( iterator position, SockAddr& sa ) { return _sockque.insert(position, sa); }
-#endif
+
+private:
+    //! \brief Double-ended-queue of SockAddrs
+    std::deque<SockAddr> _sockque;
 };
 
 }

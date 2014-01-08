@@ -28,6 +28,7 @@
 #include "api/genblock.h"
 #include "api/GenBlockParams.h"
 
+#include "api/tableapi/DBConnectionPool.h"
 #include "api/tableapi/TxObject.h"
 
 #include "api/tableapi/gensrc/bgqtableapi.h"

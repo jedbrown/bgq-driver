@@ -38,7 +38,7 @@ SchedUtil::createBlockName(
         const string& prefix
         )
 {
-    char chartime[32], *res;
+    char chartime[32];
     string myPrefix, stime, ftime, day;
     timeval tof;
     int randVal;
@@ -65,7 +65,7 @@ SchedUtil::createBlockName(
 
     gettimeofday(&tof, NULL);
 
-    res = ctime_r((const time_t*)(&tof.tv_sec),chartime);
+    ctime_r((const time_t*)(&tof.tv_sec),chartime);
     stime = chartime;
     day = stime.substr(8,2);
     if (day[0] == ' ') {

@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "CommandProcessor.h"
 
 #include "ExternalCommand.h"
@@ -29,13 +28,19 @@
 #include "common/AbstractCommand.h"
 #include "common/ConsoleController.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace console {
 
+CommandProcessor::CommandProcessor(
+        MMCSCommandMap* mmcsCommands
+        ) :
+    MMCSCommandProcessor(mmcsCommands)
+{
+    logFailures(false);
+    _bg_console = true;
+}
 
 procstat
 CommandProcessor::invokeCommand(
@@ -49,41 +54,30 @@ CommandProcessor::invokeCommand(
         )
 {
     // execute the command
-    if (status == 0)
-    {
-        try
-        {
+    if (status == 0) {
+        try {
             status = CMD_EXECUTED;
             pCmd->execute(cmdStr, reply, pController, pTarget);
-        }
-        catch (const exception &e)
-        {
+        } catch (const exception &e) {
             reply << mmcs_client::ABORT << e.what() << mmcs_client::DONE;
         }
-    }
-    else if (status == CMD_EXTERNAL) {
+    } else if (status == CMD_EXTERNAL) {
         static_cast<ExternalCommand*>(pCmd)->execute(cmdStr, reply, pController, pTarget);
-    }
-    else if (status == CMD_NOT_FOUND)
-    {
+    } else if (status == CMD_NOT_FOUND) {
         // if the command is not available locally,
         // try to forward the command to the mmcs server
-        if (pController->getConsolePort() != NULL)
-        {
+        if (pController->getConsolePort() != NULL) {
             status = execute("mmcs_server_cmd", cmdStr, reply, pController);
-            if (status == CMD_NOT_FOUND) // prevent infinite loop
-            {
+            if (status == CMD_NOT_FOUND) { // prevent infinite loop
                 status = CMD_INVALID;
                 reply << mmcs_client::FAIL << "Internal failure: mmcs_server_cmd is missing" << mmcs_client::DONE;
             }
-        }
-        else
-            reply << mmcs_client::FAIL << "lost connection to mmcs_server;use mmcs_server_connect to reconnect" << mmcs_client::DONE;
+        } else
+            reply << mmcs_client::FAIL << "Lost connection to mmcs_server, use mmcs_server_connect to reconnect" << mmcs_client::DONE;
     }
 
     return status;
 }
-
 
 #ifdef WITH_DB
 
@@ -97,6 +91,5 @@ CommandProcessor::executeExternal(deque<string>& cmdStr,
 }
 
 #endif
-
 
 } } // namespace mmcs::console

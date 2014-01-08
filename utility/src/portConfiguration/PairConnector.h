@@ -87,7 +87,7 @@ private:
      */
     void _resolveHandler(
             const boost::system::error_code& error,                       //!< [in]
-            boost::asio::ip::tcp::resolver::iterator& resolver_iterator,  //!< [in]
+            boost::asio::ip::tcp::resolver::iterator resolver_iterator,  //!< [in]
             PortConfiguration::Pairs::const_iterator pair_iterator  //!< [in]
         );
 
@@ -96,7 +96,7 @@ private:
      */
     void _connectHandler(
             const boost::system::error_code& error,                       //!< [in]
-            boost::asio::ip::tcp::resolver::iterator& resolver_iterator,  //!< [in]
+            boost::asio::ip::tcp::resolver::iterator resolver_iterator,  //!< [in]
             PortConfiguration::Pairs::const_iterator pair_iterator  //!< [in]
         );
 

@@ -54,7 +54,7 @@
      <Class name="StartReply" parent="BGMasterAgentReply">
         <Class name="BinaryStatus">
             <DataMember type="text" name="binary_id" comment="ID of binary"/>
-            <DataMember type="uint32" name="exit_status" comment="Exit status of binary"/>
+            <DataMember type="int32" name="exit_status" comment="Exit status of binary"/>
         </Class>
        <DataMember type="BinaryStatus" name="status" comment="Status object"/>
      </Class>
@@ -63,13 +63,13 @@
 <Method name="stop" type="RequestReply" comment="Stop a managed binary message">
      <Class name="StopRequest">
       <DataMember type="text" name="binary_id" comment="binary to stop"/>
-      <DataMember type="uint32" name="signal" comment="initial signal number"/>
+      <DataMember type="int32" name="signal" comment="initial signal number"/>
      </Class>
 
      <Class name="StopReply" parent="BGMasterAgentReply">
         <Class name="BinaryStatus">
             <DataMember type="text" name="binary_id" comment="ID of binary"/>
-            <DataMember type="uint32" name="exit_status" comment="Exit status of the binary if available"/>
+            <DataMember type="int32" name="exit_status" comment="Exit status of the binary if available"/>
         </Class>
        <DataMember type="BinaryStatus" name="status" comment="Status of stopped binary"/>
      </Class>
@@ -100,7 +100,7 @@
             <DataMember type="text" name="status" comment="Status of the binary"/>
         </Class>
        <DataMember type="BinaryStatus" name="status" comment="Status object"/>
-       <DataMember type="uint32" name="exit_status" comment="exit status of binary"/>
+       <DataMember type="int32" name="exit_status" comment="exit status of binary"/>
      </Class>
      <Class name="CompleteReply" parent="BGMasterAgentReply">
      </Class>
@@ -111,7 +111,7 @@
      <Class name="FailedRequest">
         <Class name="BinaryStatus">
             <DataMember type="text" name="binary_id" comment="ID of binary"/>
-            <DataMember type="uint32" name="exit_status" comment="Exit status of binary"/>
+            <DataMember type="int32" name="exit_status" comment="Exit status of binary"/>
         </Class>
        <DataMember type="BinaryStatus" name="status" comment="Status object"/>
      </Class>

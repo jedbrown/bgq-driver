@@ -41,4 +41,11 @@ uint64_t Kernel_SetPowerConsumptionParam(uint64_t param, uint64_t value)
     return CNK_SPI_SYSCALL_2(SETPOWERCONSUMPTIONPARAM, param, value);
 }
 
+__INLINE__
+uint64_t Kernel_ExecEnvmon2Command(uint64_t command)
+{
+    return CNK_SPI_SYSCALL_1(EXECENVMON2COMMAND,
+                             command);
+}
+
 #endif /* _KERNEL_CNK_ENVMON_IMPL_H_ */

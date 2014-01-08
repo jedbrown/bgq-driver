@@ -27,34 +27,33 @@
 
 #include "lib/exceptions.h"
 
-#include <utility/include/cxxsockets/Host.h>
 #include <utility/include/BoolAlpha.h>
 #include <utility/include/Log.h>
 #include <utility/include/LoggingProgramOptions.h>
 #include <utility/include/version.h>
-#include <utility/include/Properties.h>
 
+#include <boost/assign/list_of.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
 #include <boost/scope_exit.hpp>
 
 #include <openssl/conf.h>
 #include <openssl/engine.h>
 
 #include <csignal>
-#include <cerrno>
 
 #include <fcntl.h>
 
 LOG_DECLARE_FILE( "master" );
 
-static int signals[] = { SIGHUP, SIGINT, SIGQUIT, SIGUSR1, SIGTERM, SIGPIPE, SIGXFSZ, SIGABRT,
-                         SIGSEGV, SIGILL, SIGFPE, SIGTERM, SIGBUS };
-static int num_signals = sizeof(signals) / sizeof(signals[0]);
+namespace {
 
-LockFile* lock_file = 0;
+const std::vector<int> signals = boost::assign::list_of(SIGINT)(SIGUSR1)(SIGTERM)(SIGPIPE);
 
 int signal_fd;
+
+}
+
+LockFile* lock_file = 0;
 
 extern "C" void
 bgmaster_server_sighandler(
@@ -90,6 +89,7 @@ setlogging(
     const int openfd = open(logfile.c_str(), O_WRONLY|O_APPEND|O_CREAT,S_IRUSR|S_IWUSR|S_IRGRP);
     if (openfd == -1) {
         LOG_FATAL_MSG( "Error opening log file " << logfile );
+        LOG_FATAL_MSG( strerror(errno) );
         return false;
     }
 
@@ -125,7 +125,7 @@ main(int argc, const char** argv)
         // Create properties and initialize logging
         props = bgq::utility::Properties::create( propertiesOptions.getFilename() );
         bgq::utility::initializeLogging(*props, lpo, "master");
-    } catch(const std::runtime_error& e) {
+    } catch (const std::runtime_error& e) {
         std::cerr << "Error reading configuration file: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     } catch ( const std::exception& e ) {
@@ -173,20 +173,14 @@ main(int argc, const char** argv)
     std::string logdir;
     try {
         logdir = props->getValue("master.server", "logdir");
-    } catch(const std::invalid_argument& e) {
+    } catch (const std::invalid_argument& e) {
         LOG_WARN_MSG( "No log directory found, will use default. Error is: " << e.what() );
     }
-
-    std::ostringstream version;
-    const std::string basename = boost::filesystem::basename( boost::filesystem::path(argv[0]) );
-    version << "Blue Gene/Q " << basename << " " << bgq::utility::DriverName << " (revision " << bgq::utility::Revision << ")";
-    version << " " << __DATE__ << " " << __TIME__;
-    LOG_INFO_MSG( "bgmaster_server " << version.str() << " starting..." );
 
     std::string master_instances = "1";
     try {
         master_instances = props->getValue("master.policy.instances", "bgmaster_server");
-    } catch(const std::invalid_argument& e) {
+    } catch (const std::invalid_argument& e) {
         // Don't care if it isn't there.
     }
 
@@ -212,7 +206,7 @@ main(int argc, const char** argv)
                 delete lock_file;
                 lock_file = 0;
             }
-            exit(0);
+            exit(EXIT_FAILURE);
         }
 
         // Run as background process
@@ -235,7 +229,7 @@ main(int argc, const char** argv)
     signal_fd = signal_descriptors[1];
 
     // Signal handlers
-    for (int i = 0; i < num_signals; i++)
+    for (size_t i = 0; i < signals.size(); ++i)
     {
         struct sigaction action;
         action.sa_sigaction = &bgmaster_server_sighandler;
@@ -249,10 +243,9 @@ main(int argc, const char** argv)
     }
 
     // Construct master controller
-    MasterController master;
-    MasterController::_version_string = version.str();
+    MasterController master( props );
     try {
-        master.startup(props, signal_descriptors[0]);
+        master.startup(signal_descriptors[0]);
     } catch (const exceptions::ConfigError& e) {
         LOG_ERROR_MSG("Invalid configuration file entry: " << e.what());
         std::map<std::string, std::string> details;

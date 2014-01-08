@@ -48,12 +48,9 @@
 
 #include <limits>
 
-
 using mmcs::common::Properties;
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
@@ -75,7 +72,6 @@ Polling::Polling(
 
 Polling::~Polling()
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
 }
 
 void
@@ -100,14 +96,14 @@ Polling::poll(
     }
 
     if ( HardwareBlockList::list_size() ) {
-        LOG_INFO_MSG( this->getDescription() << " Subnet failover in progress. Polling suspended." );
+        LOG_INFO_MSG( this->getDescription() << " Subnet failover in progress, polling suspended." );
         this->wait();
         return;
     }
 
     if ( Properties::getProperty("bypass_envs") == "true" ) {
         // disable polling if a full system boot is in progress
-        LOG_INFO_MSG( this->getDescription() << " suspending polling while full system boot is in progress" );
+        LOG_INFO_MSG( this->getDescription() << " suspending polling while full system boot is in progress." );
         this->wait();
         return;
     }
@@ -121,9 +117,10 @@ Polling::poll(
             );
 
     mc_server->start(
+            this->getDescription(),
             boost::bind(
                 &Polling::connectHandler,
-                this,
+                shared_from_this(),
                 _1,
                 _2,
                 mc_server
@@ -138,42 +135,9 @@ Polling::connectHandler(
         const McServerConnection::Ptr& mc_server
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
     if ( error ) {
         LOG_WARN_MSG( this->getDescription() << ": could not connect: " << message );
         this->wait();
-    }
-
-    const MCServerMessageSpec::ConnectRequest request(
-            boost::lexical_cast<int>(MCServerMessageSpec::VERSION),
-            "EnvMon", // user name
-            boost::asio::ip::host_name()
-            );
-
-    mc_server->send(
-            request.getClassName(),
-            request,
-            boost::bind(
-                &Polling::connectResponseHandler,
-                this,
-                _1,
-                mc_server
-                )
-            );
-}
-
-void
-Polling::connectResponseHandler(
-        std::istream& response,
-        const McServerConnection::Ptr& mc_server
-        )
-{
-    MCServerMessageSpec::ConnectReply reply;
-    reply.read( response );
-    if ( reply._rc ) {
-        LOG_ERROR_MSG( this->getDescription() << ": " << reply._rt );
-        this->wait();
-        return;
     }
 
     this->impl( mc_server );
@@ -220,15 +184,15 @@ Polling::getPollingProperty()
     BOOST_ASSERT( !name.empty() );
 
     if ( Properties::getProperty(name.c_str()).empty() ) {
-        LOG_DEBUG_MSG( "missing " << name << " key" );
+        LOG_DEBUG_MSG( "Missing " << name << " key" );
         return _seconds;
     }
 
     try {
-        return boost::lexical_cast<unsigned>( Properties::getProperty(name.c_str()) );
+        return boost::lexical_cast<unsigned>( Properties::getProperty(name) );
     } catch ( const boost::bad_lexical_cast& e ) {
-        LOG_WARN_MSG( "garbage " << name << " value: " << Properties::getProperty(name.c_str()) );
-        LOG_WARN_MSG( "using default " << _seconds );
+        LOG_WARN_MSG( "Bad " << name << " value: " << Properties::getProperty(name.c_str()) );
+        LOG_WARN_MSG( "Using default of " << _seconds );
         return _seconds;
     }
 }
@@ -255,14 +219,14 @@ Polling::wait()
         // do nothing
     } else {
         _seconds = property;
-        LOG_INFO_MSG( this->getDescription() << " interval changed to " << _seconds << " seconds" );
+        LOG_WARN_MSG(this->getDescription() << " interval changed to " << _seconds << " seconds.");
     }
 
     _timer.expires_from_now(
             // wait for 5 minutes if we are disabled
             boost::posix_time::seconds( _seconds ? _seconds : ENVS_POLLING_PERIOD )
             );
-    LOG_TRACE_MSG( this->getDescription() << " waiting " << _timer.expires_from_now().total_seconds() << " seconds" );
+    LOG_TRACE_MSG(this->getDescription() << " waiting " << _timer.expires_from_now().total_seconds() << " seconds.");
     _timer.async_wait(
             boost::bind(
                 &Polling::poll,
@@ -289,14 +253,13 @@ Polling::closeTarget(
             request,
             boost::bind(
                 &Polling::closeTargetHandler,
-                this,
+                shared_from_this(),
                 _1,
                 set,
                 handle,
                 callback
                 )
             );
-
 }
 
 void
@@ -310,12 +273,20 @@ Polling::closeTargetHandler(
     MCServerMessageSpec::CloseTargetReply reply;
     reply.read( response );
     if ( reply._rc ) {
-        LOG_ERROR_MSG( this->getDescription() << ": could not close target " << set << " with handle " << handle << ": " << reply._rt );
+        LOG_ERROR_MSG(
+                this->getDescription() << ": could not close target " << set << " with handle " <<
+                handle << " (" << reply._rc << ")"
+                );
+        if ( !reply._rt.empty() ) {
+            LOG_ERROR_MSG( this->getDescription() << reply._rt );
+        }
     } else {
-        LOG_TRACE_MSG( "closed target " << set << " with handle " << handle );
+        LOG_TRACE_MSG("Closed target " << set << " with handle " << handle );
     }
 
-    callback();
+    // post callback through I/O service because it may be long running. There's an implicit
+    // strand in the asio SSL service implementation, see boost/asio/ssl/detail/openssl_stream_service.hpp
+    _io_service.post( callback );
 }
 
 } } } // namespace mmcs::server::env

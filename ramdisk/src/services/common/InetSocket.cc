@@ -80,7 +80,7 @@ void
 InetSocket::create(sockaddr *address, socklen_t addrLength, bool reuseAddress)
 {
    // Create the TCP socket.
-   _sd = ::socket(address->sa_family, SOCK_STREAM, 0);
+   _sd = ::socket(address->sa_family, SOCK_STREAM | SOCK_CLOEXEC, 0);
    if (_sd == Closed) {
       SocketError e(errno, "socket() failed");
       LOG_ERROR_MSG("error creating inet socket: " << bgcios::errorString(e.errcode()));

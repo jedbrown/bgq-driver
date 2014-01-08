@@ -37,8 +37,8 @@
 
 
 //! One instance.  Manages all bgagents
-class AgentManager {
-
+class AgentManager
+{
 public:
     AgentManager();
 
@@ -46,12 +46,12 @@ public:
 
     //! \brief set the number of agents we are allowed to have for each host
     //! \param count number of agents
-    void setCount(unsigned count) { _agents_per_host = count; }
+    void setCount(unsigned count);
 
     //! \brief End processing of all agent threads
     //! \param end_binaries Also end all managed binaries
     //! \param signal to use to end binaries
-    void cancel(bool end_binaries, unsigned signal);
+    void cancel(bool end_binaries, int signal);
 
     //! \brief Insert a new agent in the list
     bool addNew(AgentRepPtr agent);

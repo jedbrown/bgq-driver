@@ -58,8 +58,10 @@ LDFLAGS += -lboost_filesystem-mt
 LDFLAGS += -lboost_program_options-mt
 LDFLAGS += -lboost_system-mt
 LDFLAGS += -lboost_unit_test_framework-mt
+LDFLAGS += -lboost_serialization-mt
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/bgq_util/lib -lbgq_util
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/bgq_util/lib
+LDFLAGS += -llog4cxx
 
 TESTERS   = $(patsubst %.cc,%,$(wildcard *.cc))
 

@@ -45,7 +45,7 @@ uninstall:
 
 FILTER = filter
 $(FILTER): $(FILTER).o
-	$(CXX) $(LDFLAGS) -o $@ $^ -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
+	$(CXX) -o $@ $^ -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib $(LDFLAGS)
 
 docs: doxygen.out
 

@@ -86,6 +86,10 @@ public:
             );
 
 private:
+    void __attribute__ ((visibility("hidden"))) writeImpl(
+            const Message::Ptr& msg
+            );
+
     void __attribute__ ((visibility("hidden"))) connectHandler(
             const Callback& callback,
             const boost::system::error_code& error

@@ -21,22 +21,18 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_CONSOLE_COMMAND_REDIRECT_BLOCK_H_
 #define MMCS_CONSOLE_COMMAND_REDIRECT_BLOCK_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace console {
 namespace command {
 
-
 /*!
 ** redirect_block on|off
-** Redirect I/O node output for the selected block to the mmcs console.
+** Redirect I/O node output for the selected block to the bg_console.
 ** Directs subsequent mailbox output back to the socket connection that this command is received on.
 ** Allocating or freeing the block will stop the mailbox redirection.
 */
@@ -44,9 +40,8 @@ class RedirectBlock : public common::AbstractCommand
 {
 public:
     RedirectBlock(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "redirect_block on|off [stdout|stderr]"; }
+      : AbstractCommand(name,description,attributes) { _usage = "redirect_block on|off [stdout|stderr]"; }
     static  RedirectBlock* build(); // factory method
-    static  std::string cmdname() { return "redirect_block"; }
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -55,7 +50,6 @@ public:
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };
-
 
 } } } // namespace mmcs::console::command
 

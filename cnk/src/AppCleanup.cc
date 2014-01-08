@@ -53,15 +53,6 @@ void  __NORETURN App_ThreadExit( int status, KThread_t *kthread )
     // Cleanup watchpoints that may have been activated
     toolControl.cleanupThreadWatchpoints(kthread);
 
-    // clean up and free the thread.
-    // Reset all blocking indicators in the current kthread state
-    Sched_Unblock(kthread, (kthread->State & ~SCHED_STATE_SUSPEND));
-    // Set the RESET blocking indicator, needed to get thread counts right
-    Sched_Block(kthread, SCHED_STATE_RESET);
-    // Now free the kthread, preserving only the SUSPEND bit
-    // We can free it with a simple assignment, but after that we can't touch it.
-    kthread->State = (kthread->State & SCHED_STATE_SUSPEND) | SCHED_STATE_FREE;
-
     // Is this kthread running on a hardware thread which is owned by some other process?
     AppProcess_t *hwtProc = GetProcessByProcessorID(ProcessorID());
     if (hwtProc != kthread->pAppProc )
@@ -72,9 +63,21 @@ void  __NORETURN App_ThreadExit( int status, KThread_t *kthread )
         kthread->physical_pid = hwtProc->PhysicalPID;
         mtspr(SPRN_PID, hwtProc->PhysicalPID);
     }
+
+    ppc_msync(); // Make sure all previous memory operations are complete before we set the state to free.
+
+    // clean up and free the thread.
+    // Reset all blocking indicators in the current kthread state
+    Sched_Unblock(kthread, (kthread->State & ~SCHED_STATE_SUSPEND));
+    // Set the RESET blocking indicator, needed to get thread counts right
+    Sched_Block(kthread, SCHED_STATE_RESET);
+    // Now free the kthread, preserving only the SUSPEND bit
+    // We can free it with a simple assignment, but after that we can't touch it.
+    kthread->State = (kthread->State & SCHED_STATE_SUSPEND) | SCHED_STATE_FREE;
+
     // Put the hwthread on the recycle list, making it a candidate to be searched
     // We put this on the list of the process that owns this hardware thread, 
-    // which is not necessarily the process that is associated with this thread.
+    // which is not necessarily the process that was associated with this thread.
     Process_MakeHwThreadAvail(hwtProc, ProcessorID());
 
     // Enter the scheduler
@@ -418,7 +421,16 @@ void App_Exit(int phase, int noReturn)
 
         // Cleanup file systems.
         File_JobCleanup();
+    }
+    Kernel_Barrier(Barrier_HwthreadsInApp);
+    if(isProcessLeader)
+    {
+        File_GetFSPtrFromType(FD_LOCAL)->cleanupJob(FD_LOCAL);
+    }
+    Kernel_Barrier(Barrier_HwthreadsInApp);
 
+    if(isAppLeader)
+    {
         // Clear MMap file cache
         MMap_fileCacheClear();
 

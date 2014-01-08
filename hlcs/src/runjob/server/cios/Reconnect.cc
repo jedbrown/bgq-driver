@@ -78,7 +78,6 @@ Reconnect::blocksHandler(
         const block::Container::Blocks& blocks
         )
 {
-
     const Message::Ptr jobctl_request(
             Message::create( bgcios::jobctl::Reconnect, 0 /* job ID */ )
             );

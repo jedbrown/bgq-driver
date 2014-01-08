@@ -113,6 +113,11 @@ public:
     bool running() const { return _flags.test( Status::Running ); }
 
     /*!
+     * \brief Get signal in flight flag.
+     */
+    bool signalInFlight() const { return _signalInFlight; }
+
+    /*!
      * \brief Get and set the error flag.
      */
     bool error(
@@ -139,6 +144,11 @@ public:
     bool exited(
             const boost::tribool& value = boost::logic::indeterminate   //!< [in]
             );
+    
+    /*!
+     * \brief Get the cleanup flag.
+     */
+    bool cleanup() const { return _flags.test( Status::Cleanup ); }
 
     /*!
      * \brief Write a message on the control connection.
@@ -239,6 +249,7 @@ private:
     bool _loaded;
     bool _setup;
     bool _output_started;
+    bool _signalInFlight;
     boost::shared_ptr<block::IoNode> _node;
 };
 

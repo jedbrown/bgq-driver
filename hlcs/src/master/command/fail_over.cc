@@ -23,31 +23,27 @@
 
 #include "common/ArgParse.h"
 
-#include "lib/BGMasterClientApi.h"
+#include "lib/BGMasterClient.h"
 #include "lib/exceptions.h"
 
 #include <utility/include/Log.h>
 
-#include <boost/tokenizer.hpp>
 
-#include <csignal>
 
 LOG_DECLARE_FILE( "master" );
 
-BGMasterClient client;
-Args* pargs;
-
 void
 doFailover(
-        std::string& target,
-        std::string& trigger
+        BGMasterClient& client,
+        const std::string& target,
+        const std::string& trigger
         )
 {
     std::vector<BinaryId> bids;
     bids.push_back(target);
     try {
         client.fail_over(bids, trigger);
-    } catch(exceptions::BGMasterError& e) {
+    } catch ( const exceptions::BGMasterError& e ) {
         std::cerr << "Could not fail over selected binaries. Error is: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -84,26 +80,26 @@ help()
     std::cerr << "Administrative authority required." << std::endl;
 }
 
-int main(int argc, const char** argv)
+int
+main(int argc, const char** argv)
 {
     std::vector<std::string> validargs;
     std::vector<std::string> singles;
     std::string trigarg = "--trigger";
     validargs.push_back("*"); // One argument without a "--" is allowed
     validargs.push_back(trigarg);
-    Args largs(argc, argv, &usage, &help, validargs, singles);
-    pargs = &largs;
-    client.initProperties(pargs->get_props());
+    const Args largs(argc, argv, &usage, &help, validargs, singles);
+    BGMasterClient client;
 
     try {
-        client.connectMaster(pargs->get_portpairs());
+        client.connectMaster(largs.get_props(), largs.get_portpairs());
     }
-    catch(exceptions::BGMasterError& e) {
-        std::cerr << "Unable to contact bgmaster_server, server may be down." << std::endl;
+    catch (exceptions::BGMasterError& e) {
+        std::cerr << "Unable to contact bgmaster_server: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
-    if (pargs->size() != 0) {
-        std::string trigger = (*pargs)[trigarg];
+    if (largs.size() != 0) {
+        const std::string trigger = largs[trigarg];
         if (trigger.length() != 0) {
             if (trigger != "a" && trigger != "k" && trigger != "b") {
                 std::cerr << "Invalid trigger " << trigger << " specified." << std::endl;
@@ -111,7 +107,7 @@ int main(int argc, const char** argv)
                 exit(EXIT_FAILURE);
             }
         }
-        doFailover(*(pargs->begin()), trigger);
+        doFailover(client, *largs.begin(), trigger);
     } else {
         usage();
         exit(EXIT_FAILURE);

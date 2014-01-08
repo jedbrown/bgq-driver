@@ -69,6 +69,8 @@ class BgqConfiguration(Configuration):
         # 2) go to env variable PROPERTIES_FILE
         if not properties_file:
             properties_file = os.environ.get('PROPERTIES_FILE',None)
+        if not properties_file:
+            properties_file = os.environ.get('BG_PROPERTIES_FILE',None)
 
         # 3) then look in /bgsys/local/etc
         if not properties_file:

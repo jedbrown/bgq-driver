@@ -32,6 +32,7 @@ CXXFLAGS +=\
 
 LDFLAGS += \
  -L$(BGQ_INSTALL_DIR)/extlib/lib -lboost_unit_test_framework-mt -Wl,-rpath,$(BGQ_INSTALL_DIR)/extlib/lib \
+ -lboost_date_time-mt \
  -Wl,-rpath,..
 
 

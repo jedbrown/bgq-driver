@@ -70,10 +70,10 @@ public:
     void setStacksize(size_t stacksize);
     bool getDeleteOnExit() const { return deleteOnExit; }
     void setDeleteOnExit(bool bDelete) { deleteOnExit = bDelete; }
-    void start();                       // start the thread
+    void start();
     void stop(int signal = -1);
     void wait();
-    char isThreadStopping() { return endThread; }       // test for thread termination
+    char isThreadStopping() const { return endThread; }
 
     template <typename T>
     void setArg(const boost::shared_ptr<T>& a) { arg = a; } // for passing arguments to thread
@@ -83,7 +83,7 @@ public:
 
     pthread_t getThreadId() const { return thread_id; } // 0 if thread is not running
     const std::string& getThreadName() const { return _threadName; }
-    void setThreadName(std::string threadName) { _threadName = threadName; }
+    void setThreadName(const std::string& threadName) { _threadName = threadName; }
 };
 
 } } // namespace mmcs::common

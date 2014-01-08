@@ -21,26 +21,21 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_SELECT_BLOCK_H_
 #define MMCS_SERVER_COMMAND_SELECT_BLOCK_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
 class SelectBlock : public common::AbstractCommand
 {
 public:
     SelectBlock(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "select_block <blockId>";}
-    static  SelectBlock* build();  // factory method
-    static  std::string cmdname() { return "select_block"; }
+      : AbstractCommand(name,description,attributes) { _usage = "select_block <blockId>";}
+    static SelectBlock* build();  // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              DBConsoleController* pController,
@@ -50,7 +45,7 @@ public:
              DBConsoleController* pController,
                          BlockControllerTarget* pTarget,
                          std::vector<std::string>* validnames);
-    bool checkArgs(std::deque<std::string>& args) { if(args.size() != 1) return false; else return true; }
+    bool checkArgs(std::deque<std::string>& args) { if (args.size() != 1) return false; else return true; }
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };

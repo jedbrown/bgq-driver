@@ -46,16 +46,8 @@
  />
 
 // 0006000B is missing, it was a duplicate security RAS event
+// 0006000C is missing, it was used when a job could not be killed
 
-<rasevent
-  id="0006000C" 
-  category="Process" 
-  component="MMCS"
-  severity="INFO"
-  message="user $(JOB) cannot be killed.  The runjob_server cannot be reached."
-  description="Cannot connect to runjob_server so mmcs_server cannot kill the RAS specified job."
-  service_action="Make sure that runjob_server is running and correctly configured."
-/>
 <rasevent
   id="0006000D" 
   category="Process" 
@@ -66,33 +58,14 @@
   service_action="Check for failed I/O nodes or cables in error."
   details="BLOCK, NODE, COUNT, LIMIT"
 />
-<rasevent
-  id="0006000E"
-  category="Process"
-  component="MMCS"
-  severity="INFO"
-  message="inject_ras dummy RAS event for debug."
-  description="inject_ras event"
-  service_action="None"
- />
-<rasevent
-  id="0006000F"
-  category="Process"
-  component="MMCS"
-  severity="WARN"
-  message="mmcs_server could not connect to runjob_server"
-  description="runjob_server connection failed"
-  service_action="Make sure that runjob_server is running and that it is configured correctly in the properties file."
- />
-*/
 
+// 0006000E is missing, it was used for inject_ras
+// 0006000F is missing, it was used for a runjob connection mis-configuration
+
+*/
 
 #define MMCSOps_0009 (0x00060009)  // MEMORY_MISMATCH: midplane contains inconsistent node memory
 #define MMCSOps_000A (0x0006000A)  // BOOT_FAIL
 #define MMCSOps_0301 (0x00063001)  // Authority fail
-#define MMCSOps_000C (0x0006000C)  // runjob_server fail
 #define MMCSOps_000D (0x0006000D)  // Mundy RAS
-#define MMCSOps_000E (0x0006000E)  // INJECT_RAS: Dummy RAS event for testing RAS path
-#define MMCSOps_000F (0x0006000F)  // NOTIFY_BLOCK: Attempt to notify runjob_server failed
-#define barrier_ras  (0x00040096)
 #endif

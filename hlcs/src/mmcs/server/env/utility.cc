@@ -118,7 +118,7 @@ calculateConnectionSize(
                 2,1
                 ) == "0"
             );
-    LOG_TRACE_MSG( rows << " rows" );
+    // LOG_TRACE_MSG( rows << " rows" );
 
     // count all racks with the location R0x
     const unsigned columns = std::count_if(
@@ -130,7 +130,7 @@ calculateConnectionSize(
                 1,1
                 ) == "0"
             );
-    LOG_TRACE_MSG( columns << " columns" );
+    // LOG_TRACE_MSG( columns << " columns" );
 
     // idea here is we'll create a connection per number of rows or columns,
     // whichever is greater

@@ -100,32 +100,32 @@ inline std::string stringify( long long anint )
 /*!
  * \brief Return a string with newlines and nulls and other garbage removed.
  */
-inline std::string stringify( std::string instring, std::string* errors = NULL )
+inline std::string stringify( const std::string& instring, std::string* errors = NULL )
 {
-	std::string outstring = "";
-	
-   const char *begin  = instring.c_str();
-   const char *end  = begin + instring.size();
+    std::string outstring = "";
 
-   for (const char *cp = begin; cp < end; ++cp)
-	{
-		 if( *cp < ' ' || *cp > '~')// matches write_text in XML.cc
-		 {
-         	char hexchar[5];
-         	snprintf(hexchar, sizeof(hexchar), "[%02X]", (unsigned char)*cp);
-		 	if( errors != NULL ) 
-		 	{
-		 		std::stringstream ss;
-		 		ss << " non-printable character at byte " << cp - begin << " value = 0x" << hexchar; 
-		 		errors->append( ss.str() ); 
-		 	}
-		 	outstring.append(hexchar);
-		 }
-		 
-		 else // OK character
-		 	outstring.push_back(*cp);		 
-	}
-	return outstring;
+    const char *begin  = instring.c_str();
+    const char *end  = begin + instring.size();
+
+    for (const char *cp = begin; cp < end; ++cp)
+    {
+        if( *cp < ' ' || *cp > '~')// matches write_text in XML.cc
+        {
+            char hexchar[5];
+            snprintf(hexchar, sizeof(hexchar), "[%02X]", (unsigned char)*cp);
+            if( errors != NULL ) 
+            {
+                std::stringstream ss;
+                ss << " non-printable character at byte " << cp - begin << " value = 0x" << hexchar; 
+                errors->append( ss.str() ); 
+            }
+            outstring.append(hexchar);
+        }
+
+        else // OK character
+            outstring.push_back(*cp);		 
+    }
+    return outstring;
 }
   
 /*!

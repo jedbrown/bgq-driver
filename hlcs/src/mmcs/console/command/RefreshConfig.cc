@@ -41,11 +41,9 @@
 
 #include <stdlib.h> // system
 
-
 namespace mmcs {
 namespace console {
 namespace command {
-
 
 RefreshConfig::RefreshConfig(
         const char* name,
@@ -58,7 +56,7 @@ RefreshConfig::RefreshConfig(
     using namespace boost::assign;
     _servers += "bgmaster_server", "bgws_server", "mmcs_server", "runjob_mux", "runjob_server";
     std::sort( _servers.begin(), _servers.end() );
-    usage = "refresh_config [server [/path/to/properties]]";
+    _usage = "refresh_config [server [/path/to/properties]]";
 }
 
 RefreshConfig*
@@ -68,7 +66,7 @@ RefreshConfig::build()
     commandAttributes.requiresBlock(false);
     commandAttributes.requiresConnection(false);
     commandAttributes.requiresTarget(false);
-    commandAttributes.mmcsConsoleCommand(true);
+    commandAttributes.bgConsoleCommand(true);
     commandAttributes.helpCategory(common::ADMIN);
     commandAttributes.bgadminAuth(true);
     return new RefreshConfig("refresh_config", "refresh_config [server [/path/to/properties]]", commandAttributes);
@@ -122,7 +120,7 @@ RefreshConfig::execute(
                 server
                 );
         if ( i == _servers.end() ) {
-            reply << mmcs_client::FAIL << "unknown server: " << server << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Unknown server: " << server << mmcs_client::DONE;
             return;
         }
 

@@ -49,7 +49,7 @@ Input::create(
         result.reset(
                 new StreamInput( io_service, mux, fd )
                 );
-    } catch( const boost::system::system_error& e ) {
+    } catch ( const boost::system::system_error& e ) {
         LOG_TRACE_MSG( "could not create StreamInput for descriptor " << fd );
         LOG_TRACE_MSG( e.what() );
         LOG_TRACE_MSG( "assuming descriptor " << fd << " is a file" );
@@ -71,7 +71,7 @@ Input::Input(
 
 Input::~Input()
 {
-    LOG_DEBUG_MSG( "terminating" );
+    LOG_DEBUG_MSG( __FUNCTION__ );
 }
 
 } // client

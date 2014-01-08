@@ -128,6 +128,7 @@ private:
 
    uint64_t _SlowSyscallTimeout;
    uint64_t _HungSyscallTimeout;
+   uint32_t _RAS4SyscallTimeout;
 
    //! List of Interrupt messages queued waiting for final job cleanup
    std::list <interrupt_tracker_t *> _queuedInterruptTracker;

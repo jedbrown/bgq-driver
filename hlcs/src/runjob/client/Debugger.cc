@@ -107,7 +107,7 @@ Debugger::Debugger(
 
 Debugger::~Debugger()
 {
-    LOG_TRACE_MSG( "terminating" );
+    LOG_TRACE_MSG( __FUNCTION__ );
 
     // notify debugger that we are done
     MPIR_debug_state = static_cast<int>( State::Aborting );

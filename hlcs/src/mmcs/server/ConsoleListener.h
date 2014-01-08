@@ -21,17 +21,13 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_CONSOLE_LISTENER_H_
 #define MMCS_SERVER_CONSOLE_LISTENER_H_
 
-
 #include "common/Thread.h"
-
 
 namespace mmcs {
 namespace server {
-
 
 /*!
  * \brief listen for MMCS console connections
@@ -42,7 +38,6 @@ public:
     ConsoleListener() : Thread() {};
     void* threadStart();
 };
-
 
 } } // namespace mmcs::server
 

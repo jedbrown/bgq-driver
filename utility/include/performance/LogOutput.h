@@ -101,7 +101,7 @@ protected:
     void output(
             const std::string& type,    //!< [in]
             StoragePolicy& storage      //!< [in]
-            ) 
+            )
     {
         // can't use LOG_DECLARE_FILE here since we're in a header
         log4cxx::LoggerPtr log_logger_ = log4cxx::Logger::getLogger( "ibm.utility.performance" );
@@ -126,7 +126,6 @@ protected:
         size_t id = strlen("Id");
         size_t subFunction = strlen("Sub Function");
         size_t data = strlen("Other Data");
-        size_t time = strlen("Time");
         BOOST_FOREACH( const typename StoragePolicy::Container::value_type& i, container ) {
             function = i.getFunction().size() > function ? i.getFunction().size() : function;
             id = i.getId().size() > id ? i.getId().size() : id;
@@ -159,7 +158,7 @@ protected:
                 default:                  BOOST_ASSERT( !"unhandled unit" ); break;
             }
 
-            LOG_DEBUG_MSG( 
+            LOG_DEBUG_MSG(
                     boost::format( format )
                     % i.getFunction() % i.getId() % i.getSubFunction() % i.getOtherData() % duration
                     );

@@ -29,7 +29,7 @@
 #include "tableapi/gensrc/bgqtableapi.h"
 
 #include <boost/assign.hpp>
-#include <boost/exception.hpp>
+#include <boost/exception/all.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -598,7 +598,7 @@ std::ostream& operator<<( std::ostream& os, const GenBlockParams& gen_block_para
         os << "\n";
     }
     if ( ! gen_block_params._node_board_positions.empty() ) {
-        os << "\node boards=";
+        os << "\nnode boards=";
         BOOST_FOREACH( const std::string& nb, gen_block_params._node_board_positions ) {
             if ( &nb != &gen_block_params._node_board_positions.front() ) {
                 os << ",";

@@ -28,7 +28,6 @@
 #ifndef MMCS_MMCS_COMMAND_PROCESSOR_H
 #define MMCS_MMCS_COMMAND_PROCESSOR_H
 
-
 #include "common/AbstractCommand.h"
 #include "common/fwd.h"
 #include "common/Properties.h"
@@ -43,13 +42,10 @@
 #include <map>
 #include <string>
 
-
 namespace mmcs {
 
-
-// NOTE:  We will probably need to create a locking
-// interface around these so we can update them on
-// a refresh_config, especially for new security authorizations
+// NOTE:  We will probably need to create a locking interface around these so we can update them on
+// a refresh_config, especially for new security authorizations.
 // We'll only want a write lock allowing all readers.
 typedef std::map<std::string, common::AbstractCommand*> MMCSCommandMap;
 typedef std::map<std::string, std::string> ExternalCommandMap;
@@ -61,8 +57,6 @@ typedef boost::shared_ptr<hlcs::security::Enforcer> EnforcerPtr;
 class MMCSCommandProcessor
 {
 public:
-
-
     /*!
     ** /brief MMCSCommandProcessor constructors
     ** @param mmcsCommands a map of command names and MMCSCommand objects
@@ -76,29 +70,29 @@ public:
     virtual ~MMCSCommandProcessor() {}
 
     /*!
-    ** /brief should FAIL replies from commands be logged to the MMCS log? (default is true)
+    ** /brief Should FAIL replies from commands be logged to the MMCS log? (default is true)
     */
     void logFailures(bool tf) { _logFailures = tf; }
     bool logFailures() { return _logFailures; }
 
     /*!
-    ** /brief log the command and parameters.
+    ** /brief Log the command and parameters.
     */
     static void  logCommand(const std::string& cmd, const std::deque<std::string>& args);
 
     /*!
-    ** /brief log the command and parameters.
+    ** /brief Log the command and parameters.
     */
     static void logCommand(const std::deque<std::string>& cmd_and_args);
 
     /*!
-    ** /brief break up command line into words.
+    ** /brief Break up command line into words.
     ** /param rStr	      null terminated command line
     ** /returns std::deque<std::string> sequence of words
     */
     static std::deque<std::string> parseCommand(const std::string &rStr);
 
-    /*! /brief combine words into a command line
+    /*! /brief Combine words into a command line
     **  /param std::deque<std::string> sequence of words
     **  /returns string      null terminated command line
     */
@@ -132,12 +126,12 @@ public:
 
 
     /*!
-    ** /brief return a pointer to the command map
+    ** /brief Return a pointer to the command map
     */
     MMCSCommandMap* getCommandMap() { return _mmcsCommands; }
 
     /*!
-    ** /brief create a command map from specified attributes
+    ** /brief Create a command map from specified attributes
     ** /parm attr common::AbstractCommand::Attributes matching desired commands
     ** /parm mask common::AbstractCommand::Attributes mask indicating which attributes
     **            to check
@@ -164,7 +158,7 @@ protected:
                                                  std::vector<std::string>* validnames);
 
     /*!
-    ** /brief invoke the 'execute' method of an MMCSCommand
+    ** /brief Invoke the 'execute' method of an MMCSCommand
     ** @param cmdStr      the command string as parsed by parse()
     ** @param reply       the command output stream. Refer to class MMCSCommandProcessorReply
     ** @param pController the common::ConsoleController object that the command is to work on
@@ -185,7 +179,6 @@ protected:
     bool            _logFailures;
     bool            _bg_console;
 };
-
 
 } // namespace mmcs
 

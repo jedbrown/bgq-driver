@@ -39,6 +39,7 @@ Status::Status( boost::asio::io_service& io_service ) :
 {
     _details.connected_clients = 0;
     _details.db_changes_monitor_state = DbChangesMonitor::State::Idle;
+    _details.db2_version = DB2VERSION;
 }
 
 void Status::clientConnected()

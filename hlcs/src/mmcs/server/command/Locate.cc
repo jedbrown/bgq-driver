@@ -23,7 +23,7 @@
 
 /*!
  * \file Locate.cc
- * \brief The locate command shows the addressing information for nodes and idos in a block.
+ * \brief The locate command shows the addressing information for nodes in a block.
  */
 
 #include "Locate.h"
@@ -47,21 +47,26 @@
 #include <control/include/bgqconfig/BGQPersonality.h>
 #include <control/include/bgqconfig/BGQWirePort.h>
 #include <control/include/bgqconfig/BGQTopology.h>
+#include <utility/include/Log.h>
 
 #define NO_COORD (-1)
 
 using namespace std;
 
+LOG_DECLARE_FILE( "mmcs.server" );
+
 namespace {
 
 // Helper method to dump location info for a single node.
 void
-dumpLocationInfo(mmcs::server::BlockPtr pBlock,
-                 const char *msg,
-                 ostream &ostr,
-                 mmcs::server::BCNodeInfo *nodeInfo,
-                 bool bRASFormat,
-                 bool ioBlock)
+dumpLocationInfo(
+        mmcs::server::BlockPtr pBlock,
+        const char *msg,
+        ostream &ostr,
+        mmcs::server::BCNodeInfo *nodeInfo,
+        const bool bRASFormat,
+        const bool ioBlock
+)
 {
     if (!nodeInfo->_iopos.trainOnly()) {
 
@@ -89,45 +94,44 @@ dumpLocationInfo(mmcs::server::BlockPtr pBlock,
     }
 }
 
-// Cheap func to increment a coord.  Makes code below just a little more readable.
 int
-next_coord(unsigned start, unsigned size, bool torus)
+next_coord(
+        unsigned start,
+        unsigned size,
+        const bool torus
+)
 {
     if (++start == size) {
-	if (torus)
-	    return 0;
-    else
-	    return NO_COORD;
+        if (torus)
+            return 0;
+        else
+            return NO_COORD;
     }
     return start;
 }
 
-// Cheap func to decrement a coord.  Makes code below just a little more readable.
 int
-prev_coord(unsigned start, unsigned size, bool torus)
+prev_coord(
+        unsigned start,
+        unsigned size,
+        const bool torus
+)
 {
     if (start == 0) {
-	if (torus)
-	    return size-1;
-	else
-	    return NO_COORD;
+        if (torus)
+            return size-1;
+        else
+            return NO_COORD;
     }
     return --start;
 }
 
 } // anonymous namespace
 
-
 namespace mmcs {
 namespace server {
 namespace command {
 
-
-/*!
-** build() - MMCSCommand factory
-** This is invoked at MMCS startup when MMCS builds its list of commands
-** @return an MMCSCommand object for this specific command
-*/
 Locate*
 Locate::build()
 {
@@ -148,50 +152,43 @@ Locate::execute(
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     bool bNeighbors = false;
     bool bRASFormat = false;
     bool bVerbose = false;
     bool bSummary = false;
 
-    for (unsigned i = 0; i < args.size(); ++i)
-    {
+    for (unsigned i = 0; i < args.size(); ++i) {
         if (args[i] == "neighbors")  { bNeighbors   = true;    continue; }
         if (args[i] == "ras_format") { bRASFormat   = true;    continue; }
         if (args[i] == "verbose")    { bVerbose     = true;    continue; }
         if (args[i] == "summary")    { bSummary     = true;    continue; }
-        reply << mmcs_client::FAIL << "unrecognized argument: " << args[i] << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Unrecognized argument: " << args[i] << mmcs_client::DONE;
         return;
     }
 
     if ( bNeighbors && bSummary ) {
-        reply << mmcs_client::FAIL << "specify one of neighbors or summary." << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Specify one of neighbors or summary." << mmcs_client::DONE;
         return;
     } else if ( bVerbose && !bNeighbors ) {
-        reply << mmcs_client::FAIL << "specify verbose with neighbors." << mmcs_client::DONE;
+        reply << mmcs_client::FAIL << "Specify verbose with neighbors." << mmcs_client::DONE;
         return;
     }
-
 
     const BlockPtr pBlock = pController->getBlockHelper()->getBase();
     const CNBlockPtr compute_block = boost::dynamic_pointer_cast<CNBlockController>( pBlock );
     const IOBlockPtr io_block = boost::dynamic_pointer_cast<IOBlockController>( pBlock );
+    BOOST_ASSERT( compute_block || io_block );
+
     const BGQBlockNodeConfig* bnc = pBlock->getBlockNodeConfig();
-    bool ioBlock;
-    if ( compute_block ) {
-        ioBlock = false;
-    } else if ( io_block ) {
-        ioBlock = true;
-    } else {
-        reply << mmcs_client::FAIL << "block is not compute or I/O" << mmcs_client::DONE;
-        return;
-    }
+    BOOST_ASSERT( bnc );
+
     reply << mmcs_client::OK;
 
     if ( bSummary ) {
         // summarize the block output
-        if ( !ioBlock ) {
+        if ( compute_block ) {
             if ( pTarget->getNodes().size() >= 512 ) {
                 string mp = "none";
                 for (unsigned i = 0; i < pTarget->getNodes().size(); ++i) {
@@ -234,11 +231,11 @@ Locate::execute(
         ostringstream ostr;
 
         if ( !nodeInfo->_iopos.trainOnly() ) {
-            dumpLocationInfo(pBlock,"", ostr, nodeInfo, bRASFormat, ioBlock);
+            dumpLocationInfo(pBlock,"", ostr, nodeInfo, bRASFormat, io_block);
             string fromPos(nodeInfo->midplanePos());
-            if (bNeighbors && (!ioBlock || !common::Properties::getProperty("ioTorus").empty())) {
+            if (bNeighbors) {
                 int coord;
-                char linkInfo[256];
+                std::string linkInfo;
                 ostr << '\n';
                 BCNodeInfo *nb;
                 // For torus just search for nodes in the +/- directions
@@ -256,11 +253,11 @@ Locate::execute(
                                               nodeInfo->personality().Network_Config.Ecoord);
 
                     if (nb) {
-                        dumpLocationInfo(pBlock,"    A+ ", ostr, nb, bRASFormat, ioBlock);
+                        dumpLocationInfo(pBlock,"    A+ ", ostr, nb, bRASFormat, io_block);
                         if (bVerbose) {
-                            BGQTopology::neighborInfo(nodeInfo->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
+                            linkInfo = BGQTopology::neighborInfo(nodeInfo->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
                                                       fromPos,nb->midplanePos(),
-                                                      (coord == 0) , "A+", linkInfo);
+                                                      (coord == 0) , "A+");
                             ostr << "\t" << linkInfo;
                         }
                         ostr << '\n';
@@ -280,11 +277,11 @@ Locate::execute(
                                               nodeInfo->personality().Network_Config.Ecoord);
 
                     if (nb) {
-                        dumpLocationInfo(pBlock,"    A- ", ostr, nb, bRASFormat, ioBlock);
+                        dumpLocationInfo(pBlock,"    A- ", ostr, nb, bRASFormat, io_block);
                         if (bVerbose) {
-                            BGQTopology::neighborInfo(nb->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
+                            linkInfo = BGQTopology::neighborInfo(nb->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
                                                       fromPos,nb->midplanePos(),
-                                                      (nodeInfo->personality().Network_Config.Acoord == 0) , "A-", linkInfo);
+                                                      (nodeInfo->personality().Network_Config.Acoord == 0) , "A-");
                             ostr << "\t" << linkInfo;
                         }
                         ostr << '\n';
@@ -303,11 +300,11 @@ Locate::execute(
                                               nodeInfo->personality().Network_Config.Dcoord,
                                               nodeInfo->personality().Network_Config.Ecoord);
                     if (nb) {
-                        dumpLocationInfo(pBlock,"    B+ ", ostr, nb, bRASFormat, ioBlock);
+                        dumpLocationInfo(pBlock,"    B+ ", ostr, nb, bRASFormat, io_block);
                         if (bVerbose) {
-                            BGQTopology::neighborInfo(nodeInfo->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
+                            linkInfo = BGQTopology::neighborInfo(nodeInfo->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
                                                       fromPos,nb->midplanePos(),
-                                                      (coord == 0) , "B+", linkInfo);
+                                                      (coord == 0) , "B+");
                             ostr << "\t" << linkInfo;
                         }
                         ostr << '\n';
@@ -326,11 +323,11 @@ Locate::execute(
                                               nodeInfo->personality().Network_Config.Dcoord,
                                               nodeInfo->personality().Network_Config.Ecoord);
                     if (nb) {
-                        dumpLocationInfo(pBlock,"    B- ", ostr, nb, bRASFormat, ioBlock);
+                        dumpLocationInfo(pBlock,"    B- ", ostr, nb, bRASFormat, io_block);
                         if (bVerbose) {
-                            BGQTopology::neighborInfo(nb->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
+                            linkInfo = BGQTopology::neighborInfo(nb->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
                                                       fromPos,nb->midplanePos(),
-                                                      (nodeInfo->personality().Network_Config.Bcoord == 0) , "B-", linkInfo);
+                                                      (nodeInfo->personality().Network_Config.Bcoord == 0) , "B-");
                             ostr << "\t" << linkInfo;
                         }
                         ostr << '\n';
@@ -349,11 +346,11 @@ Locate::execute(
                                               nodeInfo->personality().Network_Config.Dcoord,
                                               nodeInfo->personality().Network_Config.Ecoord);
                     if (nb) {
-                        dumpLocationInfo(pBlock,"    C+ ", ostr, nb, bRASFormat, ioBlock);
+                        dumpLocationInfo(pBlock,"    C+ ", ostr, nb, bRASFormat, io_block);
                         if (bVerbose) {
-                            BGQTopology::neighborInfo(nodeInfo->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
+                            linkInfo = BGQTopology::neighborInfo(nodeInfo->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
                                                       fromPos,nb->midplanePos(),
-                                                      (coord == 0) , "C+", linkInfo);
+                                                      (coord == 0) , "C+");
                             ostr << "\t" << linkInfo;
                         }
                         ostr << '\n';
@@ -372,18 +369,18 @@ Locate::execute(
                                               nodeInfo->personality().Network_Config.Dcoord,
                                               nodeInfo->personality().Network_Config.Ecoord);
                     if (nb) {
-                        dumpLocationInfo(pBlock,"    C- ", ostr, nb, bRASFormat, ioBlock);
+                        dumpLocationInfo(pBlock,"    C- ", ostr, nb, bRASFormat, io_block);
                         if (bVerbose) {
-                            BGQTopology::neighborInfo(nb->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
+                            linkInfo = BGQTopology::neighborInfo(nb->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
                                                       fromPos,nb->midplanePos(),
-                                                      (nodeInfo->personality().Network_Config.Ccoord == 0) , "C-", linkInfo);
+                                                      (nodeInfo->personality().Network_Config.Ccoord == 0) , "C-");
                             ostr << "\t" << linkInfo;
                         }
                         ostr << '\n';
                     }
                 }
 
-                if (!ioBlock) {
+                if (compute_block) {
                     // D+
                     coord = next_coord(nodeInfo->personality().Network_Config.Dcoord,
                                        nodeInfo->personality().Network_Config.Dnodes,
@@ -396,11 +393,11 @@ Locate::execute(
                                                   coord,
                                                   nodeInfo->personality().Network_Config.Ecoord);
                         if (nb) {
-                            dumpLocationInfo(pBlock,"    D+ ", ostr, nb, bRASFormat, ioBlock);
+                            dumpLocationInfo(pBlock,"    D+ ", ostr, nb, bRASFormat, io_block);
                             if (bVerbose) {
-                                BGQTopology::neighborInfo(nodeInfo->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
+                                linkInfo = BGQTopology::neighborInfo(nodeInfo->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
                                                           fromPos,nb->midplanePos(),
-                                                          (coord == 0) , "D+", linkInfo);
+                                                          (coord == 0) , "D+");
                                 ostr << "\t" << linkInfo;
                             }
                             ostr << '\n';
@@ -419,11 +416,11 @@ Locate::execute(
                                                   coord,
                                                   nodeInfo->personality().Network_Config.Ecoord);
                         if (nb) {
-                            dumpLocationInfo(pBlock,"    D- ", ostr, nb, bRASFormat, ioBlock);
+                            dumpLocationInfo(pBlock,"    D- ", ostr, nb, bRASFormat, io_block);
                             if (bVerbose) {
-                                BGQTopology::neighborInfo(nb->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
+                                linkInfo = BGQTopology::neighborInfo(nb->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
                                                           fromPos,nb->midplanePos(),
-                                                          (nodeInfo->personality().Network_Config.Dcoord == 0) , "D-", linkInfo);
+                                                          (nodeInfo->personality().Network_Config.Dcoord == 0) , "D-");
                                 ostr << "\t" << linkInfo;
                             }
                             ostr << '\n';
@@ -442,11 +439,11 @@ Locate::execute(
                                                   nodeInfo->personality().Network_Config.Dcoord,
                                                   coord);
                         if (nb) {
-                            dumpLocationInfo(pBlock,"    E+ ", ostr, nb, bRASFormat, ioBlock);
+                            dumpLocationInfo(pBlock,"    E+ ", ostr, nb, bRASFormat, io_block);
                             if (bVerbose) {
-                                BGQTopology::neighborInfo(nodeInfo->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
+                                linkInfo = BGQTopology::neighborInfo(nodeInfo->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
                                                           fromPos,nb->midplanePos(),
-                                                          false , "E+", linkInfo);
+                                                          false , "E+");
                                 ostr << "\t" << linkInfo;
                             }
                             ostr << '\n';
@@ -465,11 +462,11 @@ Locate::execute(
                                                   nodeInfo->personality().Network_Config.Dcoord,
                                                   coord);
                         if (nb) {
-                            dumpLocationInfo(pBlock,"    E- ", ostr, nb, bRASFormat, ioBlock);
+                            dumpLocationInfo(pBlock,"    E- ", ostr, nb, bRASFormat, io_block);
                             if (bVerbose) {
-                                BGQTopology::neighborInfo(nb->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
+                                linkInfo = BGQTopology::neighborInfo(nb->_pos.jtagPort(), nodeInfo->_pos.nodeCard(), nb->_pos.nodeCard(),
                                                           fromPos,nb->midplanePos(),
-                                                          false , "E-", linkInfo);
+                                                          false , "E-");
                                 ostr << "\t" << linkInfo;
                             }
                             ostr << '\n';
@@ -485,64 +482,53 @@ Locate::execute(
     }
 
     // location information on icon cards
-    for (unsigned i = 0; i < pTarget->getIcons().size(); ++i)
-        {
-            BCIconInfo *iconInfo = pTarget->getIcons()[i];
-            ostringstream ostr;
-            // if this is an io location in a compute block, skip it, since its included only for training
-            if (iconInfo->_ioboard == false  || ioBlock) {
-                ostr << "{" << iconInfo->_locateId << "}\t";
-                if (iconInfo->_ioboard)
-                    ostr << setw(10) << left << "<io>" << "\t";
-                else if (typeid(*iconInfo) == typeid(BCNodecardInfo))
-                    ostr << setw(10) << left << "<nc>" << "\t";
-                else if (typeid(*iconInfo) == typeid(BCServicecardInfo))
-                    ostr << setw(10) << left << "<sc>" << "\t";
-                else if (typeid(*iconInfo) == typeid(BCClockcardInfo))
-                    ostr << setw(10) << left << "<cc>" << "\t";
-                if (bRASFormat || ioBlock)
-                    {
-                        ostr << "location: " << setw(16) << left << iconInfo->location();
-                    }
-                else
-                    {
-                        ostr << "in " << setw(6) << left << iconInfo->midplanePos();
-                        ostr << " board "     << iconInfo->cardName();
-                    }
-                if (iconInfo->_open)
-                    ostr << "\t target: open";
-                else
-                    ostr << "\t target: closed";
-                reply << ostr.str() << '\n';
-            }
-        }
-
-
-    // location information on link chips
-    for (unsigned i = 0; i < pTarget->getLinkchips().size(); ++i)
-        {
-            ostringstream ostr;
-            BCLinkchipInfo *linkchipInfo = pTarget->getLinkchips()[i];
-
-            ostr << "{" << linkchipInfo->_locateId << "}\t<l>\t";
-            if (bRASFormat) {
-                ostr << "location: " << setw(16) << left << linkchipInfo->location();
+    for (unsigned i = 0; i < pTarget->getIcons().size(); ++i) {
+        BCIconInfo *iconInfo = pTarget->getIcons()[i];
+        ostringstream ostr;
+        // if this is an io location in a compute block, skip it, since its included only for training
+        if (iconInfo->_ioboard == false  || io_block) {
+            ostr << "{" << iconInfo->_locateId << "}\t";
+            if (iconInfo->_ioboard)
+                ostr << setw(10) << left << "<io>" << "\t";
+            else if (typeid(*iconInfo) == typeid(BCNodecardInfo))
+                ostr << setw(10) << left << "<nc>" << "\t";
+            else if (typeid(*iconInfo) == typeid(BCServicecardInfo))
+                ostr << setw(10) << left << "<sc>" << "\t";
+            else if (typeid(*iconInfo) == typeid(BCClockcardInfo))
+                ostr << setw(10) << left << "<cc>" << "\t";
+            if (bRASFormat || io_block) {
+                ostr << "location: " << setw(16) << left << iconInfo->location();
             } else {
-                ostr << "in " << setw(6) << left << linkchipInfo->midplanePos()
-                     << " chip "  << linkchipInfo->linkchipPos();
+                ostr << "in " << setw(6) << left << iconInfo->midplanePos();
+                ostr << " board "     << iconInfo->cardName();
             }
-            ostr << "\troutes:";
-            // 	for (unsigned j = 0; j < linkchipInfo->_chipRoute.size(); ++j)
-            // 	{
-            // 	    ostr << " " << BGQTopology::linkChipPortNameFromLinkChipPort(linkchipInfo->_chipRoute[j]._fromPort)
-            // 		 << "-" << BGQTopology::linkChipPortNameFromLinkChipPort(linkchipInfo->_chipRoute[j]._toPort);
-            // 	}
-            if (linkchipInfo->_open)
+            if (iconInfo->_open)
                 ostr << "\t target: open";
             else
                 ostr << "\t target: closed";
             reply << ostr.str() << '\n';
         }
+    }
+
+    // location information on link chips
+    for (unsigned i = 0; i < pTarget->getLinkchips().size(); ++i) {
+        ostringstream ostr;
+        BCLinkchipInfo *linkchipInfo = pTarget->getLinkchips()[i];
+
+        ostr << "{" << linkchipInfo->_locateId << "}\t<l>\t";
+        if (bRASFormat) {
+            ostr << "location: " << setw(16) << left << linkchipInfo->location();
+        } else {
+            ostr << "in " << setw(6) << left << linkchipInfo->midplanePos()
+                << " chip "  << linkchipInfo->linkchipPos();
+        }
+        ostr << "\troutes:";
+        if (linkchipInfo->_open)
+            ostr << "\t target: open";
+        else
+            ostr << "\t target: closed";
+        reply << ostr.str() << '\n';
+    }
     reply << mmcs_client::DONE;
 }
 
@@ -550,18 +536,16 @@ void
 Locate::help(
         deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
     reply << mmcs_client::OK << description()
-        << ";lists physical location (midplane, board, card, slot) of all nodes in the selected block. "
-        << ";If target node is specified, lists the location of the specified node. "
-        << ";Add 'neighbors' to get the + and - neighbors in a,b,c,d,e dimensions, and the connected"
-        << ";  I/O node, for a compute block. Add verbose to see how the connection is made."
-        << ";Add 'ras_format' to get location information in the format found in RAS events."
-        << ";Add 'summary' to get summary board or midplane information instead of node locations."
-        << mmcs_client::DONE;
+          << ";Lists physical location (midplane, board, card, slot) of all nodes in the selected block. "
+          << ";If target node is specified, lists the location of the specified node. "
+          << ";Add 'neighbors' to get the + and - neighbors in a,b,c,d,e dimensions, and the connected"
+          << ";  I/O node, for a compute block. Add verbose to see how the connection is made."
+          << ";Add 'ras_format' to get location information in the format found in RAS events."
+          << ";Add 'summary' to get summary board or midplane information instead of node locations."
+          << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

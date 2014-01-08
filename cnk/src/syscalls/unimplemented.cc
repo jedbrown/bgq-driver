@@ -167,31 +167,7 @@ uint64_t sc_fdatasync(SYSCALL_FCN_ARGS)
 }
 
 
-uint64_t sc_fgetxattr(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
-uint64_t sc_flistxattr(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
 uint64_t sc_fork(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
-uint64_t sc_fremovexattr(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
-uint64_t sc_fsetxattr(SYSCALL_FCN_ARGS)
 {
 	return CNK_RC_FAILURE(ENOSYS);
 }
@@ -253,12 +229,6 @@ uint64_t sc_getresuid(SYSCALL_FCN_ARGS)
 
 
 uint64_t sc_getsid(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
-uint64_t sc_getxattr(SYSCALL_FCN_ARGS)
 {
 	return CNK_RC_FAILURE(ENOSYS);
 }
@@ -342,24 +312,6 @@ uint64_t sc_keyctl(SYSCALL_FCN_ARGS)
 }
 
 
-uint64_t sc_lgetxattr(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
-uint64_t sc_listxattr(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
-uint64_t sc_llistxattr(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
 uint64_t sc_lock(SYSCALL_FCN_ARGS)
 {
 	return CNK_RC_FAILURE(ENOSYS);
@@ -367,18 +319,6 @@ uint64_t sc_lock(SYSCALL_FCN_ARGS)
 
 
 uint64_t sc_lookup_dcookie(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
-uint64_t sc_lremovexattr(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
-uint64_t sc_lsetxattr(SYSCALL_FCN_ARGS)
 {
 	return CNK_RC_FAILURE(ENOSYS);
 }
@@ -594,12 +534,6 @@ uint64_t sc_remap_file_pages(SYSCALL_FCN_ARGS)
 }
 
 
-uint64_t sc_removexattr(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
 uint64_t sc_request_key(SYSCALL_FCN_ARGS)
 {
 	return CNK_RC_FAILURE(ENOSYS);
@@ -709,12 +643,6 @@ uint64_t sc_setsid(SYSCALL_FCN_ARGS)
 
 
 uint64_t sc_settimeofday(SYSCALL_FCN_ARGS)
-{
-	return CNK_RC_FAILURE(ENOSYS);
-}
-
-
-uint64_t sc_setxattr(SYSCALL_FCN_ARGS)
 {
 	return CNK_RC_FAILURE(ENOSYS);
 }

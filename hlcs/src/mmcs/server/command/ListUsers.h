@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_LIST_USERS_H_
 #define MMCS_SERVER_COMMAND_LIST_USERS_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
  ** list_users
@@ -40,19 +36,17 @@ namespace command {
  */
 class ListUsers : public common::AbstractCommand
 {
-    public:
+public:
     ListUsers(const char* name, const char* description, const Attributes& attributes)
-            : AbstractCommand(name,description,attributes) { usage = "list_users";}
-        static  ListUsers* build();    // factory method
-        static  std::string cmdname() { return "list_users"; }
-        void execute(std::deque<std::string> args,
-                mmcs_client::CommandReply& reply,
-                DBConsoleController* pController,
-                BlockControllerTarget* pTarget=NULL);
-        void help(std::deque<std::string> args,
-                mmcs_client::CommandReply& reply);
+    : AbstractCommand(name,description,attributes) { _usage = "list_users";}
+    static  ListUsers* build();    // factory method
+    void execute(std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            DBConsoleController* pController,
+            BlockControllerTarget* pTarget=NULL);
+    void help(std::deque<std::string> args,
+            mmcs_client::CommandReply& reply);
 };
-
 
 } } } // namespace mmcs::server::command
 

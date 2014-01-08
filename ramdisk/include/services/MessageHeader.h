@@ -31,8 +31,10 @@
 #include <inttypes.h>
 #include <string.h>
 
+#ifdef __cplusplus
 namespace bgcios
 {
+#endif
 
 //! Header describing a I/O service message.
 
@@ -143,8 +145,9 @@ inline void initHeader(struct MessageHeader *header) { memset(header, 0x00, size
 //! \return Length of data in message.
 
 inline uint32_t dataLength(struct MessageHeader *header) { return header->length - sizeof(struct MessageHeader); }
-
+#ifdef __cplusplus
 } // namespace bgcios
+#endif
 
 #endif // MESSAGEHEADER_H
 

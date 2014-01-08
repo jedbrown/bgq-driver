@@ -26,6 +26,7 @@
 #include "JobControl.h"
 #include <ramdisk/include/services/JobctlMessages.h>
 #include <netinet/in.h>
+#include "NodeController.h"
 
 // Define the jobControl object in static storage
 JobControl jobControl;
@@ -65,16 +66,11 @@ JobControl::init(cnv_pd *protectionDomain, cnv_cq *completionQ)
    destAddress.sin_port = BaseRdmaPort;
    destAddress.sin_addr.s_addr = INADDR_ANY;
    int err = cnv_connect(&_queuePair, (struct sockaddr *)&destAddress);
+   Node_ReportConnect(err, destAddress.sin_addr.s_addr, destAddress.sin_port);
    if (err != 0) 
    {
-       RASBEGIN(3);
-       RASPUSH(INADDR_ANY);
-       RASPUSH(BaseRdmaPort);
-       RASPUSH(err);
-       RASFINAL(RAS_KERNELCNVCONNECTFAIL);
-       
        TRACE( TRACE_Jobctl, ("(E) JobControl::init%s: cnv_connect() failed, error %d\n", whoami(), err) );
-       return err;
+       Kernel_Crash(RAS_KERNELCNVCONNECTFAIL);
    }
    TRACE( TRACE_Jobctl, ("(I) JobControl::init%s: connected to jobctld\n", whoami()) );
    

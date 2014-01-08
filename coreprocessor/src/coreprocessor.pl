@@ -56,12 +56,13 @@ BEGIN
     $OPTIONVALUEREQ{'-s'}  = 1;
     $OPTIONVALUEREQ{'-b'}  = 1;
     $OPTIONVALUEREQ{'-templates'} = 1;
-    @VALIDOPTIONS = ("-b", "-c", "-a", "-s", "-templates", "-nogui", "-j", "-pid", "-h");
+    @VALIDOPTIONS = ("-b", "-c", "-a", "-s", "-templates", "-nogui", "-j", "-pid", "-skiphostcheck", "-h");
     @{$ADDOPTIONS{'-c'}} = ("-mincore", "-maxcore", "-coreprefix");
     @{$ADDOPTIONS{'-a'}} = ("-numbadframes", "-user");
     @{$ADDOPTIONS{'-s'}} = ();
     @{$ADDOPTIONS{'-j'}} = ();
     @{$ADDOPTIONS{'-pid'}} = ();
+    @{$ADDOPTIONS{'-skiphostcheck'}} = ();
 #    @{$ADDOPTIONS{'-m'}} = ();
     @{$ADDOPTIONS{'-nogui'}} = ("-mode", "-register", "-snapshot", "-flightlog");
     
@@ -79,6 +80,8 @@ BEGIN
     $OPTIONDESC{"-j"} = "Connects to a running job via the scalable debugger interface";
     $OPTIONEXAM{"-pid"} = "-pid=3121";
     $OPTIONDESC{"-pid"} = "Connects to a running job using the pid of the runjob process via the scalable debugger interface";
+    $OPTIONEXAM{"-skiphostcheck"} = "-skiphostcheck";
+    $OPTIONDESC{"-skiphostcheck"} = "Skips check of the hostname when attaching the scalable debugger.";
     $OPTIONEXAM{"-nogui"} = "-nogui";
     $OPTIONDESC{"-nogui"} = "GUI-less mode.  Coreprocessor processes the data and terminates";
     $OPTIONEXAM{"-snapshot"} = "-snapshot=/tmp/hang_issue1234";

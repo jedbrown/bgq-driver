@@ -39,11 +39,15 @@ CXXFLAGS += \
 LDFLAGS += \
  -rdynamic \
  -L../common -lmmcs_common \
+ -L../../libmmcs_client -lmmcs_client \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib \
  -L$(BGQ_INSTALL_DIR)/extlib/lib -llog4cxx \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/extlib/lib \
+ -L$(BGQ_INSTALL_DIR)/utility/lib  -lbgutility -lcxxsockets \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib \
- -lboost_filesystem-mt
+ -lboost_filesystem-mt \
+ -lboost_system-mt \
+ -lboost_program_options-mt
 
 
 command_parts := \
@@ -118,13 +122,13 @@ CommandProcessor.o: CommandProcessor.cc
 
 
 bg_console: bg_console.o $(objs)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 
 bg_consolepy.o: CXXFLAGS += -I$(PYTHON_INC) -fPIC
 
 bg_consolepy: bg_consolepy.o $(objs)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(PYTHON_LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(PYTHON_LDFLAGS)
 
 
 $(installed_bg_console): bg_console

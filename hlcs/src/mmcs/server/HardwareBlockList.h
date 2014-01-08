@@ -21,10 +21,8 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_HARDWARE_BLOCK_LIST_H_
 #define MMCS_SERVER_HARDWARE_BLOCK_LIST_H_
-
 
 #include <bgq_util/include/pthreadmutex.h>
 
@@ -33,14 +31,12 @@
 #include <string>
 #include <vector>
 
-
 namespace mmcs {
 namespace server {
 
-
-class HardwareBlockList : boost::noncopyable {
-    //! Static list of racks not allowed to boot
-    //  until the controlling subnet_mc returns
+class HardwareBlockList : boost::noncopyable
+{
+    //! Static list of racks not allowed to boot until the controlling subnet_mc returns
     static PthreadMutex _lock;
     //! brief One comma separated list of racks per subnet
     static std::vector<std::string> _hw;
@@ -54,8 +50,6 @@ public:
     static int list_size() { return _hw.size(); }
 };
 
-
 } } // namespace mmcs::server
-
 
 #endif

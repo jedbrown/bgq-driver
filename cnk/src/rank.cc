@@ -482,7 +482,7 @@ int getMyRank(uint32_t* rank)
             Kernel_Unlock(&loadSequenceUpdate);
         }
     }
-    else
+    else if(!mpmdFound)
     {
         Kernel_Lock(&loadSequenceUpdate);
         GetMyAppState()->LoadSequence = 0;

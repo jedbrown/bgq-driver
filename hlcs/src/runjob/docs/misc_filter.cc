@@ -71,7 +71,6 @@ main(int argc, const char** argv)
                 );
 
         // output line
-        // output line
         std::cout << line << std::endl;
     }
 

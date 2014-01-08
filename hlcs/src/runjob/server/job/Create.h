@@ -196,7 +196,8 @@ public:
      * \brief
      */
     Create* reconnect(
-            BGQDB::job::Id id )
+            BGQDB::job::Id id
+            )
     {
         _reconnect = id;
         return this;

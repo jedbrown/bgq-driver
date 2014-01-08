@@ -162,6 +162,9 @@ Message::create(
         case bgcios::jobctl::Reconnect: 
             message = init<bgcios::jobctl::ReconnectMessage>( job, rank, type, bgcios::JobctlService );
             break;
+        case bgcios::jobctl::Heartbeat: 
+            message = init<bgcios::jobctl::HeartbeatMessage>( job, rank, type, bgcios::JobctlService );
+            break;
         default:
             BOOST_ASSERT( !"unhandled type" );
     }
@@ -228,6 +231,9 @@ Message::prepare(
                 break;
             case bgcios::jobctl::ReconnectAck:
                 _message = boost::make_shared<bgcios::jobctl::ReconnectAckMessage>();
+                break;
+            case bgcios::jobctl::HeartbeatAck:
+                _message = boost::make_shared<bgcios::jobctl::HeartbeatAckMessage>();
                 break;
         }
     } else if ( header.service == bgcios::StdioService ) {

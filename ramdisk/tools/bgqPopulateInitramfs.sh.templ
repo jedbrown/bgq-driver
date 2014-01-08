@@ -33,28 +33,14 @@
 # Overload the cp command to do error checking of each requested copy.
 cp()
 {
-	if [ "$1" == "-a" ] ; then
-		RC=$( /bin/cp -f -a "$2" "$3" 2>&1 )
-		if [ ! -z "$RC" ] ; then
-			echo -en "\n\nERROR: An error occurred populating BGQ_INITRAMFS_PATH\n"
-			echo -en "       cp retrurned: $RC\n"
-			echo -en "       Please correct the error and re-run BGQ_RAMDISK_PATH/tools/bgqPopulateInitramfs.sh\n"
-			echo -en "       If this error was encountered during RPM installation you will need to execute\n"
-			echo -en "       BGQ_RAMDISK_PATH/tools/bgqDistrofsInstall.sh to fully complete installation.\n\n"
+	/bin/cp $@ 2>&1
+	if [ $? -ne 0 ] ; then
+		echo -en "\n\nERROR: An error occurred populating BGQ_INITRAMFS_PATH\n"
+		echo -en "       Please correct the error and re-run BGQ_RAMDISK_PATH/tools/bgqPopulateInitramfs.sh\n"
+		echo -en "       If this error was encountered during RPM installation you will need to execute\n"
+		echo -en "       BGQ_RAMDISK_PATH/tools/bgqDistrofsInstall.sh to fully complete installation.\n\n"
 
-			exit 1
-		fi
-	else
-                RC=$( /bin/cp -f "$1" "$2" 2>&1 )
-                if [ ! -z "$RC" ] ; then
-                        echo -en "\n\n\tERROR: An error occurred populating BGQ_INITRAMFS_PATH\n"
-                        echo -en "\t       cp retrurned: $RC\n"
-                        echo -en "\t       Please correct the error and re-run BGQ_RAMDISK_PATH/tools/bgqPopulateInitramfs.sh\n"
-                        echo -en "\t       If this error was encountered during RPM installation you will need to execute:\n"
-                        echo -en "\t       BGQ_RAMDISK_PATH/tools/bgqDistrofsInstall.sh to fully complete installation.\n\n"
-
-			exit 1
-                fi
+		exit 1
 	fi
 }
 
@@ -100,75 +86,78 @@ if [ ! -e BGQ_DISTROFS_BASE_PATH ] ; then
 	exit 1
 fi
 
-for DIR in "bin" "sbin" "lib64" "lib" "usr" "usr/lib" "usr/lib64" "usr/bin" "usr/sbin" ; do
+for DIR in "bin" "sbin" "lib64" "lib" "usr/lib" "usr/lib64" "usr/bin" "usr/sbin" ; do
 
         if [ ! -e BGQ_INITRAMFS_PATH/$DIR ] ; then
-		mkdir BGQ_INITRAMFS_PATH/$DIR
+		mkdir -p BGQ_INITRAMFS_PATH/$DIR
 	fi
 done
 		
 CURRDIR=`pwd`
 
-cp BGQ_DISTROFS_BASE_PATH/bin/bash BGQ_INITRAMFS_PATH/bin
-cp BGQ_DISTROFS_BASE_PATH/bin/date BGQ_INITRAMFS_PATH/bin
-cp BGQ_DISTROFS_BASE_PATH/bin/mount BGQ_INITRAMFS_PATH/bin
-cp BGQ_DISTROFS_BASE_PATH/etc/init.d/rpcidmapd BGQ_INITRAMFS_PATH/etc/init.d
-cp BGQ_DISTROFS_BASE_PATH/sbin/busybox BGQ_INITRAMFS_PATH/bin
-cp BGQ_DISTROFS_BASE_PATH/sbin/switch_root BGQ_INITRAMFS_PATH/sbin
-cp BGQ_DISTROFS_BASE_PATH/lib64/ld-2.12.so BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libblkid.so.1.1.0 BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libc-2.12.so BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libdl-2.12.so BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libgcc_s-* BGQ_INITRAMFS_PATH/lib64
-cp -a BGQ_DISTROFS_BASE_PATH/lib64/libgcc_s.so.1 BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libm.so.6 BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libnsl-2.12.so BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libnss_files-2.12.so BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libpci.so.3.1.4 BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libpthread-2.12.so BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libresolv-2.12.so BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/librt.so.1 BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libselinux.so.1 BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libsepol.so.1 BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libtinfo.so.5.7 BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libuuid.so.1.3.0 BGQ_INITRAMFS_PATH/lib64
-cp BGQ_DISTROFS_BASE_PATH/lib64/libz.so.1 BGQ_INITRAMFS_PATH/lib64
-if [ -e BGQ_DISTROFS_BASE_PATH/usr/lib64/libgssglue.so.1.0.0 ] ; then 
-	cp -a BGQ_DISTROFS_BASE_PATH/usr/lib64/libgssglue.so.1 BGQ_INITRAMFS_PATH/usr/lib64
-	cp BGQ_DISTROFS_BASE_PATH/usr/lib64/libgssglue.so.1.0.0 BGQ_INITRAMFS_PATH/usr/lib64
-else    cp -a BGQ_DISTROFS_BASE_PATH/lib64/libgssglue.so.1 BGQ_INITRAMFS_PATH/lib64
-	cp BGQ_DISTROFS_BASE_PATH/lib64/libgssglue.so.1.0.0 BGQ_INITRAMFS_PATH/lib64
-fi
-	#cp /usr/lib64/libstdc++.so.6.0.13 BGQ_INITRAMFS_PATH/usr/lib64
-cp BGQ_DISTROFS_BASE_PATH/usr/lib64/libevent-1.4.so.2 BGQ_INITRAMFS_PATH/usr/lib64
-cp BGQ_DISTROFS_BASE_PATH/usr/lib64/libnfsidmap.so.0 BGQ_INITRAMFS_PATH/usr/lib64
-cp -a BGQ_DISTROFS_BASE_PATH/usr/lib64/libnfsidmap BGQ_INITRAMFS_PATH/usr/lib64
-cp BGQ_DISTROFS_BASE_PATH/usr/lib64/libstdc++.so.6 BGQ_INITRAMFS_PATH/usr/lib64
-if [ -e BGQ_DISTROFS_BASE_PATH/usr/lib64/libtirpc.so.1.0.10 ] ; then 
-	cp BGQ_DISTROFS_BASE_PATH/usr/lib64/libtirpc.so.1.0.10 BGQ_INITRAMFS_PATH/usr/lib64
-	cp -a BGQ_DISTROFS_BASE_PATH/usr/lib64/libtirpc.so.1 BGQ_INITRAMFS_PATH/usr/lib64
-else
-	cp BGQ_DISTROFS_BASE_PATH/lib64/libtirpc.so.1.0.10 BGQ_INITRAMFS_PATH/lib64
-	cp -a BGQ_DISTROFS_BASE_PATH/lib64/libtirpc.so.1 BGQ_INITRAMFS_PATH/lib64
-fi
-cp BGQ_DISTROFS_BASE_PATH/usr/bin/dc BGQ_INITRAMFS_PATH/usr/bin
-cp BGQ_DISTROFS_BASE_PATH/usr/bin/mstflint BGQ_INITRAMFS_PATH/usr/bin
-cp BGQ_DISTROFS_BASE_PATH/usr/sbin/rpc.idmapd BGQ_INITRAMFS_PATH/usr/sbin
-cp BGQ_DISTROFS_BASE_PATH/sbin/consoletype BGQ_INITRAMFS_PATH/sbin
-cp BGQ_DISTROFS_BASE_PATH/sbin/fstab-decode BGQ_INITRAMFS_PATH/sbin
-cp BGQ_DISTROFS_BASE_PATH/sbin/ifenslave BGQ_INITRAMFS_PATH/sbin
-cp BGQ_DISTROFS_BASE_PATH/sbin/ip	BGQ_INITRAMFS_PATH/sbin
-cp BGQ_DISTROFS_BASE_PATH/sbin/lspci BGQ_INITRAMFS_PATH/sbin
-cp BGQ_DISTROFS_BASE_PATH/sbin/mount.nfs BGQ_INITRAMFS_PATH/sbin
-cp BGQ_DISTROFS_BASE_PATH/sbin/mount.nfs4 BGQ_INITRAMFS_PATH/sbin
-cp BGQ_DISTROFS_BASE_PATH/sbin/pidof BGQ_INITRAMFS_PATH/sbin
-cp BGQ_DISTROFS_BASE_PATH/sbin/setpci BGQ_INITRAMFS_PATH/sbin
+cp -af BGQ_DISTROFS_BASE_PATH/bin/bash BGQ_INITRAMFS_PATH/bin
+cp -af BGQ_DISTROFS_BASE_PATH/bin/date BGQ_INITRAMFS_PATH/bin
+cp -af BGQ_DISTROFS_BASE_PATH/bin/mount BGQ_INITRAMFS_PATH/bin
+cp -af BGQ_DISTROFS_BASE_PATH/etc/init.d/rpcidmapd BGQ_INITRAMFS_PATH/etc/init.d
+cp -af BGQ_DISTROFS_BASE_PATH/sbin/busybox BGQ_INITRAMFS_PATH/bin
+cp -af BGQ_DISTROFS_BASE_PATH/sbin/switch_root BGQ_INITRAMFS_PATH/sbin
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/ld-*.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libblkid.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libc-*.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libdl-*.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libgcc_s-* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libgcc_s.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libm-*.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libm.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libnsl-*.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libnss_files-*.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libpci.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libpthread-*.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libresolv-*.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/librt*.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libselinux.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libsepol.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libtinfo.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libuuid.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/lib64/libz.so* BGQ_INITRAMFS_PATH/lib64
+[ `ls BGQ_DISTROFS_BASE_PATH/usr/lib64/libgssglue.so.* 2> /dev/null | wc -l` -gt 0 ] && cp -af BGQ_DISTROFS_BASE_PATH/usr/lib64/libgssglue.so* BGQ_INITRAMFS_PATH/usr/lib64
+[ `ls BGQ_DISTROFS_BASE_PATH/lib64/libgssglue.so.* 2> /dev/null | wc -l` -gt 0 ] && cp -af BGQ_DISTROFS_BASE_PATH/lib64/libgssglue.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/usr/lib64/libevent-*.so* BGQ_INITRAMFS_PATH/usr/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/usr/lib64/libnfsidmap.so* BGQ_INITRAMFS_PATH/usr/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/usr/lib64/libnfsidmap BGQ_INITRAMFS_PATH/usr/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/usr/lib64/libstdc++.so* BGQ_INITRAMFS_PATH/usr/lib64
+[ `ls BGQ_DISTROFS_BASE_PATH/usr/lib64/libtirpc.so* 2> /dev/null | wc -l` -gt 0 ] && cp -af BGQ_DISTROFS_BASE_PATH/usr/lib64/libtirpc.so* BGQ_INITRAMFS_PATH/usr/lib64
+[ `ls BGQ_DISTROFS_BASE_PATH/lib64/libtirpc.so* 2> /dev/null | wc -l` -gt 0 ] && cp -af BGQ_DISTROFS_BASE_PATH/lib64/libtirpc.so* BGQ_INITRAMFS_PATH/lib64
+cp -af BGQ_DISTROFS_BASE_PATH/usr/bin/dc BGQ_INITRAMFS_PATH/usr/bin
+cp -af BGQ_DISTROFS_BASE_PATH/usr/bin/mstflint BGQ_INITRAMFS_PATH/usr/bin
+cp -af BGQ_DISTROFS_BASE_PATH/usr/sbin/rpc.idmapd BGQ_INITRAMFS_PATH/usr/sbin
+cp -af BGQ_DISTROFS_BASE_PATH/sbin/consoletype BGQ_INITRAMFS_PATH/sbin
+cp -af BGQ_DISTROFS_BASE_PATH/sbin/fstab-decode BGQ_INITRAMFS_PATH/sbin
+cp -af BGQ_DISTROFS_BASE_PATH/sbin/ifenslave BGQ_INITRAMFS_PATH/sbin
+cp -af BGQ_DISTROFS_BASE_PATH/sbin/ip	BGQ_INITRAMFS_PATH/sbin
+cp -af BGQ_DISTROFS_BASE_PATH/sbin/lspci BGQ_INITRAMFS_PATH/sbin
+cp -af BGQ_DISTROFS_BASE_PATH/sbin/mount.nfs BGQ_INITRAMFS_PATH/sbin
+cp -af BGQ_DISTROFS_BASE_PATH/sbin/mount.nfs4 BGQ_INITRAMFS_PATH/sbin
+cp -af BGQ_DISTROFS_BASE_PATH/sbin/pidof BGQ_INITRAMFS_PATH/sbin
+cp -af BGQ_DISTROFS_BASE_PATH/sbin/setpci BGQ_INITRAMFS_PATH/sbin
 
 # Still need to copy /etc/localtime from the SN to avoid setting the time with one timezone
 # before moving to the right timezone.
 cp /etc/localtime BGQ_INITRAMFS_PATH/etc/
 
-cd BGQ_INITRAMFS_PATH
-rpm2cpio BGQ_LINUX_PATH/rpms/kernel-BGQ_LINUX_KERNEL_VERSION.rpm | cpio -id *bonding* &> /dev/null
-cd $CURRDIR	
+# Determine which module(s) are needed for channel bonding and add those module(s) to initramfs.  Also, create 
+# and copy modules.dep to initramfs.
+# mkdir -p lib/modules/BGQ_LINUX_KERNEL_VERSION
+TMPDIR=`mktemp -d`
+pushd $TMPDIR 
+rpm2cpio BGQ_LINUX_PATH/rpms/kernel-BGQ_LINUX_KERNEL_VERSION.rpm | cpio -iuvd
+depmod -b `pwd` BGQ_LINUX_KERNEL_VERSION 
+mkdir -p BGQ_INITRAMFS_PATH
+cp -v --parents lib/modules/BGQ_LINUX_KERNEL_VERSION/modules.dep BGQ_INITRAMFS_PATH
+for module in `grep bonding BGQ_INITRAMFS_PATH/lib/modules/BGQ_LINUX_KERNEL_VERSION/modules.dep | awk -F: '{ print $1 ; print $2 }'` ; do
+	cp -v --parents lib/modules/BGQ_LINUX_KERNEL_VERSION/$module BGQ_INITRAMFS_PATH
+done
+popd
+rm -rf $TMPDIR
+
 

@@ -21,10 +21,8 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_BC_ICON_INFO_H_
 #define MMCS_SERVER_BC_ICON_INFO_H_
-
 
 #include "BCTargetInfo.h"
 
@@ -32,34 +30,16 @@
 #include <string>
 #include <vector>
 
-
 namespace mmcs {
 namespace server {
 
-
-class BCIconInfo: public BCTargetInfo
+class BCIconInfo : public BCTargetInfo
 {
 public:
     unsigned         _card;             // icon location - node card index
     bool            _ioboard;           // This is an io board
     std::vector<BCTargetInfo*> _nodes;  // nodes or link chips contained in this card
     virtual std::string cardName() = 0;
-    void init_location()
-    {
-        if (midplaneNodeConfig() && !_ioboard)
-        {
-            std::ostringstream ostr;
-            ostr << midplaneNodeConfig()->posInMachine()
-                << "-" << cardName();
-            _location = ostr.str();
-        } else if (ioboardNodeConfig()) {  // Might be an io board
-            std::ostringstream ostr;
-            ostr << ioboardNodeConfig()->posInMachine()
-                << "-" << cardName();
-            _location = ostr.str();
-        }
-
-    }
 public:
     BCIconInfo() :
         BCTargetInfo(),
@@ -81,18 +61,15 @@ public:
 
     bool nodesOpen()        // return true if any nodes contained in this card are open
     {
-        for (std::vector<BCTargetInfo*>::iterator node = _nodes.begin(); node != _nodes.end(); ++node)
-        {
-        if ((*node)->_open)
-            return true;
+        for (std::vector<BCTargetInfo*>::iterator node = _nodes.begin(); node != _nodes.end(); ++node) {
+            if ((*node)->_open)
+                return true;
         }
         return false;
     }
     virtual ~BCIconInfo() {}
 };
 
-
 } } // namespace mmcs::server
-
 
 #endif

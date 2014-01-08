@@ -28,7 +28,6 @@
 #include "UserId.h"
 
 #include <boost/foreach.hpp>
-#include <boost/thread.hpp>
 #include <boost/tokenizer.hpp>
 
 #include <iostream>
@@ -53,18 +52,20 @@ dupfds(
         )
 {
     ::close( STDOUT_FILENO );
-    if ( dup2( logfd, STDOUT_FILENO ) != STDOUT_FILENO ) {
+    if ( dup2(logfd, STDOUT_FILENO) != STDOUT_FILENO ) {
         std::ostringstream msg;
-        msg << "dup2 failed to set STDOUT to the log file: " << strerror(errno);
+        char buf[256];
+        msg << "dup2 failed to set STDOUT to the log file: " << strerror_r(errno, buf, sizeof(buf));
         LOG_ERROR_MSG(msg.str());
         ::write(errorfd, msg.str().c_str(), msg.str().length());
     }
 
     // setup stderr to write to log
     ::close( STDERR_FILENO );
-    if ( dup2( logfd, STDERR_FILENO) != STDERR_FILENO ) {
+    if ( dup2(logfd, STDERR_FILENO) != STDERR_FILENO ) {
         std::ostringstream msg;
-        msg << "dup2 failed to set STDERR to the log file: " << strerror(errno);
+        char buf[256];
+        msg << "dup2 failed to set STDERR to the log file: " << strerror_r(errno, buf, sizeof(buf));
         LOG_ERROR_MSG(msg.str());
         ::write(errorfd, msg.str().c_str(), msg.str().length());
     }
@@ -81,9 +82,10 @@ logoutput(
     #else
     const int logfd = open(logfilename.c_str(), O_RDWR|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP);
     #endif
-    if(logfd < 0) {
+    if (logfd < 0) {
         std::ostringstream msg;
-        msg << "Could not open log file " << logfilename << " error " << strerror(errno);
+        char buf[256];
+        msg << "Could not open log file " << logfilename << " error " << strerror_r(errno, buf, sizeof(buf));
         LOG_ERROR_MSG(msg.str());
         ::write(errorfd, msg.str().c_str(), msg.str().length());
         return 0;
@@ -122,14 +124,13 @@ Exec::fexec(
         arg_vector.push_back( *i );
         arg_array[0] = const_cast<char*>(arg_vector[0].c_str());
     }
-    LOG_DEBUG_MSG( "size " << arg_vector.size() );
 
-    for (tokenizer::const_iterator i = nametok.begin(); i != nametok.end(); ++i){
-        const size_t position  = std::distance( nametok.begin(), i );
+    for (tokenizer::const_iterator i = nametok.begin(); i != nametok.end(); ++i) {
+        const size_t position = static_cast<size_t>(std::distance( nametok.begin(), i ));
         if ( position == 0 ) {
             // already got this guy
         } else if ( position >= sizeof(arg_array) - 1 ) {
-            LOG_ERROR_MSG( "more than " << sizeof(arg_array) -1 << " arguments is not supported" );
+            LOG_ERROR_MSG( "more than " << sizeof(arg_array) - 1 << " arguments is not supported" );
             return -1;
         } else {
             arg_vector.push_back( *i );
@@ -138,38 +139,41 @@ Exec::fexec(
     }
 
     for ( std::vector<std::string>::iterator i = arg_vector.begin(); i != arg_vector.end(); ++i ) {
-        const size_t position  = std::distance( arg_vector.begin(), i );
+        const size_t position = static_cast<size_t>(std::distance( arg_vector.begin(), i ));
         LOG_TRACE_MSG("arg[" << position << "]=" << *i);
     }
 
     // Create a pipe to read output from the child proc
     int pipeFromChild[2];
     #ifdef O_CLOEXEC
-    if(pipe2(pipeFromChild, O_CLOEXEC) != 0) {
+    if (pipe2(pipeFromChild, O_CLOEXEC) != 0) {
     #else
-    if(pipe(pipeFromChild) != 0) {
+    if (pipe(pipeFromChild) != 0) {
     #endif
-        LOG_ERROR_MSG( "creating child pipe() failed: " << strerror(errno) );
+        char buf[256];
+        LOG_ERROR_MSG( "creating child pipe() failed: " << strerror_r(errno, buf, sizeof(buf)) );
         return -1;
     }
 
     // Create error pipe
     int errorPipe[2];
     #ifdef O_CLOEXEC
-    if(pipe2(errorPipe, O_CLOEXEC) != 0) {
+    if (pipe2(errorPipe, O_CLOEXEC) != 0) {
     #else
-    if(pipe(errorPipe) != 0) {
+    if (pipe(errorPipe) != 0) {
     #endif
-        LOG_ERROR_MSG( "creating error pipe() failed: " << strerror(errno) );
+        char buf[256];
+        LOG_ERROR_MSG( "creating error pipe() failed: " << strerror_r(errno, buf, sizeof(buf)) );
         return -1;
     }
 
     const uid_t my_euid = geteuid();
     const gid_t my_egid = getegid();
     bool isroot = false;
-    if(!userid.empty()) {
+    if (!userid.empty()) {
         if ( seteuid(0) != 0 ) {
-            LOG_WARN_MSG("Cannot change uid to root.  Current uid is " << geteuid() << ".  " << strerror(errno));
+            char buf[256];
+            LOG_WARN_MSG("Cannot change uid to root.  Current uid is " << geteuid() << ".  " << strerror_r(errno, buf, sizeof(buf)));
             return -1;
         }
         isroot = true;
@@ -178,24 +182,24 @@ Exec::fexec(
     // Fork the new process.
     pid_t pid = fork();
 
-    if(pid < 0) {
+    if (pid < 0) {
         // Error on fork.
         char buf[256];
         LOG_ERROR_MSG("fork() failed: " << strerror_r(errno, buf, sizeof(buf)) );
         return -1;
     }
 
-    if(pid == 0) {
+    if (pid == 0) {
         // child process
         
         // Set the bg.properties file if we have one
-        if(!propfile.empty())
+        if (!propfile.empty())
             setenv(bgq::utility::Properties::EnvironmentalName.c_str(), propfile.c_str(), true);
 
-        if(!userid.empty() && isroot) {
+        if (!userid.empty() && isroot) {
             // We have an assigned user id and we are root.
             try {
-                bgq::utility::UserId uid( userid );
+                const bgq::utility::UserId uid( userid );
                 const gid_t my_gid = uid.getGroups().front().first;
                 if (setregid(my_gid, my_gid) != 0) {
                     char errorText[256];
@@ -230,26 +234,28 @@ Exec::fexec(
             }
         } else {
             int rc = setregid(my_egid, my_egid);
-            if(rc != 0) {
+            if (rc != 0) {
                 std::ostringstream errorstream;
-                errorstream << "Could not set real and effective gids of this process to " << my_egid << ": " << strerror(errno);
+                char buf[256];
+                errorstream << "Could not set real and effective gids of this process to " << my_egid << ": " << strerror_r(errno, buf, sizeof(buf));
                 LOG_ERROR_MSG(errorstream.str());
                 ::write(errorPipe[1], errorstream.str().c_str(), errorstream.str().length());
                 _exit(EXIT_FAILURE);
             }
 
             rc = setreuid(my_euid, my_euid);
-            if(rc != 0) {
+            if (rc != 0) {
                 std::ostringstream errorstream;
-                errorstream << "Could not set real and effective uids of this process to " << my_euid << ": " << strerror(errno);
+                char buf[256];
+                errorstream << "Could not set real and effective uids of this process to " << my_euid << ": " << strerror_r(errno, buf, sizeof(buf));
                 LOG_ERROR_MSG(errorstream.str());
                 ::write(errorPipe[1], errorstream.str().c_str(), errorstream.str().length());
                 _exit(EXIT_FAILURE);
             }
         }
 
-        if(managed) {
-            if(logfilename.empty()) {
+        if (managed) {
+            if (logfilename.empty()) {
                 // If no log file descriptor has been specified, set up a pipe
                 // for the parent to read
                 LOG_DEBUG_MSG("No destination for stdout/stderr specified.  Set up pipe.");
@@ -265,7 +271,7 @@ Exec::fexec(
                 ::close(pipeFromChild[1]);
             } else {
                 int logfd = logoutput(logfilename, errorPipe[1]);
-                if(!logfd) {
+                if (!logfd) {
                     // already wrote into error pipe
                     _exit(EXIT_FAILURE);
                 } else {
@@ -273,9 +279,9 @@ Exec::fexec(
                 }
             }
         } else {
-            if(!logfilename.empty()) {
+            if (!logfilename.empty()) {
                 const int logfd = logoutput(logfilename, errorPipe[1]);
-                if(!logfd) {
+                if (!logfd) {
                     // already wrote into error pipe
                     _exit(EXIT_FAILURE);
                 }
@@ -304,10 +310,22 @@ Exec::fexec(
             _exit(EXIT_FAILURE);
         }
 
+        // zero signal mask inherited from parent process
+        sigset_t mask;
+        sigemptyset( &mask );
+        if ( pthread_sigmask( SIG_SETMASK, &mask, NULL ) == -1 ) {
+            std::ostringstream msg;
+            char buf[256];
+            msg << "Could not set signal mask: " << strerror_r(errno, buf, sizeof(buf));
+            ::write(errorPipe[1], msg.str().c_str(), msg.str().length());
+            _exit(EXIT_FAILURE);
+        }
+
         execv(path.c_str(), arg_array);
         const int error = errno;
         std::ostringstream msg;
-        msg << "execv(" << path << ") failed: " << strerror(error);
+        char buf[256];
+        msg << "execv(" << path << ") failed: " << strerror_r(error, buf, sizeof(buf));
         ::write(errorPipe[1], msg.str().c_str(), msg.str().length());
         _exit(EXIT_FAILURE);
     }
@@ -318,14 +336,15 @@ Exec::fexec(
 
     // Set uid back to non-privileged user.
     if ( seteuid(my_euid) != 0 ) {
-        LOG_ERROR_MSG("Cannot reset effective uid to " << my_euid << ": " << strerror(errno));
+        char buf[256];
+        LOG_ERROR_MSG("Cannot reset effective uid to " << my_euid << ": " << strerror_r(errno, buf, sizeof(buf)));
     } else {
         LOG_DEBUG_MSG("successfully reset euid to " << my_euid);
     }
 
     char buf[1024];
     bzero(buf, 1024);
-    int rc = 0;
+    ssize_t rc = 0;
     while ( 1 ) {
         rc = ::read( errorPipe[0], buf, sizeof(buf) );
         if ( rc == -1 && errno == EINTR ) continue;
@@ -339,15 +358,16 @@ Exec::fexec(
         LOG_DEBUG_MSG( errorstring );
         int zero = 0;
         LOG_DEBUG_MSG("waiting for " << pid);
-        if(waitpid(pid, &zero, zero) < 0) {
-            LOG_ERROR_MSG("waitpid failed " << strerror(errno));
+        if (waitpid(pid, &zero, zero) < 0) {
+            char buf[256];
+            LOG_ERROR_MSG("waitpid failed " << strerror_r(errno, buf, sizeof(buf)));
         }
         pid = -1;
     } else {
         // pipe was closed means success
     }
 
-    if(logfilename.empty()) {
+    if (logfilename.empty()) {
         pipefd = pipeFromChild[0];
         ::close(pipeFromChild[1]);
     } else {

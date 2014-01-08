@@ -146,7 +146,7 @@ public:
     //! \param signal Signal to use to end the binaries.
     void cancel(
             bool binaries, 
-            unsigned signal
+            int signal
             );
 
     size_t binCount() const { return this->get_binaries().size(); }

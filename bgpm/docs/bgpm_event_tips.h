@@ -154,6 +154,19 @@
  * or the next instruction following itself.
  * A flush is triggered at one of five stages in the pipeline: IU2, IU5, RF0, EX1, or EX4.
  *
+ *\section bgpm_tips_MU  MU Event Tips 
+
+The MU provides various events that can be used to count traffic injected by the local node and traffic received by the local node.  Because it's a DMA interface between the local memory system and the network, the MU has no knowledge of network pass-through traffic; the network counters should be used to track that traffic, if desired.  
+
+On the message injection side, the MU provides the  PEVT_MU_PKT_INJ event which can be used to count packets injected by this node's MU.  There is an important caveat here: PEVT_MU_PKT_INJ does not count the first packet of each message, so to get an accurate injected packet count the user must add PEVT_MU_PKT_INJ with PEVT_MU_MSG_INJ. The PEVT_MU_MSG_INJ event counts each new message that is injected by the MU into the local node's network device (ND).
+
+  So on the injection side, a user can count total packets injected and total messages injected.  On the reception side, there is additional packet tracking fidelity since we provide three MU counters (PEVT_MU_FIFO_PKT_RCV, PEVT_MU_RGET_PKT_RCV, PEVT_MU_PUT_PKT_RCV), one for each different type of network packet (FIFO packets, remote get/rDMA read packets, and direct put/rDMA write packets). While the aforementioned event counters track packets injected and received, the MU also provides events to track the injection and reception bandwidth used by the MU's three master ports attached to the crossbar switch.  
+
+On the reception side, the PEVT_MU_PORT0/1/2_16B_WRT events can be used to count the number of 16B writes from the MU over the crossbar switch to the shared L2 caches. Thus a user can get an exact accounting of how much memory store bandwidth is utilized to sink packets received by this node (again, this does not track any pass-through network traffic).
+
+ On the injection side, there are three counters per master port (PEVT_MU_PORT0/1/2_32B_RD, PEVT_MU_PORT0/1/2_64B_RD, PEVT_MU_PORT0/1/2_128B_RD) since there are three load data sizes that the MU supports (32B, 64B, and 128B).  
+
+ To calculate the total memory bandwidth used by the MU injection side, the user must consider all nine of these _RD event counts. Both MU reception and injection sides operate at half the 1.6GHz core frequency, or 800MHz.
  */
 
 

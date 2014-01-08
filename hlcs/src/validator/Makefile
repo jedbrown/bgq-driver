@@ -24,52 +24,31 @@
 include ../../Make.hlcs.rules
 include ../../../Make.rules
 
-TOP_DIR=hlcs
-TOP_INSTALL_DIR=$(BGQ_INSTALL_DIR)/$(TOP_DIR)
-MODULE_INIT_DIR=$(TOP_INSTALL_DIR)/etc/init
-
 EXECS = properties_validate
 
-DIR_TARGS_ALL		= $(addsuffix .all,$(DIRS))
-DIR_TARGS_INSTALL       = $(addsuffix .install,$(DIRS))
-DIR_TARGS_CLEAN		= $(addsuffix .clean,$(DIRS))
-DIR_TARGS_DISTCLEAN	= $(addsuffix .distclean,$(DIRS))
-
-DIR_TARGS  = $(DIR_TARGS_ALL)
-DIR_TARGS += $(DIR_TARGS_CLEAN)
-DIR_TARGS += $(DIR_TARGS_DISTCLEAN)
-DIR_TARGS += $(DIR_TARGS_INSTALL)
-
-#CXXFLAGS += -gstabs
 CXXFLAGS += -O2
 CXXFLAGS += -Wall
 CXXFLAGS += -MD -MP
-CXXFLAGS += -iquote ..
-CXXFLAGS += -I $(BGQ_BUILD_DIR)/hlcs/src/master
-CXXFLAGS += -I $(BGQ_INSTALL_DIR)
-CXXFLAGS += -I $(BGQ_INSTALL_DIR)/bgq_util/include
-CXXFLAGS += -I $(BGQ_INSTALL_DIR)/utility/include
-CXXFLAGS += -I $(BGQ_INSTALL_DIR)/utility/include/cxxsockets
-CXXFLAGS += -I $(BGQ_INSTALL_DIR)/ras/include
-CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)/hlcs/include
-CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)/db/include
+CXXFLAGS += -iquote $(BGQ_BUILD_DIR)/hlcs/src/master
+CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)
 
 LDFLAGS  += -lboost_date_time-mt
+LDFLAGS  += -lboost_thread-mt
 LDFLAGS  += -lboost_program_options-mt
-LDFLAGS  += -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility
-# # This should come out and we should only link to the XML.o binary to avoid 
-# # sucking in all of the other xml interfaces.  Either that, or change the xml libs.
+LDFLAGS  += -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility 
+LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
 LDFLAGS  += -L $(BGQ_INSTALL_DIR)/xml/lib -lXML
 LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/xml/lib
 LDFLAGS  += -L $(BGQ_INSTALL_DIR)/ras/lib -lras
 LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/ras/lib
-LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
 LDFLAGS  += -L $(BGQ_INSTALL_DIR)/db/lib -lbgdb
 LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib
-LDFLAGS  += -Wl,-rpath,$(BGQ_LIB_INSTALL_DIR)
+LDFLAGS  += -L $(BGQ_INSTALL_DIR)/control/lib -lmcserver
+LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/control/lib
 
 BGM_OBJS =
 BGM_OBJS += ../master/common/AgentBase.o
+BGM_OBJS += ../master/common/BinaryController.o
 BGM_OBJS += ../master/server/AgentManager.o
 BGM_OBJS += ../master/server/AgentRep.o
 BGM_OBJS += ../master/server/Alias.o
@@ -89,36 +68,28 @@ BGM_OBJS += ../master/protocol/BGMasterClientProtocolSpec.o
 MMCS_OBJS  = ../mmcs/common/Properties.o
 MMCS_OBJS += ../mmcs/common/Subnet.o
 
-INSTALL_LIST += $(call INSTALL_BIN_TARGET, properties_validate)
+INSTALL_LIST += $(call INSTALL_BIN_TARGET, $(EXECS))
 
-bg_bin_links := properties_validate
+bg_bin_links := $(EXECS)
 
-.PHONY: $(DIR_TARGS) clean docs install distclean all build
+.PHONY: clean docs install distclean all 
 
-all: $(DIR_TARGS_ALL) $(INSTALL_LIST) install build
+all: $(EXECS) test
 
-$(MODULE_INIT_DIR):
-	$(MKDIR) -p $@
+install: $(INSTALL_LIST) $(bg_links_targets) test
 
-$(MODULE_INIT_DIR)/%: % | $(MODULE_INIT_DIR)
-	$(CP) $^ $@
-
-install: build $(INSTALL_LIST) $(lib_dev) $(MODULE_INIT_DIR)/bgagent $(bg_links_targets)
-
-clean:			$(DIR_TARGS_CLEAN)
-			$(RM) $(INSTALL_LIST)
-			$(RM) *.o *.o_64 *~ core* \#*
-			$(RM) *.d
-			$(RM) properties_validate
+clean:			
+	$(RM) $(INSTALL_LIST)
+	$(RM) *.o
+	$(RM) *.d
+	$(RM) $(EXECS)
 
 distclean:	clean
 
-build: $(DIR_TARGS_ALL) properties_validate
+properties_validate: properties_validate.o $(BGM_OBJS) $(MMCS_OBJS) 
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-$(DIR_TARGS):
-	$(MAKE) --directory $(basename $@) $(subst .,,$(suffix $@))
-
-properties_validate: properties_validate.o $(BGM_OBJS) $(MMCS_OBJS) | $(DIR_TARGS_ALL)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpthread -lcxxsockets	
+test: properties_validate
+	./$^ $(BGQ_INSTALL_DIR)/utility/etc/bg.properties.ship.tpl
 
 -include *.d

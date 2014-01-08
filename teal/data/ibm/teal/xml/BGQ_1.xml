@@ -14,5 +14,6 @@
         <column name="message" type="VARCHAR" size="1024"/>
         <column name="rawdata" type="VARCHAR" size="3072"/>
         <column name="diags" type="CHAR" size="1"/>
+        <column name="qualifier" type="CHAR" size="32"/>
     </table>
 </tables>

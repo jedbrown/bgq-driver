@@ -35,7 +35,7 @@ LOG_DECLARE_FILE("ras");
 #endif
 
 
-RasEvent& EventFilter::handle(RasEvent& event, const RasEventMetadata& metadata)
+RasEvent& EventFilter::handle(RasEvent& event, const RasEventMetadata& /*metadata*/)
 {
 
   LOG_TRACE_MSG("EventFilter handling event id=" <<  event.getDetail(RasEvent::MSG_ID).c_str() << " msg=" <<  event.getDetail(RasEvent::MESSAGE).c_str());

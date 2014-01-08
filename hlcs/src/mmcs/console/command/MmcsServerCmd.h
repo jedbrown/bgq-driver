@@ -25,25 +25,21 @@
  * \file MmcsServerCmd.h
  */
 
-
 #ifndef MMCS_CONSOLE_COMMAND_MMCS_SERVER_CMD_H_
 #define MMCS_CONSOLE_COMMAND_MMCS_SERVER_CMD_H_
-
 
 #include "common/AbstractCommand.h"
 
 #include <bgq_util/include/pthreadmutex.h>
 
-
 namespace mmcs {
 namespace console {
 namespace command {
 
-
 /*!
 ** mmcs_server_cmd <command-string>
 ** Send a command to the mmcs server for execution and wait for the reply
-** This command is used internally by mmcs_console
+** This command is used internally by bg_console
 ** Note: an active server port must be set before this command is executed
 */
 class MmcsServerCmd : public common::AbstractCommand
@@ -52,9 +48,8 @@ class MmcsServerCmd : public common::AbstractCommand
     static bool _ending;
 public:
     MmcsServerCmd(const char* name, const char* description, const Attributes& attributes)
-        : common::AbstractCommand(name,description,attributes) { usage = "mmcs_server_cmd [<anything>]";}
+        : common::AbstractCommand(name,description,attributes) { _usage = "mmcs_server_cmd [<anything>]";}
     static  MmcsServerCmd* build();	// factory method
-    static  std::string cmdname() { return "mmcs_server_cmd"; }
     void execute(std::deque<std::string> args,
 			 mmcs_client::CommandReply& reply,
 			 common::ConsoleController* pController,

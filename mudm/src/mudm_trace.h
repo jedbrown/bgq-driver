@@ -208,7 +208,12 @@ uint64_t entrynum_WriteFlightLogx4(uint32_t ID,BG_FlightRecorderRegistry_t* logr
 #define DB_RAW_DATA(logregistry,pointer) DB_WriteFlightLog64x4(DB_RAWPKTDTA,logregistry,(uint64_t *)pointer)
 
 #define DB_RECV_CALLBACK(logregistry,data0,data1,data2,data3) DB_WriteFlightLogx4(DB_RECVBADRC,logregistry,(uint64_t)data0,(uint64_t)data1,(uint64_t)data2,(uint64_t)data3)
+//FLIGHTPRINT(DB_RECVPKTQQ,"pointer=%p, allocated=%llu, free=%llu, active=%llu")
+#define DB_PKT_CHECK(logregistry,data0,data1,data2,data3) DB_WriteFlightLogx4(DB_RECVPKTQQ,logregistry,(uint64_t)data0,(uint64_t)data1,(uint64_t)data2,(uint64_t)data3)
 
+#define PKT_CHECK(logregistry,data0,data1,data2,data3) WriteFlightLogx4(DB_RECVPKTQQ,logregistry,(uint64_t)data0,(uint64_t)data1,(uint64_t)data2,(uint64_t)data3)
+
+#define DB_PKT_CHECK_PREV(logregistry,data0,data1,data2,data3) DB_WriteFlightLogx4(DB_RECVPKTQQ,logregistry,(uint64_t)data0,(uint64_t)data1,(uint64_t)data2,(uint64_t)data3)
 
 
 

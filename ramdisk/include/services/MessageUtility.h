@@ -206,9 +206,11 @@ static const char* toString(uint16_t type)
       "CheckToolStatusAck",
       "ExitTool",
       "ExitToolAck",
+      "Heartbeat",
+      "HeartbeatAck",
    };
    
-   if (type >= ErrorAck && type <= ExitToolAck) {
+   if (type >= ErrorAck && type <= HeartbeatAck) {
       return strings[type - ErrorAck];
    }
    if (type == Completed) {

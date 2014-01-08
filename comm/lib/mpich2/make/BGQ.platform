@@ -26,7 +26,8 @@ endif
     # ---------------- locations for MPICH2 ------------------------------------
     THREAD_LEVEL         = default
     MPICH2DIR            = ${ROOTDIR}/lib/dev/mpich2
-    BUILDDIR             = ${ROOTDIR}/build/mpich2
+    TOP_BUILD_DIR        = ${ROOTDIR}/build
+    BUILDDIR             = ${TOP_BUILD_DIR}/mpich2
     MPICH2BUILD          = ${BUILDDIR}/pami
     FILE_SYSTEM          = bg+bglockless
     # debuginfo is special cased for XL compiler targets. If set to bgq it only
@@ -41,7 +42,6 @@ endif
     MPI_CXXFLAGS         =${HOST_INCLUDE}
     MPI_FFLAGS           =${HOST_INCLUDE}
 
-    HOST_F77_OTHER_LIBS  =-lmpichf90
     HOST_OTHER_CONFIGURE =--with-bgq-install-dir=${BGQ_INSTALL_DIR}
 
     # These flags are used during a regular build (generally GCC)

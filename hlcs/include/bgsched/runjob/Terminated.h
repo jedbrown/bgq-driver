@@ -82,7 +82,7 @@ public:
      * When delivering a KILL signal to a job times out, the kill_timeout() method
      * will return true. For sub-block jobs, this changes the status of every node
      * participating in the job to a Software Failure status. For regular jobs on
-     * blocks larger than a midplane, the midplanes in use by the job will change 
+     * blocks a midplane and larger, the midplanes in use by the job will change 
      * to a Software Failure status. For regular jobs on blocks smaller than a 
      * midplane, all of the nodes participating in the job will change to a Software
      * Failure status. In every scenario, freeing the encompassing compute block

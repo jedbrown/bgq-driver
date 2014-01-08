@@ -514,6 +514,29 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
         Flight_CIOS_EvtDecoder(bufsize, buffer, log);
         return (size_t)strlen(buffer_start);
         break;
+
+      case SYS_CALL_PWR:
+      case SYS_CALL_WRT:
+      case SYS_CALL_SND:
+      case SYS_CALL_PRD:
+      case SYS_CALL_RED:
+      case SYS_CALL_RCV:
+        length = (size_t)snprintf(buffer, bufsize, "region@=%p length=%p offset=%p xtra=%p\n",(void*)log->data[0],(void*)log->data[1],(void*)log->data[2],(void*)log->data[3]);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+        break;
+      case SYS_RSLT_PWR:
+      case SYS_RSLT_WRT:
+      case SYS_RSLT_SND:
+      case SYS_RSLT_PRD:
+      case SYS_RSLT_RED:
+      case SYS_RSLT_RCV:
+        length = (size_t)snprintf(buffer, bufsize, "region@=%p length=%p,offset=%p,xtra=%p\n",(void*)log->data[0],(void*)log->data[1],(void*)log->data[2],(void*)log->data[3]);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+        break;
       default: break;
     }
 
@@ -668,8 +691,37 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
         case sysio::LinkAck: text=(char *)"sysio::LinkAck";break;
         case sysio::Symlink: text=(char *)"sysio::Symlink";break;
         case sysio::SymlinkAck: text=(char *)"sysio::SymlinkAck";break;
+        
+#define SYSIO(type) case sysio::type: text=(char *)"sysio::"#type;break; 
+         SYSIO(FsetXattr);
+         SYSIO(FsetXattrAck);
+         SYSIO(FgetXattr);
+         SYSIO(FgetXattrAck);
+         SYSIO(FremoveXattr);
+         SYSIO(FremoveXattrAck);
+         SYSIO(FlistXattr);
+         SYSIO(FlistXattrAck);
 
+         SYSIO(LsetXattr);
+         SYSIO(LsetXattrAck);
+         SYSIO(LgetXattr);
+         SYSIO(LgetXattrAck);
+         SYSIO(LremoveXattr);
+         SYSIO(LremoveXattrAck);
+         SYSIO(LlistXattr);
+         SYSIO(LlistXattrAck);
 
+         SYSIO(PsetXattr);
+         SYSIO(PsetXattrAck);
+         SYSIO(PgetXattr);
+         SYSIO(PgetXattrAck);
+         SYSIO(PremoveXattr);
+         SYSIO(PremoveXattrAck);
+         SYSIO(PlistXattr);
+         SYSIO(PlistXattrAck);
+         
+         SYSIO(GpfsFcntl);
+         SYSIO(GpfsFcntlAck);
 
         default:   break;
     }
@@ -686,6 +738,16 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
    }
    else if (log->id ==BGV_RECV_MSG){
         length = (size_t)snprintf(buffer, bufsize, " lQP=%d ",log->ci.BGV_recv[1] );
+        buffer += length;
+        bufsize -= length;    
+   }
+   else if (log->id ==BGV_BLOK_MSG){
+        length = (size_t)snprintf(buffer, bufsize, " BLOCKED " );
+        buffer += length;
+        bufsize -= length;    
+   }
+   else if (log->id ==BGV_RLSE_MSG){
+        length = (size_t)snprintf(buffer, bufsize, " UNBLOCKED " );
         buffer += length;
         bufsize -= length;    
    }

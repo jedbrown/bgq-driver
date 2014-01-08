@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "Redirect.h"
 
 #include "../BlockControllerBase.h"
@@ -31,25 +30,20 @@
 
 #include "libmmcs_client/ConsolePort.h"
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
-using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
 
-
-void Redirect::redirect_block(
+void
+Redirect::redirect_block(
         std::deque<std::string> args,
         mmcs_client::CommandReply& reply,
         DBConsoleController* pController
     )
 {
-    if (args.size() == 0)
-    {
+    if (args.size() == 0) {
         reply << mmcs_client::FAIL << "args?" << mmcs_client::DONE;
         return;
     }
@@ -59,38 +53,31 @@ void Redirect::redirect_block(
     }
     const DBBlockPtr pBlock = boost::dynamic_pointer_cast<DBBlockController>(pController->getBlockHelper());    // get selected block
 
-    log4cxx::MDC _blockid_mdc_( "blockId", std::string("{") + pBlock->getBlockName() + "} " );
-
-    if (!pBlock->getBase()->isConnected())
-    {
+    if (!pBlock->getBase()->isConnected()) {
         const std::deque<std::string> args( 1, "mode=monitor" );
         const std::string targspec = "{*}";
         const BlockControllerTarget target(pBlock->getBase(), targspec, reply);
         pBlock->getBase()->connect(args, reply, &target);
-        if(reply.getStatus() != 0) {
+        if (reply.getStatus() != 0) {
             return;
         }
     }
-    if (args[0] == "on")
-    {
+    if (args[0] == "on") {
         if (
                 pController->getRedirecting() ||            // is this DBConsoleController already redirecting?
                 pBlock->getBase()->getRedirectSock() != 0   // is the DBBlockController already redirecting?
            )
         {
-            reply << mmcs_client::FAIL << "block is already redirected in another process" << mmcs_client::DONE;
+            reply << mmcs_client::FAIL << "Block is already redirected in another process" << mmcs_client::DONE;
             return;
         }
         pBlock->getBase()->startRedirection(boost::static_pointer_cast<CxxSockets::SecureTCPSocket>(pController->getConsolePort()->getSock()), reply);
         if (reply.getStatus() != 0)
             return;
         pController->setRedirecting(true);
-    }
-    else
-    {
-        if (!pController->getRedirecting())     // is this DBConsoleController redirecting?
-        {
-            reply << mmcs_client::FAIL << "client not redirecting" << mmcs_client::DONE;
+    } else {
+        if (!pController->getRedirecting()) {   // is this DBConsoleController redirecting?
+            reply << mmcs_client::FAIL << "Client not redirecting" << mmcs_client::DONE;
             return;
         }
         pBlock->getBase()->stopRedirection(reply);
@@ -119,50 +106,50 @@ Redirect::build()
 
 void
 Redirect::execute(
-        deque<string> args,
+        std::deque<std::string> args,
         mmcs_client::CommandReply& reply,
         DBConsoleController* pController,
         BlockControllerTarget* pTarget,
         std::vector<std::string>* validnames
-        )
+)
 {
     return execute(args, reply, pController, pTarget);
 }
 
 void
 Redirect::execute(
-        deque<string> args,
+        std::deque<std::string> args,
         mmcs_client::CommandReply& reply,
         DBConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
-    if (args.size() != 2)
-    {
-    reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
-    return;
+    if (args.size() != 2) {
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
+        return;
     }
     pController->selectBlock(args, reply, true);
-    if (reply.getStatus() != 0)
-    return;
+    if (reply.getStatus() != 0) {
+        return;
+    }
     args.pop_front();       // remove block name from args
     redirect_block(args, reply, pController);
-    if(reply.str() == "args?")
-      reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+    if (reply.str() == "args?") {
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
+    }
 }
 
 void
 Redirect::help(
-        deque<string> args,
+        std::deque<std::string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
     reply << mmcs_client::OK << description()
-      << ";Redirect I/O node output for the specified block to the mmcs console."
-      << ";Directs subsequent mailbox output back to the socket connection that this command is received on."
-      << ";Allocating or freeing the block will stop the mailbox redirection."
-      << mmcs_client::DONE;
+          << ";Redirect I/O node output for the specified block to the mmcs console."
+          << ";Directs subsequent mailbox output back to the socket connection that this command is received on."
+          << ";Allocating or freeing the block will stop the mailbox redirection."
+          << mmcs_client::DONE;
 }
 
 } } } // namespace mmcs::server::command

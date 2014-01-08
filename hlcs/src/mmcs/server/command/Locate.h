@@ -31,11 +31,9 @@
 
 #include "common/AbstractCommand.h"
 
-
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 class Locate : public common::AbstractCommand
 {
@@ -48,23 +46,14 @@ public:
     ** @param attr describes the attributes and requirements of the command
     */
     Locate(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "[<target>] locate [neighbors [verbose]] [ras_format]";}
+      : AbstractCommand(name,description,attributes) { _usage = "[<target>] locate [neighbors [verbose]] [ras_format]";}
 
     /*!
     ** build() - MMCSCommand factory
     ** This is invoked at MMCS startup when MMCS builds its list of commands
     ** @return an MMCSCommand object for this specific command
     */
-    static  Locate* build();	// factory method
-
-    /*!
-    ** cmdname() - Returns the command name
-    ** This returns the name of the command. It is a static method so that it
-    ** can be used before the object is built, in conjunction with build,
-    ** for inserting the command objects into a map.
-    ** @return command name
-    */
-    static  std::string cmdname() { return "locate"; }
+    static Locate* build();	// factory method
 
     /*!
     ** execute() - Perform specific MMCS command

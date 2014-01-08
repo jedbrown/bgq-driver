@@ -28,6 +28,7 @@
 
 #include <string>
 #include <utility/include/Log.h>
+#include <unistd.h>
 
 // The following #defines will disable compiling calls to log4cxx into the CIOS code (for performance reasons)
 // To compile calls to particular levels of logging, comment out the appropriate defines from the following list 

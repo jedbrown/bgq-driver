@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "BlockStatus.h"
 
 #include "../BCNodeInfo.h"
@@ -33,14 +32,11 @@
 
 #include "libmmcs_client/CommandReply.h"
 
-
 using namespace std;
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 BlockStatus*
 BlockStatus::build()
@@ -58,34 +54,32 @@ BlockStatus::build()
 }
 
 void
-BlockStatus::execute(deque<string> args,
-                mmcs_client::CommandReply& reply,
-                common::ConsoleController* pController,
-                BlockControllerTarget* pTarget)
+BlockStatus::execute(
+        deque<string> args,
+        mmcs_client::CommandReply& reply,
+        common::ConsoleController* pController,
+        BlockControllerTarget* pTarget
+)
 {
     BlockPtr pBlock = pController->getBlockHelper()->getBase();    // get selected block
-    if (!pBlock->getNodes().size() && !pBlock->getIcons().size())
-    {
-        reply << mmcs_client::FAIL << "not connected" << mmcs_client::DONE;
+    if (!pBlock->getNodes().size() && !pBlock->getIcons().size()) {
+        reply << mmcs_client::FAIL << "Not connected" << mmcs_client::DONE;
         return;
     }
 
-
     reply << mmcs_client::OK;
-    for (unsigned i = 0; i < pTarget->getNodes().size(); ++i)
-    {
+    for (unsigned i = 0; i < pTarget->getNodes().size(); ++i) {
         BCNodeInfo* nodeInfo = pTarget->getNodes()[i];
-        if(nodeInfo->isIOnode())
+        if (nodeInfo->isIOnode()) {
             nodeInfo = pBlock->getNodes()[i];
+        }
 
-        reply << "{" << nodeInfo->_locateId << "} "
-            << (nodeInfo->isIOnode() ? "io     " : "compute" );
+        reply << "{" << nodeInfo->_locateId << "} " << (nodeInfo->isIOnode() ? "io     " : "compute" );
 
-        if(nodeInfo->_open == false) {
+        if (nodeInfo->_open == false) {
             reply << " [disconnected]";
         } else {
-            switch (nodeInfo->_state)
-                {
+            switch (nodeInfo->_state) {
                 case NST_IN_RESET:
                     reply << " [vacant]";
                     break;
@@ -95,14 +89,13 @@ BlockStatus::execute(deque<string> args,
                 case NST_TERMINATED:
                     reply << " [terminated]";
                     break;
-                }
-            if (nodeInfo->isIOnode())
-                {
-                    if (nodeInfo->_initialized)
-                        reply << " [initialized]";
-                    else if (nodeInfo->_haltComplete)
-                        reply << " [halt complete]";
-                }
+            }
+            if (nodeInfo->isIOnode()) {
+                if (nodeInfo->_initialized)
+                    reply << " [initialized]";
+                else if (nodeInfo->_haltComplete)
+                    reply << " [halt complete]";
+            }
         }
         reply << "\n";
     }
@@ -110,15 +103,16 @@ BlockStatus::execute(deque<string> args,
 }
 
 void
-BlockStatus::help(deque<string> args,
-             mmcs_client::CommandReply& reply)
+BlockStatus::help(
+        deque<string> args,
+        mmcs_client::CommandReply& reply
+)
 {
     reply << mmcs_client::OK << description()
           << ";Lists nodes in allocated block, the type of each node, and whether it is running a program or vacant."
-          << ";Nodes in disconnected targets will show as \"disconnected\".  IO block targets are disconnected after booting."
+          << ";Nodes in disconnected targets will show as \"disconnected\". I/O block targets are disconnected after booting."
           << ";(If block has been booted, it will show that a program is running.)"
           << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

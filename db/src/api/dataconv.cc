@@ -31,106 +31,61 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <boost/assert.hpp>
+
 LOG_DECLARE_FILE( "database" );
 
-char*
-makeChars(
-        char* target,
-        const char* source,
-        int len
-)
-{
-    int cpyLen;                   // length to copy
+namespace BGQDB {
 
-    cpyLen = strlen(source);      // calc length to copy
-    if (len <= cpyLen) {
-        cpyLen = len;
-    } else {
-        memset(target, ' ', len);     // blank fill
-    }
-    memcpy(target, source, cpyLen);
-    return target;
-}
-
-
-// copy each byte and pad with spaces
-void
-char2bitdata(
-        unsigned char *dest,
-        unsigned destLen,
-        const char *source
-)
-{
-    unsigned  i;
-    assert(destLen >= strlen(source));
-
-    for (i = 0; i < strlen(source); i++)
-        dest[i] = source[i];
-
-    // padding with spaces
-    for (; i < destLen; i++)
-        dest[i] = 0x20;
-}
-
-// convert hex digits to binary
-void
+bool
 hexchar2bitdata(
-        unsigned char *dest,
-        unsigned destLen,
-        const char *source
-)
+        unsigned char* dest,
+        const unsigned length,
+        const std::string& source
+        )
 {
-    char convunit[3];  // a string of length 2 to give only 2 digits to strtol
-    unsigned i;
-    unsigned result;
+    BOOST_ASSERT( dest );
+    memset( dest, length, 0 );
 
-    assert((strlen(source) % 2) == 0); // assuming an even number of digits
-    assert((strlen(source) / 2) <= destLen);
+    LOG_DEBUG_MSG( __FUNCTION__ << "() converting source " << source << " with " << source.size() << " characters" );
+    char convunit[3] = {0};  // a string of length 2 to give only 2 digits to strtol
 
-    convunit[2] = 0;
+    if ( source.size() % 2 ) {
+        LOG_WARN_MSG( __FUNCTION__ << "() source " << source << " does not have an even number of digits (" << source.size() << ")" );
+        return false;
+    }
 
-    for (i = 0; i < destLen; i += 2) {
-        if (!isxdigit(source[i]) || !isxdigit(source[i+1])) {
-            LOG_ERROR_MSG(__FUNCTION__ << " Invalid hex digit");
+    if ( source.size() / 2 > length ) {
+        LOG_WARN_MSG( __FUNCTION__ << "() destination length of " << length << " is smaller than converted source (" << source.size() / 2 << ")" );
+        return false;
+    }
+
+    for (unsigned i = 0; i < length * 2; i += 2) {
+        if ( !isxdigit(source[i]) ) {
+            LOG_ERROR_MSG( __FUNCTION__ << "() character at source[" << i << "] is not hexadecimal: " << source[i] );
+            return false;
         }
-        assert(isxdigit(source[i]));
-        assert(isxdigit(source[i+1]));
+        if ( !isxdigit(source[i+1]) ) {
+            LOG_ERROR_MSG( __FUNCTION__ << "() character at source[" << i+1 << "] is not hexadecimal: " << source[i+1] );
+            return false;
+        }
         convunit[0] = source[i];
         convunit[1] = source[i+1];
 
-        result = strtoul(convunit, 0, 16);
+        unsigned result = strtoul(convunit, NULL, 16);
+        LOG_DEBUG_MSG( "converted " << convunit << " to 0x" << std::hex << result );
 
-        assert(result < 256);
-        *(dest++) = (unsigned char) result;
+        *(dest++) = static_cast<unsigned char>(result);
     }
-}
 
-// convert binary to hex digits
-void
-bitdata2hexchar(
-        char *dest,
-        unsigned destLen,
-        const unsigned char *source,
-        unsigned sourceLen
-)
-{
-    unsigned i;
-
-    assert(destLen > (2 * sourceLen));
-
-    for (i = 0; i < sourceLen; i++) {
-        sprintf(dest, "%02x", source[i]);
-        dest += 2;
-    }
+    return true;
 }
 
 void
 trim_right_spaces(
         char *input
-)
+        )
 {
-    // scanning from right to left replace all spaces with '\0' until it finds a non-space
-    // character
     trim_right_spaces( input, strlen(input) );
 }
 
@@ -138,34 +93,17 @@ void
 trim_right_spaces(
         char *input,
         int len
-)
+        )
 {
     // scanning from right to left replace all spaces with '\0' until it finds a non-space
     // character
-    if( len == 0 ) { // nothing to trim
-        return;
-    }
+    if ( len == 0 ) return;
+    
     char *ptr = input + len - 1;
-    while(*ptr == ' ' && ptr >= input ) {
+    while (*ptr == ' ' && ptr >= input ) {
         *ptr = '\0';
         ptr--;
     }
 }
 
-bool
-isSerialnumberString(
-        const char* str
-)
-{
-#define SERIALNUMBER_LENGTH 48
-    int size = strlen(str);
-    if (size != SERIALNUMBER_LENGTH) {
-        return false;
-    }
-    for (int i=0; i < size; ++i) {
-        if (!isxdigit(str[i])) {
-            return false;
-        }
-    }
-    return true;
-}
+} // namespace BGQDB

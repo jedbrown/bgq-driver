@@ -236,6 +236,12 @@ class virtFS {
          return CNK_RC_FAILURE(ENOSYS);
       }
 
+      virtual uint64_t gpfsfcntl(int fd, const void* ptr, size_t length, int* gpfsresult)
+      {
+         TRACE( TRACE_VirtFS, ("(E) gpfsfcntl method not supported by file system for descriptor %d\n", fd) );
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+
       virtual uint64_t ioctl(int fd, unsigned long int cmd, void *parm3)
       {
          TRACE( TRACE_VirtFS, ("(E) ioctl method not supported by file system for descriptor %d\n", fd) );
@@ -483,6 +489,51 @@ class virtFS {
       }
 
       virtual uint64_t registerMemory(int fd, void * usingRegion4RDMA){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+
+      virtual uint64_t setxattr(const char * path, const char *name, const void *value, size_t size, int flags){
+         TRACE( TRACE_VirtFS, ("(E) setxattr method not supported by file system for path %s\n", path) );
+         printf("setxattr method not supported by file system for path %s\n", path);
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+      virtual uint64_t lsetxattr(const char * path, const char *name, const void *value, size_t size, int flags){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+      virtual uint64_t fsetxattr(int fd, const char *name, const void *value, size_t size, int flags){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+
+      virtual uint64_t getxattr(const char * path, const char *name, void *value, size_t size){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+      virtual uint64_t lgetxattr(const char * path, const char *name, void *value, size_t size){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+      virtual uint64_t fgetxattr(int fd, const char *name, void *value, size_t size){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+
+      virtual uint64_t removexattr(const char * path, const char *name){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+      virtual uint64_t lremovexattr(const char * path, const char *name){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+      virtual uint64_t fremovexattr(int fd, const char *name){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+      
+
+      virtual uint64_t listxattr(const char * path, char *list, size_t size){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+
+      virtual uint64_t llistxattr(const char * path, char *list, size_t size){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+
+      virtual uint64_t flistxattr(int fd, char *list, size_t size){
          return CNK_RC_FAILURE(ENOSYS);
       }
 

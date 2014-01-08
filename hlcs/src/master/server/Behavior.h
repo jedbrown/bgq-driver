@@ -36,9 +36,9 @@
 //! A "behavior" is a complex of an action to perform,
 //! on what to perform it, and the number of times to
 //! attempt it.
-class Behavior {
+class Behavior
+{
 public:
-
     typedef unsigned short Retries;
 
     //! These are presented as enums here, but they are strings
@@ -54,7 +54,6 @@ private:
     std::string _name;
 
 public:
-
     //! \brief Number of times to retry starting.
 
     Behavior() : _action(INVALID_ACTION), _retries(0), _name("") { }
@@ -83,7 +82,6 @@ public:
             a = INVALID_ACTION;
         return a;
     }
-
 };
 
 #endif

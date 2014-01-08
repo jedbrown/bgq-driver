@@ -32,6 +32,7 @@
 #include <utility/include/portConfiguration/Connector.h>
 #include <utility/include/portConfiguration/types.h>
 #include <utility/include/Log.h>
+#include <utility/include/UserId.h>
 
 #include <boost/archive/text_iarchive.hpp>
 
@@ -87,7 +88,7 @@ send(
     buf.consume( length );
 
     // read header and body
-    length =  boost::asio::read(
+    length = boost::asio::read(
             *connection,
             boost::asio::buffer( &header, sizeof(header) )
             );
@@ -110,6 +111,21 @@ send(
     return response;
 }
 
+std::string
+gatherDetails()
+{
+    std::ostringstream response;
+    try {
+        const bgq::utility::UserId uid;
+        response << "Delivered by scheduler API user " << uid.getUser() << " with pid " << getpid();
+        response << " on host " << boost::asio::ip::host_name();
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( e.what() );
+    }
+
+    return response.str();
+}
+
 int
 kill(
         const Job::Id job,
@@ -121,6 +137,7 @@ kill(
             );
     request->_job = job;
     request->_signal = signal;
+    request->_details = gatherDetails();
     boost::asio::io_service io_service;
     bgq::utility::portConfig::SocketPtr connection;
 

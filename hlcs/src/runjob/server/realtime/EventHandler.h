@@ -33,6 +33,8 @@
 #include <bgsched/Block.h>
 #include <bgsched/types.h>
 
+#include <boost/asio/strand.hpp>
+#include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 
@@ -43,17 +45,33 @@ namespace server {
 namespace realtime {
 
 /*!
- * \brief
+ * \brief Handles events from the real-time server
+ *
+ * \see block::Reconnect
+ * \see Connection
+ * \see Polling
  */
 class EventHandler : public bgsched::realtime::ClientEventListener
 {
 public:
     /*!
+     * \brief Callback type.
+     */
+    typedef boost::function<void()> Callback;
+
+public:
+    /*!
      * \brief
      */
     EventHandler(
-            const boost::shared_ptr<Server>& server,    //!< [in]
-            bgsched::SequenceId sequence                //!< [in]
+            const boost::shared_ptr<Server>& server    //!< [in]
+            );
+
+    /*!
+     * \brief
+     */
+    void start(
+            const Callback& callback    //!< [in]
             );
 
     /*!
@@ -62,6 +80,11 @@ public:
     void poll();
 
 private:
+    void reconnectCallback(
+            const bgsched::SequenceId sequence,
+            const Callback& callback
+            );
+
     void handlePollingEnded(
             bgsched::SequenceId sequence
             );
@@ -82,8 +105,8 @@ private:
             const BlockStateChangedEventInfo& event,
             error_code::rc error,
             const std::string& message
-        );
-            
+            );
+
     void add(
             const BlockStateChangedEventInfo& event
             );

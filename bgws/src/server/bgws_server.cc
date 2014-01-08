@@ -126,7 +126,7 @@ For security, the executable's group should be bgqadmin and authority 750 so tha
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/exception.hpp>
+#include <boost/exception/all.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>

@@ -134,6 +134,7 @@ NodeStatus::subBlock()
     // set midplane location
     _statement->parameters()[ BGQDB::DBVNodeall::MIDPLANEPOS_COL ].set( i->first );
 
+    unsigned count( 0 );
     const Shape& shape = subBlock.shape();
     const Shape::Nodes& nodes = shape.nodes();
     for ( Shape::Nodes::const_iterator i = nodes.begin(); i != nodes.end(); ++i ) {
@@ -144,23 +145,24 @@ NodeStatus::subBlock()
         const cxxdb::Transaction tx( *_connection );
 
         for ( Nodes::const_iterator j = nodes.begin(); j != nodes.end(); ++j ) {
-            LOGGING_DECLARE_LOCATION_MDC( 
-                    std::string() +
-                    BGQTopology::nodeCardNameFromPos(i->first) +
-                    "-" +
-                    BGQTopology::processorCardNameFromJtagPort(*j) 
-                    );
-
             // set node board and node locations
             _statement->parameters()[ BGQDB::DBVNodeall::NODECARDPOS_COL ].set( BGQTopology::nodeCardNameFromPos(i->first) );
             _statement->parameters()[ BGQDB::DBVNodeall::POSITION_COL ].set( BGQTopology::processorCardNameFromJtagPort(*j) );
 
-            _statement->execute();
+            unsigned rows;
+            _statement->execute( &rows );
+            if ( !rows ) continue;
+            count += rows;
         }
 
         // if we get here, commit transaction
         _connection->commit();
     }
+
+    LOG_INFO_MSG(
+            count << " node" <<
+            (count == 1 ? "" : "s") << " updated to '" << BGQDB::SOFTWARE_FAILURE << "' status" 
+            );
 }
 
 void
@@ -185,10 +187,9 @@ NodeStatus::smallBlock()
             (BGQDB::DBVNodeall::NODECARDPOS_COL)
             );
 
-    // update up to 512 (1 midplane) rows in a single transaction
-    const cxxdb::Transaction tx( *_connection );
     LOGGING_DECLARE_LOCATION_MDC(_block->midplanes().begin()->first);
 
+    size_t count( 0 );
     const block::Midplane& midplane = _block->midplanes().begin()->second;
     for (
             block::Midplane::Nodeboards::const_iterator j = midplane.nodeboards().begin();
@@ -203,11 +204,18 @@ NodeStatus::smallBlock()
 
         unsigned rows;
         _statement->execute( &rows );
-        LOG_DEBUG_MSG( "updated " << rows << " nodes to '" << BGQDB::SOFTWARE_FAILURE << "'" );
+        if ( !rows ) continue;
+        count += rows;
+        LOG_DEBUG_MSG(
+                "updated " << rows << " node" <<
+                (rows == 1 ? "" : "s") << " to '" << BGQDB::SOFTWARE_FAILURE << "'"
+                );
     }
 
-    // if we get here, commit transaction
-    _connection->commit();
+    LOG_INFO_MSG(
+            count << " node" <<
+            (count == 1 ? "" : "s") << " updated to '" << BGQDB::SOFTWARE_FAILURE << "' status" 
+            );
 }
 
 void
@@ -229,9 +237,8 @@ NodeStatus::largeBlock()
             (BGQDB::DBVMidplane::LOCATION_COL)
             );
 
-    const cxxdb::Transaction tx( *_connection );
-
     // iterate through midplanes in the block
+    size_t count( 0 );
     for ( 
             block::Compute::Midplanes::const_iterator i = _block->midplanes().begin();
             i != _block->midplanes().end();
@@ -244,11 +251,13 @@ NodeStatus::largeBlock()
 
         unsigned rows;
         _statement->execute( &rows );
-        LOG_DEBUG_MSG( "updated " << rows << " nodes to '" << BGQDB::SOFTWARE_FAILURE << "'" );
-
+        if ( !rows ) continue;
+        count += rows;
     }
-
-    _connection->commit();
+    LOG_INFO_MSG(
+            count << " midplane" <<
+            (count == 1 ? "" : "s") << " updated to '" << BGQDB::SOFTWARE_FAILURE << "' status"
+            );
 }
 
 } // database

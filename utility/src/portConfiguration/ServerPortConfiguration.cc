@@ -136,9 +136,10 @@ void ServerPortConfiguration::addTo(
 
 SslConfiguration ServerPortConfiguration::createSslConfiguration() const
 {
+    LOG_DEBUG_MSG( "creating ssl configuration with connection type " << _connection_type );
     SslConfiguration ssl_config(
             SslConfiguration::Use::Server,
-            SslConfiguration::Certificate::Administrative,
+            _connection_type == ConnectionType::Optional ? SslConfiguration::Certificate::Optional : SslConfiguration::Certificate::Administrative,
             _properties_ptr
         );
 

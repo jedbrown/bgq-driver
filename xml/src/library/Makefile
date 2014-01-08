@@ -132,6 +132,7 @@ $(MODULE_LIB_DIR)/%.so.1.0.1: %.so.1.0.1
 
 $(MODULE_LIB_DIR)/$(SOLIB_DEV): $(SOLIB_DEV)
 	$(RM) $@
+	$(MKDIR) -p $(dir $@)
 	ln -s $(SOLIB_VERS) $@
 
 $(MODULE_LIB_DIR)/$(SOLIB_VERS): $(SOLIB_VERS)
@@ -160,7 +161,7 @@ $(SOLIB_VERS): $(SOLIB_FULL)
 	$(LN) -s $< $@
 
 $(SOLIB_FULL): $(SOLIB_OBJS)
-	$(CXX) $(SOLIB_LDFLAGS) -o $@ $^
+	$(CXX) -o $@ $^ $(SOLIB_LDFLAGS)
 
 $(C_API_CC): 
 

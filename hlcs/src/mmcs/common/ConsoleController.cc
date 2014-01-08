@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "ConsoleController.h"
 
 #include "Properties.h"
@@ -32,16 +31,12 @@
 
 #include <editline/readline.h>
 
-
 using namespace std;
-
 
 LOG_DECLARE_FILE( "mmcs.common" );
 
-
 namespace mmcs {
 namespace common {
-
 
 ConsoleController::ConsoleController(
         MMCSCommandProcessor *mmcsCommandProcessor,
@@ -54,10 +49,7 @@ ConsoleController::ConsoleController(
     _consolePort(NULL),
     _user(user),
     _utype(utype),
-    _redirecting(false),
-    _fd(STDOUT_FILENO),
-    _replyFormat(1),
-    _midplaneControllerMutex(PTHREAD_MUTEX_ERRORCHECK_NP)
+    _redirecting(false)
 {
     // start reading commands from standard input
     _inputs.push(stdin);
@@ -65,48 +57,35 @@ ConsoleController::ConsoleController(
 
 ConsoleController::~ConsoleController()
 {
-    if (_consolePort)
-    {
-      //shutdown(_consolePort->getPortDescriptor(), SHUT_RDWR);
+    if (_consolePort) {
         delete _consolePort;
     }
-
-    if (_fd != STDOUT_FILENO)
-    {
-        close(_fd);
-    }
 }
-
 
 const bgq::utility::UserId&
 ConsoleController::getUser() const
 {
-    PthreadMutexHolder mutex;
-    mutex.Lock(&_midplaneControllerMutex); // unlocked via destructor
     return _user;
 }
 
 void
 ConsoleController::run()
 {
-    if (_commandProcessor)
-    {
-        while ( this->quit() == -1)
-        {
+    if (_commandProcessor) {
+        while ( this->quit() == -1) {
             serviceCommands();
         }
-    }
-    else
-    {
-        LOG_FATAL_MSG("ConsoleController::run() internal error: empty command list");
+    } else {
+        LOG_FATAL_MSG(__FUNCTION__ << " Empty command list");
     }
 }
 
 bool
 ConsoleController::pushInput(FILE* f)
 {
-    if (_inputs.size() == 10)
-    return false;
+    if (_inputs.size() == 10) {
+        return false;
+    }
     _inputs.push(f);
     return true;
 }
@@ -116,55 +95,40 @@ ConsoleController::serviceCommands()
 {
     bool eof = false;
     char buf[4096];
-    procstat cmdExecStatus = CMD_NOT_FOUND;
-    try
-    {
-        if (_inputs.size() == 0)
-        { // no input streams
-            if (!freopen("/dev/tty", "a+", stdin))
-            {
+    try {
+        if (_inputs.size() == 0) { // no input streams
+            if (!freopen("/dev/tty", "a+", stdin)) {
                 quit(EXIT_SUCCESS);
                 return;
             }
             _inputs.push(stdin);
         }
 
-        bool input_is_tty = isatty(fileno(_inputs.top()));
-        if (input_is_tty)
-        {
+        const bool input_is_tty = isatty(fileno(_inputs.top()));
+        if (input_is_tty) {
             // keyboard input stream - use "readline" library, to allow editing
             char *line = readline("mmcs$ ");
-            if (line)
-            {
+            if (line) {
                 add_history(line);
                 this->writeHistoryFile();
                 strncpy(buf, line, sizeof(buf));
                 buf[sizeof(buf) - 1] = 0;
                 free(line);
-            }
-            else
-            {
+            } else  {
                 eof = true;
             }
-        }
-        else
-        { // file input stream - no editing
-            if (fgets(buf, sizeof(buf), _inputs.top()))
-            {
+        } else { // file input stream - no editing
+            if (fgets(buf, sizeof(buf), _inputs.top())) {
                 buf[strlen(buf) - 1] = 0; // trim off trailing "\n"
-            }
-            else
-            {
+            } else {
                 eof = true;
-                if (Properties::getProperty(FILE_EXIT) == "true")
-                {
+                if (Properties::getProperty(FILE_EXIT) == "true") {
                     quit(EXIT_SUCCESS);
                 }
             }
         }
 
-        if (eof)
-        {
+        if (eof) {
             fclose(_inputs.top());
             _inputs.pop();
             return;
@@ -173,33 +137,23 @@ ConsoleController::serviceCommands()
         // parse the command
         mmcs_client::CommandReply reply(1, 1, true);    // send reply to stdout
 
-        reply.setFd(_fd);
-
         deque<string> cmdStr = MMCSCommandProcessor::parseCommand(buf);
-        if (cmdStr.size() == 0)
-        {
+        if (cmdStr.size() == 0) {
             return;
         }
 
         // if the input device is not a tty, log input and failures
-        if (input_is_tty)
-        {
+        if (input_is_tty) {
             _commandProcessor->logFailures(false);
-        }
-        else
-        {
+        } else {
             _commandProcessor->logFailures(true);
             MMCSCommandProcessor::logCommand(cmdStr);
         }
 
-        //
         // Execute command
-        //
-        cmdExecStatus = _commandProcessor->execute(cmdStr, reply, this);
+        const procstat cmdExecStatus = _commandProcessor->execute(cmdStr, reply, this);
 
-        //
         // Write the output to the console
-        //
         reply.sync();  // send the reply to the client
 
         // if the cmd failed, check the "exit on failure" option
@@ -207,7 +161,7 @@ ConsoleController::serviceCommands()
                 (cmdExecStatus == CMD_NOT_FOUND || cmdExecStatus == CMD_INVALID || reply.getStatus() != mmcs_client::CommandReply::STATUS_OK) &&
                 (!Properties::getProperty("cmd_failure_exit").empty()) &&
                 (Properties::getProperty("cmd_failure_exit") != "false")
-                )
+           )
         {
             quit(EXIT_FAILURE);
         }
@@ -215,10 +169,9 @@ ConsoleController::serviceCommands()
         // for input coming from a non-tty we don't need to retain history
         // since the file or pipe already has the command history!
         if ( input_is_tty ) {
+            // Do nothing
         }
-    }
-    catch (exception &e)
-    {
+    } catch (const exception& e) {
         LOG_ERROR_MSG("ConsoleController(): " << e.what());
         quit(EXIT_SUCCESS);
     }
@@ -237,19 +190,16 @@ ConsoleController::getHistoryFile() const
         result = home;
     }
 
-    LOG_TRACE_MSG( "using '" << result << "' for editline history" );
     return result;
 }
-
 
 void
 ConsoleController::writeHistoryFile() const
 {
     const std::string file( this->getHistoryFile() );
     if ( write_history( file.c_str() ) != 0 ) {
-        LOG_WARN_MSG( "could not write history file '" << file << "' " << strerror(errno) );
+        LOG_WARN_MSG( "Could not write history file '" << file << "' " << strerror(errno) );
     }
 }
-
 
 } } // namespace mmcs::common

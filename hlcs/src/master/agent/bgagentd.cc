@@ -23,28 +23,22 @@
 
 #include "Agent.h"
 
-#include "common/AgentProtocol.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <sys/time.h>
 #include <sys/resource.h>
-#include <csignal>
 #include <utility/include/BoolAlpha.h>
-#include <utility/include/Log.h>
 #include <utility/include/version.h>
 #include <utility/include/LoggingProgramOptions.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
 
 LOG_DECLARE_FILE( "master" );
 
-static Agent agent;
-
 std::string
 setlogging(
-        std::string& logdir
+        std::string& logdir,
+        const std::string& hostname
         )
 {
     if (logdir.empty()) {
@@ -52,16 +46,15 @@ setlogging(
         logdir = "/var/log";
     }
 
-    std::string logfile = "";
-    logfile = logdir + "/" + agent.get_hostname().uhn() + "-bgagentd.log";
+    const std::string logfile( logdir + "/" + hostname + "-bgagentd.log" );
 
     // Now open it. User and group readable. User writable.
-    int openfd = open(logfile.c_str(), O_WRONLY|O_APPEND|O_CREAT,
+    const int openfd = open(logfile.c_str(), O_WRONLY|O_APPEND|O_CREAT,
                       S_IRUSR|S_IWUSR|S_IRGRP);
     if (openfd == -1) {
-        std::string error_str = "Error opening log file " + logfile;
+        const std::string error_str = "Error opening log file " + logfile;
         perror(error_str.c_str());
-        exit(0);
+        exit( EXIT_FAILURE );
     }
 
     // One last notification before dumping output to file
@@ -99,9 +92,9 @@ main(int argc, const char** argv)
         // Create properties and initialize logging
         props = bgq::utility::Properties::create( propertiesOptions.getFilename() );
         bgq::utility::initializeLogging(*props, lpo, "master");
-    } catch(const std::runtime_error& e) {
+    } catch (const std::runtime_error& e) {
         std::cerr << "Error reading configuration file: " << e.what() << std::endl;
-        exit(EXIT_FAILURE);
+        exit( EXIT_FAILURE );
     } catch ( const std::exception& e ) {
         std::cerr << e.what() << std::endl;
         exit( EXIT_FAILURE );
@@ -137,7 +130,7 @@ main(int argc, const char** argv)
     po::variables_map vm;
     po::command_line_parser cmd_line( argc, const_cast<char**>(argv) );
     cmd_line.options( options );
-    po::positional_options_description positional;
+    const po::positional_options_description positional;
     cmd_line.positional( positional );
     try {
         po::store( cmd_line.run(), vm );
@@ -154,29 +147,31 @@ main(int argc, const char** argv)
         std::cout << std::endl;
         std::cout << "OPTIONS:" << std::endl;
         std::cout << options << std::endl;
-        exit(EXIT_SUCCESS);
+        exit( EXIT_SUCCESS );
     }
 
     host.setProperties( props, "master.agent" );
     host.notifyComplete();
+
+    Agent agent( props );
 
     if (!debug._value) {
         // Now find the logdir
         if (logdir.empty()) {
             try {
                 logdir = props->getValue("master.agent", "logdir");
-            } catch(const std::invalid_argument& e) {
+            } catch (const std::invalid_argument& e) {
                 LOG_ERROR_MSG("No logging directory specified or missing section. " << e.what());
-                exit(EXIT_FAILURE);
+                exit( EXIT_FAILURE );
             }
         }
 
         // Create log file and symlink
-        setlogging(logdir);
+        setlogging(logdir, agent.get_hostname().uhn());
         // daemonize
         if (daemon(0, 1) < 0) {
             std::cerr << "Error trying to daemonize bgagentd: " << strerror(errno) << std::endl;
-            exit(-1);
+            exit( EXIT_FAILURE );
         }
     }
 
@@ -189,17 +184,12 @@ main(int argc, const char** argv)
         const int rc = chdir(workingdir.c_str());
         if (rc) {
             LOG_FATAL_MSG("Could not change working directory to '" << workingdir << "', error is: " << strerror(errno));
-            exit(EXIT_FAILURE);
+            exit( EXIT_FAILURE );
         }
     }
 
     agent.set_users(users);
     
-    std::string basename = boost::filesystem::basename( boost::filesystem::path(argv[0]) );
-    std::ostringstream version;
-    version << "Blue Gene/Q " << basename << " " << bgq::utility::DriverName << " (revision " << bgq::utility::Revision << ")";
-    version << " " << __DATE__ << " " << __TIME__;
-
     struct rlimit rlimit_nofile = {0, 0}; // process limit on number of files
     struct rlimit rlimit_core = {0, 0};    // process limit on core file size
     rlimit_core.rlim_cur = RLIM_INFINITY;
@@ -222,7 +212,11 @@ main(int argc, const char** argv)
     LOG_DEBUG_MSG("Core limits: " << rlimit_core.rlim_cur);
     LOG_DEBUG_MSG("File limits: " << rlimit_nofile.rlim_cur);
 
-    LOG_INFO_MSG("bgagentd [" << getpid() << "] " << version.str() << " starting");
-    agent.set_pairs(host.getPairs());
-    agent.startup(props);
+    LOG_INFO_MSG(
+            "bgagentd [" << getpid() << "] Blue Gene/Q " << 
+            boost::filesystem::basename( boost::filesystem::path(argv[0]) ) <<
+            " " << bgq::utility::DriverName << " (revision " << bgq::utility::Revision << ") " <<
+            __DATE__ << " " << __TIME__ << " starting"
+            );
+    agent.start( host.getPairs() );
 }

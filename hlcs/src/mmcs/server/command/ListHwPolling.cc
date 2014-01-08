@@ -21,20 +21,13 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "ListHwPolling.h"
 
 #include "../env/LocationList.h"
 
-
-using namespace std;
-
-
-
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 ListHwPolling*
 ListHwPolling::build() {
@@ -56,20 +49,20 @@ ListHwPolling::execute(
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     env::LocationList::instance().list(reply);
 }
 
 void
 ListHwPolling::help(
-        deque<string> args,
+        std::deque<std::string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     reply << mmcs_client::OK << description()
-        << ";list the specific hardware locations that have polling in effect"
-        << mmcs_client::DONE;
+          << ";List the specific hardware locations that have polling in effect"
+          << mmcs_client::DONE;
 }
 
 } } } // namespace mmcs::server::command

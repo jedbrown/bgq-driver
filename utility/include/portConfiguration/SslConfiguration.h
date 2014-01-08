@@ -68,7 +68,8 @@ public:
     struct Certificate {
         enum Value {
             Administrative, //!< Present the administrative certificate
-            Command         //!< Present the command certificate.
+            Command,        //!< Present the command certificate.
+            Optional        //!< Client certificate is optional
         };
     };
 
@@ -104,7 +105,8 @@ public:
 
 private:
 
-    Use::Value _use;
+    const Use::Value _use;
+    const Certificate::Value _certificate;
     std::string _my_cert_filename, _my_private_key_filename;
     StringPtr _ca_certificates_path;
     StringPtr _ca_certificate_filename;

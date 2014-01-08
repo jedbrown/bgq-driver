@@ -68,7 +68,7 @@ public:
   /**
    * Get the RAS message id
    */
-  virtual const uint32_t msgId() const { return  _msgId; }
+  virtual uint32_t msgId() const { return  _msgId; }
 
   /**
    * Get the time the event was created 
@@ -81,7 +81,7 @@ public:
    * has been through the handler chain 
    * @return boolean handled
    */
-  virtual const bool handled() const { return _handled; }
+  virtual bool handled() const { return _handled; }
 
   /**
    * Get the value associated with the key

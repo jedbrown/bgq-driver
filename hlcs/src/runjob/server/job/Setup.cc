@@ -23,13 +23,13 @@
 #include "server/job/Setup.h"
 
 #include "server/block/Compute.h"
-
 #include "server/cios/Message.h"
-
+#include "server/job/CopyMappingFile.h"
 #include "server/job/SubNodePacing.h"
 #include "server/job/ValidateMappingFile.h"
-
 #include "server/Job.h"
+#include "server/Options.h"
+#include "server/Server.h"
 
 #include "common/Exception.h"
 #include "common/logging.h"
@@ -37,11 +37,20 @@
 #include "common/SubBlock.h"
 
 #include <bgq_util/include/Location.h>
+#include <db/include/api/tableapi/gensrc/DBTJob.h>
+#include <db/include/api/tableapi/DBConnectionPool.h>
+#include <db/include/api/cxxdb/cxxdb.h>
+#include <utility/include/ScopeGuard.h>
 
 #include <boost/numeric/conversion/cast.hpp>
+#include <boost/bind.hpp>
 
 #include <cstring>
 #include <fstream>
+
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <utime.h>
 
 LOG_DECLARE_FILE( runjob::server::log );
 
@@ -116,6 +125,14 @@ Setup::validateMapping() const
     }
 
     ValidateMappingFile( _job->id(), _job->info(), jobSize );
+    
+    const Server::Ptr server( _job->_server.lock() );
+    if ( !server ) return;
+
+    const std::string copiedMapping = CopyMappingFile( _job->id(), _job->info(), server->getOptions().getProperties() ).result();
+    if ( !copiedMapping.empty() ) {
+        this->updateDatabaseMapping( copiedMapping );
+    }
 }
 
 void
@@ -197,6 +214,88 @@ Setup::populate(
         _job->pacing()->add( message, _job );
     } else {
         node.writeControl( message );
+    }
+}
+
+void
+Setup::updateDatabaseMapping(
+        const std::string& mapping
+        ) const
+{
+    bgq::utility::ScopeGuard removeGuard(
+            boost::bind( &unlink, mapping.c_str() )
+            );
+
+    const cxxdb::ConnectionPtr connection( BGQDB::DBConnectionPool::instance().getConnection() );
+    if ( !connection ) {
+        LOG_RUNJOB_EXCEPTION(
+                error_code::mapping_file_invalid,
+                "Could not get databse connection"
+                );
+    }
+
+    const cxxdb::UpdateStatementPtr update = connection->prepareUpdate(
+            "UPDATE BGQJob SET mapping=? WHERE id=?",
+            { BGQDB::DBTJob::MAPPING_COL, BGQDB::DBTJob::ID_COL }
+            );
+    update->parameters()[ "id" ].cast( _job->id() );
+    bool truncated;
+    update->parameters()[ "mapping" ].set( mapping, &truncated );
+    if ( truncated ) {
+        const BGQDB::DBTJob j;
+        LOG_RUNJOB_EXCEPTION(
+                error_code::mapping_file_invalid,
+                "Copied mapping file path of " << mapping << " is too long to fit in " << sizeof(j._mapping) << " characters"
+                );
+    }
+
+    update->execute();
+    LOG_DEBUG_MSG( "updated mapping file path to " << mapping );
+    removeGuard.dismiss();
+
+    this->updateModificationTime( mapping, connection );
+}
+
+void
+Setup::updateModificationTime(
+        const std::string& mapping,
+        const cxxdb::ConnectionPtr& connection
+        ) const
+{
+    const cxxdb::QueryStatementPtr query = connection->prepareQuery(
+            "SELECT " + BGQDB::DBTJob::STARTTIME_COL + " FROM BGQJob WHERE id=?",
+            { BGQDB::DBTJob::ID_COL }
+            );
+    query->parameters()[ "id" ].cast( _job->id() );
+    const cxxdb::ResultSetPtr results( query->execute() );
+    if ( !results->fetch() ) {
+        LOG_WARN_MSG( "could not find job " << _job->id() );
+        return;
+    }
+
+    // get job's start time and calculate seconds since epoch
+    const boost::posix_time::ptime startTime( results->columns()[ BGQDB::DBTJob::STARTTIME_COL ].getTimestamp() );
+    LOG_DEBUG_MSG( "start time: " << startTime );
+    const boost::posix_time::ptime epoch( boost::gregorian::date(1970,1,1) );
+    const boost::posix_time::time_duration duration( startTime - epoch );
+    LOG_DEBUG_MSG( "since epoch: " << duration.total_seconds() );
+
+    // get the file's stat buffer so we can retain the access time
+    struct stat statBuf;
+    if ( stat(mapping.c_str(), &statBuf) ) {
+        char buf[256];
+        LOG_WARN_MSG( "Could not stat " << mapping << ": " << strerror_r(errno, buf, sizeof(buf)) );
+        return;
+    }
+    LOG_DEBUG_MSG( "file's modification time: " << statBuf.st_mtime );
+
+    // change the file's modification time to be the same as the job's start time
+    struct utimbuf newTime;
+    newTime.actime = statBuf.st_atime;
+    newTime.modtime = duration.total_seconds();
+    if ( utime(mapping.c_str(), &newTime) ) {
+        char buf[256];
+        LOG_WARN_MSG( "Could not update modification time of " << mapping << ": " << strerror_r(errno, buf, sizeof(buf)) );
     }
 }
 

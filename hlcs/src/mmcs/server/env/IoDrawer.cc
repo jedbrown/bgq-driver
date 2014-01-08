@@ -40,6 +40,7 @@
 
 #include <xml/include/c_api/MCServerMessageSpec.h>
 
+#include <boost/make_shared.hpp>
 #include <boost/scoped_ptr.hpp>
 
 LOG_DECLARE_FILE( "mmcs.server" );
@@ -61,12 +62,12 @@ processIO(
             std::vector<MCServerMessageSpec::IoCardEnv>::const_iterator io = mcIOReply->_ioCards.begin();
             io != mcIOReply->_ioCards.end();
             ++io
-        )
+    )
     {
         if (io->_error == CARD_NOT_PRESENT) continue;
         if (io->_error == CARD_NOT_UP) continue;
         if (io->_error) {
-            LOG_INFO_MSG("Error occurred reading environmentals from: " << io->_lctn);
+            LOG_ERROR_MSG("Error reading environmentals from: " << io->_lctn);
             RasEventImpl noContact(0x00061004);
             noContact.setDetail(RasEvent::LOCATION, io->_lctn);
             RasEventHandlerChain::handle(noContact);
@@ -74,9 +75,8 @@ processIO(
             continue;
         }
 
-        LOG_TRACE_MSG( "processing " << io->_lctn );
+        // LOG_TRACE_MSG("Processing " << io->_lctn );
         ioCardInsert->parameters()[ BGQDB::DBTIocardenvironment::LOCATION_COL ].set( io->_lctn );
-
         ioCardInsert->parameters()[ BGQDB::DBTIocardenvironment::VOLTAGEV08_COL ].cast( io->_powerRailV08Voltage );
         ioCardInsert->parameters()[ BGQDB::DBTIocardenvironment::VOLTAGEV14_COL ].cast( io->_powerRailV14Voltage );
         ioCardInsert->parameters()[ BGQDB::DBTIocardenvironment::VOLTAGEV25_COL ].cast( io->_powerRailV25Voltage );
@@ -116,10 +116,10 @@ processIO(
                 std::vector<MCServerMessageSpec::ComputeEnv>::const_iterator compute = io->_computes.begin();
                 compute != io->_computes.end();
                 ++compute
-           )
+            )
         {
             if ( compute->_error ) {
-                LOG_INFO_MSG("Error occurred reading environmentals from: " << compute->_lctn)
+                LOG_ERROR_MSG("Error reading environmentals from: " << compute->_lctn);
             } else {
                 nodeInsert->parameters()[ BGQDB::DBTNodeenvironment::LOCATION_COL ].set( compute->_lctn );
 
@@ -140,7 +140,7 @@ processIO(
             )
         {
             if ( link->_error ) {
-                LOG_INFO_MSG("Error occurred reading environmentals from: " << link->_lctn);
+                LOG_ERROR_MSG("Error reading environmentals from: " << link->_lctn);
             } else {
                 linkChipInsert->parameters()[ BGQDB::DBTLinkchipenvironment::LOCATION_COL ].set( link->_lctn );
 
@@ -179,7 +179,6 @@ IoDrawer::prepareInserts(
 {
     const cxxdb::ConnectionPtr result = BGQDB::DBConnectionPool::Instance().getConnection();
     if ( !result ) {
-        LOG_INFO_MSG("unable to connect to database");
         return result;
     }
 
@@ -231,7 +230,7 @@ IoDrawer::impl(
     _connection = this->prepareInserts( _fanInsert, _ioCardInsert, _nodeInsert, _linkChipInsert );
 
     if ( !_connection ) {
-        LOG_ERROR_MSG( "could not get database connection" );
+        LOG_ERROR_MSG("Could not get database connection." );
         this->wait();
         return;
     }
@@ -253,7 +252,7 @@ IoDrawer::impl(
             request,
             boost::bind(
                 &IoDrawer::makeTargetSetHandler,
-                this,
+                boost::static_pointer_cast<IoDrawer>( shared_from_this() ),
                 _1,
                 mc_server,
                 target_set_timer
@@ -268,19 +267,18 @@ IoDrawer::makeTargetSetHandler(
         const Timer::Ptr& timer
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
-
     MCServerMessageSpec::MakeTargetSetReply reply;
     reply.read( response );
 
-    MCServerMessageSpec::OpenTargetRequest request("EnvMonIO", "EnvMonIO", MCServerMessageSpec::RAAW, true);
+    LOG_TRACE_MSG( "Made target set EnvMonIO" );
+    const MCServerMessageSpec::OpenTargetRequest request("EnvMonIO", "EnvMonIO", MCServerMessageSpec::RAAW, true);
 
     mc_server->send(
             request.getClassName(),
             request,
             boost::bind(
                 &IoDrawer::openTargetHandler,
-                this,
+                boost::static_pointer_cast<IoDrawer>( shared_from_this() ),
                 _1,
                 mc_server,
                 timer
@@ -295,16 +293,15 @@ IoDrawer::openTargetHandler(
         const Timer::Ptr& timer
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
     MCServerMessageSpec::OpenTargetReply reply;
     reply.read( response );
 
     if (reply._rc) {
-        LOG_INFO_MSG("unable to open target set: " << reply._rt);
+        LOG_ERROR_MSG("Unable to open target set: " << reply._rt);
         this->wait();
         return;
     }
-    LOG_TRACE_MSG( "opened target set with handle " << reply._handle );
+    LOG_TRACE_MSG("Opened target set with handle " << reply._handle );
 
     timer->dismiss( false );
     timer->stop();
@@ -319,7 +316,7 @@ IoDrawer::openTargetHandler(
             request,
             boost::bind(
                 &IoDrawer::readHandler,
-                this,
+                boost::static_pointer_cast<IoDrawer>( shared_from_this() ),
                 _1,
                 reply._handle,
                 mc_server,
@@ -336,31 +333,50 @@ IoDrawer::readHandler(
         const Timer::Ptr& timer
         )
 {
-    LOG_TRACE_MSG( __FUNCTION__ );
-
-    MCServerMessageSpec::ReadIoCardEnvReply reply;
-    reply.read( response );
-
+    LOG_DEBUG_MSG( __FUNCTION__ );
+    const boost::shared_ptr<MCServerMessageSpec::ReadIoCardEnvReply> reply(
+            boost::make_shared<MCServerMessageSpec::ReadIoCardEnvReply>()
+            );
+    reply->read( response );
+    
     timer->stop();
-
-    const Timer::Ptr database_timer = this->time()->subFunction("database insertion");
-    database_timer->dismiss();
-
-    cxxdb::Transaction tx( *_connection );
-    processIO(&reply, _fanInsert, _ioCardInsert, _nodeInsert, _linkChipInsert);
-    _connection->commit();
-
-    database_timer->dismiss( false );
 
     this->closeTarget(
             mc_server,
             "EnvMonIO",
             handle,
             boost::bind(
-                &Polling::wait,
-                this
+                &IoDrawer::closeTargetHandler,
+                boost::static_pointer_cast<IoDrawer>( shared_from_this() ),
+                reply
                 )
             );
+}
+
+void
+IoDrawer::closeTargetHandler(
+        const boost::shared_ptr<MCServerMessageSpec::ReadIoCardEnvReply>& reply
+        )
+{
+    LOG_DEBUG_MSG( __FUNCTION__ );
+    const Timer::Ptr database_timer = this->time()->subFunction("database insertion");
+    database_timer->dismiss();
+
+    {
+        cxxdb::Transaction tx( *_connection );
+        processIO(reply.get(), _fanInsert, _ioCardInsert, _nodeInsert, _linkChipInsert);
+        _connection->commit();
+    }
+
+    database_timer->dismiss( false );
+
+    _fanInsert.reset();
+    _ioCardInsert.reset();
+    _nodeInsert.reset();
+    _linkChipInsert.reset();
+    _connection.reset();
+
+    this->wait();
 }
 
 } } } // namespace mmcs::server::env

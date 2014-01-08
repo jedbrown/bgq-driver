@@ -85,7 +85,7 @@ $(lib_vers): $(lib_full)
 	ln -sf $< $@
 
 $(lib_full): $(DECODER_OBJS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS2) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS2)
 
 clean:
 	$(RM) $(TESTER)

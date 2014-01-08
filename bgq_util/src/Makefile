@@ -237,7 +237,7 @@ $(SHARED_LIB_64_VERS): $(SHARED_LIB_64_FULL)
 	ln -sf $< $@
 
 $(SHARED_LIB_64_FULL): Makefile $(OBJS64)
-	$(CXX) $(CXXFLAGS_64) -shared $(OBJS64) $(LDFLAGS) -pthread -Wl,-soname,$(SHARED_LIB_64_VERS) -o $@
+	$(CXX) $(CXXFLAGS_64) -shared $(OBJS64) -pthread -Wl,-soname,$(SHARED_LIB_64_VERS) -o $@ $(LDFLAGS)
 
 $(TARGET_LIB_64): Makefile $(OBJS64)
 	$(AR) crv  $(TARGET_LIB_64) $(OBJS64)

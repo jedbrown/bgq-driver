@@ -184,7 +184,7 @@ enum { RAS_CNKRASID = 0x00010000,
          component="CNK"
          severity="FATAL"
          control_action="SOFTWARE_IN_ERROR,END_JOB,FREE_COMPUTE_BLOCK"
-         message="CNK:  Unable to connect CNV to address $(%lx,ADDR) with return code $(%ld,RETCODE)"
+         message="CNK:  Unable to connect CNV to address $(%lx,ADDR) port $(%ld,PORT) with return code $(%ld,RETCODE). Total failed nodes $(%ld,TOTALFAILS)"
          description="The compute node verbs (CNV) was unable to establish a connection with another service.  This could indicate a software level mismatch, bad address/port, or a service that isn't running."
          service_action="$(CheckLevels)"
          />

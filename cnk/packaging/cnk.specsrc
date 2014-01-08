@@ -18,6 +18,7 @@ The cnk component contains the lightweight compute node kernel (CNK) and related
 %dir %{_base_dir}/cnk
 %dir %{_base_dir}/cnk/bin
 %dir %{_base_dir}/cnk/tools
+%dir %{_base_dir}/cnk/lib
 %dir %{_base_dir}/cnk/include
 %dir %{_base_dir}/cnk/ras
 %dir %{_base_dir}/cnk/ras/metadata
@@ -34,3 +35,5 @@ The cnk component contains the lightweight compute node kernel (CNK) and related
 %dir %{_base_dir}/cnk/tools/standaloneldrinfo.lds
 %dir %{_base_dir}/cnk/tools/standaloneldrinfo_l2.lds
 %dir %{_base_dir}/cnk/tools/bldmemfs
+%dir %{_base_dir}/cnk/lib/libgpfs.so
+%dir %{_base_dir}/cnk/lib/libgpfs.a

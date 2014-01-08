@@ -39,18 +39,19 @@ CXXFLAGS += -DBOOST_TEST_MAIN
 # thread pool tester needs to know how many processors we have
 thread_pool_size.o: CXXFLAGS += -DNUM_PROCS=$(MAKECPUS)
 
+LDFLAGS += ../../../server/Options.o
+LDFLAGS += ../../../server/Reconnect.o
 LDFLAGS += -L ../../../common -lrunjob_common
 LDFLAGS += -Wl,-rpath,$(BGQ_BUILD_DIR)/hlcs/src/runjob/common
 LDFLAGS += -lboost_filesystem-mt
 LDFLAGS += -lboost_program_options-mt
 LDFLAGS += -lboost_system-mt
 LDFLAGS += -lboost_unit_test_framework-mt
-LDFLAGS += ../../../server/Options.o
-LDFLAGS += ../../../server/Reconnect.o
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/db/lib -lbgdb
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/ras/lib -lras
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/ras/lib
+LDFLAGS += -llog4cxx
 
 TESTERS   = $(patsubst %.cc,%,$(wildcard *.cc))
 

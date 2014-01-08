@@ -78,7 +78,7 @@ Init::Init(
         _operations.reset( new BGQDB::job::Operations );
         _insert.reset( new Insert(_operations) );
         _update.reset( new Update(_operations) );
-        _delete.reset( new Delete(_operations) );
+        _delete.reset( new Delete(server->getIoService(), _operations) );
     } catch ( const std::exception& e ) {
         LOG_FATAL_MSG( e.what() );
         server->getIoService().stop();

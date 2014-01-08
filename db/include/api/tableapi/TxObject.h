@@ -24,8 +24,8 @@
 #ifndef TXOBJECT
 #define TXOBJECT
 
-#include "DBConnectionPool.h"
 #include "DBObj.h"
+#include "DBConnection.h"
 
 #include <sql.h>
 #include <sqlext.h>
@@ -34,6 +34,8 @@
 #include <boost/utility.hpp>
 
 namespace BGQDB {
+
+class DBConnectionPool;
 
 /*!
  * \brief

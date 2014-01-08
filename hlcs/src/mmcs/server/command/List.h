@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_LIST_H_
 #define MMCS_SERVER_COMMAND_LIST_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
  ** list <db2table> [<value>]
@@ -52,9 +48,8 @@ class List : public common::AbstractCommand
 {
 public:
     List(const char* name, const char* description, const Attributes& attributes)
-            : AbstractCommand(name,description,attributes) { usage = "list <db2table> [<value>]"; }
+            : AbstractCommand(name,description,attributes) { _usage = "list <db2table> [<value>]"; }
     static  List* build();    // factory method
-    static  std::string cmdname() { return "list"; }
     void execute(std::deque<std::string> args,
             mmcs_client::CommandReply& reply,
             common::ConsoleController* pController,
@@ -63,7 +58,6 @@ public:
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };
-
 
 } } } // namespace mmcs::server::command
 

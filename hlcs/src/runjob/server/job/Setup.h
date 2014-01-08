@@ -33,6 +33,7 @@
 
 #include "server/fwd.h"
 
+#include <db/include/api/cxxdb/fwd.h>
 #include <ramdisk/include/services/JobctlMessages.h>
 
 #include <boost/enable_shared_from_this.hpp>
@@ -76,6 +77,15 @@ private:
             );
 
     void validateMapping() const;
+
+    void updateDatabaseMapping(
+            const std::string& mapping
+            ) const;
+
+    void updateModificationTime(
+            const std::string& mapping,
+            const cxxdb::ConnectionPtr& connection
+            ) const;
 
 private:
     const boost::shared_ptr<Job> _job;

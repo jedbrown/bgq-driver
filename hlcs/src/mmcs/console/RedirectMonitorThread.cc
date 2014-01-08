@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "RedirectMonitorThread.h"
 
 #include "command/MmcsServerConnect.h"
@@ -33,32 +32,24 @@
 #include <auto_ptr.h>
 #include <errno.h>
 
-
-using namespace std;
-
 using mmcs::common::ConsoleController;
 
-
 LOG_DECLARE_FILE( "mmcs.console" );
-
 
 namespace mmcs {
 namespace console {
 
-
 // Condition variable for synchronization between main thread and redirect thread
 bool redirectInitComplete;
-
 
 // Cleanup handler for the Redirect monitor thread
 // arg is mmcs_client::CommandReply, but is only valid while redirectInitComplete is false
 void redirectCleanupHandler(void* arg)
 {
-    if (!redirectInitComplete)
-    {
-        mmcs_client::CommandReply* reply = (mmcs_client::CommandReply*) arg;
+    if (!redirectInitComplete) {
+        mmcs_client::CommandReply* const reply = reinterpret_cast<mmcs_client::CommandReply*>( arg );
         if (reply && reply->getStatus() == mmcs_client::CommandReply::STATUS_NOT_SET)
-            *reply << mmcs_client::FAIL << "internal error: redirect thread initialization failed" << mmcs_client::DONE;
+            *reply << mmcs_client::FAIL << "Internal error: redirect thread initialization failed" << mmcs_client::DONE;
         redirectInitComplete = true;
         pthread_cond_signal(&RedirectMonitorThread::redirectInitCond);
         RedirectMonitorThread::redirectInitMutex.Unlock();
@@ -67,21 +58,18 @@ void redirectCleanupHandler(void* arg)
     RedirectMonitorThread::redirectMonitorThread = NULL;
 }
 
-
 RedirectMonitorThread *RedirectMonitorThread::redirectMonitorThread = NULL;
 PthreadMutex RedirectMonitorThread::redirectInitMutex(PTHREAD_MUTEX_ERRORCHECK_NP);
 pthread_cond_t RedirectMonitorThread::redirectInitCond = PTHREAD_COND_INITIALIZER;
-
 
 void*
 RedirectMonitorThread::threadStart()
 {
     std::string reply_str;
-    boost::shared_ptr<RedirectParms> parms;
+    boost::shared_ptr<Parms> parms;
     this->getArg( parms );
     mmcs_client::CommandReply& reply = *(parms->reply);
     reply.reset();
-    bool errorend = false;  // If we get an error from the other side, don't send an 'off'.
 
     // coordinate the initialization with the main thread
     redirectInitMutex.Lock();
@@ -93,18 +81,14 @@ RedirectMonitorThread::threadStart()
     mmcsCommandProcessor.logFailures(false); // don't clutter the console with log messages
 
     // Create a ConsoleController
-    CxxSockets::UserType utype = CxxSockets::Normal;
-    auto_ptr<ConsoleController> pController(new ConsoleController(&mmcsCommandProcessor, parms->user, utype));
+    const std::auto_ptr<ConsoleController> pController(new ConsoleController(&mmcsCommandProcessor, parms->user));
     pController->setPortConfiguration( parms->controller->getPortConfiguration() );
 
-    deque<string> mmcs_redirect = MMCSCommandProcessor::parseCommand("mmcs_server_cmd redirect " + parms->blockName + " on");
-
-    unsigned timeout = 2;   // two seconds
+    std::deque<std::string> mmcs_redirect = MMCSCommandProcessor::parseCommand("mmcs_server_cmd redirect " + parms->blockName + " on");
 
     // connect to the mmcs server
-    deque<string> mmcs_connect;
-    boost::scoped_ptr<console::command::MmcsServerConnect> conncmd( console::command::MmcsServerConnect::build() );
-    conncmd->execute(mmcs_connect, reply, pController.get());
+    const boost::scoped_ptr<console::command::MmcsServerConnect> conncmd( console::command::MmcsServerConnect::build() );
+    conncmd->execute(std::deque<std::string>(), reply, pController.get());
 
     if (reply.getStatus() != 0)
         goto done;
@@ -122,20 +106,18 @@ RedirectMonitorThread::threadStart()
     redirectInitMutex.Unlock();
 
     // loop receiving and printing mailbox output
-    while (isThreadStopping() == false)
-    {
-        try
-        {
-            pController->getConsolePort()->pollReceiveMessage(reply_str, timeout);
-            if(reply_str.length() != 0) {
+    while (isThreadStopping() == false) {
+        try  {
+            pController->getConsolePort()->pollReceiveMessage(reply_str, 2);
+            if (reply_str.length() != 0) {
                 if (reply_str[reply_str.length()-1] == '\n')
                     reply_str.resize(reply_str.length()-1);
-                if(stdout) std::cout << reply_str << std::endl;
-                else std::cerr << reply_str << std::endl;
+                if (stdout)
+                    std::cout << reply_str << std::endl;
+                else
+                    std::cerr << reply_str << std::endl;
             }
-        }
-        catch (mmcs_client::ConsolePort::Error& e) {
-            errorend = true;  // Assume that the other side is done.
+        } catch (const mmcs_client::ConsolePort::Error& e) {
             switch (e.errcode)
             {
                 case EAGAIN:
@@ -145,7 +127,7 @@ RedirectMonitorThread::threadStart()
                 case ESPIPE:
                 case EPIPE:
                 case EBADF:
-                    LOG_INFO_MSG("Redirection terminating");
+                    LOG_ERROR_MSG("Redirection terminating");
                     goto done;
                 default:
                     LOG_ERROR_MSG("Redirection terminating: " << e.what());
@@ -159,7 +141,7 @@ RedirectMonitorThread::threadStart()
     // return when done
 done:
     // Turn off redirect
-    if(force_end) {
+    if (force_end) {
         mmcs_client::CommandReply redirectOffReply;
         mmcs_redirect = MMCSCommandProcessor::parseCommand("mmcs_server_cmd redirect " + parms->blockName + " off");
         mmcsCommandProcessor.execute(mmcs_redirect, redirectOffReply, pController.get());
@@ -167,6 +149,5 @@ done:
     pthread_cleanup_pop(1);
     return NULL;
 }
-
 
 } } // namespace mmcs::console

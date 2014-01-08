@@ -86,6 +86,10 @@ Acceptor::AcceptArguments::AcceptArguments(
         const Acceptor::AcceptArguments::Endpoints& endpoints
     ) :
         status(Status::NowAccepting),
+        socket_ptr(),
+        user_id_ptr(),
+        user_type(portConfig::UserType::None),
+        client_cn(),
         endpoints(endpoints)
 {
     // Nothing to do.
@@ -126,7 +130,8 @@ Acceptor::Acceptor(
 }
 
 
-void Acceptor::start(
+void
+Acceptor::start(
         AcceptHandler accept_handler
     )
 {
@@ -149,7 +154,8 @@ void Acceptor::start(
 }
 
 
-void Acceptor::stop()
+void
+Acceptor::stop()
 {
     LOG_DEBUG_MSG( "Requested to stop..." );
 
@@ -157,7 +163,8 @@ void Acceptor::stop()
 }
 
 
-void Acceptor::_startResolve(
+void
+Acceptor::_startResolve(
         ServerPortConfiguration::Pairs::const_iterator pi
     )
 {
@@ -187,7 +194,8 @@ void Acceptor::_startResolve(
 }
 
 
-void Acceptor::_handleResolve(
+void
+Acceptor::_handleResolve(
         ServerPortConfiguration::Pairs::const_iterator pi,
         const boost::system::error_code& err,
         boost::asio::ip::tcp::resolver::iterator endpoint_iterator
@@ -216,7 +224,7 @@ void Acceptor::_handleResolve(
 
             try {
 
-                _AcceptorPtr acceptor_ptr( new tcp::acceptor( _io_service ) );
+                AcceptorPtr acceptor_ptr( new tcp::acceptor( _io_service ) );
                 acceptor_ptr->open( endpoint_iterator->endpoint().protocol() );
 
                 fcntl( acceptor_ptr->native(), F_SETFD, FD_CLOEXEC );
@@ -255,7 +263,7 @@ void Acceptor::_handleResolve(
             AcceptArguments::Endpoints endpoints;
 
             // Start accepting on all the acceptors.
-            for ( _Acceptors::iterator i(_acceptors.begin()) ; i != _acceptors.end() ; ++i ) {
+            for ( Acceptors::const_iterator i(_acceptors.begin()) ; i != _acceptors.end() ; ++i ) {
                 endpoints.push_back((*i)->local_endpoint());
                 _startAccept( *i );
             }
@@ -274,8 +282,9 @@ void Acceptor::_handleResolve(
 }
 
 
-void Acceptor::_startAccept(
-        _AcceptorPtr acceptor_ptr
+void
+Acceptor::_startAccept(
+        AcceptorPtr acceptor_ptr
     )
 {
     portConfig::SocketPtr socket_ptr( new portConfig::Socket( _io_service, *_context_ptr ) );
@@ -290,12 +299,12 @@ void Acceptor::_startAccept(
                     boost::asio::placeholders::error
                 ) )
         );
-
 }
 
 
-void Acceptor::_handleAccept(
-        _AcceptorPtr acceptor_ptr,
+void
+Acceptor::_handleAccept(
+        AcceptorPtr acceptor_ptr,
         portConfig::SocketPtr socket_ptr,
         const boost::system::error_code& err
     )
@@ -306,7 +315,7 @@ void Acceptor::_handleAccept(
         // If there are no acceptors remaining, notify the caller that no acceptors,
         // otherwise notify that lost an acceptor.
 
-        _Acceptors::iterator i(std::find( _acceptors.begin(), _acceptors.end(), acceptor_ptr ));
+        const Acceptors::iterator i(std::find( _acceptors.begin(), _acceptors.end(), acceptor_ptr ));
 
         if ( i != _acceptors.end() )  _acceptors.erase( i );
 
@@ -330,7 +339,8 @@ void Acceptor::_handleAccept(
 }
 
 
-void Acceptor::_handshakeComplete(
+void
+Acceptor::_handshakeComplete(
         portConfig::SocketPtr socket_ptr,
         UserId::ConstPtr user_id_ptr,
         portConfig::UserType::Value user_type,
@@ -341,11 +351,12 @@ void Acceptor::_handshakeComplete(
 }
 
 
-void Acceptor::_stopImpl()
+void
+Acceptor::_stopImpl()
 {
     LOG_DEBUG_MSG( "In _stopImpl" );
 
-    for ( _Acceptors::iterator i(_acceptors.begin()) ; i != _acceptors.end() ; ++i ) {
+    for ( Acceptors::const_iterator i(_acceptors.begin()) ; i != _acceptors.end() ; ++i ) {
         (*i)->close();
     }
     _acceptors.clear();

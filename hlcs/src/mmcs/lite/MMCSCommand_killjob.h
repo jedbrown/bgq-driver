@@ -35,7 +35,7 @@ namespace lite {
 /*!
  * \brief
  */
-class MMCSCommand_killjob: public common::AbstractCommand
+class MMCSCommand_killjob : public common::AbstractCommand
 {
 public:
     /*!
@@ -71,8 +71,7 @@ public:
     bool checkArgs(std::deque<std::string>&) { return true; }
 
 public:
-    static  MMCSCommand_killjob* build();
-    static  std::string cmdname() { return "killjob"; }
+    static MMCSCommand_killjob* build();
 };
 
 

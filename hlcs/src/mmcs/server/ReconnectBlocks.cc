@@ -21,13 +21,12 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "BlockControllerTarget.h"
 #include "CNBlockController.h"
 #include "DBConsoleController.h"
 #include "DBBlockController.h"
+#include "DefaultListener.h"
 #include "DBStatics.h"
-#include "DefaultControlEventListener.h"
 #include "ReconnectBlocks.h"
 #include "RunJobConnection.h"
 
@@ -46,9 +45,9 @@
 #include <utility/include/Log.h>
 
 #include <boost/thread.hpp>
-#include <boost/thread/barrier.hpp>
-#include <boost/scope_exit.hpp>
 
+#include <csignal>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -57,16 +56,10 @@ LOG_DECLARE_FILE( "mmcs.server" );
 using namespace MCServerMessageSpec;
 using mmcs::common::Properties;
 
-
-extern bool reconnect_done;
-extern boost::condition_variable reconnect_notifier;
-
-
 namespace mmcs {
 namespace server {
 
 extern MCServerMessageType message_type;
-
 
 boost::mutex error_write_mutex;
 std::vector<std::string> error_list;
@@ -77,27 +70,24 @@ std::vector<std::string> special_free;
 void
 subnetRestartThread(
         const std::string& curr_subnet,
-        const std::vector<std::string>& all_blocks,
-        boost::barrier* restart_barrier
+        const std::vector<std::string>& all_blocks
         )
 {
-    LOG_INFO_MSG(__FUNCTION__ << " 0x" << std::hex << pthread_self() << " subnet " << curr_subnet );
+    LOG_INFO_MSG(__FUNCTION__ << " " << curr_subnet );
     MCServerMessageSpec::FailoverRequest failreq;
     MCServerMessageSpec::FailoverReply failrep;
     const master::Monitor::AliasMap::const_iterator b(
             master::Monitor::_alias_binary_map.find(curr_subnet)
             );
     if ( b == master::Monitor::_alias_binary_map.end() ) {
-        LOG_FATAL_MSG(
-                "Cannot find " << curr_subnet
-                );
+        LOG_FATAL_MSG("Cannot find " << curr_subnet);
         _exit(EXIT_FAILURE);
     }
 
     if (!master::AliasWaiter::buildFailover(failreq, curr_subnet, b->second)) {
         LOG_FATAL_MSG(
-                "Cannot build a proper failover message. " << 
-                "Database state may be inconsistent. mmcs_server ending."
+                "Cannot build a proper failover message. " <<
+                "Database state may be inconsistent, mmcs_server is ending."
                 );
         _exit(EXIT_FAILURE);
     }
@@ -114,8 +104,7 @@ subnetRestartThread(
         }
     } else if (!failref || failreply.getStatus()) {
         // Could not connect to mc_server.  That's a termination condition.
-        LOG_FATAL_MSG("Could not connect to mc_server to send a failover message.  "
-                      << "mmcs_server ending.");
+        LOG_FATAL_MSG("Could not connect to mc_server to send a failover message, mmcs_server is ending.");
         _exit(EXIT_FAILURE);
     }
 
@@ -130,14 +119,15 @@ subnetRestartThread(
             BGQDB::queryMissing(blockname, curr_errors);
             // Get the locations necessary to kill the jobs.
             BOOST_FOREACH(const std::string& error, curr_errors) {
-                std::string trimmed_error = error.substr(error.find_last_of("R"));
-                if (trimmed_error.empty()) {
-                    // It might be an IO rack.
-                    trimmed_error = error.substr(error.find_last_of("Q"));
-                }
-                LOG_DEBUG_MSG("Adding " << trimmed_error << " to error list.");
+                // The results from queryMissing() are a little strange, it will look like
+                // NODEBOARD: R00-M0-N00
+                // Ee want to use the location string to get a list of jobs to kill so we
+                // need to strip off the prefix
+                const std::string::size_type colon = error.find_first_of( ": " );
+                const std::string trimmed( colon == std::string::npos ? error : error.substr( colon + 2 ) );
+                LOG_DEBUG_MSG("Adding " << trimmed << " to error list.");
                 boost::mutex::scoped_lock sl(error_write_mutex);
-                error_list.push_back(trimmed_error);
+                error_list.push_back(trimmed);
             }
             // Now just get the block names.
             if (!curr_errors.empty()) {
@@ -161,23 +151,22 @@ subnetRestartThread(
             if (std::find(hw_to_unmark.begin(), hw_to_unmark.end(), nc._location) != hw_to_unmark.end())
                 ncs.push_back(nc._location);
         }
-        DBStatics::setLocationStatus(ncs, failreply, DBStatics::AVAILABLE, DBStatics::COMPUTECARD);
+        DBStatics::setLocationStatus(ncs, DBStatics::AVAILABLE, bgq::util::Location::NodeBoard);
 
         std::vector<std::string> iocs;
         BOOST_FOREACH(const ReplyIoCard& ioc, failrep._ioCards) {
             if (std::find(hw_to_unmark.begin(), hw_to_unmark.end(), ioc._location) != hw_to_unmark.end())
                 iocs.push_back(ioc._location);
         }
-        DBStatics::setLocationStatus(iocs, failreply, DBStatics::AVAILABLE, DBStatics::IOCARD);
+        DBStatics::setLocationStatus(iocs, DBStatics::AVAILABLE, bgq::util::Location::IoBoardOnComputeRack );
 
         std::vector<std::string> scs;
         BOOST_FOREACH(const ReplyServiceCard& sc, failrep._serviceCards) {
             if (std::find(hw_to_unmark.begin(), hw_to_unmark.end(), sc._location) != hw_to_unmark.end())
                 scs.push_back(sc._location);
         }
-        DBStatics::setLocationStatus(scs, failreply, DBStatics::AVAILABLE, DBStatics::SERVICECARD);
+        DBStatics::setLocationStatus(scs, DBStatics::AVAILABLE, bgq::util::Location::ServiceCard);
     }
-    restart_barrier->wait();
 }
 
 void
@@ -194,129 +183,117 @@ reconnectBlocks(
     mmcs_client::CommandReply reply;
     BlockControllerBase::mcserver_connect(temp, "reconnect", reply);
     if (!temp) {
-        LOG_WARN_MSG( "could not connect to mc_server: " << reply.str() );
+        LOG_WARN_MSG( "Could not connect to mc_server: " << reply.str() );
         return;
     }
     const MCRefPtr mcServer( temp );
 
-    LOG_INFO_MSG("starting");
+    LOG_INFO_MSG("Performing reconnect blocks work.");
 
-    BOOST_SCOPE_EXIT( (&reconnect_done) ) {
-        reconnect_done = true;
-        reconnect_notifier.notify_all();
-    } BOOST_SCOPE_EXIT_END;
-
-    // get a list of all non-free blocks 
+    // Get a list of all non-free blocks
     BGQDB::STATUS result;
     result = BGQDB::getBlockIds("where status <> 'F'", allBlocks);
-    if (result != BGQDB::OK)
-    {
-        LOG_ERROR_MSG( "getBlockIds() failed with error " << result );
+    if (result != BGQDB::OK) {
+        LOG_ERROR_MSG( "Getting non-free blocks failed with error " << result );
         return;
     }
-    LOG_DEBUG_MSG( "found " << allBlocks.size() << " blocks" );
+    LOG_DEBUG_MSG( "Found " << allBlocks.size() << " blocks to process." );
 
     // Get a list of all blocks specified on the reconnect-blocks startup parameter,
-    // but only if we have reconnect true and bringup false.  We have already
+    // but only if we have reconnect true and bringup false. We have already
     // checked to make sure that both aren't true.
     if (Properties::getProperty(RECONNECT_BLOCKS) == "true" &&
         Properties::getProperty(BRINGUP) == "false")
     {
         reconnectBlocks = allBlocks;
     } else {
-        LOG_INFO_MSG( "block reconnection disabled" );
+        LOG_INFO_MSG( "Block reconnection is disabled." );
     }
 
-    // create a list of all blocks to be reconnected
+    // Create a list of all blocks to be reconnected
     for (std::vector<std::string>::iterator it = reconnectBlocks.begin(); it != reconnectBlocks.end(); )
     {
         const std::string blockName(*it);
 
-        // get the current block state
-        if ((result = BGQDB::getBlockStatus(blockName, blockState)) != BGQDB::OK)
-        {
-            LOG_ERROR_MSG("getBlockStatus(" << blockName << ") failed with error " << result);
+        // Get the current block status
+        if ((result = BGQDB::getBlockStatus(blockName, blockState)) != BGQDB::OK) {
+            LOG_ERROR_MSG("Getting block status for "  << blockName << " failed with error " << result);
             ++it;
             continue;
         }
 
-        // if the block is not fully initialized, remove it from the reconnectBlocks list
+        // If the block is not fully initialized, remove it from the reconnectBlocks list
         if (blockState != BGQDB::INITIALIZED) {
-            LOG_DEBUG_MSG( "not reconnecting to " << blockName << " with status " << blockState );
+            LOG_DEBUG_MSG( "Not reconnecting to " << blockName << " with status " << BGQDB::blockStatusToString(blockState) );
             it = reconnectBlocks.erase(it);
         } else {
             ++it;
         }
     }
 
-    // create a list of all blocks to be freed
+    // Create a list of all blocks to be freed
     for (std::vector<std::string>::const_iterator it = allBlocks.begin(); it != allBlocks.end(); ++it)
     {
         const std::string blockName(*it);
 
-        // get the current block state
-        if ((result = BGQDB::getBlockStatus(blockName, blockState)) != BGQDB::OK)
-        {
-            LOG_ERROR_MSG("getBlockStatus(" << blockName << ") failed with error " << result);
+        // Get the current block state
+        if ((result = BGQDB::getBlockStatus(blockName, blockState)) != BGQDB::OK) {
+            LOG_ERROR_MSG("Getting block status for " << blockName << " failed with error " << result);
             continue;
         }
 
-        // if the block is not in the reconnectBlocks list, then add it to the freeBlock list
+        // If the block is not in the reconnectBlocks list, then add it to the freeBlock list
         if (find(reconnectBlocks.begin(), reconnectBlocks.end(), blockName) == reconnectBlocks.end())
             freeBlocks.push_back(blockName);
     }
 
-    // try to reconnect to blocks in the reconnectBlocks list
-    // if reconnect fails, add the block to the freeBlock list
+    // Try to reconnect to blocks in the reconnectBlocks list.
+    // If reconnect fails, add the block to the freeBlock list
     typedef std::map< DBBlockPtr,boost::shared_ptr<DBConsoleController> > BlockContainer;
     BlockContainer blocks_to_connect;
-    for (std::vector<std::string>::const_iterator it = reconnectBlocks.begin(); it != reconnectBlocks.end(); ++it)
-    {
+    for (std::vector<std::string>::const_iterator it = reconnectBlocks.begin(); it != reconnectBlocks.end(); ++it) {
         const std::string blockName(*it);
 
-        // get user
+        // Get user
         std::string username;
         int qualifier;
         BGQDB::STATUS result = BGQDB::getBlockUser(blockName, username, qualifier);
-        if (result != BGQDB::OK)
-        {
-            LOG_ERROR_MSG("getBlockOwner(" << blockName << ") failed with error " << result);
+        if (result != BGQDB::OK) {
+            LOG_ERROR_MSG("Getting user for block " << blockName << " failed with error " << result);
             freeBlocks.push_back(blockName);
             continue;
         }
 
-        // create console controller
+        // Create console controller
         bgq::utility::UserId uid;
         try {
             const bgq::utility::UserId myuid( username );
             uid = myuid;
-        } catch(const std::exception& e) {
-            LOG_ERROR_MSG("Can't get user id. " << e.what());
+        } catch (const std::exception& e) {
+            LOG_ERROR_MSG("Cannot get user id. " << e.what());
             freeBlocks.push_back(blockName);
             continue;
         }
 
         const boost::shared_ptr<DBConsoleController> consoleController( new DBConsoleController(commandProcessor, uid) );
 
-        //  select the block
+        // Select the block
         std::deque<std::string> args; args.push_back(blockName);
         mmcs_client::CommandReply reply;
         consoleController->selectBlock(args, reply, true);
-        if (reply.getStatus()) // can't create block
-        {
+        if (reply.getStatus()) { // Can't create block
             LOG_ERROR_MSG("selectBlock(" << blockName << ") failed: " << reply.str());
             freeBlocks.push_back(blockName);
             continue;
         }
         const DBBlockPtr pBlock = boost::dynamic_pointer_cast<DBBlockController>(consoleController->getBlockHelper());
 
-        // remember our boot cookie for RAS events
+        // Remember our boot cookie for RAS events
         pBlock->getBase()->setBootCookie(qualifier);
 
-        // create the BlockController and targets
+        // Create the BlockController and targets
         pBlock->create_block(args, reply);
-        if (reply.getStatus()) // can't create block
-        {
+        if (reply.getStatus()) { // Can't create block
             LOG_ERROR_MSG("create_block(" << blockName << ") failed: " << reply.str());
             freeBlock( blockName, username, mcServer );
             consoleController->deselectBlock();
@@ -325,11 +302,16 @@ reconnectBlocks(
 
         // Create an MCServer connection and an MCServer target for all of the block resources,
         // and connect to the targets in the block
-        if (!pBlock->getBase()->isIOBlock()) {
-            // Only actually connect compute blocks.  IO blocks are disconnected when INITIALIZED.
+        if (!pBlock->getBase()->isIoBlock()) {
+            // Only actually connect compute blocks. I/O blocks are disconnected when INITIALIZED.
             blocks_to_connect[pBlock] = consoleController;
         } else {
             pBlock->getBase()->setReconnected();
+        }
+
+        if (!pBlock->getBase()->isIoBlock()) {
+            // Add I/O node to compute mapping
+            DefaultListener::get()->add( pBlock->getBase()->getBlockNodeConfig() );
         }
     }
 
@@ -338,17 +320,22 @@ reconnectBlocks(
         // Before reconnecting, send a list of the hardware associated with booted blocks
         std::vector<std::string> subnets;
         Properties::getSubnetNames(subnets);
-        boost::barrier restart_barrier(subnets.size() + 1);
+        boost::thread_group g;
         BOOST_FOREACH(const std::string& curr_subnet, subnets) {
-            boost::thread srt(&subnetRestartThread, curr_subnet, reconnectBlocks, &restart_barrier);
+            g.create_thread(
+                    boost::bind(
+                        &subnetRestartThread, curr_subnet, reconnectBlocks
+                        )
+                    );
         }
-        restart_barrier.wait();
+        g.join_all();
+        LOG_DEBUG_MSG( subnets.size() << " subnet restart thread" << (subnets.size() == 1 ? "" : "s") << " joined" );
     }
 
     // Now connect to the compute blocks.
     std::deque<std::string> connectArgs;
     connectArgs.push_back(Properties::getProperty(DFT_TGTSET_TYPE));
-    for(BlockContainer::const_iterator it = blocks_to_connect.begin(); it != blocks_to_connect.end(); ++it) {
+    for (BlockContainer::const_iterator it = blocks_to_connect.begin(); it != blocks_to_connect.end(); ++it) {
         const DBBlockPtr curr_block = it->first;
         if (std::find(freeBlocks.begin(), freeBlocks.end(), curr_block->getBlockName()) != freeBlocks.end()) {
             continue; // Skip it if it's in the free list
@@ -358,86 +345,79 @@ reconnectBlocks(
         BlockControllerTarget target(curr_block->getBase(), "{*}", reply);
         curr_block->getBase()->connect(connectArgs, reply, &target);
 
-        if (reply.getStatus() && !curr_block->getBase()->isIOBlock())
-        {
+        if (reply.getStatus() && !curr_block->getBase()->isIoBlock()) {
             LOG_ERROR_MSG("connect(" << curr_block->getBlockName() << ") failed: " << reply.str());
             curr_block->setBlockStatus(BGQDB::FREE);
             curr_block->getBase()->setDisconnecting(true, reply.str()); // reset icon connections and stop mailbox
             console->deselectBlock();
             freeBlocks.push_back(curr_block->getBlockName());
+        } else {
+            LOG_INFO_MSG("Block " << curr_block->getBlockName() << " successfully reconnected.");
         }
-        else
-            LOG_INFO_MSG("block " << curr_block->getBlockName() << " successfully reconnected");
         curr_block->getBase()->setReconnected();
     }
 
     // Finally, free blocks that will not be reconnected
-    for (std::vector<std::string>::const_iterator it = freeBlocks.begin(); it != freeBlocks.end(); ++it)
-    {
+    for (std::vector<std::string>::const_iterator it = freeBlocks.begin(); it != freeBlocks.end(); ++it) {
         const std::string blockName(*it);
 
-        // get the block owner
-        std::string userId;
-        result = BGQDB::getBlockOwner(blockName, userId);
-        if (result != BGQDB::OK)
-        {
-            LOG_ERROR_MSG("getBlockOwner(" << blockName << ") failed with error " << result);
-            // continue without a userid
-            userId.clear();
+        // Get the block owner
+        std::string username;
+        int qualifier;
+        result = BGQDB::getBlockUser(blockName, username, qualifier);
+        if (result != BGQDB::OK) {
+            LOG_ERROR_MSG("Getting user for block " << blockName << " failed with error " << result);
+            // Continue without a userid
+            username.clear();
         }
 
-        // delete the target set and free the block
-        freeBlock(blockName, userId, mcServer);
+        // Delete the target set and free the block
+        freeBlock(blockName, username, mcServer);
 
-        // clear any pending actions for blocks we are not reconnecting
+        // Clear any pending actions for blocks we are not reconnecting
         result = BGQDB::clearBlockAction(blockName);
         if ( result != BGQDB::OK ) {
             LOG_ERROR_MSG("clearBlockAction(" << blockName << ") failed with return code= " << result);
         }
     }
 
-    std::set<BGQDB::job::Id> jobs;
     // Kill the jobs associated with hardware in the error list.
+    std::set<BGQDB::job::Id> jobs;
     BOOST_FOREACH(const std::string& location, error_list) {
         LOG_DEBUG_MSG("Freeing blocks and jobs for " << location);
-
         std::vector<BGQDB::job::Id> temp;
         const BGQDB::STATUS result = BGQDB::killMidplaneJobs(location, &temp, true);
         if (result != BGQDB::OK) {
-            LOG_WARN_MSG( "error on BGQDB::KillMidplaneJobs trying to free blocks");
-        }
-
-        BOOST_FOREACH( const BGQDB::job::Id& job, temp ) {
-            jobs.insert( job );
+            LOG_WARN_MSG( "BGQDB::killMidplaneJobs(" << location << ") failed: " << result );
+        } else {
+            BOOST_FOREACH( const BGQDB::job::Id job, temp ) {
+                jobs.insert( job );
+            }
         }
     }
 
-    // Kill the jobs
-    BOOST_FOREACH(const BGQDB::job::Id& job, jobs) {
-        RunJobConnection::instance().Kill(job, 9);
+    BOOST_FOREACH( const BGQDB::job::Id job, jobs ) {
+        RunJobConnection::instance().kill(job, SIGKILL, "Failed block reconnection");
     }
 
     // Now free the blocks.
     BOOST_FOREACH(const std::string& blockid, special_free) {
-        // If this is an IO block, we've got to free the computes, too.
+        // If this is an I/O block, we've got to free the computes too.
         std::vector<std::string> compute_blocks;
         const BGQDB::STATUS result = BGQDB::checkIOBlockConnection(blockid, &compute_blocks);
         if (result != BGQDB::OK) {
-            LOG_ERROR_MSG(
-                    DBBlockController::strDBError(result)
-                    << ": Database cannot determine connected compute blocks."
-                    );
+            LOG_ERROR_MSG(DBBlockController::strDBError(result) << ": Database cannot determine connected compute blocks.");
         }
         // Stick it in with the compute blocks and free 'em all in one loop.
         compute_blocks.push_back(blockid);
         BOOST_FOREACH(const std::string& block, compute_blocks) {
             const BGQDB::STATUS result = BGQDB::setBlockAction(block, BGQDB::DEALLOCATE_BLOCK);
             if (result == BGQDB::OK) {
-                LOG_INFO_MSG("block " << blockid << " set to DEALLOCATE");
+                LOG_INFO_MSG("Block action for block " << blockid << " was set to DEALLOCATE.");
             } else if (result == BGQDB::DUPLICATE) {
-                // still ok
+                // Still ok
             } else {
-                LOG_ERROR_MSG("Could not deallocate block " << blockid);
+                LOG_ERROR_MSG("Could not set block action to DEALLOCATE for block " << blockid);
             }
         }
     }
@@ -451,8 +431,6 @@ reconnectBlocks(
         LOG_INFO_MSG("Sending failover request to mc_server to make it die.");
         mcServer->failover(failreq, failrep);
     }
-
-    LOG_INFO_MSG("done");
 }
 
 void
@@ -462,23 +440,22 @@ freeBlock(
         const MCRefPtr& mcServer
         )
 {
-    // delete the target set
+    // Delete the target set
     deleteTargetSet(blockName, userName, mcServer);
 
-    // mark the specified block as free
-    std::deque<std::string> errmsg; 
+    // Mark the specified block as free
+    std::deque<std::string> errmsg;
     errmsg.push_back("errmsg=block freed by reconnect_blocks");
-    // The block actions happen during startup serially here
-    // so we don't need to worry about other threads racing
-    // to the static unlocked BGQDB method.
+    // The block actions happen during startup serially here so we don't need to worry
+    // about other threads racing to the static unlocked BGQDB method.
     const BGQDB::STATUS result = BGQDB::setBlockStatus(blockName, BGQDB::FREE, errmsg);
     if (result == BGQDB::OK) {
-        LOG_INFO_MSG("block " << blockName << " successfully freed");
+        LOG_INFO_MSG("Block " << blockName << " was successfully freed.");
     } else {
         BGQDB::BLOCK_STATUS blockState;
         BGQDB::getBlockStatus(blockName, blockState);
-        LOG_ERROR_MSG("setBlockStatus(" << blockName << ", FREE) failed with return code= " << result
-                << ", current block state=" << blockState);
+        LOG_ERROR_MSG("Setting block status to FREE for block " << blockName << " failed with return code= " << result
+                << ", current block status is " << BGQDB::blockStatusToString(blockState));
     }
 }
 
@@ -491,7 +468,7 @@ deleteTargetSet(
 {
     mmcs_client::CommandReply rep;
 
-    // open the target set in Control mode
+    // Open the target set in Control mode
     MCServerMessageSpec::OpenTargetRequest mcOpenTargetSetRequest(
             blockName,
             userName,
@@ -499,67 +476,58 @@ deleteTargetSet(
             true
             );
     MCServerMessageSpec::OpenTargetReply mcOpenTargetSetReply;
-    try
-    {
+    try {
         mcServer->openTarget(mcOpenTargetSetRequest, mcOpenTargetSetReply);
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception& e) {
         mcOpenTargetSetReply._rc = -1;
         mcOpenTargetSetReply._rt = e.what();
     }
-    if (mcOpenTargetSetReply._rc)
-    {
+
+    if (mcOpenTargetSetReply._rc) {
         LOG_DEBUG_MSG("openTargetSet: " << mcOpenTargetSetReply._rt);
-        LOG_ERROR_MSG("unable to open target set " << blockName);
+        LOG_ERROR_MSG("Unable to open target set " << blockName);
         return;
     }
 
-    LOG_DEBUG_MSG("mcServer target set " << blockName << " opened for " << userName);
+    LOG_DEBUG_MSG("mc_server target set " << blockName << " opened for " << userName);
 
     MCServerMessageSpec::CloseTargetRequest mcCloseTargetRequest(
             MCServerAPIHelpers::createCloseRequest( mcOpenTargetSetRequest, mcOpenTargetSetReply)
             );
     MCServerMessageSpec::CloseTargetReply mcCloseTargetReply;
-    try
-    {
+    try {
         mcServer->closeTarget(mcCloseTargetRequest, mcCloseTargetReply);
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception& e) {
         mcCloseTargetReply._rc = -1;
         mcCloseTargetReply._rt = e.what();
     }
 
     if (mcCloseTargetReply._rc) {
-        LOG_ERROR_MSG("closeTargetSet: " << mcCloseTargetReply._rt);
-        LOG_ERROR_MSG("unable to close target set " << blockName);
+        LOG_DEBUG_MSG("closeTargetSet: " << mcCloseTargetReply._rt);
+        LOG_ERROR_MSG("Unable to close target set " << blockName);
         return;
     }
-        
-    LOG_DEBUG_MSG("mcServer target set " << blockName << " closed");
 
-    // delete the target set
+    LOG_DEBUG_MSG("mc_server target set " << blockName << " closed.");
+
+    // Delete the target set
     MCServerMessageSpec::DeleteTargetSetRequest mcDeleteTargetSetRequest(blockName, userName);
     MCServerMessageSpec::DeleteTargetSetReply   mcDeleteTargetSetReply;
 
     try {
         mcServer->deleteTargetSet(mcDeleteTargetSetRequest, mcDeleteTargetSetReply);
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception& e) {
         mcDeleteTargetSetReply._rc = -1;
         mcDeleteTargetSetReply._rt = e.what();
     }
 
-    if (mcDeleteTargetSetReply._rc)
-    {
-        LOG_ERROR_MSG("deleteTargetSet: " << mcDeleteTargetSetReply._rt);
-        LOG_ERROR_MSG("unable to delete target set " << blockName);
+    if (mcDeleteTargetSetReply._rc) {
+        LOG_DEBUG_MSG("deleteTargetSet: " << mcDeleteTargetSetReply._rt);
+        LOG_ERROR_MSG("Unable to delete target set " << blockName);
         return;
     }
 
-    LOG_DEBUG_MSG("mcServer target set " << blockName << " deleted");
+    LOG_DEBUG_MSG("mc_server target set " << blockName << " deleted.");
 }
 
 } } // namespace mmcs::server

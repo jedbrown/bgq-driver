@@ -74,3 +74,15 @@ uint64_t sc_SETPOWERCONSUMPTIONPARAM( SYSCALL_FCN_ARGS )
     // NOTE:  Power consumption controls will be restored to their default
     //        values at job termination in PowerManagement_Shutdown().
 }
+
+uint64_t sc_EXECENVMON2COMMAND( SYSCALL_FCN_ARGS )
+{
+    uint64_t command = r3;
+    if (IsSubNodeJob()) // Power control is not supported for subnode jobs                                                       
+    {                                                                                                                            
+        return CNK_RC_SPI(ENOSYS);                                                                                                 
+    }
+    
+    uint64_t rc = Kernel_ExecEnvmon2Command(command);
+    return CNK_RC_SPI(rc);
+}

@@ -73,8 +73,7 @@ Log::Log(
         ) :
     _connection( connection ),
     _statement(),
-    _object( object ),
-    _action( action )
+    _object( object )
 {
     if ( _object.type() == Object::Block ) {
         _statement = _connection->prepareUpdate(

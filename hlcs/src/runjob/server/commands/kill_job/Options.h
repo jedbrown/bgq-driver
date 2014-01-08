@@ -121,6 +121,8 @@ private:
             const std::string& arg  //!< [in]
             );
 
+    std::string getDetails() const;
+
 private:
     pid_t _pid;
     std::string _hostname;

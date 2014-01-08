@@ -36,9 +36,9 @@ namespace CxxSockets {
 
 //! \brief Generic v4/v6 listening socket.  
 //!
-//! This is version specified
-//! by the sockaddr structure used to initialize it.  ListenerSets
-//! allow initilializing multiple listeners.
+//! The version is specified by the SockAddr used to initialize it.
+//!
+//! \see ListenerSet
 class ListeningSocket : public Socket
 {
     int Accept();
@@ -52,7 +52,7 @@ public:
     //! \brief This gets a new socket
     //! 
     //! \param sock Pass in a new socket object to fill
-    bool AcceptNew(const TCPSocketPtr& sock);
+    void AcceptNew(const TCPSocketPtr& sock);
 };
 
 } 

@@ -756,6 +756,8 @@ int fw_mailbox_process_inbound_msg( void ) {
 	uint64_t dest_vaddr = *((uint64_t*)mbox_ptr); INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint64_t), fw_MBox2Core, FW_INBOX_SIZE);
 	uint64_t count      = *((uint64_t*)mbox_ptr); INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint64_t), fw_MBox2Core, FW_INBOX_SIZE);
 
+	//if ( dest_vaddr >= 0x3C0000000 ) printf("WRITE(addr=%lX len=%ld)\n", dest_vaddr, count);
+
 	acquire_mapping(dest_vaddr);
 
 	if ( count > ( FW_INBOX_SIZE - sizeof(MailBoxHeader_t) - sizeof(MailBoxPayload_Write_t) ) ) {

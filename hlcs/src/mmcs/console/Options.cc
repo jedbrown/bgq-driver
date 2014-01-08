@@ -37,16 +37,12 @@
 #include <iostream>
 #include <map>
 
-
 using mmcs::common::Properties;
-
 
 LOG_DECLARE_FILE( "mmcs.console" );
 
-
 namespace mmcs {
 namespace console {
-
 
 Options::Options(
         unsigned int argc,
@@ -94,6 +90,7 @@ Options::Options(
     // parse
     boost::program_options::command_line_parser cmd_line( _argc, _argv );
     cmd_line.options( options );
+    cmd_line.positional( boost::program_options::positional_options_description() );
     boost::program_options::store( cmd_line.run(), _vm );
 
     // notify variables_map that we are done processing options
@@ -140,16 +137,16 @@ Options::Options(
         Properties::setProperty(FILE_EXIT, "true");
     }
 
-    if(_vm["no_shell"].as<bool>()) {
+    if (_vm["no_shell"].as<bool>()) {
         Properties::setProperty(NO_SHELL, "true");
     } else Properties::setProperty(NO_SHELL, "false");
 
-    if(!reconnect.empty()) {
-        if(reconnect == "true" || reconnect == "false")
+    if (!reconnect.empty()) {
+        if (reconnect == "true" || reconnect == "false")
             Properties::setProperty(AUTO_RECONNECT, reconnect.c_str());
         else {
             std::cerr << "Invalid argument '" << reconnect
-                      << "' for auto-reconnect.  Must be either 'true' or 'false'"
+                      << "' for auto-reconnect. Must be either 'true' or 'false'"
                       << std::endl;
             exit(EXIT_FAILURE);
         }
@@ -160,7 +157,7 @@ Options::Options(
     // log each arg
     std::ostringstream args;
     std::copy(_argv, _argv + _argc, std::ostream_iterator<char*>(args, " "));
-    LOG_DEBUG_MSG("startup parameters: " << args.str());
+    LOG_DEBUG_MSG("Startup parameters: " << args.str());
 }
 
 void
@@ -220,9 +217,9 @@ Options::setupLoggingDefaults()
         }
 
         // remove any loggers specified in --verbose from the default logger list
-        const Loggers::iterator i = loggers.find( logger_name );
-        if ( i != loggers.end() ) {
-            loggers.erase( i );
+        const Loggers::iterator verbose = loggers.find( logger_name );
+        if ( verbose != loggers.end() ) {
+            loggers.erase( verbose );
         }
 
     }

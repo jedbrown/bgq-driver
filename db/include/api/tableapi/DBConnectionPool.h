@@ -48,7 +48,6 @@ class DBConnectionPool : public bgq::utility::Singleton<DBConnectionPool, bgq::u
 {
 public:
     static const unsigned DefaultSize; //!< Default number of connections in the pool if not provided explicitly or from a properties file.
-    static const unsigned MaximumSize; //!< Some maximum size we want for a connection pool.
 
 public:
     /*!
@@ -114,7 +113,6 @@ protected:
     /*!
      * \brief ctor.
      *
-     * \throws std::invalid_argument if size > MaximumSize
      * \throws std::invalid_argument if properties == NULL
      */
     DBConnectionPool(
@@ -123,7 +121,6 @@ protected:
             );
 
 private:
-    bool validateSize();
     void initCxxdbPool();
 };
 

@@ -25,8 +25,9 @@
 #define MASTER_MONITOR_H
 
 #include "common/Thread.h"
+#include "WaiterList.h"
 
-#include "master/lib/BGMasterClientApi.h"
+#include "master/lib/BGMasterClient.h"
 
 #include <control/include/mcServer/MCServerRef.h>
 
@@ -43,9 +44,9 @@ namespace master {
 
 class AliasWaiter;
 class SubnetWaiter;
-class WaiterList;
 
-class Monitor : public common::Thread {
+class Monitor : public common::Thread
+{
     friend class AliasWaiter;
     friend class SubnetWaiter;
 public:

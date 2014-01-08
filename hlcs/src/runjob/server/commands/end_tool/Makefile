@@ -32,6 +32,10 @@ COMMAND              = $(shell basename `pwd`)
 COMMAND_SRC          = main.cc
 COMMAND_SRC         += Options.cc
 
+LDFLAGS += -lrunjob_common
+LDFLAGS += -lboost_program_options-mt
+LDFLAGS += -lboost_date_time-mt
+LDFLAGS += -llog4cxx
 
 INSTALL_LIST          += $(call INSTALL_BIN_TARGET, $(COMMAND))
 bg_bin_links         := $(COMMAND)

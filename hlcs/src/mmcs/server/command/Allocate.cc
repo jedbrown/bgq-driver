@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "Allocate.h"
 
 #include "../BlockControllerBase.h"
@@ -30,17 +29,11 @@
 
 #include <utility/include/Log.h>
 
-
-using namespace std;
-
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 Allocate*
 Allocate::build()
@@ -62,11 +55,11 @@ Allocate::build()
 
 void
 Allocate::execute(
-        deque<string> args,
+        std::deque<std::string> args,
         mmcs_client::CommandReply& reply,
         DBConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     std::vector<std::string> vn;
     vn.push_back(args[0]);
@@ -76,42 +69,45 @@ Allocate::execute(
 
 void
 Allocate::execute(
-        deque<string> args,
+        std::deque<std::string> args,
         mmcs_client::CommandReply& reply,
         DBConsoleController* pController,
         BlockControllerTarget* pTarget,
         std::vector<std::string>* validnames
-        )
+)
 {
-    BGQDB::STATUS result;           // getBlockStatus return code
-    BGQDB::BLOCK_STATUS bState;     // getBlockStatus return state
-
-    if (validnames->size() != 1)
-    {
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+    if (validnames->size() != 1) {
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         return;
     }
 
-    const string blockName = validnames->at(0);    // save the block name
+    const std::string blockName = validnames->at(0);
 
-    if (((result = BGQDB::getBlockStatus(blockName, bState)) == BGQDB::OK)
-            && (bState != BGQDB::FREE && bState != BGQDB::ALLOCATED)) {
+    BGQDB::BLOCK_STATUS bState;
+    const BGQDB::STATUS result = BGQDB::getBlockStatus(blockName, bState);
+    if (result == BGQDB::NOT_FOUND) {
+        reply << mmcs_client::FAIL << "Block not found: " << blockName << mmcs_client::DONE;
+        return;
+    } else if ( result != BGQDB::OK ) {
+        reply << mmcs_client::FAIL << "Could not get block status: " << DBBlockController::strDBError(result) << mmcs_client::DONE;
+        return;
+    }
+
+    if ( bState != BGQDB::FREE && bState != BGQDB::ALLOCATED ) {
         reply << mmcs_client::FAIL << "Block is not free" << mmcs_client::DONE;
         return;
     }
 
-    if(!DBConsoleController::setAllocating(blockName)) {
-        reply << mmcs_client::FAIL << "Block is being allocated in another thread" << mmcs_client::DONE;
+    if (!DBConsoleController::setAllocating(blockName)) {
+        reply << mmcs_client::FAIL << "Block is being allocated or freed in another thread" << mmcs_client::DONE;
         return;
     }
 
-    log4cxx::MDC _blockid_mdc_( "blockId", std::string("{") + blockName + "} " );
-
-    //  Select the block
+    // Select the block
     pController->selectBlock(args, reply, false);
     if (reply.getStatus() != 0) {
-        if(reply.str() == "args?") {
-            reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+        if (reply.str() == "args?") {
+            reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         }
         DBConsoleController::doneAllocating(blockName);
         return;
@@ -120,12 +116,13 @@ Allocate::execute(
     // Allocate the block (supports "no_check" option)
     const DBBlockPtr pBlock = boost::dynamic_pointer_cast<DBBlockController>(pController->getBlockHelper()); // get the selected BlockController
     pBlock->allocateBlock(args, reply);
-    if (reply.getStatus() != 0)
-    {
-        if(reply.str() == "args?")
-            reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
-        if (pController->getBlockHelper() != 0)
+    if (reply.getStatus() != 0) {
+        if (reply.str() == "args?") {
+            reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
+        }
+        if (pController->getBlockHelper() != 0) {
             pController->deselectBlock();
+        }
         DBConsoleController::doneAllocating(blockName);
 
         return;
@@ -137,16 +134,14 @@ Allocate::execute(
     // Boot the block
     pBlock->boot_block(args, reply);
     if (reply.getStatus() != 0) {
-        result = BGQDB::getBlockStatus(blockName, bState);
-        if ( result == BGQDB::OK && bState != BGQDB::TERMINATING ) {
-            // Return the block to terminating state
-            if ((result = pBlock->setBlockStatus(BGQDB::TERMINATING)) != BGQDB::OK) {
-                LOG_ERROR_MSG("setBlockStatus(TERMINATING) failed, result=" << result);
-            } else {
-                LOG_INFO_MSG("Set block " << blockName << " to TERMINATING");
+        const BGQDB::STATUS result = BGQDB::getBlockStatus(blockName, bState);
+        if ( result == BGQDB::OK ) {
+            if ( bState != BGQDB::TERMINATING ) {
+                // Return the block to terminating state
+                (void)pBlock->setBlockStatus(BGQDB::TERMINATING);
             }
         } else {
-            LOG_ERROR_MSG( "could not get block status: " << result );
+            LOG_ERROR_MSG( "Could not get block status: " << DBBlockController::strDBError(result) );
         }
 
         if (pController->getBlockHelper() != 0) {
@@ -161,19 +156,19 @@ Allocate::execute(
     DBConsoleController::doneAllocating(blockName);
 
     // wait for the boot to complete
-    deque<string> waitBoot_args; // empty argument list
+    const std::deque<std::string> waitBoot_args; // empty argument list
     pBlock->waitBoot(waitBoot_args, reply);
-    if(reply.str() == "args?") {
-        reply << mmcs_client::FAIL << "args? " << usage << mmcs_client::DONE;
+    if (reply.str() == "args?") {
+        reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;
         return;
     }
 }
 
 void
 Allocate::help(
-        deque<string> args,
+        std::deque<std::string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     reply << mmcs_client::OK << description()
           << ";For specified <blockId>, performs select_block, allocate_block, boot_block and wait_boot."

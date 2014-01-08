@@ -38,7 +38,10 @@ CXXFLAGS += \
 
 
 LDFLAGS += \
- -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
+ -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib \
+ -llog4cxx \
+ -lboost_system-mt \
+ -lboost_program_options-mt
 
 
 install_files = $(call INSTALL_SBIN_TARGET, $(exes)) $(bg_links_targets)
@@ -50,10 +53,10 @@ all: $(exes)
 
 
 realtime_server_log_level: realtime_server_log_level.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 realtime_server_status: realtime_server_status.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 
 install: $(install_files)

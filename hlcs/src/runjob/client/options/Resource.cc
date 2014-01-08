@@ -26,6 +26,7 @@
 #include "common/MaximumLengthString.h"
 #include "common/RanksPerNode.h"
 
+#include <db/include/api/tableapi/gensrc/DBTBlock.h>
 #include <boost/bind.hpp>
 
 namespace runjob {
@@ -38,7 +39,7 @@ Resource::Resource(
     Description( "Resource Options" )
 {
     namespace po = boost::program_options;
-    typedef MaximumLengthString<BLOCK_STRING_SIZE - 1> BlockString;
+    typedef MaximumLengthString<BGQDB::DBTBlock::BLOCKID_SIZE> BlockString;
     _options.add_options()
         (
          "block",

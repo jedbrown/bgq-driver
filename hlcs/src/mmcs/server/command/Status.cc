@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "Status.h"
 
 #include "../DBConsoleController.h"
@@ -32,19 +31,15 @@
 
 #include <utility/include/Log.h>
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 using namespace std;
 
 using mmcs::common::Properties;
 
-
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 Status::Status(
         const char* name,
@@ -76,7 +71,7 @@ Status::execute(
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     reply <<
         mmcs_client::OK << "BG/Q " << Properties::getProperty(MMCS_PROCESS) <<
@@ -97,8 +92,8 @@ Status::execute(
     reply << std::endl;
     {
         PthreadMutexHolder holder;
-        holder.Lock( &DBConsoleController::_midplaneControllerListMutex );
-        const size_t users = DBConsoleController::_midplaneControllerList.size();
+        holder.Lock( &DBConsoleController::_consoleControllerListMutex );
+        const size_t users = DBConsoleController::_consoleControllerList.size();
         reply << users << " user" << (users == 1 ? "" : "s") << std::endl;
     }
 
@@ -119,10 +114,10 @@ void
 Status::help(
         deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
     reply << mmcs_client::OK << description();
-    reply << ";displays internal status of mmcs_server.";
+    reply << ";Displays internal status of mmcs_server.";
 
     reply << mmcs_client::DONE;
 }

@@ -34,6 +34,7 @@ BGSCHED = bgsched_runjob
 
 LDFLAGS  += -L ../../client -lrunjob_client
 LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib
+LDFLAGS  += -lboost_thread-mt
 
 install: $(BGSCHED)
 

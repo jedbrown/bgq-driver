@@ -21,18 +21,14 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_SERVER_COMMAND_SYSRQ_H_
 #define MMCS_SERVER_COMMAND_SYSRQ_H_
 
-
 #include "common/AbstractCommand.h"
-
 
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 /*!
 ** sysrq
@@ -41,14 +37,12 @@ namespace command {
 ** Options:
 ** loglevel0-8 reBoot tErm Halt kIll showMem showPc unRaw Sync showTasks Unmount Xmon
 */
-
 class Sysrq : public common::AbstractCommand
 {
 public:
     Sysrq(const char* name, const char* description, const Attributes& attributes)
-      : AbstractCommand(name,description,attributes) { usage = "[<target>] sysrq [options]";}
-    static  Sysrq* build(); // factory method
-    static  std::string cmdname() { return "sysrq"; }
+      : AbstractCommand(name,description,attributes) { _usage = "[<target>] sysrq [options]";}
+    static Sysrq* build(); // factory method
     void execute(std::deque<std::string> args,
              mmcs_client::CommandReply& reply,
              common::ConsoleController* pController,
@@ -57,7 +51,6 @@ public:
     void help(std::deque<std::string> args,
               mmcs_client::CommandReply& reply);
 };
-
 
 } } } // namespace mmcs::server::command
 

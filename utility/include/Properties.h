@@ -32,6 +32,7 @@
 
 #include <boost/program_options.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/utility.hpp>
 
 #include <map>
 #include <stdexcept>
@@ -157,7 +158,7 @@ namespace utility {
  * Properties::getValues and Properties::reload.
  *
  */
-class Properties
+class Properties : private boost::noncopyable
 {
 public:
     /*!
@@ -271,20 +272,6 @@ public:
      */
     explicit Properties(
             const std::string& file = std::string()     //!< [in] file to open
-            );
-
-    /*!
-     * \brief copy ctor.
-     */
-    Properties(
-            const Properties& other //!< [in]
-            );
-
-    /*!
-     * \brief assignment operator.
-     */
-    Properties& operator=(
-            const Properties& other //!< [in]
             );
 
     /*!

@@ -1,0 +1,925 @@
+#/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+#
+# ramdisk/tools/bgqDistrofsPostInstall.sh for BlueGene/Q Linux Distribution
+#
+# Author: Jay S. Bryant <jsbryant@us.ibm.com>
+#
+# Purpose:  This script is to be run after YACI has installed an image of
+#           RHEL6 on the service node's filesystem.  This script will then
+#           be run to customize the RHEL6 installation making it a
+#           BG/Q Linux Distribution that will run as the root filesystem 
+#           for the I/O Nodes.
+
+# Source shared variables and functions
+. BGQ_RAMDISK_PATH/tools/functions
+
+# Setup some default variables.
+DISTROFSTAR_LOC=BGQ_RAMDISK_PATH/bin/distrofs.tar
+DISTROFS_LOC="BGQ_LINUX_OS_PATH"
+KERNEL_RPM_LOC="BGQ_LINUX_PATH/rpms"
+USER_KERNEL_RPM_LOC=0
+ADDPKGS_LOC="/bgsys/linux/addpkgs"
+DISTROFS_RPM_LOC=BGQ_RAMDISK_PATH/rpms
+ONLY_ADDPKGS=0
+RHEL6_BASE_LOC=BGQ_DISTROFS_BASE_PATH
+IONFLOOR=0
+IGNORE_EXISTING=0
+LOCKFILE=/bgsys/linux/.distrofsPostInstall.lock
+SUCCESS=1
+# Need to remove trailing '/' from DISTROFS_LOC if it is there.
+if [[ $DISTROFS_LOC =~ /$ ]] ; then
+	LENGTH=${#DISTROFS_LOC}
+	let LENGTH=$LENGTH-1
+	DISTROFS_LOC=`/bin/echo $DISTROFS_LOC | cut -c -$LENGTH`
+fi
+DISTRO=`/bin/echo $DISTROFS_LOC | awk 'BEGIN{FS="/"} ; {print $NF}'`
+LOGFILE=`hostname -s`-bgqDistrofsPostInstall-$DISTRO-`date +%Y-%m%d-%H:%M:%S`.log
+
+# Export variables for use by scripts in /bgsys/linux/addpkgs
+I=0
+if [[ $0 =~ ^/bgsys/drivers ]] ; then
+        DRIVER_ARR=(`echo $0 | tr "/" "\n"`)
+        while [ $I -lt ${#DRIVER_ARR[@]} ] ; do
+                if [ ${DRIVER_ARR[$I]} != "bgqDistrofsPostInstall.sh" ] && [ ${DRIVER_ARR[$I]} != "ramdisk" ] &&
+                   [ ${DRIVER_ARR[$I]} != "tools" ] ; then
+                    DRIVER_PATH=${DRIVER_PATH}/${DRIVER_ARR[$I]}
+                fi
+                let I=$I+1
+        done
+        export DRIVER_PATH="$DRIVER_PATH"
+        export DRIVER_LINUX_OS_PATH="$DRIVER_PATH/linux/OS"
+fi
+
+#For sandbox builds
+export DISTROFS_LOC="$DISTROFS_LOC"
+
+usage () {
+
+    #Don't need to log usage output
+    LOG=0
+
+    echo -en "\n\nUsage: $0 [OPTIONS]  (NOTE: Must be run as root)\n"
+    echo -en "\t[-t path to tar file containing customizations for distrofs] (default: $DISTROFSTAR_LOC)\n"
+    echo -en "\t[-d path to target distrofs] (default: $DISTROFS_LOC)\n"
+    echo -en "\t[-r path to BG/Q kernel RPMs] (defaults to the driver the script was built for: \n\t\t\t\t\t$KERNEL_RPM_LOC )\n"
+    echo -en "\t[-b path to base RHEL distribution] (default: $RHEL6_BASE_LOC)\n"
+    echo -en "\t[-f make the target distrofs the ionfloor]\n"
+    echo -en "\t[-i do not skip distrofs install if the requested directory already exists]\n"
+    echo -en "\t[-a only reprocess the $ADDPKGS_LOC directory] \n"
+    echo -en "\t[-h displays this help text]\n\n"
+}
+
+# Check for required arguments and do validation.
+while getopts "t:d:r:b:afhi" flags ; do
+    case "$flags" in
+	t) DISTROFSTAR_LOC=$OPTARG
+	   ;;
+	d) DISTROFS_LOC=$OPTARG
+	   ;;
+	r) KERNEL_RPM_LOC=$OPTARG
+	   USER_KERNEL_RPM_LOC=1
+	   ;;
+	b) RHEL6_BASE_LOC=$OPTARG
+	   ;;
+	f)
+	   IONFLOOR=1
+	   ;;
+	i)
+	  IGNORE_EXISTING=1
+	  ;;
+	a)
+	  ONLY_ADDPKGS=1
+	  ;;
+	*) usage
+	   exit 1
+	   ;;
+    esac
+done
+
+# Split up the DISTROFS_LOC to get the directory distro is going into.
+DISTROFS_ARR=(`/bin/echo $DISTROFS_LOC | tr "/" "\n"`)
+
+echo -en "\n\n###################################################"
+echo -en "\n# Starting BG/Q Linux Distrofs Post Install Script"
+echo -en "\n#####################################################\n"
+
+# Need to run as root. Check after args parsing so non-root users can
+# at least get the help text.
+if [ "$(id -u)" != "0" ]; then
+    echo -en "\n\nERROR! This script must be executed as root.\n\n"
+    exit 1
+fi
+
+#Make sure that we can write to the log file.  If not print a warning.
+touch $LOG_DIR/$LOGFILE
+if [ $? -ne 0 ] ; then
+
+    #Disable logging to avoid further errors.
+    LOG=0
+
+    /bin/echo -en "\n\n\tWARNING: Unable to create log file $LOG_DIR/$LOGFILE\n"
+    /bin/echo -en "\t         Installation will continue without logging.\n\n"
+    
+else
+	echo -en "\n\tLogging output to: $LOG_DIR/$LOGFILE"
+fi
+
+   echo -en "\n\tInstalling to: $DISTROFS_LOC ."
+   echo -en "\n\tInstalling BG/Q Linux kernel RPMs from: $KERNEL_RPM_LOC ."
+   echo -en "\n\tAdding packages from: $ADDPKGS_LOC ."
+
+#Ensure that there isn't another installation happening concurrently.  Having multiple installs
+#going results in unpredictable behavior.
+if [ -e /bgsys/linux/.distrofsPostInstall.lock ] ; then
+	OTHER_DISTRO=`cat /bgsys/linux/.distrofsPostInstall.lock`
+	echo -en "\n\n\tERROR! Found a .distrofsPostInstall.lock file in /bgsys/linux."
+	echo -en "\n\t       $OTHER_DISTRO is currently being installed."
+	echo -en "\n\n\t       Retry BG/Q Distrofs Installation after installation of $OTHER_DISTRO has completed.\n\n"
+	exit 1
+fi
+
+#Summary output to help with debug:
+if [ ! -f $DISTROFSTAR_LOC ] ; then
+   echo -en "\n\tERROR: Unable to find distrofs tar file: $DISTROFSTAR_LOC .\n\n"
+   exit 1
+else
+   echo -en "\n\tDistrofs tar file: $DISTROFSTAR_LOC ."
+fi
+
+if [ IONFLOOR = 1 ] ; then
+   echo -en "\n\tSetting /bgsys/linux/ionfloor to $DISTROFS_LOC ."
+fi
+
+if [ $IGNORE_EXISTING -eq 1 ] ; then
+   echo -en "\n\tInstalling into $DISTROFS_LOC even if it already exists."
+
+   # Need an option for customers to install kernel RPMs into the ionfloor distro.  So, if
+   # they use -i and -f you can override this check.
+   if [ ! $IONFLOOR -eq 1 ] ; then 
+	   # Check to make sure that we aren't trying to update the floor.  We don't want to do that.
+   	if [ -L /bgsys/linux/ionfloor ] && [ -e /bgsys/linux/ionfloor ] ; then
+		if [[ `readlink /bgsys/linux/ionfloor` =~ ${DISTROFS_ARR[`expr ${#DISTROFS_ARR[@]} - 1`]}$ ]] ; then
+			echo -en "\n\n\tERROR: You have requested to update the ionfloor BG/Q Linux Distribution.\n"
+			echo -en "\t       /bgsys/linux/ionfloor -> "
+			readlink /bgsys/linux/ionfloor
+			echo -en "\t       The production distribution shouldn't be updated. Please select a different one.\n\n"
+			exit 1
+		fi
+   	fi
+   fi
+fi
+
+if [ $ONLY_ADDPKGS -eq 1 ] ; then
+   echo -en "\n\tOnly reprocessing the $ADDPKGS_LOC directory."
+fi
+
+echo -en "\n\n\t-----------------------------------------------------------------------------------------\n"
+
+# Need a list of the general RPM names we expect.
+# If we are not using a user kernel RPM location, use the info from the build.
+# Otherwise use one of the expected arches. Check for the old naming format for backward compatibility.
+if [ $USER_KERNEL_RPM_LOC -eq 0 ] ; then
+	KERNEL_RPM_ARCH=BGQ_LINUX_KERNEL_VERSION
+else
+	ls $KERNEL_RPM_LOC/kernel-*.ppc64.rpm &> /dev/null
+	if [ $? -eq 0 ] ; then
+		KERNEL_RPM_ARCH='ppc64'
+	else
+		KERNEL_RPM_ARCH='ppc64bgq'
+	fi
+fi
+
+if [ ! -e $DISTROFS_LOC ] ; then 
+	# Special case for /bgsys/linux/ionfloor.  If the directory doesn't exist assume it is the
+	# first driver install.  Don't fail, just print a warning.
+	if [ $DISTROFS_LOC == '/bgsys/linux/ionfloor' ] ; then                                    
+		echo -en "\n\n\tWARNING: The distrofs directory $DISTROFS_LOC does not exist.\n"
+		echo -en "\t       Please use the bgqDistrofsInstall.sh script in /bgsys/drivers/ppcfloor/ramdisk/tools\n"
+		echo -en "\t       to create a BG/Q Linux Distribution.\n\n"
+		echo -en "\t       Skipping BG/Q Linux Distrofs Post Installation.\n\n"
+                exit 0
+	else
+		if [ -e $RHEL6_BASE_LOC ] ; then
+			 # Try to create the requested distro if it doesn't exist and we have the base distro.
+			echo -en "\n\n\tCreating new distrofs $DISTROFS_LOC based on $RHEL6_BASE_LOC."
+
+			# Create a lock file so that our .distrofsInstallState file isn't removed incorrectly.
+			echo "$DISTROFS_LOC" >> $LOCKFILE 
+			
+			# Record the state of the system so that we can install/uninstall properly when doing eFixes.
+			if [ -e /bgsys/linux/ionfloor ] ; then
+				PREEXISTING_DISTRO=`readlink /bgsys/linux/ionfloor | awk 'BEGIN{FS="/"} ; {print $NF}'`
+			fi
+			# There shouldn't be an existing .distrofsInstallState file, Remove it just to be safe if it is there.
+			if [ -e /bgsys/linux/.distrofsInstallState ] ; then
+				rm -f /bgsys/linux/.distrofsInstallState
+			fi
+                        if [ ! -z "$PREEXISTING_DISTRO" ] ; then
+                                /bin/echo "PREEXISTING_DISTRO=$PREEXISTING_DISTRO" >> /bgsys/linux/.distrofsInstallState
+                                echo -en "\n\t\tFound pre-existing distro $PREEXISTING_DISTRO"
+                                /bin/echo "INSTALLING_DISTRO=$DISTRO" >> /bgsys/linux/.distrofsInstallState
+                        else
+                                # If there is no ionfloor link that is ok for VXRXMX-0, but for any eFix installations
+                                # we need an ionfloor link so we know the old distro to remove during an RPM upgrade.
+                                # If we can't do that, we need to bail out.
+				# If the distro isn't in VXRXMX format we must be in a local driver...Move along.
+                                if [[ $DISTRO =~ V[0-9]R[0-9]M[0-9] ]] ; then
+                                	DISTRO_ARR=(`/bin/echo "$DISTRO" | tr "_" "\n"`)
+                                	/bin/echo ${DISTRO_ARR[1] | grep "V[0-9]R[0-9]M[0-9]" >> /dev/null}
+                                	if [ $? -eq 0 ] ; then
+                                        	DISTRO_ARR=(`/bin/echo "${DISTRO_ARR[1]}" | tr "-" "\n"`)
+                                        	if [ ${DISTRO_ARR[1]} -ne 0 ] ;then
+                                                	echo -en "\n\n\tERROR: No /bgsys/linux/ionfloor link found!\n"
+                                                	echo -en "\t       An ionfloor link is required for eFix installation.\n"
+                                                	echo -en "\t       Link /bgsys/linux/ionfloor to the current BG/Q Linux Distro\n"
+                                                	echo -en "\t       and execute BGQ_RAMDISK_PATH/tools/bgqDistrofsPostInstall.sh -f\n\n"
+                                                	exit 1
+                                        	fi
+                                	fi
+				fi
+                        fi
+
+			echo -en "\n\n\t\t(Please wait ... This may take some time ...)\n\n"
+			RC=$(cp -a $RHEL6_BASE_LOC $DISTROFS_LOC 2>&1 )
+
+			if [ ! -z "$RC" ] ; then
+               
+				echo -en "\n\n\tERROR! Unable to find requested BG/Q Linux Distro $DISTROFS_LOC and a"
+				echo -en "\n\t       an error was encountered copying $RHEL6_BASE_LOC."
+				echo -en "\n\t       cp returned: $RC"
+				echo -en "\n\n\t       Skipping BG/Q Linux Distrofs Post Installation.\n\n"  
+				[ -e $LOCKFILE ] && rm -f $LOCKFILE
+				exit 1
+			fi
+		else
+			echo -en "\n\n\tERROR! Unable to find required base BG/Q Linux Distro: $RHEL6_BASE_PATH \n"   
+			echo -en "\t       Please use bgqDistrofsInstall.sh in /bgsys/drivers/ppcfloor/ramdisk tools\n"     
+			echo -en "\t       before running bgqDistrofsPostInstall.sh to create the\n"
+			echo -en "\t       base BG/Q Linux Distribution.\n\n"
+			echo -en "\t       Skipping BG/Q Linux Distrofs Post Installation.\n\n"
+			[ -e $LOCKFILE ] && rm -f $LOCKFILE
+			exit 1
+		fi
+	fi
+else  
+	if [ $IGNORE_EXISTING -eq 0 ] && [ $ONLY_ADDPKGS -eq 0 ] ; then
+		echo -en "\n\n\n\t$DISTROFS_LOC already exists.\n"
+		
+		echo -en "\n\n\tSkipping further installation!  Use the '-i' option to override and install into an existing directory.\n\n"
+
+		# Check if we need to build the ramdisk.
+		if [ ! -e BGQ_RAMDISK_PATH/bin/ramdisk.gz ] ; then
+        	   # First populate initramfs
+		   BGQ_RAMDISK_PATH/tools/bgqPopulateInitramfs.sh 2>&1 | tee -a $LOG_DIR/$LOGFILE
+		   if [ ! -e BGQ_INITRAMFS_PATH/bin/busybox ] ; then
+		      echo -en "\n\n\tERROR: bgqPopulateInitramfs.sh encountered a failure.\n"
+		      echo -en "\t       Consult the logs above for further details.\n\n"
+		      [ -e $LOCKFILE ] && rm -f $LOCKFILE
+		      exit 1
+		   else
+		       if [ -e BGQ_RAMDISK_PATH/bin/build-ramdisk ] ; then
+			   echo -en "\n\n\tBuilding BG/Q Ramdisk ...\n\n"
+			   BGQ_RAMDISK_PATH/bin/build-ramdisk --saveimg --verbose \
+			       --rootfs BGQ_INITRAMFS_PATH \
+			       -o BGQ_RAMDISK_PATH/bin/ramdisk.gz 2>&1 | tee -a $LOG_DIR/$LOGFILE
+			   if [ ! -e BGQ_RAMDISK_PATH/bin/ramdisk.gz ] ; then
+			       echo -en "\n\n\tERROR: build-ramdisk failed to run properly.\n"
+			       echo -en "\t       Consult the logs above and correct the problem.\n"
+			       echo -en "\t       You may manually rebuild the ramdisk with the following command: \n"
+			       echo -en "\t       BGQ_RAMDISK_PATH/bin/build-ramdisk --saveimg --verbose \\ \n"
+			       echo -en "\t\t     --rootfs BGQ_INITRAMFS_PATH \\ \n"
+			       echo -en "\t\t     -o BGQ_RAMDISK_PATH/bin/ramdisk.gz \n"
+			       echo -en "\t       Complete the process by linking ramdisk to ramdisk.gz in BGQ_RAMDISK_PATH/bin\n\n"
+			   else
+			       ln -sf BGQ_RAMDISK_PATH/bin/ramdisk.gz \
+			       	   BGQ_RAMDISK_PATH/bin/ramdisk
+			   fi
+			   
+		       else
+			   echo -en "\n\n\tWARNING: Unable to find the BGQ_RAMDISK_PATH/bin/build-ramdisk utility\n"
+		       fi
+	
+		   fi
+		fi
+		[ -e $LOCKFILE ] && rm -f $LOCKFILE
+		exit 0
+	else
+	    echo -en "\n\tUsing existing $DISTROFS_LOC\n\n"
+	fi                                                                          
+fi
+
+# Make sure we haven't been told to only reprocess the addpkags directory.
+if [ $ONLY_ADDPKGS -eq 0 ] ; then
+   # Make sure we have the kernel RPMs we need.
+   if [ ! -e $KERNEL_RPM_LOC ] ; then
+       echo -en "\n\tERROR: Unable to find the requested BG/Q Linux Kernel RPM directory $KERNEL_RPM_LOC \n\n"
+       [ -e $LOCKFILE ] && rm -f $LOCKFILE
+       exit 1
+   else
+	# Make sure there are RPMs in the specified directory..
+	if [ ! `ls $KERNEL_RPM_LOC | wc -l` -ge 1 ] ; then
+		echo -en "\n\tERROR: Unable to find any BG/Q Linux Kernel RPMs in $KERNEL_RPM_LOC \n\n"
+		[ -e $LOCKFILE ] && rm -f $LOCKFILE
+		exit 1
+	fi
+   fi
+
+   # Make sure we can get to the rpms to install into the distro.
+   if [ ! -e $DISTROFS_RPM_LOC ] || [ ! `ls $DISTROFS_RPM_LOC | wc -l` -gt 0 ] ; then
+	echo -en "\n\tERROR: Cannot find BG/Q rpms for the BG/Q Linux Distribution at $DISTROFS_RPM_LOC\n\n"
+	[ -e $LOCKFILE ] && rm -f $LOCKFILE
+	exit 1
+   fi
+
+   # Create the bgfs space if necessary
+   if [ ! -e /bgsys/linux/bgfs ] ; then
+	mkdir /bgsys/linux/bgfs
+   fi
+
+   # Ensure that there is a distrofs to install into at this point we will assume
+   # that it is in the default /tftpboot/images/distrofs.ppc64.
+   if [ ! -e $DISTROFS_LOC ] ; then
+
+      echo -en "\n\n\tERROR! Unable to find distrofs directory."
+      echo -en "\n\t        Consult previous errors to determine why the BG/Q"
+      echo -en "\n\t        Linux Distribution was not installed into $DISTROFS_LOC.\n\n"
+      [ -e $LOCKFILE ] && rm -f $LOCKFILE
+      exit 1
+   fi
+
+   # rc3.d and rc0.d are special cases, we want to move them with all of their default
+   # start scripts and replace that with our start scripts.
+   if [ ! -e $DISTROFS_LOC/etc/rc.d/rc3.d.orig ] ; then
+      mv $DISTROFS_LOC/etc/rc.d/rc3.d $DISTROFS_LOC/etc/rc.d/rc3.d.orig
+      mkdir $DISTROFS_LOC/etc/rc.d/rc3.d
+   fi
+
+   if [ ! -e $DISTROFS_LOC/etc/rc.d/rc0.d.orig ] ; then
+      mv $DISTROFS_LOC/etc/rc.d/rc0.d $DISTROFS_LOC/etc/rc.d/rc0.d.orig
+      mkdir $DISTROFS_LOC/etc/rc.d/rc0.d
+   fi
+
+
+   # Make sure that the tarfile of our changes exists.  If so, start
+   # processing it.
+
+   cd $DISTROFS_LOC
+
+   if [ -f $DISTROFSTAR_LOC ] ; then
+
+      # Process each of the files and make a back-up if the file 
+      # exists, is not a directory and a back-up hasn't arleady been made.
+      # Need to avoid the SysV init scripts to avoid getting duplicate start files.
+      for file in `tar -tf $DISTROFSTAR_LOC` ; do
+	  if [ ! -d $file ] && [ -f $file ] && [ ! -f $file.orig ] && \
+	     [[ ! $file =~ S[0-9][0-9]* ]] && [[ ! $file =~ K[0-9][0-9]* ]] ; then
+
+	     cp $file $file.orig
+
+	  fi
+      done
+
+      # Extract our changes into distrofs
+      echo -en "\n\tExtracting BG/Q customizations into $DISTROFS_LOC\n\n"
+      tar --no-same-owner --no-same-permissions -xvf $DISTROFSTAR_LOC &> /dev/null
+
+  else
+      echo -en "\n\n\tERROR!  Unable to find distrofs tar file: $DISTROFSTAR_LOC\n\n"
+      [ -e $LOCKFILE ] && rm -f $LOCKFILE
+      exit 1
+  fi
+
+  # No longer start start bgsys from rc3.d, so I need to remove it if it is there.
+  if [ -e $DISTROFS_LOC/etc/rc.d/rc3.d/S09bgsys ] ; then
+     rm $DISTROFS_LOC/etc/rc.d/rc3.d/S09bgsys
+  fi 
+
+  # If the default RHEL6/RHEL6.1/RHEL6.2/RHEL6.3/RHEL6.4 RPMs are installed we need to remove them.
+  for RPM in "kernel-debug-devel-2.6.32-71.el6.ppc64" "kernel-debug-2.6.32-71.el6.ppc64" "kernel-2.6.32-71.el6.ppc64" \
+ 	   "kernel-devel-2.6.32-71.el6.ppc64" "kernel-bootwrapper-2.6.32-71.el6.ppc64" "kernel-headers-2.6.32-71.el6.ppc64" \
+	   "kernel-debug-2.6.32-131.0.15.el6.ppc64" "kernel-headers-2.6.32-131.0.15.el6.ppc64" \
+	   "kernel-debug-devel-2.6.32-131.0.15.el6.ppc64" "kernel-2.6.32-131.0.15.el6.ppc64" \
+	   "kernel-devel-2.6.32-131.0.15.el6.ppc64" "kernel-bootwrapper-2.6.32-131.0.15.el6.ppc64" \
+	   "kernel-firmware-2.6.32-131.0.15.el6.noarch" "kernel-2.6.32-220.el6.ppc64" "kernel-doc-2.6.32-220.el6.noarch" \
+	   "kernel-headers-2.6.32-220.el6.ppc64" "kernel-debug-devel-2.6.32-220.el6.ppc64" \
+	   "kernel-bootwrapper-2.6.32-220.el6.ppc64" "kernel-devel-2.6.32-220.el6.ppc64" \
+	   "kernel-firmware-2.6.32-220.el6.noarch" "kernel-debug-2.6.32-220.el6.ppc64" \
+	   "kernel-bootwrapper-2.6.32-279.el6.ppc64" "kernel-devel-2.6.32-279.el6.ppc64" \
+	   "kernel-firmware-2.6.32-279.el6.noarch" "kernel-headers-2.6.32-279.el6.ppc64" \
+	   "kernel-2.6.32-279.el6.ppc64" "kernel-devel-2.6.32-343.el6.ppc64" "kernel-2.6.32-343.el6.ppc64" \
+	   "kernel-headers-2.6.32-343.el6.ppc64" "kernel-bootwrapper-2.6.32-343.el6.ppc64" \
+	   "kernel-firmware-2.6.32-343.el6.noarch" ; do
+
+	   rpm --root $DISTROFS_LOC -qa | grep $RPM &> /dev/null 
+	   if [ $? -eq 0 ] ; then
+		 rpm --root $DISTROFS_LOC -e --nodeps $RPM 2>&1 | tee -a $LOG_DIR/$LOGFILE
+	   fi
+  done
+
+  INSTALL_RPMS=0
+
+  echo -en "\n\n\tInstalling/updating BG/Q Kernel RPMs...\n\n"
+  for RPM in `ls $KERNEL_RPM_LOC/*$KERNEL_RPM_ARCH.rpm` ; do
+	# Pull the RPM name off the end of the string.
+	RPM_ARR=(`/bin/echo $RPM | tr "/" "\n"`)
+	RPM=${RPM_ARR[`expr ${#RPM_ARR[@]} - 1`]}
+	# Remove .rpm from the string for checking if the RPM is installed.
+	LENGTH=${#RPM}
+	let LENGTH=$LENGTH-4
+	RPM=`/bin/echo $RPM | cut -c -$LENGTH`
+	rpm --root $DISTROFS_LOC -qa | grep $RPM &> /dev/null
+        if [ $? -ne 0 ] ; then
+		if [ ! -e /bgsys/linux/tmpinstallsrc ] ; then mkdir /bgsys/linux/tmpinstallsrc ; fi
+		cp $KERNEL_RPM_LOC/$RPM.rpm /bgsys/linux/tmpinstallsrc
+                INSTALL_RPMS=1
+        fi
+  done
+
+  if [ $INSTALL_RPMS -eq 1 ] ; then
+	rpm --root $DISTROFS_LOC --replacefiles --ignorearch -ivh /bgsys/linux/tmpinstallsrc/*$KERNEL_RPM_ARCH.rpm 2>&1 | tee -a $LOG_DIR/$LOGFILE
+	rm -rf /bgsys/linux/tmpinstallsrc
+
+	for RPM in `ls $KERNEL_RPM_LOC/*$KERNEL_RPM_ARCH.rpm` ; do
+		#Pull the RPM name off the end of the string.
+		RPM_ARR=(`/bin/echo $RPM | tr "/" "\n"`)
+		RPM=${RPM_ARR[`expr ${#RPM_ARR[@]} - 1`]}
+		# Remove .rpm from the string for checking if the RPM is installed.
+		LENGTH=${#RPM}
+		let LENGTH=$LENGTH-4
+		RPM=`/bin/echo $RPM | cut -c -$LENGTH`
+		rpm --root $DISTROFS_LOC -qa | grep $RPM &> /dev/null
+		if [ $? -ne 0 ] ; then
+			echo -en "\t\tERROR: A problem was encountered during BG/Q Linux Kernel RPM installation.\n"
+			echo -en "\t\t       Consult the log file above for details.  Once the problem has been corrected\n"
+			echo -en "\t\t       execute '/bgsys/drivers/ppcfloor/ramdisk/tools/bgqDistrofsPostInstall.sh -i -f -r $KERNEL_RPM_LOC'\n"
+			echo -en "\t\t       to complete installation.\n\n"
+			[ -e $LOCKFILE ] && rm -f $LOCKFILE
+			exit 1
+		else
+			echo -en "\n\tInstalled RPM: $RPM"
+		fi
+	done
+  else
+	echo -en "\t\tKernel RPMs are already installed in $DISTROFS_LOC.\n"
+	echo -en "\t\t\tSkipping package install ...\n\n"
+  fi
+
+  # Install the distrofs rpms.
+  echo -en "\n\n\tInstalling/updating BG/Q Distrofs RPMs ...\n\n"
+
+  if [ $IGNORE_EXISTING -eq 0 ] ; then
+	rpm --root $DISTROFS_LOC -Uvh $DISTROFS_RPM_LOC/*.ppc64.rpm 2>&1 | tee -a $LOG_DIR/$LOGFILE
+  else
+	rpm --root $DISTROFS_LOC --force -Uvh $DISTROFS_RPM_LOC/*.ppc64.rpm 2>&1 | tee -a $LOG_DIR/$LOGFILE
+  fi
+
+  # Make sure that the directory permissions are set the same as a stock RHEL6 install.
+  cd $DISTROFS_LOC
+  chmod 555 ./bin ./boot ./lib ./lib64 ./sbin ./proc ./usr/lib ./usr/lib64 ./usr/bin ./usr/sbin
+
+  # Need to remove the /var/adm/ras and /var/mmfs directories if they exist.
+  if [ -e ./var/adm/ras ] ; then
+	rm -rf ./var/adm/ras
+  fi
+  if [ -e ./var/mmfs ] ; then
+	rm -rf ./var/mmfs
+  fi
+
+  #Split up the DISTROFS_LOC to get the directory distro is going into.
+  DISTROFS_ARR=(`/bin/echo $DISTROFS_LOC | tr "/" "\n"`)
+
+  # If we are supposed to move the floor and the link hasn't already been made, make it.
+  if [ $IONFLOOR == 1 ] && ! [[ `readlink /bgsys/linux/ionfloor` =~ ${DISTROFS_ARR[`expr ${#DISTROFS_ARR[@]} - 1`]}$ ]] ; then
+
+      if [ -e /bgsys/linux/ionfloor-1 ] ; then
+	  rm /bgsys/linux/ionfloor-1
+      fi
+
+      mv /bgsys/linux/ionfloor /bgsys/linux/ionfloor-1
+      RC=$(ln -s ./${DISTROFS_ARR[`expr ${#DISTROFS_ARR[@]} - 1`]} /bgsys/linux/ionfloor 2>&1)
+      if [ ! -z "$RC" ] ; then
+	  echo -en "\n\n\tWARNING! Failure setting /bgsys/linux/ionfloor to $DISTROFS_LOC ."
+	  echo -en "\n\t         ln returned: $RC \n\n"
+      else
+	  echo -en "\n\n\tMoved /bgsys/linux/ionfloor to $DISTROFS_LOC .\n"
+      fi
+  fi
+
+fi # End check for ONLY_ADDPKGS
+
+INSTALL_RPMS=0
+
+# Check for the directory containing additional packages.  If it exists, first attempt to install all the RPMs in the directory
+# then run any .sh scripts.
+if [ -e $ADDPKGS_LOC ] ; then
+    RC=$(ls $ADDPKGS_LOC 2>&1)
+    if [ ! -z "$RC" ] ; then
+        echo -en "\n\n\tInstalling additonal packages from $ADDPKGS_LOC .\n\n"
+        RC=$(ls $ADDPKGS_LOC/*.rpm 2>&1)
+        if [ ! -z "$RC" ] ; then
+	    for RPM in `ls $ADDPKGS_LOC/*.rpm` ; do
+
+		GPFS_RPM=""
+		SLES_FOUND=0
+		UPDATE_RPM=0
+
+		# Pull the RPM name off the end of the string.
+		RPM_ARR=(`/bin/echo $RPM | tr "/" "\n"`)
+		RPM=${RPM_ARR[`expr ${#RPM_ARR[@]} - 1`]}
+
+		# Remove .rpm from the string for checking if the RPM is installed.
+		LENGTH=${#RPM}
+		let LENGTH=$LENGTH-4
+		RPM=`/bin/echo $RPM | cut -c -$LENGTH`
+		# For some reason GPFS names their base package gpfs.base-0.0.0-0.sles.ppc64.rpm but then 
+		# puts the name in the RPM DB as gpfs.base-0.0.0-0.ppc64 .  So, I need to rework the RPM name
+		# to deal with this.
+		if [[ $RPM =~ "gpfs" ]] && [[ $RPM =~ "sles" ]] ; then
+			GPFS_RPM=$RPM
+			SLES_FOUND=1
+			GPFS_ARR=(`/bin/echo $RPM | tr "." "\n"`)
+			if [ ${#GPFS_ARR[@]} -gt 5 ] ; then
+				RPM="${GPFS_ARR[0]}.${GPFS_ARR[1]}.${GPFS_ARR[2]}.${GPFS_ARR[3]}.${GPFS_ARR[`expr ${#GPFS_ARR[@]} - 1`]}"
+			fi
+		fi
+
+		if [[ $RPM =~ "gpfs" ]] && [[ $RPM =~ "update" ]] ; then
+			# Already have the original name if it has been processed for SLES naming/
+			if [ $SLES_FOUND -eq 0 ] ; then
+				GPFS_RPM=$RPM
+			fi
+			# Remove .update from the string for checking if the RPM is installed.
+			LENGTH=${#RPM}
+			let LENGTH=$LENGTH-7
+			RPM=`/bin/echo $RPM | cut -c -$LENGTH`
+			UPDATE_RPM=1
+		fi
+
+		rpm --root $DISTROFS_LOC -qi $RPM &> /dev/null
+
+		# If the RPM has not yet been installed we copy it to a new directory for
+		# installation.  This way once we have the list built up, all we ahve to do is
+		# an rpm install of all the RPMs and let rpm handle dependencies.
+		# If it is a GPFS update RPM we need to try installing it anyway.
+		if [ $? -ne 0 ] || [ $UPDATE_RPM -eq 1 ] ; then
+
+		    if [ ! -z $GPFS_RPM ] ; then
+			RPM=$GPFS_RPM
+			GPFS_RPM=""
+		    fi	
+		    if [[ $RPM =~ "gpfs.base" ]] && [[ ! $RPM =~ "update" ]] ; then
+			echo -en "\n\t\tChecking the state of $RPM and installing if necessary ...\n"
+			rpm -Uvh --root $DISTROFS_LOC $ADDPKGS_LOC/$RPM.rpm &> /dev/null
+			RC=$?
+			if [ $RC -eq 0 ] ; then
+				echo -en "\t\t\tSuccessfully installed $RPM\n\n"
+			elif [ $RC -eq 2 ] ; then
+				echo -en "\t\t\tA newer version of GPFS has already been installed. \n\n"
+			else
+				echo -en "\n\n\t\t\tWARNING: $RPM did not install properly."
+				echo -en "\n\t\t\t         Subsequent GPFS rpms may also fail.\n\n"
+			fi
+		    else
+		    	if [ ! -d $ADDPKGS_LOC/tmpinstallsrc ] ; then
+				mkdir $ADDPKGS_LOC/tmpinstallsrc
+		    	fi
+		    	cp $ADDPKGS_LOC/$RPM.rpm $ADDPKGS_LOC/tmpinstallsrc
+		    	INSTALL_RPMS=1
+		    fi
+		fi
+	    done
+	    if [ $INSTALL_RPMS -eq 1 ] ; then
+		rpm -Uvh --root $DISTROFS_LOC $ADDPKGS_LOC/tmpinstallsrc/*.rpm 2>&1| tee -a $LOG_DIR/$LOGFILE
+
+		FIRSTPASS=1
+
+		# Run through the list of RPMs that should have been installed and make sure they were.
+		for RPM in `ls $ADDPKGS_LOC/*.rpm` ; do
+			# Pull the RPM name off the end of the string.
+			RPM_ARR=(`/bin/echo $RPM | tr "/" "\n"`)
+			RPM=${RPM_ARR[`expr ${#RPM_ARR[@]} - 1`]}
+
+			# Remove .rpm from the string for checking if the RPM is installed.
+			LENGTH=${#RPM}
+			let LENGTH=$LENGTH-4
+			RPM=`/bin/echo $RPM | cut -c -$LENGTH`
+			if [[ $RPM =~ "gpfs" ]] && [[ $RPM =~ "sles" ]] ; then
+				GPFS_ARR=(`/bin/echo $RPM | tr "." "\n"`)
+				if [ ${#GPFS_ARR[@]} -gt 5 ] ; then
+					RPM="${GPFS_ARR[0]}.${GPFS_ARR[1]}.${GPFS_ARR[2]}.${GPFS_ARR[3]}.${GPFS_ARR[`expr ${#GPFS_ARR[@]} - 1`]}"
+				fi
+			fi
+
+			if [[ $RPM =~ "gpfs" ]] && [[ $RPM =~ "update" ]] ; then
+				# Remove .update from the string for checking if the RPM is installed.
+				LENGTH=${#RPM}
+				let LENGTH=$LENGTH-7
+				RPM=`/bin/echo $RPM | cut -c -$LENGTH`
+			fi
+			if [[ $RPM =~ "gpfs.base" ]] ; then
+				rpm --root $DISTROFS_LOC -qa | grep "gpfs.base" &> /dev/null
+			else
+				rpm --root $DISTROFS_LOC -qi $RPM &> /dev/null
+			fi
+			if [ $? -ne 0 ] ; then
+				if [ $FIRSTPASS -eq 1 ] ; then
+					echo -en "\n\n\tERROR: RPM encountered a problem during installation.\n"
+					echo -en "\t       See above output for additional details. Checking installation status ...\n"
+					echo -en "\t       The following RPMs failed to install:\n"
+					FIRSTPASS=0
+					SUCCESS=0
+				fi
+				echo -en "\t\t\t$RPM\n"
+			fi
+		done
+			
+		# Remove the tmpinstallsrc space.
+		rm -rf $ADDPKGS_LOC/tmpinstallsrc
+
+            else
+		echo -en "\t\tRPMs in $ADDPKGS_LOC appear to already be installed in $DISTROFS_LOC.\n"
+		echo -en "\t\t\tSkipping package installation.\n\n"
+	    fi
+	fi
+	
+	# Find all executable programs in addpkgs and execute them.
+	for FILE in `ls $ADDPKGS_LOC/*` ; do 
+		if [ -x $FILE ] && [ ! -d $FILE ] ; then
+			# Don't want to try and execute rpms.
+			if [[ ! "$FILE" =~ .rpm$ ]] ; then
+				$FILE 2>&1 | tee -a $LOG_DIR/$LOGFILE
+			fi
+		fi 
+	done
+
+	# If customers install the full XL compiler set, as would be the case for log-in nodes,
+	# we need to do additional conifguration.  So, we check for the C/C++ and Fortran XL Compiler
+	# RPMs and if it exists we prepare the distro for compiler configuration and run the 
+	# new_install script.	
+	ls $ADDPKGS_LOC | grep "vac.bg.cmp-*" &> /dev/null
+
+	if [ $? -eq 0 ] ; then
+		if [ -e $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/bin/new_install ] && 
+		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446 ] ; then
+			echo -en "\n\tFound the full IBM XL C/C++ Compiler RPM set.  Configuring ...\n"
+			echo "1" > $DISTROFS_LOC/tempKeyFile
+			mount --bind /bgsys $DISTROFS_LOC/bgsys
+			mount -o remount,ro $DISTROFS_LOC/bgsys
+			chroot $DISTROFS_LOC /bin/bash -c " cd opt/ibmcmp/vac/bg/12.1/bin ; \
+				./new_install < /tempKeyFile ; \
+				exit " 2>&1 | tee -a $LOG_DIR/$LOGFILE
+			umount $DISTROFS_LOC/bgsys
+                        mv $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446 \
+			   $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        cat $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446 2>&1 | tee -a $LOG_DIR/$LOGFILE
+			rm $DISTROFS_LOC/tempKeyFile
+		fi
+	fi
+
+	ls $ADDPKGS_LOC | grep "xlf.bg.cmp-*" &> /dev/null
+
+	if [ $? -eq 0 ] ; then
+		if [ -e $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/bin/new_install ] &&
+		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446 ] ; then
+			echo -en "\n\tFound the full IBM XL Fortran Compiler RPM set.  Configuring ...\n"
+			echo "1" > $DISTROFS_LOC/tempKeyFile
+			mount --bind /bgsys $DISTROFS_LOC/bgsys
+			mount -o remount,ro $DISTROFS_LOC/bgsys
+			chroot $DISTROFS_LOC /bin/bash -c "cd opt/ibmcmp/xlf/bg/14.1/bin/ ; \
+				./new_install < /tempKeyFile ; \
+				exit " 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        mv $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446 \
+			   $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        cat $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446 2>&1 | tee -a $LOG_DIR/$LOGFILE
+			rm $DISTROFS_LOC/tempKeyFile
+			umount $DISTROFS_LOC/bgsys
+		fi
+	fi
+    fi
+fi
+
+# Make sure we are in the distro.
+if [ `pwd` != $DISTROFS_LOC ] ; then
+	cd $DISTROFS_LOC
+fi
+
+# Create mount point to bind to /bgsys/ibm_essl_prod/opt/ibmmath 
+if [ ! -e ./opt/ibmmath ] ; then
+	mkdir -p ./opt/ibmmath
+fi
+
+# Check if we need to build the ramdisk.
+if [ ! -e BGQ_RAMDISK_PATH/bin/ramdisk.gz ] ; then
+        # First populate initramfs
+    BGQ_RAMDISK_PATH/tools/bgqPopulateInitramfs.sh 2>&1 | tee -a $LOG_DIR/$LOGFILE
+    if [ ! -e BGQ_INITRAMFS_PATH/bin/busybox ] ; then
+	echo -en "\n\n\tERROR: bgqPopulateInitramfs.sh encountered a failure.\n"
+	echo -en "\t       Consult the logs above for further details.\n\n"
+    	SUCCESS=0
+    else
+	if [ -e BGQ_RAMDISK_PATH/bin/build-ramdisk ] ; then
+	    echo -en "\n\n\tBuilding BG/Q Ramdisk ...\n\n"
+	    BGQ_RAMDISK_PATH/bin/build-ramdisk --saveimg --verbose \
+		--rootfs BGQ_INITRAMFS_PATH \
+		-o BGQ_RAMDISK_PATH/bin/ramdisk.gz 2>&1 | tee -a $LOG_DIR/$LOGFILE
+	    if [ ! -e BGQ_RAMDISK_PATH/bin/ramdisk.gz ] ; then
+		echo -en "\n\n\tERROR: build-ramdisk failed to run properly.\n"
+		echo -en "\t       Consult the logs above and correct the problem.\n"
+		echo -en "\t       You may manually rebuild the ramdisk with the following command: \n"
+		echo -en "\t       BGQ_RAMDISK_PATH/bin/build-ramdisk --saveimg --verbose \\ \n"
+		echo -en "\t\t     --rootfs BGQ_INITRAMFS_PATH \\ \n"
+		echo -en "\t\t     -o BGQ_RAMDISK_PATH/bin/ramdisk.gz \n"
+		echo -en "\t       Complete the process by linking ramdisk to ramdisk.gz in BGQ_RAMDISK_PATH/bin\n\n"
+		SUCCESS=0
+	    else
+		ln -sf BGQ_RAMDISK_PATH/bin/ramdisk.gz \
+		    BGQ_RAMDISK_PATH/bin/ramdisk
+		# Need to do a chmod for systems where the umask is 077.
+		chmod a+rx BGQ_RAMDISK_PATH/bin/ramdisk.gz
+
+
+		# Also put a copy in the BG/Q Linux Distro for future use.
+		echo -en "\n\n\t Ramdisk build successful.  Putting a copy in $DISTROFS_LOC/boot ...\n\n"
+		cp -a BGQ_RAMDISK_PATH/bin/ramdisk.gz $DISTROFS_LOC/boot
+
+	    fi
+	else
+	    echo -en "\n\n\tWARNING: Unable to find the BGQ_RAMDISK_PATH/bin/build-ramdisk utility\n"
+	fi
+    fi
+elif [ ! -e $DISTROFS_LOC/boot/ramdisk.gz ] ; then
+
+    echo -en "\n\n\tNo ramdisk.gz found in $DISTROFS_LOC/boot .  Putting one there ...\n\n"
+    cp -a BGQ_RAMDISK_PATH/bin/ramdisk.gz $DISTROFS_LOC/boot
+
+fi
+
+# Check if we need to build the mlxFwUpdate ramdisk.
+if [ ! -e BGQ_RAMDISK_PATH/bin/mlxFwUpdate ] ; then
+    # First populate initramfs
+    if [ ! -e BGQ_INITRAMFS_PATH/bin/busybox ] ; then              
+    	BGQ_RAMDISK_PATH/tools/bgqPopulateInitramfs.sh 2>&1 | tee -a $LOG_DIR/$LOGFILE
+    fi
+    # Make sure the addtree is populated
+    cp /lib64/libm-2.12.so BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
+    cp -a /lib64/libm.so.6 BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
+    cp /lib64/libz.so.1.2.3 BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
+    cp -a /lib64/libz.so.1 BGQ_RAMDISK_PATH/tools/mlxFwUpdate/lib64/
+    cp /usr/bin/mstflint BGQ_RAMDISK_PATH/tools/mlxFwUpdate/usr/bin
+    if [ -e BGQ_INSTALL_DIR/baremetal/firmware/mlxFwUpdate ] ; then
+	cp -a BGQ_INSTALL_DIR/baremetal/firmware/mlxFwUpdate/* BGQ_RAMDISK_PATH/tools/mlxFwUpdate/bin
+    else
+	echo -en "\n\n\tWARNING: Unable to find the BGQ_INSTALL_DIR/baremetal/firmware/mlxFwUpdate directory.\n"
+	echo -en "\t         The mlxFwUpdate ramdisk will not be able to update Mellanox cards until the\n"
+	echo -en "\t         appropriate images have been downloaded from Mellanox to the directory listed above.\n"
+	echo -en "\t         Please consult the Administrator RedBook or contact service for additional details.\n\n"
+    fi
+    # If the initramfs still isn't populated, something is wrong.
+    if [ ! -e BGQ_INITRAMFS_PATH/bin/busybox ] ; then                             
+        echo -en "\n\n\tERROR: bgqPopulateInitramfs.sh encountered a failure.\n"  
+        echo -en "\t       Consult the logs above for further details.\n\n"       
+        SUCCESS=0                                                                 
+    else                                                                          
+        if [ -e BGQ_RAMDISK_PATH/bin/build-ramdisk ] ; then                       
+            echo -en "\n\n\tBuilding BG/Q Mellanox Firmware Update Ramdisk ...\n\n"                        
+	    BGQ_RAMDISK_PATH/bin/build-ramdisk --saveimg --verbose \
+		--rootfs BGQ_INITRAMFS_PATH --addtree BGQ_RAMDISK_PATH/tools/mlxFwUpdate \
+		-o BGQ_RAMDISK_PATH/bin/mlxFwUpdate 2>&1 | tee -a $LOG_DIR/$LOGFILE
+            if [ ! -e BGQ_RAMDISK_PATH/bin/mlxFwUpdate ] ; then
+                echo -en "\n\n\tERROR: build-ramdisk failed to run properly.\n"   
+                echo -en "\t       Consult the logs above and correct the problem.\n"
+                echo -en "\t       You may manually rebuild the Mellanox firmware update ramdisk with the following command: \n"
+                echo -en "\t       BGQ_RAMDISK_PATH/bin/build-ramdisk --saveimg --verbose \\ \n"       
+                echo -en "\t\t     --rootfs BGQ_INITRAMFS_PATH \\ \n"
+		echo -en "\t\t     --addtree BGQ_RAMDISK_PATH/tools/mlxFwUpdate \\ \n"
+                echo -en "\t\t     -o BGQ_RAMDISK_PATH/bin/mlxFwUpdate \n\n"                              
+                SUCCESS=0                                                                                            
+            else                                                                                                     
+                # Need to do a chmod for systems where the umask is 077.                                             
+                chmod a+rx BGQ_RAMDISK_PATH/bin/mlxFwUpdate                                                           
+
+
+                # Also put a copy in the BG/Q Linux Distro for future use.
+                echo -en "\n\n\t Mellanox Firmware Update Ramdisk build successful.  Putting a copy in $DISTROFS_LOC/boot ...\n\n"
+                cp -a BGQ_RAMDISK_PATH/bin/mlxFwUpdate $DISTROFS_LOC/boot                                 
+
+            fi
+        else  
+            echo -en "\n\n\tWARNING: Unable to find the BGQ_RAMDISK_PATH/bin/build-ramdisk utility\n"
+        fi                                                                                           
+    fi                                                                                               
+elif [ ! -e $DISTROFS_LOC/boot/mlxFwUpdate ] ; then                                                   
+
+    echo -en "\n\n\tNo mlxFwUpdate ramdisk found in $DISTROFS_LOC/boot .  Putting one there ...\n\n"
+    cp -a BGQ_RAMDISK_PATH/bin/mlxFwUpdate $DISTROFS_LOC/boot                               
+
+fi
+
+################################################################
+# Create links to start scripts we don't modify
+################################################################
+
+if [ ! -e $DISTROFS_LOC/etc/rc.d/rc3.d/S18rpcidmapd ] ; then
+    cd ./etc/rc.d/rc3.d
+    ln -s ../init.d/rpcidmapd ./S18rpcidmapd
+    ln -s ../init.d/nscd ./S30nscd
+    cd ../../../
+fi
+
+# For some reason it appears the libvirt-guests lock file is created though
+# the subsys isn't running.  Remove it to avoid shutdown errors.
+ if [ -e $DISTROFS_LOC/var/lock/subsys/libvirt-guests ] ; then
+         rm $DISTROFS_LOC/var/lock/subsys/libvirt-guests
+ fi
+
+# Fix up /bgsys/linux/nodefs/<ip>/var/tmp's permissions
+# 
+#  NOTE: Eventually want to remove this.
+# 
+if [ -e /bgsys/linux/nodefs ] ; then
+    for DIR in `ls /bgsys/linux/nodefs` ; do
+	if [ -e /bgsys/linux/nodefs/$DIR/var/tmp ] ; then
+       		chmod 1777 /bgsys/linux/nodefs/$DIR/var/tmp
+	fi
+    done
+fi
+
+
+# Set the timezone
+if [ -e $DISTROFS_LOC/etc/localtime ] || [ -L $DISTROFS_LOC/etc/localtime ] ; then
+        rm -f $DISTROFS_LOC/etc/localtime
+fi
+
+if [ -e /etc/localtime ] ; then
+        echo -en "\n\n\tCopying /etc/localtime from the Service Node to $DISTROFS_LOC/etc ."
+        if [ -e $DISTROFS_LOC/etc/localtime ] ; then
+                rm -f $DISTROFS_LOC/etc/localtime
+        fi
+        cp -a /etc/localtime $DISTROFS_LOC/etc
+else
+        echo -en "\n\n\tWARNING: Couldn't find /etc/localtime on the Service Node.  $DISTROFS_LOC will default to using CST."
+
+        cd $DISTROFS_LOC/etc
+        ln -s /usr/share/zoneinfo/America/Chicago localtime
+        cd /
+fi
+
+# It appears that YACI creates /dev/null in the distro.  This causes issues for GPFS if
+# the RPM is removed.  So, I am removing it here to avoid issues.
+if [ -e $DISTROFS_LOC/dev/null ] ; then
+	rm -f $DISTROFS_LOC/dev/null
+fi
+
+# Create tar files that facilitate a faster boot.
+
+#NOTE: Removed for the time being at LLNL's request.
+
+#cd ./etc
+#if [ -e etc.tar.gz ] ; then rm -f etc.tar.gz ; fi
+#tar -cvf etc.tar ./* &> /dev/null
+#gzip -f ./etc.tar
+
+#cd ../var
+#if [ -e var.tar.gz ] ; then rm -f var.tar.gz ; fi
+#tar -cvf var.tar ./* &> /dev/null
+#gzip -f ./var.tar
+
+#cd ../lib/modules
+#if [ -e modules.tar.gz ] ; then rm -f modules.tar.gz ; fi
+#tar -cvf modules.tar ./* &> /dev/null
+#gzip -f ./modules.tar
+
+if [ $SUCCESS -eq 1 ] ; then
+    echo -en "\n\n#################################################################"
+    echo -en "\n# BG/Q Linux Distribution $DISTRO successfully installed!"
+    echo -en "\n#################################################################\n\n"
+    [ -e $LOCKFILE ] && rm -f $LOCKFILE
+    exit 0
+else
+    echo -en "\n\n#################################################################"
+    echo -en "\n# WARNING! BG/Q Linux Distribution $DISTRO installation "
+    echo -en "\n#          encountered a problem.  See above logs for details."
+    echo -en "\n#################################################################\n\n"
+    [ -e $LOCKFILE ] && rm -f $LOCKFILE
+    exit 1
+fi

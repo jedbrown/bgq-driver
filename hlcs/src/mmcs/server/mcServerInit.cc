@@ -94,7 +94,7 @@
 #include "mcServerInit.h"
 
 #include "BlockControllerBase.h"
-#include "DefaultControlEventListener.h"
+#include "DefaultListener.h"
 #include "ReconnectBlocks.h"
 
 #include "common/Properties.h"
@@ -103,12 +103,9 @@
 #include <control/include/mcServer/MCServer_errno.h>
 #include <control/include/mcServer/MCServerRef.h>
 
-
 using namespace MCServerMessageSpec;
-using namespace std;
 
 using mmcs::common::Properties;
-
 
 LOG_DECLARE_FILE("mmcs.server");
 
@@ -120,45 +117,53 @@ bool subnets_home = true;
 
 void
 mcServerInit(
-        const vector<string>& bringup_options,
+        const std::vector<std::string>& bringup_options,
         mmcs_client::CommandReply& reply,
         const bool blocks_are_active
         )
 {
-    DefaultControlEventListener* defaultRasListener = DefaultControlEventListener::getDefaultControlEventListener();
+    DefaultListener* defaultRasListener(NULL);
+    try {
+        defaultRasListener = DefaultListener::get();
+    } catch ( const std::runtime_error& e ) {
+        reply << mmcs_client::FAIL << e.what() << mmcs_client::DONE;
+        return;
+    }
+    BOOST_ASSERT( defaultRasListener );
 
     // Determine what kind of message(s) will eventually get sent to mc_server.
 
-    // establish a socket connection to mcServer
-    while(true) {
+    // Establish a socket connection to mcServer
+    LOG_INFO_MSG("Attempting to connect to mc_server.");
+    while (true) {
         if (!defaultRasListener->getBase()->isConnected()) {
             defaultRasListener->getBase()->mcserver_connect(reply);
-            if (reply.getStatus() != 0)
-                {
-                    LOG_WARN_MSG( __FUNCTION__ << " mcserver_connect() failed: " << reply.str() );
-                    sleep(1);
-                }
-            else break; // Got a connection
-        } else break; // already connected
+            if (reply.getStatus() != 0) {
+                sleep(3);
+            } else {
+                break; // Got a connection
+            }
+        } else {
+            break; // Already connected
+        }
     }
+    LOG_INFO_MSG("Connected to mc_server successfully.");
 
     // Start a generic RAS listener
-    if (!defaultRasListener->getBase()->isMailboxStarted())
-    {
-	defaultRasListener->getBase()->startMailbox(reply);
-	if (reply.getStatus() != 0)
-	{
-	    delete defaultRasListener;
-	    defaultRasListener = NULL;
-	    return;
-	}
+    if (!defaultRasListener->getBase()->isMailboxStarted()) {
+        defaultRasListener->getBase()->startMailbox(reply);
+        if (reply.getStatus() != 0) {
+            delete defaultRasListener;
+            defaultRasListener = NULL;
+            return;
+        }
     }
 
     subnets_home = true;
-    // Check to see if subnets are on their primary SSNs.  If they are, send
-    // BU request.  Otherwise, let reconnect/failover logic have its way.
-    BOOST_FOREACH(common::Subnet& curr_subnet, Properties::_subnets) {
-        if(curr_subnet._home == false) {
+    // Check to see if subnets are on their primary SSNs. If they are, send
+    // BU request. Otherwise, let reconnect/failover logic have its way.
+    BOOST_FOREACH(const common::Subnet& curr_subnet, Properties::_subnets) {
+        if (curr_subnet._home == false) {
             subnets_home = false;
             break;
         }
@@ -166,7 +171,7 @@ mcServerInit(
 
     LOG_DEBUG_MSG("Subnets home is " << subnets_home);
 
-    if(subnets_home == false &&
+    if (subnets_home == false &&
        Properties::getProperty(RECONNECT_BLOCKS) == "false" &&
        Properties::getProperty(BRINGUP) == "false" &&
        blocks_are_active == false) {
@@ -211,51 +216,35 @@ mcServerInit(
     }
 
     // Send a bringup message to mcServer
-    //
     BringupRequest mcBringupRequest;
     mcBringupRequest._killMcServerIfHwStarted = true;
-    BringupReply   mcBringupReply;
-    if(message_type == BRINGUP_MSG) {
+    BringupReply mcBringupReply;
+    if (message_type == BRINGUP_MSG) {
         // Don't send a bringup message if it has been done automatically by mc
         // add bringup options
-        for (vector<string>::const_iterator it = bringup_options.begin(); it != bringup_options.end(); ++it)
-        {
+        for (std::vector<std::string>::const_iterator it = bringup_options.begin(); it != bringup_options.end(); ++it) {
             if (!mcBringupRequest._bringupOptions.empty())
                 mcBringupRequest._bringupOptions.append(",");
             mcBringupRequest._bringupOptions.append(*it);
         }
-        // send a BringupRequest to mcserver
-        try
-            {
-                defaultRasListener->getBase()->getMCServer()->bringup(mcBringupRequest, mcBringupReply);
-            }
-        catch (exception &e)
-            {
-                mcBringupReply._rc = -1;
-                mcBringupReply._rt = e.what();
-            }
-        if (mcBringupReply._rc)
-            {
-                reply << mmcs_client::FAIL << "mcServer bringup: " << mcBringupReply._rt << mmcs_client::DONE;
-                delete defaultRasListener;
-                defaultRasListener = NULL;
-                return;
-            }
-        LOG_INFO_MSG("Bringup request complete");
+        // Send a BringupRequest to mcserver
+        try {
+            defaultRasListener->getBase()->getMCServer()->bringup(mcBringupRequest, mcBringupReply);
+        } catch (const std::exception& e) {
+            mcBringupReply._rc = -1;
+            mcBringupReply._rt = e.what();
+        }
+
+        if (mcBringupReply._rc) {
+            reply << mmcs_client::FAIL << "mcServer bringup: " << mcBringupReply._rt << mmcs_client::DONE;
+            delete defaultRasListener;
+            defaultRasListener = NULL;
+            return;
+        }
+        LOG_INFO_MSG("Bringup request complete.");
     }
 
     reply << mmcs_client::OK << mmcs_client::DONE;
 }
-
-void
-mcServerTerm(
-        mmcs_client::CommandReply& reply
-        )
-{
-    DefaultControlEventListener* defaultRasListener = DefaultControlEventListener::getDefaultControlEventListener();
-    defaultRasListener->disconnect();
-    reply << mmcs_client::OK << mmcs_client::DONE;
-}
-
 
 } } // namespace mmcs::server

@@ -52,7 +52,7 @@ public:
     /*!
      * \brief Protocol version.
      */
-    static const unsigned ProtocolVersion = 2;
+    static const unsigned ProtocolVersion = 3;
 
     /*!
      * \brief pointer type
@@ -70,7 +70,8 @@ public:
         _pid( 0 ),
         _hostname( ),
         _timeout( 0 ),
-        _controlActionRecordId( 0 )
+        _controlActionRecordId( 0 ),
+        _details( )
     {
 
     }
@@ -81,6 +82,7 @@ public:
     std::string _hostname;
     size_t _timeout;
     int _controlActionRecordId;
+    std::string _details;
 
     /*!
      * \copydoc runjob::commands::Message::serialize
@@ -105,6 +107,7 @@ private:
         ar & _hostname;
         ar & _timeout;
         ar & _controlActionRecordId;
+        ar & _details;
     }
 };
 
@@ -120,6 +123,11 @@ class KillJob : public Response
 {
 public:
     /*!
+     * \brief Protocol version.
+     */
+    static const unsigned ProtocolVersion = 2;
+
+    /*!
      * \brief pointer type.
      */
     typedef boost::shared_ptr<KillJob> Ptr;
@@ -130,7 +138,7 @@ public:
      */
     KillJob() :
         Response(Message::Tag::KillJob),
-        _error(0)
+        _job(0)
     {
 
     }
@@ -152,11 +160,11 @@ private:
     void serialize(Archive & ar, const unsigned int /* version */)
     {
         ar & boost::serialization::base_object<Response>(*this);
-        ar & _error;
+        ar & _job;
     }
 
-private:
-    uint32_t _error;
+public:
+    BGQDB::job::Id _job;
 };
 
 } // response
@@ -165,6 +173,6 @@ private:
 } // runjob
 
 BOOST_CLASS_VERSION( runjob::commands::request::KillJob, runjob::commands::request::KillJob::ProtocolVersion )
-BOOST_CLASS_VERSION( runjob::commands::response::KillJob, runjob::commands::ProtocolVersion )
+BOOST_CLASS_VERSION( runjob::commands::response::KillJob, runjob::commands::response::KillJob::ProtocolVersion )
 
 #endif

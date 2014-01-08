@@ -62,7 +62,8 @@
 
 //! \brief MasterController is the main data structure in BGMaster.  There's only
 //! one and it contains some static members for managing agents and clients.
-class MasterController {
+class MasterController
+{
 public:
     static std::string _version_string;
 
@@ -70,9 +71,11 @@ public:
     static Registrar _client_registrar;
     static DBUpdater _updater;
 
-    MasterController();
+    MasterController(
+            const bgq::utility::Properties::Ptr& properties
+            );
 
-    void startup(const bgq::utility::Properties::Ptr& props, int signal_fd);
+    void startup(int signal_fd);
     static void putRAS(unsigned int id, const std::map<std::string, std::string>& details);
 
     static bool get_master_terminating() { return _master_terminating; }
@@ -91,8 +94,8 @@ public:
     static void getErrorMessages(std::vector<std::string>& messages);
     static void addHistoryMessage(const std::string& message);
     static void getHistoryMessages(std::vector<std::string>& messages);
-    static void stopThreads(bool end_binaries, unsigned signal);
-    static bgq::utility::Properties::Ptr getProps()  { return _master_props; }
+    static void stopThreads(bool end_binaries, int signal);
+    static const bgq::utility::Properties::Ptr& getProps()  { return _props; }
 
     static bool isStartServers() { return _start_servers; }
 
@@ -145,8 +148,8 @@ private:
     //! \brief policy builder mutex
     static boost::mutex _policy_build_mutex;
 
-    //! \brief static properties object
-    static bgq::utility::Properties::Ptr _master_props;
+    //! \brief properties object
+    static bgq::utility::Properties::Ptr _props;
 
     //! \brief static end flag
     static bool _master_terminating;

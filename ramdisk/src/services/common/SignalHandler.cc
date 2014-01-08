@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <execinfo.h>
 #include <iomanip>
+#include <fcntl.h>
 
 LOG_DECLARE_FILE("cios.common");
 
@@ -244,11 +245,25 @@ SigWritePipe::SigWritePipe(int signal_number)
     if ( pipe(_pipe_descriptor) != 0 ) {
       _pipe_descriptor[0]=-1;
       _pipe_descriptor[1]=-1;
+    } else {
+        fcntl(_pipe_descriptor[0], F_SETFD, fcntl(_pipe_descriptor[0], F_GETFD) | FD_CLOEXEC);
+        fcntl(_pipe_descriptor[1], F_SETFD, fcntl(_pipe_descriptor[1], F_GETFD) | FD_CLOEXEC);
+    }
+}
+
+SigWritePipe::~SigWritePipe()
+{
+    if ( _pipe_descriptor[0] != -1 ) {
+        close( _pipe_descriptor[0] );
+        _pipe_descriptor[0] = -1;
+    }
+    if ( _pipe_descriptor[1] != -1 ) {
+        close( _pipe_descriptor[1] );
+        _pipe_descriptor[1] = -1;
     }
 }
 
 void
-
 SigWritePipe::myHandler(int , siginfo_t *siginfo, void *)
 {  
    SigWritePipe *me = (SigWritePipe *)thisPtr;

@@ -26,7 +26,7 @@ include ../../Make.rules
 SILENT=@
 #SILENT=
 
-.PHONY : network/network.a fs/fs.a syscalls/syscalls.a
+.PHONY : network/network.a fs/fs.a syscalls/syscalls.a libgpfs.a
 
 BASENAME = cnk
 RM_F = /bin/rm -f
@@ -133,14 +133,23 @@ install:	all
 	@echo "Installing $(BASENAME)"
 	$(INSTALLCANFAIL)mkdir -p $(BGQ_INSTALL_DIR)/$(BASENAME)/bin
 	$(INSTALLCANFAIL)mkdir -p $(BGQ_INSTALL_DIR)/$(BASENAME)/tools
+	$(INSTALLCANFAIL)mkdir -p $(BGQ_INSTALL_DIR)/$(BASENAME)/lib
 	$(INSTALLCANFAIL)cp -pf $(K_TARGET)   $(BGQ_INSTALL_DIR)/$(BASENAME)/bin
 	$(INSTALLCANFAIL)cp -pf AppAgent0.lds $(BGQ_INSTALL_DIR)/$(BASENAME)/tools
 	$(INSTALLCANFAIL)cp -pf AppAgent1.lds $(BGQ_INSTALL_DIR)/$(BASENAME)/tools
 	$(INSTALLCANFAIL)cp -pf AppAgent2.lds $(BGQ_INSTALL_DIR)/$(BASENAME)/tools
 	$(INSTALLCANFAIL)cp -pf AppAgent3.lds $(BGQ_INSTALL_DIR)/$(BASENAME)/tools
 	$(INSTALLCANFAIL)cp -pf staticmapper  $(BGQ_INSTALL_DIR)/$(BASENAME)/tools
+	$(INSTALLCANFAIL)cp -pf libgpfs.a     $(BGQ_INSTALL_DIR)/$(BASENAME)/lib
+	$(INSTALLCANFAIL)cp -pf libgpfs.so    $(BGQ_INSTALL_DIR)/$(BASENAME)/lib
 
-all:	$(K_TARGET) staticmapper
+all:	$(K_TARGET) staticmapper libgpfs
+
+libgpfs: libgpfs.c
+	@echo "Creating libgpfs.a and libgpfs.so"
+	$(SILENT)$(BGQ_CROSS_CC) $(K_CPU_FLAGS) $(K_CFLAGS) libgpfs.c -o libgpfs.o
+	$(SILENT)$(BGQ_CROSS_AR) cr libgpfs.a libgpfs.o
+	$(SILENT)$(BGQ_CROSS_CC) $(K_CPU_FLAGS) $(K_CFLAGS) -shared -fPIC libgpfs.c -o libgpfs.so
 
 objdump:	$(K_OBJDUMP)
 
@@ -182,9 +191,9 @@ asmConstants.h: genAsmConstants.c
 	    /^ASM_CONSTANT_[a-zA-Z0-9_]*:$$/ \
 		{name = substr($$1, 14, length($$1)-14)} \
 	    /^	.quad/ \
-	    	{if (name != NULL) printf "#define %s %s\n", name, $$2} \
+	    	{if (name != NULL) { printf "#define %s %s\n", name, $$2; name = NULL}} \
 	    /^	.zero/ \
-	    	{if (name != NULL) printf "#define %s 0\n", name} \
+	    	{if (name != NULL) { printf "#define %s 0\n", name; name = NULL}} \
 	    ' genAsmConstants.s > asmConstants.h
 	$(SILENT)sed -e '1s/genAsmConstants\.o/asmConstants.h/' \
 	    .dep.genAsmConstants.c.d > tmp.d

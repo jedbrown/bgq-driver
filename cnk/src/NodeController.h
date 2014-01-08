@@ -34,6 +34,7 @@ extern "C"
    int Node_Init(void);
    int Node_Term(void);
    void __NORETURN  Node_Run(void);
+   int Node_ReportConnect(int cnv_error, uint64_t address, uint16_t port);
 }
 
 class NodeController
@@ -54,6 +55,12 @@ public:
    //! \return 0 when successful, errno when unsuccessful.
 
    int run(void);
+
+   //! \brief  Report the results of this compute node connection with the IO node.
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int report_connect_result(int cnv_error, uint64_t address, uint16_t port);
+
 
 private:
 

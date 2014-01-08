@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "ConsoleConnectionThread.h"
 
 #include "CommandProcessor.h"
@@ -35,13 +34,10 @@
 
 #include <utility/include/portConfiguration/ServerPortConfiguration.h>
 
-
 LOG_DECLARE_FILE( "mmcs.server" );
-
 
 namespace mmcs {
 namespace server {
-
 
 void*
 ConsoleConnectionThread::threadStart()
@@ -52,7 +48,7 @@ ConsoleConnectionThread::threadStart()
 
     mmcs_client::ConsolePortClient* const connection( dynamic_cast<mmcs_client::ConsolePortClient*>(parms->consolePort) );
     if ( !connection ) {
-        LOG_WARN_MSG( "invalid connection" );
+        LOG_WARN_MSG( "Unable to obtain connection." );
         return NULL;
     }
 
@@ -62,11 +58,11 @@ ConsoleConnectionThread::threadStart()
     CxxSockets::SockAddr remote;
     connection->getSock()->getSockName(local);
     connection->getSock()->getPeerName(remote);
-    LOG_INFO_MSG("connected to " << remote.getHostAddr()
+    LOG_TRACE_MSG("Connected to " << remote.getHostAddr()
             << ":" << remote.getServicePort() << " on port "
             << local.getServicePort());
 
-    // perform SSL handshake
+    // Perform SSL handshake
     bgq::utility::ServerPortConfiguration port_config(0, bgq::utility::ServerPortConfiguration::ConnectionType::AdministrativeCommand);
     port_config.setProperties(common::Properties::getProperties(), "");
     port_config.notifyComplete();
@@ -78,7 +74,7 @@ ConsoleConnectionThread::threadStart()
             );
     connection->setSock( socket );
 
-    // get user on the other end
+    // Get user on the other end
     bgq::utility::UserId uid;
     CxxSockets::UserType utype( CxxSockets::Normal );
     const CxxSockets::SecureTCPSocketPtr sock(
@@ -88,10 +84,10 @@ ConsoleConnectionThread::threadStart()
         uid = sock->getUserId();
         utype = sock->getUserType();
     } else {
-        LOG_WARN_MSG( "could not get remote user" );
+        LOG_WARN_MSG( "Could not get remote user." );
         return NULL;
     }
-    
+
     log4cxx::MDC _userid_mdc_( "user", std::string("[") + uid.getUser() + "] " );
 
     // Create a midplane controller object
@@ -100,12 +96,11 @@ ConsoleConnectionThread::threadStart()
     setThreadName("console");
     midplaneController.setMMCSThread(this);
 
-    LOG_INFO_MSG("started as " << (utype == CxxSockets::Administrator ? "administrator" : "command") );
+    LOG_DEBUG_MSG("Started as " << (utype == CxxSockets::Administrator ? "administrator" : "command") );
 
     // Execute commands received on this connection
     midplaneController.run();
 
-    LOG_INFO_MSG("stopped");
     return NULL;
 }
 

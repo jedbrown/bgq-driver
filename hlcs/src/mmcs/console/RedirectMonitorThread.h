@@ -21,10 +21,8 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #ifndef MMCS_CONSOLE_REDIRECT_MONITOR_THREAD_H_
 #define MMCS_CONSOLE_REDIRECT_MONITOR_THREAD_H_
-
 
 #include "common/ConsoleController.h"
 #include "common/Thread.h"
@@ -39,37 +37,34 @@
 
 #include <pthread.h>
 
-
 namespace mmcs {
 namespace console {
-
 
 class RedirectMonitorThread : public common::Thread
 {
 public:
 
-    struct RedirectParms
+    struct Parms
     {
-        RedirectParms(
+        Parms(
                 common::ConsoleController* controllerarg,
-                std::string block,
+                const std::string& block,
                 mmcs_client::CommandReply* replyarg
                 ) :
             controller(controllerarg),
-        user(controller->getUser()),
+            user(controller->getUser()),
             blockName(block),
             mmcsCommands(controller->getCommandProcessor()->getCommandMap()),
             reply(replyarg)
         {
 
         }
-        common::ConsoleController* controller;
-        bgq::utility::UserId user;
-        std::string blockName;
-        MMCSCommandMap* mmcsCommands;
-        mmcs_client::CommandReply* reply;
+        common::ConsoleController* const controller;
+        const bgq::utility::UserId user;
+        const std::string blockName;
+        MMCSCommandMap* const mmcsCommands;
+        mmcs_client::CommandReply* const reply;
     };
-
 
     // Each mmcs console is allowed to redirect a single block
     static RedirectMonitorThread *redirectMonitorThread;
@@ -77,15 +72,12 @@ public:
     static PthreadMutex redirectInitMutex;
     static pthread_cond_t redirectInitCond;
 
-
     RedirectMonitorThread() : Thread() { stdout = true; force_end = false; };
     void* threadStart();
     bool stdout;
     bool force_end;
 };
 
-
 } } // namespace mmcs::console
-
 
 #endif

@@ -21,18 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-
 #include "DumpPersonalities.h"
 
 #include "../BCLinkchipInfo.h"
 #include "../BCNodeInfo.h"
 #include "../BlockControllerTarget.h"
 
-
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 DumpPersonalities*
 DumpPersonalities::build()
@@ -56,45 +53,41 @@ DumpPersonalities::execute(
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     bool formatted = true;
 
-    if (args.size() > 0)
-    {
-        if (args[0].compare("unformatted") == 0)
+    if (args.size() > 0) {
+        if (args[0].compare("unformatted") == 0) {
             formatted = false;
-        else
-        {
-            reply << mmcs_client::FAIL <<  "args? " << usage << mmcs_client::DONE;
+        } else {
+            reply << mmcs_client::FAIL <<  "args? " << _usage << mmcs_client::DONE;
             return;
         }
     }
 
     reply << mmcs_client::OK;
-    for (unsigned i = 0; i < pTarget->getNodes().size(); ++i)
-    {
+    for (unsigned i = 0; i < pTarget->getNodes().size(); ++i) {
         BCNodeInfo *nodeInfo = pTarget->getNodes()[i];
         reply << "{" << nodeInfo->_locateId << "} " << "Dumping personality:";
-        if (!formatted)
-        {
+        if (!formatted) {
             uint8_t numPersonalityWords = nodeInfo->personality().PersonalitySizeWords;
             unsigned* personalityWord = (unsigned*) &nodeInfo->personality();
 
-            for (unsigned i = 0; i < numPersonalityWords; ++i)
-            {
-                if (i % 4 == 0)
+            for (unsigned i = 0; i < numPersonalityWords; ++i) {
+                if (i % 4 == 0) {
                     reply << "\n" << std::hex << std::setw(8) << std::setfill('0') << i*4 << ":";
+                }
                 reply << " " << std::hex << std::setw(8) << std::setfill('0') << *personalityWord;
                 ++personalityWord;
             }
             reply << std::dec;
-        }
-        else
+        } else {
             reply << "\n" << nodeInfo->personality() << "\n";
+        }
     }
-    for (unsigned i = 0; i < pTarget->getLinkchips().size(); ++i)
-    {
+
+    for (unsigned i = 0; i < pTarget->getLinkchips().size(); ++i) {
         BCLinkchipInfo *bllInfo = pTarget->getLinkchips()[i];
         reply << "{" << bllInfo->_locateId << "} " << "Dumping personalities:";
     }
@@ -105,13 +98,9 @@ void
 DumpPersonalities::help(
         std::deque<std::string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
-    reply << mmcs_client::OK << description()
-        << ";Print the node personality objects"
-        << mmcs_client::DONE;
-
+    reply << mmcs_client::OK << description() << ";Print the node personality objects" << mmcs_client::DONE;
 }
-
 
 } } } // namespace mmcs::server::command

@@ -29,6 +29,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/throw_exception.hpp>
+#include <boost/exception/info.hpp>
 
 #include <string>
 
@@ -36,10 +37,10 @@
  * \brief Log a message then throw an exception.
  */
 #define LOG_RUNJOB_EXCEPTION(error, msg) { \
-    runjob::Exception e(error); \
-    e << msg; \
     LOG_ERROR_MSG( msg ); \
-    ::boost::throw_exception(::boost::enable_error_info(e) << \
+    runjob::Exception e_(error); \
+    e_ << msg; \
+    ::boost::throw_exception(::boost::enable_error_info(e_) << \
             ::boost::throw_function(BOOST_CURRENT_FUNCTION) << \
             ::boost::throw_file(__FILE__) << \
             ::boost::throw_line(static_cast<int>(__LINE__)) \

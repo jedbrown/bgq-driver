@@ -40,6 +40,7 @@ from ibm.bgq.analyzer import bgq_HardwareInErrorAnalyzer
 from ibm.bgq.analyzer import bgq_JobFatalRasAnalyzer
 from ibm.bgq.analyzer import bgq_ThresholdExceededAnalyzer
 from ibm.bgq.analyzer import bgq_BqlEventAnalyzer
+from ibm.bgq.analyzer import bgq_BqcSerdesAnalyzer
 
 COMMIT_LIMIT = 10000
 BGQ_RAW_DATA_FMT =  0x4247510080010001
@@ -107,6 +108,7 @@ class BgqConnector(threading.Thread):
         msgIDsThreshold, msgidService, msgidCount, msgidPeriod = bgq_ThresholdExceededAnalyzer.get_eventList()
         self.msgIDs.extend(msgIDsThreshold)
         self.msgIDs.extend(bgq_BqlEventAnalyzer.get_eventList())
+        self.msgIDs.extend(bgq_BqcSerdesAnalyzer.get_eventList())
         self.msgIDs = list(set(self.msgIDs))
         self.msgIDs.sort()
 
@@ -219,7 +221,7 @@ class BgqConnector(threading.Thread):
         cnxn.close()
 
     def _query_and_log_event(self, query_sign, recid, max_recid=0):
-        ''' Query the BG event log for new events and log into TEAAL
+        ''' Query the BG event log for new events and log into TEAL
         '''
         registry.get_logger().debug("in _query_and_log_event")
         event_logged = False

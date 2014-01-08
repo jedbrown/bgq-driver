@@ -38,7 +38,6 @@
 #include <bgq_util/include/TempFile.h>
 #include <bgq_util/include/string_tokenizer.h>
 
-#include <control/include/mcServer/MCServerPorts.h>
 #include <control/include/bgqconfig/xml/BGQMachineXML.h>
 
 #include <utility/include/Log.h>

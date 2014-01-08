@@ -46,10 +46,11 @@ namespace server {
 namespace block {
 
 /*!
- * \brief Mapping of compute to I/O blocks.
+ * \brief %Mapping of compute to I/O blocks.
  *
  * \see Compute
  * \see Io
+ * \see Reconnect
  */
 class Container
 {
@@ -109,11 +110,16 @@ public:
      * using the provided name.  It will create an object of the
      * appropriate type based on this definition.
      *
+     * If the machine XML description is not provided, it will be
+     * constructed using database queries, see Reconnect for an
+     * example of how this is done.
+     *
      * \throws Exception on error
      */
     void create(
-            const std::string& name,                    //!< [in] block name
-            const ResponseCallback& callback            //!< [in] callback
+            const std::string& name,                            //!< [in] block name
+            const boost::shared_ptr<BGQMachineXML>& machine,    //!< [in] machine description
+            const ResponseCallback& callback                    //!< [in] callback
             );
 
     /*!
@@ -153,6 +159,13 @@ public:
      */
     void get(
             const GetCallback& callback  //!< [in]
+            );
+
+    /*!
+     * \brief Get the machine XML description.
+     */
+    void loadMachine(
+            const LoadMachineCallback& callback //!< [in]
             );
 
 private:
@@ -204,10 +217,6 @@ private:
 
     void getImpl(
             const GetCallback& callback
-            );
-
-    void loadMachineImpl(
-            const LoadMachineCallback& callback
             );
 
 private:

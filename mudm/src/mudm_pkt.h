@@ -58,6 +58,9 @@ struct pkt_controls   {
   MUSPI_InjFifo_t * IdToInjFifo; /* using Injection Fifo Pointer */  
   
 } ;
+
+void check4notRight(struct pkt_controls * pkt_ctls,BG_FlightRecorderRegistry_t* logregistry);
+
 __INLINE__ void update_IdToInjFifo(struct pkt_controls * pc,  MUSPI_InjFifo_t * using_IdToInjFifo){
      pc->IdToInjFifo = using_IdToInjFifo;
 };

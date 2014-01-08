@@ -35,11 +35,9 @@ using namespace std;
 
 using mmcs::common::Properties;
 
-
 namespace mmcs {
 namespace server {
 namespace command {
-
 
 Version*
 Version::build()
@@ -55,30 +53,28 @@ Version::build()
     return new Version("version", "version", commandAttributes);
 }
 
-
 void
 Version::execute(
         deque<string> args,
         mmcs_client::CommandReply& reply,
         common::ConsoleController* pController,
         BlockControllerTarget* pTarget
-        )
+)
 {
     reply << mmcs_client::OK << "BG/Q " << Properties::getProperty(MMCS_PROCESS)
-        << " " << Properties::getProperty(MMCS_VERSION)
-        << mmcs_client::DONE;
+          << " " << Properties::getProperty(MMCS_VERSION)
+          << mmcs_client::DONE;
 }
 
 void
 Version::help(
         deque<string> args,
         mmcs_client::CommandReply& reply
-        )
+)
 {
-    // the first data written to the reply stream should be 'OK' or 'FAIL'
     reply << mmcs_client::OK << description()
-        << ";Displays the mmcs version"
-        << mmcs_client::DONE;
+          << ";Displays the mmcs version"
+          << mmcs_client::DONE;
 }
 
 

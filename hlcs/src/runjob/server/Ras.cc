@@ -36,6 +36,9 @@
 
 #include <ras/include/RasEventHandlerChain.h>
 
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/foreach.hpp>
 #include <boost/throw_exception.hpp>
 
 LOG_DECLARE_FILE( runjob::server::log );
@@ -162,9 +165,18 @@ Ras::handleControlActions(
         )
 {
     if ( _impl.getDetail(RasEvent::CONTROL_ACTION).empty() ) return;
-    const std::string& action = _impl.getDetail(RasEvent::CONTROL_ACTION);
-    if ( action != "SOFTWARE_IN_ERROR" ) {
-        LOG_WARN_MSG( "unsupported control actions: " << action );
+
+    typedef std::vector<std::string> Tokens;
+    Tokens tokens;
+    const std::string actions( _impl.getDetail(RasEvent::CONTROL_ACTION) );
+    boost::split( tokens, actions, boost::is_any_of(",") );
+    BOOST_FOREACH( const Tokens::value_type& i, tokens ) {
+        if ( i == "SOFTWARE_IN_ERROR" ) continue;
+        if ( i == "FREE_COMPUTE_BLOCK" ) continue;
+        if ( i == "END_JOB" ) continue;
+        if ( i == "NONE" ) continue;
+        if ( i.empty() ) continue;
+        LOG_WARN_MSG( "unsupported control action: " << i );
         return;
     }
 
@@ -174,15 +186,38 @@ Ras::handleControlActions(
         return;
     }
 
-    uint64_t rows = 0;
-    connection->executeUpdate(
-            std::string("UPDATE ") + BGQDB::DBVIonode().getTableName() + " SET " +
-            BGQDB::DBVIonode::STATUS_COL + " = '" + BGQDB::SOFTWARE_FAILURE + "' WHERE " +
-            BGQDB::DBVIonode::STATUS_COL + " in ('" + BGQDB::HARDWARE_AVAILABLE + "') AND " +
-            BGQDB::DBVIonode::LOCATION_COL + " = '" + location.getLocation() + "'",
-            &rows
-            );
-    LOG_TRACE_MSG( "updated " << rows << " rows" );
+    const Tokens::const_iterator softwareFailure = std::find(tokens.begin(), tokens.end(), "SOFTWARE_IN_ERROR");
+    if ( softwareFailure != tokens.end() ) {
+        LOG_DEBUG_MSG( "handling " << *softwareFailure << " control action" );
+        uint64_t rows = 0;
+        connection->executeUpdate(
+                std::string("UPDATE ") + BGQDB::DBVIonode().getTableName() + " SET " +
+                BGQDB::DBVIonode::STATUS_COL + " = '" + BGQDB::SOFTWARE_FAILURE + "' WHERE " +
+                BGQDB::DBVIonode::STATUS_COL + " in ('" + BGQDB::HARDWARE_AVAILABLE + "') AND " +
+                BGQDB::DBVIonode::LOCATION_COL + " = '" + location.getLocation() + "'",
+                &rows
+                );
+        LOG_TRACE_MSG( "updated " << rows << " rows" );
+    }
+    
+    const Tokens::const_iterator freeComputeBlock = std::find(tokens.begin(), tokens.end(), "FREE_COMPUTE_BLOCK");
+    if ( freeComputeBlock != tokens.end() ) {
+        LOG_DEBUG_MSG( "handling " << *freeComputeBlock << " control action" );
+        uint64_t rows = 0;
+        connection->executeUpdate(
+                std::string("UPDATE ") + BGQDB::DBTBlock().getTableName() + " SET " +
+                BGQDB::DBTBlock::ACTION_COL + " = '" + BGQDB::BLOCK_DEALLOCATING + "' WHERE " +
+                BGQDB::DBTBlock::BLOCKID_COL + " in (" +
+                "SELECT a.blockid from bgqblock a, bgqcnioblockmap b " +
+                "WHERE b.cnblock = a.blockid " +
+                "AND b.ion = '" + _impl.getDetail(RasEvent::LOCATION) + "' " +
+                "AND a.status <> 'F'" +
+                ")"
+                );
+        LOG_TRACE_MSG( "updated " << rows << " rows" );
+    }
+
+    // END_JOB control action is handled elsewhere
 }
 
 Ras::~Ras()

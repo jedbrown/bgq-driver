@@ -148,7 +148,7 @@ FileOutput::writeImpl(
             boost::bind(
                 &FileOutput::writeHandler,
                 Output::shared_from_this(),
-                boost::system::error_code::error_code(
+                boost::system::error_code(
                     error,
                     boost::system::get_system_category()
                     ),

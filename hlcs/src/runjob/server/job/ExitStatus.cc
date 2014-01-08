@@ -113,6 +113,9 @@ ExitStatus::set(
                 append( " due to RAS event with record ID " ).
                 append( boost::lexical_cast<std::string>(_controlActionRecordId) )
                 ;
+        } else if ( !_details.empty() ) {
+            _message.append( ". " );
+            _message.append( _details );
         }
     } else {
         LOG_WARN_MSG( "not exited or signaled: 0x" << std::setw(8) << std::setfill('0') << std::hex << _status );
@@ -133,13 +136,27 @@ ExitStatus::setRecordId(
         const int recid
         )
 {
+    LOG_DEBUG_MSG( __FUNCTION__ << " " << recid );
     if ( _controlActionRecordId ) {
-        LOG_TRACE_MSG( "recid already set: " << _controlActionRecordId );
+        LOG_DEBUG_MSG( "recid already set" );
         return;
     }
 
     _controlActionRecordId = recid;
-    LOG_TRACE_MSG( "set control action record ID: " << _controlActionRecordId );
+}
+
+void
+ExitStatus::setDetails(
+        const std::string& details
+        )
+{
+    LOG_DEBUG_MSG( details );
+    if ( !_details.empty() ) {
+        LOG_DEBUG_MSG( "details already set: " << _details );
+        return;
+    }
+
+    _details = details;
 }
 
 } // job

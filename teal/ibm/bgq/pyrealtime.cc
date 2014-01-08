@@ -62,16 +62,11 @@ void ras_event_term_callback()
 class RasEventListener: public bgsched::realtime::ClientEventListener 
 {
 public:
-  RasEventListener() : rtcontinue(true) { }
+  RasEventListener() { }
   
   void handleRealtimeStartedRealtimeEvent(const bgsched::realtime::ClientEventListener::RealtimeStartedEventInfo& info ) {
   }
 
-  bool getRealTimeContinue() {
-    LOG_TRACE_MSG("Set indicator to continue receiving RAS events from real-time server");
-    return true;
-  }
-  
   void handleRasRealtimeEvent( const bgsched::realtime::ClientEventListener::RasEventInfo& info) {
 
     bgsched::realtime::RasRecordId recid = info.getRecordId();
@@ -91,13 +86,13 @@ public:
     // release the python global lock
     PyGILState_Release(gstate);
 
-    LOG_TRACE_MSG("Exit hanle Ras event");
+    LOG_TRACE_MSG("Exit handle Ras event");
   }
 
-  bool getRealtimeContinue() { return rtcontinue; }
-  
-protected: 
-  bool rtcontinue;
+  bool getRealtimeContinue() { 
+      LOG_TRACE_MSG("Set indicator to continue receiving RAS events from real-time server");
+      return true;
+  }
 };
 
 
@@ -138,10 +133,11 @@ int ras_event_poller(char *msgid_filter) {
     client.receiveMessages(NULL, NULL, &end);
 
   } catch (exception &e) {
+    LOG_ERROR_MSG(e.what());  
     return 0;
   }
 
-  LOG_TRACE_MSG("exit ras_event_poller ");
+  LOG_TRACE_MSG("exit ras_event_poller");
   return 0;
 }
 
@@ -149,9 +145,10 @@ static PyObject *
 ras_init(PyObject *self, PyObject *args)
 {
   //  Initialize logging
-  string bg_props = "/bgsys/local/etc/bg.properties";
-  bgq::utility::Properties properties (bg_props);
-  bgq::utility::initializeLogging(properties);
+  const bgq::utility::Properties::ConstPtr properties(
+          bgq::utility::Properties::create()
+          );
+  bgq::utility::initializeLogging(*properties);
 
   // Set the python callback for RealtimeEventMonitor
   LOG_DEBUG_MSG("enter ras_init");

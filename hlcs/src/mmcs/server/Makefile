@@ -41,6 +41,7 @@ CXXFLAGS += \
 LDFLAGS += \
  -rdynamic \
  -L../common -lmmcs_common \
+ -L../../libmmcs_client -lmmcs_client \
  -L../../master/lib -lbgmasterclient \
  -L../../security -lsecurity \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib \
@@ -54,7 +55,15 @@ LDFLAGS += \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/ras/lib \
  -L$(BGQ_INSTALL_DIR)/xml/lib -lXML \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/xml/lib \
- -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
+ -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility \
+ -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib \
+ -lcxxsockets \
+ -lboost_date_time-mt \
+ -llog4cxx \
+ -lboost_serialization-mt \
+ -lboost_system-mt \
+ -lboost_thread-mt \
+ -lboost_filesystem-mt
 
 
 command_parts := \
@@ -134,6 +143,7 @@ env_parts := \
  PerfData \
  Polling \
  ServiceCard \
+ Token \
  utility \
 
 
@@ -145,12 +155,14 @@ master_parts := \
 
 
 parts := \
+ areBlocksActive \
  mmcs_server \
  BCNodeInfo \
  BlockControllerBase \
  BlockControllerTarget \
  BlockDBPollingGovernor \
  BlockHelper \
+ BootFailure \
  CheckBootComplete \
  CNBlockController \
  CommandProcessor \
@@ -162,20 +174,26 @@ parts := \
  DBConsoleController \
  DBPollingGovernor \
  DBStatics \
- DefaultControlEventListener \
+ DefaultListener \
  ExcludeList \
  HardwareBlockList \
  IOBlockController \
  mcServerInit \
  MMCSCommandProcessor_db \
- NeighborInfo \
- Parameters \
+ Options \
  PerformanceCounters \
  RackBitset \
  ReconnectBlocks \
  RunJobConnection \
  SecureConnect \
- SecureMailboxMonitor \
+ MailboxMonitor \
+ neighbor/add \
+ neighbor/ComputeNode \
+ neighbor/Direction \
+ neighbor/Info \
+ neighbor/IoLink \
+ neighbor/IoNode \
+ neighbor/LinkChip \
  ${command_parts:%=command/%} \
  ${env_parts:%=env/%} \
  ${master_parts:%=master/%}
@@ -196,6 +214,7 @@ clean_cmds := \
   command/*.o command/*.d \
   env/*.o env/*.d \
   master/*.o master/*.d \
+  neighbor/*.o neighbor/*.d \
   mmcs_server
 
 
@@ -212,7 +231,7 @@ CommandProcessor.o: CommandProcessor.cc
 
 
 mmcs_server: $(objs)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 
 $(mmcs_server_installed): mmcs_server
@@ -241,3 +260,4 @@ uninstall:
 -include command/*.d
 -include env/*.d
 -include master/*.d
+-include neighbor/*.d

@@ -33,6 +33,8 @@ CXXFLAGS += -DBOOST_TEST_DYN_LINK
 CXXFLAGS += -DBOOST_TEST_MAIN
 
 LDFLAGS += -lboost_unit_test_framework-mt
+LDFLAGS += -llog4cxx
+LDFLAGS += -lboost_date_time-mt
 LDFLAGS += -lboost_serialization-mt
 LDFLAGS += -lboost_system-mt
 LDFLAGS +=  -L ../../common/ -lrunjob_common -Wl,-rpath,../../common
