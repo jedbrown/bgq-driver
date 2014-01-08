@@ -1,0 +1,100 @@
+<div>
+
+<div data-dojo-type="dijit.layout.BorderContainer" data-dojo-props="gutters: false">
+    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'top'">
+        <div data-dojo-type="dijit.form.DropDownButton" data-dojo-attach-point="_filterOptionsDropDownButton">
+            <span>Filter options</span>
+            <div style="width: 600px;" data-dojo-type="dijit.TooltipDialog">
+                <div class="bgFilterOptions bgFilterOptionsAlerts" data-dojo-type="dijit.form.Form" data-dojo-attach-point="_filterOptionsForm">
+                    <fieldset>
+                        <ul>
+                            <li><input data-dojo-type="bluegene.navigator.dijit.TimeInterval" data-dojo-props="name: 'interval', label: 'Alerts'" /></li>
+                            <li>
+                                <label for="${id}-fo-state">State</label>
+                                <input id="${id}-fo-state" data-dojo-type="bluegene.navigator.dijit.MultiSelectCodes" data-dojo-props="name: 'state', values: bluegene.navigator.xlate.alerts.state" />
+                            </li>
+                            <li>
+                                <label for="${id}-fo-urgency">Urgency</label>
+                                <input id="${id}-fo-urgency" data-dojo-type="bluegene.navigator.dijit.MultiSelectCodes" data-dojo-props="name: 'urgency', values: bluegene.navigator.xlate.alerts.urgency" />
+                            </li>
+                            <li>
+                                <label for="${id}-fo-severity">Severity</label>
+                                <input id="${id}-fo-severity" data-dojo-type="bluegene.navigator.dijit.MultiSelectCodes" data-dojo-props="name: 'severity', values: bluegene.navigator.xlate.alerts.severity" />
+                            </li>
+                            <li>
+                                <label for="${id}-fo-location-type">Location Type</label>
+                                <input id="${id}-fo-location-type" data-dojo-type="bluegene.navigator.dijit.MultiSelectCodes" data-dojo-props="name: 'locationType', values: bluegene.navigator.xlate.alerts.locationType" />
+                            </li>
+                            <li>
+                                <label for="${id}-fo-dups">Duplicates</label>
+                                <div id="${id}-fo-dups">
+                                    <input type="radio" name="duplicates" value="hide" checked id="${id}-fo-dups-hide" data-dojo-type="dijit.form.RadioButton" data-dojo-props="checked: true, name: 'duplicates', value: 'hide'" />
+                                    <label for="${id}-fo-dups-hide">Hide</label>
+                                    <input type="radio" name="duplicates" value="show" id="${id}-fo-dups-show" data-dojo-type="dijit.form.RadioButton" data-dojo-props="name: 'duplicates', value: 'show'" />
+                                    <label for="${id}-fo-dups-show">Show</label>
+                                </div>
+                            </li>
+                            <li>
+                                <label for="${id}-fo-location">Location</label>
+                                <input id="${id}-fo-location" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'location'" />
+                            </li>
+                        </ul>
+                    </fieldset>
+                    <fieldset class="submit">
+                        <button type="submit" data-dojo-type="dijit.form.Button">Apply</button>
+                        <button type="button" data-dojo-type="dijit.form.Button" data-dojo-attach-point="_filterOptionsResetButton">Reset</button>
+                    </fieldset>
+                </div>
+            </div>
+        </div>
+        <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_actionButtonsContainer">
+            <button disabled type="button" data-dojo-type="dijit.form.Button" data-dojo-props="disabled: true, type: 'button'" data-dojo-attach-point="_closeButton">Close Alert</button>
+            <button disabled type="button" data-dojo-type="dijit.form.Button" data-dojo-props="disabled: true, type: 'button'" data-dojo-attach-point="_removeButton">Remove Alert</button>
+        </span>
+        <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_opInProgressHideable">
+            <span data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_opInProgressFormat">${_d}{opType} Alert ${_d}{id}</span>...
+        </span>
+        <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_opSuccessHideable">
+            <span data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_opSuccessFormat">${_d}{opType} Alert ${_d}{id}.</span>
+        </span>
+        <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_opErrorHideable">
+            <span data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_opErrorFormat">Failed to ${_d}{opType}, ${_d}{message}</span>
+        </span>
+        <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_opResultDismissHideable">
+            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-attach-point="_opResultDismissButton">Dismiss</button>
+        </span>
+    </div>
+    
+    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'center'">
+	    <table style="height: 100%;" data-dojo-type="dojox.grid.EnhancedGrid" 
+	            data-dojo-props="rowsPerPage: 20, selectionMode: 'single', selectable: true, noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No alerts match the filter options.&lt;/span&gt;'"
+	            data-dojo-attach-point="_grid"
+	            >
+	        <thead>
+	            <tr>
+	                <th field="state" formatter="bluegene.navigator.format.alerts.state" width="100px" cellStyles="text-align: center;">State</th>
+	                <th field="urgency" formatter="bluegene.navigator.format.alerts.urgency" width="100px" cellStyles="text-align: center;">Urgency</th>
+	                <th field="severity" formatter="bluegene.navigator.format.alerts.severity" width="100px" cellStyles="text-align: center;">Severity</th>
+	                <th field="eventLocation" width="120px">Location</th>
+	                <th field="eventLocationType" formatter="bluegene.navigator.format.alerts.locationType" width="100px" cellStyles="text-align: center;">Location Type</th>
+	                <th field="source" width="180px">Source</th>
+	                <th field="recId" width="90px" cellStyles="text-align: right;">Record ID</th>
+	                <th field="alertId" width="100px">Alert ID</th>
+	                <th field="duplicateOf" width="100px" formatter="bluegene.navigator.format.alerts.duplicate">Duplicate Of</th>
+	                <th field="created" formatter="bluegene.navigator.format.timestamp" width="110px" cellStyles="text-align: right;">Time</th>
+	            </tr>
+	            <tr>
+	                <th field="recommendation" colspan="11">Recommendation</th>
+	            </tr>
+	            <tr>
+	                <th field="reason" colspan="11">Reason</th>
+	            </tr>
+	            <tr>
+	                <th field="rawData" colspan="11">Raw Data</th>
+	            </tr>
+	        </thead>
+	    </table>
+    </div>
+</div>
+
+</div>

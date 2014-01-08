@@ -1,0 +1,8 @@
+[database]
+name=%%BGQDB_DBNAME%%
+user=%%BGQDB_USER%%
+password=%%BGQDB_PWD%%
+schema_name=%%BGQDB_SCHEMA%%
+
+[my_section]
+connection_pool_size=asdf

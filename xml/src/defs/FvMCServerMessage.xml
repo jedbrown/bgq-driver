@@ -1,0 +1,874 @@
+
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!-- Eclipse Public License (EPL)                                     -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<!-- Fpga verification platform configuration file
+-->
+<File filename="FvMCServerMessage" namespace="FvMCServerMessage" version="1">
+
+    <Method name="setNetPath" comment="set the current fpga device target for subsequent commands, identified by its net path">
+        <Class name ="SetNetPathRequest">
+            <DataMember type="text" name="netpath" comment="fpga target device net path"/>
+        </Class>
+        <Class name="SetNetPathReply">
+            <DataMember type="int32" name="rc" comment="return error code" />
+            <DataMember type="text" name="rt" comment="return error text" />
+        </Class>
+    </Method>
+
+    <Method name="getNetpath" comment="get the current fpga device">
+        <Class name ="GetNetPathRequest">
+        </Class>
+        <Class name="GetNetPathReply">
+            <DataMember type="text" name="netpath" comment="fpga target device name"/>
+            <DataMember type="uint32" name="index" comment="index for the motherboard fpga devices"/>
+            <DataMember type="int32" name="rc" comment="return error code" />
+            <DataMember type="text" name="rt" comment="return error text" />
+        </Class>
+    </Method>
+
+    <Method name="listNetPaths" comment="get a list of all the net paths..">
+        <Class name="NetPathInfo">
+            <DataMember type="text" name="name" comment="card name" />
+            <DataMember type="text" name="netpath" comment="net list path to this component"/>
+            <DataMember type="uint32" name="device" comment="device number (2..5)" />
+            <DataMember type="text" name="xilinxname" comment="xilinx file name for this component (without extenstion)"/>
+        </Class>
+        <Class name ="ListNetPathsRequest">
+        </Class>
+        <Class name="ListNetPathsReply">
+            <DataMember type="int32" name="rc" comment="return error code" />
+            <DataMember type="text" name="rt" comment="return error text" />
+            <DataMember type="NetPathInfo" name="npinfo" occurrences="many"  comment="net path information string"/>
+        </Class>
+    </Method>
+
+    <Method name="setCard" comment="set the current fpga device target for subsequent commands, identified by its card name">
+        <Class name ="SetCardRequest">
+            <DataMember type="text" name="cardname" comment="fpga target device card"/>
+        </Class>
+        <Class name="SetCardReply">
+            <DataMember type="int32" name="rc" comment="return error code" />
+            <DataMember type="text" name="rt" comment="return error text" />
+        </Class>
+    </Method>
+
+    <Method name="getCard" comment="get the current fpga device">
+        <Class name ="GetCardRequest">
+        </Class>
+        <Class name="GetCardReply">
+            <DataMember type="text" name="cardname" comment="fpga target device name"/>
+            <DataMember type="int32" name="rc" comment="return error code" />
+            <DataMember type="text" name="rt" comment="return error text" />
+        </Class>
+    </Method>
+
+    <Method name="listCards" comment="get a list of all the net paths..">
+        <Class name="FpgaInfo">
+            <DataMember type="text" name="netpath" comment="net list path to this component"/>
+            <DataMember type="text" name="xilinxname" comment="xilinx file name for this component (without extenstion)"/>
+        </Class>
+        <Class name="CardInfo">
+            <DataMember type="text" name="name" comment="card name" />
+            <DataMember type="FpgaInfo" name="fpgainfo" occurrences="many"  comment="fpga information"/>
+        </Class>
+        <Class name ="ListCardsRequest">
+        </Class>
+        <Class name="ListCardsReply">
+            <DataMember type="int32" name="rc" comment="return error code" />
+            <DataMember type="text" name="rt" comment="return error text" />
+            <DataMember type="CardInfo" name="cardinfo" occurrences="many"  comment="card information"/>
+        </Class>
+    </Method>
+    <Method name="setTraceEscortIo" comment="setting the trace level to > 0, causes tracing for the card controller to be printed">
+        <Class name ="SetTraceEscortIoRequest">
+            <DataMember type="int32" name="tracelevel" comment="tracelevel to set"/>
+        </Class>
+        <Class name="SetTraceEscortIoReply">
+            <DataMember type="int32" name="rc" comment="return error code" />
+            <DataMember type="text" name="rt" comment="return error text" />
+        </Class>
+    </Method>
+
+    <Method name="setPintoResetN" comment="...">
+        <Class name="SetPintoResetNRequest">
+            <DataMember type="int32" name="resetvalue" comment="reset value to set"/>
+        </Class>
+        <Class name="SetPintoResetNReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="setTempoReset" comment="...">
+        <Class name="SetTempoResetRequest">
+            <DataMember type="int32" name="resetvalue" comment="reset value to set"/>
+        </Class>
+        <Class name="SetTempoResetReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="setTargetProgReset" comment="...">
+        <Class name="SetTargetProgResetRequest">
+            <DataMember type="int32" name="resetvalue" comment="reset value to set"/>
+        </Class>
+        <Class name="SetTargetProgResetReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="setMainClockSelectReset" comment="...">
+        <Class name="SetMainClockSelectRequest">
+            <DataMember type="int32" name="value" comment="value to set"/>
+        </Class>
+        <Class name="SetMainClockSelectReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="initializeIcon" comment="...">
+        <Class name="InitializeIconRequest">
+            <DataMember type="text" name="iconimagefile" comment="reset value to set"/>
+        </Class>
+        <Class name="InitializeIconReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="initializeEscort" comment="...">
+        <Class name="InitializeEscortRequest">
+            <DataMember type="text" name="iconimagefile" comment="escort image file"/>
+            <DataMember type="text" name="escortimagefile" comment="icon image file to use"/>
+      </Class>
+        <Class name="InitializeEscortReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="initializeSlave" comment="...">
+        <Class name="InitializeSlaveRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="text" name="slaveimagefile" comment="slave image file"/>
+        </Class>
+        <Class name="InitializeSlaveReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="escortWriteRegister" comment="...">
+        <Class name="EscortWriteRegisterRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="int32" name="reg" comment="register id"/>
+            <DataMember type="int32" name="index" comment="register index"/>
+            <DataMember type="uint32" name="value" comment="value to write"/>
+        </Class>
+        <Class name="EscortWriteRegisterReply">
+            <DataMember type="uint64" name="oldvalue" comment="old value"/>
+            <DataMember type="uint32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="escortReadRegister" comment="...">
+        <Class name="EscortReadRegisterRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="int32" name="reg" comment="register id"/>
+            <DataMember type="int32" name="index" comment="register index"/>
+        </Class>
+        <Class name="EscortReadRegisterReply">
+            <DataMember type="uint32" name="value" comment="value read"/>
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="readSystemStatus" comment="...">
+        <Class name="ReadSystemStatusRequest">
+        </Class>
+        <Class name="ReadSystemStatusReply">
+            <DataMember type="uint32" name="status" comment="value read"/>
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="readRunCounter" comment="...">
+        <Class name="ReadRunCounterRequest">
+        </Class>
+        <Class name="ReadRunCounterReply">
+            <DataMember type="uint64" name="runcounter" comment="value read"/>
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="readLocalStatus" comment="...">
+        <Class name="ReadLocalStatusRequest">
+        </Class>
+        <Class name="ReadLocalStatusReply">
+            <DataMember type="uint32" name="status" comment="value read"/>
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="readBreakpointCounter" comment="...">
+        <Class name="ReadBreakpointCounterRequest">
+        </Class>
+        <Class name="ReadBreakpointCounterReply">
+            <DataMember type="uint64" name="counter" comment="value read"/>
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="writeBreakpointCounter" comment="...">
+        <Class name="WriteBreakpointCounterRequest">
+            <DataMember type="uint64" name="counter" comment="value read"/>
+        </Class>
+        <Class name="WriteBreakpointCounterReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="writePauseCmd" comment="...">
+        <Class name="WritePauseCmdRequest">
+        </Class>
+        <Class name="WritePauseCmdReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="writeRunCmd" comment="...">
+        <Class name="WriteRunCmdRequest">
+        </Class>
+        <Class name="WriteRunCmdReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="resetDutCode" comment="...">
+        <Class name="ResetDutCodeRequest">
+        </Class>
+        <Class name="ResetDutCodeReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="waitForStop" comment="...">
+        <Class name="WaitForStopRequest">
+            <DataMember type="float" name="timeout" comment="timeout value"/>
+            <DataMember type="uint32" name="pollinterval" comment="polling interval"/>
+        </Class>
+        <Class name="WaitForStopReply">
+            <DataMember type="bool" name="stopped" comment="return true if we stopped, false if we did not"/>
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+
+    <Method name="writeSelectMap" comment="...">
+        <Class name="WriteSelectMapRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="uint32" name="data" occurrences="many" comments="selectmap data" />
+        </Class>
+        <Class name="WriteSelectMapReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="readSelectMap" comment="...">
+        <Class name="ReadSelectMapRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="int32" name="nwords" comment="number of icap words to read"/>
+        </Class>
+        <Class name="ReadSelectMapReply">
+            <DataMember type="uint32" name="data" occurrences="many" comments="selectmap data" />
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="writeIcap" comment="...">
+        <Class name="WriteIcapRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="uint32" name="data" occurrences="many" comments="icap data" />
+        </Class>
+        <Class name="WriteIcapReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="readIcap" comment="...">
+        <Class name="ReadIcapRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="int32" name="nwords" comment="number of icap words to read"/>
+        </Class>
+        <Class name="ReadIcapReply">
+            <DataMember type="uint32" name="data" occurrences="many" comments="icap data "/>
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="openAetSetupFile" comment="...">
+        <Class name="OpenAetSetupFileRequest">
+            <DataMember type="text" name="filename" comment="file name to load"/>
+        </Class>
+        <Class name="OpenAetSetupFileReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="closeAetSetupFile" comment="...">
+        <Class name="CloseAetSetupFileRequest">
+        </Class>
+        <Class name="CloseAetSetupFileReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+
+    <Method name="setAetProbe" comment="...">
+        <Class name="SetAetProbeRequest">
+            <DataMember type="text" name="netSpec" comment="net specification for the probe to set"/>
+        </Class>
+        <Class name="SetAetProbeReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="clearAetProbes" comment="...">
+        <Class name="ClearAetProbesRequest">
+        </Class>
+        <Class name="ClearAetProbesReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="getAetProbes" comment="...">
+        <Class name="GetAetProbesRequest">
+        </Class>
+        <Class name="GetAetProbesReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+            <DataMember type="text" name="netPaths" occurrences="many"  comment="list of net paths being probed"/>
+        </Class>
+    </Method>
+
+    <Method name="findAetSignals" comment="...">
+        <Class name="FindAetSignalsRequest">
+            <DataMember type="text" name="netSpec" comment="net specification for the probe to set"/>
+        </Class>
+        <Class name="FindAetSignalsReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+            <DataMember type="text" name="netPaths" occurrences="many"  comment="list of net paths being probed"/>
+        </Class>
+    </Method>
+
+
+
+    <Method name="openAetFile" comment="...">
+        <Class name="OpenAetFileRequest">
+            <DataMember type="text" name="filename" comment="file name to load"/>
+        </Class>
+        <Class name="OpenAetFileReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="closeAetFile" comment="...">
+        <Class name="CloseAetFileRequest">
+        </Class>
+        <Class name="CloseAetFileReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="sampleAet" comment="...">
+        <Class name="SampleAetRequest">
+            <DataMember type="int32" name="framestoscan" comment="number of frames to scan"/>
+            <DataMember type="text" name="options" comment="return error code"/>
+        </Class>
+        <Class name="SampleAetReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="readFrame" comment="...">
+        <Class name="ReadFrameRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="int32" name="framenum" comment="frame number to read"/>
+        </Class>
+        <Class name="ReadFrameReply">
+            <DataMember type="uint32" name="framedata" occurrences="many" comments="frame data"/>
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+
+    <Method name="readFrameList" comment="...">
+        <Class name="FrData">
+            <DataMember type="uint32" name="data" occurrences="many" comments="frame data"/>
+        </Class>
+
+        <Class name="ReadFrameListRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="uint32" name="framelist" occurrences="many" comments="list of frame offsets"/>
+        </Class>
+        <Class name="ReadFrameListReply">
+            <DataMember type="FrData" name="framedata" occurrences="many" comments="list of frame datas"/>
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="setIconDebugLevel" comment="...">
+        <Class name="SetIconDebugLevelRequest">
+            <DataMember type="int32" name="debuglevel" comment="debug level to set"/>
+        </Class>
+        <Class name="SetIconDebugLevelReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="setIconDebugStream" comment="...">
+        <Class name="SetIconDebugStreamRequest">
+            <DataMember type="text" name="debugstream" comment="debug stream to set"/>
+        </Class>
+        <Class name="SetIconDebugStreamReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="loadElfFiles" comment="...">
+        <Class name="LoadElfFilesRequest">
+            <DataMember type="text" name="sElfFiles" comment="string of elf files, separated by commas"/>
+        </Class>
+        <Class name="LoadElfFilesReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="writeMemory" comment="...">
+        <Class name="WriteMemoryRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="uint64" name="addr" comment="address to write to"/>
+            <DataMember type="uint32" name="port" comment="port to write to"/>
+            <DataMember type="uint32" name="data" occurrences="many" comments="data to write"/>
+        </Class>
+        <Class name="WriteMemoryReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="readMemory" comment="...">
+        <Class name="ReadMemoryRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="uint64" name="addr" comment="address to write to"/>
+            <DataMember type="uint32" name="port" comment="port to write to"/>
+            <DataMember type="uint32" name="len" comment="length of data to read, in 32 bit words"/>
+        </Class>
+        <Class name="ReadMemoryReply">
+            <DataMember type="uint32" name="data" occurrences="many" comments="data read"/>
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="initMemory" comment="...">
+        <Class name="InitMemoryRequest">
+            <DataMember type="int32" name="device" comment="device"/>
+            <DataMember type="uint64" name="addr" comment="address to write to"/>
+            <DataMember type="uint32" name="port" comment="port to write to"/>
+            <DataMember type="uint32" name="data" occurrences="many" comments="pattern to use to init"/>
+        </Class>
+        <Class name="InitMemoryReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+
+    <Method name="setMcServerDebugLevel" comment="...">
+        <Class name="SetMcServerDebugLevelRequest">
+            <DataMember type="uint32" name="level" comment="debug level to set..."/>
+        </Class>
+        <Class name="SetMcServerDebugLevelReply">
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="readDutStatus" comment="...">
+        <Class name="ReadDutStatusRequest">
+        </Class>
+        <Class name="ReadDutStatusReply">
+            <DataMember type="uint32" name="sysstatus" comment="system status" />
+            <DataMember type="uint32" name="localstatus" comment="local status" />
+            <DataMember type="uint64" name="runcounter" comment="run counter status" />
+            <DataMember type="uint64" name="breakpointcounter" comment="breakpoint counter status" />
+            <DataMember type="int32" name="rc" comment="return error code"/>
+            <DataMember type="text" name="rt" comment="return error text"/>
+        </Class>
+    </Method>
+
+    <Method name="filterSetup" comment="send the filter setup command">
+        <Class name = "FilterSetupRequest">
+            <DataMember type="int32" name="devindex" comment="device index this is for"/>
+            <DataMember type="uint32" name="descriptor" occurrences="many" comments="frame descriptors"/>
+        </Class>
+        <Class name = "FilterSetupReply">
+          <DataMember type="int32" name="rc" comment="return code" />
+          <DataMember type="text" name="rt" comment="return code text" />
+        </Class>
+    </Method>
+
+    <Method name="filterSetupReadBack" comment="send the filter setup command">
+        <Class name = "FilterSetupReadBackRequest">
+            <DataMember type="int32" name="devindex" comment="device index this is for"/>
+            <DataMember type="int32" name="numframes" comment="number of frames to read back, must match filter setup"/>
+        </Class>
+        <Class name = "FilterSetupReadBackReply">
+          <DataMember type="int32" name="rc" comment="return code" />
+          <DataMember type="text" name="rt" comment="return code text" />
+          <DataMember type="uint32" name="descriptor" occurrences="many" comments="frame descriptors"/>
+        </Class>
+    </Method>
+
+    <Method name="frameFilteredRead" comment="send the filter setup command">
+
+        <Class name = "FrameFilteredReadRequest">
+            <DataMember type="int32" name="devindex" comment="device index this is for"/>
+            <DataMember type="int32" name="numframes" comment="number of frames to expect in return"/>
+        </Class>
+        <Class name = "FrameFilteredReadReply">
+            <Class name="FrData">
+                <DataMember type="uint32" name="frameaddr" comment="frame address" />
+                <DataMember type="uint32" name="data" occurrences="many" comments="frame data"/>
+            </Class>
+          <DataMember type="int32" name="rc" comment="return code" />
+          <DataMember type="text" name="rt" comment="return code text" />
+          <DataMember type="FrData" name="frdata" occurrences="many"  comment="frame data record"/>
+        </Class>
+    </Method>
+
+    <Method name="bitFilteredRead" comment="send the filter setup command">
+        <Class name = "BitFilteredReadRequest">
+            <DataMember type="int32" name="devindex" comment="device index this is for"/>
+            <DataMember type="int32" name="numclbs" comment="number of clb frames to expect"/>
+            <DataMember type="int32" name="numbrams" comment="number of block ram frames"/>
+        </Class>
+        <Class name = "BitFilteredReadReply">
+            <Class name="FrData">
+                <DataMember type="uint32" name="frameaddr" comment="frame address" />
+                <DataMember type="uint32" name="data" occurrences="many" comments="frame data"/>
+            </Class>
+          <DataMember type="int32" name="rc" comment="return code" />
+          <DataMember type="text" name="rt" comment="return code text" />
+          <DataMember type="FrData" name="frdata"  occurrences="many" comment="frame data record"/>
+        </Class>
+    </Method>
+
+   <Method name="iconwrapper" comment="Execute a low level icon wrapper command.">
+       <Class name = "IconWrapperRequest">
+         <DataMember type="text" name="data" comment="wrapper data stream" />
+       </Class>
+       <Class name = "IconWrapperReply">
+         <DataMember type="int32" name="rc" comment="return code" />
+         <DataMember type="text" name="rt" comment="return code text" />
+         <DataMember type="uint32" name="len" comment="length of the data field" />
+         <DataMember type="uchar" name="data"   occurrences="many"  comment="reply data, 1  per icon.." />
+       </Class>
+   </Method>
+
+   <Method name="cseOpenTarget" comment="Open the target with the given parameters.">
+       <Class name = "CseOpenTargetRequest">
+         <DataMember type="text" name="argv" occurrences="many"  comment="List of arguments passed to the driver" />
+       </Class>
+       <Class name = "CseOpenTargetReply">
+         <DataMember type="int32" name="rc" comment="return code" />
+         <DataMember type="text" name="rt" comment="return code text" />
+       </Class>
+   </Method>
+
+   <Method name="cseCloseTarget" comment="Close the target">
+       <Class name = "CseCloseTargetRequest">
+       </Class>
+       <Class name = "CseCloseTargetReply">
+         <DataMember type="int32" name="rc" comment="return code" />
+         <DataMember type="text" name="rt" comment="return code text" />
+       </Class>
+   </Method>
+
+   <Method name="cseNavigateTAP" comment="Set the tap state">
+       <Class name = "CseNavigateTAPRequest">
+           <DataMember type="uint32" name="state" comment="state to navigate to, found in our bgq_util/include/JtagState.h" />
+           <DataMember type="uint32" name="count" comment="Number of additional times to clock TCK while in state" />
+       </Class>
+       <Class name = "CseNavigateTAPReply">
+         <DataMember type="int32" name="rc" comment="return code" />
+         <DataMember type="text" name="rt" comment="return code text" />
+       </Class>
+   </Method>
+
+   <Method name="cseInitializeTAP" comment="Force the tap state to TLR. No assumptions about current state">
+       <Class name = "CseInitializeTAPRequest">
+       </Class>
+       <Class name = "CseInitializeTAPReply">
+         <DataMember type="int32" name="rc" comment="return code" />
+         <DataMember type="text" name="rt" comment="return code text" />
+       </Class>
+   </Method>
+
+   <Method name="cseShiftChainIR" comment="Shift buffer into the IR of the chain and return the data read back">
+       <Class name = "CseShiftChainIRRequest">
+           <DataMember type="binary" name="tdobuf" comment="buffer to shift into TDI, our tdo, targets tdi" />
+           <DataMember type="uint32" name="bitcount" comment="Bits to shift, stream must be (bitcount+7)/8 long" />
+           <DataMember type="bool" name="returndata" comment="1 return data, 0 don't return data"/>
+           <DataMember type="uint32" name="exitShiftState" comment="State to end in" />
+       </Class>
+       <Class name = "CseShiftChainIRReply">
+         <DataMember type="int32" name="rc" comment="return code" />
+         <DataMember type="text" name="rt" comment="return code text" />
+         <DataMember type="binary" name="tdibuf" comment="buffer to shift into from target" />
+       </Class>
+   </Method>
+
+   <Method name="cseShiftChainDR" comment="Shift buffer into the DR of the chain and return the data read back.">
+       <Class name = "CseShiftChainDRRequest">
+           <DataMember type="binary" name="tdobuf" comment="buffer to shift into TDI, our tdo, targets tdi" />
+           <DataMember type="uint32" name="bitcount" comment="Bits to shift, stream must be (bitcount+7)/8 long" />
+           <DataMember type="bool" name="returndata" comment="1 return data, 0 don't return data"/>
+           <DataMember type="uint32" name="exitShiftState" comment="State to end in" />
+       </Class>
+       <Class name = "CseShiftChainDRReply">
+         <DataMember type="int32" name="rc" comment="return code" />
+         <DataMember type="text" name="rt" comment="return code text" />
+         <DataMember type="binary" name="tdibuf" comment="buffer to shift into from target" />
+       </Class>
+       </Method>
+
+   <Method name="cseSetTraceLevel" comment="setting the trace level to > 0, causes tracing for the card controller to be printed">
+       <Class name ="CseSetTraceLevelRequest">
+           <DataMember type="int32" name="tracelevel" comment="tracelevel to set"/>
+       </Class>
+       <Class name="CseSetTraceLevelReply">
+           <DataMember type="int32" name="rc" comment="return error code" />
+           <DataMember type="text" name="rt" comment="return error text" />
+       </Class>
+   </Method>
+
+
+    <Method name="jtagTbxInitializeTAP" comment="Force the tap state to TLR. No assumptions about current state">
+        <Class name = "JtagTbxInitializeTAPRequest">
+        </Class>
+        <Class name = "JtagTbxInitializeTAPReply">
+            <DataMember type="int32" name="rc" comment="return code" />
+            <DataMember type="text" name="rt" comment="return code text" />
+        </Class>
+    </Method>
+
+    <Method name="jtagTbxShiftIR" comment="Shift buffer into the IR of the chain and return the data read back">
+        <Class name = "JtagTbxShiftIRRequest">
+            <DataMember type="binary" name="tdobuf" comment="buffer to shift into TDI, our tdo, targets tdi" />
+            <DataMember type="uint32" name="bitcount" comment="Bits to shift, stream must be (bitcount+7)/8 long" />
+            <DataMember type="bool" name="returndata" comment="1 return data, 0 don't return data"/>
+            <DataMember type="uint32" name="exitShiftState" comment="State to end in" />
+        </Class>
+        <Class name = "JtagTbxShiftIRReply">
+            <DataMember type="int32" name="rc" comment="return code" />
+            <DataMember type="text" name="rt" comment="return code text" />
+            <DataMember type="binary" name="tdibuf" comment="buffer to shift into from target" />
+        </Class>
+    </Method>
+
+    <Method name="jtagTbxShiftDR" comment="Shift buffer into the DR of the chain and return the data read back.">
+        <Class name = "JtagTbxShiftDRRequest">
+            <DataMember type="binary" name="tdobuf" comment="buffer to shift into TDI, our tdo, targets tdi" />
+            <DataMember type="uint32" name="bitcount" comment="Bits to shift, stream must be (bitcount+7)/8 long" />
+            <DataMember type="bool" name="returndata" comment="1 return data, 0 don't return data"/>
+            <DataMember type="uint32" name="exitShiftState" comment="State to end in" />
+        </Class>
+        <Class name = "JtagTbxShiftDRReply">
+            <DataMember type="int32" name="rc" comment="return code" />
+            <DataMember type="text" name="rt" comment="return code text" />
+            <DataMember type="binary" name="tdibuf" comment="buffer to shift into from target" />
+        </Class>
+    </Method>
+
+    <Method name="jtagTbxSetTraceLevel" comment="setting the trace level to > 0, causes tracing for the card controller to be printed">
+        <Class name ="JtagTbxSetTraceLevelRequest">
+            <DataMember type="int32" name="tracelevel" comment="tracelevel to set"/>
+        </Class>
+        <Class name="JtagTbxSetTraceLevelReply">
+            <DataMember type="int32" name="rc" comment="return error code" />
+            <DataMember type="text" name="rt" comment="return error text" />
+        </Class>
+    </Method>
+
+
+   <Method name="writeSystemHaltMask" comment="set the system halt mask">
+       <Class name ="WriteSystemHaltMaskRequest">
+           <DataMember type="int32" name="mask" comment="mask to set"/>
+       </Class>
+       <Class name="WriteSystemHaltMaskReply">
+           <DataMember type="int32" name="rc" comment="return error code" />
+           <DataMember type="text" name="rt" comment="return error text" />
+       </Class>
+   </Method>
+
+   <Method name="readSystemHaltMask" comment="...">
+       <Class name="ReadSystemHaltMaskRequest">
+       </Class>
+       <Class name="ReadSystemHaltMaskReply">
+           <DataMember type="uint32" name="mask" comment="value read"/>
+           <DataMember type="int32" name="rc" comment="return error code"/>
+           <DataMember type="text" name="rt" comment="return error text"/>
+       </Class>
+   </Method>
+<Method name="setMcDebugLevel" comment="...">
+    <Class name="SetMcDebugLevelRequest">
+        <DataMember type="int32" name="debuglevel" comment="debug level to set"/>
+    </Class>
+    <Class name="SetMcDebugLevelReply">
+        <DataMember type="int32" name="rc" comment="return error code"/>
+        <DataMember type="text" name="rt" comment="return error text"/>
+    </Class>
+</Method>
+
+<Method name="escortReadBscan" comment="...">
+    <Class name="EscortReadBscanRequest">
+        <DataMember type="text" name="options" comment="options"/>
+    </Class>
+    <Class name="EscortReadBscanReply">
+        <DataMember type="binary" name="scandata" comment="raw scan data"/>
+        <DataMember type="int32" name="numscanbits" comment="number of scan bits"/>
+        <DataMember type="int32" name="rc" comment="return error code"/>
+        <DataMember type="text" name="rt" comment="return error text"/>
+    </Class>
+</Method>
+
+<Method name="runSim" comment="...">
+    <Class name="RunSimRequest">
+        <DataMember type="uint64" name="cycles" comment="cyclecount"/>
+        <DataMember type="text" name="options" occurrences="many" comment="argument list"/>
+    </Class>
+    <Class name="RunSimReply">
+        <DataMember type="int32" name="rc" comment="return error code"/>
+        <DataMember type="text" name="rt" comment="return error text"/>
+    </Class>
+</Method>
+<Method name="stopSim" comment="...">
+    <Class name="StopSimRequest">
+    </Class>
+    <Class name="StopSimReply">
+        <DataMember type="int32" name="rc" comment="return error code"/>
+        <DataMember type="text" name="rt" comment="return error text"/>
+    </Class>
+</Method>
+
+<Method name="isSimRunning" comment="...">
+    <Class name="IsSimRunningRequest">
+    </Class>
+    <Class name="IsSimRunningReply">
+        <DataMember type="int32" name="rc" comment="return error code"/>
+        <DataMember type="text" name="rt" comment="return error text"/>
+        <DataMember type="bool" name="running" comment="return true if the runSim command is still running"/>
+    </Class>
+</Method>
+<Method name="testRasEvent" comment="...">
+    <Class name="TestRasEventRequest">
+    </Class>
+    <Class name="TestRasEventReply">
+        <DataMember type="int32" name="rc" comment="return error code"/>
+        <DataMember type="text" name="rt" comment="return error text"/>
+        <DataMember type="bool" name="running" comment="return true if the runSim command is still running"/>
+    </Class>
+</Method>
+
+<Method name="test" comment="...">
+    <Class name="TestRequest">
+        <DataMember type="text" name="argv" occurrences="many"  comment="List of arguments passed to the driver" />
+    </Class>
+    <Class name="TestReply">
+        <DataMember type="int32" name="rc" comment="return error code"/>
+        <DataMember type="text" name="rt" comment="return error text"/>
+        <DataMember type="text" name="retdata" occurrences="many"  comment="list of return data" />
+    </Class>
+</Method>
+
+<Method name="bfStatsSetSize" comment="...">
+    <Class name="BfStatsSetSizeRequest">
+        <DataMember type="int32" name="size" comment="size to set the stats buffer to (0 is don't collect stats)"/>
+    </Class>
+    <Class name="BfStatsSetSizeReply">
+        <DataMember type="int32" name="rc" comment="return error code"/>
+        <DataMember type="text" name="rt" comment="return error text"/>
+    </Class>
+</Method>
+<Method name="bfStatsWrite" comment="...">
+    <Class name="BfStatsWriteRequest">
+        <DataMember type="text" name="filename" comment="name of file to open and write stats to"/>
+    </Class>
+    <Class name="BfStatsWriteReply">
+        <DataMember type="int32" name="rc" comment="return error code"/>
+        <DataMember type="text" name="rt" comment="return error text"/>
+    </Class>
+</Method>
+
+
+<Method name="readDutConfigOption" comment="...">
+    <Class name="ReadDutConfigOptionRequest">
+        <DataMember type="text" name="key"  comment="key of value to read" />
+    </Class>
+    <Class name="ReadDutConfigOptionReply">
+        <DataMember type="int32" name="rc" comment="return error code"/>
+        <DataMember type="text" name="rt" comment="return error text"/>
+        <DataMember type="text" name="value"  comment="value found, blank if not found" />
+    </Class>
+</Method>
+
+
+
+ </File>
+
+
+

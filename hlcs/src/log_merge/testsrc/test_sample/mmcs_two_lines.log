@@ -1,0 +1,2 @@
+2010-05-04 16:00:10.757 (INFO ) [0x2b477594d890] ibm.mmcs.mmcs_server: MMCS[26651]: starting: BG/Q mmcs_server bgq (revision 23365) Apr 29 2010 16:17:57
+2010-05-04 16:00:10.758 (INFO ) [0x2b477594d890] ibm.mmcs.mmcs_server: Startup parameters: ./mmcs_server

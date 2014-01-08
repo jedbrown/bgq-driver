@@ -1,0 +1,35 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/* ================================================================ */
+/*                                                                  */
+/* (C) Copyright IBM Corp.  2010, 2011                              */
+/* Eclipse Public License (EPL)                                     */
+/*                                                                  */
+/* ================================================================ */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+{
+    "name": "bluegene",
+    "directories": {
+        "lib": "."
+    },
+    "main": "layer",
+    "version":"1.1.1",
+    "dojo" : {
+        "profile" : "bluegene.profile.js"
+    },
+    "description": "Blue Gene Navigator",
+    "licenses": [
+         {
+             "type": "EPL",
+             "url": "http://www.eclipse.org"
+         }
+    ],
+    "bugs": "http://www.ibm.com/",
+    "keywords": ["JavaScript", "Blue Gene"],
+    "homepage": "http://www.ibm.com/",
+    "dojoBuild": "bluegene.profile.js"
+}

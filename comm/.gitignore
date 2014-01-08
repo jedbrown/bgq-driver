@@ -1,0 +1,7 @@
+*~
+/build
+/install
+/lib/dev
+/Make.config.rules
+/sys/buildtools
+/sys/pami

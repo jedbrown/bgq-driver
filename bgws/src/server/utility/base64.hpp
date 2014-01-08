@@ -1,0 +1,50 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/* ================================================================ */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/*                                                                  */
+/* Blue Gene/Q                                                      */
+/*                                                                  */
+/* (C) Copyright IBM Corp.  2010, 2011                              */
+/*                                                                  */
+/* US Government Users Restricted Rights -                          */
+/* Use, duplication or disclosure restricted                        */
+/* by GSA ADP Schedule Contract with IBM Corp.                      */
+/*                                                                  */
+/* This software is available to you under the                      */
+/* Eclipse Public License (EPL).                                    */
+/*                                                                  */
+/* ================================================================ */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+#ifndef BGWS_UTILITY_BASE64_HPP_
+#define BGWS_UTILITY_BASE64_HPP_
+
+
+#include "utility.hpp"
+
+#include <string>
+
+
+namespace bgws {
+namespace utility {
+namespace base64 {
+
+
+std::string encode( const Bytes& bytes );
+
+
+Bytes decode( const std::string& s );
+
+
+
+} // namespace bgws::utility::base64
+} // namespace bgws::utility
+} // namespace bgws
+
+
+#endif

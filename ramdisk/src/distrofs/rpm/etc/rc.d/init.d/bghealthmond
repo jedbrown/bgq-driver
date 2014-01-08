@@ -1,0 +1,177 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# bghealthmond		Starts the BlueGene Node Health Monitor Daemon.
+#
+# Author:		Jay S. Bryant (jsbryant@us.ibm.com)
+#
+
+# Source function library including BG/Q env vars
+. /etc/init.d/functions
+
+LOCKFILE=/var/lock/subsys/bghealthmond
+BGHEALTHMOND_DIR=/bgfs/bghealthmond
+
+function start
+{
+	# Start the BG Node Health Monitor Daemon.
+	echo -n $"Starting BG Node Health Monitor: "
+
+	cat /etc/sysconfig/bghealthmond | grep "ENABLED=0" &> /dev/null
+	if [ $? -eq 0 ] ; then
+		skipped
+		echo
+		exit 0
+	fi
+
+	if [ ! -d $BGHEALTHMOND_DIR ] ; then
+		mkdir $BGHEALTHMOND_DIR
+	fi
+
+	# Set up binaries needed by bghealthmond in /bgfs so that it can continue to run after
+	# the nfs root has hung up.
+	for DIRS in "sbin" "lib64" "usr/sbin" "usr/bin" "bin" "var/run" "etc/sysconfig" "etc/init.d" \
+		    "dev" "proc" "sys" "lib" ; do
+		if [ ! -d $BGHEALTHMOND_DIR/$DIRS ] ; then mkdir -p $BGHEALTHMOND_DIR/$DIRS ; fi
+	done
+
+	for FILES in "lib64/libc.so.6" "lib64/libtirpc.so.1" "lib64/libnsl.so.1" \
+		     "lib64/libgssglue.so.1" "lib64/libdl.so.2" "lib64/libpthread.so.0" \
+		     "lib64/libreadline.so.6" "lib64/libtinfo.so.5" "lib64/libncurses.so.5" \
+		     "lib64/ld64.so.1" "lib64/libresolv.so.2" "lib64/libpcre.so.0" \
+		     "lib64/libproc-3.2.8.so" "lib64/libselinux.so.1" "lib64/libblkid.so.1" \
+		     "lib64/libuuid.so.1" "lib64/libsepol.so.1" "lib64/librt.so.1" "lib64/libcap.so.2" \
+		     "lib64/libacl.so.1" "lib64/libattr.so.1" "lib64/libncursesw.so.5" \
+		     "lib64/libidn.so.11" ; do
+		cp $FILES $BGHEALTHMOND_DIR/$FILES
+	done
+	for FILES in "usr/sbin/nfsstat" "sbin/ip" "usr/bin/bc" "bin/bash" \
+		     "bin/cat" "usr/sbin/bghealthmond.sh" "bin/ps" "bin/cat" \
+		     "usr/bin/top" "usr/sbin/arping" "bin/echo" "bin/sleep" "bin/date" \
+		     "bin/mount" "usr/bin/wc" "bin/grep" "usr/bin/tr" "bin/rm" "bin/bgras" "bin/mknod" \
+		     "etc/sysconfig/bghealthmond" "etc/init.d/functions" "bin/cut" "sbin/consoletype" \
+		     "etc/init.d/bgsys" "bin/mkdir" "bin/ls" "usr/bin/tee" "bin/ln" "usr/sbin/lsof" \
+		     "bin/ping" ; do
+		cp $FILES $BGHEALTHMOND_DIR/$FILES
+	done
+
+	# Need sysinit so we know our BG_OSDIR
+	cp /bgfs/etc/sysconfig/sysinit $BGHEALTHMOND_DIR/etc/sysconfig/
+	
+	# Top needs /lib/terminfo to run properly.
+	cp -a /lib/terminfo $BGHEALTHMOND_DIR/lib
+ 
+	# This avoids error messages when mounting up /proc and /sys
+	touch $BGHEALTHMOND_DIR/etc/fstab
+
+	#for FILES in "top" "cat" "mount" "df" "ps" "wc" "grep" "tr" "date"  \
+	#	     "cut" "sleep" "rm" "echo" ; do
+	#	ln -s /bgfs/RHEL6/sbin/busybox /bgfs/RHEL6/sbin/$FILES
+	#done
+
+	#export LD_LIBRARY_PATH=/bgfs/RHEL6/lib64
+	#export PATH=/bgfs/RHEL6/bin:/bgfs/RHEL6/sbin:/bgfs/RHEL6/usr/bin:/bgfs/RHEL6/usr/sbin
+
+	# Need to make /bgsys available to verify the state of the NFS root.
+	if [ ! -d $BGHEALTHMOND_DIR/bgsys ] ; then
+		mkdir -p $BGHEALTHMOND_DIR/bgsys
+	fi
+	mount --bind /bgsys $BGHEALTHMOND_DIR/bgsys
+
+	# Need to run chrooted in the ramdisk so that we don't hang if nfsroot goes away.
+	exec chroot $BGHEALTHMOND_DIR /bin/bash -c /usr/sbin/bghealthmond.sh < /dev/console > /dev/console 2> /dev/console &        
+	sleep 1
+	if [ -e $BGHEALTHMOND_DIR/var/run/bghealthmond.pid ] ; then
+		RETVAL=0
+		touch $LOCKFILE 
+
+		# Copy the lock files so we have them at shutdown time.
+		if [ -e $BGHEALTHMOND_DIR/var/run/bghealthmond.pid ] ; then
+                	cp $BGHEALTHMOND_DIR/var/run/bghealthmond.pid /var/run/
+        	fi
+
+        	if [ -e $BGHEALTHMOND_DIR$LOCKFILE ] ; then
+                	touch $LOCKFILE
+        	fi
+
+		success
+
+	else
+		echo -n $"Startup of BG Node Health Monitor: "
+		RETVAL=1
+		failure
+	fi
+       	echo
+       	return ${RETVAL}
+		
+
+}
+
+function stop
+{
+    echo -n $"Stopping BG Node Health Monitor: "
+    killproc -p /var/run/bghealthmond.pid 
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ] ; then
+	rm -f $LOCKFILE
+    fi	
+    echo
+    return ${RETVAL}
+}
+
+function mystatus
+{
+    status -p /var/run/bghealthmond.pid bghealthmond.sh
+}
+
+function restart
+{
+    stop
+    start
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        mystatus
+        ;;
+    restart)
+        restart
+        ;;
+    try-restart)
+        mystatus >/dev/null 2>&1 || exit 0
+        restart
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|try-restart}"
+        exit 3
+        ;;
+esac
+
+exit $?
+
+
+

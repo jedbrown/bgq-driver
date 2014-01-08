@@ -1,0 +1,59 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2011, 2012                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+This README contains information about the Comm Application Agent.
+
+================================================================================
+
+Overview
+
+The Comm Agent is a program that runs on a thread on the 17th core of each node.
+It is automatically started along with the application executable.  Its purpose
+is to assist with communications (messaging) between nodes.  Specifically, the
+Comm Agent performs the following functions:
+
+1. Remote Get Pacing.  When messaging sends a large message to a far-away node,
+it may choose to pass the message to the Comm Agent for pacing.  The Comm Agent
+will break the message up into sub-messages and only allow a maximum number of
+sub-messages to be in the network from this node at one time.  This paces the
+amount of messaging traffic in the network, possibly reducing network congestion
+which may improve performance.
+
+2. One-sided Put Fence.  The Comm Agent is used during a fence operation to wait
+for one-sided puts to complete.
+
+The Comm Agent may be disabled (not started) by specifying environment variable
+BG_APPAGENTCOMM=DISABLE.  If the application does not use messaging, this may be
+specified to eliminate the Comm Agent's small memory footprint.  Even if the
+application uses messaging, this may be specified.  In that case, the application
+will continue to run with no remote get pacing.  However, if the application
+performs a fence operation, it may fail with an assertion because the Comm Agent
+is not running.
+
+================================================================================
+
+Default Configuration
+
+The Comm Agent has parameters that may be controlled using environment variables.
+Refer to the Application Development Guide for information about them.  The Comm
+Agent's environment variables begin with "COMMAGENT_".

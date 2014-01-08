@@ -1,0 +1,21 @@
+<span>
+    <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_rel_hideable">
+        <span title="Click to toggle" data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_rel_toggle_button">${label} in past</span>
+        <input style="width: 2em;" data-dojo-type="dijit.form.NumberTextBox" data-dojo-props="constraints: {min:1,max:65535,places:0}, placeHolder: '1'" data-dojo-attach-point="_count_dij" />
+        <select style="width: 7em;" data-dojo-type="dijit.form.Select" data-dojo-props="sortByLabel: false" data-dojo-attach-point="_unit_dij"></select>
+    </span>
+    <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_abs_hideable">
+        <span title="Click to toggle" data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_abs_toggle_button">${label} between</span>
+        <input style="width: 7em;" data-dojo-type="dijit.form.DateTextBox" data-dojo-attach-point="_start_date_dij" />
+        <input style="width: 6em;" data-dojo-type="dijit.form.TimeTextBox" data-dojo-attach-point="_start_time_dij" />
+        and
+        <input style="width: 7em;" data-dojo-type="dijit.form.DateTextBox" data-dojo-attach-point="_end_date_dij" />
+        <input style="width: 6em;" data-dojo-type="dijit.form.TimeTextBox" data-dojo-attach-point="_end_time_dij" />
+    </span>
+    <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_recid_hideable">
+        <span title="Click to toggle" data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_recid_toggle_button">Records between</span>
+        <input style="text-align: right; width: 5em;" data-dojo-type="dijit.form.NumberTextBox" data-dojo-props="constraints: {min:1,places:0}, placeHolder: '1000'" data-dojo-attach-point="_recid_start_dij" />
+        and
+        <input style="text-align: right; width: 5em;" data-dojo-type="dijit.form.NumberTextBox" data-dojo-props="constraints: {min:1,places:0}, placeHolder: '2000'" data-dojo-attach-point="_recid_end_dij" />
+    </span>
+</span>

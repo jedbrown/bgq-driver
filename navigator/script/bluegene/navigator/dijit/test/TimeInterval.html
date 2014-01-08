@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<html>
+
+<head>
+
+<title>bluegene/navigator/dijit/TimeInterval Browser Tests</title>
+
+<script src="../../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+
+<script>
+
+
+g_b_navigator_dijit_TimeInterval = null;
+
+g_j_form_Form = null;
+
+
+require(
+[
+    "bluegene/navigator/dijit/TimeInterval",
+    "dojo/parser",
+    "dojo/ready",
+    "dijit/_base/manager",
+    "dijit/form/Form",
+    "doh/runner"
+],
+function(
+        b_navigator_dijit_TimeInterval,
+        d_parser,
+        d_ready,
+        j_manager,
+        j_form_Form,
+        doh
+    )
+{
+
+    
+g_b_navigator_dijit_TimeInterval = b_navigator_dijit_TimeInterval;
+
+g_j_form_Form = j_form_Form;
+
+
+var tests = [
+
+
+function has_name()
+{
+    // Can do .name to get the name.
+    doh.assertEqual( "started", j_manager.byId( "ti1" ).name );
+},
+
+function default_value_empty_string()
+{
+    // Can do .get( "value" ) when not set and get empty string.
+    doh.t( j_manager.byId( "ti1" ).get( "value" ) === "" );
+},
+
+function set_value()
+{
+    // Can .set( "value", "P1D" ) and set the value.
+    doh.assertEqual( "", j_manager.byId( "ti1" ).get( "value" ) );
+    j_manager.byId( "ti1" ).set( "value", "P1D" );
+    doh.assertEqual( "P1D", j_manager.byId( "ti1" ).get( "value" ) );
+},
+
+function set_value_null()
+{
+    // Can .set( "value", null ) and clears the value.
+    j_manager.byId( "ti1" ).set( "value", null );
+    doh.assertEqual( "", j_manager.byId( "ti1" ).get( "value" ) );
+},
+
+function initialize_value()
+{
+    // Can create with value='P1D' and the value is initialized.
+    doh.assertEqual( "P1D", j_manager.byId( "ti2" ).get( "value" ) );
+},
+
+function get_value_in_form() 
+{
+    // If get( "value" ) from form that the TimeInterval is in then the value for that name is the value.
+    doh.assertEqual( "P2D", j_manager.byId( "form1" ).get( "value" ).ti1 );
+},
+
+function get_value_form_not_set()
+{
+    // If get( "value" ) on form that the TimeInterval is in but no value set then value is "".
+    doh.assertEqual( "", j_manager.byId( "form1" ).get( "value" ).ti2 );
+},
+
+function set_value_form()
+{
+    // Can .set( "value", ... ) on the form and the TimeInterval gets set, too.
+    
+    j_manager.byId( "form1" ).set( "value", { ti2: "P3D" } );
+
+    doh.assertEqual( "P3D", j_manager.byId( "form1" ).get( "value" ).ti2 );
+}
+
+];
+
+
+var onLoad = function() {
+    doh.register( "bluegene/navigator/dijit/test/TimeIntervalHTML", tests );
+    doh.run();
+};
+
+
+d_ready( onLoad );
+
+
+} );
+
+
+</script>
+
+</head>
+
+<body>
+    <ul>
+        <li id="ti1" data-dojo-type="g_b_navigator_dijit_TimeInterval" data-dojo-props="name: 'started', label: 'Started'"></li>
+        <li id="ti2" data-dojo-type="g_b_navigator_dijit_TimeInterval" data-dojo-props="name: 'ti2', label: 'ti2', value: 'P1D'"></li>
+    </ul>
+
+    <div id="form1" data-dojo-type="g_j_form_Form">
+        <ul>
+            <li data-dojo-type="g_b_navigator_dijit_TimeInterval" data-dojo-props="name: 'ti1', label: 'ti1', value: 'P2D'"></li>
+            <li data-dojo-type="g_b_navigator_dijit_TimeInterval" data-dojo-props="name: 'ti2', label: 'ti2'"></li>
+        </ul>
+    </div>    
+</body>
+
+</html>

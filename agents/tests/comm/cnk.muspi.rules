@@ -1,0 +1,70 @@
+#
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2011, 2012                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+# rules for building CNK applications
+# 
+
+BASENAME = /bin/basename
+RM_F = /bin/rm -f
+
+TEST_INSTALL_DIR=$(patsubst $(BGQ_BUILD_DIR)/agents/tests/comm/%,$(BGQ_INSTALL_DIR)/agents/tests/comm/%,$(shell pwd))
+
+K_KFLAGS    =
+K_AFLAGS    =
+K_INCLUDES  = -I$(BGQ_INSTALL_DIR) \
+              -I$(BGQ_INSTALL_DIR)/spi/include/kernel/cnk \
+              -I$(BGQ_INSTALL_DIR)/agents/include/comm
+K_CPU_FLAGS = -m64 -g -O3
+K_LDMAP     = -Map $(basename $@).map
+
+K_LDFLAGS  = -Bstatic $(K_LDMAP)
+K_LDSCRIPT = --script $(K_LDS_NAME)
+
+K_CFLAGS = -Wall $(LISTING_OPTIONS) $(K_INCLUDES) -static -c
+K_CPPFLAGS = -Wall $(LISTING_OPTIONS) $(K_INCLUDES) -static -c
+
+K_LIBS =
+
+LOCAL_LIBS =  -lpthread
+
+SPI_DIR = $(BGQ_INSTALL_DIR)/spi/lib
+SPI_LIB = SPI -l SPI_cnk
+AGENT_LIBS = -L$(BGQ_INSTALL_DIR)/spi/lib -l SPI_cnk -lpthread -lrt
+%.o: %.c
+	@echo "gcc: "`$(BASENAME) $$PWD`"/"`$(BASENAME) $<`
+	$(SILENT)$(BGQ_CROSS_CC) $(K_CPU_FLAGS) $(K_KFLAGS) $(K_CFLAGS) $< -o $*.o
+
+%.o: %.cc
+	@echo "gcc: "`$(BASENAME) $$PWD`"/"`$(BASENAME) $<`
+	$(SILENT)$(BGQ_CROSS_CC) $(K_CPU_FLAGS) $(K_KFLAGS) $(K_CPPFLAGS) $< -o $*.o
+
+%.o:	%.S
+	@echo "gcc: "`$(BASENAME) $$PWD`"/"`$(BASENAME) $<`
+	$(SILENT)$(BGQ_CROSS_CC) $(K_CPU_FLAGS) $(K_KFLAGS) $(K_CFLAGS) $(K_AFLAGS) -Os $< -o $*.o
+
+%.elf:
+	@echo "Linking Executable $@ ..."
+	$(SILENT)$(BGQ_CROSS_CC) -o $@ $*.o -lpthread -static -L $(SPI_DIR) -l $(SPI_LIB) $(AGENT_LIBS)
+#	$(SILENT)$(BGQ_INSTALL_DIR)/cnk/tools/mkstandalone.pl -driver=$(BGQ_INSTALL_DIR) -exe=$@ -gcc=$(BGQ_CROSS_CC) -objdump=$(BGQ_CROSS_OBJDUMP) -o=$@.ldr.elf
+	$(SILENT)$(BGQ_CROSS_OBJDUMP)  -dfhl $@ > $*.objdump
+#	$(SILENT)$(BGQ_CROSS_READELF)  $@ > $*.readelf

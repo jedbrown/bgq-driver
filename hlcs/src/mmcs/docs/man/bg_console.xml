@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY product "bg_console">
+]>
+
+<refentry lang="en" id="bg_console">
+<refentryinfo>
+    <productname>&product;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>© Copyright IBM Corp. 2010, 2011</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+<refmeta>
+    <refentrytitle>&product;</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&product;</refname>
+    <refpurpose>Manual for bg_console </refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id="bg_console.synopsis">
+  <title>Synopsis</title>
+  <cmdsynopsis><command>bg_console [-hewvr] [ OPTIONS ] </command>
+  </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id="bg_console.options">
+    <title>Arguments</title>
+    <para>Accepted arguments:</para>
+    <variablelist>
+        <varlistentry>
+            <term><option>--properties</option></term>
+            <listitem>
+            <para>The bg.properties configuration file to use.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>-h --help</option></term>
+            <listitem>
+            <para>usage </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>-v --verbose level</option></term>
+            <listitem>
+            <para>Set logging levels for the console loggers. </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--host portpair </option></term>
+            <listitem>
+            <para> port pair for connecting to mmcs_server, 
+              defaults to 127.0.0.1:32031
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>-w --waitforserver </option></term>
+            <listitem>
+            <para> 
+	      Wait for mmcs_server if it's not already started.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>-r --auto-reconnect true|false </option></term>
+            <listitem>
+            <para> 
+	      Automatically reconnect to mmcs_server if it is restarted.  Defaults to true.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>-v --version </option></term>
+            <listitem>
+            <para> 
+	      Display version information.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>-e --eof-exit </option></term>
+            <listitem>
+            <para> 
+	      Terminate after reading a script.
+	    </para>
+            </listitem>
+        </varlistentry>
+
+    </variablelist>
+
+</refsect1>
+
+<refsect1 id="bg_console.description">
+    <title>Description</title>
+    <para>bg_console is the BlueGene/Q administrative console.  It interfaces with the 
+BlueGene/Q control system components to perform a systems management tasks
+through a large number of internal and external commands.  Consult the bg_console
+help system for further details.</para>
+</refsect1>
+
+
+<refsect1 id="bg_console.seealso">
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>mmcs_server</refentrytitle>
+           <manvolnum>8</manvolnum>
+       </citerefentry>, <citerefentry>
+           <refentrytitle>runjob_server</refentrytitle>
+           <manvolnum>8</manvolnum>
+      </citerefentry>, <citerefentry>
+           <refentrytitle>bgws_server</refentrytitle>
+           <manvolnum>8</manvolnum>
+      </citerefentry>, <citerefentry>
+           <refentrytitle>realtime_server</refentrytitle>
+           <manvolnum>8</manvolnum>
+      </citerefentry>, <citerefentry>
+        <refentrytitle>bgmaster_server</refentrytitle>
+        <manvolnum>8</manvolnum>
+      </citerefentry>
+    </para>
+</refsect1>
+
+</refentry>

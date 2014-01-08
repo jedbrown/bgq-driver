@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY product "alias_wait">
+]>
+
+<refentry lang="en" id="alias_wait">
+<refentryinfo>
+    <productname>&product;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>© Copyright IBM Corp. 2010, 2011</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+<refmeta>
+    <refentrytitle>&product;</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&product;</refname>
+    <refpurpose>Manual for BGmaster alias_wait command</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id="alias_wait.synopsis">
+    <title>Synopsis</title>
+    <cmdsynopsis><command>alias_wait [alias] [ OTIONS ]</command>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id="alias_wait.options">
+    <title>Arguments</title>
+    <para>Accepted arguments:</para>
+    <variablelist>
+        <varlistentry>
+            <term><option>--timeout</option></term>
+            <listitem>
+            <para>Optionally specify the number of seconds to wait.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--properties</option></term>
+            <listitem>
+            <para>The bg.properties configuration file to use.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--help</option></term>
+            <listitem>
+            <para>usage </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--host host:port</option></term>
+            <listitem>
+            <para>TCP host and port pair to use to connect to bgmaster_server </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--verbose verbosity</option></term>
+            <listitem>
+            <para>Add program trace information.  Levels of verbosity are TRACE, DEBUG, INFO, WARN, ERROR, FATAL. </para>
+            </listitem>
+        </varlistentry>
+
+    </variablelist>
+</refsect1>
+
+<refsect1 id="alias_wait.description">
+    <title>Description</title>
+    <para> Waits for a binary associated with the specified alias to become active.  This
+is a blocking wait with an optional timeout. </para>
+</refsect1>
+
+
+<refsect1 id="alias_wait.seealso">
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>master_start</refentrytitle>
+           <manvolnum>8</manvolnum>
+       </citerefentry>, <citerefentry>
+           <refentrytitle>binary_status</refentrytitle>
+           <manvolnum>8</manvolnum>
+	</citerefentry>
+    </para>
+</refsect1>
+
+</refentry>

@@ -1,0 +1,64 @@
+
+-- Now how about diagnostics:
+
+WITH
+
+blocksInUse( blockId, state) AS (
+
+SELECT b.blockId,
+       CASE
+           WHEN d.blockId IS NOT NULL THEN 4
+           WHEN j.blockId IS NOT NULL THEN 3
+           WHEN b.status = 'I' THEN 2
+           ELSE 1 END
+         AS state
+  FROM bgqBlock AS b
+       LEFT OUTER JOIN
+       ( SELECT DISTINCT blockId
+           FROM bgqJob
+           WHERE status IN ( 'R', 'D' )
+       ) AS j
+       ON b.blockId = j.blockId
+       LEFT OUTER JOIN
+       ( SELECT blockId
+           FROM bgqDiagBlocks
+           WHERE endTime IS NULL
+       )  AS d
+       ON b.blockId = d.blockId
+  WHERE b.status <> 'F'
+
+),
+
+sbUsage( mp_location, nodeCardPos, state ) AS (
+  SELECT sb.posInMachine AS mp_location, sb.nodeCardPos, b.state AS state
+    FROM blocksInUse AS b JOIN bgqSmallBlock AS sb ON b.blockId = sb.blockId
+),
+
+lbUsage( mp_location, state ) AS (
+  SELECT bm.bpid mp_location, b.state AS state
+    FROM blocksInUse AS b JOIN bgqBpBlockMap AS bm on b.blockId = bm.blockId
+)
+
+SELECT TRIM(mp_location) AS mp_location, CAST( NULL AS CHAR(1) ) AS nodeCardPos, state
+  FROM lbUsage
+UNION ALL
+SELECT TRIM(mp_location) AS mp_location, nodeCardPos, state
+  FROM sbUsage
+UNION ALL
+SELECT location AS mp_location, CAST( NULL AS CHAR(1) ) AS nodeCardPos, 5 AS state
+  FROM bgqServiceAction
+  WHERE location LIKE 'R__-M_' AND
+        (status = 'A' OR status = 'P')
+UNION ALL
+SELECT SUBSTR( location, 1, 6 ) AS mp_location, SUBSTR( location, 8, 3 ) AS nodeCardPos, 5 AS state
+  FROM bgqServiceAction
+  WHERE location LIKE 'R__-M_-N__' AND
+        (status = 'A' OR status = 'P')
+UNION ALL
+SELECT TRIM(location) AS mp_location, CAST( NULL AS CHAR(1) ) AS nodeCardPos, 6 AS state
+  FROM bgqMidplane
+  WHERE status <> 'A'
+UNION ALL
+SELECT TRIM(midplanePos) AS mp_location, position AS nodeCardPos, 6 AS state
+  FROM bgqNodeCard
+  WHERE status <> 'A'

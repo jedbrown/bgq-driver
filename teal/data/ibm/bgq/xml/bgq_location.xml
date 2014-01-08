@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<cluster ver="1.0"
+    xmlns="http://www.ibm.com/teal" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:schemaLocation="http://www.ibm.com/teal ../../../../xml/location.xsd ">
+  
+    <location id="A" type="application" separator="##">
+        <simple>
+            <component type="node"/>            
+            <component type="application"/>
+            <component type="pid"/>
+            <component type="identifier"/>
+        </simple>
+    </location>
+
+    <location id="J" type="job" separator="##">
+        <simple>
+            <component type="jobid"/>            
+            <component type="block"/>
+        </simple>
+    </location>
+
+    <location id="C" type="compute" separator="-">
+        <complex>
+            <!-- Level 1 -->
+            <component type="rack" id="R" pattern="[0-9A-V][0-9A-V]">
+                <compref ref="bulkPower"/>
+                <compref ref="midplane"/>
+                <compref ref="clockCard"/>
+                <compref ref="ioDrawer"/>
+                <compref ref="coolantMonitor"/>
+            </component>
+            
+            <!-- Level 2 -->
+            <component type="bulkPower" id="B" pattern="[0-3]">
+                <compref ref="powerModule"/>
+            </component>
+            
+            <component type="midplane" id="M" pattern="[0-1]">
+                <compref ref="nodeBoard"/>
+                <compref ref="serviceCard"/>
+            </component>
+                        
+            <component type="clockCard" id="K"/>
+            
+            <component type="ioDrawer" id="I" pattern="[C-F]">
+                <compref ref="ioComputeCard"/>
+                <compref ref="ioOpticalModule"/>
+                <compref ref="fanAssembly"/>
+                <compref ref="pciCard"/>
+                <compref ref="ioLinkModule"/>
+                <compref ref="ioDcaModule"/>
+            </component>
+            
+            <component type="coolantMonitor" id="L"/>
+            
+            <!-- Level 3 -->
+            <component type="powerModule" id="P" pattern="[0-8]"/>
+            
+            <component type="nodeBoard" id="N" pattern="0[0-9]|1[0-5]">
+                <compref ref="computeCard"/>
+                <compref ref="linkModule"/>
+                <compref ref="dcaModule"/>
+                <compref ref="opticalModule"/>
+            </component>
+            
+            <component type="serviceCard" id="S"/>
+            
+            <component type="fanAssembly" id="H" pattern="[0-2]">
+                <compref ref="fan"/>
+            </component>
+            
+            <component type="pciCard" id="A" pattern="[0-7]"/>
+
+            <component type="ioComputeCard" id="J" pattern="[0-2][0-9]|3[0-1]">
+                <compref ref="ioCore"/>
+            </component>
+            
+            <component type="ioLinkModule" id="U" pattern="0[0-8]"/>
+            <component type="ioDcaModule" id="D" pattern="[0-1]"/>
+            <component type="ioOpticalModule" id="O" pattern="[0-2][0-9]|3[0-5]"/>
+            
+            <!-- Level 4 -->
+            <component type="computeCard" id="J" pattern="[0-2][0-9]|3[0-1]">
+                <compref ref="core"/>
+            </component>
+            
+            <component type="linkModule" id="U" pattern="0[0-8]"/>
+            <component type="dcaModule" id="D" pattern="[0-1]"/>
+            <component type="opticalModule" id="O" pattern="[0-2][0-9]|3[0-5]"/>
+            <component type="fan" id="F" pattern="[0-1]"/>
+
+            <component type="ioCore" id="C" pattern="0[0-9]|1[0-6]"/>
+            
+            <!-- Level 5 -->
+            <component type="core" id="C" pattern="0[0-9]|1[0-6]"/>
+        </complex>
+    </location>
+    
+    <location type="io" id="I" separator="-">
+        <complex>
+            <component type="rack" id="Q" pattern="[0-9A-V][0-9A-V]">
+                <compref ref="bulkPower"/>
+                <compref ref="clockCard"/>
+                <compref ref="ioDrawer"/>
+            </component>
+
+            <!-- Level 2 -->
+            <component type="bulkPower" id="B">
+                <compref ref="powerModule"/>
+            </component>
+            <component type="clockCard" id="K" pattern="[0-1]"/>
+            
+            <component type="ioDrawer" id="I" pattern="[0-9A-B]">
+                <compref ref="computeCard"/>
+                <compref ref="opticalModule"/>
+                <compref ref="linkModule"/>
+                <compref ref="fanAssembly"/>
+                <compref ref="pciCard"/>
+                <compref ref="dcaModule"/>
+            </component>
+                        
+            <!-- Level 3 -->
+            <component type="powerModule" id="P" pattern="[0-5]"/>
+            
+            <component type="computeCard" id="J" pattern="0[0-7]">
+                <compref ref="core"/>
+            </component>
+            
+            <component type="linkModule" id="U" pattern="0[0-5]"/>
+            <component type="dcaModule" id="D" pattern="0"/>
+            <component type="opticalModule" id="O" pattern="[0-2][0-9]|3[0-5]"/>
+
+            <component type="fanAssembly" id="H" pattern="[0-2]">
+                <compref ref="fan"/>
+            </component>
+                        
+            <component type="pciCard" id="A" pattern="[0-7]"/>
+                        
+            <!-- Level 4 -->
+            <component type="core" id="C" pattern="0[0-9]|1[0-6]"/>
+            <component type="fan" id="F" pattern="[0-1]"/>
+            
+        </complex>
+    </location>
+
+</cluster>

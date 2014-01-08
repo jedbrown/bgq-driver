@@ -1,0 +1,243 @@
+#!/bin/bash -e
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp.  2010, 2012                              
+# US Government Users Restricted Rights - Use, duplication or      
+#   disclosure restricted by GSA ADP Schedule Contract with IBM    
+#   Corp.                                                          
+#                                                                  
+# This software is available to you under the Eclipse Public       
+# License (EPL).                                                   
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+declare -i SIZE
+
+MIDPLANE=R00-M0
+BOARD=N00
+SIZE=32
+FLOOR=/bgsys/drivers/ppcfloor
+IODRAWER=
+STOCK_FILE=
+
+while [ z"$1" != z ] ; do
+
+  case $1 in
+  
+    --midplane) shift;
+       MIDPLANE=$1;
+       ;;
+
+    --board) shift;
+       BOARD=$1;
+       ;;
+
+    --size) shift;
+       SIZE=$1;
+       ;;
+
+
+    --iodrawer) shift;
+       IODRAWER=$1;
+       ;;
+
+    --fromstock) STOCK_FILE=${FLOOR}/ctrlnet/include/boot/bqc_hss.xml.stock.pass3_megtron;
+       ;;
+
+      # The --floor option is undocumented.  It is useful and interesting for developers
+      # but not useful in production scenarios.
+
+    --update) shift;
+       STOCK_FILE=$1;
+       ;;
+
+    --floor) shift;
+       FLOOR=$1;
+       ;;
+
+    --Help) echo;
+       cat <<EOF
+This utility may be used to calibrate HSS settings for DD1 hardware.  It is not necessary or
+even useful on DD2 systems.
+
+This calibrate utility requires write access to the current directory and also write access
+to /bgsys/local/etc/.  While not technically required, it is typically run by user bgqadmin.
+
+
+
+Usage Scenario 1: Compute Node Replacement
+-------------------------------------------
+
+After a compute node is replaced, you must recalibrate that node.  The simplest way to do
+that is to recalibrate the entire node board containing the replaced node.  For example,
+if you replaced R10-M0-N14-J23, you could do this:
+
+    /bgsys/drivers/ppcfloor/firmware/tests/hss_rx_cal/calibrate --midplane R10-M0 --board N14
+
+The utility will produce a new calibration XML file and prompt you to backup and replace the
+existing file.
+
+
+Usage Scenario 2: I/O Node Replacement
+--------------------------------------
+
+This is similar to the Compute Node Replacement scenario, above, except that you will calibrate
+the I/O drawer containing the replaced node.  For example, if you replaced R10-IF-J03, you
+would do this:
+
+    /bgsys/drivers/ppcfloor/firmware/tests/hss_rx_cal/calibrate --iodrawer R10-IF
+
+
+Usage Scenario 3: Calibration from Stock
+----------------------------------------
+
+<TBD>
+
+
+EOF
+       exit 0;
+       ;;
+
+    *) echo ;
+       cat <<EOF
+Usage: calibrate [--midplane Rxx-Mx] [--board Nxx] [--iodrawer Qxx-Ix] [--size N]
+
+    --midplane Rxx-Mx : specifies the midplane being calibrated.  The default
+        is R00-M0.
+
+    --board Nxx : specifies the node board being calibrated.  The default is
+        N00.
+
+    --size N : specifies the number of nodes being calibrated.  Legal sizes are
+        32, 64, 128, 256, 512.  The default is 32.
+
+    --iodrawer Qxx-Ix : specifies the IO drawer to be calibrated.  When this option
+        is used, the --midplane, --board and --size arguments are ignored.  All
+        eight nodes in the drawer are always calibrated.
+
+    --help : Provide this help text.
+
+    --Help : Provide detailed instructions on how to use this utility.
+
+    NOTE: the midplane/board/size specifications must describe the origin of a 
+        legal block.  For example, it is not legal to specified board N01 and a
+        size of 64, since such a block is not legal.
+
+EOF
+       exit;
+       ;;
+  
+  esac
+
+  shift;
+
+done
+
+
+TIMESTAMP=`date "+%Y_%m_%d_%H_%M_%S"`
+HERE=`pwd`
+
+echo ''
+echo '+----------------------------------------+'
+echo '| Blue Gene Q HSS Calibration Program.   |'
+echo '| (C) Copyright IBM Corp., 2007, 2011    |'
+echo '+----------------------------------------+'
+echo ''
+
+
+mkdir calibrate_$TIMESTAMP
+cd calibrate_$TIMESTAMP
+
+
+echo 'Note: intermediate results are in '`pwd`'.'
+
+WAIT=1
+
+if [ z${IODRAWER} == z ] ; then 
+
+  case $SIZE in
+     32) GENBLOCK='gen_small_block calibrate_'$TIMESTAMP' '$MIDPLANE' '$SIZE' '$BOARD;
+         ;;
+     64) GENBLOCK='gen_small_block calibrate_'$TIMESTAMP' '$MIDPLANE' '$SIZE' '$BOARD;
+         ;;
+    128) GENBLOCK='gen_small_block calibrate_'$TIMESTAMP' '$MIDPLANE' '$SIZE' '$BOARD;
+         ;;
+    256) GENBLOCK='gen_small_block calibrate_'$TIMESTAMP' '$MIDPLANE' '$SIZE' '$BOARD;
+         ;;
+
+    512) GENBLOCK='gen_block calibrate_'$TIMESTAMP' '$MIDPLANE;
+         WAIT=2;
+         ;;
+
+    *) echo 'Illegal size: '$SIZE;
+       exit -1;
+       ;;
+
+  esac
+
+  TEMPLATE=calibrate.cn.script
+else
+  SIZE=8;
+  GENBLOCK='gen_io_block calibrate_'$TIMESTAMP' '$IODRAWER' '$SIZE
+  TEMPLATE=calibrate.ion.script
+fi
+
+grep -v '^#' ${FLOOR}/firmware/tests/hss_rx_cal/${TEMPLATE} |
+    sed -e "s|xGENBLOCKx|$GENBLOCK|g" \
+    -e "s|xBLOCKx|calibrate_$TIMESTAMP|g" \
+    -e "s|xMIDPLANEx|$MIDPLANE|g" \
+    -e "s|xSIZEx|$SIZE|g" \
+    -e "s|xBOARDx|$BOARD|g" \
+    -e "s|xFLOORx|$FLOOR|g" \
+    -e "s|xWAITx|$WAIT|g" \
+     > calibrate.script
+
+
+echo  -n 'Collecting calibration data.  This will take approximately '$WAIT' minute(s). ... '
+${FLOOR}/bin/bg_console < calibrate.script > calibrate.log 2>&1
+echo ''
+
+
+
+BQC_HSS_FILE=`grep '^BqcHssFile' /bgsys/local/etc/bg.properties | sed -e 's| [ ]*||g' | awk -F'=' '{print $2}'`
+
+if [ z${STOCK_FILE} == z ] ; then 
+    BASE_FILE=${BQC_HSS_FILE}
+else 
+    BASE_FILE=${STOCK_FILE}
+fi
+
+echo 'Creating calibration file based on '${BASE_FILE}'.'
+
+
+${FLOOR}/scantools/bin/updateHssXml \
+  --calibration calibrate.log \
+  --mmcs \
+  --file ${BASE_FILE} \
+  --noturbo \
+  --longkeys \
+  > new.xml
+#  > ${EXISTING_FILE}.${TIMESTAMP}
+
+
+if [ $? -eq 0 ] ; then
+  read -p "Update calibration file ($BQC_HSS_FILE) (y|n) : " ANSWER
+  if [ z${ANSWER} == "zy" ] ; then
+    cp ${BQC_HSS_FILE}  ${BQC_HSS_FILE}.bak.${TIMESTAMP}
+    cp new.xml ${BQC_HSS_FILE} 
+    echo 'Done!'
+  fi
+fi
+
+
+
+
+

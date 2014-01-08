@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY product "bgagentd">
+]>
+
+<refentry lang="en" id="bgagentd">
+<refentryinfo>
+    <productname>&product;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>© Copyright IBM Corp. 2010, 2011</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+<refmeta>
+    <refentrytitle>&product;</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&product;</refname>
+    <refpurpose>Manual for BGmaster bgagentd </refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id="bgagentd.synopsis">
+    <title>Synopsis</title>
+    <cmdsynopsis><command> 
+	bgagentd [ OPTIONS ]
+      </command>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id="bgagentd.options">
+    <title>Arguments</title>
+    <para>Accepted arguments:</para>
+    <variablelist>
+        <varlistentry>
+            <term><option>--properties</option></term>
+            <listitem>
+            <para>The bg.properties configuration file to use.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--logdir</option></term>
+            <listitem>
+            <para>The directory to which bgagentd should send its log file. </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--host</option></term>
+            <listitem>
+            <para>Specify comma separated host:port pairs to connect to bgmaster_server. </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--debug</option></term>
+            <listitem>
+            <para>Debug mode sends log output to the console and runs bgagentd as a foreground 
+	      process. </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--users</option></term>
+            <listitem>
+            <para>List of user IDs to which bgagentd is permitted to switch.  Specify "root" to
+	      disallow user ID switching.  This parameter is usually set in the bgagent init script.  
+	      The requested user ID is set in bg.properties under the [agent] section as agentuid=
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--help</option></term>
+            <listitem>
+            <para>usage </para>
+            </listitem>
+        </varlistentry>
+
+    </variablelist>
+
+</refsect1>
+
+<refsect1 id="bgagentd.description">
+    <title>Description</title>
+    <para>bgagentd is the BGmaster system's process watcher.  
+      bgagentd operates solely on instructions from bgmaster_server.  
+      bgagentd should be started from the bgagent init script at system startup time and
+      allowed to run continuously in the background.</para>
+</refsect1>
+
+
+<refsect1 id="bgagentd.seealso">
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>bgmaster_server</refentrytitle>
+           <manvolnum>8</manvolnum>
+       </citerefentry>
+    </para>
+</refsect1>
+
+</refentry>

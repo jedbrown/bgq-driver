@@ -1,0 +1,6 @@
+
+Tips on jsdoc_toolkit-2.4.0-bg-0.patch:
+
+diff -u -r jsdoc_toolkit-2.4.0-orig jsdoc_toolkit-2.4.0 > jsdoc_toolkit-2.4.0-bg-0.patch
+
+patch -p0 <jsdoc_toolkit-2.4.0-bg-0.patch

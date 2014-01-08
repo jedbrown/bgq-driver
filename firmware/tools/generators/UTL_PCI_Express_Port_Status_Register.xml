@@ -1,0 +1,50 @@
+<register width="32" name="UTL Express Port Status Register" prefix="UTL_PCIEPSR_" 
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+ description="When an error occurs, the relevant bit is set by the hardware.  Software should write '1' to reset error indication; writing a '0' has no effect.">
+     <field bit="1" name="TPCP" 
+       description="TXPC array (outbound posted requests FIFO) parity error.  When set, indicates that a parity error was detected on the array's read port."
+       />
+     <field bit="2" name="TNPP" 
+       description="TXNP array (outbound non-posted requests FIFO) parity error.  When set, indicates that the parity error was detected on array's read port."
+       />
+     <field bit="3"  name="TFTP" 
+       description="TXFT array (output non-posted requests free tags FIFO) parity error.  When set, indicates that the parity error was detected on array's read port."
+       />
+     <field bit="4"  name="TCAP" 
+       description="TXCA array (transmit completions attributes array) parity error.  When set, indicates that the parity error was detected on array's read port."
+       />
+     <field bit="5"  name="TCIP" 
+       description="TXCIF array (transmit completions idications array) parity error.  When set, indicates that the parity error was detected on array's read port."
+       />
+     <field bit="6"  name="RCAP" 
+       description="RXCA array (receive completions attributes array) parity error.  When set, indicates that the parity error was detected on array's read port."
+       />
+     <field bit="8" name="PLUP" 
+       description="PCI Express LinkUp status.  When set, indicates that the PCI Express Link moved into the LinkUp state."
+       />
+     <field bit="9" name="PLDN" 
+       description="PCI Express LinkDown status.  When set, indicates that the PCI Express Link moved into the LinkDown state."
+       />
+     <field bit="10" name="OTDD" 
+       description="Outbound request discard status.  When set, indicates that the outbound request TLP was discarded."
+       />
+	   
+</register>

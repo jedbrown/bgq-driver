@@ -1,0 +1,30 @@
+<register width="64" name="INT_REG" prefix="DC_ARBITER_DCR" description="tbd">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <field bit="53" name="INV_PTY_STATE" description="Invalid parity state machine value "  category="fatal" />
+  <field bit="54" name="INV_MON_STATE" description="Invalid monitor state machine value "  category="fatal" />
+  <field bit="55" name="INV_ARB_STATE" description="Invalid arbiter state machine value "  category="fatal" />
+  <field bit="58" name="RING_NOT_CLEAN" description="Time out: a pending request or acknowlege still active at the end of an operation."  category="fatal" />
+  <field bit="59" name="NO_REQ_AFTER_ACK" description="Time out: request not removed after an acknowlege."  category="fatal" />
+  <field bit="60" name="NO_ACK_AFTER_REQ" description="Time out: no acknowlege after a request."  category="fatal" />
+  <field bit="61" name="NO_REQ_AFTER_GRT" description="Time out: no request after a grant."  category="fatal" />
+  <field bit="62" name="DATA_ERR" description="Data parity error."  category="fatal" />
+  <field bit="63" name="ADD_ERR" description="Address parity error."  category="fatal" />
+</register>

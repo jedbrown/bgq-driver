@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<html>
+
+<head>
+
+<title>dojo Browser Tests</title>
+
+<script src="../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+
+<script>
+
+
+require(
+[
+    "dojo/parser",
+    "dojo/ready",
+    "dijit/registry",
+    "dijit/form/Form",
+    "dijit/form/TextBox",
+    "doh/runner"
+],
+function(
+        d_parser,
+        d_ready,
+        j_registry,
+        j_form_Form,
+        j_form_TextBox,
+        doh
+    )
+{
+
+
+var tests = [
+
+function TextBox_default_value_is_empty_string() {
+    doh.t( j_registry.byId( "tb1" ).get( "value" ) === "" );
+},
+
+function TextBox_in_form_default_value_is_empty_string() {
+    doh.t( j_registry.byId( "form1" ).get( "value" ).tb1 === "" );
+}
+
+];
+
+
+d_ready( function() {
+    doh.register( "bluegene/test/dojoHTML", tests );
+    doh.run();
+} );
+
+
+} );
+
+</script>
+
+</head>
+
+<body>
+
+<input id="tb1" data-dojo-type="dijit.form.TextBox" />
+
+<div id="form1" data-dojo-type="dijit.form.Form">
+    <input name="tb1" data-dojo-type="dijit.form.TextBox" />
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,30 @@
+####################################
+%package ras
+
+Summary: RAS 
+Group: %{product_group}
+Release: 0
+
+%description ras
+%{bgq_package_description}
+
+This package contains RAS library.
+
+%files ras
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/ras
+%dir %{_base_dir}/ras/lib
+%dir %{_base_dir}/ras/include
+
+%{_base_dir}/ras/lib/libras.so.1
+%{_base_dir}/ras/lib/libras.so.1.0.0
+%{_base_dir}/ras/etc
+%{_base_dir}/ras/include/ras.xml
+%{_base_dir}/ras/ras
+
+
+
+

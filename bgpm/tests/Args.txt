@@ -1,0 +1,430 @@
+//# begin_generated_IBM_copyright_prolog                             
+//#                                                                  
+//# This is an automatically generated copyright prolog.             
+//# After initializing,  DO NOT MODIFY OR MOVE                       
+//# ================================================================ 
+//#                                                                  
+//# Licensed Materials - Property of IBM                             
+//#                                                                  
+//# Blue Gene/Q                                                      
+//#                                                                  
+//# (C) Copyright IBM Corp.  2012, 2012                              
+//#                                                                  
+//# US Government Users Restricted Rights -                          
+//# Use, duplication or disclosure restricted                        
+//# by GSA ADP Schedule Contract with IBM Corp.                      
+//#                                                                  
+//# This software is available to you under the                      
+//# Eclipse Public License (EPL).                                    
+//#                                                                  
+//# ================================================================ 
+//#                                                                  
+//# end_generated_IBM_copyright_prolog                               
+Make files and front end test submit tools should use common arguments
+Variations should be handled via environment variables.  
+
+   tstrun.sh used to target mmcslite runfctest.sh
+      runs directly out of driver sandbox and runfctest generated FCTest dirs.
+   bgqrun.sh used to target mmcs and bgq runjob 
+      copies FCTest dir to $RUNPATH (preset to /bgusr/<uid>) and runs from there. 
+ 
+ 
+common syntax: 
+make runjob block=R00-IC-J03  (for example - runfctest includes corner node)
+make bgqrun block=R00-IC-J03  (for example - use bgq runjob, block incls corner node)
+makefile provides runtime arguments and scope for the test.
+ 
+
+tstrun.sh and bgqrun.sh arguments:
+*run.sh <blockname> <exename> <exeargs>
+
+Processed Envvars: 
+  TIMEOUT
+  RUNOPTS  - runjob arguments besides --program, and --args
+  
+Transparent common envvars only used in target tests:
+  BG_SHAREDMEMSIZE
+  OMP_NUM_THREADS
+  MPIOPTS
+                                 
+ map to runfctest args  
+ 
+  runjob.sh *.elf                                    -> --program *.elf
+  --block <R00-IC>                              -> --location <R00-IC-J03>
+  --corner ${block}-${nodeid} --shape 1x1x1x1x1 
+
+BG/Q runjob     notes
+--exe   
+--args          multiple tokens instead of a single token enclosed with double quotation marks
+--envs          multiple tokens instead of a single token enclosed with double quotation marks
+--exp-env       multiple tokens instead of a single token enclosed with double quotation marks
+--env-all   
+--block     
+--mapping       ABCDET instead of XYZT permutation
+--np    
+--ranks-per-node or -p  Syntax has changed.
+--corner    
+--shape         Used for sub-block jobs instead of block creation
+--strace        --strace all is no longer supported
+--start-tool    use --tool-args to pass arguments
+--raise     
+--label     
+--timeout   
+--stdinrank     
+--socket        UNIX socket instead of TCP
+--tool-args     Arguments to a tool started with --start-tool.
+--verbose       Syntax differs noticeably. See logging.
+--properties 
+
+
+
+runfctest.sh args
+Usage: runfctest.sh
+
+
+  General Arguments:
+
+    [--help]
+       Prints this help message.
+
+    [--script script]
+        script can be runSim which is the default and runs the cycle simulator
+        runMambo which runs glibc/cnk version of mambo
+        runFpga which sets up files to run on the fpga
+        runMmcsLite which sets up files to run on hardware via MMCS-Lite
+        runHW which is not implemented
+
+
+    [--regres regres_id]
+        Run regression test number \"regres_id\"
+
+    [--noreport]
+        Do not report result of regression run to database.
+
+    [--norun]
+        create all the files, but don't run.
+
+    [--noobjdump]
+        Do not run objdump on the binaries. (saves time and space but may make debug harder)
+
+    [--notee]
+        do not pipe output through 'tee', permitting debug interaction.
+
+    [--loadleveler ]
+    [--llsubmit]
+        submit the job under loadleveler.
+
+    [--llclass cyclesim]
+        The LoadLeveler class that this job should run under.
+        The default is "cyclesim".
+        for twinstar jobs the possible class names are:
+          tstar_console     -- reserved for the fpga hw team
+          tstar_emergency   -- ultra hipriority jobs
+          tstar_hipri       -- high priority jobs (for test case debugging)
+          tstar_normal      -- normal (default) tstar priority
+          tstar_background  -- background, flood job priority
+          tstar_long        -- long class job runs on twinstar2
+
+
+    [--llmachine machinename]
+                the load leveler machine to run the job on (for fpga twinstar1 or twinstar2)
+    [--llnotify_user user-mail]
+                add a notify user mail address to load leveler notification
+
+    [--llwait]
+        use the -s option to wait for the job to complete before returning
+    [--location serverip:jtag]
+                The location for the job, e.g. bgqssn0:Q01-I0-J05 or bgqssn1:1206:Q01-I0-J05.
+
+    [--notify_user user-email]
+                add a notify user mail address.
+    [--llwall_clock_limit]
+        override the default wall clock limit for loadleveler (fpga) jobs.
+        limit is specified as [[hours:]minutes:]seconds
+
+    [--initialdir directory_name]
+        The initial directory that this script should run under.
+        This argument will not be used during normal usage of this script, it was added 
+        to work around a problem with LoadLeveler, LoadLeveler is not honoring 
+        the current working directory or it's "# @ initialdir =" parameter.
+        So this argument was added work around that limitation.
+
+    [--timelimit number_of_seconds]
+        timelimit specify the number of seconds to limit mambo simulation
+    [--bugpromote]
+            run the bugspray bugpromote program to promote the image name to the
+                bugspray server
+
+  Elfs to run, application arguments, service host configuration:
+    [--ttype [ newlib | fwext | fwddr | none | cnk]
+        test type to run, we have 4 basic flavors.
+        newlib -- which loads hwbooter+newlibkernel+programfile
+        fwext -- firmware extensions (load just the elf image and nothing else
+        fwddr -- ddr based firmware extension
+        none --  same as fwext..
+        cnk -- loads firmware+cnk+test+test.ld.elf
+        <default> f--  newlib
+
+    [--numcores number_of_cores_to_run_with]
+        numcores specify the number of cores to run with
+
+    [--numnodes number_of_nodes_to_run_with]
+        numnodes specify the number of nodes to run with
+
+    [--l2selctrl value]
+        value to load into the L2 slice selection control register
+
+    [--firmware firmware_elf_file]
+        firmware specify the firmware elf image to use
+
+    [--cnk cnk_elf_file]
+        specify the cnk file to use.
+
+        [--modelfile <modelfilenames> ] 
+                 mesa model file to use
+
+    [--memfs memfs_file_name]
+         Provide cnk memory file system image, defaults to cnkmemfs.elf in current directory
+
+    [--dd1]
+        use dd1 default model and dd1 runtime settings.
+
+    [--dd2]
+        use dd2 default model and dd1 runtime settings.
+    [--twinstarfloor <path>]
+        use the twinstar model in <path>
+    [--twinstartools <path>]
+        use twinstar tools in <path>
+    [--m2msmod]
+        override the model extension with m2msmod
+    [--m3msmod]
+        override the model extension with m3msmod
+    [--m2msopt]
+        override the model extension with m2msopt
+    [--m3msopt]
+        override the model extension with m2msopt
+
+
+    [--program program_file]
+       (elf program file file to load).  Currently this is loaded along with
+       a booter and a newlib based kernel.  Later this option will
+       go away and be replaced with whatever replaces the bl, cnk, cns, cna 
+       files we used on bgp.
+
+    [--svchost svchost_argument_file]
+        If specified, then the elf file personalities will be patched
+        according to the specifications within this file before 
+        the test case is executed.
+
+    [--nosvchost]
+        don-t use svchost to patch any files.
+
+    [--svchost_option option]
+        If specified, then the option will be passed to svc_host.  
+        The values of all --svchost_option parameters will be used.
+
+    [--env application_environment_file]
+        If specified, then \"application_environment_file\" is passed
+        as environment to svc_host to be patched into the personality
+
+    [--symbol symbol=type:value]
+        If specified, then the named symbol in the program file is edited to
+        the specified value.  The type identifies the type of symbol; currently
+        i32 (32-bit integer) and i64 (64-bit integer) is supported.
+
+    [--seedsymbol name]
+        If specified, indicates the name of the test's random seed symbol.
+        The symbol will be stuffed with the APPSEED value.  It must be a
+        32-bit integer.  This is useful for tests like grub which have
+        a built-in random seed.
+
+    [--extra comma_separated_list_of_svc_host_args]
+        Additional arguments to give to svc_host.
+        These additional arguments are applied after all other arguments,
+        and so can be used to override or add additional svc_host args.
+
+    [-- application_arguments]
+        All arguments after \"--\" are collected and treated as application 
+        arguments.  These are passed to svc_host for installation into
+        the application personality.
+
+        If the string \"APPSEED\" is included in this list it is replaced
+        with a randomly generated seed at each new execution of the 
+        of the runfctest.sh script, or (if set), with the value of 
+        argument \"--appseed\"
+
+        these arguments are also put int an in.argv file so that 
+        some runtime scripts can pay attention to them.
+
+    [--stage0]
+    [--stage1]
+        verification stage to default to...
+    [--nobugspray ]
+        turnoff bugspray by removing the libbsp module from the in.dll file.
+
+    [--unitsim]
+                unitsim setup...
+
+  Fine control over test directory location and name:
+
+    [--cwd  wd_path]
+       Change to directory \"wd_path\" to setup and execute
+       test.
+
+    [--root root_path]
+       If specified, then the directory in which the full chip
+       test is run will be created in this root directory,
+       otherwise it will be created in the current working directory.
+
+    [--fctestdir path]
+        synonyme for --root
+    [--noname]
+       Don\'t add test name to the FCTest directory name
+       (default name is determined from name of elf file to be run).
+
+    [--name test]
+       If specified, then use this name as the name of the test.
+      This argument overrides the default name for the test which
+       is taken from the name of the elf file to be run.
+
+    [--variant test_variant]
+       If specified, this string will be added to the name of the
+       test variant directory which will be created for the test.
+       It can be useful to distinguish different variants which
+       might be run.
+
+
+  Additional files to copy (mostly for cycle sim)
+
+    [--sim elf_or_sim_files ]
+        A comma separated (no spaces) list of elf or sim files
+        to load in addition to bootloader or cnk elfs.
+        These files are not patched with svc_host before loading.
+
+    [--copy file_list ]
+        A comma separated (no spaces) list of additional files 
+        to copy to the run directory, when it is setup.
+
+
+    [--parmstest test_parms_file]
+        If specified, then this file will be added as an
+        additional parms file to the runmesa.sh script. 
+        This is useful to override the default parms settings
+        provided in \"in.parms\".
+
+    [--tclfile tcl_file]
+        If specified, then this file will be added as an
+        additional parms file to the runmambo.sh script. 
+        This is useful to override the default parms settings
+        provided in \"mambo.tcl\".
+
+  Parameteres passed to cyclesim/runmesa.sh:
+
+    [--aetfile <aet_signal_file_base_name> ] 
+        file name to use for (no extension)
+    [--indfile <aet_signal_file_base_name> ] 
+        aet indirect file name
+    [--fullaet ] 
+        generate a full aet
+    [--noaet ] 
+        don't generate an aet 
+    [--aetindon <time>]
+       turn on aet indirect at time x
+    [--aeton <time>]
+       turn aet on at time
+    [--MHz1600]
+       default choice runs cyclesim clock at 1600 MHz
+    [--MHz1200]
+       sets extra facs parameters to run cyclesim at 1200 MHz
+    [--noexitcode]
+       suppresses the addition of returning the exitcode from RunTest.sh (e.g. Awan build)
+
+  Randomisation (mostly for cycle sim):
+
+    [--initrandom]
+        If set, then random signal initialisation is used for mesa model.
+
+    [--initseed seed]
+        Seed used to initialise random state for mesa model
+
+    [--fusionseed seed]
+        Seed used to initialise fusion master seed
+
+    [--appseed seed]
+        Seed to pass to application 
+        (replaces string APPSEED in application argv list specified with the 
+        \"--\" intro sequence)
+
+
+  Miscellaneous Arguments (mostly for cycle sim):
+
+    [--exec [no|sim|mambo|hw ]]
+        If sim, the testcase will be executed in cyclesim using RunTest.sh
+        If mambo, the testcase will be executed in mambo using RunMambo.sh
+        If hw, the testcase will be executed in hardware using RunHW.sh
+        For any other argument, the testcase directory is created, but no test is run.
+
+    [--example-svchost]
+        Creates a file: \"example.svchost\" in current directory.
+        This provides a template svc_host input for personality configuration.
+
+    [--example-parmstest]
+        Creates a file: \"example.parms\" in current directory.
+        This provides a template file with which to override \"in.parms\".
+        
+    [--post-process script]
+        Runs a script on the output from the cycle-sim run.
+
+    [--aix-install-dir installdir]
+        Locaion of the install or floor directory for an aix build to copy files
+        for use with awan.  
+
+    [--mmcs-lite-script script]
+        Provides a script to be passed to MMCS Lite to control test loading and
+        execution.
+
+    [--ti-script script]
+        Provides a test interface script to be passed to MMCS Lite to control test loading and
+        execution (this is typically your *.ti.sh script)
+
+    [--bootsteps steps]
+        Specifies the MC server boot steps to be performed or NONE if the boot is to be
+        skipped altogether. Consult MMCS Lite help for addiitonal information and legal
+        values.
+
+    [--bootoptions options[,moreoptions]
+        Specifies the MC server boot options to be passed in, commaa separated
+
+    [--tolerate_faults]
+        Tolerate link training faults
+
+    [--computeTorus]
+        Configure the compute network as a torus.
+
+    [--ioTorus]
+        Configure the IO board's network as a torus.
+
+    [--printAllRas, --noPrintAllRas]
+        Configures MMCS Lite's default RAS listener.
+
+    [--no-default-listener]
+        Eliminates the MMCS Lite default RAS listener.
+
+    [--timestamps]
+        Incorporate timestamps into MMCS Lite output (printfs)
+        
+    [additionally, any valid argument to runmesa.sh can be provided also]
+    
+    
+    
+Some make file snippets:
+
+srchdirs := ./ ../ ../../ ../../../ ../../../../ ../../../../../ ../../../../../../ ../../../../../../../ ../../../../../../../../ ../../../../../../../../../ ../../../../../../../../../../ ../../../../../../../../../../../
+FindUpperFile = $(realpath $(firstword $(wildcard $(addsuffix $(1),$(srchdirs)))))
+dirs := $(call FindUpperFile,Make.gcc.rules)
+$(if $(dirs),, $(error ERROR: did not find indicated upper file)))
+
+
+
+    
+   

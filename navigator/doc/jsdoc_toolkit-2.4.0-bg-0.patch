@@ -1,0 +1,28 @@
+diff -u -r jsdoc_toolkit-2.4.0-orig/jsdoc-toolkit/templates/jsdoc/static/default.css jsdoc_toolkit-2.4.0/jsdoc-toolkit/templates/jsdoc/static/default.css
+--- jsdoc_toolkit-2.4.0-orig/jsdoc-toolkit/templates/jsdoc/static/default.css	2012-02-27 15:19:41.000000000 -0600
++++ jsdoc_toolkit-2.4.0/jsdoc-toolkit/templates/jsdoc/static/default.css	2012-02-27 15:26:48.000000000 -0600
+@@ -38,7 +38,7 @@
+ {
+ 	margin-top: 24px;
+ 	float: left;
+-	width: 160px;
++	width: 320px;
+ 	position: absolute;
+ 	left: 8px;
+ 	background-color: #F3F3F3;
+@@ -47,7 +47,7 @@
+ 
+ #content
+ {
+-	margin-left: 190px;
++	margin-left: 350px;
+ 	width: 600px;
+ }
+ 
+@@ -159,4 +159,4 @@
+ {
+ 	text-align: right;
+ 	font-size: 10px;
+-}
+\ No newline at end of file
++}

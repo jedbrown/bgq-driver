@@ -1,0 +1,923 @@
+0006640 0000038
+0006678 0000151
+0006829 0000107
+0006936 0000098
+0007034 0000093
+0007127 0000110
+0007237 0000138
+0007375 0000182
+0007557 0000040
+0007597 0000049
+0007646 0000195
+0007841 0000212
+0008053 0000171
+0008224 0000110
+0008334 0000127
+0008461 0000061
+0008522 0000067
+0008589 0000084
+0008673 0000155
+0008828 0000172
+0009000 0000216
+0009216 0000233
+0009449 0000055
+0009504 0000072
+0009576 0000181
+0009757 0000198
+0009955 0000035
+0009990 0000052
+0010042 0000057
+0010099 0000074
+0010173 0000131
+0010304 0000226
+0010530 0000271
+0010801 0000068
+0010869 0000045
+0010914 0000046
+0010960 0000049
+0011009 0000046
+0011055 0000057
+0011112 0000237
+0011349 0000061
+0011410 0000151
+0011561 0000151
+0011712 0000114
+0011826 0000040
+0011866 0000053
+0011919 0000035
+0011954 0000095
+0012049 0000063
+0012112 0000156
+0012268 0000074
+0012342 0000065
+0012407 0000073
+0012480 0000064
+0012544 0000081
+0012625 0000065
+0012690 0000074
+0012764 0000076
+0012840 0000177
+0013017 0000203
+0013220 0000128
+0013348 0000051
+0013399 0000035
+0013434 0000095
+0013529 0000040
+0013569 0000063
+0013632 0000052
+0013684 0000156
+0013840 0000156
+0013996 0000156
+0014152 0000073
+0014225 0000185
+0014410 0000042
+0014452 0000051
+0014503 0000053
+0014556 0000063
+0014619 0000051
+0014670 0000051
+0014721 0000053
+0014774 0000060
+0014834 0000282
+0015116 0000468
+0015584 0000217
+0015801 0000182
+0015983 0000198
+0016181 0000253
+0016434 0000250
+0016684 0000168
+0016852 0000170
+0017022 0000102
+0017124 0000045
+0017169 0000077
+0017246 0000046
+0017292 0000264
+0017556 0000321
+0017877 0000059
+0017936 0000298
+0018234 0000115
+0018349 0000048
+0018397 0000078
+0018475 0000246
+0018721 0000172
+0018893 0000261
+0019154 0000223
+0019377 0000074
+0019451 0000113
+0019564 0000081
+0019645 0000085
+0019730 0000060
+0019790 0000084
+0019874 0000216
+0020090 0000106
+0020196 0000068
+0020264 0000072
+0020336 0000102
+0020438 0000073
+0020511 0000112
+0020623 0000075
+0020698 0000077
+0020775 0000109
+0020884 0000080
+0020964 0000119
+0021083 0000075
+0021158 0000092
+0021250 0000075
+0021325 0000092
+0021417 0000059
+0021476 0000059
+0021535 0000059
+0021594 0000063
+0021657 0000059
+0021716 0000094
+0021810 0000068
+0021878 0000055
+0021933 0000076
+0022009 0000091
+0022100 0000083
+0022183 0000081
+0022264 0000083
+0022347 0000079
+0022426 0000092
+0022518 0000094
+0022612 0000111
+0022723 0000043
+0022766 0000032
+0022798 0000042
+0022840 0000041
+0022881 0000056
+0022937 0000063
+0023000 0000011
+0023011 0000086
+0023097 0000016
+0023113 0000045
+0023158 0000050
+0023208 0000057
+0023265 0000043
+0023308 0000050
+0023358 0000052
+0023410 0000059
+0023469 0000051
+0023520 0000058
+0023578 0000026
+0023604 0000048
+0023652 0000055
+0023707 0000029
+0023736 0000047
+0023783 0000046
+0023829 0000043
+0023872 0000043
+0023915 0000043
+0023958 0000042
+0024000 0000023
+0024023 0000052
+0024075 0000045
+0024120 0000032
+0024152 0000021
+0024173 0000045
+0024218 0000054
+0024272 0000055
+0024327 0000022
+0024349 0000071
+0024420 0000049
+0024469 0000062
+0024531 0000031
+0024562 0000041
+0024603 0000050
+0024653 0000050
+0024703 0000045
+0024748 0000034
+0024782 0000038
+0024820 0000044
+0024864 0000043
+0024907 0000043
+0024950 0000071
+0025021 0000038
+0025059 0000044
+0025103 0000044
+0025147 0000044
+0025191 0000044
+0025235 0000044
+0025279 0000044
+0025323 0000044
+0025367 0000070
+0025437 0000044
+0025481 0000072
+0025553 0000048
+0025601 0000039
+0025640 0000047
+0025687 0000093
+0025780 0000062
+0025842 0000062
+0025904 0000023
+0025927 0000281
+0026208 0000080
+0026288 0000138
+0026426 0000139
+0026565 0000143
+0026708 0000144
+0026852 0000137
+0026989 0000137
+0027126 0000139
+0027265 0000136
+0027401 0000131
+0027532 0000131
+0027663 0000138
+0027801 0000127
+0027928 0000131
+0028059 0000134
+0028193 0000127
+0028320 0000133
+0028453 0000136
+0028589 0000144
+0028733 0000159
+0028892 0000180
+0029072 0000161
+0029233 0000146
+0029379 0000147
+0029526 0000159
+0029685 0000123
+0029808 0000159
+0029967 0000334
+0030301 0000090
+0030391 0000173
+0030564 0000160
+0030724 0000150
+0030874 0000149
+0031023 0000149
+0031172 0000150
+0031322 0000146
+0031468 0000153
+0031621 0000150
+0031771 0000147
+0031918 0000162
+0032080 0000152
+0032232 0000143
+0032375 0000157
+0032532 0000142
+0032674 0000147
+0032821 0000158
+0032979 0000150
+0033129 0000144
+0033273 0000146
+0033419 0000146
+0033565 0000138
+0033703 0000090
+0033793 0000133
+0033926 0000122
+0034048 0000121
+0034169 0000160
+0034329 0000117
+0034446 0000116
+0034562 0000120
+0034682 0000117
+0034799 0000116
+0034915 0000120
+0035035 0000117
+0035152 0000116
+0035268 0000192
+0035460 0000133
+0035593 0000050
+0035643 0000046
+0035689 0000041
+0035730 0000040
+0035770 0000039
+0035809 0000248
+0036057 0000156
+0036213 0000098
+0036311 0000192
+0036503 0000097
+0036600 0000206
+0036806 0000095
+0036901 0000135
+0037036 0000122
+0037158 0000112
+0037270 0000133
+0037403 0000050
+0037453 0000046
+0037499 0000041
+0037540 0000040
+0037580 0000039
+0037619 0000248
+0037867 0000156
+0038023 0000098
+0038121 0000192
+0038313 0000097
+0038410 0000206
+0038616 0000095
+0038711 0000135
+0038846 0000122
+0038968 0000112
+0039080 0000072
+0039152 0000094
+0039246 0000112
+0039358 0000153
+0039511 0000261
+0039772 0000065
+0039837 0000064
+0039901 0000064
+0039965 0000065
+0040030 0000065
+0040095 0000064
+0040159 0000064
+0040223 0000065
+0040288 0000065
+0040353 0000064
+0040417 0000064
+0040481 0000065
+0040546 0000045
+0040591 0000046
+0040637 0000056
+0040693 0000055
+0040748 0000056
+0040804 0000055
+0040859 0000056
+0040915 0000055
+0040970 0000034
+0041004 0000027
+0041031 0000030
+0041061 0000033
+0041094 0000031
+0041125 0000030
+0041155 0000019
+0041174 0000018
+0041192 0000027
+0041219 0000019
+0041238 0000018
+0041256 0000027
+0041283 0000038
+0041321 0000040
+0041361 0000033
+0041394 0000036
+0041430 0000030
+0041460 0000027
+0041487 0000040
+0041527 0000129
+0041656 0000137
+0041793 0000136
+0041929 0000138
+0042067 0000131
+0042198 0000131
+0042329 0000142
+0042471 0000127
+0042598 0000131
+0042729 0000119
+0042848 0000127
+0042975 0000126
+0043101 0000128
+0043229 0000121
+0043350 0000121
+0043471 0000132
+0043603 0000117
+0043720 0000121
+0043841 0000162
+0044003 0000170
+0044173 0000169
+0044342 0000171
+0044513 0000164
+0044677 0000164
+0044841 0000175
+0045016 0000160
+0045176 0000164
+0045340 0000083
+0045423 0000074
+0045497 0000108
+0045605 0000088
+0045693 0000049
+0045742 0000051
+0045793 0000007
+0045800 0000018
+0045818 0000031
+0045849 0000031
+0045880 0000028
+0045908 0000037
+0045945 0000031
+0045976 0000033
+0046009 0000036
+0046045 0000032
+0046077 0000022
+0046099 0000029
+0046128 0000036
+0046164 0000026
+0046190 0000024
+0046214 0000032
+0046246 0000032
+0046278 0000025
+0046303 0000032
+0046335 0000035
+0046370 0000026
+0046396 0000035
+0046431 0000038
+0046469 0000031
+0046500 0000038
+0046538 0000038
+0046576 0000036
+0046612 0000020
+0000 Undefined event should not occur
+0001 A valid AXU (non-load/store) instruction has completed (past the last flush stage).
+in EX6 pipeline stage.
+-AXU uCode sub-operations are excluded
+0002 A valid AXU CR updater instruction has completed, past the last flush point.
+in EX6 in pipeline stage
+0003 No valid AXU instruction is in the last stage of the floating point unit.
+EX6 stage is empty
+0004 A Floating-Point Divide or Square Root sequence is in progress (incl single-precision).
+0005 Number of cycles a Floating-Point Divide or Square Root sequence is in progress (incl single-precision).
+0006 A B operand of a Floating Point instruction caused a Denormal Operand flush2ucode. Microcode prenormalization sequence will follow. 
+0007 A valid AXU ucode operation is committed past the last flush point. This does not include the original AXU instruction, but only the operations from the expanded ucode sequence
+0008 FP Exception - FX bit of the FPSCR
+0009 FP Enabled Exception - FEX bit of the FPSCR
+0010 A thread is waiting for a reload from the L2.
+-Not when cache inhibited.
+-Not when thread held off for a reload that another thread is waiting for.
+-Still counts even if flush has occurred.
+0011 Number of cycles a thread is waiting for a reload from the L2.
+-Not when cache inhibited.
+-Not when thread held off for a reload that another thread is waiting for.
+-Still counts even if flush has occurred.
+0012 Number of times a reload from the L2 is dropped, per thread
+-Not when cache inhibited
+-Does not count when not loading cache due to a back invalidate to that address
+0013 A ready thread is held off due to the L1 Cache being reloaded
+-Could occur on multiple threads per cycle
+0014 Number of cycles a ready thread is held off due to the L1 Cache being reloaded
+-Could occur on multiple threads per cycle
+0015 Cycles IU0 is flushed for any reason (XU, UC, BP, etc.)
+0016 IERAT Miss occurrence
+-Can only occur on one thread per cycle
+0017 Number of cycles ierat Miss occurrence
+-Can only occur on one thread per cycle
+0018 ICache read completes for instruction
+-Does not count if flushed before IU2
+-Counts whether cache hit or miss
+-Can only occur on one thread per cycle
+0019 Number of cycles icache read completes for instruction
+-Does not count if flushed before IU2
+-Counts whether cache hit or miss
+-Can only occur on one thread per cycle
+0020 Instructions fetched, divided by 4 (only counts every 4 instructions)
+-Uses a counter so fetches of 1, 2, or 3 instructions are not lost
+-Includes CI=0 or 1, hit or miss (any instruction that comes through IU2)
+0021 Number of cycles instructions fetched, divided by 4 (only counts every 4 instructions)
+-Uses a counter so fetches of 1, 2, or 3 instructions are not lost
+-Includes CI=0 or 1, hit or miss (any instruction that comes through IU2)
+0022 Back invalidate from L2
+-Per core, not per thread
+0023 Number of cycles back invalidate from L2
+-Per core, not per thread
+0024 Back invalidate from L2, and data was contained within the instruction cache.
+-Per core, not per thread
+-Does not count if hits cacheline for which we are waiting for a reload
+0025 Number of cycles back invalidate from L2, and data was contained within the instruction cache.
+-Per core, not per thread
+-Does not count if hits cacheline for which we are waiting for a reload
+0026 Instruction buffers are empty
+0027 Number of cycles instruction buffers are empty
+0028 Instruction buffer address range mismatch and flush
+0029 Number of cycles instruction buffer address range mismatch and flush
+0030 Register Dependency Stall
+-any stall due to dependencies between instructions (IU5 stage).
+-includes Issue Stage Stalls (IU6)
+0031 Instruction Issue Stall
+Each execution unig (XU or AXU) can receive one instruction from any of the 4 threads each cycle. This stall occurs while an instruction is ready, but another ready thread takes a turn (Stage IU6)
+0032 Stalled pending barrier op resolution (each uCoded instruction will also cause a barrier operation).
+-Caveot. The results from this event may be suspect: The barrier stall cycles include event from sync instruction, pls stall due to AIX and XU uCoded instructions. 
+0033 Stalled for MFSPR/MTSPR ops that move across the slow SPR bus.
+0034 Stalled for Read-After-Write dependency
+0035 Stalled for Write-After-Write dependency
+0036 Stalled for SYNC/ISYNC/TLBSYNC instructions
+0037 Stalled for SPR use or update dependency
+0038 Stalled for any AXU dependency (excludes IS2 stall)
+0039 Stalled for any FXU dependency (excludes IS2 stall)
+Caveat: AXU ucode Barrier stall cycles included, but XU uCode barrier stall cycles are not. Must subtract 2*PEVT_INST_QFPU_UCODE to get more accurate representation of FXU stalls.
+0040 Stalled for any AXU/FXU dependency (excludes IS2 stall)
+0041 AXU instruction that is valid in issue and another thread issues because it has priority (see IS2 Stall for combined AXU/FXU issue priority loss)
+0042 FXU instruction that is valid in issue and another thread issues because it has priority (see IS2 Stall for combined AXU/FXU issue priority loss)
+0043 FXU instructions issued per thread. AXU Issues is broken; Instead use axu issues = total issues - fxu issues
+0044 all instructions issued per thread
+0045 Cycles that any thread is running on the core. 
+0046 Number of Branches committed 
+0047 Number of mispredicted Branches committed (does not include target address mispredicted) 
+0048 Number of Branch Target addresses mispredicted committed 
+0049 Number of cycles that thread is in run state.
+only meaningful in BGPM_MODE_HWDISTRIB, since otherwise counters are stopped if SW thread is swapped out
+0050 Number of times the timebase has incremented (same as GetBaseTime())
+0051 Number of mfspr, mftb, mfmsr or mfcr instructions committed
+0052 Number of mtspr, mtmsr, mtcrf, wrtee, wrteei instructions committed
+0053 Between commit of waitrsv and wakeup by lost reservation. 
+0054 Number of cycles between commit of waitrsv and wakeup by lost reservation. 
+0055 Number of cycles the external interrupt signal is asserted 
+0056 Number of cycles the critical external interrupt signal is asserted 
+0057 Number of cycles the performance monitor interrupt signal is asserted 
+0058 Number of instructions committed. uCode sequences count as one instruction.
+- Similar to PEVT_INSTR_ALL except that it may be context sensitive. Includes AXU instructions.
+0059 Number of XU operations committed.
+-Includes every committed sub-operation of an XU uCode sequence.
+-Includes one committed operation per AXU uCode sequence;
+-Includes all XU committed instructions
+0060 Number of uCode instructions committed (includes QFPU ucode instructions committed). Does not include uCode sub-operations
+0061 Number of cycles flush is asserted to the IU 
+0062 Number of Branches committed 
+0063 Number of mispredicted Branches committed (does not include target address mispredicted) 
+0064 Number of taken branches committed
+0065 Number of Branch Target addresses mispredicted committed 
+0066 Number of Multiply/Divide resource collisions 
+0067 Count number of cycles the interrupt signal into the processor is asserted before the completion logic redirects program flow to the interrupt vector 
+0068 Count number of cycles the interrupt signal into the processor is asserted before the completion logic redirects program flow to the interrupt vector 
+0069 Count number of cycles the interrupt signal into the processor is asserted before the completion logic redirects program flow to the interrupt vector 
+0070 Number of PPC instruction commits while any thread is in run state 
+0071 Number of external, critical external, or performance mintor interrupt taken across all threads.
+Does not count more than one per cycle, although up to 4 can occur simultaneously.
+0072 Number of external interrupts taken 
+0073 Number of critical external interrupts taken 
+0074 Number of performance monitor interrupts taken 
+0075 Number of doorbell or doorbell critical interrupts taken 
+0076 Number of failing stwcx./stdcx. instructions 
+0077 Number of failing icswx/icswepx instructions 
+0078 Number of icswx/icswepx instructions committed 
+0079 Number of cycles the multiplier or divider is in use. 
+0080 Number of completed store commands.
+-Microcoded instructions will count more than once.
+-Does not count syncs,tlb ops,dcbz,icswx, or data cache management instructions.
+-Includes stcx, but does not wait for stcx complete response from the L2.
+-Includes cache-inhibited stores.
+0081 Number of completed store commands that missed the L1 Data Cache. Note that store misses are pipelined and write through to the L2, so the store time typically has less impact on performance than load misses.
+-Microcoded instructions may be counted more than once.
+-Does not count syncs,tlb ops,dcbz,icswx, or data cache management instructions.
+-Includes stcx, but does not wait for stcx complete response from the L2.
+-Does not includes cache-inhibited stores.
+0082 Number of completed load commands that missed the L1 Data Cache.
+-Microcoded instructions may be counted more than once.
+-Does not count dcbt[st][ls][ep].
+-Include larx.
+-Does not includes cache-inhibited loads.
+0083 Number of completed cache-inhibited load commands.
+-Microcoded instructions may be counted more than once.
+-Does not count dcbt[st][ls][ep].
+-Does not includes cacheable loads.
+0084 Number of completed cache-able load commands.
+-Microcoded instructions may be counted more than once.
+-Does not count dcbt[st][ls][ep].
+-Include larx.
+-Does not includes cache-inhibited loads.
+0085 Number of completed dcbt[st][ls][ep] commands that missed the L1 Data Cache.
+-Does not include touch ops that were dropped due to the following:
+1) Unsupported TH(CT) fields.
+2) Translated to cache-inhibited.
+3) Exception detected on dcbt[st][ep].
+0086 Number of completed dcbt[st][ls][ep] commands that hit the L1 Data Cache.
+-Does not include touch ops that were dropped due to the following:
+1) Unsupported TH(CT) fields.
+2) Translated to cache-inhibited.
+3) Exception detected on dcbt[st][ep].
+0087 Number of completed AXU loads. AXU refers to the unit attached on the AXU interface (i.e a floating point unit).
+-Cacheable and cache-inhibited loads are counted.
+0088 Number of completed AXU stores. AXU refers to the unit attached on the AXU interface (i.e a floating point unit).
+-Cacheable and cache-inhibited stores are counted.
+0089 Number of completed STCX instructions. Does not wait for the stcx complete response from the L2.
+0090 Number of completed WCLR instructions. 
+0091 Number of completed WCLR instructions that set the Watchlost indicator.
+0092 Number of completed LDAWX instructions. 
+0093 Number of flushes due to an unsupported alignment.
+-This is a speculative count.
+-Includes speculative flushes to microcode.
+-Includes speculative flushes to the alignment interrupt due to
+unaligned larx,stcx,icswx,ldawx or XUCR0[FLSTA]=1 or XUCR0[AFLSTA]=1.
+0094 Number of flushes due to a resource conflict on a reload.
+1)Cache-Inhibited Reload colliding with store,icswx,mftgpr,mffgpr, mtdp,mfdp instructions valid in EX2 pipe stage.
+2)Cache-Inhibited Reload targeting AXU colliding with AXU load instruction.
+3)1st half of Cacheable Reload colliding with dcbt[st]ls or ldawx.
+0095 Number of completed LDAWX which set CR=001||XER[SO]. 
+0096 Number of flushes due to a thread setting/clearing cacheline directory contents (i.e. valid,lock,thread watch bits) and different thread
+accesses same cacheline. Also, count of non-committed WCLR L[0]=0 in pipe and different thread has a directory access in EX3.
+-This is a speculative count.
+0097 Number of flushes due to a RAW/WAW hazard detected against the Load Miss Queue.
+-This is a speculative count.
+0098 Number of completed WCHKALL instructions. 
+0099 Number of completed WCHKALL instructions that returned CR=000||XER[SO]. 
+0100 Number of flushes due to the Load Miss Queue being full. Load Miss Queue Full is determined when all 8 entries are in use and new load
+miss is flushed. Also, count of load miss command sequence wrapped flushes.
+-This is a speculative count.
+0101 Number of flushes due to the Store Queue being full or a sync,mbar,tlbsync instruction hits against outstanding load for issuing thread.
+-This is a speculative count.
+0102 Number of flushes due to a cache instruction (i.e load,store, or cache management) hit against an outstanding load miss.
+-XUCR0[CLS]=0Cacheline check is down to the 64Byte boundary, else check is down to the 128Byte boundary.
+-This is a speculative count.
+0103 Number of flushes due to a cache instruction (i.e load,store, or cache management) hit against an outstanding guarded cache-inhibited
+request in the load miss queue or in the store queue.
+-This is a speculative count.
+0104 Number of completed LARX instructions.
+-Waits for reload from the L2
+0105 Number of Watch Lost indicator sets due to a different thread storing to a watched line by another thread. 
+0106 Number of Watch Lost indicator sets due to a reload evicting watched line. 
+0107 Number of Watch Lost indicator sets due to a back invalidate to a watched line.
+0108 Number of back-invalidates sent to the L1 Data Cache. 
+0109 Number of back-invalidates sent to the L1 Data Cache that invalidated a line. 
+0110 Number of parity errors detected in the L1 Directories and Caches.
+-Includes both Instruction and Data Directories and Caches.
+-Does not count more than one per cycle, although up to 4 may occur simultaneously.
+0111 load miss queue entry 0 is in use was the intent - but is broken. Doesn't indicate anything useful. 
+0112 TLB hit direct entry (instruction, ind=0 entry hit for fetch) 
+0113 TLB miss direct entry (instruction, ind=0 entry missed for fetch) 
+0114 TLB miss indirect entry (instruction, ind=1 entry missed for fetch, results in i-tlb exception) 
+0115 H/W tablewalk hit (instruction, pte reload with PTE.V=1 for fetch) 
+0116 H/W tablewalk miss (instruction, pte reload with PTE.V=0 for fetch, results in PT fault exception -> isi) 
+0117 TLB hit direct entry (data, ind=0 entry hit for load/store/cache op) 
+0118 TLB miss direct entry (data, ind=0 entry miss for load/store/cache op) 
+0119 TLB miss indirect entry (data, ind=1 entry missed for load/store/cache op, results in d-tlb exception) 
+0120 H/W tablewalk hit (data, pte reload with PTE.V=1 for load/store/cache op) 
+0121 H/W tablewalk miss (data, pte reload with PTE.V=0 for load/store/cache op, results in PT fault exception -> dsi) 
+0122 IERAT miss (edge) or latency (level) (total ierat misses or latency) 
+0123 Number of cycles ierat miss (edge) or latency (level) (total ierat misses or latency) 
+0124 DERAT miss (edge) or latency (level) (total derat misses or latency) 
+0125 Number of cycles derat miss (edge) or latency (level) (total derat misses or latency) 
+0126 IERAT miss total (part of direct entry search total) 
+0127 DERAT miss total (part of direct entry search total) 
+0128 TLB miss direct entry total (total TLB ind=0 misses) 
+0129 TLB hit direct entry first page size (first mmucr2 size) 
+0130 TLB indirect entry hits total (=page table searches) 
+0131 H/W tablewalk successful installs total (with no PTfault, TLB ineligible, or LRAT miss) 
+0132 LRAT translation request total (for GS=1 tlbwe and ptereload) 
+0133 LRAT misses total (for GS=1 tlbwe and ptereload) 
+0134 Page table faults total (PTE.V=0 for ptereload, resulting in isi/dsi) 
+0135 TLB ineligible total (all TLB ways are iprot=1 for ptereloads, resulting in isi/dsi) 
+0136 tlbwe conditional failed total (total tlbwe WQ=01 with no reservation match) 
+0137 tlbwe conditional success total (total tlbwe WQ=01 with reservation match) 
+0138 tlbilx local invalidations sourced total (sourced tlbilx on this core total) 
+0139 tlbivax invalidations sourced total (sourced tlbivax on this core total) 
+0140 tlbivax snoops total (total tlbivax snoops received from bus, local bit = don't care) 
+0141 TLB flush requests total (TLB requested flushes due to TLB busy or instruction hazards) 
+0142 Number of cycles tlb flush requests total (TLB requested flushes due to TLB busy or instruction hazards) 
+0143 Lines established for stream prefetch
+0144 Hits in prefetch directory
+0145 Prefetch to demand fetch conversions
+0146 Misses in L1p by prefetchable loads
+0147 Lookup was held by guarded store waiting for drain
+0148 Cycles lookup was held by guarded store waiting for drain
+0149 Loads
+0150 Write combined stores (even and odd bits to accomidate x1 to x2 clock conversion
+0151 QPX stores
+0152 Stores cracked into two switch requests
+0153 Lookup was held by full switch request table
+0154 Cycles lookup was held by full switch request table
+0155 Lookup was held by MMIO or DCR access
+0156 Cycles lookup was held by MMIO or DCR access
+0157 Lookup was held while a stream was established
+0158 Cycles lookup was held while a stream was established
+0159 Lookup was held while list fetched addresses 
+0160 Cycles lookup was held while list fetched addresses 
+0161 Stores non-combined 
+0162 Lookup was held while list wrote list data
+0163 Cycles lookup was held while list wrote list data
+0164 requests to the sw xbar
+0165 active request info cycles to the sw xbar
+0166 active write data cycles to the sw xbar 
+0167 read response cycles from the sr xbar
+0168 requests to the invalidation(si) xbar
+0169 "normally" scheduled sw xbar requests
+0170 "eagerly" scheduled sw xbar requests
+0171 mmu read requests
+0172 failed stwcx (store with reservation) requests
+0173 stwcx (store with reservation) requests
+0174 instruction fetch requests
+0175 hwsync requests
+0176 lwarx (load with reservation) requests 
+0177 Lwarx reservation kill sent from L1p to L2 slice
+0178 Lwarx reservation kill send from L2 slice to L1p 
+0179 invalidate to L1
+0180 write combine buffer was evicted by store to same 128 byte window
+0181 lines established for any reason and thread
+0182 Hit in L1p forwarded to L2 (measure speculation traffic)
+0183 Hit in L1 forwarded to L2
+0184 Lines fetched and never hit evicted
+0185 Line fetched and only partially used evicted
+0186 Remote invalidate collided with a valid line
+0187 Don't cache bit was set for a line fill
+0188 Adaptation events per thread
+0189 streams detected and established
+0190 Local write collided with a valid line
+0191 Lines established by all list engines
+0192 Hits for lines fetched by list engine
+0193 Prefetch to demand fetch conversions for line established by list
+0194 Partially invalid line refetched
+0195 core address skipped by 1 (any thread)
+0196 core address skipped by 2 (any thread)
+0197 core address skipped by 3 (any thread)
+0198 core address skipped by 4 (any thread)
+0199 core address skipped by 5 (any thread)
+0200 core address skipped by 6 (any thread)
+0201 core address skipped by 7 (any thread)
+0202 A2 loads mismatching pattern resulted in abandoned list prefetch
+0203 core address was compared against list
+0204 core address matched a non head of queue list address (per thread)
+0205 core address does not match a list address
+0206 List prefetch process was started
+0207 Written pattern exceeded allocated buffer
+0208 core address advances faster than prefetch lines can be established dropping prefetches
+0209 wakeup unit address compare 10/11 hit the target address
+0210 wakeup unit address compare 10/11 hit the target address
+0211 Total CPU Cycles 
+0212 Perform a major/minor opcode match on completed XU instructions. Use Bgpm_SetXuMatch() on event to choose pattern. Only one may be set per core. If not set, will count all completed XU Instructions. Choosing whether to match is multiplexable, but the pattern to match is not.
+0213 Build a mask from XU instruction groups to count. See Bgpm_SetXuGrpMask().
+0214 Floating point load instructions completed (UPC_P_XU_OGRP_FLD). See Bgpm Opcode Groups page for which instructions match this group.
+0215 Floating point store instructions completed (UPC_P_XU_OGRP_FST). See Bgpm Opcode Groups page for which instructions match this group.
+0216 Quad Floating point load instructions completed (UPC_P_XU_OGRP_QLD). See Bgpm Opcode Groups page for which instructions match this group.
+0217 Quad Floating point Store instructions completed (UPC_P_XU_OGRP_QST). See Bgpm Opcode Groups page for which instructions match this group.
+0218 Bit manipulations instructions completed (UPC_P_XU_OGRP_BITS). See Bgpm Opcode Groups page for which instructions match this group.
+0219 Conditional Branch Instructions Completed (UPC_P_XU_OGRP_BRC). See Bgpm Opcode Groups page for which instructions match this group.
+0220 Unconditional Branch Instructions Completed (UPC_P_XU_OGRP_BRU). See Bgpm Opcode Groups page for which instructions match this group.
+0221 Cache Invalidate Instructions Completed (UPC_P_XU_OGRP_CINV). See Bgpm Opcode Groups page for which instructions match this group.
+0222 Cache Store Instructions Completed (UPC_P_XU_OGRP_CSTO). See Bgpm Opcode Groups page for which instructions match this group.
+0223 Cache Touch Instructions Completed (UPC_P_XU_OGRP_CTCH). See Bgpm Opcode Groups page for which instructions match this group.
+0224 Integer Arithmetic Instructions Completed (UPC_P_XU_OGRP_IADD). See Bgpm Opcode Groups page for which instructions match this group.
+0225 Compare Instructions Completed (UPC_P_XU_OGRP_ICMP). See Bgpm Opcode Groups page for which instructions match this group.
+0226 Coprocessor Instructions Completed (UPC_P_XU_OGRP_ICSW). See Bgpm Opcode Groups page for which instructions match this group.
+0227 Integer Divide Instructions Completed (UPC_P_XU_OGRP_IDIV). See Bgpm Opcode Groups page for which instructions match this group.
+0228 Logical Instructions Completed (UPC_P_XU_OGRP_ILOG). See Bgpm Opcode Groups page for which instructions match this group.
+0229 Move register Instructions Completed (UPC_P_XU_OGRP_IMOV). See Bgpm Opcode Groups page for which instructions match this group.
+0230 Integer Multiply Instructions Completed (UPC_P_XU_OGRP_IMUL). See Bgpm Opcode Groups page for which instructions match this group.
+0231 Interrupt and System call Instructions Completed (UPC_P_XU_OGRP_INT). See Bgpm Opcode Groups page for which instructions match this group.
+0232 Load Instructions Completed (UPC_P_XU_OGRP_LD). uCoded Instructions are counted once. See Bgpm Opcode Groups page for which instructions match this group
+0233 Load and Store Reserve Instructions Completed (UPC_P_XU_OGRP_LSCX). uCoded Instructions are counted once. See Bgpm Opcode Groups page for which instructions match this group.
+0234 Store Instructions Completed (UPC_P_XU_OGRP_ST). uCoded Instructions are counted once. See Bgpm Opcode Groups page for which instructions match this group.
+0235 Completed Instructions which cause a Context Sync (UPC_P_XU_OGRP_SYNC). See Bgpm Opcode Groups page for which instructions match this group.
+0236 Translation Look-aside buffer Instructions Completed (UPC_P_XU_OGRP_TLB). See Bgpm Opcode Groups page for which instructions match this group
+0237 Translation Look-aside buffer Invalidate Instructions Completed (UPC_P_XU_OGRP_TLBI). See Bgpm Opcode Groups page for which instructions match this group
+0238 Watch Instructions Completed (UPC_P_XU_OGRP_WCH). See Bgpm Opcode Groups page for which instructions match this group
+0239 All XU instructions completed (instructions which use A2 FX unit - UPC_P_XU_OGRP_*). See Bgpm Opcode Groups page for which instructions match this group.
+0240 Perform a major/minor opcode match on completed AXU (QFPU) instructions. Use Bgpm_SetQfpuMatch() on event to choose pattern and possible Floating point scaling value. Only one may be set per core. If not set, will count all completed AXU Instructions. Choosing whether to match is multiplexable, but the pattern to match is not.
+0241 Build a mask from AXU (QFPU) instruction groups to count. See Bgpm_SetQfpuGrpMask().
+0242 Single floating point instruction completes (instructions not in other groups UPC_P_AXU_OGRP_FOTH). See Bgpm Opcode Groups page for which instructions match this group
+0243 Single floating point reciprocal estimate instruction completes (UPC_P_AXU_OGRP_FRES). See Bgpm Opcode Groups page for which instructions match this group
+0244 Single floating point addition instructions completes (UPC_P_AXU_OGRP_FADD). See Bgpm Opcode Groups page for which instructions match this group
+0245 Single floating point convert instructions completes (UPC_P_AXU_OGRP_FCVT). See Bgpm Opcode Groups page for which instructions match this group
+0246 Single floating point compare instructions completes (UPC_P_AXU_OGRP_FCMP). See Bgpm Opcode Groups page for which instructions match this group
+0247 Single floating point division instructions completes (UPC_P_AXU_OGRP_FDIV). See Bgpm Opcode Groups page for which instructions match this group
+0248 Single floating point move instructions completes (UPC_P_AXU_OGRP_FMOV). See Bgpm Opcode Groups page for which instructions match this group
+0249 Single floating point multiply-add instructions completes (UPC_P_AXU_OGRP_FMA). See Bgpm Opcode Groups page for which instructions match this group
+0250 Single floating point multiply instructions completes (UPC_P_AXU_OGRP_FMUL). See Bgpm Opcode Groups page for which instructions match this group
+0251 Single floating point round instructions completes (UPC_P_AXU_OGRP_FRND). See Bgpm Opcode Groups page for which instructions match this group
+0252 Single floating point square root estimate instructions completes (UPC_P_AXU_OGRP_FSQE). See Bgpm Opcode Groups page for which instructions match this group
+0253 Single floating point square root instructions completes (UPC_P_AXU_OGRP_FSQ). See Bgpm Opcode Groups page for which instructions match this group
+0254 Quad floating point move instructions complete (UPC_P_AXU_OGRP_QMOV). See Bgpm Opcode Groups page for which instructions match this group
+0255 Quad floating point instructions not counted in other groups (UPC_P_AXU_OGRP_QOTH). See Bgpm Opcode Groups page for which instructions match this group
+0256 Quad floating point add instructions complete (UPC_P_AXU_OGRP_QADD). See Bgpm Opcode Groups page for which instructions match this group
+0257 Quad floating point multiply instructions complete (UPC_P_AXU_OGRP_QMUL). See Bgpm Opcode Groups page for which instructions match this group
+0258 Quad floating point reciprocal estimate instructions complete (UPC_P_AXU_OGRP_QRES). See Bgpm Opcode Groups page for which instructions match this group
+0259 Quad floating point multiply-add instructions complete (UPC_P_AXU_OGRP_QMA). See Bgpm Opcode Groups page for which instructions match this group
+0260 Quad floating point round instructions complete (UPC_P_AXU_OGRP_QRND). See Bgpm Opcode Groups page for which instructions match this group
+0261 Quad floating point convert instructions complete (UPC_P_AXU_OGRP_QCVT). See Bgpm Opcode Groups page for which instructions match this group
+0262 Quad floating point compare instructions complete (UPC_P_AXU_OGRP_QCMP). See Bgpm Opcode Groups page for which instructions match this group
+0263 Count all completed floating point instructions which are microcoded. Useful in CPI calculations. Ucode sub-operations are excluded.
+0264 Count all completed instructions which processed by the QFPU unit (UPC_P_AXU_OGRP_*)
+0265 Count completed floating point operations scaled according QFPU capacity. See the Bgpm Opcode Groups page for more information.
+0266 Count completed Single (just Fxx operations) subset of FPGRP1. See the Bgpm Opcode Groups page for more information 
+0267 Count completed Quad (just Qfxx operations) subset of FPGRP1. See the Bgpm Opcode Groups page for more information.
+0268 Count completed floating point operations, but excluding rounding, copy and conversion instructions. See the Bgpm Opcode Groups page for more information.
+0269 Count completed Single (Fxx operations) subset of FPGRP2. See the Bgpm Opcode Groups page for more information 
+0270 Count completed Quad (Qfxx operations) subset of FPGRP2. See the Bgpm Opcode Groups page for more information.
+0271 Count completed floating point instructions matching FPGRP1. See the Bgpm Opcode Groups page for more information.
+0272 Count completed Single Fxx instructions subset of FPGRP1. See the Bgpm Opcode Groups page for more information 
+0273 Count completed Quad Qfxx instructions subset of FPGRP1. See the Bgpm Opcode Groups page for more information.
+0274 Count completed floating point instructions matching FPGRP2. See the Bgpm Opcode Groups page for more information.
+0275 Count completed Single Fxx instructions subset of FPGRP2. See the Bgpm Opcode Groups page for more information 
+0276 Count completed Quad Qfxx instructions subset of FPGRP2. See the Bgpm Opcode Groups page for more information.
+0277 Count all completed instructions.
+-Equivalent to PEVT_XU_PPC_COMMIT, but this event is preferred as may use any counter, versus the XU event which is restricted to 4 available counters. 
+0278 hits in L2, both load and store. Network Polling store operations from core 17 on BG/Q pollute in this count during normal use.
+0279 cacheline miss in L2 (both loads and stores)
+0280 fetching cacheline ahead of L1P prefetch
+0281 Load 128 byte line from main memory
+0282 Store 128 byte line to main memory
+0283 Store Partial line to main memory
+0284 Request sent by the core was processed, but rejected for later processing. Examples reasons are: address currently reloaded from or evicted to main memory, speculative data for address already cleaned. The request remains and is retried later
+0285 Request completes right away after look-up and neither enters the hit nor missqueue. Examples are some dcbtls hitting in L2, some l1-hit notifications
+0286 Request misses in L2 and evicts a line (subset of L2 misses and subset of L2 Miss and Evict)
+0287 Request misses in L2 and evicts a line, while speculative state is pending and the victim may be a speculative line (subset of L2 Req Miss and Evict and subset of L2 Miss and Evict Spec)
+0288 Request misses in L2 and evicts line, but includes evictions due to L2-initiated prefetches
+0289 Request misses in L2 and evicts a line, while speculative state is pending and the victim may be a speculative line, but includes evictions due to L2-initiated prefetches (subset of L2 Miss and Evict)
+0290 Request address has speculative state needing cleanup (has been invalidated or committed)
+0291 Request address has speculative state needing cleanup (has been invalidated or committed), but including L2 initiated prefetches.
+0292 Request address is mapped to a set that contains other addresses needing cleanup (has been invalidated or committed)
+0293 Request needs to be retried later because it would interfere with a speculation commit currently in flight
+0294 hits in L2, both load and store. Network Polling store operations from core 17 on BG/Q pollute in this count during normal use.
+0295 Cacheline miss in L2 (both loads and stores)
+0296 Fetching cacheline ahead of L1P prefetch
+0297 Load 128 byte line from main memory
+0298 Store 128 byte line to main memory
+0299 Store Partial line to main memory
+0300 Request sent by the core was processed, but rejected for later processing. Examples reasons are: address currently reloaded from or evicted to main memory, speculative data for address already cleaned. The request remains and is retried later
+0301 Request completes right away after look-up and neither enters the hit nor missqueue. Examples are some dcbtls hitting in L2, some l1-hit notifications
+0302 Request misses in L2 and evicts a line (subset of L2 misses and subset of L2 Miss and Evict)
+0303 Request misses in L2 and evicts a line, while speculative state is pending and the victim may be a speculative line (subset of L2 Req Miss and Evict and subset of L2 Miss and Evict Spec)
+0304 Request misses in L2 and evicts line, but includes evictions due to L2-initiated prefetches
+0305 Request misses in L2 and evicts a line, while speculative state is pending and the victim may be a speculative line, but includes evictions due to L2-initiated prefetches (subset of L2 Miss and Evict)
+0306 Request address has speculative state needing cleanup (has been invalidated or committed)
+0307 Request address has speculative state needing cleanup (has been invalidated or committed), but including L2 initiated prefetches.
+0308 Request address is mapped to a set that contains other addresses needing cleanup (has been invalidated or committed)
+0309 Request needs to be retried later because it would interfere with a speculation commit currently in flight
+0310 A new packet has been injected (Packet has been stored to ND FIFO)
+0311 A new message has been injected (All packets of the message have been stored to ND FIFO)
+0312 A new FIFO packet has been received (The packet has been stored to L2. There is no pending switch request)
+0313 A new RGET packet has been received (The packet has been stored to L2. There is no pending switch request. ICSRAM has accepted update tail request)
+0314 A new PUT packet has been received (rME has started to process the packet). Note that this counter is incremented before packet has been completely processed (stored to L2). This is because event is checked by RPUT SRAM access but it is accessed only when
+0315 Master port 0 has issued a 16B write request to the switch.
+0316 Master port 0 has issued a 32B read request to the switch.
+0317 Master port 0 has issued a 64B read request to the switch.
+0318 Master port 0 has issued a 128B read request to the switch.
+0319 Master port 1 has issued a 16B write request to the switch.
+0320 Master port 1 has issued a 32B read request to the switch.
+0321 Master port 1 has issued a 64B read request to the switch.
+0322 Master port 1 has issued a 128B read request to the switch.
+0323 Master port 2 has issued a 16B write request to the switch.
+0324 Master port 2 has issued a 32B read request to the switch.
+0325 Master port 2 has issued a 64B read request to the switch.
+0326 Master port 2 has issued a 128B read request to the switch.
+0327 Slave port has received a read request.
+0328 Slave port has received a write request.
+0329 Number of write requests pending in master port 0.
+0330 Number of read requests pending in master port 0.
+0331 Number of write requests pending in master port 1.
+0332 Number of read requests pending in master port 1.
+0333 Number of write requests pending in master port 2.
+0334 Number of read requests pending in master port 2.
+0335 Inbound Read Bytes Requested
+0336 Inbound Read Requests
+0337 Inbound Read Completions
+0338 outbound memory write bytes
+0339 Outbound CFG transactions
+0340 Outbound IO transactions
+0341 RX DLLP Count
+0342 RX TLP Count
+0343 RX TLP Size in DWORDS
+0344 TX DLLP Count
+0345 TX TLP Count
+0346 TX TLP Size in DWORDS
+0347 PCIe inbound write bytes written
+0348 PCIe outbound read bytes requested
+0349 PCIe outbound read requests
+0350 PCIe outbound read completions
+0351 Boot eDRAM bytes written
+0352 Boot eDRAM bytes read
+0353 Message-Signaled Interrupts (MSIs)
+0354 Number of 32 byte user point to point packet chunks sent. Includes packets originating or passing through the current node.
+0355 Number of 32 byte user dynamic point to point packet chunks sent. Includes packets originating or passing through the current node.
+0356 Number of 32 byte user escape point to point packet chunks sent. Includes packets originating or passing through the current node.
+0357 Number of 32 byte user priority point to point packet chunks sent. Includes packets originating or passing through the current node.
+0358 Number of 32 byte system point to point packet chunks sent. Includes packets originating or passing through the current node.
+0359 Number of 32 byte user world collective packet chunks sent. Includes packets originating or passing through the current node.
+0360 Number of 32 byte user sub-communicator collective packet chunks sent. Includes packets originating or passing through the current node.
+0361 Number of 32 byte system collective packet chunks sent. Includes packets originating or passing through the current node.
+0362 Number of 32 byte comm-world collective packet chunks sent. Includes packets originating or passing through the current node.
+0363 Number of user point to point packets received. Includes packets originating or passing through the current node.
+0364 Number of user dynamic point to point packets received. Includes packets originating or passing through the current node.
+0365 Number of user escape point to point packets received. Includes packets originating or passing through the current node.
+0366 Number of user priority point to point packets received. Includes packets originating or passing through the current node.
+0367 Number of system point to point packets received. Includes packets originating or passing through the current node.
+0368 Number of user world collective packets received. Includes packets originating or passing through the current node.
+0369 Number of user sub-communicator collective packets received. Includes packets originating or passing through the current node.
+0370 Number of system collective packets received. Includes packets originating or passing through the current node.
+0371 Number of comm-world collective packets received. Includes packets originating or passing through the current node.
+0372 Number of user point to point packets in receive fifo queue. Includes packets received or passing through the current node. Count is accumulated each cycle.
+0373 Number of user dynamic point to point packets in receive fifo queue. Includes packets received or passing through the current node. Count is accumulated each cycle.
+0374 Number of user escape point to point packets in receive fifo queue. Includes packets received or passing through the current node. Count is accumulated each cycle.
+0375 Number of user priority point to point packets in receive fifo queue. Includes packets received or passing through the current node. Count is accumulated each cycle.
+0376 Number of system point to point packets in receive fifo queue. Includes packets received or passing through the current node. Count is accumulated each cycle.
+0377 Number of user world collective packets in receive fifo queue. Includes packets received or passing through the current node. Count is accumulated each cycle.
+0378 Number of user sub-communicator collective packets in receive fifo queue. Includes packets received or passing through the current node. Count is accumulated each cycle.
+0379 Number of system collective packets in receive fifo queue. Includes packets received or passing through the current node. Count is accumulated each cycle.
+0380 Number of comm-world collective packets in receive fifo queue. Includes packets received or passing through the current node. Count is accumulated each cycle.
+0381 Use NW channel filter attribute to select types of 32 byte packet chunks sent
+0382 Use NW channel filter attribute to select types of packets received.
+0383 Use NW channel filter attribute to select types of packets counted which remain in receive fifo queue.
+0384 The delta network cycles which have occurred since the last network counter reset.
+0385 Number of Message Unit non-fatal interrupts
+0386 Number of Network Device non-fatal interrupts
+0387  
+0388 System Calls
+0389 External Input Interrupts
+0390 Critical Input Interrupts
+0391 Decrementer Interrupts
+0392 Fixed Interval Timer Interrupts
+0393 Watchdog Timer Interrupts
+0394 User Decrementer Interrupts
+0395 Performance Monitor interrupts
+0396 Unknown/Invalid Interrupts
+0397 Debug Interrupts
+0398 Data Storage Interrupts
+0399 Instruction Storage Interrupts
+0400 Alignment Interrupts
+0401 Program Interrupts
+0402 FPU Unavailable Interrupts
+0403 APU Unavailable Interrupts
+0404 Data TLB Interrupts
+0405 Instruction TLB Interrupts
+0406 Vector Unavailable Interrupts
+0407 Undefined Interrupts
+0408 Processor Doorbell Interrupts
+0409 Processor Doorbell Critical Ints
+0410 Guest Doorbell Interrupts
+0411 Guest Doorbell Crit or MChk Ints
+0412 Embedded Hypervisor System Calls
+0413 Embedded Hypervisor Privileged
+0414 LRAT exception

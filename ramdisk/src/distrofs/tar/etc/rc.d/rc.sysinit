@@ -1,0 +1,159 @@
+#/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+#
+#/etc/rc.d/rc.sysinit for the BlueGene/Q distrofs 
+#
+# Author: Jay S. Bryant <jsbryant@us.ibm.com>
+#
+
+# Source the function library including BG/Q specific data.
+. /etc/init.d/functions
+
+# Get our inital read/write spaces configured.
+mount -t tmpfs -o rw tmpfs /etc.mirror
+if [ -e /etc/etc.tar.gz ] ; then
+	cd /etc.mirror
+	tar -xzvf /etc/etc.tar.gz &> /dev/null
+	cd /
+else
+	cp -a /etc/* /etc.mirror
+fi
+mount --bind /etc.mirror /etc
+
+# Integrate start scripts from /bgfs
+if [ -e /bgfs/etc/rc.d/rc3.d ] ; then
+	cp -a /bgfs/etc/rc.d/rc3.d /etc/rc.d
+fi
+if [ -e /bgfs/etc/rc.d/init.d/ ] ; then
+	cp -a /bgfs/etc/rc.d/init.d /etc/rc.d
+fi
+# Pull in the sysinit script from bgfs also:
+if [ -e /bgfs/etc/sysconfig/sysinit ] ; then
+	cp -a /bgfs/etc/sysconfig/sysinit /etc/sysconfig
+	. /etc/sysconfig/sysinit
+fi
+
+# Set the appropriate root mount point at the head of /etc/mtab.
+mv /etc/mtab /etc/mtab.orig
+if [ $BG_BGSYS_IPV4 != "0.0.0.0" ] ; then
+     	if [ ! -z $BG_BGSYS_EXPORT_MOUNT_OPTS ] ; then
+	   echo "$BG_BGSYS_IPV4:$BG_OSDIR / nfs ro,$BG_BGSYS_EXPORT_MOUNT_OPTS 0 0" >> /etc/mtab
+	else
+	   echo "$BG_BGSYS_IPV4:$BG_OSDIR / nfs ro,tcp,nolock,vers=3 0 0" >> /etc/mtab
+	fi
+	echo "tmpfs /bgfs tmpfs rw 0 0" >> /etc/mtab
+else
+	if [ ! -z $BG_BGSYS_EXPORT_MOUNT_OPTS ] ; then
+	   echo "[$BG_BGSYS_IPV6]:$BG_OSDIR / nfs ro,$BG_BGSYS_EXPORT_MOUNT_OPTS 0 0" >> /etc/mtab
+	else
+	   echo "[$BG_BGSYS_IPV6]:$BG_OSDIR / nfs ro,nolock 0 0" >> /etc/mtab
+	fi
+	echo "tmpfs /bgfs tmpfs rw 0 0" >> /etc/mtab
+fi
+cat /etc/mtab.orig >> /etc/mtab
+rm /etc/mtab.orig
+
+# Mounts /proc, /var, /tmp, /etc.mirror, dev/pts /sys and /dev/shm
+mount -a
+if [ -e /var/var.tar.gz ] ; then
+	cd /var.mirror
+	tar -xzvf /var/var.tar.gz &> /dev/null
+	cd /
+else
+	cp -a /var/* /var.mirror
+fi
+mount --bind /var.mirror /var
+
+# Create r/w /root
+mount --bind /root.mirror /root
+chmod 550 /root
+
+# For depmod to work properly /lib/modules needs to be r/w .  Set that up here.
+if [ -e /lib/modules/modules.tar.gz ] ; then
+	cd /lib/modules.mirror
+	tar -xzvf /lib/modules/modules.tar.gz &> /dev/null
+	cd /
+else
+	cp -a /lib/modules/* /lib/modules.mirror
+fi
+mount --bind /lib/modules.mirror /lib/modules
+
+touch /var/log/lastlog
+export LD_LIBRARY_PATH=/lib64:/lib:/usr/lib64:/usr/lib
+
+# Make link to in memory copy of the BG/Q libraries.
+if [ ! -e /bgfs/lib64 ] ; then
+	mkdir -p /bgfs/lib64
+fi
+mount --bind /bgfs/lib64 /lib64/bgq
+
+if [ ! -e /bgfs/usr/lib64 ] ; then
+	mkdir -p /bgfs/usr/lib64
+fi
+mount --bind /bgfs/usr/lib64 /usr/lib64/bgq
+
+# Source unique paths for the console
+if [ -e /etc/profile.d/bgq.sh ] ; then
+	. /etc/profile.d/bgq.sh
+fi
+
+# Link in start scripts that do not require custom scripts
+ln -s /etc/rc.d/init.d/rpcbind /etc/rc.d/rc3.d/S07rpcbind
+ln -s /etc/rc.d/init.d/nfslock /etc/rc.d/rc3.d/S08nfslock
+
+touch /etc/sysconfig/network
+
+# Start udev
+/sbin/start_udev
+
+# Get RHEL6 functions library, bgpers and bgras
+. /etc/init.d/functions
+
+# Load up our settings from sysctl.conf
+if [ -e /bgfs/etc/sysctl.conf ] ; then
+	sysctl -p /bgfs/etc/sysctl.conf &> /dev/null
+elif [ -e /etc/sysctl.conf ] ; then
+	sysctl -p /etc/sysctl.conf &> /dev/null
+fi
+
+# Start bgsys here so that we can set up any persistent filesystems 
+# before more is started.
+/etc/rc.d/init.d/bgsys start
+/etc/rc.d/init.d/nodefs start
+
+# Steps to prep for ssh startup.
+chmod 711 /var/empty/sshd
+chown root:root /var/empty/sshd
+touch /var/log/btmp
+chmod 600 /var/log/btmp
+if [ -e /etc/ssh/ssh_host_rsa_key ] ; then chmod 600 /etc/ssh/ssh_host_rsa_key ; fi
+if [ -e /etc/ssh/ssh_host_dsa_key ] ; then chmod 600 /etc/ssh/ssh_host_dsa_key ; fi
+
+# Need to mount rpc_pipefs for NFSv4/idmapd support
+if [ ! -e /var/lib/nfs/rpc_pipefs ] ; then
+         mkdir -p /var/lib/nfs/rpc_pipefs
+fi
+mount -t rpc_pipefs sunrpc /var/lib/nfs/rpc_pipefs
+
+# Properly set the permissions for /dev/shm.  For some reason, setting it 
+# earlier in the boot process doesn't seem to work.
+chmod 1777 /dev/shm

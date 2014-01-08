@@ -1,0 +1,37 @@
+<File filename="MCBootSteps" namespace="BootStep" type="xmlapi" version="1" >
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!-- Eclipse Public License (EPL)                                     -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+  <ValueSet name="BootStep" >
+	  <ValueMember name="enableNodes" value="10" comment="Raise pgood, fuse download, clock start, check clock status, CFAM configuration, asic config to enable units for boot load"/>
+	  <ValueMember name="initDevbus" value="15" comment="Initialize the devbus"/>
+	  <ValueMember name="installFirmware" value="20" comment="Install Firmware in BeDRAM"/>
+	  <ValueMember name="installPersonalities" value="30" comment="Install Node Personalities in BeDRAM"/>
+	  <ValueMember name="startTraining" value="40" comment="Start torus network training"/>
+	  <ValueMember name="enableLinkChips" value="50" comment="Enable and configure link chips"/>
+	  <ValueMember name="trainLinkChips" value="55" comment="Train link chips"/>
+	  <ValueMember name="trainTorus" value="60" comment="Complete torus network training"/>
+	  <ValueMember name="startCores" value="70" comment="Start the cores"/>
+	  <ValueMember name="verifyMailbox" value="80" comment="Verify mailbox ready for each node"/>
+	  <ValueMember name="monitorMailbox" value="90" comment="Begin monitoring the node for attention conditions including RAS events"/>
+	  <ValueMember name="verifyMailboxReady" value="95" comment="Verify firmware is ready to receive kernel code via the mailbox"/>
+	  <ValueMember name="sendTrainingComplete" value="100" comment="Send training complete message to Firmware"/>
+	  <ValueMember name="installKernelImages" value="110" comment="Install the kernel images"/>
+ 	  <ValueMember name="configureDomains" value="120" comment="Configure the kernel domains"/>
+ 	  <ValueMember name="launchKernels" value="130" comment="Launch the start of the kernels"/>
+ 	  <ValueMember name="verifyKernelReady" value="140" comment="Verify the kernels reached a ready state"/>
+ 	  <ValueMember name="noop" value="1000" comment="No operation performed by the machine controller"/>
+ 	  <ValueMember name="cardNoop" value="1010" comment="No operation performed by the card controllers"/>
+    </ValueSet>
+
+</File>

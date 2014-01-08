@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY command "list_blocks">
+<!ENTITY manSection "1">
+]>
+
+<refentry lang="en">
+
+<refentryinfo>
+    <productname>&command;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>IBM</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+
+<refmeta>
+    <refentrytitle>&command;</refentrytitle>
+    <manvolnum>&manSection;</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&command;</refname>
+    <refpurpose>List block definitions on the Blue Gene system</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv>
+    <title>Synopsis</title>
+    <cmdsynopsis>
+        <command>&command;</command>
+        <arg rep="repeat"><replaceable>OPTION</replaceable></arg>
+        <arg><replaceable>BLOCKID</replaceable></arg>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1>
+    <title>Description</title>
+    <para>
+        This command lists block definitions or displays details for a single block on the Blue Gene system.
+    </para>
+    <para>
+        By default, compute blocks with any status are listed.
+    </para>
+    <para>
+        The user must have READ authority to the block.
+    </para>
+</refsect1>
+
+<refsect1>
+    <title>Options</title>
+    <variablelist>
+        <varlistentry>
+            <term><option>--status</option> arg</term>
+            <listitem>
+                <para>Block status, a set of these codes:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>F : Free</para></listitem>
+                    <listitem><para>A : Allocated</para></listitem>
+                    <listitem><para>B : Booting</para></listitem>
+                    <listitem><para>I : Initialized</para></listitem>
+                    <listitem><para>T : Terminating</para></listitem>
+                </itemizedlist>
+                <para>For example, --status=AB will return blocks that are allocated or booting.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--io</option></term>
+            <listitem>
+                <para>Show I/O blocks rather than compute blocks.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--properties</option> filename</term>
+            <listitem>
+                <para>Blue Gene configuration file.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--base</option> URL</term>
+            <listitem>
+                <para>Blue Gene Web Services (BGWS) server base URL.</para>
+                <para>
+                    This overrides the BGWS server base URL as specified in the Blue Gene configuration file.
+                    The format is a URL, like https://localhost:32071/bg.
+                </para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--verbose</option> logging-spec</term>
+            <listitem>
+                <para>The --verbose argument can be given multiple times. The format for the argument is as follows:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>logger=level : set the logger to the level</para></listitem>
+                    <listitem><para>level : set the default logger to the level</para></listitem>
+                    <listitem><para>logger : set the logger's level to DEBUG</para></listitem>
+                    <listitem><para>"" : set the default logger's level to DEBUG</para></listitem>
+                </itemizedlist>
+                <para>These values are allowed for the level:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>OFF / O / 0</para></listitem>
+                    <listitem><para>FATAL / F / 1</para></listitem>
+                    <listitem><para>ERROR / E / 2</para></listitem>
+                    <listitem><para>WARN / W / 3</para></listitem>
+                    <listitem><para>INFO / I / 4</para></listitem>
+                    <listitem><para>DEBUG / D / 5</para></listitem>
+                    <listitem><para>TRACE / T / 6</para></listitem>
+                    <listitem><para>ALL / A / 7</para></listitem>
+                </itemizedlist>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>-h, --help</option></term>
+            <listitem>
+                <para>Print help text</para>
+            </listitem>
+        </varlistentry>
+    </variablelist>
+</refsect1>
+
+<refsect1>
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>bgws_server</refentrytitle>
+           <manvolnum>8</manvolnum>
+	</citerefentry>
+    </para>
+</refsect1>
+
+<refsect1>
+    <title>COPYRIGHT</title>
+    <para>© Copyright IBM Corp. 2010, 2011</para>
+</refsect1>
+
+</refentry>

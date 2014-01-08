@@ -1,0 +1,622 @@
+####################################
+%package bgsched
+
+Summary: Scheduler 
+Group: %{product_group}
+Release: 0
+
+%description bgsched
+%{bgq_package_description}
+
+Job scheduler library.
+
+%files bgsched
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/bin
+%dir %{_base_dir}/hlcs/etc
+%dir %{_base_dir}/hlcs/lib
+
+%{_base_dir}/hlcs/lib/libbgsched.so.1
+%{_base_dir}/hlcs/lib/libbgsched.so.1.0.1
+%{_base_dir}/hlcs/etc/firstfit_plugin_logging.configuration
+%{_base_dir}/hlcs/lib/libfirstfit.so
+%{_base_dir}/hlcs/lib/libfirstfit.so.1
+%{_base_dir}/hlcs/lib/libfirstfit.so.1.0.0
+
+%{_base_dir}/hlcs/bin/test_core
+
+
+####################################
+%package bgsched-devel
+
+Summary: Job scheduler development headers
+Group: %{product_group}
+Release: 0
+
+%description bgsched-devel
+%{bgq_package_description}
+
+Job scheduler development headers and libraries.
+
+%files bgsched-devel
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/lib
+%dir %{_base_dir}/hlcs/include
+
+# this file is included in runjob-devel
+%exclude %{_base_dir}/hlcs/include/bgsched/runjob/Client.h
+
+%{_base_dir}/hlcs/include/bgsched
+%{_base_dir}/hlcs/lib/libbgsched.so
+
+
+####################################
+%package bgmaster_server
+
+Summary: Master server
+Group: %{product_group}
+Release: 0
+
+%description bgmaster_server
+%{bgq_package_description}
+
+Master server.
+
+%files bgmaster_server
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/ras
+%dir %{_base_dir}/hlcs/ras/metadata
+%dir %{_base_dir}/hlcs/sbin
+%dir %{_base_dir}/sbin
+
+%{_base_dir}/hlcs/ras/metadata/bgmaster_ras.xml
+%{_base_dir}/hlcs/sbin/bgmaster_server
+%{_base_dir}/sbin/bgmaster_server
+
+
+####################################
+%package bgagentd
+
+Summary: bgmaster agent daemon
+Group: %{product_group}
+Release: 0
+
+%description bgagentd
+%{bgq_package_description}
+
+%files bgagentd
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/etc
+%dir %{_base_dir}/hlcs/etc/init
+%dir %{_base_dir}/hlcs/sbin
+%dir %{_base_dir}/sbin
+
+%{_base_dir}/hlcs/sbin/bgagentd
+%{_base_dir}/hlcs/etc/init/bgagent
+%{_base_dir}/hlcs/etc/init/bgagent.v1r1m0
+%{_base_dir}/sbin/bgagentd
+
+
+####################################
+%package bgmaster_command
+
+Summary: Master commands
+Group: %{product_group}
+Release: 0
+
+%description bgmaster_command
+%{bgq_package_description}
+
+Master commands
+
+%files bgmaster_command
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/lib
+%dir %{_base_dir}/hlcs/sbin
+%dir %{_base_dir}/bin
+%dir %{_base_dir}/sbin
+
+
+%{_base_dir}/hlcs/sbin/bgmaster_server_refresh_config
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/alias_wait
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/binary_status
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/binary_wait
+%{_base_dir}/hlcs/sbin/fail_over
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/get_errors
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/get_history
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/list_agents
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/list_clients
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/monitor_master
+%{_base_dir}/hlcs/sbin/master_start
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/master_status
+%{_base_dir}/hlcs/sbin/master_stop
+%{_base_dir}/hlcs/sbin/bgmaster_server_log_level
+%{_base_dir}/hlcs/lib/libbgmasterclient.so.1
+%{_base_dir}/hlcs/lib/libbgmasterclient.so.1.0.0
+%{_base_dir}/sbin/bgmaster_server_refresh_config
+%{_base_dir}/bin/alias_wait
+%{_base_dir}/bin/binary_status
+%{_base_dir}/bin/binary_wait
+%{_base_dir}/sbin/fail_over
+%{_base_dir}/bin/get_errors
+%{_base_dir}/bin/get_history
+%{_base_dir}/bin/list_agents
+%{_base_dir}/bin/list_clients
+%{_base_dir}/sbin/master_start
+%{_base_dir}/bin/master_status
+%{_base_dir}/sbin/master_stop
+%{_base_dir}/bin/monitor_master
+%{_base_dir}/sbin/bgmaster_server_log_level
+
+
+####################################
+%package bgmaster-devel
+
+Summary: Master development headers and libraries
+Group: %{product_group}
+Release: 0
+
+%description bgmaster-devel
+%{bgq_package_description}
+
+Master development headers and libraries
+
+%files bgmaster-devel
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/include
+%dir %{_base_dir}/hlcs/lib
+
+%{_base_dir}/hlcs/include/c_api
+%{_base_dir}/hlcs/include/master
+%{_base_dir}/hlcs/lib/libbgmasterclient.so
+
+
+####################################
+%package mmcs_server
+
+Summary: MMCS server
+Group: %{product_group}
+Release: 0
+
+%description mmcs_server
+%{bgq_package_description}
+
+MMCS server.
+
+%files mmcs_server
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/sbin
+%dir %{_base_dir}/hlcs/ras
+%dir %{_base_dir}/hlcs/ras/metadata
+%dir %{_base_dir}/sbin
+
+%{_base_dir}/hlcs/ras/metadata/mmcs_ras.xml
+%{_base_dir}/hlcs/sbin/mmcs_server
+%{_base_dir}/sbin/mmcs_server
+
+
+####################################
+%package bg_console
+
+Summary: bg_console
+Group: %{product_group}
+Release: 0
+
+%description bg_console
+%{bgq_package_description}
+
+Blue Gene interactive console.
+
+%files bg_console
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/bin
+%dir %{_base_dir}/hlcs/lib
+%dir %{_base_dir}/bin
+
+%{_base_dir}/hlcs/lib/libconsolecmds.so.1
+%{_base_dir}/hlcs/lib/libconsolecmds.so.1.0.0
+
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/bg_console
+%{_base_dir}/bin/bg_console
+
+####################################
+%package bg_consolepy
+
+Summary: bg_consolepy
+Group: %{product_group}
+Release: 0
+
+%description bg_consolepy
+%{bgq_package_description}
+
+Blue Gene python console.
+
+%files bg_consolepy
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/bin
+%dir %{_base_dir}/bin
+
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/bg_consolepy
+%{_base_dir}/bin/bg_consolepy
+
+
+
+####################################
+%package realtime_server
+
+Summary: Real Time server
+Group: %{product_group}
+Release: 0
+
+%description realtime_server
+%{bgq_package_description}
+
+Real time server.
+
+%files realtime_server
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/sbin
+%dir %{_base_dir}/sbin
+
+%{_base_dir}/hlcs/sbin/bg_realtime_server
+%{_base_dir}/sbin/bg_realtime_server
+
+
+####################################
+%package realtime_client
+
+Summary: Real Time client
+Group: %{product_group}
+Release: 0
+
+%description realtime_client
+%{bgq_package_description}
+
+Real time client.
+
+%files realtime_client
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/bin
+
+%{_base_dir}/hlcs/bin/realtime_client
+
+
+####################################
+%package realtime_command
+
+Summary: Real Time commands
+Group: %{product_group}
+Release: 0
+
+%description realtime_command
+%{bgq_package_description}
+
+Real time commands.
+
+%files realtime_command
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/sbin
+%dir %{_base_dir}/sbin
+
+%{_base_dir}/hlcs/sbin/realtime_server_log_level
+%{_base_dir}/hlcs/sbin/realtime_server_status
+%{_base_dir}/sbin/realtime_server_log_level
+%{_base_dir}/sbin/realtime_server_status
+
+
+####################################
+%package runjob_server
+
+Summary: runjob server
+Group: %{product_group}
+Release: 0
+
+%description runjob_server
+%{bgq_package_description}
+
+Job submission server.
+
+%files runjob_server
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/sbin
+%dir %{_base_dir}/hlcs/ras
+%dir %{_base_dir}/hlcs/ras/metadata
+%dir %{_base_dir}/sbin
+
+%{_base_dir}/hlcs/sbin/runjob_server
+%{_base_dir}/hlcs/ras/metadata/runjob_ras.xml
+%{_base_dir}/sbin/runjob_server
+
+
+####################################
+%package runjob_mux
+
+Summary: runjob multiplexer
+Group: %{product_group}
+Release: 0
+
+%description runjob_mux
+%{bgq_package_description}
+
+Job submission multiplexer.
+
+%files runjob_mux
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/sbin
+%dir %{_base_dir}/sbin
+
+%{_base_dir}/hlcs/sbin/runjob_mux
+%{_base_dir}/sbin/runjob_mux
+
+
+####################################
+%package runjob-devel
+
+Summary: runjob client development headers
+Group: %{product_group}
+Release: 0
+
+%description runjob-devel
+%{bgq_package_description}
+
+Job submission client library interface.
+
+%files runjob-devel
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/include
+%dir %{_base_dir}/hlcs/include/bgsched
+%dir %{_base_dir}/hlcs/include/bgsched/runjob
+%dir %{_base_dir}/hlcs/lib
+
+%{_base_dir}/hlcs/include/bgsched/runjob/Client.h
+%{_base_dir}/hlcs/lib/librunjob_client.so
+
+
+####################################
+%package runjob
+
+Summary: runjob client
+Group: %{product_group}
+Release: 0
+
+%description runjob
+%{bgq_package_description}
+
+Job submission interface.
+
+%files runjob
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/bin
+%dir %{_base_dir}/hlcs/lib
+%dir %{_base_dir}/bin
+
+%{_base_dir}/hlcs/bin/runjob
+%{_base_dir}/hlcs/lib/librunjob_client.so.1
+%{_base_dir}/hlcs/lib/librunjob_client.so.1.0.0
+%{_base_dir}/bin/runjob
+
+
+####################################
+%package runjob_common
+
+Summary: runjob common libraries
+Group: %{product_group}
+Release: 0
+
+%description runjob_common
+%{bgq_package_description}
+
+Job submission common library.
+
+%files runjob_common
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/lib
+
+%{_base_dir}/hlcs/lib/librunjob_common.so.1
+%{_base_dir}/hlcs/lib/librunjob_common.so.1.0.0
+
+
+####################################
+%package runjob_command
+
+Summary: runjob commands
+Group: %{product_group}
+Release: 0
+
+%description runjob_command
+%{bgq_package_description}
+
+Job submission commands.
+
+%files runjob_command
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/bin
+%dir %{_base_dir}/hlcs/lib
+%dir %{_base_dir}/hlcs/sbin
+%dir %{_base_dir}/bin
+%dir %{_base_dir}/sbin
+
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/dump_proctable
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/end_tool
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/grant_job_authority
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/job_status
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/kill_job
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/list_job_authority
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/locate_rank
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/revoke_job_authority
+%{_base_dir}/hlcs/bin/start_tool
+%attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/tool_status
+%{_base_dir}/hlcs/lib/librunjob_command.so.1
+%{_base_dir}/hlcs/lib/librunjob_command.so.1.0.0
+%{_base_dir}/hlcs/sbin/runjob_mux_log_level
+%{_base_dir}/hlcs/sbin/runjob_mux_refresh_config
+%{_base_dir}/hlcs/sbin/runjob_mux_status
+%{_base_dir}/hlcs/sbin/runjob_server
+%{_base_dir}/hlcs/sbin/runjob_server_log_level
+%{_base_dir}/hlcs/sbin/runjob_server_refresh_config
+%{_base_dir}/hlcs/sbin/runjob_server_status
+%{_base_dir}/hlcs/sbin/cios_log_level
+
+%{_base_dir}/sbin/runjob_mux_log_level
+%{_base_dir}/sbin/runjob_mux_refresh_config
+%{_base_dir}/sbin/runjob_mux_status
+%{_base_dir}/sbin/runjob_server
+%{_base_dir}/sbin/runjob_server_log_level
+%{_base_dir}/sbin/runjob_server_refresh_config
+%{_base_dir}/sbin/runjob_server_status
+%{_base_dir}/sbin/cios_log_level
+%{_base_dir}/bin/dump_proctable
+%{_base_dir}/bin/end_tool
+%{_base_dir}/bin/grant_job_authority
+%{_base_dir}/bin/job_status
+%{_base_dir}/bin/kill_job
+%{_base_dir}/bin/list_job_authority
+%{_base_dir}/bin/locate_rank
+%{_base_dir}/bin/revoke_job_authority
+%{_base_dir}/bin/start_tool
+%{_base_dir}/bin/tool_status
+
+
+####################################
+%package security
+
+Summary: security
+Group: %{product_group}
+Release: 0
+
+%description security
+%{bgq_package_description}
+
+Security library.
+
+%files security
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/lib
+%dir %{_base_dir}/hlcs/ras
+%dir %{_base_dir}/hlcs/ras/metadata
+
+%{_base_dir}/hlcs/lib/libsecurity.so.1
+%{_base_dir}/hlcs/lib/libsecurity.so.1.0.0
+%{_base_dir}/hlcs/ras/metadata/security_ras.xml
+
+
+####################################
+%package properties_validate
+
+Summary: Validate contents of the bg.properties file
+Group: %{product_group}
+Release: 0
+
+%description properties_validate
+%{bgq_package_description}
+
+Validate the contents of the bg.properties file.
+
+%files properties_validate
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/bin
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/bin
+
+%{_base_dir}/bin/properties_validate
+%{_base_dir}/hlcs/bin/properties_validate
+
+
+####################################
+%package log_merge
+
+Summary: Blue Gene logs merge utility.
+Group: %{product_group}
+Release: 0
+
+%description log_merge
+%{bgq_package_description}
+
+This package provides a utility for merging the various Blue Gene log files.
+
+%files log_merge
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/bin
+%dir %{_base_dir}/bin
+
+%{_base_dir}/hlcs/bin/log_merge
+%{_base_dir}/bin/log_merge

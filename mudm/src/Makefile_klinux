@@ -1,0 +1,34 @@
+
+include ../../Make.rules
+
+export ARCH=powerpc
+export CFLAGS=-D__LINUX__
+export BGQ_INSTALL_DIR
+export INSTALL_MOD_PATH=$(BGQ_INSTALL_DIR)/mudm
+export BGQ_LINUX_SRC_PATH
+
+#SILENT=@
+SILENT=
+
+SOURCE_FILES=$(shell ls -1 *.[ch]) 
+INSTALLED_SOURCE_FILES=$(addprefix $(BGQ_INSTALL_DIR)/mudm/src/, ${SOURCE_FILES})
+
+.PHONY: default install
+.NOTPARALLEL: install
+
+default: install
+all: install
+
+$(BGQ_INSTALL_DIR)/mudm/src:
+	${MKDIR} -p $@
+
+${INSTALLED_SOURCE_FILES}: $(BGQ_INSTALL_DIR)/mudm/src/% : % 
+	${CP} $< $@
+
+install:$(BGQ_INSTALL_DIR)/mudm/src ${INSTALLED_SOURCE_FILES}
+
+clean:
+
+distclean:
+	@${RM} -rf $(BGQ_INSTALL_DIR)/mudm/lib/*
+	@${RM} -rf $(BGQ_INSTALL_DIR)/mudm/src/*

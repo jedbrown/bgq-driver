@@ -1,0 +1,85 @@
+# -*- mode: makefile-gmake; -*-
+# begin_generated_IBM_copyright_prolog                             #
+#                                                                  #
+# This is an automatically generated copyright prolog.             #
+# After initializing,  DO NOT MODIFY OR MOVE                       #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# (C) Copyright IBM Corp.  2007, 2008                              #
+# IBM CPL License                                                  #
+#                                                                  #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# end_generated_IBM_copyright_prolog                               #
+
+xxl.ndebug-install: pre-install xxl.ndebug
+	${MAKE} -C ${MPICH2BUILD}-xxl.ndebug install
+
+xxl.ndebug: autoconf
+	mkdir -p ${MPICH2BUILD}-xxl.ndebug
+	cd ${MPICH2BUILD}-xxl.ndebug &&					\
+	if [ ! -f Makefile ] ; then					\
+	  GCC="${HOST_CC}"						\
+	  CC="${FAST_CC}"						\
+	  CXX="${FAST_CXX}"						\
+	  F77="${FAST_F77}"						\
+	  FC="${FAST_F90}"						\
+	  AR="${HOST_AR}"						\
+	  LD="${HOST_LD}"						\
+	  MPICH2LIB_CFLAGS="${FAST_CFLAGS}"				\
+	  MPICH2LIB_CXXFLAGS="${FAST_CXXFLAGS}"				\
+	  MPICH2LIB_FFLAGS="${FAST_FFLAGS}"				\
+	  MPICH2LIB_F90FLAGS="${FAST_FFLAGS}"				\
+	  MPICH2LIB_LDFLAGS="${HOST_LDFLAGS}"				\
+	  CFLAGS="${MPI_CFLAGS}"					\
+	  CXXFLAGS="${MPI_CXXFLAGS}"					\
+	  FFLAGS="${MPI_FFLAGS}"					\
+	  FCFLAGS="${MPI_FFLAGS}"					\
+	  LDFLAGS="${MPI_LDFLAGS}"					\
+	  MPILIBNAME="mpich"						\
+	  MPICXXLIBNAME="cxxmpich"					\
+	  MSGLAYER_INCLUDE="${HOST_INCLUDE}"				\
+	  MSGLAYER_LIB="${HOST_LIB_XLFAST}"				\
+	  ${MPICH2DIR}/configure					\
+	  --enable-cache						\
+	  --prefix=${INSTALL_DIR}/xxl.ndebug				\
+	  --mandir=${INSTALL_DIR}/xxl.ndebug/man			\
+	  --htmldir=${INSTALL_DIR}/xxl.ndebug/www			\
+	  --host=${BUILD_HOST}						\
+	  --target=${BUILD_TARGET}					\
+	  --build=${BUILD_BUILD}					\
+	  --enable-dependencies						\
+	  --enable-g=none						\
+	  --with-device=pamid:${PLATFORM}				\
+	  --enable-romio=yes						\
+	  --enable-f77=yes						\
+	  --enable-fc=yes						\
+	  --with-file-system=${FILE_SYSTEM}				\
+	  --enable-timer-type=device					\
+	  --enable-threads=${THREAD_LEVEL}				\
+	  --with-fwrapname=fmpich					\
+	  --with-cross=${MPICH2DIR}/src/mpid/pamid/cross/${PLATFORMlc}8	\
+	  --with-mpe=no							\
+	  --enable-timing=no						\
+	  --disable-collchk						\
+	  --disable-graphics						\
+	  --disable-rlog						\
+	  --disable-sample						\
+	  --disable-rpath						\
+	  --with-aint-size=8						\
+	  --with-assert-level=0						\
+	  --enable-shared=no						\
+	  --enable-sharedlibs=none					\
+	  --disable-dynamiclibs						\
+	  --disable-debuginfo						\
+	  --enable-fast=nochkmsg,notiming,O3				\
+	  --disable-error-messages					\
+	  --with-atomic-primitives					\
+	  --enable-thread-cs=per-object					\
+	  --enable-handle-allocation=tls				\
+	  --enable-refcount=lock-free					\
+	  --disable-predefined-refcount					\
+	; fi
+	${MAKE} -j1 -C ${MPICH2BUILD}-xxl.ndebug dependencies
+	${MAKE} -j1 -C ${MPICH2BUILD}-xxl.ndebug
+# This lists specific options for "--enable-fast" because xlf breaks when it sees -DNDEBUG

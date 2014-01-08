@@ -1,0 +1,166 @@
+#/* -------------------------------------------------------------  */
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2010, 2011                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+####################################
+%package capena-http
+
+Summary: C++ library that provides an embedded HTTP server to generate dynamic responses.
+Group: %{product_group}
+Release: 0
+
+%description capena-http
+%{bgq_package_description}
+
+This package contains a C++ library that provides an embedded HTTP server to generate dynamic responses.
+
+%files capena-http
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/bgws
+%dir %{_base_dir}/bgws/lib
+
+%{_base_dir}/bgws/lib/libcapena-http.so.0
+%{_base_dir}/bgws/lib/libcapena-http.so.0.1.0
+
+
+####################################
+%package chiron-json
+
+Summary: C++ library for JSON.
+Group: %{product_group}
+Release: 0
+
+%description chiron-json
+%{bgq_package_description}
+
+This package contains a C++ library for JSON.
+
+%files chiron-json
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/bgws
+%dir %{_base_dir}/bgws/lib
+
+%{_base_dir}/bgws/lib/libchiron-json.so.0
+%{_base_dir}/bgws/lib/libchiron-json.so.0.1.0
+
+
+####################################
+%package bgws_common
+
+Summary: Library of common routines for BGWS.
+Group: %{product_group}
+Release: 0
+
+%description bgws_common
+%{bgq_package_description}
+
+This package contains a library of common routines for Blue Gene Web Services (BGWS).
+
+%files bgws_common
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/bgws
+%dir %{_base_dir}/bgws/lib
+
+%{_base_dir}/bgws/lib/libbgws_common.so.0
+%{_base_dir}/bgws/lib/libbgws_common.so.0.1.0
+
+
+####################################
+%package bgws_server
+
+Summary: The Blue Gene Web Services server.
+Group: %{product_group}
+Release: 0
+
+%description bgws_server
+%{bgq_package_description}
+
+This package contains the Blue Gene Web Services server.
+
+%files bgws_server
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/bgws
+%dir %{_base_dir}/bgws/libexec
+%dir %{_base_dir}/bgws/sbin
+%dir %{_base_dir}/sbin
+
+%{_base_dir}/bgws/etc
+
+%attr(4750,root,bgqadmin) %{_base_dir}/bgws/libexec/checkUserAdmin
+%{_base_dir}/bgws/sbin/bgws_server
+
+%{_base_dir}/sbin/bgws_server
+
+
+####################################
+%package bgws_command
+
+Summary: Command line utilities that access the Blue Gene Web Services.
+Group: %{product_group}
+Release: 0
+
+%description bgws_command
+%{bgq_package_description}
+
+This package contains command line utilities that access the Blue Gene Web Services.
+
+%files bgws_command
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/bgws
+%dir %{_base_dir}/bgws/bin
+%dir %{_base_dir}/bgws/lib
+%dir %{_base_dir}/bgws/sbin
+%dir %{_base_dir}/sbin
+
+%attr(4755,bgqcommand,root) %{_base_dir}/bgws/bin/list_blocks
+%attr(4755,bgqcommand,root) %{_base_dir}/bgws/bin/list_jobs
+%{_base_dir}/bgws/lib/libbgws_client.so.0
+%{_base_dir}/bgws/lib/libbgws_client.so.0.1.0
+%{_base_dir}/bgws/sbin/bgws_server_log_level
+%{_base_dir}/bgws/sbin/bgws_server_refresh_config
+%{_base_dir}/bgws/sbin/bgws_server_status
+%attr(4755,bgqcommand,root) %{_base_dir}/bgws/sbin/create_block
+%attr(4755,bgqcommand,root) %{_base_dir}/bgws/sbin/delete_block
+
+%{_base_dir}/bin/list_blocks
+%{_base_dir}/bin/list_jobs
+%{_base_dir}/sbin/bgws_server_log_level
+%{_base_dir}/sbin/bgws_server_refresh_config
+%{_base_dir}/sbin/bgws_server_status
+%{_base_dir}/sbin/create_block
+%{_base_dir}/sbin/delete_block

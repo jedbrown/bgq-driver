@@ -1,0 +1,33 @@
+#
+# rules for building CNK applications
+# 
+
+
+# bgpm library directory.
+SUBDIRS = $(BGQ_BUILD_DIR)/bgpm/include 
+LOCAL_LIBS = $(BGQ_INSTALL_DIR)/bgpm/lib/libbgpm.a 
+
+
+BASENAME = /bin/basename
+RM_F = /bin/rm -f
+
+TEST_INSTALL_DIR=$(patsubst $(BGQ_BUILD_DIR)/bgpm/%,$(BGQ_INSTALL_DIR)/bgpm/%,$(shell pwd))
+
+LIB_DIRS += $(BGQ_INSTALL_DIR)/bgpm/lib
+LIBS := bgpm $(LIBS) c
+
+
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) -c $< -o $*.o
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $*.o
+
+%.o: %.S
+	$(CC) $(CFLAGS) -Os $< -o $*.o
+
+%.elf:
+	$(CXX) -o $@ $(filter %.o,$^) $(LDFLAGS) $(foreach e,$(LIB_DIRS),-L$(e)) $(foreach e,$(LIBS),-l$(e))
+
+	
+	

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY product "monitor_master">
+]>
+
+<refentry lang="en" id="monitor_master">
+<refentryinfo>
+    <productname>&product;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>© Copyright IBM Corp. 2010, 2011</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+<refmeta>
+    <refentrytitle>&product;</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&product;</refname>
+    <refpurpose>Manual for BGmaster monitor_master command</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id="monitor_master.synopsis">
+    <title>Synopsis</title>
+    <cmdsynopsis><command>monitor_master [ OPTIONS ]</command>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id="monitor_master.options">
+    <title>Arguments</title>
+    <para>Accepted arguments:</para>
+    <variablelist>
+        <varlistentry>
+            <term><option>--properties</option></term>
+            <listitem>
+            <para>The bg.properties configuration file to use.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--help</option></term>
+            <listitem>
+            <para>usage </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--host host:port</option></term>
+            <listitem>
+            <para>TCP host and port pair to use to connect to bgmaster_server </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--verbose verbosity</option></term>
+            <listitem>
+            <para>Add program trace information.  Levels of verbosity are TRACE, DEBUG, INFO, WARN, ERROR, FATAL. </para>
+            </listitem>
+        </varlistentry>
+
+    </variablelist>
+</refsect1>
+
+<refsect1 id="monitor_master.description">
+    <title>Description</title>
+    <para>monitor_master provides a rolling update of events and errors from bgmaster_server.  When it makes
+its initial connection to bgmaster_server, it gathers the contents of the history and error buffers and prints 
+them out.  It then maintains the connection and bgmaster_server feeds each new event and error back to 
+monitor_master which displays them on standard out.
+ </para>
+</refsect1>
+
+
+<refsect1 id="monitor_master.seealso">
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>master_status</refentrytitle>
+           <manvolnum>8</manvolnum>
+	</citerefentry>
+    </para>
+</refsect1>
+
+</refentry>

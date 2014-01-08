@@ -1,0 +1,51 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+    # ----------------- basic definitions --------------------------------------
+    PLATFORM             = PE
+    PLATFORMlc           = pe
+    INSTALL_DIR          ?= ${ROOTDIR}/install
+    BUILD_TARGET         ?= powerpc64-unknown-linux-gnu
+
+    BUILD_BUILD          ?= powerpc64-unknown-linux-gnu
+    BUILD_TARGET         ?= x86_64-ibm-linux
+    BUILD_HOST           ?= i686-pc-linux-gnu
+
+
+    # ---------------- PAMI Information -----------------------------------------
+    PAMI_CONFIG           = --with-target=${PLATFORMlc}   --with-installdir=${INSTALL_DIR}/sys
+    PAMI_CONFIG_FAST      = --with-target=${PLATFORMlc}   --with-installdir=${INSTALL_DIR}/sys-fast
+
+    # ---------------- default compilation targets -----------------------------
+    HOST_AR              =ar
+    HOST_LD              =ld
+    HOST_NM              =nm
+    HOST_OBJCOPY         =objcopy
+
+    HOST_CC              ?=gcc
+    HOST_CXX             ?=g++
+    HOST_F77             ?=gfortran -fno-underscoring
+    HOST_F90             ?=gfortran -fno-underscoring
+
+    FAST_CC              =false
+    FAST_CXX             =false
+    FAST_F77             =false
+    FAST_F90             =false
+
+    HOST_INCLUDE         ?=-I${INSTALL_DIR}/sys/include
+    HOST_LIB             ?=-L${INSTALL_DIR}/sys/lib      -Wl,-rpath,${INSTALL_DIR}/sys/lib -lpami -lpthread -lrt
+    HOST_LIB_FAST        ="${HOST_LIB}"

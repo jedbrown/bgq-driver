@@ -1,0 +1,33 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+# Rules to set up /dev/null and /dev/zero properly
+KERNEL=="null", MODE="0666"
+KERNEL=="zero", MODE="0666"
+KERNEL=="random", MODE="0666"
+KERNEL=="urandom", MODE="0666"
+KERNEL=="tty*", MODE="0620" GROUP="tty"
+KERNEL=="tty[1-6]" MODE="0600" GROUP="root"
+KERNEL=="vcs*" MODE="0660" OWNER="vcsa" GROUP="tty"
+KERNEL=="ram*" MODE="0660" GROUP="disk"
+KERNEL=="pty*" MODE="0660" GROUP="tty"
+KERNEL=="ptmx" MODE="0666" GROUP="tty"
+KERNEL=="console" MODE="0600"
+KERNEL=="port" MODE="0640" GROUP="kmem"
+KERNEL=="mem" MODE="0640" GROUP="kmem"

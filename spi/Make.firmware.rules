@@ -1,0 +1,56 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2010, 2011                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+CFLAGS  = -O2 -g -Wall
+
+# Creates a dependency file
+CFLAGS += -MMD -MF .dep.$(<F).d
+
+# path for BGQ installation
+CFLAGS += -I$(BGQ_INSTALL_DIR)/gnu/runtime -I$(BGQ_INSTALL_DIR)
+
+# path for firmware implementation of SPIs
+CFLAGS += -I$(BGQ_INSTALL_DIR)/spi/include/kernel/firmware
+
+# firmware flags
+CFLAGS += -D__KERNEL__ -D__FWEXT__
+
+# for additional command line args, ie "make ARGS=-Dxxx=yyy"
+CFLAGS += $(ARGS)
+
+CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -fuse-cxa-atexit
+
+CXX     = $(BGQ_CROSS_CXX)
+CC      = $(BGQ_CROSS_CC)
+FC      = $(BGQ_CROSS_FC)
+AR      = $(BGQ_CROSS_AR) crv
+
+
+
+%.o : %.c
+	$(CC) $(CFLAGS) -MMD -MF .dep.$(<F).d -o $@ -c $(<)
+    
+%.o : %.cc
+	$(CXX) $(CFLAGS) -MMD -MF .dep.$(<F).d -o $@ -c $(<)
+
+

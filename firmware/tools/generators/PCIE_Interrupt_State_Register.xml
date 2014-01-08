@@ -1,0 +1,132 @@
+<register width="64" name="PCIE_INTERRUPT_STATE" prefix="PE_DCR" 
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+ description="When an error occurs, the relevant bit is set by the hardware.  Software should write '1' to reset error indication; writing a '0' has no effect.">
+
+  <field bit="0" name="LOCAL_RING" description="Parity error on DCR ring." category="fatal" />
+
+     <field bit="1" name="serr" 
+       description="PCIE got a SERR."
+       category="software" />
+     <field bit="2" name="pci_cfg_wr_error" 
+       description="Outbound PCIe configuration or IO write completed in error."
+       category="software" />
+     <field bit="3" name="pci_cfg_wr_error_ur" 
+       description="Outbound PCIe configuration or IO write completed with an unsupported request error."
+       category="software" />
+     <field bit="4" name="pci_cfg_wr_error_retry" 
+       description="Outbound PCIe configuration or IO write completed with a retry error."
+       category="software" />
+     <field bit="5" name="pci_ow_pty" 
+       description="Parity error on an outbound PCIe write request received from the device bus."
+       category="fatal" />
+     <field bit="6" name="pci_cfg_rd_error" 
+       description="Outbound PCIe configuration or IO read cmpleted in error."
+       category="software" />
+     <field bit="7" name="pci_cfg_rd_error_ur" 
+       description="Outbound PCIe configuration or IO read completed with an unsupported request error."
+       category="software" />
+     <field bit="8" name="pci_cfg_rd_error_retry" 
+       description="Outbound PCIe configuration or IO read completed with a retry error."
+       category="software" />
+     <field bit="9" name="pci_or_pty" 
+       description="Parity error in an outbound PCIe read request received from the device bus."
+       category="fatal" />
+     <field bit="10" name="pci_or_tag_store" 
+       description="Parity error in some entry of the outbound PCIe read tag store."
+       category="fatal" />
+     <field bit="11" name="pci_or_poisoned" 
+       description="Outbound PCIe read data was poisoned."
+       category="fatal" />
+     <field bit="12" name="pci_iw_pty" 
+       description="Parity error in inbound PCIe write request register."
+       category="fatal" />
+     <field bit="13" name="pci_iw_req_size" 
+       description="Received inbound PCIe write request with size exceeding 512 bytes."
+       category="software" />
+     <field bit="14" name="pci_iw_req_type" 
+       description="Received inbound PCIe write request that was for IO or message space."
+       category="fatal" />
+
+     <field bit="16" name="pci_iw_req_snoop" 
+       description="Received coherent inbound PCIe write request."
+       category="reserved" />
+     <field bit="17" name="pci_iw_range_start" 
+       description="Received inbound PCIe write request with out-of-range start address."
+       category="software" />
+     <field bit="18" name="pci_iw_range_end" 
+       description="Received inbound PCIe write request with out-of-range end address."
+       category="software" />
+     <field bit="19" name="pci_iw_max_top" 
+       description="Received inbound PCIe write request exceeding 64GB maximum boundary."
+       category="software" />
+     <field bit="20" name="pci_iw_bounds" 
+       description="Received inbound PCIe write request that is not within configured bounds."
+       category="software" />
+     <field bit="21" name="pci_iw_sm_state" 
+       description="Inbound PCIe write state machine reached an illegal state."
+       category="fatal" />
+     <field bit="22" name="pci_ir_req_snoop" 
+       description="Received coherent inbound PCIe read requet."
+       category="reserved" />
+     <field bit="23" name="pci_ir_resp" 
+       description="Parity error in inbound PCIe read response received from the device bus."
+       category="fatal" />
+     <field bit="24" name="pci_ir_ecc" 
+       description="Uncorrectable ECC error in inbound PCIe read response data received from the device bus."
+       category="fatal" />
+     <field bit="25" name="cfg_perr" 
+       description="Configuration core parity error."
+       category="fatal" />
+     <field bit="26" name="utl_pclk_err" 
+       description="PCIe error in the PCLK domain of the UTL."
+       category="fatal" />
+     <field bit="27" name="utl_bclk_err" 
+       description="PCIE error in the BCLK domain."
+       category="fatal" />
+     <field bit="28" name="tdlp_pclk_err" 
+       description="PCIE error in the TLDLP core."
+       category="fatal" />
+     <field bit="29" name="al_pint" 
+       description="UTL Primary Interrupt."
+       category="fatal" />
+     <field bit="30" name="al_sint" 
+       description="UTL Secondary Interrupt."
+       category="software" />
+     <field bit="31" name="utl_sm_pty" 
+       description="UTL internal register state machine error."
+       category="fatal" />
+     <field bit="32" name="upc_counter_ovf" 
+       description="UPC counter overflow."
+       category="software" />
+     <field bit="33" name="ei_sm_error" 
+       description="Error injection state machine error."
+       category="reserved" />
+     <field bit="34" name="pci_mem_rd_error" 
+       description="Outbound PCIe memory read completed in error."
+       category="fatal" />
+     <field bit="35" name="pci_mem_rd_error_ur" 
+       description="Outbound PCIe memory read completed with an unsupported request error."
+       category="fatal" />
+     <field bit="36" name="pci_mem_rd_error_rerry" 
+       description="Outbound PCIe memory read completed with a retry error."
+       category="fatal" />
+	   
+</register>

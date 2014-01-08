@@ -1,0 +1,1785 @@
+<File filename="MCServerMessageSpec" type="xmlapi" namespace="MCServerMessageSpec" version="3" >
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!-- Eclipse Public License (EPL)                                     -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <Method name="targetspec" comment="Specific location of a target for the command">
+    <Class name="TargetRequest" superclass="true">
+      <DataMember type="text" name="set" comment="target set name" />
+      <DataMember type="text" name="expression" occurrences="many" comment="regular expressions" />
+      <DataMember type="text" name="location" occurrences="many" comment="location string(s)" />
+    </Class>
+  </Method>
+
+  <Method name="returnspec" comment="Specification of return message for a command">
+    <Class name="Reply" superclass="true">
+      <DataMember type="int32" name="rc" comment="return error code" />
+      <DataMember type="text" name="rt" comment="return error text" />
+    </Class>
+  </Method>
+
+  <Method name="bringup" type="RequestReply" comment="Ask MC to initialize the machine and fill up the skeleton bglmachine data structures with available hardware">
+    <Class name="BringupRequest">
+      <DataMember type="text" name="bringupOptions" comment="comma separated list of options to pass to bringup" />
+    </Class>
+    <Class name="BringupReply" parent="Reply">
+      <Class name="ServiceCard">
+        <DataMember type="text" name="cardLocation" comment="service card location" />
+        <DataMember type="text" name="licensePlate" comment="card license plate" />
+      </Class>
+      <Class name="NodeCard">
+        <DataMember type="text" name="cardLocation" comment="node card location" />
+        <DataMember type="text" name="licensePlate" comment="card license plate" />
+        <DataMember type="text" name="computes" occurrences="many" comment="compute node locations" />
+        <DataMember type="text" name="blinks" occurrences="many" comment="link module locations" />
+        <DataMember type="text" name="avagos" occurrences="many" comment="avago module locations" />
+      </Class>
+      <Class name="IoCard">
+        <DataMember type="text" name="cardLocation" comment="where is this service card" />
+        <DataMember type="text" name="licensePlate" comment="card license plate" />
+        <DataMember type="text" name="computes" occurrences="many" comment="compute node locations" />
+        <DataMember type="text" name="blinks" occurrences="many" comment="link module locations" />
+        <DataMember type="text" name="avagos" occurrences="many" comment="avagos module locations" />
+      </Class>
+
+
+      <DataMember type="uint32" name="error" comment="mc error code" />
+      <DataMember type="ServiceCard" name="serviceCards" occurrences="many" comment="all service cards" />
+      <DataMember type="NodeCard" name="nodeCards" occurrences="many" comment="all node cards" />
+      <DataMember type="IoCard" name="ioCards" occurrences="many" comment="all link cards" />
+    </Class>
+  </Method>
+
+  <Method name="halt" type="RequestReply" comment="Stop MC and shutdown the hardware.We need to call bringup again to reinitialize the hardware">
+    <Class name="HaltRequest">
+    </Class>
+    <Class name="HaltReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="setDebugLevel" type="RequestReply" comment="set machineController debug level">
+    <Class name="SetDebugLevelRequest" parent="TargetRequest">
+      <DataMember type="uint32" name="mask" comment="which debug flags take effect" />
+      <DataMember type="bool" name="onOrOff" comment="turn on/off" />
+    </Class>
+    <Class name="SetDebugLevelReply" parent="Reply">
+      <DataMember type="bool" name="error"  occurrences="many" comment="mc reutrn codes" />
+    </Class>
+  </Method>
+
+  <Method name="logger" type="RequestReply" comment="logger list and set name level">
+    <Class name="LoggerRequest">
+      <DataMember type="text" name="cmd" occurrences="many" comment="logger_name=level" />
+    </Class>
+    <Class name="LoggerReply" parent="Reply">
+      <DataMember type="bool" name="error"  occurrences="many" comment="mc return codes" />
+      <DataMember type="text" name="lines"  occurrences="many" comment="response data" />
+    </Class>
+  </Method>
+
+  <Method name="flightrecorder" type="RequestReply" comment="flightrecorder list and dump name">
+    <Class name="FlightRecorderRequest">
+      <DataMember type="text" name="cmd" occurences="many" comment="flightRecorder [list | dump name]" />
+    </Class>
+    <Class name="FlightRecorderReply" parent="Reply">
+      <DataMember type="bool" name="error"  occurrences="many" comment="mc return codes" />
+      <DataMember type="text" name="lines"  occurrences="many" comment="response data" />
+    </Class>
+  </Method>
+
+
+  <Method name="bootBlock" type="RequestReply" comment="Boot a block with explicit information">
+    <Class name="BootBlockRequest">
+
+      <Class name="Node">
+        <DataMember type="uint32" name="jtag" comment="jtag position of this node" />
+        <DataMember type="bool" name="isIoNode" comment="which ELF images to use" />
+        <DataMember type="bool" name="trainOnly" comment="use this node for IO Link training only" />
+        <DataMember type="binary" name="personality" comment="the personality of this node" />
+        <DataMember type="binary" name="configData" comment="configurate data to be passed to the OS" />
+        <DataMember type="uint64" name="configDataSize" comment="size in bytes of the config data" />
+      </Class>
+
+      <Class name="BQLSwitch">
+        <DataMember type="uint32" name="state" comment="switch state" />
+        <DataMember type="uint32" name="hss4GmaskA" comment="lanes used on A port" />
+        <DataMember type="uint32" name="hss4GmaskB" comment="lanes used on B port" />
+        <DataMember type="uint32" name="hss10GmaskC" comment="lanes used on C port" />
+        <DataMember type="uint32" name="hss10GmaskD" comment="lanes used on D port" />
+        <DataMember type="uint32" name="optModRX" comment="index of optical modules used for receiving data" />
+        <DataMember type="uint32" name="optModTX" comment="index of optical modules used for transmitting data" />
+      </Class>
+
+
+      <Class name="LinkChipPersonality">
+        <DataMember type="BQLSwitch" name="bqlSwitches" occurrences="many" comment="bql switch information - on for each of the four switches" />
+        <DataMember type="uint32" name="badWires" occurrences="many" comment="bitmask of bad wires (two for receiver regs C01 and C23 and two for transmitters regs D01 and D23)" />
+        <DataMember type="bool" name="mode56" comment="sparing mode" />
+      </Class>
+
+      <Class name="LinkChip">
+        <DataMember type="uint32" name="jtag" comment="jtag position of this link chip" />
+        <DataMember type="LinkChipPersonality" name="personality" comment="the personality of this link chip" />
+      </Class>
+
+      <Class name="NodeCard">
+        <DataMember type="text" name="location" comment="where this node card is located" />
+        <DataMember type="Node" name="nodes" occurrences="many" comment="nodes on this card" />
+        <DataMember type="LinkChip" name="linkChips" occurrences="many" comment="link chips on this card" />
+      </Class>
+
+      <Class name="NodeCardReboot">
+        <DataMember type="text" name="location" comment="where this node card is located" />
+        <DataMember type="Node" name="nodes" occurrences="many" comment="nodes on this card" />
+        <DataMember type="LinkChip" name="linkChips" occurrences="many" comment="link chips on this card" />
+      </Class>
+
+      <Class name="IoCard">
+        <DataMember type="text" name="location" comment="where this node card is located" />
+        <DataMember type="Node" name="nodes" occurrences="many" comment="nodes on this IO card" />
+        <DataMember type="LinkChip" name="linkChips" occurrences="many" comment="link chips on this card" />
+      </Class>
+
+      <Class name="IoCardReboot">
+        <DataMember type="text" name="location" comment="where this node card is located" />
+        <DataMember type="Node" name="nodes" occurrences="many" comment="nodes on this IO card" />
+        <DataMember type="LinkChip" name="linkChips" occurrences="many" comment="link chips on this card" />
+      </Class>
+
+      <Class name="Domain">
+        <DataMember type="uint32" name="startCore" comment="the zero based index of the starting core included in this domain" />
+        <DataMember type="uint32" name="endCore" comment="the zero based index of the end core included in this domain" />
+        <DataMember type="uint64" name="startAddress" comment="the beginning real address of memory for this domain" />
+        <DataMember type="uint64" name="endAddress" comment="the ending real address of memory for this domain" />
+        <DataMember type="text" name="imageSet" comment="a comma separate list of elf images to load on the nodes" />
+        <DataMember type="text" name="options" comment="list of name=value options to pass to OS" />
+        <DataMember type="uint64" name="configAddress" comment="the starting address of the configuration data for this domain" />
+      </Class>
+
+      <DataMember type="uint32" name="bootSteps" occurrences="many"  comment="the steps to perform as part of the boot process" />
+      <DataMember type="text" name="set" comment="to verify that we own it" />
+      <DataMember type="text" name="user" comment="who booted the block" />
+      <DataMember type="bool" name="tolerateFaults" comment="attempt to continue the boot process when chip, node, and card failures occur" />
+      <DataMember type="text" name="firmware" comment="firmware common to all nodes - provides the hardware initialization and mailbox capabilities" />
+      <DataMember type="Domain" name="domains" occurrences="many" comment="a set of hardware resources and associated images to run on those resources" />
+      <DataMember type="uint32" name="cookie" comment="boot cookie for perf stats qualifier" />
+      <DataMember type="text" name="options" comment="list of name=value options to pass to boot" />
+      <DataMember type="uint32" name="startTime" comment="timestamp the boot started" />
+
+      <DataMember type="NodeCard" name="nodeCards" occurrences="many" comment="all the node cards" />
+      <DataMember type="NodeCardReboot" name="rebootNodeCards" occurrences="many" comment="node cards to be rebooted" />
+      <DataMember type="IoCard" name="ioCards" occurrences="many" comment="all the node cards" />
+      <DataMember type="IoCardReboot" name="rebootIoCards" occurrences="many" comment="node cards to be rebooted" />
+    </Class>
+
+    <Class name="BootBlockReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="failover" type="RequestReply" comment="Inform mc_server of a failover event">
+    <Class name="FailoverRequest">
+      <Class name="BootedHardware">
+        <Class name="NodeCard">
+          <DataMember type="text"   name="location"                  comment="where this node card is located" />
+          <DataMember type="uint32" name="blinksToBeMonitoredMask"   comment="mask indicating which of the blinks are to be monitored (LSB=Blink with location suffix of Rxx-Iy-U00, Rxx-Iy-U01, ...)" />
+          <DataMember type="uint32" name="computesToBeMonitoredMask" comment="mask indicating which of the computes are to be monitored (LSB=Compute with location suffix of Rxx-Iy-J00, Rxx-Iy-J01, ...)" />
+          <DataMember type="uint32" name="computesJtagId"            comment="only need one jtag id because all computes in a board must have same jtag id." />
+        </Class>
+        <Class name="IoCard">
+          <DataMember type="text"   name="location"                  comment="where this node card is located" />
+          <DataMember type="uint32" name="blinksToBeMonitoredMask"   comment="mask indicating which of the blinks are to be monitored (LSB=Blink with location suffix of Rxx-Iy-U00, Rxx-Iy-U01, ...)" />
+          <DataMember type="uint32" name="computesToBeMonitoredMask" comment="mask indicating which of the computes are to be monitored (LSB=Compute with location suffix of Rxx-Iy-J00, Rxx-Iy-J01, ...)" />
+          <DataMember type="uint32" name="computesJtagId"            comment="only need one jtag id because all computes in a board must have same jtag id." />
+        </Class>
+        <Class name="ServiceCard">
+          <DataMember type="text" name="location" comment="where this service card is located" />
+        </Class>
+        <DataMember type="NodeCard" name="nodeCards"        occurrences="many" comment="all the node cards" />
+        <DataMember type="IoCard"   name="ioCards"          occurrences="many" comment="all the node cards" />
+	     <DataMember type="ServiceCard" name="serviceCards"  occurrences="many" comment="all of the service cards" />
+        <DataMember type="text"     name="failed_subnet_id"                    comment="MMCS has detected that this subnet has failed and been restarted"/>
+      </Class>
+      <Class name="IdleHardware">
+        <Class name="NodeCard">
+          <DataMember type="text" name="location" comment="where this node card is located" />
+        </Class>
+        <Class name="IoCard">
+          <DataMember type="text" name="location" comment="where this node card is located" />
+        </Class>
+	     <Class name="ServiceCard">
+	       <DataMember type="text" name="location" comment="where this service card is located" />
+	     </Class>
+        <DataMember type="NodeCard" name="nodeCards"        occurrences="many" comment="all the node cards" />
+        <DataMember type="IoCard"   name="ioCards"          occurrences="many" comment="all the node cards" />
+	     <DataMember type="ServiceCard" name="serviceCards"  occurrences="many" comment="all of the service cards" />
+      </Class>
+      <DataMember type="BootedHardware" name="bootedHardware"  comment="All of the hardware booted before failover"/>
+      <DataMember type="IdleHardware"   name="idleHardware"    comment="All of the hardware NOT booted before failover"/>
+      <DataMember type="text"           name="bringupOptions"  comment="comma separated list of options to pass to bringup" />
+      <DataMember type="text"           name="ethAdapterForHw" comment="Ethernet adapter that should be used to talk to Blue Gene hardware" />
+    </Class>
+    <Class name="FailoverReply" parent="Reply">
+      <Class name="NodeCard">
+        <DataMember type="text"   name="location"                  comment="where this node card is located" />
+      </Class>
+      <Class name="IoCard">
+        <DataMember type="text"   name="location"                  comment="where this node card is located" />
+      </Class>
+      <Class name="ServiceCard">
+	<DataMember type="text" name="location" comment="where this service card is located" />
+      </Class>
+      <DataMember type="NodeCard" name="nodeCards"        occurrences="many" comment="all the node cards" />
+      <DataMember type="IoCard"   name="ioCards"          occurrences="many" comment="all the node cards" />
+      <DataMember type="ServiceCard" name="serviceCards"  occurrences="many" comment="all of the service cards" />
+    </Class>
+  </Method>
+
+  <Method name="haltnodes" type="RequestReply" comment="Tell node kernels to perform shutdown processing.">
+    <Class name="HaltNodesRequest" parent="TargetRequest">
+      <DataMember type="uint32" name="cookie" comment="boot cookie for perf stats qualifier" />
+    </Class>
+    <Class name="HaltNodesReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="notify_io" type="RequestReply" comment="Tell I/O nodes that compute block is shutting down.">
+    <Class name="NotifyIoRequest" parent="TargetRequest">
+      <DataMember type="uint32" name="blockid" comment="Creation ID of the block being shut down"/>
+      <DataMember type="uint32" name="cookie" comment="boot cookie for perf stats qualifier" />
+    </Class>
+    <Class name="NotifyIoReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="bist" type="RequestReply" comment="Run the specified form of bist on the specified chip locations.">
+    <ValueSet name="BistType" >
+      <ValueMember name="BIST_BqcBist"    comment="perform BqcBist."/>
+      <ValueMember name="BIST_BqcHssBist" comment="perform BqcHssBist."/>
+      <ValueMember name="BIST_BqlBist"    comment="perform BqlBist."/>
+      <ValueMember name="BIST_BqlHssBist" comment="perform BqlHssBist."/>
+    </ValueSet>
+    <Class name="BistRequest" parent="TargetRequest">
+      <DataMember type="BistType" name="type"    comment="type of bist to perform on the specified chips"/>
+      <DataMember type="text"     name="options" comment="bist options"/>
+      <DataMember type="text"     name="logDir"  comment="log directory"/>
+    </Class>
+    <Class name="BistReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="bpmCommand" type="RequestReply" comment="Execute an arbitrary BPM/Bulk Power Module operation.">
+    <ValueSet name="BpmOp" >
+      <ValueMember name="BPM_GetFirmwareLevel"    comment="get the firmware level of this bpm."/>
+      <ValueMember name="BPM_UpdateFirmwareLevel" comment="update the firmware level of this bpm."/>
+      <ValueMember name="BPM_ClearFaults"         comment="clear/reset bpm faults."/>
+      <ValueMember name="BPM_DisableBpm"          comment="disable this bpm."/>
+      <ValueMember name="BPM_EnableBpm"           comment="enable this bpm."/>
+    </ValueSet>
+    <Class name="BpmCommandRequest" parent="TargetRequest">
+      <DataMember type="BpmOp"    name="operation"        comment="operation to perform on this bpm's domain"/>
+      <DataMember type="text"     name="inputFileName1"   comment="used by following operations: operation UpdateFirmwareLevel - this is the name of the BPM firmware file." />
+      <DataMember type="text"     name="inputFileName2"   comment="used by following operations: operation UpdateFirmwareLevel - this is the name of the BPM firmware CRC file." />
+    </Class>
+    <Class name="BpmReply">
+      <DataMember type="int32"  name="rc"                                  comment="whether or not any problem occurred. (0 = success / no error)" />
+      <DataMember type="text"   name="lctn"                                comment="the location that this reply is for." />
+      <DataMember type="text"   name="internalMessages" occurrences="many" comment="msgs that user should see (e.g. what errors occurred)." />
+      <DataMember type="text"   name="firmwareLevel"                       comment="returned by operation GetFirmwareLevel." />
+    </Class>
+    <Class name="BpmCommandReply" parent="Reply">
+      <DataMember type="BpmReply" name="bpms"             occurrences="many" comment="whether or not any problem occurred with an individual bpm." />
+      <DataMember type="text"     name="msgs"             occurrences="many" comment="messages that the user should see (e.g. what errors occurred).  Note: there is not necessarily a one to one correspondence between request entries above and _msgs." />
+    </Class>
+  </Method>
+
+  <Method name="fomCommand" type="RequestReply" comment="Execute an arbitrary Fiber Optics Module/Avago operation.">
+    <ValueSet name="FomOp" >
+      <ValueMember name="FOM_GetFirmwareLevel"       comment="get the firmware level of this Fiber Optics Module."/>
+      <ValueMember name="FOM_UpdateFirmwareLevel"    comment="update the firmware level of this Fiber Optics Module."/>
+      <ValueMember name="FOM_GetPartnumFmwlvlSernum" comment="get the Part Number, Firmware Level, and Serial Number for this Fiber Optics Module."/>
+    </ValueSet>
+    <Class name="FomCommandRequest" parent="TargetRequest">
+      <DataMember type="FomOp"    name="operation"        comment="operation to perform on this Fiber Optics Module - see values in MC_FomCommandOperation above."/>
+      <DataMember type="text"     name="inputFileName1"   comment="used by following operations: operation UpdateFirmwareLevel - this is the name of the Fiber Optics Module firmware file." />
+      <DataMember type="bool"     name="bEncodedFirmware" comment="used by following operations: operation UpdateFirmwareLevel - indicates whether or not the firmare is encoded." />
+      <DataMember type="bool"     name="bRecoveryMode"    comment="used by following operations: operation UpdateFirmwareLevel - indicates whether or not we are running in recovery mode." />
+      <DataMember type="bool"     name="bVerboseMode"     comment="used by following operations: operation UpdateFirmwareLevel - indicates whether or not we are running in verbose mode." />
+    </Class>
+    <Class name="FomReply">
+      <DataMember type="int32"  name="rc"                                  comment="whether or not any problem occurred. (0 = success / no error)" />
+      <DataMember type="text"   name="lctn"                                comment="the location that this reply is for." />
+      <DataMember type="text"   name="internalMessages" occurrences="many" comment="msgs that user should see (e.g. what errors occurred)." />
+      <DataMember type="uint32" name="firmwareLevel"                       comment="returned by operation GetFirmwareLevel." />
+      <DataMember type="text"   name="partNumber"                          comment="returned by operation GetPartnumFmwlvlSernum." />
+      <DataMember type="text"   name="serialNumber"                        comment="returned by operation GetPartnumFmwlvlSernum." />
+    </Class>
+    <Class name="FomCommandReply" parent="Reply">
+      <DataMember type="FomReply" name="foms"             occurrences="many" comment="whether or not any problem occurred with an individual Fiber Optics Module." />
+      <DataMember type="text"     name="msgs"             occurrences="many" comment="messages that the user should see (e.g. what errors occurred). Note: there is not necessarily a one to one correspondence between request entries above and _msgs." />
+    </Class>
+  </Method>
+
+  <Method name="dynamicSparing" type="RequestReply" comment="BQL dynamic lane sparing.">
+    <Class name="DynamicSparingRequest">
+      <Class name="LinkChipSpareXmtr">
+        <DataMember type="text"        name="bqlLocation" comment="link chip location." />
+        <DataMember type="text"        name="reg"         comment="register { C01, C23, D01, D23 }" />
+        <DataMember type="uint32"        name="wire_mask"   comment="bit mask - 0 = good, 1 = bad lane to be spared" />
+      </Class>
+      <Class name="LinkChipSpareRcvr">
+        <DataMember type="text"        name="bqlLocation" comment="link chip location." />
+        <DataMember type="text"        name="reg"         comment="register { C01, C23, D01, D23 }" />
+        <DataMember type="uint32"        name="wire_mask"   comment="bit mask - 0 = good, 1 = bad lane to be spared" />
+      </Class>
+      <DataMember type="LinkChipSpareXmtr" name="transmitter" comment="valid regs are D01 and D23" />
+      <DataMember type="LinkChipSpareRcvr" name="receiver"    comment="valid regs are C01 and C23" />
+    </Class>
+    <Class name="DynamicSparingReply" parent="Reply">
+      <DataMember type="text"          name="msg"         comment="msg that user should see (e.g. what errors occurred)." />
+    </Class>
+  </Method>
+
+  <Method name="readCoolantMonitorEnv" type="RequestReply" comment="Read environmental information.">
+    <Class name="ReadCoolantMonitorEnvRequest" parent="TargetRequest">
+    </Class>
+    <Class name="CoolMonEnv">
+      <DataMember type="text"   name="lctn"                   comment="the location that this environmental information is for." />
+      <DataMember type="int32"  name="error"                  comment="whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="uint32" name="supplyFlowStatus"       comment="Supply coolant flow status - register 0x0000" />
+      <DataMember type="uint32" name="returnFlowStatus"       comment="Return coolant flow status - register 0x0001" />
+      <DataMember type="uint32" name="leakStatus"             comment="Leak Detection Status - register 0x0002" />
+      <DataMember type="uint32" name="valveStatus"            comment="Solenoid Valve status - register 0x0003" />
+      <DataMember type="uint32" name="supplyTempStatus"       comment="Supply coolant temperature status - register 0x0004" />
+      <DataMember type="uint32" name="returnTempStatus"       comment="Return coolant temperature status - register 0x0005" />
+      <DataMember type="uint32" name="supplyPressureStatus"   comment="Supply coolant pressure status - register 0x0006" />
+      <DataMember type="uint32" name="diffPressureStatus"     comment="Coolant differential pressure status - register 0x0007" />
+      <DataMember type="uint32" name="ambientTempStatus"      comment="Ambient temperature status - register 0x0008" />
+      <DataMember type="uint32" name="humidityStatus"         comment="Ambient humidity status - register 0x0009" />
+      <DataMember type="uint32" name="dewpointStatus"         comment="Dew point status - register 0x000A" />
+      <DataMember type="uint32" name="powerConsumptionStatus" comment="Power consumption status - register 0x000B" />
+      <DataMember type="uint32" name="impedanceStatus"        comment="Coolant flow impedance status - register 0x000C" />
+      <DataMember type="uint32" name="shutoffCauseStatus"     comment="Shut-off cause status - register 0x000D" />
+      <DataMember type="int32"  name="supplyFlowRate"         comment="supply coolant flow rate (register 0x0200) - in units of 0.01, so a value of 1536 would be 15.36 gallons." />
+      <DataMember type="int32"  name="returnFlowRate"         comment="return coolant flow rate (register 0x0201) - in units of 0.01, so a value of 1536 would be 15.36 gallons." />
+      <DataMember type="int32"  name="supplyCoolantTemp"      comment="supply coolant temperature (register 0x0202) - in units of 0.01." />
+      <DataMember type="int32"  name="returnCoolantTemp"      comment="return coolant temperature (register 0x0203) - in units of 0.01." />
+      <DataMember type="int32"  name="supplyPresure"          comment="supply coolant pressure (register 0x0204) - in units of 0.01." />
+      <DataMember type="int32"  name="diffPresure"            comment="differential coolant pressure (register 0x0205) - in units of 0.01." />
+      <DataMember type="int32"  name="ambientTemp"            comment="ambient-air temperature (register 0x0206) - in units of 0.01." />
+      <DataMember type="int32"  name="ambientHumidity"        comment="ambient-air relative humidity (register 0x0207) - in units of 0.01." />
+      <DataMember type="int32"  name="ambientDewPoint"        comment="ambient-air dew-point temperature (register 0x0208) - in units of 0.01." />
+      <DataMember type="int32"  name="systemPower"            comment="system efficiency (power consumed by this rack) (register 0x0208) - in units of 0.01." />
+      <DataMember type="text"   name="internalMessages"       comment="msgs that user should see (e.g. what errors occurred)." occurrences="many" />
+      <DataMember type="text"   name="timestampDataRead"      comment="time that this data was captured (into the Card Controller object)." />
+    </Class>
+    <Class name="ReadCoolantMonitorEnvReply" parent="Reply">
+      <DataMember type="text"       name="msgs"     occurrences="many" comment="msgs that user should see (e.g. what errors occurred). Note: there is not necessarily a one to one correspondence between entries in _cards and _msgs." />
+      <DataMember type="CoolMonEnv" name="coolMons" occurrences="many" comment="vector containing 1 entry for each card specified in the above request." />
+    </Class>
+  </Method>
+
+  <Method name="readCoolantMonitorEnvShort" type="RequestReply" comment="Read environmental information.">
+    <Class name="ReadCoolantMonitorEnvShortRequest" parent="TargetRequest">
+    </Class>
+    <Class name="CoolMonEnvShort">
+      <DataMember type="text"   name="lctn"                   comment="the location that this environmental information is for." />
+      <DataMember type="int32"  name="error"                  comment="whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="uint32" name="supplyFlowStatus"       comment="Supply coolant flow status - register 0x0000" />
+      <DataMember type="uint32" name="returnFlowStatus"       comment="Return coolant flow status - register 0x0001" />
+      <DataMember type="uint32" name="leakStatus"             comment="Leak Detection Status - register 0x0002" />
+      <DataMember type="uint32" name="valveStatus"            comment="Solenoid Valve status - register 0x0003" />
+      <DataMember type="uint32" name="supplyTempStatus"       comment="Supply coolant temperature status - register 0x0004" />
+      <DataMember type="uint32" name="returnTempStatus"       comment="Return coolant temperature status - register 0x0005" />
+      <DataMember type="uint32" name="supplyPressureStatus"   comment="Supply coolant pressure status - register 0x0006" />
+      <DataMember type="uint32" name="diffPressureStatus"     comment="Coolant differential pressure status - register 0x0007" />
+      <DataMember type="uint32" name="ambientTempStatus"      comment="Ambient temperature status - register 0x0008" />
+      <DataMember type="uint32" name="humidityStatus"         comment="Ambient humidity status - register 0x0009" />
+      <DataMember type="uint32" name="dewpointStatus"         comment="Dew point status - register 0x000A" />
+      <DataMember type="uint32" name="powerConsumptionStatus" comment="Power consumption status - register 0x000B" />
+      <DataMember type="uint32" name="impedanceStatus"        comment="Coolant flow impedance status - register 0x000C" />
+      <DataMember type="uint32" name="shutoffCauseStatus"     comment="Shut-off cause status - register 0x000D" />
+      <DataMember type="text"   name="internalMessages"       comment="msgs that user should see (e.g. what errors occurred)." occurrences="many" />
+      <DataMember type="text"   name="timestampDataRead"      comment="time that this data was captured (into the Card Controller object)." />
+    </Class>
+    <Class name="ReadCoolantMonitorEnvShortReply" parent="Reply">
+      <DataMember type="text"            name="msgs"     occurrences="many" comment="msgs that user should see (e.g. what errors occurred). Note: there is not necessarily a one to one correspondence between entries in _cards and _msgs." />
+      <DataMember type="CoolMonEnvShort" name="coolMons" occurrences="many" comment="vector containing 1 entry for each card specified in the above request." />
+    </Class>
+  </Method>
+
+  <Method name="coolMonCommand" type="RequestReply" comment="Read environmental information.">
+    <ValueSet name="CoolMonOp" >
+      <ValueMember name="COOLMON_GetFirmwareLevel"       comment="get the firmware level of this Coolant Monitor."/>
+      <ValueMember name="COOLMON_UpdateFirmwareLevel"    comment="update the firmware level of this Coolant Monitor."/>
+      <ValueMember name="COOLMON_ReadRegisterValue"      comment="read the value of the specified Coolant Monitor register."/>
+      <ValueMember name="COOLMON_WriteRegisterValue"     comment="write the specified value into the specified Coolant Monitor register."/>
+    </ValueSet>
+    <Class name="CoolMonCommandRequest" parent="TargetRequest">
+      <DataMember type="CoolMonOp" name="operation"        comment="operation to perform on this Coolant Monitor - see values in MC_CoolMonCommandOperation above."/>
+      <DataMember type="text"      name="inputFileName1"   comment="operation UpdateFirmwareLevel - this is the name of the Coolant Monitor firmware file." />
+      <DataMember type="bool"      name="bVerboseMode"     comment="operation UpdateFirmwareLevel - indicates whether or not we are running in verbose mode." />
+      <DataMember type="bool"      name="bRecoveryMode"    comment="operation UpdateFirmwareLevel - indicates whether or not we are running in recovery mode." />
+      <DataMember type="uint32"    name="linesPerBlock"    comment="operation UpdateFirmwareLevel - number of lines from firmware file to put in to each block write." />
+      <DataMember type="uint32"    name="delay"            comment="operation UpdateFirmwareLevel - number of millisecs to wait between each block write." />
+      <DataMember type="uint32"    name="reg"              comment="operation ReadRegisterValue/WriteRegisterValue - register number (indicating which register to act upon)." />
+      <DataMember type="uint32"    name="value"            comment="operation WriteRegisterValue - new value to be written in to the above specified _register." />
+    </Class>
+    <Class name="CoolMonReply">
+      <DataMember type="uint32" name="rc"                comment="whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="text"   name="lctn"              comment="the location that this environmental information is for." />
+      <DataMember type="text"   name="internalMessages"  comment="msgs that user should see (e.g. what errors occurred)." occurrences="many" />
+      <DataMember type="text"   name="firmwareLevel"     comment="returned by operations GetFirmwareLevel." />
+      <DataMember type="uint32" name="value"             comment="returned by operations ReadRegisterValue." />
+    </Class>
+    <Class name="CoolMonCommandReply" parent="Reply">
+      <DataMember type="text"         name="msgs"     occurrences="many" comment="msgs that user should see (e.g. what errors occurred). Note: there is not necessarily a one to one correspondence between entries in _cards and _msgs." />
+      <DataMember type="CoolMonReply" name="coolMons" occurrences="many" comment="vector containing 1 entry for each card specified in the above request." />
+    </Class>
+  </Method>
+
+  <Method name="shutdownBlock" type="RequestReply" comment="Opposite to bootBlock. The state of the block must be ready (or running?). Use clearBlock command to remove errors in the block.">
+    <Class name="ShutdownBlockRequest" parent="TargetRequest" >
+      <Class name="Node">
+        <DataMember type="uint32" name="jtag" comment="jtag position of this node" />
+        <DataMember type="bool" name="isIoNode" comment="which ELF images to use" />
+        <DataMember type="bool" name="trainOnly" comment="use this node for IO Link training only" />
+        <DataMember type="binary" name="personality" comment="the personality of this node" />
+        <DataMember type="binary" name="configData" comment="configurate data to be passed to the OS" />
+        <DataMember type="uint64" name="configDataSize" comment="size in bytes of the config data" />
+        <DataMember type="text" name="location" comment="location of the node" />
+      </Class>
+
+      <Class name="BQLSwitch">
+        <DataMember type="uint32" name="state" comment="switch state" />
+        <DataMember type="uint32" name="hss4GmaskA" comment="lanes used on A port" />
+        <DataMember type="uint32" name="hss4GmaskB" comment="lanes used on B port" />
+        <DataMember type="uint32" name="hss10GmaskC" comment="lanes used on C port" />
+        <DataMember type="uint32" name="hss10GmaskD" comment="lanes used on D port" />
+        <DataMember type="uint32" name="optModRX" comment="index of optical modules used for receiving data" />
+        <DataMember type="uint32" name="optModTX" comment="index of optical modules used for transmitting data" />
+      </Class>
+
+
+      <Class name="LinkChipPersonality">
+        <DataMember type="BQLSwitch" name="bqlSwitches" occurrences="many" comment="bql switch information - on for each of the four switches" />
+        <DataMember type="uint32" name="badWires" occurrences="many" comment="bitmask of bad wires (two for receiver regs C01 and C23 and two for transmitters regs D01 and D23)" />
+        <DataMember type="bool" name="mode56" comment="sparing mode" />
+      </Class>
+
+      <Class name="LinkChip">
+        <DataMember type="uint32" name="jtag" comment="jtag position of this link chip" />
+        <DataMember type="LinkChipPersonality" name="personality" comment="the personality of this link chip" />
+      </Class>
+
+      <Class name="Link">
+        <DataMember type="text" name="location" comment="where this node card is located" />
+      </Class>
+
+      <Class name="NodeCard">
+        <DataMember type="text" name="location" comment="where this node card is located" />
+        <DataMember type="Node" name="node_location" occurrences="many" comment="compute chips location on the card" />
+        <DataMember type="Link" name="link_location" occurrences="many" comment="link chips location on the card" />
+        <DataMember type="LinkChip" name="linkChips" occurrences="many" comment="link chips on this card" />
+      </Class>
+
+      <Class name="IoCard">
+        <DataMember type="text" name="location" comment="where this node card is located" />
+        <DataMember type="Node" name="node_location" occurrences="many" comment="compute chips on the card" />
+        <DataMember type="Link" name="link_location" occurrences="many" comment="link chips on the card" />
+        <DataMember type="LinkChip" name="linkChips" occurrences="many" comment="link chips on this card" />
+      </Class>
+
+      <DataMember type="NodeCard" name="nodeCards" occurrences="many" comment="all the node cards" />
+      <DataMember type="IoCard" name="ioCards" occurrences="many" comment="all the node cards" />
+      <DataMember type="uint32" name="cookie" comment="boot cookie for perf stats qualifier" />
+      <DataMember type="uint32" name="blockid" comment="Creation ID of the block being shut down"/>
+      <DataMember type="bool" name="skipKernel" comment="flag to indicate kernel handshake should be skipped - ie. diag block or firmware extension" />
+      <DataMember type="text" name="options" comment="list of options to pass to shutdown" />
+
+    </Class>
+
+    <Class name="ShutdownBlockReply" parent="Reply">
+      <DataMember type="uint32" name="error" comment="mc error code" />
+    </Class>
+  </Method>
+
+  <Method name="registerEventListener" type="RequestReply" comment="Register a listener for mailbox messages from the nodes. This is in effect until shutdown or until a closeMailboxListener.">
+    <Class name="RegisterEventListenerRequest" parent="TargetRequest">
+      <DataMember type="text" name="listenerAddr" comment="address and port for listener, e.g  127.0.0.1:31555   or bgl2.rchland.ibm.com:31888, etc." />
+      <DataMember type="bool"   name="exclusive" comment="exclude other listeners" />
+      <DataMember type="uint32" name="version" comment="version number for format of returned information." />
+      <DataMember type="uint32" name="messageTypes" occurrences="many" comment="vector of message types (mailbox message types) that should be sent to the listener" />
+    </Class>
+    <Class name="RegisterEventListenerReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="eventMessage" comment="Receive an event from the control system">
+    <Class name="RASMessage" comment="RAS event (MC_ControlEvent)">
+      <DataMember type="uint32" name="msgId" comment="the message id" />
+      <DataMember type="bool"   name="handled" comment="handled flag" />
+      <DataMember type="uint32" name="time_secs" comment="mc time" />
+      <DataMember type="uint32" name="time_usecs" comment="mc time" />
+      <DataMember type="text"   name="keys" occurrences="many" comment="keys for the detail map" />
+      <DataMember type="text"   name="values" occurrences="many" comment="values for the detail map" />
+    </Class>
+    <Class name="ConsoleMessage" comment="Console Message (MC_ConsoleMessage)">
+      <DataMember type="text"   name="cardLocation" comment="which card, as a string" />
+      <DataMember type="uint32" name="jtagPort" comment="which jtag port in the card" />
+      <DataMember type="uint32" name="cpu" comment="which cpu" />
+      <DataMember type="uint32" name="threadId" comment="which thread id" />
+      <DataMember type="uint32" name="time_secs" comment="mc time" />
+      <DataMember type="uint32" name="time_usecs" comment="mc time" />
+      <DataMember type="text"   name="lines" occurrences="many" comment="ascii characters" />
+    </Class>
+  </Method>
+
+
+
+  <Method name="mailbox" type="RequestReply" comment="Send a message to a node's mailbox">
+    <Class name="MailboxRequest" parent="TargetRequest">
+      <DataMember type="binary" name="text" comment="what to write" />
+    </Class>
+    <Class name="MailboxReply" parent="Reply">
+    </Class>
+  </Method>
+
+
+  <Method name="barrierAck" type="RequestReply" comment="Send a barrier ack to a node's mailbox">
+    <Class name="BarrierAckRequest" parent="TargetRequest">
+    </Class>
+    <Class name="BarrierAckReply" parent="Reply">
+    </Class>
+  </Method>
+
+
+  <Method name="closeEventListener" type="RequestReply" comment="Close a listener for event messages from the nodes.">
+    <Class name="CloseEventListenerRequest" parent="TargetRequest">
+    </Class>
+    <Class name="CloseEventListenerReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="registerEnvListener" type="RequestReply" comment="Register a listener for environmental readings from the hardware. This is in effect until halt or until a closeEnvListener.">
+    <Class name="RegisterEnvListenerRequest" parent="TargetRequest">
+      <DataMember type="text" name="listenerAddr" comment="address and port for listener, e.g  127.0.0.1:31555   or bgl2.rchland.ibm.com:31888, etc." />
+      <DataMember type="uint32" name="version" comment="version number for format of returned information." />
+      <DataMember type="uint32" name="messageTypes" occurrences="many" comment="vector of env types (0x0000 all, 0x0001 temps, 0x0002 voltages, etc.) that should be sent to the listener" />
+      <DataMember type="uint32" name="pollInterval" comment="polling interval, in seconds" />
+    </Class>
+    <Class name="RegisterEnvListenerReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="closeEnvListener" type="RequestReply" comment="Close a listener for mailbox messages from the nodes.">
+    <Class name="CloseEnvListenerRequest" parent="TargetRequest">
+    </Class>
+    <Class name="CloseEnvListenerReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="status" type="RequestReply" comment="List all the machine, sorted by midplane and then service cards, node cards and link cards.">
+    <Class name="StatusRequest" parent="TargetRequest">
+    </Class>
+    <Class name="StatusReply" parent="Reply">
+      <Class name="Midplane">
+        <DataMember type="text" name="statusStrings" occurrences="many" comment="vector of block information" />
+      </Class>
+      <DataMember type="Midplane" name="midplanes" occurrences="many" comment="status by midplane" />
+    </Class>
+  </Method>
+
+  <Method name="quit" type="RequestReply" comment="Quit a console, or mc with the all option.">
+    <Class name="QuitRequest">
+      <DataMember type="bool" name="all" comment="close all connections" />
+      <DataMember type="text" name="user" comment="who is requesting a quit" />
+    </Class>
+    <Class name="QuitReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="getGlobalEnv" type="RequestReply" comment="List all common (shared) mserver variables.">
+    <Class name="GetGlobalEnvRequest">
+    </Class>
+    <Class name="GetGlobalEnvReply">
+      <Class name="VarPair">
+        <DataMember type="text" name="name" comment="variable name" />
+        <DataMember type="text" name="value" comment="variable value" />
+      </Class>
+      <DataMember type="VarPair" name="vars" occurrences="many" comment="all the variables" />
+    </Class>
+  </Method>
+
+  <Method name="setGlobalEnv" type="RequestReply" comment="Set the value of a global mserver variable. Use getGlobalEnv to obtain a list of the current global variables.">
+    <Class name="SetGlobalEnvRequest">
+      <DataMember type="text" name="name" comment="variable name" />
+      <DataMember type="text" name="value" comment="variable value" />
+    </Class>
+    <Class name="SetGlobalEnvReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="verifyKernelReady" type="RequestReply" comment="Ask MC to verify computes are booted">
+    <Class name="VerifyKernelReadyRequest" parent="TargetRequest">
+    </Class>
+    <Class name="VerifyKernelReadyReply" parent="Reply">
+      <DataMember type="uint32" name="error" comment="mc error code " />
+      <DataMember type="text" name="compute_not_ready" occurrences="many" comment="Computes not ready" />
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+
+    </Class>
+  </Method>
+
+
+  <Method name="verifyKernelShutdown" type="RequestReply" comment="Ask MC to verify computes are booted">
+    <Class name="VerifyKernelShutdownRequest" parent="TargetRequest">
+      <DataMember type="uint32" name="cookie" comment="boot cookie for perf stats qualifier" />
+    </Class>
+    <Class name="VerifyKernelShutdownReply" parent="Reply">
+      <DataMember type="uint32" name="error" comment="mc error code " />
+      <DataMember type="text" name="compute_not_halted" occurrences="many" comment="Computes not halted" />
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+
+    </Class>
+  </Method>
+
+
+  <Method name="suspend" type="RequestReply" comment="Ask MC to suspend connections to a set of icon chips.">
+    <Class name="SuspendRequest" parent="TargetRequest">
+    </Class>
+    <Class name="SuspendReply" parent="Reply">
+      <DataMember type="uint32" name="error" comment="mc error code for use by mm" />
+    </Class>
+  </Method>
+
+  <Method name="resume" type="RequestReply" comment="Ask MC to resume connections to a set of ido chips.">
+    <Class name="ResumeRequest" parent="TargetRequest">
+    </Class>
+    <Class name="ResumeReply" parent="Reply">
+      <DataMember type="uint32" name="error" comment="mc error code for use by mm" />
+    </Class>
+  </Method>
+
+  <Method name="connect" type="RequestReply" comment="Get a console connection. MServer is a server that can handle many connections at the same time.">
+    <Class name="ConnectRequest">
+      <DataMember type="uint32" name="version" comment="current version of the MServer API" />
+      <DataMember type="text" name="user" comment="who connected" />
+      <DataMember type="text" name="hostname" comment="from where" />
+    </Class>
+    <Class name="ConnectReply" parent="Reply">
+    </Class>
+  </Method>
+
+
+  <Method name="listClients" type="RequestReply" comment="Return a list with all the clients opened to MCServer">
+    <Class name="ListClientsRequest">
+    </Class>
+    <Class name="ListClientsReply">
+      <DataMember type="text" name="clients" occurrences="many" comment="vector of client information" />
+    </Class>
+  </Method>
+
+
+  <Method name="powerCycle" type="RequestReply" comment="Ask MC to reinitialize a midplane.">
+    <Class name="PowerCycleRequest" parent="TargetRequest">
+    </Class>
+    <Class name="PowerCycleReply" parent="Reply">
+      <DataMember type="text" name="cards" occurrences="many" comment="result for every card that we try to power cycle" />
+    </Class>
+  </Method>
+
+  <Method name="powerOff" type="RequestReply" comment="power off cards">
+    <Class name="PowerOffRequest" parent="TargetRequest">
+      <DataMember type="text" name="sOption" occurrences="many" />
+    </Class>
+
+    <Class name="POReplyValue">
+      <DataMember type="text" name="location" comment="location of card" />
+      <DataMember type="uint32" name="error" comment="error powering off card?" />
+    </Class>
+
+    <Class name="PowerOffReply" parent="Reply">
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+      <DataMember type="POReplyValue" name="values" occurrences="many" comment="errors returned from power off" />
+    </Class>
+  </Method>
+
+  <Method name="powerOn" type="RequestReply" comment="power on Bel power module for a node card">
+    <Class name="PowerOnRequest" parent="TargetRequest">
+    </Class>
+
+    <Class name="PowerOnReply" parent="Reply">
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+      <DataMember type="uint32" name="errors" occurrences="many" comment="errors returned from power on" />
+    </Class>
+  </Method>
+
+
+  <ValueSet name="LocationType" >
+    <ValueMember name="any"/>
+    <ValueMember name="IoRack"/>
+    <ValueMember name="ComputeRack"/>
+    <ValueMember name="Midplane"/>
+    <ValueMember name="ServiceCard"/>
+    <ValueMember name="NodeBoard"/>
+    <ValueMember name="IoBoard"/>
+    <ValueMember name="ComputeCard"/>
+    <ValueMember name="LinkModule"/>
+    <ValueMember name="LinkPort"/>
+    <ValueMember name="LinkCable"/>
+    <ValueMember name="OpticalModule"/>
+    <ValueMember name="PCIAdapterCard"/>
+    <ValueMember name="DCA"/>
+    <ValueMember name="Clock"/>
+    <ValueMember name="LeakDetector"/>
+    <ValueMember name="FanAssembly"/>
+    <ValueMember name="Fan"/>
+    <ValueMember name="BulkPowerEnclosure"/>
+    <ValueMember name="BulkPowerModule"/>
+    <ValueMember name="TorusIoPort"/>
+  </ValueSet>
+
+
+  <Method name="makeTargetSet" type="RequestReply" comment="Give a name to a set of components">
+    <Class name="MakeTargetSetRequest" parent="TargetRequest">
+      <DataMember type="text" name="user" comment="who opened the target set" />
+      <DataMember type="bool" name="temporary" comment="true if we should delete the target set on close"/>
+    </Class>
+    <Class name="MakeTargetSetReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="deleteTargetSet" type="RequestReply" comment="Give a name to a set of components">
+    <Class name="DeleteTargetSetRequest" comment="inform the server we are done with this set">
+      <DataMember type="text" name="set" comment="handle for this target set." />
+      <DataMember type="text" name="user" comment="who opened the target set" />
+    </Class>
+    <Class name="DeleteTargetSetReply" parent="Reply">
+    </Class>
+  </Method>
+
+
+
+  <Method name="listTargetSets" type="RequestReply" comment="Return a list with all sets of target sets created.">
+    <Class name="ListTargetSetsRequest">
+    </Class>
+    <Class name="ListTargetSetsReply" parent="Reply">
+      <DataMember type="text" name="targetSets" occurrences="many" comment="vector of target sets" />
+    </Class>
+  </Method>
+
+
+  <Method name="queryTargetSet" type="RequestReply" comment="Return a list with all sets of target sets created.">
+    <Class name="QueryTargetSetRequest" parent="TargetRequest" >
+      <DataMember type="LocationType" name="type" comment="type of targets to return" />
+    </Class>
+    <Class name="QueryTargetSetReply" parent="Reply">
+      <Class name="Target" >
+        <DataMember type="uint32" name="index" comment="how to address this target inside the target set" />
+        <DataMember type="text" name="location" comment="physical location in the machine" />
+      </Class>
+      <DataMember type="text" name="owner" comment="who opened the target set" />
+      <DataMember type="Target" name="targets" occurrences="many" comment="all the targets in this set" />
+    </Class>
+  </Method>
+
+  <ValueSet name="LockMode" >
+    <ValueMember name="OVER" comment="Override - grants access regardless of other locks, for emergency use only"/>
+    <ValueMember name="WENR" comment="Write Exclusive, No Read - grant exclusive access to only one user"/>
+    <ValueMember name="WUAR" comment="Write User, All Read - grant write access with other writes as long as they are the same user, allow others read access"/>
+    <ValueMember name="WUNR" comment="Write User, No Read - grant write access with other writes as long as they are the same user, allow no read access"/>
+    <ValueMember name="WEAR" comment="Write Exclusive, All Read - grant write access, allow others to read access"/>
+    <ValueMember name="WAAR" comment="Write All, All Read - grant write access, allow others write and read access, this is very permissive"/>
+    <ValueMember name="RANW" comment="Read All, No Writers - grant read access, others only allowed read access, no writers permitted, for atomic reads"/>
+    <ValueMember name="RAAW" comment="Read All, All Write - grant read access, allow others to write"/>
+  </ValueSet>
+
+  <Method name="openTarget" type="RequestReply" comment="open a target">
+    <Class name="OpenTargetRequest" parent="TargetRequest">
+      <DataMember type="text" name="user" comment="who opened the target" />
+      <DataMember type="LockMode" name="mode" comment="open mode" />
+      <DataMember type="bool" name="autoclose" comment="close targets on client disconnect" />
+    </Class>
+    <Class name="OpenTargetReply" parent="Reply">
+      <DataMember type="int32" name="handle" comment="used to refer to this open on a close" />
+    </Class>
+  </Method>
+
+
+  <Method name="closeTarget" type="RequestReply" comment="close a target">
+    <Class name="CloseTargetRequest" parent="TargetRequest">
+      <DataMember type="text" name="user" comment="who opened the target" />
+      <DataMember type="LockMode" name="mode" comment="open mode" />
+      <DataMember type="int32" name="handle" comment="which open to close" />
+    </Class>
+    <Class name="CloseTargetReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="jtag" type="RequestReply" comment="Execute a low level jtag command.">
+    <Class name="JtagRequest" parent="TargetRequest">
+      <DataMember type="binary" name="data" comment="jtag data stream" />
+    </Class>
+    <Class name = "JtagReply" parent="Reply">
+      <Class name = "JtagIconReply" >
+        <DataMember type = "uint32" name = "index" comment = "index of the 1st target in this reply"/>
+        <DataMember type = "uint32" name = "numports" comment = "number of ports addressed in this reply"/>
+        <DataMember type="binary" name="targ_reply"   comment="Replies organized by target" />
+      </Class>
+      <DataMember type="JtagIconReply" name="icon_reply" occurrences="many"  comment="Replies organized by node/link/service card" />
+    </Class>
+  </Method>
+
+  <Method name="i2c" type="RequestReply" comment="Execute a low level i2c command.">
+    <Class name = "I2cRequest" parent="TargetRequest">
+      <DataMember type="binary" name="data" comment="I2c data stream" />
+    </Class>
+    <Class name = "I2cReply" parent="Reply">
+      <DataMember type="binary" name="data" occurrences="many"    comment="reply data, 1 icon per target.." />
+    </Class>
+  </Method>
+
+  <Method name="spi" type="RequestReply" comment="Execute a low level spi command.">
+    <Class name = "SpiRequest" parent="TargetRequest">
+      <DataMember type="binary" name="data" comment="Spi data stream" />
+    </Class>
+    <Class name = "SpiReply" parent="Reply">
+      <DataMember type="binary" name="data" occurrences="many"     comment="reply data, 1 per icon target.." />
+    </Class>
+  </Method>
+
+  <Method name="iconWrapper" type="RequestReply" comment="Execute a low level icon wrapper command.">
+    <Class name = "IconWrapperRequest" parent="TargetRequest">
+      <DataMember type="binary" name="data" comment="Glint data stream" />
+    </Class>
+    <Class name = "IconWrapperReply" parent="Reply">
+      <DataMember type="binary" name="data"   occurrences="many"  comment="reply data, 1  per icon target.." />
+    </Class>
+  </Method>
+
+  <Method name="pgoodReset" type="RequestReply" comment="execute a pgood/reset on a link or bpc chip toggle">
+    <Class name = "PgoodResetRequest" parent="TargetRequest">
+    </Class>
+    <Class name = "PgoodResetReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="bpcStartClocks" type="RequestReply" comment="start clocks on a bpc chip">
+    <Class name = "BpcStartClocksRequest" parent="TargetRequest">
+      <DataMember type="text" name="options" comment="list of options to pass to start clocks" />
+    </Class>
+    <Class name = "BpcStartClocksReply" parent="Reply">
+    </Class>
+  </Method>
+
+
+
+  <Method name="initializeServiceCards" type="RequestReply" comment="Initialize a midplane">
+    <Class name="InitializeServiceCardsRequest" parent="TargetRequest">
+    </Class>
+    <Class name="ServiceCardReply">
+      <DataMember type="text" name="location" comment="location of card" />
+      <DataMember type="uint32" name="error" comment="error powering off card?" />
+    </Class>
+
+    <Class name = "InitializeServiceCardsReply" parent="Reply">
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+      <DataMember type="ServiceCardReply" name="values" occurrences="many" comment="replies returned by service cards" />
+    </Class>
+  </Method>
+
+  <Method name="initializeNodeCards" type="RequestReply" comment="Initialize a node card">
+    <Class name="InitializeNodeCardsRequest" parent="TargetRequest">
+    </Class>
+    <Class name="NodeCardReply">
+      <DataMember type="text" name="location" comment="location of card" />
+      <DataMember type="uint32" name="error" comment="error powering off card?" />
+    </Class>
+    <Class name = "InitializeNodeCardsReply" parent="Reply">
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+      <DataMember type="NodeCardReply" name="values" occurrences="many" comment="replies returned by node cards" />
+    </Class>
+  </Method>
+
+  <Method name="initializeIoCards" type="RequestReply" comment="Initialize an Io card">
+    <Class name="InitializeIoCardsRequest" parent="TargetRequest">
+    </Class>
+    <Class name="IoCardReply">
+      <DataMember type="text" name="location" comment="location of card" />
+      <DataMember type="uint32" name="error" comment="error powering off card?" />
+    </Class>
+    <Class name = "InitializeIoCardsReply" parent="Reply">
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+      <DataMember type="IoCardReply" name="values" occurrences="many" comment="replies returned by io cards" />
+    </Class>
+  </Method>
+
+  <Method name="PowerDomainOperation " type="RequestReply" comment="Perform Power Doman Operation">
+    <Class name="PowerDomainOperationRequest" parent="TargetRequest">
+      <DataMember type="uint32" name="domain" comment="domain to effect" />
+      <DataMember type="uint32" name="operation" comment="operation to perform" />
+      <DataMember type="uint32" name="voltage" comment="mv units " />
+    </Class>
+
+    <Class name="PowerDomainFaultStatus">
+      <DataMember type="uchar" name="status" comment="power domain extended status" />
+      <DataMember type="uchar" name="enablePins" comment="enabled pins" />
+      <DataMember type="uchar" name="pgoodDynamicFaultStatus" comment="pgood dynamic fault status " />
+      <DataMember type="uchar" name="pgoodLatchedFaultStatus" comment="pgood latched fault status " />
+      <DataMember type="uchar" name="overvoltageDynamicFaultStatus" comment="overvoltage dynamic fault status " />
+      <DataMember type="uchar" name="overvoltageLatchedFaultStatus" comment="overvoltage latched fault status " />
+      <DataMember type="uchar" name="overcurrentDynamicFaultStatus" comment="overcurrent dynamic fault status " />
+      <DataMember type="uchar" name="overcurrentLatchedFaultStatus" comment="overcurrent latched fault status " />
+      <DataMember type="uint32" name="voltageSetPoint" comment="vset in mV units" />
+      <DataMember type="uint32" name="voltage" comment="voltage read in mV units" />
+      <DataMember type="uint32" name="current" comment="current read in mA units" />
+    </Class>
+
+    <Class name="PowerDomainDcaReply">
+      <DataMember type="text" name="lctn" comment="where this power domain is located" />
+      <DataMember type="uint32" name="error" comment="return code for the power domain" />
+      <DataMember type="PowerDomainFaultStatus" name="pwrDomainFaultStatus" comment="Fault status" />
+      <DataMember type="uint32" name="voltage" comment="return voltage" />
+      <DataMember type="uint32" name="current" comment="return current" />
+    </Class>
+
+
+    <Class name="PowerDomainOperationReply" parent="Reply">
+      <DataMember type="PowerDomainDcaReply" name="dcas_reply" occurrences="many" comment="indicate if problem ocuured on dca" />
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+    </Class>
+  </Method>
+
+  <Method name="readSram" type="RequestReply" comment="read an Sram">
+    <Class name="ReadSramRequest" parent="TargetRequest">
+      <DataMember type="uint32" name="address" comment="address of the sram" />
+    </Class>
+
+    <Class name="SramValue">
+      <DataMember type="text" name="location" comment="location of sram" />
+      <DataMember type="binary" name="value" comment="data read from sram" />
+      <DataMember type="bool" name="error" comment="error reading data from sram?" />
+    </Class>
+
+    <Class name="ReadSramReply" parent="Reply">
+      <DataMember type="SramValue" name="values" occurrences="many" comment="data read from srams" />
+    </Class>
+  </Method>
+
+  <Method name="readVpdField" type="RequestReply" comment="read a Vpd field">
+    <Class name="ReadVpdFieldRequest" parent="TargetRequest">
+      <DataMember type="text" name="keywords" occurrences="many" comment="field keywords" />
+    </Class>
+    <Class name="VpdFieldValue">
+      <Class name="VarPair">
+        <DataMember type="text"   name="keyword" comment="field keyword" />
+        <DataMember type="binary" name="value"   comment="field value" />
+      </Class>
+      <DataMember type="text"    name="location"                    comment="location of card" />
+      <DataMember type="text"    name="msgs"     occurrences="many" comment="msgs that user should see (e.g. what errors occurred)." />
+      <DataMember type="VarPair" name="values"   occurrences="many" comment="all the requested fields" />
+      <DataMember type="int32"   name="error"                       comment="whether or not any problem occurred." />
+    </Class>
+    <Class name="ReadVpdFieldReply" parent="Reply">
+      <DataMember type="text"          name="msgs"   occurrences="many" comment="msgs that user should see (e.g. what errors occurred)." />
+      <DataMember type="VpdFieldValue" name="values" occurrences="many" comment="data read from vpd" />
+    </Class>
+  </Method>
+
+  <Method name="readVpd" type="RequestReply" comment="read a Vpd">
+    <Class name="ReadVpdRequest" parent="TargetRequest">
+    </Class>
+    <Class name="VpdValue">
+      <DataMember type="text"   name="location" comment="location of the device that this vpd is for." />
+      <DataMember type="binary" name="value"    comment="vpd image." />
+      <DataMember type="int32"  name="error"    comment="whether or not any problem occurred." />
+    </Class>
+    <Class name="ReadVpdReply" parent="Reply">
+      <DataMember type="text"     name="msgs"   occurrences="many" comment="msgs that user should see (e.g. what errors occurred)." />
+      <DataMember type="VpdValue" name="values" occurrences="many" comment="Results" />
+    </Class>
+  </Method>
+
+  <Method name="writeVpd" type="RequestReply" comment="write a Vpd">
+    <Class name="WriteVpdRequest" parent="TargetRequest">
+      <DataMember type="binary" name="value" comment="value to write" />
+    </Class>
+
+    <Class name="WriteVpdReply" parent="Reply">
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+    </Class>
+  </Method>
+
+
+  <Method name="readPalomino" type="RequestReply" comment="read a Palomino">
+    <Class name="ReadPalominoRequest" parent="TargetRequest">
+      <DataMember type="uint32" name="reg" comment="register number" />
+    </Class>
+
+    <Class name="PalominoValue">
+      <DataMember type="text" name="location" comment="location of card" />
+      <DataMember type="uint32" name="value" comment="value of register" />
+    </Class>
+
+    <Class name="ReadPalominoReply" parent="Reply">
+      <DataMember type="PalominoValue" name="values" occurrences="many" comment="data read from palomino registers" />
+    </Class>
+  </Method>
+
+  <ValueSet name="PalOp" >
+    <ValueMember name="PAL_WRITE" comment="write the value"/>
+    <ValueMember name="PAL_SET" comment="read reg,OR with value,write result"/>
+    <ValueMember name="PAL_CLEAR" comment="read reg, AND with ~value, write result"/>
+  </ValueSet>
+
+  <Method name="writePalomino" type="RequestReply" comment="write a Palomino">
+    <Class name="WritePalominoRequest" parent="TargetRequest">
+      <DataMember type="uint32" name="reg" comment="register number" />
+      <DataMember type="uint32" name="value" comment="value to write" />
+      <DataMember type="PalOp" name="operation" comment="write, set, or clear" />
+    </Class>
+
+    <Class name="WritePalominoReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <ValueSet name="TdrType" >
+    <ValueMember name="MCS_TDR_32" comment="32 bit tdr type"/>
+    <ValueMember name="MCS_TDR_64" comment="64 bit tdr type"/>
+    <ValueMember name="MCS_TDR_SCOM" comment="scom type"/>
+  </ValueSet>
+
+  <Method name="readTdr" type="RequestReply" comment="read a TDR">
+    <Class name="ReadTdrRequest" parent="TargetRequest">
+
+
+      <DataMember type="TdrType" name="type" comment="32, 64, scom" />
+      <DataMember type="uint32" name="tdr" comment="tdr number to match" />
+      <DataMember type="bool" name="appendNotValidBit" comment="add one bit or not" />
+
+    </Class>
+    <Class name="TdrValue">
+      <DataMember type="text" name="location" comment="location of card" />
+      <DataMember type="uint64" name="value" comment="value of register" />
+    </Class>
+
+    <Class name="ReadTdrReply" parent="Reply">
+      <DataMember type="TdrValue" name="values" occurrences="many" comment="replies from all the cards" />
+    </Class>
+  </Method>
+
+  <Method name="writeTdr" type="RequestReply" comment="write a TDR">
+    <Class name="WriteTdrRequest" parent="TargetRequest">
+      <DataMember type="TdrType" name="type" comment="32, 64, scom" />
+      <DataMember type="uint32" name="tdr" comment="tdr number to match" />
+      <DataMember type="bool" name="appendValidBit" comment="add one bit or not" />
+      <DataMember type="uint64" name="value" comment="value of the DCR" />
+    </Class>
+
+    <Class name="WriteTdrReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="readCardInfo" comment="Common structures for readXXXInfo methods">
+    <Class name = "IconPalInfo">
+      <DataMember type="text" name="licensePlate" comment="license plate" />
+      <DataMember type="text" name="ip" comment="ip address" />
+      <DataMember type="uchar" name="iconBuildDay" />
+      <DataMember type="uchar" name="iconBuildMonth" />
+      <DataMember type="uint32" name="iconBuildNumber" />
+      <DataMember type="uint32" name="iconBuildYear" />
+      <DataMember type="uint32" name="iconId" />
+      <DataMember type="uchar" name="iconIdChecksum" />
+      <DataMember type="uint32" name="iconLogicRev" />
+      <DataMember type="uchar" name="palBuildDay" />
+      <DataMember type="uchar" name="palBuildMonth" />
+      <DataMember type="uint32" name="palBuildNumber" />
+      <DataMember type="uint32" name="palBuildYear" />
+      <DataMember type="uint32" name="palId" />
+      <DataMember type="uchar" name="palIdChecksum" />
+      <DataMember type="uint32" name="palLogicRev" />
+    </Class>
+    <Class name = "ComputeCardInfo">
+      <DataMember type="bool" name="present" comment="hardware present or not" />
+      <DataMember type="int32" name="error" comment="indicates if problem occurred " />
+      <DataMember type="binary" name="vpd" comment="vpd data" />
+      <DataMember type="uint32" name="position" comment="jtag port" />
+      <DataMember type="text" name="ecid" comment="asic ecid as string" />
+      <DataMember type="text" name="location" comment="where this processor card is located on the node card" />
+    </Class>
+
+    <Class name = "DcaInfo">
+      <DataMember type="text" name="location" comment="where this DCA is located " />
+      <DataMember type="int32" name="error" comment="indicates if problem occurred " />
+      <DataMember type="text" name="powermicroFirmware" comment="the power micro firmware level " />
+      <DataMember type="bool" name="vpdPresent" comment="VPD present or not" />
+      <DataMember type="binary" name="vpd" comment="vpd data" />
+    </Class>
+
+
+    <Class name = "BulkPowerModuleInfo">
+      <DataMember type="text" name="lctnString" comment="BPM's location string" />
+      <DataMember type="int32" name="error" comment="indicates if problem occurred " />
+      <DataMember type="text" name="partNumber" comment="IBM part number" />
+      <DataMember type="text" name="serialNumber" comment="serial number" />
+      <DataMember type="text" name="hardwareRevision" />
+      <DataMember type="text" name="softwareRevision" />
+    </Class>
+
+    <Class name = "LinkChipInfo">
+      <DataMember type="text"  name="lctn" comment="link chip location." />
+      <DataMember type="int32" name="rc"   comment="whether or not any problem occurred - 0=success, !0=failure (see FailureCode enum)." />
+      <DataMember type="text"  name="ecid" comment="link chip's ecid (in string format) from the board's vpd." />
+    </Class>
+    <Class name = "ClockCardInfo">
+      <DataMember type="text"   name="location" comment="location of the clock card" />
+      <DataMember type="int32"  name="rc"       comment="whether or not any problem occurred - 0=success, !0=failure (see FailureCode enum)." />
+      <DataMember type="binary" name="vpd"      comment="vpd image" />
+    </Class>
+    <Class name = "NodeCardInfo">
+      <DataMember type="binary"          name="vpd"                               comment="vpd data" />
+      <DataMember type="uint32"          name="position"                          comment="jtag port" />
+      <DataMember type="IconPalInfo"     name="iconPal"                           comment="iCon/palomino data" />
+      <DataMember type="ComputeCardInfo" name="processorCards" occurrences="many" comment="info for processor cards on this node card" />
+      <DataMember type="DcaInfo"         name="dcas"           occurrences="many" comment="info for DCAs on this node card" />
+      <DataMember type="text"            name="location"                          comment="where this node card is located" />
+      <DataMember type="uint32"          name="error"                             comment="true if error occurred" />
+      <DataMember type="LinkChipInfo"    name="blinks"         occurrences="many" comment="vector of link chips within this board." />
+    </Class>
+    <Class name = "IoCardInfo">
+      <DataMember type="text"                name="cardLocation"                        comment="where this node card is located" />
+      <DataMember type="uint32"              name="error"                               comment="whether or not any problem occurred on this card" />
+      <DataMember type="binary"              name="vpd"                                 comment="vpd image" />
+      <DataMember type="IconPalInfo"         name="iconPal"                             comment="iCon/palomino data" />
+      <DataMember type="ComputeCardInfo"     name="computes"         occurrences="many" comment="vector of compute cards within this card by location within card" />
+      <DataMember type="DcaInfo"             name="dca"                                 comment="DCA information for DCA on IO card (1) " />
+      <DataMember type="ClockCardInfo"       name="clockCard"                           comment="clock card in this rack" />
+      <DataMember type="BulkPowerModuleInfo" name="bulkPowerModules" occurrences="many" comment="vector of bulk power modules within this card" />
+      <DataMember type="text"                name="msgs"             occurrences="many" comment="messages that the user should see" />
+      <DataMember type="LinkChipInfo"        name="blinks"           occurrences="many" comment="vector of link chips within this board." />
+    </Class>
+    <Class name = "ServiceCardInfo">
+      <DataMember type="text"                name="location"                     comment="where this node card is located" />
+      <DataMember type="uint32"              name="error"                        comment="true if error occurred" />
+      <DataMember type="binary"              name="vpd"                          comment="vpd data for service card" />
+      <DataMember type="binary"              name="mpVpd"                        comment="vpd data for midplane" />
+      <DataMember type="IconPalInfo"         name="iconPal"                      comment="iCon/palomino data" />
+      <DataMember type="ClockCardInfo"       name="clockCard"                    comment="clock card info" />
+      <DataMember type="BulkPowerModuleInfo" name="bpms"      occurrences="many" comment="bulk power modules in this rack (iff master midplane, else null)" />
+      <DataMember type="text"                name="msgs"      occurrences="many" comment="messages that the user should see" />
+    </Class>
+
+
+  </Method>
+
+  <Method name="readComputeCardInfo" type="RequestReply" comment="Read processor card Info">
+    <Class name = "ReadComputeCardInfoRequest" parent="TargetRequest">
+    </Class>
+    <Class name = "ReadComputeCardInfoReply" parent="Reply">
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+      <DataMember type="ComputeCardInfo" name="computeCard"   comment="reply data" />
+    </Class>
+  </Method>
+
+  <Method name="readNodeCardInfo" type="RequestReply" comment="Read Node card Info">
+    <Class name = "ReadNodeCardInfoRequest" parent="TargetRequest">
+    </Class>
+    <Class name = "ReadNodeCardInfoReply" parent="Reply">
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+      <DataMember type="NodeCardInfo" name="nodeCards"   occurrences="many"  comment="reply data, 1 per target.." />
+    </Class>
+  </Method>
+
+  <Method name="readIoCardInfo" type="RequestReply" comment="Read Io card Info">
+    <Class name = "ReadIoCardInfoRequest" parent="TargetRequest">
+    </Class>
+    <Class name = "ReadIoCardInfoReply" parent="Reply">
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+      <DataMember type="IoCardInfo" name="ioCards"   occurrences="many"  comment="reply data, 1 per target.." />
+    </Class>
+  </Method>
+
+  <Method name="readServiceCardInfo" type="RequestReply" comment="Read Service card Info">
+    <Class name = "ReadServiceCardInfoRequest" parent="TargetRequest">
+    </Class>
+    <Class name = "ReadServiceCardInfoReply" parent="Reply">
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+      <DataMember type="ServiceCardInfo" name="serviceCards"   occurrences="many"  comment="reply data, 1 per target.." />
+    </Class>
+  </Method>
+
+  <Method name="readCardEnv" comment="Common classes for Service/Node/Link card environmentals">
+
+
+    <Class name = "PowerModuleEnv">
+      <DataMember type="text" name="location" comment="BPM's location" />
+      <DataMember type="uint32" name="statusWord" comment="summary of the unit's fault/warning conditions" />
+      <DataMember type="uchar" name="statusVout" comment="specifics for Output Voltage faults/warnings" />
+      <DataMember type="uchar" name="statusIout" comment="specifics for Output Current/Power faults/warnings" />
+      <DataMember type="uchar" name="statusInput" comment="specifics for Input voltage, current, or power faults/warnings" />
+      <DataMember type="uchar" name="statusTemperature" comment="specifics for temperature faults/warnings" />
+      <DataMember type="uchar" name="statusCml" comment="specifics for Communications, Logic, and Memory faults/warnings" />
+      <DataMember type="uchar" name="status5V" comment="specifics for 5 volt output - faults/warnings" />
+      <DataMember type="uchar" name="statusFans" comment="fan status" />
+      <DataMember type="float" name="inputVoltage" comment="input voltage in volts" />
+      <DataMember type="float" name="inputCurrent" comment="input current in amps" />
+      <DataMember type="float" name="outputVoltage51V" comment="51 volt output voltage in volts" />
+      <DataMember type="float" name="outputCurrent51V" comment="51 volt output current in amps" />
+      <DataMember type="float" name="outputVoltage5V" comment="5 volt output voltage in volts" />
+      <DataMember type="float" name="outputCurrent5V" comment=" 5 volt output current in amps" />
+      <DataMember type="float" name="temp1" comment="temperature 1 in degrees C" />
+      <DataMember type="float" name="temp2" comment="temperature 2 in degrees C" />
+      <DataMember type="float" name="temp3" comment="temperature 3 in degrees C" />
+      <DataMember type="float" name="rpmsFan1" comment="fan 1's speed" />
+      <DataMember type="float" name="rpmsFan2" comment="fan 2's speed" />
+    </Class>
+
+    <Class name = "ComputeEnv" comment="Compute environmental data">
+      <DataMember type="text" name="lctn" comment="the location that this environmental information is for." />
+      <DataMember type="uint32" name="error" comment=" whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="uint32" name="tempI2c" comment="temperature in degrees C - i2c temperature. " />
+      <DataMember type="uint32" name="tempI2cLocal" comment="local temperature in degrees C - i2c temperature. " />
+      <DataMember type="uint32" name="tempTvSense" comment="temperature in degrees C - TVSense temperature (available via DCR). " />
+    </Class>
+
+    <Class name = "LinkChipEnv" comment="Link Chip environmental data">
+      <DataMember type="text" name="lctn" comment="the location that this environmental information is for." />
+      <DataMember type="uint32" name="error" comment=" whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="uint32" name="tempI2c" comment="external temperature in degrees C - i2c temperature. " />
+      <DataMember type="uint32" name="tempI2cLocal" comment="local temperature in degrees C - i2c temperature. " />
+      <DataMember type="uint32" name="tempTvSense" comment="temperature in degrees C - TVSense temperature (available via DCR). " />
+    </Class>
+
+    <Class name = "OpticalChannelInfo" comment="Optical Environmental per channel">
+      <DataMember type="uint32" name="biasCurrent" comment="Bias current in 2 uA units for each of the channels. " />
+      <DataMember type="uint32" name="opticalPower" comment="Optical power in 0.1 uWatt units (Light Output/Input) for each of the channels. " />
+    </Class>
+
+
+    <Class name = "OpticEnv" comment="Optic environmental data">
+      <DataMember type="text" name="lctn" comment="the location that this environmental information is for." />
+      <DataMember type="uint32" name="error" comment=" whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="uchar" name="status" comment=" Status flags" />
+      <DataMember type="uint32" name="los" comment="Loss of Signal indicator " />
+      <DataMember type="uint32" name="losMask" comment="Mask for Loss of Signal indicator " />
+      <DataMember type="uint32" name="faults" comment="Faults (which channels have experienced a Fault). " />
+      <DataMember type="uint32" name="faultsMask" comment="Mask for Faults (a '1'b prevents IntL generation). " />
+      <DataMember type="uint32" name="alarmsTemp" comment="Temperature alarms. " />
+      <DataMember type="uint32" name="alarmsTempMask" comment="Mask for Temperature alarms (a '1'b prevents IntL generation). " />
+      <DataMember type="uint32" name="alarmsVoltage" comment="Voltage alarms " />
+      <DataMember type="uint32" name="alarmsVoltageMask" comment=" Mask for Temperature alarms (a '1'b prevents IntL generation). " />
+      <DataMember type="uint64" name="alarmsBiasCurrent" comment="Bias current alarms. " />
+      <DataMember type="uint64" name="alarmsBiasCurrentMask" comment="Mask for Bias Current alarms " />
+      <DataMember type="uint64" name="alarmsPower" comment="Power alarms (high/low power alarms for Channel x). " />
+      <DataMember type="uint64" name="alarmsPowerMask" comment="Mask for Power alarms (a '1'b prevents IntL generation). " />
+      <DataMember type="uchar" name="temp" comment="Temperature in degrees C. " />
+      <DataMember type="uint32" name="voltageV33" comment=" 3.3v voltage in units of 100 uV. " />
+      <DataMember type="uint32" name="voltageV25" comment="2.5v voltage in units of 100 uV. " />
+      <DataMember type="OpticalChannelInfo" occurrences="many" name="OpticalEnvChannel" comment="Optical Channel Info - one entry per channel " />
+      <DataMember type="uint32" name="eot"           comment="Elapsed Operating Time (in hours)." />
+      <DataMember type="uint32" name="firmwareLevel" comment="Firmware level." />
+      <DataMember type="text"   name="serialNumber"  comment="Serial number (16 bytes)." />
+    </Class>
+    <Class name = "OpticEnvShort" comment="Optic environmental data">
+      <DataMember type="text" name="lctn" comment="the location that this environmental information is for." />
+      <DataMember type="uint32" name="error" comment=" whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="uchar" name="status" comment=" Status flags" />
+      <DataMember type="uint32" name="los" comment="Loss of Signal indicator " />
+      <DataMember type="uint32" name="losMask" comment="Mask for Loss of Signal indicator " />
+      <DataMember type="uint32" name="faults" comment="Faults (which channels have experienced a Fault). " />
+      <DataMember type="uint32" name="faultsMask" comment="Mask for Faults (a '1'b prevents IntL generation). " />
+      <DataMember type="uint32" name="alarmsTemp" comment="Temperature alarms. " />
+      <DataMember type="uint32" name="alarmsTempMask" comment="Mask for Temperature alarms (a '1'b prevents IntL generation). " />
+      <DataMember type="uint32" name="alarmsVoltage" comment="Voltage alarms " />
+      <DataMember type="uint32" name="alarmsVoltageMask" comment=" Mask for Temperature alarms (a '1'b prevents IntL generation). " />
+      <DataMember type="uint64" name="alarmsBiasCurrent" comment="Bias current alarms. " />
+      <DataMember type="uint64" name="alarmsBiasCurrentMask" comment="Mask for Bias Current alarms " />
+      <DataMember type="uint64" name="alarmsPower" comment="Power alarms (high/low power alarms for Channel x). " />
+      <DataMember type="uint64" name="alarmsPowerMask" comment="Mask for Power alarms (a '1'b prevents IntL generation). " />
+    </Class>
+
+    <Class name = "PowerDomainEnv" comment="Power Domain environmental data">
+      <DataMember type="uint32" name="domain" comment="number representing the domain this information is for." />
+      <DataMember type="uchar"  name="status" comment="power domain extended status - general status of this power domain. " />
+      <DataMember type="uchar"  name="enablePins"                 comment="enable pins (..up to 8 pins.. (1 &lt;&lt; pin#))." />
+      <DataMember type="uchar"  name="prmReDynamicFaultStatus"    comment="PRM_RE (Pgood) dynamic fault status (..up to 8 pins.. (1 &lt;&lt; pin#))." />
+      <DataMember type="uchar"  name="prmReLatchedFaultStatus"    comment="PRM_RE (Pgood) latched fault status (..up to 8 pins.. (1 &lt;&lt; pin#))." />
+      <DataMember type="uchar"  name="ovDynamicFaultStatus"       comment="OverVoltage dynamic fault status (..up to 8 pins.. (1 &lt;&lt; pin#))." />
+      <DataMember type="uchar"  name="ovLatchedFaultStatus"       comment="OverVoltage latched fault status (..up to 8 pins.. (1 &lt;&lt; pin#))." />
+      <DataMember type="uchar"  name="prmFaultDynamicFaultStatus" comment="PRM_FAULT dynamic fault status (..up to 8 pins.. (1 &lt;&lt; pin#))." />
+      <DataMember type="uchar"  name="prmFaultLatchedFaultStatus" comment="PRM_FAULT latched fault status (..up to 8 pins.. (1 &lt;&lt; pin#))." />
+      <DataMember type="uchar"  name="uvDynamicFaultStatus"       comment="UnderVoltage dynamic fault status." />
+      <DataMember type="uchar"  name="uvLatchedFaultStatus"       comment="UnderVoltage latched fault status." />
+      <DataMember type="uint32" name="voltage" comment="voltage read in mV units. " />
+      <DataMember type="uint32" name="current" comment="current read in mA units " />
+    </Class>
+
+    <Class name = "DcaEnv" comment="DCA environmental data">
+      <DataMember type="text" name="lctn" comment="the location that this environmental information is for." />
+      <DataMember type="int32" name="error" comment=" whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="PowerDomainEnv" occurrences="many" name="domains" comment="power domains in this dca " />
+    </Class>
+
+    <Class name = "RpmsFan" comment="Fan speed ">
+      <DataMember type="uint32" name="rpmsFans" comment=" " />
+    </Class>
+
+    <Class name = "NodeCardEnv" comment="Node card environmental data">
+      <DataMember type="text" name="lctn" comment="the location that this environmental information is for." />
+      <DataMember type="int32" name="error" comment=" whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="uint32" name="clockFreq" comment="this card's system clock frequency in MHZ" />
+      <DataMember type="uint32" name="alertsComputes" comment="state of compute alert signals (compute 0 is bit 0 (lsb), compute 1 is bit 1, ..., compute 7 is bit 7)" />
+      <DataMember type="uint32" name="alertsBlinks" comment="state of link chip alert signals (blink 0 is bit 0 (lsb), blink 1 is bit 1, ..., blink 5 is bit 5)" />
+      <DataMember type="uint32" name="alertsOptics" comment=" state of optic module alert signals (avago 0 is bit 0 (lsb), avago 1 is bit 1, ..., avago 23 is bit 23)" />
+      <DataMember type="uint32" name="pgoodBlinks" comment="state of link chip pgood signals" />
+      <DataMember type="uint32" name="pgoodComputes" comment="state of compute pgood signals" />
+      <DataMember type="uint32" name="statusDca" comment="state of DCA" />
+      <DataMember type="uint32" name="statusVtmDomains123" comment="state of VTMs / Vicor Module" />
+      <DataMember type="uint32" name="statusVtmDomains468" comment="state of VTMs / Vicor Module" />
+      <DataMember type="text" name="powerRailV08Voltage" comment="voltage on D0A1 power rail, 0.8V" />
+      <DataMember type="text" name="powerRailV14Voltage" comment="voltage on D0A2 power rail, 1.4V" />
+      <DataMember type="text" name="powerRailV25Voltage" comment="voltage on D0B1 power rail, 2.5V" />
+      <DataMember type="text" name="powerRailV33Voltage" comment="voltage on D0B2 power rail, 3.3V" />
+      <DataMember type="text" name="powerRailV120PVoltage" comment="voltage on D1A1 power rail, 12.0V Persistent" />
+      <DataMember type="text" name="powerRailV15Voltage" comment="voltage on D1A2 power rail, 1.5V" />
+      <DataMember type="text" name="powerRailV09Voltage" comment="voltage on D1B1 power rail, 0.9V" />
+      <DataMember type="text" name="powerRailV10Voltage" comment="voltage on D1B2 power rail, 1.0V" />
+      <DataMember type="text" name="powerRailV33PVoltage" comment="voltage on D2A1 power rail, 3.3V Persistent" />
+      <DataMember type="text" name="powerRailV12AVoltage" comment="voltage on D2A1 power rail, V12A" />
+      <DataMember type="text" name="powerRailV12BVoltage" comment="voltage on D2B1 power rail, V12B" />
+      <DataMember type="text" name="powerRailV18Voltage" comment="voltage on D2B2 power rail, 1.8V" />
+      <DataMember type="text" name="powerRailV25PVoltage" comment="voltage on D3A1 power rail, 2.5V Persistent" />
+      <DataMember type="text" name="powerRailV12PVoltage" comment="voltage on D3A2 power rail, 1.2V Persistent" />
+      <DataMember type="text" name="powerRailV18PVoltage" comment="voltage on D3B1 power rail, 1.8V Persistent" />
+      <DataMember type="text" name="powerRailV09VoltageQ0" comment="voltage on D4A1 power rail, .9V Quadrant 0" />
+      <DataMember type="text" name="powerRailV09VoltageQ1" comment="voltage on D4A2 power rail, .9V Quadrant 1" />
+      <DataMember type="text" name="powerRailV09VoltageQ2" comment="voltage on D4B1 power rail, .9V Quadrant 2" />
+      <DataMember type="text" name="powerRailV09VoltageQ3" comment="voltage on D4B2 power rail, .9V Quadrant 3" />
+      <DataMember type="text" name="powerVTM112Temperature" comment="VTM temperature in degrees C" />
+      <DataMember type="uint32" name="coreVoltageFromComputes" comment="voltage specified in computes' vpd for Vdd/Core/Domain 1   voltage (in units of 1 mv)." />
+      <DataMember type="uint32" name="dramVoltageFromComputes" comment="voltage specified in computes' vpd for Vddr3/DRAM/Domain 2 voltage (in units of 1 mv)." />
+      <DataMember type="uint32" name="onboardTemp0" comment="external incoming coolant temp in degrees C" />
+      <DataMember type="uint32" name="onboardTemp1" comment="external outgoing coolant temp in degrees C" />
+      <DataMember type="uint32" name="onboardTemp0Local" comment="local incoming coolant temp in degrees C" />
+      <DataMember type="uint32" name="onboardTemp1Local" comment="local outgoing coolant temp in degrees C" />
+      <DataMember type="ComputeEnv"  occurrences="many" name="computes" comment="compute cards." />
+      <DataMember type="LinkChipEnv" occurrences="many" name="blinks" comment="link chips / blinks." />
+      <DataMember type="OpticEnv" occurrences="many"  name="optics" comment="avago optical modules." />
+      <DataMember type="DcaEnv" occurrences="many" name="dcas" comment="DCAs." />
+      <DataMember type="text" name="timestampDataRead" comment="time that this data was captured (into the Card Controller object)." />
+    </Class>
+
+    <Class name = "NodeCardEnvShort" comment="Node card environmental data">
+      <DataMember type="text"      name="lctn"                                       comment="the location that this environmental information is for." />
+      <DataMember type="int32"     name="error"                                      comment="whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="uint32"    name="clockFreq"                                  comment="this card's system clock frequency in MHZ - SystemClock1 palomino register." />
+      <DataMember type="uint32"    name="alertsComputes"                             comment="state of compute alert signals." />
+      <DataMember type="uint32"    name="alertsBlinks"                               comment="state of link chip alert signals." />
+      <DataMember type="uint32"    name="alertsOptics"                               comment="state of optic module alert signals." />
+      <DataMember type="uint32"    name="pgoodBlinks"                                comment="state of link chip pgood signals" />
+      <DataMember type="uint32"    name="pgoodComputes"                              comment="state of pgood signals for compute cards." />
+      <DataMember type="uint32"    name="statusDca"                                  comment="state of DCA" />
+      <DataMember type="uint32"    name="statusVtmDomains123"                        comment="state of VTMs / Vicor Modules for Domains 1, 2, &amp; 3 (VTM aka Voltage Transformation Module)" />
+      <DataMember type="uint32"    name="statusVtmDomains468"                        comment="state of VTMs / Vicor Modules for Domains 4, 6, &amp; 8 (VTM aka Voltage Transformation Module)" />
+      <DataMember type="text"      name="powerRailV08Voltage"                        comment="voltage on D0A1 power rail,  0.8v." />
+      <DataMember type="text"      name="powerRailV14Voltage"                        comment="voltage on D0A2 power rail,  1.4v." />
+      <DataMember type="text"      name="powerRailV25Voltage"                        comment="voltage on D0B1 power rail,  2.5v." />
+      <DataMember type="text"      name="powerRailV33Voltage"                        comment="voltage on D0B2 power rail,  3.3v." />
+      <DataMember type="text"      name="powerRailV120PVoltage"                      comment="voltage on D1A1 power rail, 12.0v PERSISTENT." />
+      <DataMember type="text"      name="powerRailV15Voltage"                        comment="voltage on D1A2 power rail,  1.5v." />
+      <DataMember type="text"      name="powerRailV09Voltage"                        comment="voltage on D1B1 power rail, DEPRECATED on pass3 and later node boards - for pass2 boards this is 0.9v." />
+      <DataMember type="text"      name="powerRailV10Voltage"                        comment="voltage on D1B2 power rail,  1.0v." />
+      <DataMember type="text"      name="powerRailV33PVoltage"                       comment="voltage on D2A1 power rail,  3.3v PERSISTENT." />
+      <DataMember type="text"      name="powerRailV12AVoltage"                       comment="voltage on D2A2 power rail,  V12A" />
+      <DataMember type="text"      name="powerRailV12BVoltage"                       comment="voltage on D2B1 power rail,  V12B" />
+      <DataMember type="text"      name="powerRailV18Voltage"                        comment="voltage on D2B2 power rail,  1.8v." />
+      <DataMember type="text"      name="powerRailV25PVoltage"                       comment="voltage on D3A1 power rail,  2.5v PERSISTENT." />
+      <DataMember type="text"      name="powerRailV12PVoltage"                       comment="voltage on D3A2 power rail,  1.2v PERSISTENT." />
+      <DataMember type="text"      name="powerRailV18PVoltage"                       comment="voltage on D3B1 power rail,  1.8v PERSISTENT." />
+      <DataMember type="text"      name="powerRailV09VoltageQ0"                      comment="voltage on D4A1 power rail,  0.9v quadrant 0 (pass 3 node boards)." />
+      <DataMember type="text"      name="powerRailV09VoltageQ1"                      comment="voltage on D4A2 power rail,  0.9v quadrant 1 (pass 3 node boards)." />
+      <DataMember type="text"      name="powerRailV09VoltageQ2"                      comment="voltage on D4B1 power rail,  0.9v quadrant 2 (pass 3 node boards)." />
+      <DataMember type="text"      name="powerRailV09VoltageQ3"                      comment="voltage on D4B2 power rail,  0.9v quadrant 3 (pass 3 node boards)." />
+      <DataMember type="uint32"    name="coreVoltageFromComputes"                    comment="voltage specified in computes' vpd for Vdd/Core/Domain 1   voltage (in units of 1 mv)." />
+      <DataMember type="uint32"    name="dramVoltageFromComputes"                    comment="voltage specified in computes' vpd for Vddr3/DRAM/Domain 2 voltage (in units of 1 mv)." />
+      <DataMember type="uint32"    name="onboardTemp0"                               comment="incoming coolant temperature in degrees C - TempMonitorSDA_0." />
+      <DataMember type="uint32"    name="onboardTemp1"                               comment="outgoing coolant temperature in degrees C - TempMonitorSDA_1." />
+      <!-- todo: I haven't had a chance to build the backing classes for these two -->
+      <!-- <DataMember type="ComputeEnvShort"  name="computes"                            comment="compute cards." /> -->
+      <!-- <DataMember type="LinkChipEnvShort" name="blinks"                              comment="link chips / blinks." /> -->
+      <DataMember type="OpticEnvShort" name="optics"              occurrences="many" comment="avago optical modules." />
+      <DataMember type="DcaEnv"    name="dcas"                    occurrences="many" comment="DCAs." />
+      <DataMember type="text"      name="internalMessages"        occurrences="many" comment="msgs that user should see (e.g. what errors occurred)." />
+      <DataMember type="text"      name="timestampDataRead"                          comment="time that this data was captured (into the Card Controller object)." />
+    </Class>
+
+    <Class name = "IoCardEnv" comment="IO card environmental data">
+      <DataMember type="text" name="lctn" comment="the location that this environmental information is for." />
+      <DataMember type="int32" name="error" comment=" whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="uint32" name="clockFreq" comment="this card's system clock frequency in MHZ" />
+      <DataMember type="uint32" name="alertsComputes" comment="state of compute alert signals (compute 0 is bit 0 (lsb), compute 1 is bit 1, ..., compute 7 is bit 7)" />
+      <DataMember type="uint32" name="alertsBlinks" comment="state of link chip alert signals (blink 0 is bit 0 (lsb), blink 1 is bit 1, ..., blink 5 is bit 5)" />
+      <DataMember type="uint32" name="alertsOptics" comment=" state of optic module alert signals (avago 0 is bit 0 (lsb), avago 1 is bit 1, ..., avago 23 is bit 23)" />
+      <DataMember type="bool" name="tempCriticalBlink" comment="has any link chip signaled a critical temperature?" />
+      <DataMember type="bool" name="tempWarningBlink" comment="has any link chip signaled a warning temperature value?" />
+      <DataMember type="uint32" name="pgoodBlinks" comment="state of link chip pgood signals" />
+      <DataMember type="uint32" name="pgoodComputes" comment="state of compute pgood signals" />
+      <DataMember type="RpmsFan" occurrences="many" name="fanRpms" comment="fan RPMs" />
+      <DataMember type="uint32" name="statusDca" comment="state of DCA" />
+      <DataMember type="uint32" name="statusVtmDomains" comment="state of VTMs / Vicor Module" />
+      <DataMember type="text" name="powerRailV08Voltage" comment="voltage on D0A1 power rail,  0.8v." />
+      <DataMember type="text" name="powerRailV14Voltage" comment="voltage on D0A2 power rail,  1.4v" />
+      <DataMember type="text" name="powerRailV25Voltage" comment="voltage on D0B1 power rail,  2.5v." />
+      <DataMember type="text" name="powerRailV33Voltage" comment="voltage on D0B2 power rail,  3.3v." />
+      <DataMember type="text" name="powerRailV120Voltage" comment="voltage on D1A1 power rail, 12.0v." />
+      <DataMember type="text" name="powerRailV15Voltage" comment="voltage on D1A2 power rail,  1.5v." />
+      <DataMember type="text" name="powerRailV09Voltage" comment="voltage on D1B1 power rail,  0.9v." />
+      <DataMember type="text" name="powerRailV10Voltage" comment="voltage on D1B2 power rail,  1.0v." />
+      <DataMember type="text" name="powerRailV120PVoltage" comment="voltage on D2A1 power rail, 12.0v PERSISTENT." />
+      <DataMember type="text" name="powerRailV33PVoltage" comment="voltage on D2A2 power rail,  3.3v PERSISTENT" />
+      <DataMember type="text" name="powerRailV12Voltage" comment="voltage on D2B1 power rail,  1.2v." />
+      <DataMember type="text" name="powerRailV18Voltage" comment="voltage on D2B2 power rail,  1.8v." />
+      <DataMember type="text" name="powerRailV12PVoltage" comment="voltage on D3B2 power rail, 1.2v PERSISTENT" />
+      <DataMember type="text" name="powerRailV15PVoltage" comment="voltage on D3B1 power rail, 1.5v PERSISTENT" />
+      <DataMember type="text" name="powerRailV18PVoltage" comment="voltage on D3A2 power rail, 1.8v PERSISTENT" />
+      <DataMember type="text" name="powerRailV25PVoltage" comment="voltage on D3A1 power rail, 2.5v PERSISTENT" />
+      <DataMember type="uint32" name="coreVoltageFromComputes" comment="voltage specified in computes' vpd for Vdd/Core/Domain 1   voltage (in units of 1 mv)." />
+      <DataMember type="uint32" name="dramVoltageFromComputes" comment="voltage specified in computes' vpd for Vddr3/DRAM/Domain 2 voltage (in units of 1 mv)." />
+      <DataMember type="uint32" name="onboardTemp" comment="external on board temperature in degrees C" />
+      <DataMember type="uint32" name="onboardTempLocal" comment="local on board temperature in degrees C" />
+      <DataMember type="ComputeEnv"  occurrences="many" name="computes" comment="compute cards." />
+      <DataMember type="LinkChipEnv" occurrences="many" name="blinks" comment="link chips / blinks." />
+      <DataMember type="OpticEnv" occurrences="many"  name="optics" comment="avago optical modules." />
+      <DataMember type="DcaEnv" occurrences="many" name="dcas" comment="DCAs." />
+      <DataMember type="text" name="timestampDataRead" comment="time that this data was captured (into the Card Controller object)." />
+    </Class>
+    <Class name = "IoCardEnvShort" comment="IO card environmental data">
+      <DataMember type="text"      name="lctn"                                       comment="the location that this environmental information is for." />
+      <DataMember type="int32"     name="error"                                      comment="whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="uint32"    name="clockFreq"                                  comment="this card's system clock frequency in MHZ." />
+      <DataMember type="uint32"    name="alertsComputes"                             comment="state of compute alert signals (compute 0 is bit 0 (lsb), compute 1 is bit 1, ..., compute 7 is bit 7)" />
+      <DataMember type="uint32"    name="alertsBlinks"                               comment="state of link chip alert signals (blink 0 is bit 0 (lsb), blink 1 is bit 1, ..., blink 5 is bit 5)" />
+      <DataMember type="uint32"    name="alertsOptics"                               comment="state of optic module alert signals (avago 0 is bit 0 (lsb), avago 1 is bit 1, ..., avago 23 is bit 23)" />
+      <DataMember type="bool"      name="tempCriticalBlink"                          comment="has any link chip signaled a critical temperature?  (0 = no, 1 = at least 1 blink is in the 'critical' temperature range)" />
+      <DataMember type="bool"      name="tempWarningBlink"                           comment="has any link chip signaled a warning temperature value?  (0 = no, 1 = at least 1 blink is in the 'warning' temperature range)" />
+      <DataMember type="uint32"    name="pgoodBlinks"                                comment="state of link chip pgood signals (blink 0 is bit 0 (lsb), blink 1 is bit 1, ..., blink 5 is bit 5)" />
+      <DataMember type="uint32"    name="pgoodComputes"                              comment="state of compute pgood signals (compute 0 is bit 0 (lsb), compute 1 is bit 1, ..., compute 7 is bit 7)" />
+      <DataMember type="uint32"    name="rpmsFans"                occurrences="many" comment="fan RPMs." />
+      <DataMember type="uint32"    name="statusDca"                                  comment="state of DCA" />
+      <DataMember type="uint32"    name="statusVtmDomains"                           comment="state of VTMs / Vicor Modules (VTM aka Voltage Transformation Module)" />
+      <DataMember type="text"      name="powerRailV08Voltage"                        comment="voltage on D0A1 power rail,  0.8v." />
+      <DataMember type="text"      name="powerRailV14Voltage"                        comment="voltage on D0A2 power rail,  1.4v." />
+      <DataMember type="text"      name="powerRailV25Voltage"                        comment="voltage on D0B1 power rail,  2.5v." />
+      <DataMember type="text"      name="powerRailV33Voltage"                        comment="voltage on D0B2 power rail,  3.3v." />
+      <DataMember type="text"      name="powerRailV120Voltage"                       comment="voltage on D1A1 power rail, 12.0v." />
+      <DataMember type="text"      name="powerRailV15Voltage"                        comment="voltage on D1A2 power rail,  1.5v." />
+      <DataMember type="text"      name="powerRailV09Voltage"                        comment="voltage on D1B1 power rail,  0.9v." />
+      <DataMember type="text"      name="powerRailV10Voltage"                        comment="voltage on D1B2 power rail,  1.0v." />
+      <DataMember type="text"      name="powerRailV120PVoltage"                      comment="voltage on D2A1 power rail, 12.0v PERSISTENT." />
+      <DataMember type="text"      name="powerRailV33PVoltage"                       comment="voltage on D2A2 power rail,  3.3v PERSISTENT." />
+      <DataMember type="text"      name="powerRailV12Voltage"                        comment="voltage on D2B1 power rail,  1.2v." />
+      <DataMember type="text"      name="powerRailV18Voltage"                        comment="voltage on D2B2 power rail,  1.8v." />
+      <DataMember type="text"      name="powerRailV12PVoltage"                       comment="voltage on D3B2 power rail,  1.2v PERSISTENT." />
+      <DataMember type="text"      name="powerRailV15PVoltage"                       comment="voltage on D3B1 power rail,  1.5v PERSISTENT." />
+      <DataMember type="text"      name="powerRailV18PVoltage"                       comment="voltage on D3A2 power rail,  1.8v PERSISTENT." />
+      <DataMember type="text"      name="powerRailV25PVoltage"                       comment="voltage on D3A1 power rail,  2.5v PERSISTENT." />
+      <DataMember type="uint32"    name="coreVoltageFromComputes"                    comment="voltage specified in computes' vpd for Vdd/Core/Domain 1   voltage (in units of 1 mv)." />
+      <DataMember type="uint32"    name="dramVoltageFromComputes"                    comment="voltage specified in computes' vpd for Vddr3/DRAM/Domain 2 voltage (in units of 1 mv)." />
+      <DataMember type="uint32"    name="onboardTemp"                                comment="on board temperature in degrees C." />
+      <!-- todo: I haven't had a chance to build the backing classes for these two -->
+      <!-- <DataMember type="ComputeEnvShort"  name="computes"                            comment="compute cards." /> -->
+      <!-- <DataMember type="LinkChipEnvShort" name="blinks"                              comment="link chips / blinks." /> -->
+      <DataMember type="OpticEnvShort" name="optics"              occurrences="many" comment="avago optical modules." />
+      <DataMember type="DcaEnv"    name="dcas"                    occurrences="many" comment="DCAs." />
+      <DataMember type="text"      name="internalMessages"        occurrences="many" comment="msgs that user should see (e.g. what errors occurred)." />
+      <DataMember type="text"      name="timestampDataRead"                          comment="time that this data was captured (into the Card Controller object)." />
+    </Class>
+    <Class name = "ServiceCardEnv" comment="Service card environmental data">
+      <DataMember type="uint32" name="clockFreq" comment="this card's system clock frequency in MHZ" />
+      <DataMember type="text" name="powerRailV12PVoltage" comment="voltage on V12P  power rail, 1.2v  PERSISTENT." />
+      <DataMember type="text" name="powerRailV12R5Voltage" comment="voltage on V12R5 power rail, 1.25v PERSISTENT." />
+      <DataMember type="text" name="powerRailV15PVoltage" comment="voltage on V15P  power rail, 1.5v  PERSISTENT." />
+      <DataMember type="text" name="powerRailV25PVoltage" comment="voltage on V25P  power rail, 2.5v  PERSISTENT." />
+      <DataMember type="text" name="powerRailV33PVoltage" comment="voltage on V33P  power rail, 3.3v  PERSISTENT." />
+      <DataMember type="text" name="powerRailV50PVoltage" comment="voltage on V50P  power rail, 5.0v  PERSISTENT." />
+      <DataMember type="bool" name="leakDetectorFaultBpe0" comment="boolean indicating if the Leak Detector's power from BPE 0 has faulted." />
+      <DataMember type="bool" name="leakDetectorFaultBpe1" comment="boolean indicating if the Leak Detector's power from BPE 1 has faulted." />
+      <DataMember type="uint32" name="onboardTemp1" comment="external temp of on board temperature sensor on i2c port  5 in degrees C." />
+      <DataMember type="uint32" name="onboardTemp2" comment="external temp of on board temperature sensor on i2c port 10 in degrees C." />
+      <DataMember type="uint32" name="onboardTemp3" comment="external temp of on board temperature sensor on i2c port 11 in degrees C." />
+      <DataMember type="uint32" name="onboardTemp1Local" comment="local temp of on board temperature sensor on i2c port  5 in degrees C." />
+      <DataMember type="uint32" name="onboardTemp2Local" comment="local temp of on board temperature sensor on i2c port 10 in degrees C." />
+      <DataMember type="uint32" name="onboardTemp3Local" comment="local temp of on board temperature sensor on i2c port 11 in degrees C." />
+      <DataMember type="text" name="location" comment="the location that this environmental information is for" />
+      <DataMember type="uint32" name="error" comment="whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="text" name="timestampDataRead" comment="time that this data was captured (into the card controller object)" />
+    </Class>
+
+    <Class name = "ServiceCardEnvShort" comment="Service card environmental data">
+      <DataMember type="uint32" name="clockFreq" comment="this card's system clock frequency in MHZ" />
+      <DataMember type="bool" name="leakDetectorFaultBpe0" comment="boolean indicating if the Leak Detector's power from BPE 0 has faulted." />
+      <DataMember type="bool" name="leakDetectorFaultBpe1" comment="boolean indicating if the Leak Detector's power from BPE 1 has faulted." />
+      <DataMember type="uint32" name="onboardTemp" comment="external temp of on board temperature sensor in degrees C." />
+      <DataMember type="text" name="location" comment="the location that this environmental information is for" />
+      <DataMember type="uint32" name="error" comment="whether or not any problem occurred on this card. (0 = success / no error)" />
+      <DataMember type="text" name="timestampDataRead" comment="time that this data was captured (into the card controller object)" />
+    </Class>
+
+    <Class name = "BpmEnv" comment="Bulk power environmental data for an individual bulk power module">
+      <DataMember type="text" name="location" comment="BPM's location" />
+      <DataMember type="uint32" name="statusWord" comment="summary of the unit's fault/warning conditions" />
+      <DataMember type="uchar" name="statusVout" comment="specifics for Output Voltage faults/warnings" />
+      <DataMember type="uchar" name="statusIout" comment="specifics for Output Current/Power faults/warnings" />
+      <DataMember type="uchar" name="statusInput" comment="specifics for Input voltage, current, or power faults/warnings" />
+      <DataMember type="uchar" name="statusTemperature" comment="specifics for temperature faults/warnings" />
+      <DataMember type="uchar" name="statusCml" comment="specifics for Communications, Logic, and Memory faults/warnings" />
+      <DataMember type="uchar" name="status5V" comment="specifics for 5 volt output - faults/warnings" />
+      <DataMember type="uchar" name="statusFans" comment="fan status" />
+      <DataMember type="text" name="inputVoltage" comment="input voltage in volts" />
+      <DataMember type="text" name="inputCurrent" comment="input current in amps" />
+      <DataMember type="text" name="outputVoltage51V" comment="51 volt output voltage in volts" />
+      <DataMember type="text" name="outputCurrent51V" comment="51 volt output current in amps" />
+      <DataMember type="text" name="outputVoltage5V" comment="5 volt output voltage in volts" />
+      <DataMember type="text" name="outputCurrent5V" comment=" 5 volt output current in amps" />
+      <DataMember type="text" name="temp1" comment="temperature 1 in degrees C" />
+      <DataMember type="text" name="temp2" comment="temperature 2 in degrees C" />
+      <DataMember type="text" name="temp3" comment="temperature 3 in degrees C" />
+      <DataMember type="text" name="rpmsFan1" comment="fan 1's speed" />
+      <DataMember type="text" name="rpmsFan2" comment="fan 2's speed" />
+
+    </Class>
+    <Class name="BpmsEnv" comment="Bulk power environmental data for all bulk power modules on a service card">
+      <DataMember type="text"   name="location"                comment="where this service card is located" />
+      <DataMember type="text"   name="timestampDataRead"       comment="time that this data was captured (into the card controller object)" />
+      <DataMember type="uint32" name="error"                   comment="true if error occurred" />
+      <DataMember type="BpmEnv" name="bpms" occurrences="many" comment="info for bulk power modules in this midplane" />
+    </Class>
+
+
+  </Method>
+
+  <Method name="readNodeCardEnv" type="RequestReply" comment="Read Node card environmentals">
+    <Class name = "ReadNodeCardEnvRequest" parent="TargetRequest">
+      <DataMember type="bool" name="shortForm" comment="if true, then read short form of envs." />
+    </Class>
+    <Class name = "ReadNodeCardEnvReply" parent="Reply">
+      <DataMember type="NodeCardEnv" name="nodeCards"   occurrences="many"  comment="reply data, 1 per target.." />
+      <DataMember type="NodeCardEnvShort" name="nodeCardsShort"   occurrences="many"  comment="reply data, 1 per target.." />
+    </Class>
+  </Method>
+
+  <Method name="readIoCardEnv" type="RequestReply" comment="Read Io card environmentals">
+    <Class name = "ReadIoCardEnvRequest" parent="TargetRequest">
+      <DataMember type="bool" name="shortForm" comment="if true, then read short form of envs." />
+    </Class>
+    <Class name = "ReadIoCardEnvReply" parent="Reply">
+      <DataMember type="IoCardEnv" name="ioCards"   occurrences="many"  comment="reply data, 1 per target.." />
+      <DataMember type="IoCardEnvShort" name="ioCardsShort"   occurrences="many"  comment="reply data, 1 per target.." />
+    </Class>
+  </Method>
+
+  <Method name="readServiceCardEnv" type="RequestReply" comment="Read Service card environmentals">
+    <Class name = "ReadServiceCardEnvRequest" parent="TargetRequest">
+      <DataMember type="bool" name="shortForm" comment="if true, then read short form of envs." />
+    </Class>
+    <Class name = "ReadServiceCardEnvReply" parent="Reply">
+      <DataMember type="ServiceCardEnv" name="serviceCards"   occurrences="many"  comment="reply data, 1 per target.." />
+      <DataMember type="ServiceCardEnvShort" name="serviceCardsShort"   occurrences="many"  comment="reply data, 1 per target.." />
+    </Class>
+  </Method>
+
+
+  <Method name="readBulkPowerEnv" type="RequestReply" comment="Read bulk power card environmentals">
+    <Class name = "ReadBulkPowerEnvRequest" parent="TargetRequest">
+    </Class>
+    <Class name = "ReadBulkPowerEnvReply" parent="Reply">
+      <DataMember type="BpmsEnv" name="bpms" occurrences="many" comment="reply data, 1 per target.." />
+    </Class>
+  </Method>
+
+  <Method name="readPerfStats" type="RequestReply" comment="Read performance statistics">
+    <Class name="DataPoint" comment="performance data - measured duration">
+      <DataMember type="text"   name="component" comment="component generating performance statistic (mc, subnet_mc, etc)" />
+      <DataMember type="text"   name="id" comment="id associated with the event" />
+      <DataMember type="text"   name="qualifier" comment="unique identifier associated with the id (boot cookie)" />
+      <DataMember type="text"   name="function" comment="function generating the event" />
+      <DataMember type="text"   name="subfunction" comment="sub-function generating the event" />
+      <DataMember type="text"   name="otherData" comment="other data associated with the event" />
+      <DataMember type="text"   name="mode" comment="extended or basic mode" />
+      <DataMember type="uint64" name="timestamp" comment="seconds since epoch when the event was created" />
+      <DataMember type="uint64" name="duration" comment="duration of the event" />
+    </Class>
+    <Class name="StatisticSet" comment="data points for statistic type">
+      <DataMember type="text"  name="statType" comment="the name of the performance statistics read" />
+      <DataMember type="DataPoint" name="dataPoints" occurrences="many" comment="performance data" />
+    </Class>
+
+    <Class name="ReadPerfStatsRequest" parent="TargetRequest">
+      <DataMember type="text" name="statType" occurrences="many" comment="the names of the perfomance statistics to read - if empty, read all." />
+    </Class>
+    <Class name = "ReadPerfStatsReply" parent="Reply">
+      <DataMember type="StatisticSet" name="statSet" occurrences="many" comment="the set of performance statitics" />
+    </Class>
+  </Method>
+
+  <Method name="logConsoleEvent" type="RequestReply" comment="Log a console event">
+    <Class name="LogConsoleEventRequest" parent="TargetRequest">
+      <DataMember type="ConsoleMessage" name="msg" comment="console event" />
+    </Class>
+    <Class name="LogConsoleEventReply" parent="Reply">
+    </Class>
+  </Method>
+
+  <Method name="logRASEvent" type="RequestReply" comment="Log a RAS event">
+    <Class name="LogRASEventRequest" parent="TargetRequest">
+      <DataMember type="RASMessage" name="event" comment="ras event" />
+    </Class>
+    <Class name="LogRASEventReply" parent="Reply">
+    </Class>
+  </Method>
+
+
+
+  <Method name="verifyCables" type="RequestReply" comment="Verify a cable">
+    <Class name="VerifyCableLinkChipInfo">
+
+      <Class name="BQLSwitch">
+        <DataMember type="uint32" name="state" comment="switch state" />
+        <DataMember type="uint32" name="hss4GmaskA" comment="lanes used on A port" />
+        <DataMember type="uint32" name="hss4GmaskB" comment="lanes used on B port" />
+        <DataMember type="uint32" name="hss10GmaskC" comment="lanes used on C port" />
+        <DataMember type="uint32" name="hss10GmaskD" comment="lanes used on D port" />
+        <DataMember type="uint32" name="optModRX" comment="index of optical modules used for receiving data" />
+        <DataMember type="uint32" name="optModRX_ExpectedSenderId_0_5"   comment="expected ID of the sender for the OLCT data" />
+        <DataMember type="uint32" name="optModRX_ExpectedSenderId_6_11"  comment="expected ID of the sender for the OLCT data" />
+        <DataMember type="uint32" name="optModRX_ExpectedReceiverId_0_5" comment="expected ID of the receiver for the OLCT data" />
+        <DataMember type="uint32" name="optModRX_ExpectedReceiverId_6_11"   comment="expected ID of the receiver for the OLCT data" />
+        <DataMember type="uint32" name="optModTX" comment="index of optical modules used for transmitting data" />
+        <DataMember type="uint32" name="optModTX_LocalId"   comment=" local id of this avago that is transmitting OLCT data" />
+        <DataMember type="uint32" name="optModTX_ExpectedReceiverId_0_5"   comment="remote ID of the receiver for the OLCT data" />
+        <DataMember type="uint32" name="optModTX_ExpectedReceiverId_6_11"  comment="remote ID of the receiver for the OLCT data" />
+      </Class>
+
+
+      <Class name="LinkChipPersonality">
+        <DataMember type="BQLSwitch" name="bqlSwitches" occurrences="many" comment="bql switch information - on for each of the four switches" />
+        <DataMember type="uint32" name="badWires" occurrences="many" comment="bitmask of bad wires (two for receiver regs C01 and C23 and two for transmitters regs D01 and D23)" />
+        <DataMember type="bool" name="mode56" comment="sparing mode" />
+      </Class>
+
+
+
+      <DataMember type="text" name="lctn" comment="location string for this particular link" />
+      <DataMember type="LinkChipPersonality" name="personality" comment="personality for this particular link chip" />
+    </Class>
+
+    <Class name="VerifyCableLinkChipReply" >
+      <DataMember type="text" name="lctn" comment="location string for this particular link chip" />
+      <DataMember type="int32" name="error" comment=" " />
+      <DataMember type="uint32" name="badFibers01Rx" comment="mask indicating which RX fibers are bad " />
+      <DataMember type="uint32" name="badFibers23Rx" comment="mask indicating which RX fibers are bad " />
+      <DataMember type="uint32" name="badFibers01Tx" comment="mask indicating which TX fibers are bad " />
+      <DataMember type="uint32" name="badFibers23Tx" comment="mask indicating which TX fibers are bad " />
+    </Class>
+
+    <Class name="VerifyCablesRequest" >
+      <DataMember type="bool"                    name="runOlct"                      comment="flag indicating whether or not to run the Optical Link Connectivity Test." />
+      <DataMember type="bool"                    name="runCheckOpticsModStatusChk"   comment="flag indicating whether or not to run the the Optics Module Status checks." />
+      <DataMember type="VerifyCableLinkChipInfo" name="blinkInfo" occurrences="many" comment="vector of blinks" />
+    </Class>
+
+    <Class name="VerifyCablesReply"  parent="Reply" >
+      <DataMember type="VerifyCableLinkChipReply" name="blinks" occurrences="many" comment="result info for each individual blink" />
+      <DataMember type="text" name="msgs" occurrences="many" comment="msgs that user should see (e.g. what errors occurred)" />
+    </Class>
+
+  </Method>
+
+  <Method name="checkBootComplete" type="RequestReply" comment="Count the number of nodes reporting a complete boot.">
+    <Class name="CheckBootCompleteRequest">
+      <DataMember type="text" name="locations" occurrences="many" comment="list of all nodes in the block"/>
+    </Class>
+    <Class name="CheckBootCompleteReply" parent="Reply">
+      <DataMember type="text" name="locations" occurrences="many" comment="list of all nodes that are not yet complete"/>
+    </Class>
+  </Method>
+
+  <Method name="checkShutdownComplete" type="RequestReply" comment="Count the number of nodes reporting a complete boot.">
+    <Class name="CheckShutdownCompleteRequest">
+      <DataMember type="text" name="locations" occurrences="many" comment="list of all nodes in the block"/>
+    </Class>
+    <Class name="CheckShutdownCompleteReply" parent="Reply">
+      <DataMember type="text" name="locations" occurrences="many" comment="list of all nodes that are not yet complete"/>
+    </Class>
+  </Method>
+
+  <Method name="McExtNopCmd" type="RequestReply" comment="Mcserver extension command (used for simulation and mcserver testbenchs, where mcserver just ignores this command.">
+    <Class name="McExtNopCmdRequest">
+      <DataMember type="text" name="name" comment="variable name" />
+      <DataMember type="text" name="value" comment="variable value" />
+    </Class>
+    <Class name="McExtNopCmdReply" parent="Reply">
+      <DataMember type="text" name="name" comment="variable name" />
+      <DataMember type="text" name="value" comment="variable value" />
+    </Class>
+  </Method>
+
+
+  <Method name="DcaCommand " type="RequestReply" comment="Perform DCA Command ">
+    <Class name="DcaCommandRequest" parent="TargetRequest">
+      <DataMember type="DcaOp" name="operation" comment="operation to perform" />
+      <DataMember type="text" name="dca_boot_code" comment="file that contains the DCA Boot Code" />
+      <DataMember type="text" name="dca_app_code" comment="file that contains the DCA App Code" />
+    </Class>
+
+    <ValueSet name="DcaOp" >
+      <ValueMember name="DCA_Disable" comment="disable this dca"/>
+      <ValueMember name="DCA_Enable" comment="enable this dca"/>
+      <ValueMember name="DCA_Execution_Trace" comment="grab an execution trace "/>
+      <ValueMember name="DCA_GetFirmwareLevel" comment="get the firmware level of this dca"/>
+      <ValueMember name="DCA_Poll" comment="issue a poll command to this dca"/>
+      <ValueMember name="DCA_GetInformation" comment="get the information for this dca"/>
+      <ValueMember name="DCA_GetEnvironmentals" comment="get the environmentals for this dca"/>
+      <ValueMember name="DCA_UpdateFirmwareLevel" comment="get the firmware level of this dca"/>
+    </ValueSet>
+
+
+
+
+    <Class name="DcaReply">
+      <DataMember type="text" name="lctn" comment="where this power domain is located" />
+      <DataMember type="uint32" name="error" comment="return code for the power domain" />
+      <DataMember type="text" name="internalMessages" occurrences="many" comment="error messages" />
+      <DataMember type="text" name="outputFileName" comment="return by operation Execute Trace" />
+      <DataMember type="text" name="firmwareLevel" comment="return by operation get Firmware" />
+      <DataMember type="DcaEnv" name="environmentals"   comment="returned by the Get Environmentals "/>
+      <DataMember type="DcaInfo" name="information"  comment="returned by the Get Information "/>
+    </Class>
+
+
+    <Class name="DcaCommandReply" parent="Reply">
+      <DataMember type="DcaReply" name="dcas_reply" occurrences="many" comment="indicate if problem ocuured on dca" />
+      <DataMember type="text" name="msgs" occurrences="many" comment="messages" />
+    </Class>
+  </Method>
+
+  <Method name="enableNodes" type="RequestReply" comment="Perform the power on sequence on the specified nodes (i.e. booting computes with a single boot step of enableNodes).">
+    <Class name = "EnableNodesRequest" parent="TargetRequest">
+      <DataMember type="text" name="bootOptions" comment="list of name=value boot options to pass to boot" />
+      <DataMember type="text" name="controlOptions" comment="list of name=value options for control" />
+    </Class>
+    <Class name = "EnableNodesReply" parent="Reply">
+    </Class>
+  </Method>
+
+
+
+</File>

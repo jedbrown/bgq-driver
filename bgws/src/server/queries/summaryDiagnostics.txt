@@ -1,0 +1,8 @@
+-- SUMMARY_DIAGNOSTICS
+
+SELECT db.blockId, db.runId
+  FROM bgqDiagBlocks AS db
+       JOIN
+       bgqDiagRuns AS dr
+       ON db.runId = dr.runId
+  WHERE db.endTime IS NULL AND dr.endTime IS NULL

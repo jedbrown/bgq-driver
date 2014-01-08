@@ -1,0 +1,57 @@
+<div>
+
+<div data-dojo-type="dijit.layout.BorderContainer" data-dojo-props="gutters: false">
+
+    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'top'">
+        <div data-dojo-type="dijit.form.DropDownButton" data-dojo-attach-point="_foDropDown">
+            <span>Filter Options</span>
+            <div style="width: 500px;" data-dojo-type="dijit.TooltipDialog" data-dojo-props="style: 'width: 500px;'">
+                <div class="bgFilterOptions bgFilterOptionsEnvHc" data-dojo-type="dijit.form.Form" data-dojo-props="'class': 'bgFilterOptions bgFilterOptionsEnvHc'" data-dojo-attach-point="_foForm">
+                    <fieldset>
+                        <ul>
+                            <li><input data-dojo-type="bluegene.navigator.dijit.TimeInterval" data-dojo-props="name: 'interval', label: 'Entries'" data-dojo-attach-point="_foInterval" /></li>
+                            <li>
+                                <label for="${id}-fo-location">Location</label>
+                                <input id="${id}-fo-location" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'location'" />
+                            </li>
+                            <li>
+                                <label for="${id}-fo-category">Category</label>
+                                <select name="category" id="${id}-fo-category" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'category', maxHeight: -1" data-dojo-attach-point="_foCategory">
+                                </select>
+                            </li>
+                            <li>
+                                <label for="${id}-fo-severity">Severity</label>
+                                <input id="${id}-fo-severity" data-dojo-type="bluegene.navigator.dijit.MultiSelectCodes" data-dojo-props="name: 'severity', values: bluegene.navigator.xlate.rasSeverity" />
+                            </li>
+                        </ul>
+                    </fieldset>
+                    <fieldset class="submit">
+                        <button type="submit" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'submit'">Apply</button>
+                        <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_foResetButton">Reset</button>
+                    </fieldset>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'center'">
+        <table style="height: 100%;"
+               data-dojo-type="dojox.grid.EnhancedGrid"
+               data-dojo-props="rowsPerPage: 50, selectable: true, style: 'height: 100%;', noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No events match the filter options.&lt;/span&gt;'"
+               data-dojo-attach-point="_grid"
+               >
+            <thead><tr>
+                <th field="id" width="80px">Record ID</th>
+                <th field="eventTime" width="110px" formatter="bluegene.navigator.format.timestamp" cellStyles="text-align: right;">Time</th>
+                <th field="severity" width="70px" cellStyles="text-align: center;">Severity</th>
+                <th field="category" width="90px">Category</th>
+                <th field="msgId" width="90px">Message ID</th>
+                <th field="location" width="120px">Location</th>
+                <th field="message" width="300px">Message</th>
+            </tr></thead>
+        </table>
+    </div>
+
+</div>
+
+</div>

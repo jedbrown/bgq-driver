@@ -1,0 +1,56 @@
+#/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+#
+# ramdisk/tools/Make.rules for BlueGene/Q Linux Distribution tools
+#
+# Author: Jay S. Bryant <jsbryant@us.ibm.com>
+#
+# Purpose:  This provides shared variables for the BG/Q Linux Distribution 
+#	    tools directory.
+#
+
+CURR_RHEL=RHEL6.2
+RHEL6_PATH=/install/redhat/RHEL6.2-ppc/Packages
+if [ -e /bgsys/logs/BGQ/distrofs ] ; then
+	LOG_DIR="/bgsys/logs/BGQ/distrofs"
+else
+	LOG_DIR="/bgsys/logs/BGQ"
+fi
+LOG=1
+
+#Overload the echo command so that output goes to the console and to a
+##log file.
+echo()
+{
+	if [ ! -z "$2" ] ; then
+		/bin/echo $1 "$2"
+		if [ $LOG -eq 1 ] ; then
+			/bin/echo $1 "$2" >> $LOG_DIR/$LOGFILE
+		fi
+	else
+		/bin/echo "$1"
+		if [ $LOG -eq 1 ] ; then
+			/bin/echo "$1" >> $LOG_DIR/$LOGFILE
+		fi
+	fi
+}
+

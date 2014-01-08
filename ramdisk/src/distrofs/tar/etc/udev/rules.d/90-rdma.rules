@@ -1,0 +1,26 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+KERNEL=="umad*", NAME="infiniband/%k"
+KERNEL=="issm*", NAME="infiniband/%k"
+KERNEL=="ucm*", NAME="infiniband/%k", MODE="0666"
+KERNEL=="uverbs*", NAME="infiniband/%k", MODE="0666"
+KERNEL=="uat", NAME="infiniband/%k", MODE="0666"
+KERNEL=="ucma", NAME="infiniband/%k", MODE="0666"
+KERNEL=="rdma_cm", NAME="infiniband/%k", MODE="0666"

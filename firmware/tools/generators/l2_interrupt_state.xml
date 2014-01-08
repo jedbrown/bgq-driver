@@ -1,0 +1,41 @@
+<register width="64" name="L2_INTERRUPT_STATE" prefix="L2_DCR" description="tbd">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <field bit="0" name="LOCAL_RING" description="Parity error on DCR ring." category="fatal" />
+  <field bit="1" name="RQ_ERR" description="Request queue error" category="fatal" />
+  <field bit="2" name="CTRL_ERR" description="Controller error" category="fatal" />
+  <field bit="3" name="RDB_ERR" description="Read buffer error" category="fatal" />
+  <field bit="4" name="COH_CE" description="Coherence array correctable error" category="fatal" />
+  <field bit="5" name="COH_UE" description="Coherence array uncorrectable error" category="fatal" />
+  <field bit="6" name="DIRB_CE" description="Directory array correctable error" category="fatal" />
+  <field bit="7" name="DIRB_UE" description="Directory array uncorrectable error" category="fatal" />
+  <field bit="8" name="EDR_CE" description="Coherence array correctable error" category="fatal" />
+  <field bit="9" name="EDR_OCE" description="Coherence array correctable error" category="fatal" />
+  <field bit="10" name="EDR_OUE" description="Coherence array correctable error" category="fatal" />
+  <field bit="11" name="EDR_UE" description="Coherence array ucorrectable error" category="fatal" />
+  <field bit="12" name="LRU_CE" description="LRU correctable error" category="fatal" />
+  <field bit="13" name="LRU_UE" description="LRU uncorrectable error" category="fatal" />
+  <field bit="14" name="SPR_CE" description="SPR correctable error" category="fatal" />
+  <field bit="15" name="SPR_UE" description="SPR uncorrectable error" category="fatal" />
+  <field bit="16" name="RQ_CE" description="Read queue correctable error" category="fatal" />
+  <field bit="17" name="RQ_UE" description="Read queue uncorrectable error" category="fatal" />
+  <field bit="18" name="OVERLOCK" description="Tried to lock more than overlock_thresh ways down" category="fatal" />
+  <field bit="19" name="UPC_COUNTER_OVF" description="UPC counter overflow" category="software" />
+</register>

@@ -1,0 +1,4 @@
+
+# define installation directories
+TEAL_OPT_INSTALL_DIR=$(BGQ_BUILD_DIR)/teal/install/opt
+TEAL_ETC_INSTALL_DIR=$(BGQ_BUILD_DIR)/teal/install/etc

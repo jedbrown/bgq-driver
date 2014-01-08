@@ -1,0 +1,55 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Cwd;
+use File::Find;
+
+
+sub find_files(@)
+{
+    our @files=();
+    sub wanted() {
+        return if ($File::Find::name =~ m@/CVS@);
+        push(@files, $File::Find::name) if ( (-f $_) and (m@\.d$@) );
+    }
+    find(\&wanted, @_);
+    return @files;
+}
+
+
+sub read_files(@)
+{
+    local $/ = undef;
+    local @ARGV = @_;
+    exit unless scalar @ARGV;
+    my @list = ();
+    while(<>) {
+        s/\\\n//g;
+        my @a = split(/\n/, $_);
+        chomp @a;
+        for (@a) {
+            next unless m/./;
+            die unless m/\S+:(.*)$/;
+            $_=$1;
+            s/^\s+//g;
+            s/\s+\\$//g;
+            push(@list, split(/\s+/, $_));
+        }
+    }
+    return @list;
+}
+
+
+sub ersu(@)
+# Exists
+# Realpath
+# Sort
+# Unique
+{
+    my %seen = ();
+    return sort grep { !$seen{$_}++ } map { Cwd::abs_path($_) } grep { -e $_ } @_;
+}
+
+
+print "$_\n" for ersu( read_files( find_files( @ARGV ) ) );

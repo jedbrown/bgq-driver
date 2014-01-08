@@ -1,0 +1,27 @@
+####################################
+%package log4cxx
+
+Summary: Logging library for C++.
+Group: %{product_group}
+Release: 0
+
+%description log4cxx
+%{bgq_package_description}
+
+This package provides the logging library used by the C++ programs.
+
+%files log4cxx
+
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/extlib
+%dir %{_base_dir}/extlib/include
+%dir %{_base_dir}/extlib/lib
+
+%{_base_dir}/extlib/include/log4cxx
+%{_base_dir}/extlib/lib/liblog4cxx.so
+%{_base_dir}/extlib/lib/liblog4cxx.so.10
+%{_base_dir}/extlib/lib/liblog4cxx.so.10.0.0
+

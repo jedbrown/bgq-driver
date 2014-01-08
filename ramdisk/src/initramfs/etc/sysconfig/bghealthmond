@@ -1,0 +1,81 @@
+#
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# bghealthmond Config File for BlueGene/Q Linux Distribution
+#
+# File: /etc/sysconfig/bghealthmond
+#
+# Author: Jay S. Bryant <jsbryant@us.ibm.com>
+#
+# Purpose: Provides the the configuration variables for the bghealthmod.sh daemon. 
+
+# Enable (1) or disable (0) the daemon.
+# 	Default: 1
+ENABLED=1
+
+# The number of seconds to wait between each sample of the system status.
+#	Default: 300 seconds
+FREQUENCY=300
+
+# Enables (1) or disables (0) verbose output from the deamone
+#	Default: 0
+VERBOSE=0
+
+# Path to directory to create event log files under.
+# If set to /dev/console that output is just sent to the console.
+#	Default: /dev/console
+LOGPATH=/dev/console
+
+# Minimum kb of free memory to drop below before logging an event.
+#	Default: 256000 kb
+MEMTHRESHOLD=256000
+
+# Number of of errors to tolerate on an interface before logging an event.
+#	Default: 0
+NETERRTHRESHOLD=0
+
+# Percent of the total tranmitted/received packets to tolerate as dropped before logging an event.
+#	Default: 2
+NETDRPTHRESHOLD=2
+
+# Maximum 5 minute load average to tolerate before logging an event.
+#	Default: 500
+LOADAVGTHRESHOLD=500
+
+# Percent of the total possible open file descriptors used to tolerate before logging an event.
+#	Default: 90
+OFTHRESHOLD=90
+
+# Number of NFS retransmissions to tolerate before logging an event.
+#	Default: 0
+RETRANSTHRESHOLD=5
+
+# Number of times to try checking to see if a network link has recovered.
+# 	Default: 4
+LINKRETRIES=4
+
+# Number of seconds to sleep after each link check.
+# 	Default: 30
+LINKRETRYSLEEP=30
+
+# Number of seconds to sleep waiting for an attempt to access the root filesystem to return.
+# 	Default: 30
+ROOTFSCHECKSLEEP=30

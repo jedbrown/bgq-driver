@@ -1,0 +1,40 @@
+<div>
+
+<div data-dojo-type="dijit.layout.TabContainer" data-dojo-attach-point="_tabContainer">
+    <div title="Details" data-dojo-type="dijit.layout.StackContainer" data-dojo-attach-point="_detailsStack">
+        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_detailsNonePane">
+            Select a block to show block details.
+        </div>
+        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_detailsLoadingPane">
+            <span data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_detailsLoadingFmt">
+                Loading details for block '${_d}{name}'...
+            </span>
+	    </div>
+        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_detailsLoadingErrorPane">
+            <span data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_detailsErrorFmt">
+                Failed to load details for block '${_d}{name}', error message follows: ${_d}{msg}
+            </span>
+        </div>
+        <div data-dojo-type="bluegene.navigator.dijit.BlockFields" data-dojo-attach-point="_detailsLoadedPane"></div>
+    </div>
+
+    <table title="Jobs"
+           data-dojo-type="dojox.grid.EnhancedGrid"
+           data-dojo-props="rowsPerPage: 50, selectable: true, noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No jobs used the block.&lt;/span&gt;'"
+           data-dojo-attach-point="_jobsGrid">
+        <thead><tr>
+            <th field="id">Job ID</th>
+            <th field="status" formatter="bluegene.navigator.format.jobStatus">Status</th>
+            <th field="username">User</th>
+            <th field="executable" width="300px">Executable</th>
+            <th field="nodesUsed" formatter="dojo.number.format" cellStyles="text-align: right;">Size</th>
+            <th field="processesPerNode" cellStyles="text-align: right;">PPN</th>
+            <th field="startTime" formatter="bluegene.navigator.format.timestamp" width="110px">Started</th>
+            <th field="endTime" formatter="bluegene.navigator.format.timestamp" width="110px">Ended</th>
+            <th field="exitStatus" width="60px" cellStyles="text-align: right;">Exit Status</th>
+        </tr></thead>
+    </table>
+
+</div>
+    
+</div>

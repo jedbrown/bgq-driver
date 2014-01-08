@@ -1,0 +1,101 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp.  2012, 2012                              
+# US Government Users Restricted Rights - Use, duplication or      
+#   disclosure restricted by GSA ADP Schedule Contract with IBM    
+#   Corp.                                                          
+#                                                                  
+# This software is available to you under the Eclipse Public       
+# License (EPL).                                                   
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+#
+# rules for building firmware extensions
+# 
+#
+
+
+BASENAME = /bin/basename
+RM_F = /bin/rm -f
+
+TEST=$(shell basename $(shell pwd))
+
+#TEST_INSTALL_DIR=$(patsubst $(BGQ_BUILD_DIR)/hwverify/src/%,$(BGQ_INSTALL_DIR)/hwverify/bin/%,$(shell pwd))
+
+TEST_INSTALL_DIR = $(BGQ_INSTALL_DIR)/firmware/tests/$(TEST)
+
+
+FWTST_KFLAGS    = -D__KERNEL__
+FWTST_AFLAGS    = -D__ASSEMBLY__
+FWTST_INCLUDES  = -I$(BGQ_INSTALL_DIR) \
+		  -I$(BGQ_INSTALL_DIR)/spi/include/kernel/firmware
+FWTST_CPU_FLAGS = -m64 -g -O2
+
+FWTST_LDMAP = -Map $(basename $@).map
+
+FWTST_LDSCRIPT = FWExtDDR.lds
+FW_LDSCRIPT = $(BGQ_INSTALL_DIR)/firmware/include/$(FWTST_LDSCRIPT)
+FW_PRELINK  = $(BGQ_INSTALL_DIR)/firmware/lib/fwext.prelink
+
+FWTST_LDFLAGS  = -Bstatic $(FWTST_LDMAP) --script $(FW_LDSCRIPT)
+FWTST_CFLAGS = -D__FWEXT__ -Wall -Werror$(LISTING_OPTIONS) $(FWTST_INCLUDES) -c
+
+FW_DEP_CFLAGS = -MMD -MF .dep.$<.d
+
+FWTST_LIBS = -static -nostdlib
+
+FWLIBINSTALL_DIR=$(BGQ_INSTALL_DIR)/firmware/lib/
+
+LOCAL_LIBS =
+
+FW_EXT_LIBS = 
+
+
+define RUNFCTEST_EX_HELP
+To pass runmesa parameters via make use the following syntax:
+
+    make runmesa parms='list of parameters' 
+
+For example: 
+
+    make runmesa parms='--numcores 17 --aeton 5000 --maxtime 20000' 
+
+endef
+
+export RUNFCTEST_EX_HELP
+
+%.o: %.c
+	@echo "gcc: $<"
+	$(SILENT)$(BGQ_CROSS_CC) $(FWTST_CPU_FLAGS) $(FWTST_KFLAGS) $(FWTST_CFLAGS) $(FW_DEP_CFLAGS) $< -o $*.o
+
+%.o: %.cc
+	@echo "gcc: $<"
+	$(SILENT)$(BGQ_CROSS_CXX) $(FWTST_CPU_FLAGS) $(FWTST_KFLAGS) $(FWTST_CFLAGS) $(FW_DEP_CFLAGS) $< -o $*.o
+
+%.o: %.S
+	@echo "gcc: $<"
+	$(SILENT)$(BGQ_CROSS_CC) $(FWTST_CPU_FLAGS) $(FWTST_KFLAGS) $(FWTST_CFLAGS) $(FWTST_AFLAGS) -Os $< -o $*.o
+
+%.elf:	$(FW_PRELINK) $(FW_EXT_LIBS) $(LOCAL_LIBS)
+	@echo "Linking Executable $@ ..."
+	$(SILENT)$(BGQ_CROSS_LD) $(FWTST_LDFLAGS) -o $@  $(FW_PRELINK) $(filter %.o,$^)  $(FWTST_LIBS) $(FW_EXT_LIBS) $(LOCAL_LIBS)
+
+%.objdump: %.elf
+	@echo "Generating $@ ..."
+	$(SILENT)$(BGQ_CROSS_OBJDUMP)  -dfhl $< > $*.objdump
+
+
+default:		install
+test:			this.test
+this.test:		this.test.via.mambo
+this.test.via.mambo:	install
+	@$(MAKE) runmambo | grep "Software Test"

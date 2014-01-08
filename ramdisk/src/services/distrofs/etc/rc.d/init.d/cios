@@ -1,0 +1,130 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012  All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# cios		Starts the BlueGene Common I/O Services		
+#
+# Authors:	Mike Mundy (mmundy@us.ibm.com) & Jay S. Bryant (jsbryant@us.ibm.com)
+#
+
+# Source function library including BG/Q env vars
+. /etc/init.d/functions
+
+prog=iosd
+IOSD_BIN=/sbin/${prog}
+IOSD_CONFIG=/etc/sysconfig/${prog}
+PIDFILE=/var/run/cios.pid
+LOCKFILE=/var/lock/subsys/cios
+CIOS_RPM_ARR=(`rpm -qa | grep cio_services_runtime | tr "-" "\n"`)
+
+# Bind mount files from NFS root into /bgfs when using NFS root
+# Additional daemons may be added her by adding to the list.  It is
+# assumed that a file has been touched under ramdisk/src/distrofs to
+# correspond with the daemon.  The zero length file will be used for the bind mount.
+for DAEMON in "/sbin/iosd" "/sbin/gdbtool" "/sbin/jobctld" "/sbin/stdiod" \
+	      "/sbin/stdiod" "/sbin/sysiod" "/sbin/toolctld" "/etc/sysconfig/iosd" ; do
+	if [ -e /bgfs/$DAEMON ] ; then
+		mount --bind /bgfs/$DAEMON $DAEMON
+		RETVAL=$?
+		if [ $RETVAL -ne 0 ] ; then
+			failure
+			echo -en "\n\tERROR: Unable create bind mount  for CIOS daemone $DAEMON\n"
+		fi	
+	fi
+done
+
+function start
+{
+    # Only start Common I/O Services when enabled in personality and if the MU is enabled.
+    if [ $BG_NODE_ENABLE_CIOS -eq 1 ] && [ $BG_NODE_ENABLE_MU -eq 1 ] ; then
+
+        # Source the configuration file.
+        if [ -f ${IOSD_CONFIG} ] ; then
+            . ${IOSD_CONFIG}
+        fi
+
+        # Start the I/O Services daemon which starts the other daemons.
+        echo -n $"Starting Common I/O Services (Revision ${CIOS_RPM_ARR[2]}-${CIOS_RPM_ARR[3]}): "
+        daemon --pidfile=${PIDFILE} ${IOSD_BIN} ${IOSD_OPTIONS}
+        RETVAL=$?
+        echo
+        [ ${RETVAL} -eq 0 ] && touch ${LOCKFILE}
+        return ${RETVAL}
+
+    else
+	echo -n $"Starting Common I/O Services (Revision ${CIOS_RPM_ARR[2]}-${CIOS_RPM_ARR[3]}): "
+	skipped
+	echo -en "\n"
+	return 0
+    fi
+}
+
+function stop
+{
+    # Only stop Common I/O Services when enabled in personality and if the MU is enabled.
+    if [ $BG_NODE_ENABLE_CIOS -eq 1 ] && [ $BG_NODE_ENABLE_MU -eq 1 ] ; then
+
+	echo -n $"Stopping Common I/O Services: "
+    	killproc ${prog}
+    	RETVAL=$?
+    	echo
+    	[ ${RETVAL} -eq 0 ] && rm -f ${LOCKFILE}
+    	return ${RETVAL}
+    fi		
+}
+
+function mystatus
+{
+    status -p ${PIDFILE} cios
+}
+
+function restart
+{
+    stop
+    start
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        mystatus
+        ;;
+    restart)
+        restart
+        ;;
+    try-restart)
+        mystatus >/dev/null 2>&1 || exit 0
+        restart
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|try-restart}"
+        exit 3
+        ;;
+esac
+
+exit $?
+
+
+

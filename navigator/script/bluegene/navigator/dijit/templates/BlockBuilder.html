@@ -1,0 +1,65 @@
+<div>
+
+<div data-dojo-type="dijit.layout.ContentPane">
+    <div data-dojo-type="dijit.form.Form" data-dojo-attach-point="_form">
+        <div>
+            <label for="${id}-id-input">Block Name</label>:
+            <input name="id" maxLength="32" id="${id}-id-input"
+                    data-dojo-type="dijit.form.ValidationTextBox"
+                    data-dojo-props="intermediateChanges: true, maxLength: 32, name: 'id', regExp: '[a-zA-Z0-9-_]*', required: true, trim: true"
+                    data-dojo-attach-point="_idInput"
+                 />
+        </div>
+
+        <table style="padding-top: 1em;">
+           <tr><td>&larr;</td><td>Select midplanes or node boards from the machine.
+               <span style="color: red;" data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_machineErrorIndicator">*</span>
+           </td></tr>
+           <tr><td></td><td>Click a midplane to add it to the block or expand the block in the dimension.</td></tr>
+           <tr><td></td><td>If a midplane can be passed through, click it again to toggle it from included to passed through.</td></tr>
+           <tr><td></td><td>Included midplanes are <span style="color: lightblue;">blue</span> and passthrough midplanes are <span style="color: orange;">orange</span>.</td></tr>
+           <tr><td></td><td>To create a small block, select a single midplane and then click on node boards in the midplane. The upper-left square is N00 and the lower right is N15.</td></tr>
+        </table>
+
+        <div class="bgBlockBuilderSummary" style="padding-top: 1em;">
+            <h2>Summary</h2>
+            <ul>
+                <li>
+                    <label for="${id}-size-text">Size</label>
+                    <span id="${id}-size-text" data-dojo-type="bluegene.dijit.OutputText" data-dojo-props="formatter: dojo.number.format" data-dojo-attach-point="_sizeText">n/a</span>
+                </li>
+                <li>
+                    <label for="${id}-shape-text">Shape</label>
+                    <span id="${id}-shape-text" data-dojo-type="bluegene.dijit.OutputText" data-dojo-props="formatter: bluegene.navigator.dijit.BlockBuilder.formatShape" data-dojo-attach-point="_shapeText">n/a</span>
+                </li>
+                <li><label>Full Torus</label>
+                    <span>A</span><input type="checkbox" checked disabled data-dojo-attach-point="_connectivityA" />
+                    <span style="padding-left: 1em;">B</span><input type="checkbox" checked disabled data-dojo-attach-point="_connectivityB" />
+                    <span style="padding-left: 1em;">C</span><input type="checkbox" checked disabled data-dojo-attach-point="_connectivityC" />
+                    <span style="padding-left: 1em;">D</span><input type="checkbox" checked disabled data-dojo-attach-point="_connectivityD" />
+                    <span style="padding-left: 1em;">E</span><input type="checkbox" checked disabled data-dojo-attach-point="_connectivityE" />
+                </li>
+            </ul>
+        </div>
+        <div style="padding-top: 1em;">
+            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-attach-point="_resetButton">Reset</button>
+            <button disabled type="submit" data-dojo-type="dijit.form.Button" data-dojo-attach-point="_createButton">Create block</button>
+        </div>
+
+        <div style="padding-top: 1em;" data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_processingContainer">
+            <img src="resources/image/ajax-loader.gif" /> Creating block...
+        </div>
+        <div style="padding-top: 1em;" data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_resultContainer">
+            <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_resultCreatedContainer">
+                Block created.
+            </span>
+            <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_resultErrorContainer">
+                <span style="color: red;" data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_resultErrorText">Failed to create block</span>
+            </span>
+            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-attach-point="_resultDismissButton">Dismiss</button>
+        </div>
+
+    </div>
+</div>
+
+</div>

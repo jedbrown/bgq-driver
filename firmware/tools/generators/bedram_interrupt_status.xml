@@ -1,0 +1,35 @@
+<register width="64" name="BEDRAM_INTERRUPT_STATUS" prefix="BEDRAM_DCR" description="tbd">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <field bit="1" name="BEDRAM_DB_PARITY" description="Parity error in devbus" category="fatal" />
+  <field bit="2" name="BEDRAM_PIPE_PARITY" description="Parity error in pipeline" category="fatal" />
+  <field bit="3" name="BEDRAM_REF_PARITY" description="Parity error in refresh unit" category="fatal" />
+  <field bit="4" name="BEDRAM_RES_PARITY" description="Parity error in reset unit" category="fatal" />
+  <field bit="5" name="BEDRAM_SCB_PARITY" description="Parity error in scrub unit" category="fatal" />
+  <field bit="6" name="BEDRAM_ERR_PARITY" description="Parity error in error counter" category="fatal" />
+  <field bit="7" name="BEDRAM_DB_ECC" description="Uncorrectable ECC error in devbus" category="fatal" />
+  <field bit="8" name="BEDRAM_EDRAM_ECC" description="Uncorrectable ECC error in eDRAM" category="fatal" />
+  <field bit="9" name="BEDRAM_PIPE_ECC" description="Uncorrectable ECC error in pipeline" category="fatal" />
+  <field bit="10" name="BEDRAM_ECC_CE_RAISE" description="Total amount of correctable ECC errors exceeded maximum" category="fatal" />
+  <field bit="11" name="BEDRAM_ALIGNED" description="non aligned address"  category="reserved" />
+  <field bit="12" name="BEDRAM_BYTE_SIZE" description="wrong byte size"  category="fatal" />
+  <field bit="13" name="BEDRAM_NON_PRIV" description="non-privileged atomic operation"  category="fatal" />
+  <field bit="14" name="LOCAL_RING" description="Parity error on DCR ring." category="fatal" />
+</register>

@@ -1,0 +1,51 @@
+
+
+#optimization
+CFLAGS = -qpic=small
+
+# CPU Flags
+CFLAGS += -q64 -qarch=qp -qtune=qp -qflag=w:w 
+
+# Creates a dependency file
+CFLAGS += -qmakedep -MF .dep.$(<F).d
+
+# path for BGQ installation
+CFLAGS += -I$(BGQ_INSTALL_DIR)
+
+# path for cnk application implementation of SPIs
+CFLAGS += -I$(BGQ_INSTALL_DIR)/spi/include/kernel/cnk
+
+# for additional command line args, ie "make ARGS=-Dxxx=yyy"
+CFLAGS += $(ARGS)
+
+CXXFLAGS = $(CFLAGS) 
+
+
+LDFLAGS  = 
+LIB_DIRS = $(BGQ_INSTALL_DIR)/spi/lib
+LIBS = 
+
+
+MPIBIN = $(BGQ_INSTALL_DIR)/comm/xl/bin
+#XLBIN  = /gsa/tlbgsa/projects/x/xlcmpbld/run/vacpp/dev/bgq/daily/latest/bin
+XLBIN = /opt/ibmcmp/vacpp/bg/12.1/bin
+
+
+#CFLAGS := -I$(BGQ_INSTALL_DIR)/comm/sys/include -I$(BGQ_INSTALL_DIR)/comm/gcc/include $(CFLAGS)
+#LIB_DIRS += $(BGQ_INSTALL_DIR)/comm/xl/lib $(BGQ_INSTALL_DIR)/comm/sys/lib 
+#LDFLAGS += -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/xl/lib -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/sys/lib \
+#           -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/spi/lib
+#LIBS += cxxmpich mpich opa mpl dl pami SPI SPI_cnk rt ibmc++ stdc++
+
+LD      = $(BGQ_CROSS_LD)     # $(MPIBIN)/mpicxx
+CXX     = $(XLBIN)/bgxlC_r    # $(MPIBIN)/mpicxx
+CC      = $(XLBIN)/bgxlc_r    # $(MPIBIN)/mpicc
+FC      = $(BGQ_CROSS_FC)     # $(MPIBIN)/mpif90
+
+
+LD      = $(MPIBIN)/mpicxx
+CXX     = $(MPIBIN)/mpicxx
+CC      = $(MPIBIN)/mpicc
+FC      = $(MPIBIN)/mpif90
+AR      = $(BGQ_CROSS_AR) crv
+

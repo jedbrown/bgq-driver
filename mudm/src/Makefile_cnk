@@ -1,0 +1,85 @@
+# +++
+#	Makefile for MU data mover
+#
+#	$(SRC):	
+#		list of files to be linked with kernel to make test
+#	$(TEST):
+#		name of the test
+#                 = name of current directory
+#	$(FW_OBJ):
+#		object files needed to make the test
+#
+# ---
+
+include ../../Make.rules
+
+#SILENT=@
+SILENT=
+
+MUDM_TARGET  = cnk
+MUDM_CFLAGS  = -m64 -D__KERNEL__ -Wall -m64 -g -O2 -Werror 
+#-fno-strict-aliasing
+
+MUDM_INCLUDES += -I$(BGQ_INSTALL_DIR)
+MUDM_INCLUDES += -I$(BGQ_INSTALL_DIR)/spi/include/kernel/firmware
+
+#
+#	Definitions
+#
+
+C_SRC 	= $(wildcard *.c)
+S_SRC	= 
+
+MUDM_OBJ	=  $(patsubst %.c,$(MUDM_TARGET)/%.o,$(wildcard *.c))
+
+LOCAL_LIBS =
+
+SUBDIRS=
+
+.PHONY: default all install clean dist_clean subdirs $(SUBDIRS)
+
+
+$(MUDM_TARGET)/%.o: %.c
+	@echo "building mudm-$(MUDM_TARGET): $<"
+	$(SILENT)$(BGQ_CROSS_CC) -c $(MUDM_CFLAGS) $(MUDM_INCLUDES) $< -o $@
+
+
+#
+# 	Standard targets
+#
+
+default:	install
+
+all:	$(MUDM_TARGET)/mudm.a MAKE_MUDM_PATH INSTALL_MUDM
+
+install: all
+
+MAKE_MUDM_PATH:
+	@${MKDIR} -p $(BGQ_INSTALL_DIR)/mudm/lib/$(MUDM_TARGET)
+
+INSTALL_MUDM: $(MUDM_TARGET)/mudm.a
+	@${CP} $(MUDM_TARGET)/mudm.a $(BGQ_INSTALL_DIR)/mudm/lib/$(MUDM_TARGET)
+
+
+clean:
+	$(SILENT)rm -f *.o *.listing *.nm *.map *.elf *.objdump *.readelf .dep.*.d $(MUDM_TARGET)/* $(MUDM_TARGET)/* $(BGQ_INSTALL_DIR)/mudm/lib/$(MUDM_TARGET)/*
+
+
+distclean:	clean
+
+objdump:	$(TEST).objdump
+
+fresh:	clean all objdump install
+
+#
+# Build rule
+#
+
+$(MUDM_TARGET)/mudm.a: $(MUDM_OBJ)
+	$(SILENT)$(BGQ_CROSS_AR) crv $(MUDM_TARGET)/mudm.a $(MUDM_OBJ)
+
+
+ifeq ($(filter distclean clean,$(MAKECMDGOALS)),)	
+-include .dep.*.d
+endif
+

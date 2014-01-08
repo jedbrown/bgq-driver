@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY command "bgws_server_refresh_config">
+<!ENTITY manSection "8">
+]>
+
+<refentry lang="en">
+
+<refentryinfo>
+    <productname>&command;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>IBM</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+
+<refmeta>
+    <refentrytitle>&command;</refentrytitle>
+    <manvolnum>&manSection;</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&command;</refname>
+    <refpurpose>Refresh the configuration of the BGWS server</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv>
+    <title>Synopsis</title>
+    <cmdsynopsis>
+        <command>&command;</command>
+        <arg rep="repeat"><replaceable>OPTION</replaceable></arg>
+        <arg><replaceable>FILENAME</replaceable></arg>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1>
+    <title>Description</title>
+    <para>
+        This command causes the Blue Gene Web Services (BGWS) server to read the Blue Gene configuration file (bg.properties) and update its configuration with the new settings.
+        The configuration options that can be updated are documented in the configuration file template.
+    </para>
+    <para>
+        By default the current configuration file is re-read.
+        If a filename is given, that file is read.
+        If the filename is an empty string then the default configuration file is read.
+    </para>
+    <para>
+        The user must have administrative authority to refresh the BGWS server configuration.
+    </para>
+</refsect1>
+
+<refsect1>
+    <title>Options</title>
+    <variablelist>
+        <varlistentry>
+            <term><option>--properties</option> filename</term>
+            <listitem>
+                <para>Blue Gene configuration file.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--base</option> URL</term>
+            <listitem>
+                <para>Blue Gene Web Services (BGWS) server base URL.</para>
+                <para>
+                    This overrides the BGWS server base URL as specified in the Blue Gene configuration file.
+                    The format is a URL, like https://localhost:32071/bg.
+                </para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--verbose</option> logging-spec</term>
+            <listitem>
+                <para>The --verbose argument can be given multiple times. The format for the argument is as follows:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>logger=level : set the logger to the level</para></listitem>
+                    <listitem><para>level : set the default logger to the level</para></listitem>
+                    <listitem><para>logger : set the logger's level to DEBUG</para></listitem>
+                    <listitem><para>"" : set the default logger's level to DEBUG</para></listitem>
+                </itemizedlist>
+                <para>These values are allowed for the level:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>OFF / O / 0</para></listitem>
+                    <listitem><para>FATAL / F / 1</para></listitem>
+                    <listitem><para>ERROR / E / 2</para></listitem>
+                    <listitem><para>WARN / W / 3</para></listitem>
+                    <listitem><para>INFO / I / 4</para></listitem>
+                    <listitem><para>DEBUG / D / 5</para></listitem>
+                    <listitem><para>TRACE / T / 6</para></listitem>
+                    <listitem><para>ALL / A / 7</para></listitem>
+                </itemizedlist>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>-h, --help</option></term>
+            <listitem>
+                <para>Print help text</para>
+            </listitem>
+        </varlistentry>
+    </variablelist>
+</refsect1>
+
+<refsect1>
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>bgws_server</refentrytitle>
+           <manvolnum>8</manvolnum>
+	</citerefentry>
+    </para>
+</refsect1>
+
+<refsect1>
+    <title>COPYRIGHT</title>
+    <para>© Copyright IBM Corp. 2010, 2011</para>
+</refsect1>
+
+</refentry>

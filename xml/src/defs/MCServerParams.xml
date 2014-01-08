@@ -1,0 +1,44 @@
+<File filename="MCServerParams" version="1" >
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!-- Eclipse Public License (EPL)                                     -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+  <Method name="MCServerParams" comment="Configuration parameters for MCServer">
+    <Class name="MCServerParams">
+
+      <DataMember type="int32" name="clientPort" comment="client port to listen on" />
+      <DataMember type="int32" name="servletPort" comment="servlet port?" isOptional="true"/>
+      <DataMember type="int32" name="machineType" comment="0 = standard BG/L machine - 16 node cards, 4 link cards, 1 service card (per midplane); 1 = desktop BG/S machine - 4 node cards, 1 service card; 2 = service station - 1 node card, 1 service card" />
+      <DataMember type="text" name="hostName" comment="host name" />
+      <DataMember type="bool" name="autoinit" comment="run automatically?" />
+      <DataMember type="bool" name="skeletonLocs" comment="verify locations by rack number only (not by locations found on bringup)" />
+
+      <DataMember type="int32" name="rackRows" comment="number of rows" />
+      <DataMember type="int32" name="rackColumns" comment="number of columns" />
+      <DataMember type="text" name="midplaneLicensePlates" occurrences="many" comment="midplane license plates" />
+      <DataMember type="text" name="midplaneLocations" occurrences="many" comment="midplane locations" />
+
+      <Class name="Subnet">
+        <DataMember type="text" name="netMask" comment="network mask" />
+        <DataMember type="text" name="addressBase" comment="base address" />
+        <DataMember type="int32" name="addressCount" comment="address count" />
+      </Class>
+
+      <DataMember type="Subnet" name="subnets" occurrences="many" comment="subnets" />
+
+      <DataMember type="text" name="alteraPath" occurrences="many" comment="absolute path to altera images" />
+      <DataMember type="text" name="hwOptions" occurrences="many" comment="hardware options to pass to mc" />
+
+    </Class>
+  </Method>
+
+</File>

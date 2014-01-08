@@ -1,0 +1,94 @@
+
+To build the open source Blue Gene software, perform the following steps.
+
+The software is available in two tar files:
+o bgq-V1R1M1.tar.gz
+o bgq-V1R1M1-gpl.tar.gz
+
+Both of these must be downloaded.
+
+
+=== Download and Install Required Software ===
+
+In addition to the Blue Gene software distribution, you must have these extra packages/software installed:
+
+- Dojo 1.7.1
+
+To build the Blue Gene Navigator administrative web application, you will need the Dojo JavaScript library.
+
+Download Dojo from Dojo's site, http://download.dojotoolkit.org/release-1.7.1/dojo-release-1.7.1-src.tar.gz.
+
+In addition, you need to create an archive for the Navigator build.
+
+$ mkdir dojo-repackage
+$ cd dojo-repackage
+$ tar -xzf dojo-release-1.7.1-src.tar.gz
+$ mv dojo-release-1.7.1-src dojo
+$ tar -czf dojo.tgz dojo
+
+Put dojo.tgz somewhere, such as /bgsys/dowloads.
+When you configure, you will pass --with-dojo=/bgsys/dowloads/dojo.tgz (or wherever you put it).
+
+- JSDoc Toolkit
+
+To build the Blue Gene Navigator administrative web application, you will need the JSDoc toolkit.
+
+Get JSDoc from http://code.google.com/p/jsdoc-toolkit/
+
+Put the jsdoc_toolkit ZIP file in a directory like /bgsys/downloads.
+When you run configure during the build, you will pass --with-jsdoc=/bgsys/downloads/jsdoc_toolkit-2.4.0.zip
+
+- IBM XL Compiler
+ 
+To build the "comm" component, you will need the IBM XL compiler installed on the system in
+/opt/ibmcmp/vacpp/bg and /opt/ibmcmp/xlf/bg.  Refer to installation instructions that come
+with the XL compiler.
+
+- Other packages from RHEL
+
+Other packages from the RedHat Enterprise Linux distribution may need to be installed.
+One package that is required but not commonly is librdmacm-devel.
+
+This package can be installed using yum if you have a RHEL repository configured:
+# yum install librdmacm-devel
+
+
+=== Scratch Database ===
+
+A database in DB2 is used during the build of the Blue Gene open source software.
+This scratch database is called BGDB0SCR by default.
+The system that you build on must have the BGDB0SCR database cataloged.
+To create the database, use the following commands:
+
+$ su - bgqsysdb
+$ mkdir ~bgqsysdb/data/ts
+$ db2 "CREATE DATABASE bgdb0scr PAGESIZE 8192"
+$ db2 "create bufferpool bp3scr size 100000 pagesize 16k"
+$ db2 "create tablespace userspace3scr pagesize 16k managed by system using ('/dbhome/bgqsysdb/data/ts') extentsize 64 prefetchsize 32 bufferpool bp3scr overhead 7.5"
+$ db2 "alter bufferpool bp3scr size AUTOMATIC"
+$ db2 "create temporary tablespace userspace3scrtemp pagesize 16k managed by system using ('/dbhome/bgqsysdb/data/tsscr') extentsize 64 prefetchsize 32 bufferpool bp3scr overhead 7.5"
+
+
+=== Building ===
+
+When the system has the required software and configuration, build the source code by by running the following steps:
+
+Un-tar the two tar files in the same directory, the second will add more files to the directories created by the first un-tar.
+$ tar -xzf bgq-V1R1M1.tar.gz
+$ tar -xzf bgq-V1R1M1-gpl.tar.gz
+
+$ cd bgq-V1R1M1
+
+$ scripts/configure \
+ --with-floor=/bgsys/drivers/ppcfloor \
+ --with-dojo=/bgsys/downloads/dojo.tgz \
+ --with-jsdoc=/bgsys/downloads/jsdoc_toolkit-2.4.0.zip \
+ --with-revision=1 \
+ --with-db=yes \
+ --with-security=yes
+
+$ make
+
+
+Once complete, the binaries and libraries are in the "work" directory.
+

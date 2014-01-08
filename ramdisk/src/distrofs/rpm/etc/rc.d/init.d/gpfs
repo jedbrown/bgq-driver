@@ -1,0 +1,274 @@
+#!/bin/sh  
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+# -------------------------------------------------------------
+# NOTE:  The PATH environment variable is set to the following
+#        upon entry to this script:
+#        /bin.rd:/sbin.rd:/usr/bin:/bin:/usr/sbin:/sbin
+#        The /bin.rd and /sbin.rd directories contain many of
+#        the busybox commands and Blue Gene specific programs.
+#        The /bin, /sbin, and /usr directories are symbolic
+#        links to the NFS-mounted MCP.
+#--------------------------------------------------------------
+
+#
+# Initialization script to start the GPFS daemon, mount any GPFS
+# filesystems that have automount enabled, and wait for mounts to complete.
+#
+# This script reads configaration variables from file /etc/sysconfig/gpfs,
+# if it exists.  The variables that may be set are:
+#
+#    GPFS_VAR_DIR       Name of a directory in an NFS-mounted filesystem
+#                       where GPFS log files, traces, and configuration
+#                       files will be kept. Defaults /bgsys/linux/bgfs/var
+#
+#    GPFS_CONFIG_SERVER The host name or IP address of the primary GPFS
+#                       cluster configuration server node.  If the GPFS
+#                       configuration file (/var/mmfs/gen/mmsdrfs) is
+#                       missing, it will be retrieved from this node.
+#                       Defaults service node IP address ($BG_IPV4_FS)
+
+# Source the function library include BG/Q env vars
+. /etc/init.d/functions
+
+# Default to quiet output.  This can be overridden with 'VERBOSE=1' in /etc/sysconfig/gpfs .
+VERBOSE=0
+LOCKFILE=/var/lock/subsys/gpfs
+
+case "$1" in
+    start)
+	# Set defaults for GPFS configuration variables
+	GPFS_STARTUP=0
+	GPFS_VAR_DIR=/bgsys/linux/nodefs/
+	if [ ! -z $BG_BGSYS_IPV4 ] && [ $BG_BGSYS_IPV4 != "0.0.0.0" ] ; then
+		GPFS_CONFIG_SERVER="$BG_BGSYS_IPV4"
+	elif [ ! -z $BG_BGSYS_IPV6 ] && [ $BG_BGSYS_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+		GPFS_CONFIG_SERVER="$BG_BGSYS_IPV6"
+	fi
+
+	# Obtain overrides from config file
+	GPFSFILE=/etc/sysconfig/gpfs
+	[ -r $GPFSFILE ] && . $GPFSFILE
+
+        #echo "Randy Start `date` ... BG_NODE_TYPE =$BG_NODE_TYPE "
+	#Only run on I/O Nodes (ION)
+        if [ $BG_NODE_TYPE  = "ION" ] ; then
+		# Should never get here but will check just in case.	
+		if    [ -z $BG_INTF0_NAME ] && [ -z $BG_INTF1_NAME ]
+		then  bgras $BGRAS_ID_NO_NETWORK_INTERFACE_DEFINED "$0: No network interface configured "
+		      echo -en "GPFS startup: "
+		      failure
+		      echo -en "\n"
+		      exit 1
+		fi
+	
+		# Set up node identification for messages:
+	        # $HOSTID is the hostname and/or IP address of the node
+	        # $HOSTID_LOC is $HOSTID plus the location of the node 
+		
+                HOSTID="`hostname` "
+		# First we need to make sure that a hostname is set up for the node.  If not, we need to throw RAS.
+		hostname -i &> /dev/null
+		if [ $? -ne 0 ] && [ $GPFS_STARTUP -eq 1 ] ; then
+			# There appears to be a bug getting an IP from hostid on IPv6 only systems.
+			# So, if hostname fails, see if we are on an IPv6 node and use that IP instead.
+			if [ ! -z $BG_INTF0_IPV6 ] && [ $BG_INTF0_IPV6 != "0.0.0.0.0.0.0.0" ] ; then
+				HOSTID_IP="$BG_INTF0_IPV6"
+			elif [ ! -z $BG_INTF1_IPV6 ] && [ $BG_INTF1_IPV6 != "0.0.0.0.0.0.0.0" ] ; then
+				HOSTID_IP="$BG_INTF1_IPV6"
+			else
+				bgras $BGRAS_ID_GPFS_HOSTNAME_FAILURE \
+			      	      "Could not resolve an IP address for hostname $HOSTID. Node location is: $BG_LOCATION"
+				echo -en "GPFS startup: "
+				failure
+				echo -en "\n"
+				exit 1
+			fi
+		fi	
+
+		# If GPFS is not to be started, exit now.
+		if [ $GPFS_STARTUP != 1 ] ; then
+			echo -en "Starting GPFS: "
+			skipped
+			echo -en "\n"
+			exit 0
+		fi
+
+		# Translate the hostname -i output to put each IP on its own line.  This resolves issues with
+		# nodes that have multiple IP addresses configured.  Default to using the first IP listed.
+		if [ -z $HOSTID_IP ] ; then
+                	HOSTID_IP=(`hostname -i | tr " " "\n"`)
+		fi
+                [ $HOSTID = $HOSTID_IP ] || HOSTID="$HOSTID: $HOSTID_IP"
+                HOSTID_LOC="$HOSTID: $BG_LOCATION"
+
+		echo -en "Starting GPFS on $HOSTID ... \n"  
+
+		# Make sure that our var directory exists.
+		if [ ! -d $GPFS_VAR_DIR ] ; then
+			mkdir -p $GPFS_VAR_DIR
+		fi
+
+		# Root of per-node directory tree
+		r=$GPFS_VAR_DIR/$HOSTID_IP
+
+		# If per-node directories don't exist, create them
+		#mkdir -p $r/var/mmfs/gen $r/var/mmfs/etc $r/var/mmfs/tmp $r/var/adm/ras
+		mkdir -p /var/mmfs/gen /var/mmfs/etc /var/mmfs/tmp /var/adm/ras 
+
+        	# Create initial version of GPFS configuration database if it isn't
+	        # already there.  Delete it if this node is not a member of the cluster yet,
+	        # and exit so the node can be added to the cluster.
+	        mmsdrfsFile=/var/mmfs/gen/mmsdrfs
+	        if    [ ! -f $mmsdrfsFile ]
+	        then  if [ $VERBOSE -eq 0 ] ; then
+				/usr/lpp/mmfs/bin/mmsdrrestore -R /usr/bin/scp -p $GPFS_CONFIG_SERVER &> /dev/null
+				RC=$?
+		      else
+                               /usr/lpp/mmfs/bin/mmsdrrestore -R /usr/bin/scp -p $GPFS_CONFIG_SERVER
+                                RC=$?
+		      fi
+		      if [ $RC -eq 1 ] ;
+	              then  rm -f $mmsdrfsFile
+			    bgras $BGRAS_ID_GPFS_START_FAILURE "$0: node $HOSTID must be added to the bgio cluster"
+	                    echo -en "GPFS startup: "
+			    failure
+			    echo -en "\n"
+			    exit 1
+	              fi
+	        fi
+
+		# Exit if GPFS daemon is already running
+	        if    /usr/lpp/mmfs/bin/tsstatus > /dev/null 2>&1
+		
+		then  
+		      echo "$0: GPFS daemon is already running\n"
+		      echo -en "GPFS startup: "
+	 	      failure
+		      echo -en "\n"
+		      exit 1
+		fi
+
+		# Create the local environment lock in RAM filesystem so that we won't
+		# be blocked if a reboot occurs while holding the lock
+		export mmfsEnvLockLocation=/tmp
+
+		# This file will be created by mmfsup.scr to signal that GPFS startup is
+		# complete
+		upfile=/tmp/mmfsup.done
+
+		# Create mmfsup script that will run when GPFS is ready
+		cat <<-EOF > /var/mmfs/etc/mmfsup.scr
+		#!/bin/sh
+		touch $upfile
+		EOF
+                #Make sure that /var/mmfs was written to:
+                if [ $? -ne 0 ] ; then
+                        bgras $BGRAS_ID_GPFS_INIT_FAILURE \
+                              "GPFS is unable to initialize on $HOSTID because /var/mmfs is read-only.  Please correct this problem before trying to initialize GPFS again."
+                        echo -en "GPFS startup: "
+                        failure
+                        echo -en "\n"
+                        exit 1
+                fi
+		chmod +x /var/mmfs/etc/mmfsup.scr
+
+		# Start GFPS and wait for it to come up.  Keep GPFS off of the first and last 
+		# cores because interrupts are going to the first core and all MU activity is 
+		# on the last core. 
+		rm -f $upfile
+		NUM_CPUS=`grep -c processor /proc/cpuinfo`
+		if [ $NUM_CPUS -le 17 ]; then
+			taskset -c 1-15 /usr/lpp/mmfs/bin/mmautoload
+		elif [ $NUM_CPUS -le 34 ]; then
+			taskset -c 2-31 /usr/lpp/mmfs/bin/mmautoload
+		else
+			taskset -c 4-63 /usr/lpp/mmfs/bin/mmautoload
+		fi
+
+		retries=300
+		until test -e $upfile
+		do    sleep 2
+		      let retries=$retries-1
+		      if    [ $retries -eq 0 ]
+		      then  
+                            bgras $BGRAS_ID_GPFS_INIT_FAILURE "$0: GPFS did not initialize on node $HOSTID" 
+			    echo -en "GPFS startup: "
+			    failure
+			    echo -en "\n"
+			    exit 1
+		      fi
+		done
+		rm -f $upfile
+		echo -en "GPFS startup completed: "
+		touch $LOCKFILE
+		success   
+		echo -en "\n"
+	else
+		echo -en "Starting GPFS ... \n"
+		bgras $BGRAS_ID_SCRIPT_FAILURE
+		      "gpfs - An attempt was made to start GPFS on a $BG_NODE_TYPE node.  GPFS is only designed to run on nodes of type ION"
+		echo -en "GPFS startup: "
+		failure
+		echo "\n"
+		exit 1
+	fi
+	;;
+    stop)
+	#Only run on I/O Nodes
+        if [ $BG_NODE_TYPE  = "ION" ] ; then
+	        # Set defaults for GPFS configuration variables
+	        GPFS_STARTUP=0
+	
+	        # Obtain overrides from config file
+	        GPFSFILE=/etc/sysconfig/gpfs
+	        [ -r $GPFSFILE ] && . $GPFSFILE
+
+	        # If GPFS was never started, exit now.
+ 	       [ $GPFS_STARTUP = 1 ] || exit 0
+
+	       	echo -en "Stopping GPFS ...\n"
+	       	if [ $VERBOSE -eq 0 ] ; then
+			/usr/lpp/mmfs/bin/mmshutdown &> /dev/null 
+                	RC1=$?
+		else
+			/usr/lpp/mmfs/bin/mmshutdown
+                        RC1=$?
+		fi
+               	if [ $RC1 = '0' ]
+                 then 
+		  echo -en "GPFS shutdown completed: "
+		  rm -f $LOCKFILE
+                  success
+                 else
+		  echo -en "GPFS shutdown: "
+                  failure
+               fi
+	       echo -en "\n"
+	fi
+	;;
+    restart)
+	echo "Restart GPFS...not yet implemented"
+        ;;
+    status)
+	echo "Status GPFS...not yet implemented"
+        ;;
+esac

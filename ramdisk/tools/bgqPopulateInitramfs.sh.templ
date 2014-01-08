@@ -1,0 +1,182 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+#
+# ramdisk/tools/bgqPopulateInitramfs.sh for BlueGene/Q Linux Distribution
+#
+# Author: Jay S. Bryant <jsbryant@us.ibm.com>
+#
+# Purpose:  This script populates the ramdisk/initramfs directory for either
+#           a sandbox or at the customer site in preparation for building a 
+#           ramdisk.
+#
+
+RHEL6=no
+if [ `lsb_release -i | grep RedHatEnterpriseServer > /dev/null; echo $?` == 0 ] && \
+   [ `lsb_release -r | grep "6.*" > /dev/null; echo $?` == 0 ] ; then
+  RHEL6=yes
+fi
+
+OS_ARCH=`uname -m`
+
+# Overload the cp command to do error checking of each requested copy.
+cp()
+{
+	if [ "$1" == "-a" ] ; then
+		RC=$( /bin/cp -f -a "$2" "$3" 2>&1 )
+		if [ ! -z "$RC" ] ; then
+			echo -en "\n\nERROR: An error occurred populating BGQ_INITRAMFS_PATH\n"
+			echo -en "       cp retrurned: $RC\n"
+			echo -en "       Please correct the error and re-run BGQ_RAMDISK_PATH/tools/bgqPopulateInitramfs.sh\n"
+			echo -en "       If this error was encountered during RPM installation you will need to execute\n"
+			echo -en "       BGQ_RAMDISK_PATH/tools/bgqDistrofsInstall.sh to fully complete installation.\n\n"
+
+			exit 1
+		fi
+	else
+                RC=$( /bin/cp -f "$1" "$2" 2>&1 )
+                if [ ! -z "$RC" ] ; then
+                        echo -en "\n\n\tERROR: An error occurred populating BGQ_INITRAMFS_PATH\n"
+                        echo -en "\t       cp retrurned: $RC\n"
+                        echo -en "\t       Please correct the error and re-run BGQ_RAMDISK_PATH/tools/bgqPopulateInitramfs.sh\n"
+                        echo -en "\t       If this error was encountered during RPM installation you will need to execute:\n"
+                        echo -en "\t       BGQ_RAMDISK_PATH/tools/bgqDistrofsInstall.sh to fully complete installation.\n\n"
+
+			exit 1
+                fi
+	fi
+}
+
+usage () {
+
+    #Do not need to log usage output
+    LOG=0
+
+    echo -en "\n\nUsage: $0 \n"
+    echo -en "\tThis script copies files from the Service Node into BGQ_INITRAMFS_PATH \n"
+    echo -en "\tto serve as the basis for ramdisk builds.\n"
+    echo -en "\tThis script takes no arguments.\n\n"
+
+}
+
+
+# Check for required arguments and do validation.
+while getopts "h" flags ; do
+    case "$flags" in
+        h) usage
+           exit 0
+           ;;
+        *) usage
+           exit 1
+           ;;
+
+    esac
+done
+
+echo -en "\n\n######################################################################\n"
+echo -en "# \n"
+echo -en "# Populating BGQ_INITRAMFS_PATH\n"
+echo -en "# \n"
+echo -en "######################################################################\n\n"
+
+for DIR in "bin" "sbin" "lib64" "lib" "usr" "usr/lib" "usr/lib64" "usr/bin" "usr/sbin" ; do
+
+        if [ ! -e BGQ_INITRAMFS_PATH/$DIR ] ; then
+		mkdir BGQ_INITRAMFS_PATH/$DIR
+	fi
+done
+		
+CURRDIR=`pwd`
+
+if [ "$RHEL6" == "yes" ] && [ "$OS_ARCH" == "ppc64" ] ; then
+	cp /bin/bash BGQ_INITRAMFS_PATH/bin
+	cp /bin/mount BGQ_INITRAMFS_PATH/bin
+	cp /etc/init.d/rpcidmapd BGQ_INITRAMFS_PATH/etc/init.d
+	cp /sbin/busybox BGQ_INITRAMFS_PATH/bin
+	cp /sbin/switch_root BGQ_INITRAMFS_PATH/sbin
+	cp /lib64/ld-2.12.so BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libblkid.so.1.1.0 BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libc-2.12.so BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libdl-2.12.so BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libgcc_s-* BGQ_INITRAMFS_PATH/lib64
+	cp -a /lib64/libgcc_s.so.1 BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libm.so.6 BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libnsl-2.12.so BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libnss_files-2.12.so BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libpci.so.3.1.4 BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libpthread-2.12.so BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libresolv-2.12.so BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libselinux.so.1 BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libsepol.so.1 BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libtinfo.so.5.7 BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libuuid.so.1.3.0 BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/libz.so.1 BGQ_INITRAMFS_PATH/lib64
+	if [ -e /usr/lib64/libgssglue.so.1.0.0 ] ; then 
+		cp -a /usr/lib64/libgssglue.so.1 BGQ_INITRAMFS_PATH/usr/lib64
+		cp /usr/lib64/libgssglue.so.1.0.0 BGQ_INITRAMFS_PATH/usr/lib64
+	else    cp -a /lib64/libgssglue.so.1 BGQ_INITRAMFS_PATH/lib64
+		cp /lib64/libgssglue.so.1.0.0 BGQ_INITRAMFS_PATH/lib64
+	fi
+	#cp /usr/lib64/libstdc++.so.6.0.13 BGQ_INITRAMFS_PATH/usr/lib64
+	cp /usr/lib64/libevent-1.4.so.2 BGQ_INITRAMFS_PATH/usr/lib64
+	cp /usr/lib64/libnfsidmap.so.0 BGQ_INITRAMFS_PATH/usr/lib64
+	cp -a /usr/lib64/libnfsidmap BGQ_INITRAMFS_PATH/usr/lib64
+	cp /usr/lib64/libstdc++.so.6 BGQ_INITRAMFS_PATH/usr/lib64
+	if [ -e /usr/lib64/libtirpc.so.1.0.10 ] ; then 
+		cp /usr/lib64/libtirpc.so.1.0.10 BGQ_INITRAMFS_PATH/usr/lib64
+		cp -a /usr/lib64/libtirpc.so.1 BGQ_INITRAMFS_PATH/usr/lib64
+	else
+		cp /lib64/libtirpc.so.1.0.10 BGQ_INITRAMFS_PATH/lib64
+		cp -a /lib64/libtirpc.so.1 BGQ_INITRAMFS_PATH/lib64
+	fi
+	cp /usr/bin/dc BGQ_INITRAMFS_PATH/usr/bin
+	cp /usr/bin/mstflint BGQ_INITRAMFS_PATH/usr/bin
+	cp /usr/sbin/rpc.idmapd BGQ_INITRAMFS_PATH/usr/sbin
+	cp /sbin/consoletype BGQ_INITRAMFS_PATH/sbin
+	cp /sbin/fstab-decode BGQ_INITRAMFS_PATH/sbin
+	cp /sbin/ifenslave BGQ_INITRAMFS_PATH/sbin
+	cp /sbin/ip	BGQ_INITRAMFS_PATH/sbin
+	cp /sbin/lspci BGQ_INITRAMFS_PATH/sbin
+	cp /sbin/mount.nfs BGQ_INITRAMFS_PATH/sbin
+	cp /sbin/mount.nfs4 BGQ_INITRAMFS_PATH/sbin
+	cp /sbin/pidof BGQ_INITRAMFS_PATH/sbin
+	cp /sbin/setpci BGQ_INITRAMFS_PATH/sbin
+
+	cd BGQ_INITRAMFS_PATH
+	rpm2cpio BGQ_LINUX_PATH/rpms/kernel-BGQ_LINUX_KERNEL_VERSION.rpm | cpio -id *bonding* &> /dev/null
+	cd $CURRDIR	
+
+else
+        LINUX_DISTRO=`lsb_release -i`
+        LINUX_DISTRO_RELEASE=`lsb_release -r`
+
+        echo -en "\n\n#######################################################\n"
+        echo -en "# ERROR: bgqPopulateInitramfs.sh must be run on a ppc64,\n"
+        echo -en "#        RHEL6.X based service node. Detected:\n"
+        echo -en "#\n"
+        echo -en "#        Architecture: $OS_ARCH\n"
+        echo -en "#        $LINUX_DISTRO \n"
+	echo -en "#        $LINUX_DISTRO_RELEASE\n"
+        echo -en "###########################################################\n\n"
+
+	exit 1
+
+fi

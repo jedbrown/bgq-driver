@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<html>
+
+<head>
+
+<title>Hideable Browser Tests</title>
+
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+
+<script>
+
+
+g_b_dijit_Hideable = null;
+
+g_j_form_Form = null;
+g_j_form_TextBox = null;
+
+
+require(
+[
+    "bluegene/dijit/Hideable",
+    "dojo/dom",
+    "dojo/dom-class",
+    "dojo/parser",
+    "dojo/ready",
+    "dijit/_base/manager",
+    "dijit/form/Form",
+    "dijit/form/TextBox",
+    "doh/runner"
+],
+function(
+        b_dijit_Hideable,
+        d_dom,
+        d_class,
+        d_parser,
+        d_ready,
+        j_manager,
+        j_form_Form,
+        j_form_TextBox,
+        doh
+    )
+{
+
+
+g_b_dijit_Hideable = b_dijit_Hideable;
+g_j_form_Form = j_form_Form;
+g_j_form_TextBox = j_form_TextBox;
+
+
+var checkIsVisible = function( node ) {
+    doh.assertFalse( d_class.contains( node, "dijitHidden" ) );
+    doh.assertEqual( b_dijit_Hideable.Visibility.VISIBLE, j_manager.byId( node ).get( "visibility" ) );        
+};
+
+var checkIsHidden = function( node ) {
+    doh.assertTrue( d_class.contains( node, "dijitHidden" ) );
+    doh.assertEqual( b_dijit_Hideable.Visibility.HIDDEN, j_manager.byId( node ).get( "visibility" ) );
+};
+
+
+var tests = [
+
+function default_is_visible() {
+    checkIsVisible( "hideable1" );
+},
+
+function can_default_hidden() {
+    checkIsHidden( "hideable2" );
+},
+
+function can_set_hidden() {
+    checkIsVisible( "hideable3" );
+
+    j_manager.byId( "hideable3" ).set( "visibility", b_dijit_Hideable.Visibility.HIDDEN );
+
+    checkIsHidden( "hideable3" );
+},
+
+function can_set_visible() {
+    checkIsHidden( "hideable4" );
+
+    j_manager.byId( "hideable4" ).set( "visibility", b_dijit_Hideable.Visibility.VISIBLE );
+
+    checkIsVisible( "hideable4" );
+},
+
+function can_switch_visibility() {
+    checkIsHidden( "hideable5" );
+
+    j_manager.byId( "hideable5" ).set( "visibility", b_dijit_Hideable.Visibility.VISIBLE );
+
+    checkIsVisible( "hideable5" );
+
+    j_manager.byId( "hideable5" ).set( "visibility", b_dijit_Hideable.Visibility.HIDDEN );
+
+    checkIsHidden( "hideable5" );
+},
+
+function show_sets_visible() {
+    j_manager.byId( "hideable6" ).show();
+    checkIsVisible( "hideable6" );
+},
+
+function hide_sets_hidden() {
+    j_manager.byId( "hideable7" ).hide();
+    checkIsHidden( "hideable7" );
+},
+
+function form_with_hideable_visible() {
+    // When get value of a Form that contains a Hideable with input element(s) the value includes the input elements in the Hideable.
+
+    doh.t( j_manager.byId( "form1" ).get( "value" ).text1 === "testValue" );
+},
+
+function form_with_hideable_hidden() {
+    // When get value of a Form that contains a Hideable with input element(s) and the Hideable is hidden, the value of the form does not includes the input elements in the Hideable.
+
+    doh.f( j_manager.byId( "form2" ).get( "value" ).text1 );
+},
+
+function form_with_hideable_toggle() {
+    // Can set the visibility and value is returned or not depending on value.
+
+    doh.t( j_manager.byId( "form3" ).get( "value" ).text1 === "testValue" );
+
+    j_manager.byId( "f3-hideable1" ).set( "visibility", b_dijit_Hideable.Visibility.HIDDEN );
+
+    doh.f( j_manager.byId( "form3" ).get( "value" ).text1 );
+
+    j_manager.byId( "f3-hideable1" ).set( "visibility", b_dijit_Hideable.Visibility.VISIBLE );
+
+    doh.t( j_manager.byId( "form3" ).get( "value" ).text1 === "testValue" );
+}
+
+];
+
+
+d_ready( function() {
+    doh.register( "bluegene/dijit/test/HideableHTML", tests );
+    doh.run();
+} );
+
+
+} );
+
+</script>
+
+</head>
+
+<body>
+    <span id="hideable1" data-dojo-type="g_b_dijit_Hideable"></span>
+    <span id="hideable2" data-dojo-type="g_b_dijit_Hideable" data-dojo-props="visibility: 'hidden'"></span>
+    <span id="hideable3" data-dojo-type="g_b_dijit_Hideable"></span>
+    <span id="hideable4" data-dojo-type="g_b_dijit_Hideable" data-dojo-props="visibility: 'hidden'"></span>
+    <span id="hideable5" data-dojo-type="g_b_dijit_Hideable" data-dojo-props="visibility: 'hidden'"></span>
+    <span id="hideable6" data-dojo-type="g_b_dijit_Hideable" data-dojo-props="visibility: 'hidden'"></span>
+    <span id="hideable7" data-dojo-type="g_b_dijit_Hideable"></span>
+    <div id="form1" data-dojo-type="g_j_form_Form">
+        <span id="f1-hideable1" data-dojo-type="g_b_dijit_Hideable">
+            <input name="text1" data-dojo-type="g_j_form_TextBox" data-dojo-props="name: 'text1', value: 'testValue'" />
+        </span>
+    </div>
+    <div id="form2" data-dojo-type="g_j_form_Form">
+        <span id="f2-hideable1" data-dojo-type="g_b_dijit_Hideable" data-dojo-props="visibility: 'hidden'">
+            <input name="text1" data-dojo-type="g_j_form_TextBox" data-dojo-props="name: 'text1', value: 'testValue'" />
+        </span>
+    </div>
+    <div id="form3" data-dojo-type="g_j_form_Form">
+        <span id="f3-hideable1" data-dojo-type="g_b_dijit_Hideable">
+            <input name="text1" data-dojo-type="g_j_form_TextBox" data-dojo-props="name: 'text1', value: 'testValue'" />
+        </span>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,25 @@
+@GEN_BLOCK_CMD@
+connect mode=reserve
+boot_block uloader=@ARG_FW@ domain={images=@ARG_EXE@ cores=0-7 memory=0-0x3fffffff} domain={images=@ARG_EXE@ cores=8-16 memory=0x40000000--1} standalone steps=enableNodes,initDevbus,startTraining,enableLinkChips,trainLinkChips,trainTorus,installFirmware,installPersonalities,startCores,verifyMailbox,monitorMailbox,verifyMailboxReady,installKernelImages,configureDomains,launchKernels,verifyKernelReady  svchost_options=@ARG_SVCHOST@ numcores=17,
+wait_for_terminate 60
+disconnect
+dump_ras ras.out
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2010, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */

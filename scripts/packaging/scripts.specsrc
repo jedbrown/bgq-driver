@@ -1,0 +1,21 @@
+####################################
+%package scripts
+
+Summary: Scripts
+Group: %{product_group}
+Release: 0
+
+%description scripts
+%{bgq_package_description}
+
+This package contains snapbug tool and resource agent script for Linux-HA. 
+
+%files scripts
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/scripts
+
+%defattr(-,root,root,-)
+%{_base_dir}/scripts/snapbug.pl
+%{_base_dir}/scripts/bgRA

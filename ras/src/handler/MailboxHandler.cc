@@ -1,0 +1,410 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/* ================================================================ */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/*                                                                  */
+/* Blue Gene/Q                                                      */
+/*                                                                  */
+/* (C) Copyright IBM Corp.  2007, 2011                              */
+/*                                                                  */
+/* US Government Users Restricted Rights -                          */
+/* Use, duplication or disclosure restricted                        */
+/* by GSA ADP Schedule Contract with IBM Corp.                      */
+/*                                                                  */
+/* This software is available to you under the                      */
+/* Eclipse Public License (EPL).                                    */
+/*                                                                  */
+/* ================================================================ */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+#include "MailboxHandler.h"
+
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "RasLog.h"
+
+using namespace std;
+
+#ifdef __linux
+LOG_DECLARE_FILE("ras");
+#endif
+
+/**
+ * The handler for RAS events.
+ *
+ * @param event:
+ *          The RasEvent object. This object may be modified by handlers and/or decoders.
+ * @param metadata:
+ *          The RAS event metadata.
+ * @returns The RasEvent object after all appropriate modifications have been done.
+ */
+RasEvent& MailboxHandler::handle(RasEvent& event, const RasEventMetadata& metadata)
+{
+  // Retrieve the mailbox data string from the metadata
+  string mboxPayload = event.getDetail(RasEvent::MBOX_PAYLOAD);
+
+  // Ensure we're only calling the mailbox RAS handler if a mailbox payload was provided.
+  if (mboxPayload != "")
+  {
+    handleMailbox(event, mboxPayload, metadata);
+  }
+  else
+  {
+    handleNonMailbox(event, metadata);
+  }
+
+  return event;
+}
+
+/**
+ * The RAS event handler for RAS events that originated from a mailbox. A RAS event object is passed in,
+ * along with the RAS event's metadata. The handler performs basic consistency checks and calls the
+ * specified decoder, if applicable. The RasEvent object is modified when appropriate.
+ *
+ * @param event:
+ *          The RasEvent object. This object may be modified by the handler and/or decoders.
+ * @param mboxPayload:
+ *          The raw RAS mailbox payload.
+ * @param metadata:
+ *          The RAS event metadata object.
+ */
+void MailboxHandler::handleMailbox(RasEvent& event, string mboxPayload, const RasEventMetadata& metadata)
+{
+  LOG_TRACE_MSG("MailboxHandler handling event payload = " << mboxPayload.c_str());
+  istringstream in(mboxPayload, istringstream::in);
+
+  MailBoxPayload_Common_RAS_t rasEvent;
+  memset(&rasEvent, 0, sizeof(rasEvent));
+
+  uint64_t uci;
+  uint64_t descriptor;
+
+  // Question: what to do if in.eof() is true before we pull out the UCI and other header pieces?  Exception?
+
+  in >> hex >> uci;
+  in >> hex >> descriptor;
+
+  rasEvent.mboxBinary.UCI = uci;
+  string mboxType = event.getDetail(RasEvent::MBOX_TYPE);
+
+  if (mboxType == "ASCII")
+  {
+    rasEvent.mboxBinary.message_id = descriptor;
+
+    int i = 0;
+    char* message = &(rasEvent.mboxAscii.message[0]);
+
+    // remove the leading space
+    char space;
+    if (!in.eof())
+    {
+      in >> noskipws >> space;
+    }
+
+    i = 0;
+    unsigned mboxLen = mboxPayload.length();
+    while (!in.eof() && i < mboxLen)
+    {
+      in >> noskipws >> rasEvent.mboxAscii.message[i++];
+    }
+
+    defaultAscii(event, rasEvent, metadata);
+
+  } // End ASCII message format
+  else
+  {
+    rasEvent.mboxBinary.message_id = descriptor >> 32;
+    rasEvent.mboxBinary.num_details = descriptor & 0xFFFF;
+    int i = 0;
+
+    while (!in.eof())
+    {
+      uint64_t detail;
+      in >> hex >> detail;
+      rasEvent.mboxBinary.details[i++] = detail;
+
+    } // End loop thru removing binary formatting
+
+    defaultBinary(event, rasEvent, metadata);
+
+  } // End not ASCII so anything else is treated as binary
+
+  LOG_TRACE_MSG("MailboxHandler done handling event");
+} // End MailboxHandler::handleMailbox(RasEvent& event, string mboxPayload, const RasEventMetadata& metadata )
+
+
+/**
+ * The RAS handler for RAS events that did not originate from a mailbox, such as a RAS event generated by
+ * software running on the service node. A RAS event object is passed in, along with the RAS event's
+ * metadata. The handler performs basic consistency checks and calls the specified decoder, if applicable.
+ * The RasEvent object is modified when appropriate.
+ *
+ * @param event:
+ *          The RasEvent object. This object may be modified by the handler and/or decoders.
+ * @param metadata:
+ *          The RAS event metadata object.
+ */
+void MailboxHandler::handleNonMailbox(RasEvent& event, const RasEventMetadata& metadata)
+{
+  LOG_TRACE_MSG("MailboxHandler handling non-mailbox event");
+
+  // Perform formatted variable substitutions.
+  defaultNonMailbox(event, metadata);
+
+}
+
+/*
+ *  Method to take default action on any Ascii event that did not have a decoder defined for it.
+ *  The default action is to look thru the ASCII message and
+ */
+void MailboxHandler::defaultAscii(RasEvent& event, MailBoxPayload_Common_RAS_t rasEvent, const RasEventMetadata& metadata)
+{
+  unsigned int replaceCount = 0;
+  unsigned int varsReplaced = 0;
+
+  // Get the variables to set for substitution
+  const vector<string>& vars = metadata.vars();
+
+  // Any place to put the string?
+  if (vars.size() == 0)
+  {
+    return;
+  }
+
+  string rasAscii = rasEvent.mboxAscii.message;
+  LOG_TRACE_MSG("MailboxHandler RAS ASCII " << rasAscii.c_str());
+
+  // Vector of tokenized strings using the ASCII string passed in
+  vector<string> tokenString = tokenize(rasEvent.mboxAscii.message, ",");
+
+  // How many substitutions are there?
+  if (tokenString.size() < vars.size())
+  {
+    replaceCount = tokenString.size();
+
+  } // End less details to substitute than replacement variables
+  else
+  {
+    // Subtract one to keep the last detail item free for rest of string
+    replaceCount = vars.size() - 1;
+
+  } // End substitution variable count used
+
+  for (unsigned int i = 0; i < replaceCount; i++)
+  {
+    varsReplaced++;
+
+    // Retrieve the metadata key to substitute
+    string key_name = vars[i];
+
+    // Add the key/value pair for this replaced text
+    event.setDetail(key_name, tokenString[i]);
+
+  } // End loop thru replacing passed variables with the substitution string
+
+  // Need to adjust for more replacement text than number of substitution variables?
+  if (varsReplaced == 0)
+  {
+    // Only one metadata key available
+    string key_name = vars[0];
+
+    // Add the complete string to the key/value pair
+    event.setDetail(key_name, rasAscii);
+
+  } // End only one substitution variable
+  else
+  {
+    // Need to store the rest of the data available in the last substitution variable
+    string key_name = vars[(vars.size() - 1)];
+
+    string restOfData;
+
+    // Loop thru the rest of the tokenized string to put into last substitution variable
+    for (unsigned int i = varsReplaced; i < tokenString.size(); i++)
+    {
+      restOfData += ',';
+      restOfData += tokenString[i];
+    }
+
+    // Add the rest of the string to the last data substitution variable
+    event.setDetail(key_name, restOfData);
+  }
+} // End MailboxHandler::defaultAscii(RasEvent& event, const RasEventMetadata& metadata)
+
+
+void MailboxHandler::defaultBinary(RasEvent& event, MailBoxPayload_Common_RAS_t rasEvent, const RasEventMetadata& metadata)
+{
+  ostringstream subString;
+
+  unsigned int replaceCount = 0;
+
+  char buf[256];
+
+  // Get the variables to set for substitution
+  const vector<string>& vars = metadata.vars();
+
+  // How many default replacements should be done?
+  if (rasEvent.mboxBinary.num_details < vars.size())
+  {
+    replaceCount = rasEvent.mboxBinary.num_details;
+
+  } // End less details passed in than replacement variables.
+  else
+  {
+    replaceCount = vars.size();
+
+  } // End substitution variable count used
+
+  for (unsigned int i = 0; i < replaceCount; i++)
+  {
+    // Retrieve the metadata key to substitute
+    string key_name = vars[i];
+
+    // Retrieve the format string, if one was specified.
+    string format = metadata.format(key_name);
+
+    // Check to see if a RAS format string was specified.
+    if (format.empty())
+    {
+      // Set up the original default format for binary RAS variables.
+      format = "0x%016LX";
+    }
+
+    // Set up the detail to replace
+    snprintf(buf, sizeof(buf), format.c_str(), rasEvent.mboxBinary.details[i]);
+
+    // Add the key/value pair for this replaced text
+    event.setDetail(key_name, string(buf));
+  } // End loop thru replacing passed variables with the substitution string
+
+} // End MailboxHandler::defaultBinary( RasEvent& event, const RasEventMetadata& metadata)
+
+
+void MailboxHandler::defaultNonMailbox(RasEvent& event, const RasEventMetadata& metadata)
+{
+  ostringstream subString;
+  char buf[256];
+
+  // Get the variables to set for substitution
+  const vector<string>& vars = metadata.vars();
+
+  unsigned int replaceCount = vars.size();
+
+  for (unsigned int i = 0; i < replaceCount; i++)
+  {
+    // Retrieve the metadata key to substitute
+    string key_name = vars[i];
+
+    // Retrieve the value for the variable.
+    string value = event.getDetail(key_name.c_str()).c_str();
+
+    // Retrieve the format string, if one was specified.
+    string format = metadata.format(key_name);
+
+    LOG_TRACE_MSG("Mailboxhandler defaultNonMailbox key=" << key_name.c_str() << ", value=" << value.c_str() << ", format=" << format.c_str());
+
+    // Check to see if a RAS format string was specified.
+    if (!format.empty())
+    {
+      // Pull out the format string in C string format.
+      const char *formatStr = format.c_str();
+
+      // Determine the length of the format string.
+      int formatLen = strlen(formatStr);
+
+      // Determine the data type based on the format string.
+      char type = toupper(formatStr[formatLen - 1]);
+
+      LOG_TRACE_MSG("formatStr=" << formatStr << ", formatStrLen=" << formatLen << ", dataType=" << type);
+
+      // Temporary variables for conversions below.
+      long tmpLong = 0;
+      unsigned long tmpUlong = 0;
+      double tmpFloat = 0;
+
+      // Set up the detail to replace.
+      switch(type)
+      {
+        case 'X':
+        case 'U':
+          tmpUlong = strtoul(value.c_str(), NULL, 10);
+          snprintf(buf, sizeof(buf), format.c_str(), tmpUlong);
+	  LOG_TRACE_MSG("tmpUlong=" << tmpUlong);
+          break;
+        case 'D':
+        case 'I':
+        case 'L':
+        case 'O':
+          tmpLong = strtol(value.c_str(), NULL, 10);
+          snprintf(buf, sizeof(buf), format.c_str(), tmpLong);
+          LOG_TRACE_MSG("tmpLong=" << tmpLong);
+          break;
+        case 'E':
+        case 'F':
+        case 'G':
+          tmpFloat = atof(value.c_str());
+          snprintf(buf, sizeof(buf), format.c_str(), tmpFloat);
+	  LOG_TRACE_MSG("tmpFloat=" << tmpFloat);
+          break;
+        default:
+          snprintf(buf, sizeof(buf), format.c_str(), value.c_str());
+          break;
+      }
+
+      LOG_TRACE_MSG("buf=" << buf << ", string(buf)=" << string(buf).c_str());
+
+      // Add the key/value pair for this replaced text.
+      LOG_TRACE_MSG("Setting " << key_name.c_str() << " to " << buf);
+      event.setDetail(key_name, string(buf));
+    }
+  } // End loop thru replacing passed variables with the substitution string
+} // End MailboxHandler::defaultNonMailbox(RasEvent& event, const RasEventMetadata& metadata)
+
+
+/*
+ * String tokenizer
+ *
+ * Code lifted from bringup/env/nodeenvtest/diag_parm.cc
+ */
+vector<string> MailboxHandler::tokenize(const string &rStr, const string &szDelimiters)
+{
+  vector<string> words;
+
+  string::size_type lastPos(rStr.find_first_not_of(szDelimiters, 0));
+  string::size_type pos(rStr.find_first_of(szDelimiters, lastPos));
+  while (string::npos != pos || string::npos != lastPos)
+  {
+    words.push_back(rStr.substr(lastPos, pos - lastPos));
+    lastPos = rStr.find_first_not_of(szDelimiters, pos);
+    pos = rStr.find_first_of(szDelimiters, lastPos);
+  }
+  return words;
+
+} // End MailboxHandler::tokenize(const string &rStr, const string &szDelimiters)
+
+
+/**
+ * Constructs a MailboxHandler object.
+ *
+ */
+MailboxHandler::MailboxHandler() :
+  _name("MailboxHandler")
+{
+
+}
+
+/**
+ * Destructs a MailboxHandler object.
+ *
+ */
+MailboxHandler::~MailboxHandler()
+{
+}
+

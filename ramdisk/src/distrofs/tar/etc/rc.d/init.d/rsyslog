@@ -1,0 +1,126 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# rsyslog        Starts rsyslogd/rklogd.
+# 
+# Modified to support execution on BlueGene
+#
+# chkconfig: 2345 12 88
+# description: Syslog is the facility by which many daemons use to log \
+# messages to various system log files.  It is a good idea to always \
+# run rsyslog.
+### BEGIN INIT INFO
+# Provides: $syslog
+# Required-Start: $local_fs
+# Required-Stop: $local_fs
+# Default-Start:  2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Enhanced system logging and kernel message trapping daemons
+# Description: Rsyslog is an enhanced multi-threaded syslogd supporting, 
+#              among others, MySQL, syslog/tcp, RFC 3195, permitted 
+#              sender lists, filtering on any message part, and fine 
+#              grain output format control.
+### END INIT INFO
+
+# Source function library including BG/Q env vars.
+. /etc/init.d/functions
+
+RETVAL=0
+PIDFILE=/var/run/syslogd.pid
+
+prog=rsyslogd
+exec=/sbin/rsyslogd
+lockfile=/var/lock/subsys/rsyslog
+
+start() {
+	[ -x $exec ] || exit 5
+
+	# Source config
+        if [ -f /etc/sysconfig/rsyslog ] ; then
+                . /etc/sysconfig/rsyslog
+	fi
+	umask 077
+
+        echo -n $"Starting system logger: "
+        daemon --pidfile="${PIDFILE}" $exec $SYSLOGD_OPTIONS
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && touch $lockfile
+        return $RETVAL
+}
+stop() {
+        echo -n $"Shutting down system logger: "
+        killproc $prog
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -f $lockfile
+        return $RETVAL
+}
+reload()  {
+    RETVAL=1
+    syslog=$(cat "${PIDFILE}" 2>/dev/null)
+    echo -n "Reloading system logger..."
+    if [ -n "${syslog}" ] && [ -e /proc/"${syslog}" ]; then
+	kill -HUP "$syslog";
+	RETVAL=$?
+    fi
+    if [ $RETVAL -ne 0 ]; then
+	failure
+    else
+	success
+    fi
+    echo
+    return $RETVAL
+}
+rhstatus() {
+        status -p "${PIDFILE}" $prog
+}
+restart() {
+        stop
+        start
+}
+
+case "$1" in
+  start)
+       	start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+       	restart
+        ;;
+  reload|force-reload)
+	reload
+	;;
+  status)
+        rhstatus
+        ;;
+  condrestart|try-restart)
+	rhstatus >/dev/null 2>&1 || exit 0
+	restart
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|condrestart|try-restart|reload|force-reload|status}"
+        exit 3
+esac
+
+exit $?

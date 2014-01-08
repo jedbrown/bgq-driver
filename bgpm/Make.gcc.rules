@@ -1,0 +1,37 @@
+
+
+CFLAGS  = -O2 -g -Wall -Werror
+
+# allow relocation if used in dynamic libraries 
+CFLAGS  += -fpic
+
+# CPU Flags
+CFLAGS += -m64
+
+# Creates a dependency file
+CFLAGS += -MMD -MF .dep.$(<F).d
+
+# path for BGQ installation
+CFLAGS += -I$(BGQ_INSTALL_DIR)
+
+# path for cnk application implementation of SPIs
+CFLAGS += -I$(BGQ_INSTALL_DIR)/spi/include/kernel/cnk
+
+# for additional command line args, ie "make ARGS=-Dxxx=yyy"
+CFLAGS += $(ARGS)
+
+CXXFLAGS = $(CFLAGS) -fcheck-new -Wnon-virtual-dtor
+
+
+LDFLAGS = -static 
+LIB_DIRS = $(BGQ_INSTALL_DIR)/spi/lib
+LIBS = rt stdc++ pthread 
+
+
+LD      = $(BGQ_CROSS_LD)
+CXX     = $(BGQ_CROSS_CXX)
+CC      = $(BGQ_CROSS_CC)
+FC      = $(BGQ_CROSS_FC)
+AR      = $(BGQ_CROSS_AR) crv
+
+

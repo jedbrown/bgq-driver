@@ -1,0 +1,93 @@
+//
+// Parameter file for setting options we want to run with this
+// for local testing...
+//
+
+
+// this controls the maximum number of cycles to run until a timeout.
+Fusion.MaxTime=10000000; 
+
+// use this to control the number of cores running.
+// enable 1 core
+//Stage1ResetDriver.CoreEnables=0x80000000;
+#prefix Stage1ResetDriver {
+    //CoreEnables=0x80000000; // enable only 1 core...
+    CoreEnables=0xFFFF8000; // enable all 17cores
+    //CoreEnables=0xFFFFC000; // enable 18 cores
+    SuppressA2Clocks=false;
+    //TiSpareCore=1;    
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Monitors
+//////////////////////////////////////////////////////////////////////////////
+
+
+#prefix IfarMonitor[00-17] {
+  EnableDriver=true;
+}
+#prefix GprMonitor[00-17] {
+  EnableDriver=true;
+}
+
+#prefix A2L1pMonitor[00-17] {
+  EnableDriver=true;
+  TraceReq=true;
+  TraceLoad=true;
+  TraceStore=true;
+  TraceLwarxAndStwcx=true;
+  TraceInvalidate=true;
+}
+#prefix L1pSwMonitor[00-17] {
+  EnableDriver=false;
+  TraceReq=true;
+  TraceLoad=true;
+  TraceStore=true;
+}
+#prefix DevbusMonitor {
+  EnableDriver=true;
+  TraceReq=true;
+  TraceStore=true;
+  TraceLoad=true;
+};
+
+#prefix BedramMonitor {
+  EnableDriver=true;
+  TraceReq=true;
+  TraceWrite=true;
+  TraceRead=true;
+  TraceAtomicOps=true;
+
+};
+
+#prefix BedramLoader {		
+  TraceLoad=false;
+  ValidateLoad=false;
+  DumpSram=false;
+  SuppressLoad=false;
+};
+
+#prefix L2Monitor[00-15] {
+  EnableDriver=false;
+  TraceStore=false;
+  TraceLoad=false;
+  TraceReq=false;
+  TraceLwarxAndStwcx=false;
+  TraceInvalidate=false;
+};
+
+#prefix L2DdrDriver[00-15] {
+  TraceRead=false;
+  TraceWrite=false;
+  TraceReq=false;
+  TraceArb=false;
+  TraceMem=false;
+};
+
+#prefix MuSlaveMonitor { 
+    EnableDriver=true;
+    TraceReq=true;
+    TraceStore=true; 
+    TraceLoad=true; 
+};

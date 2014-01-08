@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<html>
+
+<head>
+
+<title>OutputText Browser Tests</title>
+
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+
+<script>
+
+
+g_b_dijit_OutputText = null;
+
+g_formatter_ot5 = null;
+
+
+require(
+[
+    "bluegene/dijit/test/OutputTextHtmlTests",
+    "bluegene/dijit/OutputText",
+    "dojo/parser",
+    "dojo/ready",
+    "doh/runner"
+],
+function(
+        tests,
+        b_dijit_OutputText,
+        d_parser,
+        d_ready,
+        doh
+    )
+{
+
+
+g_b_dijit_OutputText = b_dijit_OutputText;
+
+g_formatter_ot5 = function( value )
+    {
+        if ( value === null )  return "FormattedNullValue";
+        return "Formatted" + value;
+    };
+
+
+var onLoad = function() 
+    {
+        doh.register( "bluegene/dijit/test/OutputTextHTML", tests );
+        doh.run();
+    };
+
+
+d_ready( onLoad );
+
+
+} );
+
+</script>
+
+</head>
+<body id="body1">
+
+<span id="container1"></span>
+
+<span id="ot1" data-dojo-type="g_b_dijit_OutputText"></span>
+<ul>
+  <li id="ot2" data-dojo-type="g_b_dijit_OutputText"></li>
+</ul>
+<span id="ot3" data-dojo-type="g_b_dijit_OutputText">Loading...</span>
+<span id="ot4" data-dojo-type="g_b_dijit_OutputText" data-dojo-props="nullText: 'nullTextValue'">InnerValue</span>
+<span id="ot5" data-dojo-type="g_b_dijit_OutputText" data-dojo-props="formatter: g_formatter_ot5"></span>
+<span id="ot6" style="font-weight: bold;" data-dojo-type="g_b_dijit_OutputText">My Blue Gene</span>
+
+<table>
+<tr id="t1tr"></tr>
+</table>
+
+</body>
+</html>

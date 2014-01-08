@@ -1,0 +1,35 @@
+<register width="32" name="Root Complex Status Register" prefix="RCSR_" 
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+ description="When an error occurs, the relevant bit is set by the hardware.  Software should write '1' to reset error indication; writing a '0' has no effect.">
+
+     <field bit="0"  name="RLCE" description="Correctable Error Status.  When set, indicates that correctable system error occurred." />
+     <field bit="1"  name="RLNE" description="Non-fatal Error Status. When set, indicates that non-fatal system error occurred." />
+     <field bit="2"  name="RLFE" description="Fatal Error Status.  When set, indicates that fatal system error occurred." />
+     <field bit="6"  name="RCPE" description="PME Status.  When set, indicates that the remote PCIE device signalled a Power Management Event."  />
+     <field bit="7"  name="RCTO" description="PME Turn Off Acknowledge status.  When set, indicates that a PME_TO_Ack messages was received." />
+     <field bit="8"  name="PINA" description="INTA status.  When set, indicates that legacy INTA interrupt is asserted." />
+     <field bit="9"  name="PINB" description="INTB status. When set, indicates that legacy INTB interrupt is asserted."  />
+     <field bit="10" name="PINC" description="INTC status.  When set, indicates that legacy INTC interrupt is asserted." />
+     <field bit="11" name="PIND" description="INTD status.  When set, indicates that legacy INTD interrupt is asserted." />
+     <field bit="12" name="ALER" description="ASPM L1Enter request status.  Asserted when a PM_Active_State_Request_L1 DLLP is received." />
+     <field bit="13" name="CRSE" description="CRS status.  Asserted a configuration request is completed by the destination with Configuration Retry Status (CRS)." />
+	   
+</register>

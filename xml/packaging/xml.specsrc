@@ -1,0 +1,24 @@
+####################################
+%package control_system_protocol
+
+Summary: Control system protocol libraries.
+Group: %{product_group}
+Release: 0
+
+%description control_system_protocol
+%{bgq_package_description}
+
+This package contains libraries that implement the protocol used between control system components.
+
+%files control_system_protocol
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/xml
+%dir %{_base_dir}/xml/lib
+
+%{_base_dir}/xml/lib/libXML.so.1
+%{_base_dir}/xml/lib/libXML.so.1.0.1
+%{_base_dir}/xml/lib/mcserver.jar
+

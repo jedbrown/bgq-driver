@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<tables>
+    <table name="" id="1">
+        <column name="category" type="CHAR" size="16"/>
+        <column name="severity" type="CHAR" size="8"/>
+        <column name="jobid" type="BIGINT"/>
+        <column name="block" type="CHAR" size="32"/>        
+        <column name="serialnumber" type="CHAR" size="19"/> 
+        <column name="ecid" type="VARCHAR" size="256"/>
+        <column name="cpu" type="INTEGER"/>
+        <column name="ctlaction" type="VARCHAR" size="256"/>
+        <column name="message" type="VARCHAR" size="1024"/>
+        <column name="rawdata" type="VARCHAR" size="3072"/>
+        <column name="diags" type="CHAR" size="1"/>
+    </table>
+</tables>

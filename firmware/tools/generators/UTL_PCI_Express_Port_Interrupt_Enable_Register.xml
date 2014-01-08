@@ -1,0 +1,50 @@
+<register width="32" name="UTL Express Port Interrupt Enable Register" prefix="UTL_PCIEPIER_" 
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+ description="Each bit in this register enables UTL interrupt assertion upon detection of events indicated by the corresponding bits in the UTL PCI Express Port Status Register.">
+     <field bit="1" name="TPCI" 
+       description="TXPC array (outbound posted requests FIFO) parity error enable."
+       />
+     <field bit="2" name="TNPI" 
+       description="TXNP array (outbound non-posted requests FIFO) parity error enable."
+       />
+     <field bit="3"  name="TFTI" 
+       description="TXFT array (output non-posted requests free tags FIFO) parity error enable."
+       />
+     <field bit="4"  name="TCAI" 
+       description="TXCA array (transmit completions attributes array) parity error enable."
+       />
+     <field bit="5"  name="TCII" 
+       description="TXCIF array (transmit completions idications array) parity error enable."
+       />
+     <field bit="6"  name="RCAI" 
+       description="RXCA array (receive completions attributes array) parity error enable."
+       />
+     <field bit="8" name="PLUI" 
+       description="PCI Express LinkUp event enable."
+       />
+     <field bit="9" name="PLDI" 
+       description="PCI Express LinkDown event enable."
+       />
+     <field bit="10" name="OTDI" 
+       description="Outbound request discard event enable."
+       />
+	   
+</register>

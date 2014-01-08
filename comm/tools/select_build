@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+use Cwd;
+use File::Basename;
+use FindBin;
+$\="\n";
+
+sub default_env
+{
+    my $name = shift;
+    my $default = shift;
+    if (defined $ENV{"PAMI_$name"}) {
+        return $ENV{"PAMI_$name"};
+    } else {
+        $ENV{"PAMI_$name"} = 'XXX';
+        return $default;
+    }
+}
+
+my %options = (@ARGV);
+my $rootdir = Cwd::abs_path ($options{ROOTDIR} or dirname $FindBin::RealBin);
+Cwd::chdir $rootdir or die $!;
+
+my $PLATFORM = default_env(qw(PLATFORM BGQ));
+my $OS       = default_env(qw(OS       CNK));
+my $ENV      = default_env(qw(ENV      System));
+
+my $extra = "";
+my $rules = "Makefiles/Make.$PLATFORM-$OS-$ENV.rules";
+unless (-e $rules) {
+    $extra = " (does not exist)
+Final config:
+   BGQ-CNK-System";
+    $rules = "Make.BGQ-CNK-System.rules";
+}
+
+# print "ROOTDIR = $rootdir";
+print "Original config:
+   $ENV{PAMI_PLATFORM}-$ENV{PAMI_OS}-$ENV{PAMI_ENV}
+Current config:
+   $PLATFORM-$OS-$ENV$extra";
+
+unlink("Make.config.rules");
+my $rc = symlink($rules, "Make.config.rules");
+# print $rc;

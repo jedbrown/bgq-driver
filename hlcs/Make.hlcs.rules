@@ -1,0 +1,44 @@
+
+# 64-bit build flags
+
+UNAME_PROC := $(shell uname -i)
+
+ifndef BITS
+  ifeq ($(UNAME_PROC),i386)
+    BITS := 32
+  else
+    BITS := 64
+  endif
+endif
+
+ifeq ($(UNAME_PROC),ppc64)
+  ifeq ($(BITS),64)
+    CXXFLAGS += -m64
+    LDFLAGS += -m64
+  endif
+endif
+ifeq ($(UNAME_PROC),x86_64)
+  ifeq ($(BITS),32)
+    CXXFLAGS += -m32
+    LDFLAGS += -m32
+  endif
+endif
+
+
+# boost stuff
+CXXFLAGS    += -isystem $(BGQ_INSTALL_DIR)/extlib/include
+LDFLAGS     += -L $(BGQ_INSTALL_DIR)/extlib/lib
+LDFLAGS     += -Wl,-rpath,$(BGQ_INSTALL_DIR)/extlib/lib
+
+# enable RUNPATH ELF tag instead of RPATH
+LDFLAGS     += -Wl,--enable-new-dtags
+
+# define installation directories
+BGQ_LIB_INSTALL_DIR=$(BGQ_INSTALL_DIR)/hlcs/lib
+BGQ_BIN_INSTALL_DIR=$(BGQ_INSTALL_DIR)/hlcs/bin
+BGQ_SBIN_INSTALL_DIR=$(BGQ_INSTALL_DIR)/hlcs/sbin
+
+# debugger flags
+ifneq ($(DEBUG_FLAGS),no)
+CXXFLAGS    += $(DEBUG_FLAGS)
+endif

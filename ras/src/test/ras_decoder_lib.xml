@@ -1,0 +1,3 @@
+<rasdecoder libname="ras/ras/decoder/libRasTest.so">
+  <decoder name="testDecoder" />
+</rasdecoder>

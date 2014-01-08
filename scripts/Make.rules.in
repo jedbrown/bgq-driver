@@ -1,0 +1,385 @@
+# Top level place where we're compiling from 
+# (== top of cvs source tree)
+#
+BGQ_BUILD_DIR=@BGQ_BUILD_DIR@
+
+# Top level place to install what we build 
+# (== BGQ_BUILD_DIR/work unless overridden by "configure --prefix")
+#
+BGQ_INSTALL_DIR=@BGQ_INSTALL_DIR@
+
+
+# Place where host cross compilers, linkers, etc get installed
+#
+BGQ_CROSS_TOOLS_DIR=@BGQ_CROSS_TOOLS_DIR@
+
+# Host Operating system                                       
+#
+BGQ_HOST_OS=@BGQ_HOST_OS@
+
+# Place where target binaries (booters, kernels, ramdisks, etc) get installed
+#
+BGQ_CROSS_BIN_DIR=$(BGQ_INSTALL_DIR)/crossbin
+
+# Place where mambo instruction simulator has been installed on this host.
+# Note that mambo is maintained, built, and installed independently.
+# It is not part of this CVS tree.
+#
+BGQ_MAMBO_DIR=@BGQ_MAMBO_DIR@
+
+### Note: the following is not currently used
+###
+### #
+### # Place where previously installed binaries live (same as --floor)
+### #
+BGQ_FLOOR_DIR=@BGQ_FLOOR_DIR@
+
+#
+# Place where bgq gnu compilers live (usually a floor with gnu compilers)
+#
+BGQGNU_DIR=@BGQGNU_DIR@
+### BGQ_GNU_TAG=@BGQ_GNU_TAG@
+
+
+## floor 
+BGQ_FLOOR_TAG=@BGQ_FLOOR_TAG@
+
+# Directory for the toolchain install.
+#
+BGQ_GNU_INSTALL_DIR=@BGQ_GNU_INSTALL_DIR@
+
+
+#
+# definition of makefile to use in the gnu directory
+#
+BGQ_GNU_MAKEFILE=@BGQ_GNU_MAKEFILE@
+
+#
+# Variables needed for Linux
+#
+BGQ_LINUX_OS_PATH=@BGQ_LINUX_OS_PATH@
+BGQ_LINUX_KERNEL_VERSION=@BGQ_LINUX_KERNEL_VERSION@
+BGQ_LINUX_PATH=$(BGQ_INSTALL_DIR)/linux
+BGQ_LINUX_SRC_PATH=$(BGQ_LINUX_PATH)/usr/src/kernels/$(BGQ_LINUX_KERNEL_VERSION)
+BGQ_LINUX_HEADERS_PATH=@BGQ_LINUX_HEADERS_PATH@
+BGQ_BOOT_PATH=$(BGQ_INSTALL_DIR)/boot
+BGQ_RAMDISK_PATH=$(BGQ_INSTALL_DIR)/ramdisk
+BGQ_INITRAMFS_PATH=$(BGQ_RAMDISK_PATH)/initramfs
+BGQ_DISTROFS_PATH=$(BGQ_RAMDISK_PATH)/distrofs
+BGQ_DISTROFS_BASE_PATH=@BGQ_DISTROFS_BASE_PATH@
+
+#
+# Variables needed for RPMs
+#
+BGQ_RPMRELEASE=@BGQ_RPMRELEASE@
+BGQ_RPMVERSION=@BGQ_RPMVERSION@
+BGQ_RPMMODIFICATION=@BGQ_RPMMODIFICATION@
+BGQ_RPMDRIVER=@BGQ_RPMDRIVER@
+BGQ_RPMSUFFIX=@BGQ_RPMSUFFIX@
+PACKAGING_GPG_NAME=@PACKAGING_GPG_NAME@
+BGQ_RPM_INSTALL_DIR=@RPM_INSTALL_DIR@
+BGQ_EFIX_INSTALL_DIR=@EFIX_INSTALL_DIR@
+
+#****************************************************************************
+# Hardware stuff
+
+# when this variable == 'yes' the --enable-hwsim option was use in configure
+# or selected by default and signals that any special make actions needed
+# to support building for hardware sim be supported.
+#
+BGQ_ENABLE_HWSIM=@BGQ_ENABLE_HWSIM@
+#BGQ_DDX_VERSION=@BGQ_DDX_VERSION@
+BGQ_HWSIM_STAGE0=@BGQ_HWSIM_STAGE0@
+
+
+# Paths/Setup for Fusion/CycleSim
+#
+CTEPATH=@CTEPATH@
+CTEFUSIONPATH=@CTEFUSIONPATH@
+CTESIMARAMABASE=@CTESIMARAMABASE@
+CTESIMARAMAPATH=@CTESIMARAMAPATH@
+FUSION_RELEASE=@FUSION_RELEASE@
+CTETEXSIMPATH=@CTETEXSIMPATH@
+CTEDENALIPATH=@CTEDENALIPATH@
+CTEPROJPATH=@CTEPROJPATH@
+CDS_INST_DIR=@CDS_INST_DIR@
+PONY_SRC=@PONY_SRC@
+PONY_LIB=@PONY_LIB@
+#****************************************************************************
+
+#
+# expat path for aix
+# for now, snarf it from the bgp project area.
+#
+BGQ_EXPAT_PATH=@BGQ_EXPAT_PATH@
+
+
+# Cross target to build
+#  name         arch
+# ------    ----------------
+# A2        powerpc64-linux
+# 450DPX    powerpc-linux
+# GPE       ppcgpe-ibm-gpeos
+#
+BGQ_CROSS_TARGET_NAME=@BGQ_CROSS_TARGET_NAME@
+BGQ_CROSS_TARGET_ARCH=@BGQ_CROSS_TARGET_ARCH@
+BGQ_ENABLE_FAST_MEMCPY=@BGQ_ENABLE_FAST_MEMCPY@
+# Utilities
+#
+CP                = @CP_F@
+RM                = @RM_F@
+MV                = @MV@
+AR                = @AR@
+LN                = @LN@
+MKDIR             = @MKDIR@
+TEE               = @TEE@
+TOUCH             = @TOUCH@
+JAVA_BUILDS       = @JAVA_BUILDS@
+HAVE_JAVA6        = @HAVE_JAVA6@
+JAVA_HOME         = @JAVA_HOME@
+JAVA              = @JAVA@
+JAVAC             = @JAVAC@
+JAR               = @JAR@
+HAVE_ANT          = @HAVE_ANT@
+ANT_HOME          = @ANT_HOME@
+ANT               = @ANT@
+DEBUG_FLAGS       = @DEBUG_FLAGS@
+BGQDB             = @BGQDB@
+BGQDB_DBNAME      = @BGQDB_DBNAME@
+BGQDB_USER        = @BGQDB_DBUSER@
+BGQDB_PWD         = @BGQDB_DBPWD@
+BGQDB_SCHEMA      = $$USER
+DB2PATH           = @BGQDB2PATH@
+DB2INSTANCE       = @BGQDB2INSTANCE@
+DOCBOOK           = @DOCBOOK@
+SECURITY          = @SECURITY@
+RHEL6             = @RHEL6@
+OS_ARCH           = @OS_ARCH@
+BGQ_DOJO          = @DOJO@
+JSDOC_ZIP         = @JSDOC_ZIP@
+BGQ_OPEN_SOURCE_INSTALL = @BGQ_OPEN_SOURCE_INSTALL@
+
+# Use this to turn beam on.
+WITH_BEAM = @WITH_BEAM@
+BEAM_BIN = @BEAM_BIN@
+BEAM_OUTPUT = @BEAM_OUTPUT@
+
+#----------------------------------------
+#BEAM OPTIONS
+#---------------------------------------
+
+ifeq ($(BEAM_OUTPUT), stdout)
+BEAM_RESULTS=
+else
+BEAM_RESULTS=--beam::stats_file=${BEAM_OUTPUT}/stats/$@.stats --beam::complaint_file=${BEAM_OUTPUT}/complaints/$@.bc --beam::parser_file=${BEAM_OUTPUT}/parser/$@.bpf --beam::data=${BEAM_OUTPUT}/data
+endif
+
+BEAM_OPTIONS_A2_C = -c --beam::exit0 --beam::parms=${BGQ_INSTALL_DIR}/beam/bgq_beam_parms.tcl $(BEAM_RESULTS) --beam::source=${BGQ_INSTALL_DIR}/beam/a2compiler_c_config --beam::build_root=${BGQ_BUILD_DIR}
+
+BEAM_OPTIONS_A2_CXX = -c --beam::exit0 --beam::parms=${BGQ_INSTALL_DIR}/beam/bgq_beam_parms.tcl $(BEAM_RESULTS) --beam::source=${BGQ_INSTALL_DIR}/beam/a2compiler_cpp_config --beam::build_root=${BGQ_BUILD_DIR}
+
+BEAM_OPTIONS_A2_JAVA = -c --beam::exit0 --beam::parms=${BGQ_INSTALL_DIR}/beam/bgq_beam_parms.tcl $(BEAM_RESULTS) --beam::source=${BGQ_INSTALL_DIR}/beam/a2compiler_java_config --beam::build_root=${BGQ_BUILD_DIR}
+
+
+# Cross tools
+#
+BGQ_CROSS_AS      = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-as
+BGQ_CROSS_CC      = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-gcc
+BGQ_CROSS_CXX     = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-g++
+BGQ_CROSS_FC      = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-gfortran
+BGQ_CROSS_LD      = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-ld
+BGQ_CROSS_AR      = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-ar
+BGQ_CROSS_OBJDUMP = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-objdump
+BGQ_CROSS_OBJCOPY = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-objcopy
+BGQ_CROSS_READELF = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-readelf
+BGQ_CROSS_SIZE    = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-size
+BGQ_CROSS_GDB     = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-gdb
+
+ifeq ($(WITH_BEAM),1)
+ifeq ($(BEAM),1)
+BGQ_CROSS_AS      = @echo
+BGQ_CROSS_CC      = $(BGQ_BUILD_DIR)/scripts/prefix.pl $(BEAM_BIN)/beam_compile $(BEAM_OPTIONS_A2_C)
+BGQ_CROSS_CXX     = $(BGQ_BUILD_DIR)/scripts/prefix.pl $(BEAM_BIN)/beam_compile $(BEAM_OPTIONS_A2_CXX)
+BGQ_CROSS_FC      = @echo
+BGQ_CROSS_LD      = @echo
+BGQ_CROSS_AR      = @echo
+BGQ_CROSS_OBJDUMP = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-objdump
+BGQ_CROSS_OBJCOPY = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-objcopy
+BGQ_CROSS_READELF = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-readelf
+BGQ_CROSS_SIZE    = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-size
+BGQ_CROSS_GDB     = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-gdb
+CXX               = $(BGQ_BUILD_DIR)/scripts/prefix.pl $(BEAM_BIN)/beam_compile $(BEAM_OPTIONS_CXX)
+INSTALLCANFAIL    = -
+endif
+endif
+
+# We have no xl cross compilers yet so we're using native glutamine xl compilers for now.
+# !!TODO: this should probably be a configure parameter
+#
+BGQ_CROSS_XLC = /opt/ibmcmp/vac/8.0/bin/xlc  -F$(BGQ_CROSS_TOOLS_DIR)/$(BGQ_CROSS_TARGET_ARCH)/libxlc/xlc.cfg -qarch=ppc64 -q64 -D'__builtin_va_list=char*'
+BGQ_CROSS_XLF = /opt/ibmcmp/xlf/10.1/bin/xlf -F$(BGQ_CROSS_TOOLS_DIR)/$(BGQ_CROSS_TARGET_ARCH)/libxlf/xlf.cfg -qarch=ppc64 -q64
+
+# Uncomment these to override gcc/gfortran with xlc/xlf.
+#
+#BGQ_CROSS_CC = $(BGQ_CROSS_XLC)
+#BGQ_CROSS_FC = $(BGQ_CROSS_XLF)
+
+
+#----------------------------------------
+#BEAM OPTIONS
+#---------------------------------------
+
+BEAM_OPTIONS_C = -c --beam::exit0 --beam::parms=bgp_parms.tcl --beam::stats_file=${BEAM_OUTPUT}/stats/$@.stats --beam::complaint_file=${BEAM_OUTPUT}/complaints/$@.bc --beam::parser_file=${BEAM_OUTPUT}/parser/$@.bpf --beam::source=compiler_c_config --beam::data=${BEAM_OUTPUT}/data --beam::build_root=${BGPSYS_DIR}
+
+BEAM_OPTIONS_CXX = -c --beam::exit0 --beam::parms=${BGQ_INSTALL_DIR}/beam/bgq_beam_parms.tcl $(BEAM_RESULTS) --beam::compiler=${BGQ_INSTALL_DIR}/beam/sncompiler_cpp_config --beam::build_root=${BGQ_BUILD_DIR}
+
+BEAM_OPTIONS_JAVA = -c --beam::exit0 --beam::parms=bgp_parms.tcl --beam::stats_file=${BEAM_OUTPUT}/stats/$@.stats --beam::complaint_file=${BEAM_OUTPUT}/complaints/$@.bjava --beam::parser_file=${BEAM_OUTPUT}/parser/$@.bpf --beam::source=compiler_java_config --beam::data=${BEAM_OUTPUT}/data --beam::build_root=${BGPSYS_DIR}
+
+
+#
+# include bin and library install top level directories
+#
+
+# Simulation tools that are not part of our CVS tree
+# !!TODO: this should probably be a configure parameter
+#
+#BGQ_A2SIM =                   /auto/BGQ/tools/A2Sim/external_version/scripts/run_tritium_sim
+ BGQ_A2SIM = /gsa/watgsa/home/c/h/chenyong/pub/A2Sim/external_version/scripts/run_tritium_sim
+
+####################################################################################
+# default overall C and C++ flags
+CXXFLAGS += -Werror
+CFLAGS += -Werror
+
+####################################################################################
+# install library and bin funcionts:
+# does the following:
+#	- make the directory and parents if necessary.
+#       - record in a file, the libraries this installs, 
+#	  that can be scanned during configure
+#       - copy the file to the destination directory.
+# 	
+#       -- todo, scan the file to see if the name is already there and avoid redundant entries
+#          for now work with redundant files
+# 
+
+define bgq_install_any
+	@topdir=`echo $(PWD) | sed -e s:$(BGQ_BUILD_DIR):: | awk 'BEGIN { FS = "/" } ; { print $$2 }'`; 
+	@mkdir -p $(dir $3); 
+	$(INSTALLCANFAIL)cp -fP $2 $(topdir)/$3;
+endef
+
+bgq_install_lib= $(call bgq_install_any,$(BGQ_LIB_INSTALL_DIR),$1,$2)
+bgq_install_bin= $(call bgq_install_any,$(BGQ_BIN_INSTALL_DIR),$1,$2)
+bgq_install_sbin= $(call bgq_install_any,$(BGQ_SBIN_INSTALL_DIR),$1,$2)
+
+#
+# implicit library and bin install rules...
+#
+$(BGQ_LIB_INSTALL_DIR)/% : ./%
+	$(call bgq_install_lib,$<,$@)
+
+$(BGQ_BIN_INSTALL_DIR)/% : ./%
+	$(call bgq_install_lib,$<,$@)
+
+$(BGQ_SBIN_INSTALL_DIR)/% : ./%
+	$(call bgq_install_sbin,$<,$@)
+
+bgq_tld := $(word 1,$(subst /, ,$(subst $(BGQ_BUILD_DIR)/,,$(shell pwd))))
+bgq_tld_install_dir := $(BGQ_INSTALL_DIR)/$(bgq_tld)
+bgq_tld_packaging_install_dir := $(bgq_tld_install_dir)/packaging
+
+$(bgq_tld_packaging_install_dir)/% : ./packaging/%
+	@$(MKDIR) -p $(dir $@)
+	$(CP) $< $@
+
+
+########################################################################
+# header file install macros
+#
+# 
+define bgq_install_hdr
+	@mkdir -p $(dir $2);
+	cp -f $1 $2;
+endef
+
+#
+# this provides the boiler plate macros needed to properly implement
+# a header file install according to the top level file rules we have outlined
+#
+# usage
+# bgq_hdr_make <topdir> [<subdir>]
+define bgq_header_make
+  $(eval DIRNAME=$(strip $1))
+  $(eval INSTALLDIR=$(BGQ_INSTALL_DIR)/$$(strip $1))
+  $(eval HDRS=$(wildcard *.h) $(wildcard *.lds))
+  $(eval TARGET_HDRS=$(addprefix $(INSTALLDIR)/,$(HDRS)))
+  $(eval LINKBACK=$(shell (test $(INSTALLDIR) -ef .;if [[ $$? -eq 0 ]] ;then echo yes;else echo no; fi) ))
+
+
+
+  ifneq ($(LINKBACK),yes)
+  # copy rule if the user did not link back to his include directory..
+$(INSTALLDIR)/%.h: ./%.h
+	$$(call bgq_install_hdr,$$<,$$@)
+$(INSTALLDIR)/%.lds: ./%.lds
+	$$(call bgq_install_hdr,$$<,$$@)
+
+  $(eval cleancmd=-rm -rf $(INSTALLDIR)/*.h)
+  endif
+
+endef
+
+
+define bgq_link
+	$(eval TOPDIR=`pwd -P | sed -e s:$(BGQ_BUILD_DIR):: | awk 'BEGIN { FS = "/" } ; { print $$2 }'`)
+	$(foreach TARGET, $1, $(shell ${LN} -sf ..$(TOPDIR)/$(TARGET) $(BGQ_INSTALL_DIR)/$(TARGET)))
+endef
+
+# library and binary install macros
+# use like so
+# install: $(call INSTALL_LIB_TARGET, my_library_here.so)
+define INSTALL_LIB_TARGET
+    $(addprefix $(BGQ_LIB_INSTALL_DIR)/,$1)
+endef
+define INSTALL_BIN_TARGET
+    $(addprefix $(BGQ_BIN_INSTALL_DIR)/,$1)
+endef
+define INSTALL_SBIN_TARGET
+    $(addprefix $(BGQ_SBIN_INSTALL_DIR)/,$1)
+endef
+define TLD_INSTALL_PACKAGING_TARGET
+    $(addprefix $(bgq_tld_packaging_install_dir)/,$1)
+endef
+
+
+#
+# Creating links in install_dir/bin,sbin
+#
+# To create symlinks, update you Makefile,
+# bg_sbin_links contains what links to create in sbin,
+# bg_bin_links contains which links to create in bin,
+# add $(bg_links_targets) to your install: target.
+#
+# define bg_sbin_links := names, like bg_sbin_links := mmcs_server runjob_server
+# define bg_bin_links := names, like bg_bin_links := bg_console runjob
+#
+# both of these are optional.
+#
+
+$(BGQ_INSTALL_DIR)/bin/%:
+	$(LN) -sf ../$(bgq_tld)$(subst $(BGQ_INSTALL_DIR),,$@) $@
+
+$(BGQ_INSTALL_DIR)/sbin/%:
+	$(LN) -sf ../$(bgq_tld)$(subst $(BGQ_INSTALL_DIR),,$@) $@
+
+bg_sbin_links_targets = $(addprefix $(BGQ_INSTALL_DIR)/sbin/,$(bg_sbin_links))
+
+bg_bin_links_targets = $(addprefix $(BGQ_INSTALL_DIR)/bin/,$(bg_bin_links))
+
+bg_links_targets = $(bg_sbin_links_targets) $(bg_bin_links_targets)
+
+#
+# end of Creating links in install_dir/bin,sbin
+#
+

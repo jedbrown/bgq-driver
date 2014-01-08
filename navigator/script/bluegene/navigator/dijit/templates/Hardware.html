@@ -1,0 +1,239 @@
+<div>
+
+<div data-dojo-type="dijit.layout.BorderContainer" data-dojo-props="gutters: false">
+
+    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'top'">
+        <button disabled type="button" data-dojo-type="dijit.form.Button" data-dojo-props="disabled: true, type: 'button'" data-dojo-attach-point="_parentButton">Parent</button>
+        <div style="display: inline; margin-left: 1em;" data-dojo-type="dijit.form.Form" data-dojo-props="style: 'display: inline; margin-left: 1em;'" data-dojo-attach-point="_jumpToForm">
+            <label for="${id}-jump-to-input">Jump To</label>
+            <input id="${id}-jump-to-input"
+                data-dojo-type="dijit.form.ValidationTextBox"
+                data-dojo-props="invalidMessage: 'The value is not a valid location', style: 'width: 8em;', trim: true,
+                  regExp: '(R..((-M[01]((-N[01]\\d((-J[0-3]\\d)|(-D[01]))?)|(-S))?)|(-I.(-J0[0-7])?)|((-B[0-3](-P[0-8])?)?)|((-K)?))?)|(Q..(-I.)?)'"
+                  data-dojo-attach-point="_jumpToInput"
+                  />
+            <button type="submit" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'submit'" data-dojo-attach-point="_jumpToButton">Go</button>
+            <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_jumpToLoadingHideable">Loading...</span>
+            <span class="bgError" data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_jumpToFailedHideable">No match found for location</span>
+        </div>
+    </div>
+
+    <div data-dojo-type="dijit.layout.StackContainer" data-dojo-props="region: 'center'" data-dojo-attach-point="_detailsStack">
+
+        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_machineContainer">
+            <h2>Machine</h2>
+            &larr; Select a rack to show details for the rack.
+            <table class="bgHardwareDetailsTable">
+                <tr><th>Status</th>
+                    <td
+                            data-dojo-type="bluegene.dijit.OutputText"
+                            data-dojo-props="formatter: bluegene.navigator.format.hardwareStatus, classFn: bluegene.navigator.format.hardwareStatusCalcClass"
+                            data-dojo-attach-point="_machineStatus"
+                        >Loading...</td>
+                </tr>
+                <tr><th>Serial Number</th> <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_machineSerialNumber"></td></tr>
+                <tr><th>Product ID</th> <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_machineProductId"></td></tr>
+                <tr data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_machineDescriptionHideable">
+                    <th>Description</th> <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_machineDescription"></td>
+                </tr>
+                <tr><th>Has Ethernet Gateway</th> <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_machineHasEthGw"></td></tr>
+                <tr><th>MTU</th> <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_machineMtu"></td></tr>
+                <tr><th>Clock Hz</th> <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_machineClockhz"></td></tr>
+                <tr><th>Bringup Options</th> <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_machineBringupOption"></td></tr>
+            </table>
+
+            <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_machineIoRacksContainer">
+                <h3>I/O Racks</h3>
+                <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_machineIoRacksTable"></table>
+            </div>
+
+            <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_machineProblemsContainer">
+                <h3>Problems</h3>
+                <ul data-dojo-attach-point="_machineProblemsList">
+                </ul>
+            </div>
+        </div>
+
+        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_rackContainer">
+            <h2 data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_rackLocation">R00</h2>
+
+            <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_rackProblemsContainer">
+                <h2>Problems</h2>
+                <ul data-dojo-attach-point="_rackProblemsList">
+                </ul>
+            </div>
+
+            <h3>Midplanes</h3>
+            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_rackMidplanes"></table>
+
+            <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_rackIoDrawersContainer">
+                <h3>I/O Drawers</h3>
+                <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_rackIoDrawersTable"></table>
+            </div>
+
+            <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_rackClockCardContainer">
+                <h3>Clock Card</h3>
+                <table class="bgHardwareDetailsTable">
+                    <tr><th>Location</th><td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_rackClockCardLocation">R00-K</td></tr>
+                    <tr>
+                        <th>Status</th>
+                        <td data-dojo-type="bluegene.dijit.OutputText"
+                            data-dojo-props="formatter: bluegene.navigator.format.hardwareStatus, classFn: bluegene.navigator.format.hardwareStatusCalcClass"
+                            data-dojo-attach-point="_rackClockCardStatus"
+                            >Loading...</td>
+                    </tr>
+                    <tr><th>Frequency</th><td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_rackClockCardFreq"></td></tr>
+                    <tr><th>Serial Number</th><td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_rackClockCardSerialNumber">N/A</td></tr>
+                    <tr><th>Product ID</th><td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_rackClockCardProductId">N/A</td></tr>
+                    <tr data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_rackClockCardSourceHideable">
+                        <th>Source</th>
+                        <td data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_rackClockCardSource"></td>
+                    </tr>
+                    <tr data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_rackClockCardSuppliesHideable">
+                        <th>Supplies</th>
+                        <td data-dojo-attach-point="_rackClockCardSupplies"></td>
+                    </tr>
+                </table>
+            </div>
+
+            <h3>Bulk Power Modules</h3>
+            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_rackBpmsTable"></table>
+        </div>
+
+        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_midplaneContainer">
+            <h2 data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_midplaneLocation">R00-M0</h2>
+            <table class="bgHardwareDetailsTable">
+                <tr>
+                    <th><label for="hardware-midplane-status">Status</label></th>
+                    <td data-dojo-type="bluegene.dijit.OutputText"
+                        data-dojo-props="formatter: bluegene.navigator.format.hardwareStatus, classFn: bluegene.navigator.format.hardwareStatusCalcClass"
+                        data-dojo-attach-point="_midplaneStatus"
+                        >Loading...</td>
+                </tr>
+                <tr data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_midplaneSwitchProblemsHideable">
+                    <th>Switch Problems</th>
+                    <td data-dojo-type="bluegene.dijit.OutputText" style="color: red" data-dojo-attach-point="_midplaneSwitchProblems"></td>
+                </tr>
+                <tr>
+                    <th><label for="${id}-midplane-serialnumber">Serial Number</label></th>
+                    <td id="${id}-midplane-serialnumber" data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_midplaneSerialNumber"></td>
+                </tr>
+                <tr>
+                    <th><label for="${id}-midplane-product-id">Product ID</label></th>
+                    <td id="${id}-midplane-product-id" data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_midplaneProductId"></td>
+                </tr>
+                <tr>
+                    <th><label for="${id}-midplane-torus-coords">Torus Coordinates</label></th>
+                    <td id="${id}-midplane-torus-coords" data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_midplaneTorusCoords"></td>
+                </tr>
+                <tr id="${id}-midplane-clock-source-hideable" data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_midplaneClockSourceHideable">
+                    <th><label for="${id}-midplane-clock-source">Clock source</label></th>
+                    <td id="${id}-midplane-clock-source" data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_midplaneClockSource"></td>
+                </tr>
+            </table>
+
+            <h3>Node Boards</h3>
+            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_midplaneNodeBoardsTable"></table>
+
+            <h3>Service Card - <span data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_midplaneServiceCardLocation">R00-M0-S</span></h3>
+            <table class="bgHardwareDetailsTable">
+                <tr>
+                    <th>Status</th>
+                    <td data-dojo-type="bluegene.dijit.OutputText"
+                        data-dojo-props="formatter: bluegene.navigator.format.hardwareStatus, classFn: bluegene.navigator.format.hardwareStatusCalcClass"
+                        data-dojo-attach-point="_midplaneServiceCardStatus"
+                      >Loading...</td>
+                </tr>
+                <tr>
+                    <th>Serial Number</th>
+                    <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_midplaneServiceCardSerialNumber"></td>
+                </tr>
+                <tr>
+                    <th>Product ID</th>
+                        <td data-dojo-type="bluegene.dijit.OutputText"
+                            data-dojo-attach-point="_midplaneServiceCardProductId"></td>
+                    </tr>
+            </table>
+        </div>
+
+        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_nodeBoardContainer">
+            <h2 data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_nodeBoardLocation">R00-M0-N00</h2>
+
+            <table class="bgHardwareDetailsTable">
+                <tr>
+                    <th>Status</th>
+                    <td data-dojo-type="bluegene.dijit.OutputText"
+                        data-dojo-props="formatter: bluegene.navigator.format.hardwareStatus, classFn: bluegene.navigator.format.hardwareStatusCalcClass"
+                        data-dojo-attach-point="_nodeBoardStatus"
+                        >Loading...</td>
+                </tr>
+                <tr>
+                    <th>Serial Number</th>
+                    <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_nodeBoardSerialNumber"></td>
+                </tr>
+                <tr>
+                    <th>Product ID</th>
+                    <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_nodeBoardProductId"></td>
+                </tr>
+            </table>
+
+            <h3>Compute Cards</h3>
+            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_nodeBoardComputeCardsTable"></table>
+
+            <h3>DCAs</h3>
+            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_nodeBoardDcasTable"></table>
+        </div>
+
+        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_ioRackContainer">
+            <h2 data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_ioRackLocation">Q00</h2>
+
+            <table class="bgHardwareDetailsTable">
+                <tr>
+                    <th>Status</th>
+                    <td data-dojo-type="bluegene.dijit.OutputText"
+                        data-dojo-props="formatter: bluegene.navigator.format.hardwareStatus, classFn: bluegene.navigator.format.hardwareStatusCalcClass"
+                        data-dojo-attach-point="_ioRackStatus"
+                        >Loading...</td>
+                </tr>
+                <tr><th>Serial Number</th><td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_ioRackSerialNumber"></td></tr>
+                <tr><th>Product ID</th><td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_ioRackProductId"></td></tr>
+            </table>
+
+            <h3>I/O Drawers</h3>
+            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_ioRackDrawersTable"></table>
+
+            <h3>Clock Cards</h3>
+            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_ioRackClockCardsTable"></table>
+
+            <h3>Power Modules</h3>
+            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_ioRackPowerModulesTable"></table>
+        </div>
+
+        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_ioDrawerContainer">
+            <h2 data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_ioDrawerLocation">R00-ID</h2>
+
+            <table class="bgHardwareDetailsTable">
+                <tr>
+                    <th>Status</th>
+                    <td data-dojo-type="bluegene.dijit.OutputText"
+                        data-dojo-props="formatter: bluegene.navigator.format.hardwareStatus, classFn: bluegene.navigator.format.hardwareStatusCalcClass"
+                        data-dojo-attach-point="_ioDrawerStatus"
+                        >Loading...</td>
+                </tr>
+                <tr><th>Serial Number</th><td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_ioDrawerSerialNumber"></td></tr>
+                <tr><th>Product ID</th><td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_ioDrawerProductId"></td></tr>
+                <tr data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_ioDrawerClockSourceHideable">
+                    <th><label for="${id}-io-drawer-clock-source">Clock source</label></th>
+                    <td id="${id}-io-drawer-clock-source" data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_ioDrawerClockSource"></td>
+                </tr>
+            </table>
+
+            <h3>I/O Nodes</h3>
+            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_ioDrawerNodesTable"></table>
+
+        </div>
+
+    </div>
+</div>
+
+</div>

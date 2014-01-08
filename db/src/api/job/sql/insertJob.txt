@@ -1,0 +1,27 @@
+-- INSERT_JOB
+
+SELECT id
+  FROM NEW TABLE (
+    INSERT INTO TBGQJob (
+        args, blockId,
+        corner, envs,
+        executable, hostname,
+        mapping, nodesUsed,
+        pid, processesPerNode,
+        schedulerData,
+        shapeA, shapeB, shapeC, shapeD, shapeE,
+        username, workingDir, qualifier, np, client
+      ) VALUES (
+        ?, ?, # args blockId
+        ?, ?, # corner envs
+        ?, ?, # executable hostname
+        ?, ?, # mapping nodesUsed
+        ?, ?, # pid processesPerNode
+        ?,    # schedulerData
+        ?, ?, ?, ?, ?, # shapeA shapeB shapeC shapeD shapeE
+        ?, ?,  # username workingDir
+        ?, # qualifier
+        ?, # np
+        ? # client
+      )
+    )

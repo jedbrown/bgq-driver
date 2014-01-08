@@ -1,0 +1,120 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2004, 2011                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+trap 'rm -f $$' EXIT
+###set -x
+
+logecho () {
+   echo "$(date +%m/%d/%y-%H:%M:%S)  $* "
+}
+
+[ $# -lt 2 -o $# -gt 5 ] && echo "Usage: $0 db2instancedir database_name [user password [schema]]" && exit
+dbprofile=$1/db2profile
+
+. $dbprofile
+
+BGQDB_DBNAME=$2
+BGQDB_USER=$3
+BGQDB_PWD=$4
+if [ $# -eq 5 ]
+then
+  BGQDB_SCHEMA=$5
+else
+  BGQDB_SCHEMA=$USER
+fi
+
+
+LOG_FILE=./dropBGQSchema.log
+echo "output sent to $LOG_FILE"
+exec 1> $LOG_FILE
+
+logecho "dropBGQSchema started."
+
+if  [[ $BGQDB_SCHEMA == "" ]]
+then
+  logecho "Error: BGQDB_SCHEMA not set. Check if \$USER environment variable is set."
+  exit 1
+fi
+
+logecho "connecting to database."
+if [[ $BGQDB_USER == "" ]]; then
+  db2 connect to $BGQDB_DBNAME
+else
+  db2 connect to $BGQDB_DBNAME user $BGQDB_USER using $BGQDB_PWD
+fi
+
+if [ $? -ne 0 ]; then
+  if [[ $BGQDB_USER == "" ]]; then
+    echo "could not connect to database $BGQDB_DBNAME as $USER" >&2
+  else
+    echo "could not connect to database $BGQDB_DBNAME as user $BGQDB_USER with password $BGQDB_PWD" >&2
+  fi
+  exit 1
+elif [ $BGQDB_USER !=  $BGQDB_SCHEMA ]
+then
+  db2 set schema $BGQDB_SCHEMA
+fi
+
+
+####### make sure we start from empty database
+logecho "clearing schema $BGQDB_SCHEMA."
+
+db2 list tables for schema $BGQDB_SCHEMA |
+   awk 'NF==4 {
+     if ($3=="T") print  "drop table " $1 ";"
+     else if ($3=="V") print  "drop view " $1 ";"
+          else if ($3=="A") print  "drop alias " $1 ";"
+   }' >$$
+NLINES=$(wc -l $$| awk '{print $1}')
+if [ $NLINES -gt 0 ]
+then
+   db2 -tvf $$
+   db2 commit
+fi
+db2 "select name from sysibm.systriggers where schema='$BGQDB_SCHEMA'" |
+   awk 'NF==1 { if (($1!="NAME") && (substr($1,1,2)!="--")) print  "drop trigger " $1 ";" }' >$$
+NLINES=$(wc -l $$| awk '{print $1}')
+if [ $NLINES -gt 0 ]
+then
+  db2 -tvf $$
+  db2 commit
+fi
+
+db2 "select procname from sysibm.sysprocedures where procschema='$BGQDB_SCHEMA'" |
+   awk 'NF==1 { if (($1!="PROCNAME") && (substr($1,1,2)!="--")) print  "drop procedure " $1 ";" }' >$$
+NLINES=$(wc -l $$| awk '{print $1}')
+if [ $NLINES -gt 0 ]
+then
+  db2 -tvf $$
+  db2 commit
+fi
+
+
+db2 "drop sequence seqid"
+db2 "drop function ncpos"
+db2 commit
+
+logecho "cleared schema $BGQDB_SCHEMA."
+
+

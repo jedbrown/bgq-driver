@@ -1,0 +1,101 @@
+#!/bin/bash 
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp.  2010, 2012                              
+# US Government Users Restricted Rights - Use, duplication or      
+#   disclosure restricted by GSA ADP Schedule Contract with IBM    
+#   Corp.                                                          
+#                                                                  
+# This software is available to you under the Eclipse Public       
+# License (EPL).                                                   
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+runtest() {
+
+    #make clean install PARMS="-DTEST"$1" -DL2SLICE="$2
+
+    if [[ $? -ne 0 ]] ; then
+	echo ERROR
+	exit -1
+    fi
+
+    SVCOPT=$1
+
+    case $1 in 
+
+	GEA) SVCOPT=BIC;
+             ;;
+
+        SerDes*) SVCOPT=SerDes;
+	     ;;
+
+        L2CTR) SVCOPT=L2;
+	    ;;
+
+	L2Central) SVCOPT=L2;
+	    ;;
+
+    esac
+
+    echo '+'${SVCOPT} > tmp.svchost
+
+    cat tmp.svchost
+
+
+#make runmambo parms="--svchost tmp.svchost"
+#if [[ $? -ne 0 ]] ; then
+#    echo ERROR
+#    exit -1
+#fi
+
+#make runmesa parms="--svchost tmp.svchost"
+
+
+
+#make runfpga parms="--svchost tmp.svchost --envvar TEST=$1 --envvar L2SLICE=$2"
+#export DISPLAY=bgqfen3.rchland.ibm.com:2
+#RESPONSE=""
+#while [[ z${RESPONSE} != "zContinue" ]] ; do
+#  sleep 300
+#  llq | grep tstar
+#  echo '----'
+#  llq -u tmusta
+#  echo '----'
+#  RESPONSE=`xmessage -print -buttons Continue:0,Wait:1 "Please check the LL queue and tell me how to proceed."`
+#done
+
+make runmmcslite parms="--svchost tmp.svchost --envvar TEST=$1 --envvar L2SLICE=$2 --timelimit 15 --location Q00-I0-J00 --svchost_option +$SVCOPT"
+}
+
+
+
+
+
+
+
+#for OPT in GEA SerDes0 SerDes1   ; do
+
+for OPT in BeDRAM ClkStopUnit DrArbiter DDR DevBus EnvMon GEA L1P L2Central Msgc MU PCIE SerDes0 SerDes1 TestInt UPC  ; do
+  # Wakeup
+  echo '---' $OPT '---'
+  runtest $OPT 0
+done
+
+for SLICE in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 ; do
+  echo "--- L2 SLICE "$SLICE" ---"
+  runtest L2 $SLICE
+done
+
+for COUNTER in 0 1 2 3  ; do
+  echo "--- L2 COUNTER "$COUNTER" ---"
+  runtest L2CTR $COUNTER
+done

@@ -1,0 +1,49 @@
+#! /bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012  All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+savedir=$PWD
+outdir=/var/spool/abrt 
+
+if [ -d $outdir ]; then
+  echo gstack output to $outdir
+else 
+  outdir=$PWD
+fi
+
+rm -rf *.gstack
+for s in iosd jobctld stdiod sysiod toolctld
+do
+  pidlist=( $(ps -C $s -o pid=)  )
+  for p in "${pidlist[@]}"
+  do
+    outfile="$outdir/$s.$p.gstack"
+#    echo $outfile
+    ps -fp $p > $outfile
+    gstack $p >> $outfile & 
+  done
+
+done
+wait
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+tarfile=$outdir/gstack-$TIMESTAMP.tar
+tar -cf $tarfile   $outdir/*.gstack
+rm -rf $outdir/*.gstack
+exit
+

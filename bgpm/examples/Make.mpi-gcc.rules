@@ -1,0 +1,52 @@
+
+
+CFLAGS  = -O2 -g -Wall
+
+# allow relocation if used in dynamic libraries 
+CFLAGS  += -fpic  
+
+
+# CPU Flags
+CFLAGS += -m64
+
+# Creates a dependency file
+CFLAGS += -MMD -MF .dep.$(<F).d
+
+# path for BGQ installation
+CFLAGS += -I$(BGQ_INSTALL_DIR)
+
+# path for cnk application implementation of SPIs
+CFLAGS += -I$(BGQ_INSTALL_DIR)/spi/include/kernel/cnk
+
+# for additional command line args, ie "make ARGS=-Dxxx=yyy"
+CFLAGS += $(ARGS)
+
+CXXFLAGS = $(CFLAGS) -fcheck-new -Wnon-virtual-dtor
+
+
+LDFLAGS = -static 
+LIB_DIRS = $(BGQ_INSTALL_DIR)/spi/lib
+LIBS = rt pthread 
+
+MPIBIN = $(BGQ_INSTALL_DIR)/comm/gcc/bin
+
+
+# replace what the mpi wrappers accomplish (wrappers assume all code comes from floor, 
+# so needed to use code and libs from sandbox rather than floor)
+
+#CFLAGS := -I$(BGQ_INSTALL_DIR)/comm/sys/include -I$(BGQ_INSTALL_DIR)/comm/gcc/include $(CFLAGS)
+#LIB_DIRS += $(BGQ_INSTALL_DIR)/comm/gcc/lib $(BGQ_INSTALL_DIR)/comm/sys/lib 
+#LDFLAGS += -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/gcc/lib -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/sys/lib \
+#           -Wl,-rpath -Wl,$(BGQ_INSTALL_DIR)/comm/spi/lib
+#LIBS += cxxmpich mpich opa mpl dl pami SPI SPI_cnk rt stdc++ pthread
+LD      = $(BGQ_CROSS_CXX)    # $(MPIBIN)/mpicxx
+CXX     = $(BGQ_CROSS_CXX)    # $(MPIBIN)/mpicxx
+CC      = $(BGQ_CROSS_CC)     # $(MPIBIN)/mpicc
+FC      = $(BGQ_CROSS_FC)     # $(MPIBIN)/mpif90
+
+LD      = $(MPIBIN)/mpicxx
+CXX     = $(MPIBIN)/mpicxx
+CC      = $(MPIBIN)/mpicxx
+FC      = $(MPIBIN)/mpif90
+AR      = $(BGQ_CROSS_AR) crv
+

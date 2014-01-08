@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<html>
+
+<head>
+
+<title>OutputFormat Browser Tests</title>
+
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+
+<script>
+
+
+g_b_dijit_OutputFormat = null;
+
+
+require(
+[
+    "bluegene/dijit/test/OutputFormatHtmlTests",
+    "bluegene/dijit/OutputFormat",
+    "dojo/number", // dojo.number.format
+    "dojo/parser",
+    "dojo/ready",
+    "doh/runner"
+],
+function(
+        tests,
+        b_dijit_OutputFormat,
+        d_number,
+        d_parser,
+        d_ready,
+        doh
+    )
+{
+
+
+g_b_dijit_OutputFormat = b_dijit_OutputFormat;
+
+
+var onLoad = function() 
+    {
+        doh.register( "bluegene/dijit/test/OutputFormatHTML", tests );
+        doh.run();
+    };
+
+
+d_ready( onLoad );
+
+
+} );
+
+</script>
+
+</head>
+<body>
+
+<span id="container1"></span>
+
+<span id="of1" data-dojo-type="g_b_dijit_OutputFormat"></span>
+<ul>
+    <li id="of2" data-dojo-type="g_b_dijit_OutputFormat"></li>
+</ul>
+<table>
+    <tr id="t1tr"></tr>
+</table>
+<span id="of3" data-dojo-type="g_b_dijit_OutputFormat" data-dojo-props="nullText: 'Loading...'">Formatted ${field1}</span>
+<span id="of4" data-dojo-type="g_b_dijit_OutputFormat" data-dojo-props="nullText: 'Loading...', value: { jobCount: 10000, jobTotal: 12345 }">${jobCount:dojo.number.format} of ${jobTotal:dojo.number.format}</span>
+<span id="of5" style="font-size: 12pt; font-weight: bold;" data-dojo-type="g_b_dijit_OutputFormat">Diagnostics Results for ${blockType} ${blockOrLocation}</span>
+
+</body>
+</html>

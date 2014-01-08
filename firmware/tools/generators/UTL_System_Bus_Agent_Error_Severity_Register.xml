@@ -1,0 +1,51 @@
+<register width="32" name="UTL System Bus Agent Error Severity Register" prefix="UTL_SBAESR_" 
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+ description="Each bit in this register determines the type of interrupt tiggered by the respective event from the
+UTL System Bus Agent Status Register. When set the event triggers the primary interrupt (AL_PINT). When clear,
+the event triggers the secondary interrupt (AL_SINT)."
+>
+  <field 
+	   bit="0" 
+	   name="RNPS" 
+	   description="RXNP array (inbound non-posted requests FIFO) parity error severity."
+	   />
+     <field 
+       bit="2" 
+       name="RPCS" 
+       description="RXPC array (inbound posted requests FIFO) parity error severity."
+       />
+     <field 
+       bit="4" 
+       name="RCIS" 
+       description="RXCIF array (Received completions indications FIFO) parity error severity."
+       />
+     <field 
+       bit="5" 
+       name="RCCS" 
+       description="Receive completions control arrays parity error severity."
+       />
+     <field 
+       bit="8" 
+       name="RFTS" 
+       description="RXFT array (inbound read tags queue array) parity error severity."
+       />
+	   
+</register>

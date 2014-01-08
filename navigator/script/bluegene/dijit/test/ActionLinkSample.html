@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2012, 2012                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+
+<html>
+<head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+<title>ActionLink Sample</title>
+
+<style>
+    @import "../../../../dojo/resources/dojo.css";
+    @import "../../../../dijit/themes/claro/claro.css";
+    @import "../../../../dijit/themes/claro/document.css";
+
+    @import "../../../../../style/bluegene.css";
+
+    html, body, #main-div { width: 100%; height: 100%; border: 0; margin: 0; padding: 0; }
+</style>
+
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, isDebug: 1"></script>
+
+<script>
+
+g_b_layer = null;
+
+g_b_dijit_ActionLink = null;
+
+
+require(
+[
+    "bluegene/layer",
+    "bluegene/dijit/ActionLink",
+    "dojo/ready",
+    "dijit/registry"
+],
+
+function(
+        b_layer,
+        b_dijit_ActionLink,
+        d_ready,
+        j_registry
+    )
+{
+    // Put symbols used in navigator.html into global space.
+
+    g_b_layer = b_layer; // Note: keep this around since might be useful when using debugger.
+
+    g_b_dijit_ActionLink = b_dijit_ActionLink;
+
+    
+    var ready_fn = function() 
+        {
+            console.log( "Ready!" );
+            
+            j_registry.byId( "al1" ).on( "click", function() { alert( "al1 Clicked!" ); } );
+            j_registry.byId( "al2" ).on( "click", function() { alert( "al2 clicked" ); } );
+            j_registry.byId( "al3" ).on( "click", function() {
+                    j_registry.byId( "al2" ).set( "disabled", (! j_registry.byId( "al2" ).get( "disabled" )) );
+                    j_registry.byId( "al6" ).set( "disabled", (! j_registry.byId( "al6" ).get( "disabled" )) );
+                } );
+
+            j_registry.byId( "al4" ).on( "click", function() { alert( "al4 Clicked!" ); } );
+            j_registry.byId( "al5" ).on( "click", function() { alert( "al5 Clicked!" ); } );
+
+            var al6_val = false;
+            var toggle_al6_fn = function()
+                {
+	                if ( al6_val ) {
+	                    j_registry.byId( "al6" ).set( "class", "" );
+	                    al6_val = false;
+	                    return;
+	                }
+
+                    j_registry.byId( "al6" ).set( "class", "bgHardwareNotAvailable" );
+	                al6_val = true;
+	            };
+            
+            j_registry.byId( "al6" ).on( "click", toggle_al6_fn );
+            
+
+            j_registry.byId( "al7" ).on( "click", function() {
+                j_registry.byId( "al5" ).destroyRecursive();
+            } );
+        };
+
+    d_ready( ready_fn );
+} );
+
+</script>
+
+</head>
+
+<body class="claro">
+
+<h1>ActionLink Samples</h1>
+
+<span id="al1" data-dojo-type="g_b_dijit_ActionLink">Click Me for Alert</span>
+<br>
+<span id="al2" data-dojo-type="g_b_dijit_ActionLink" data-dojo-props="disabled: true">I'm#2</span>
+<br>
+<span id="al3" data-dojo-type="g_b_dijit_ActionLink">Toggle2</span>
+
+<ul>
+<li id="al4" data-dojo-type="g_b_dijit_ActionLink">Click Me</li>
+<li id="al5" data-dojo-type="g_b_dijit_ActionLink">Click Me (al5)</li>
+<li id="al7" data-dojo-type="g_b_dijit_ActionLink">Destroy al5!</li>
+</ul>
+
+
+<table>
+<tr><td id="al6" data-dojo-type="g_b_dijit_ActionLink">Toggle bgHardwareNotAvailable class</td></tr>
+</table>
+
+
+</body>
+</html>

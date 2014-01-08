@@ -1,0 +1,83 @@
+<register width="64" name="L1P_ESR_STATE" prefix="L1P_ESR_" description="tbd">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <field bit="2" name="int_list_0" description="L1P_int_list_0" category="software" />
+  <field bit="3" name="int_list_1" description="L1P_int_list_1" category="software" />
+  <field bit="4" name="int_list_2" description="L1P_int_list_2" category="software" />
+  <field bit="5" name="int_list_3" description="L1P_int_list_3" category="software" />
+  <field bit="6" name="int_list_4" description="L1P_int_list_4" category="software" />
+  <field bit="7" name="int_speculation_0" description="L1P_int_speculation_0" category="software" />
+  <field bit="8" name="int_speculation_1" description="L1P_int_speculation_1" category="software" />
+  <field bit="9" name="int_speculation_2" description="L1P_int_speculation_2" category="software" />
+  <field bit="10" name="int_speculation_3" description="L1P_int_speculation_3" category="software" />
+  <field bit="11" name="err_luq_ovfl" description="L1P_err_luq_ovfl : fatal error overflow of lookup queue " category="fatal" />
+  <field bit="12" name="err_sr_p" description="L1P_err_sr_p : parity error on switch response interface" category="fatal" />
+  <field bit="13" name="err_sr_rd_valid_p" description="L1P_err_sr_rd_valid_p : parity error on rd_valid of switch response interface" category="fatal" />
+  <field bit="14" name="err_sw_p" description="L1P_err_sw_p : parity error on switch write interface" category="fatal" />
+  <field bit="15" name="err_si_ecc" description="L1P_err_si_ecc : correctable ECC error on switch invalidate interface" category="fatal" />
+  <field bit="16" name="err_si_ecc_ue" description="L1P_err_si_ecc_ue : uncorrectable ECC error on switch invalidate interface" category="fatal" />
+  <field bit="17" name="err_si_p" description="L1P_err_si_p : parity error on switch invalidate interface" category="fatal" />
+  <field bit="18" name="err_sda_p" description="L1P_err_sda_p : benign parity error in store data array" category="fatal" />
+  <field bit="19" name="err_sda_p_ue" description="L1P_err_sda_p_ue : uncorrectable parity error in store data array" category="fatal" />
+  <field bit="20" name="err_rqra_p" description="L1P_err_rqra_p : parity error in request array" category="fatal" />
+  <field bit="21" name="err_reload_ecc_x2" description="L1P_err_reload_ecc_x2 : correctable reload data ECC error" category="fatal" />
+  <field bit="22" name="err_reload_ecc_ue_x2" description="L1P_err_reload_ecc_ue_x2 : uncorrectable reload data ECC error" category="fatal" />
+  <field bit="23" name="err_rira_p" description="L1P_err_rira_p : parity error in request info array" category="fatal" />
+  <field bit="24" name="err_gctr_p" description="L1P_err_gctr_p : parity error on msync global counter" category="fatal" />
+  <field bit="25" name="err_lu_state_p" description="L1P_err_lu_state_p : parity error in lookup state" category="fatal" />
+  <field bit="26" name="err_lu_ttype" description="L1P_err_lu_ttype : bad ttype for memory region (cache op to IO space)" category="fatal" />
+  <field bit="27" name="err_lu_dcr_abort" description="L1P_err_lu_dcr_abort : dcr abort on dcr request from this core" category="fatal" />
+  <field bit="28" name="err_mmio_async" description="L1P_err_mmio_async : asynchronous parity error on local MMIO bus (some reg got bit flipped)" category="fatal" />
+  <field bit="29" name="err_mmio_state_p" description="L1P_err_mmio_state_p : parity error on local MMIO master state" category="fatal" />
+  <field bit="30" name="err_mmio_timeout" description="L1P_err_mmio_timeout : timeout on local MMIO bus" category="fatal" />
+  <field bit="31" name="err_mmio_priv" description="L1P_err_mmio_priv : privilege access violation attempted on local MMIO bus" category="fatal" />
+  <field bit="32" name="err_mmio_rdata_p" description="L1P_err_mmio_rdata_p : parity error on data read on local MMIO bus" category="fatal" />
+  <field bit="33" name="err_mmio_wdata_p" description="L1P_err_mmio_wdata_p : parity error on data write on local MMIO bus" category="fatal" />
+  <field bit="34" name="err_mmio_dcrs_timeout" description="L1P_err_mmio_dcrs_timeout : remote DCR - local MMIO bridge saw timeout" category="fatal" />
+  <field bit="35" name="err_mmio_dcrs_priv" description="L1P_err_mmio_dcrs_priv : remote DCR - local MMIO bridge saw privilege access violation attempt" category="fatal" />
+  <field bit="36" name="err_mmio_dcrs_par" description="L1P_err_mmio_dcrs_par : remote DCR - local MMIO bridge saw parity error" category="fatal" />
+  <field bit="37" name="err_dcrm_crit" description="L1P_err_dcrm_crit : critical error from DCR master" category="fatal" />
+  <field bit="38" name="err_dcrm_noncrit" description="L1P_err_dcrm_noncrit : non-critical error from DCR master" category="fatal" />
+  <field bit="39" name="err_dcrm_mc" description="L1P_err_dcrm_mc : machine check from DCR master" category="fatal" />
+  <field bit="40" name="err_tag_timeout" description="L1P_err_tag_timeout : timeout waiting return of a core tag from memory system" category="fatal" />
+  <field bit="41" name="err_valid_timeout" description="L1P_err_valid_timeout : valid request live in l1p for too long " category="fatal" />
+  <field bit="42" name="err_hold_timeout" description="L1P_err_hold_timeout : lookup queue was held for too long" category="fatal" />
+  <field bit="43" name="err_ditc_req_x2" description="L1P_err_ditc_req_x2 : core attempted unsupported direct interthread communication" category="fatal" />
+  <field bit="44" name="err_pfd_addr_p" description="L1P_err_pfd_addr_p : parity error on address tag in prefetch directory" category="fatal" />
+  <field bit="45" name="err_pfd_avalid_p" description="L1P_err_pfd_avalid_p : parity error on address valid in prefetch directory" category="fatal" />
+  <field bit="46" name="err_pfd_fill_pnd_p" description="L1P_err_pfd_fill_pnd_p : parity error on fill pnd in prefetch directory" category="fatal" />
+  <field bit="47" name="err_pfd_hit_pnd_p" description="L1P_err_pfd_hit_pnd_p : parity error on hit pnd in prefetch directory" category="fatal" />
+  <field bit="48" name="err_pfd_stream_p" description="L1P_err_pfd_stream_p : parity error on stream id in prefetch directory" category="fatal" />
+  <field bit="49" name="err_pfd_depth_p" description="L1P_err_pfd_depth_p : parity error on depth in prefetch directory" category="fatal" />
+  <field bit="50" name="err_pfd_clone_p" description="L1P_err_pfd_clone_p : parity error in prefetch directory cloned address" category="fatal" />
+  <field bit="51" name="err_hitq_p" description="L1P_err_hitq_p : parity error in hitq" category="fatal" />
+  <field bit="52" name="err_sd_p" description="L1P_err_sd_p : parity error in stream detect" category="fatal" />
+  <field bit="53" name="err_pf2dfc_p" description="L1P_err_pf2dfc_p : parity error in prefetch to demand fetch table" category="fatal" />
+  <field bit="54" name="err_wccm_p_x2" description="L1P_err_wccm_p_x2 : parity error in write combine candidate match" category="fatal" />
+  <field bit="55" name="err_wccm_wcd_p_x2" description="L1P_err_wccm_wcd_p_x2 : parity error in write combine decision maker1" category="fatal" />
+  <field bit="56" name="err_lu_wcd_p" description="L1P_err_lu_wcd_p : parity error in write combine decision maker2" category="fatal" />
+  <field bit="57" name="err_lu_current_p" description="L1P_err_lu_current_p : parity error in lookup request info" category="fatal" />
+  <field bit="58" name="err_l2cmd" description="L1P_err_l2cmd : parity error in l2cmd signal" category="fatal" />
+  <field bit="59" name="err_lu_dcr_dbus_p" description="L1P_err_lu_dcr_dbus_p : parity error on DCR dbus" category="fatal" />
+  <field bit="60" name="err_luq_p" description="L1P_err_luq_p : parity error on lookup queue" category="fatal" />
+  <field bit="61" name="err_sda_phase_p" description="L1P_err_sda_phase_p : parity error in SDA phase register" category="fatal" />
+  <field bit="62" name="slice_sel_ctrl_perr" description="L1P_slice_sel_ctrl_perr : parity error on slice select control" category="fatal" />
+  <field bit="63"  name="redun_ctrl_perr" description="L1P_redun_ctrl_perr : parity error on redundancy control" category="fatal" />
+</register>

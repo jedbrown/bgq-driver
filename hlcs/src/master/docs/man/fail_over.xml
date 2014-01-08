@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY product "fail_over">
+]>
+
+<refentry lang="en" id="fail_over">
+<refentryinfo>
+    <productname>&product;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>© Copyright IBM Corp. 2010, 2011</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+<refmeta>
+    <refentrytitle>&product;</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&product;</refname>
+    <refpurpose>Manual for BGmaster fail_over command</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id="fail_over.synopsis">
+    <title>Synopsis</title>
+    <cmdsynopsis><command>fail_over [ binary id ] [ OPTIONS ]</command>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id="fail_over.options">
+    <title>Arguments</title>
+    <para>Accepted arguments:</para>
+    <variablelist>
+        <varlistentry>
+            <term><option>--properties</option></term>
+            <listitem>
+            <para>The bg.properties configuration file to use.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--help</option></term>
+            <listitem>
+            <para>usage </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--host host:port</option></term>
+            <listitem>
+            <para>TCP host and port pair to use to connect to bgmaster_server </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--verbose verbosity</option></term>
+            <listitem>
+            <para>Add program trace information.  Levels of verbosity are TRACE, DEBUG, INFO, WARN, ERROR, FATAL. </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--trigger trigger</option></term>
+            <listitem>
+            <para>The trigger to use to select the policy for the failover action.  
+	      The triggers are:
+	      a=agent
+	      b=binary
+	      k=killed.
+	      "a" is the default.
+	    </para>
+            </listitem>
+        </varlistentry>
+
+    </variablelist>
+</refsect1>
+
+<refsect1 id="fail_over.description">
+    <title>Description</title>
+    <para> Force a specific binary id to be killed and restarted
+on another node. This behavior is governed by the configured policy. </para>
+</refsect1>
+
+
+<refsect1 id="fail_over.seealso">
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>list_agents</refentrytitle>
+           <manvolnum>8</manvolnum>
+       </citerefentry>, <citerefentry>
+           <refentrytitle>binary_status</refentrytitle>
+           <manvolnum>8</manvolnum>
+	</citerefentry>
+    </para>
+</refsect1>
+
+</refentry>

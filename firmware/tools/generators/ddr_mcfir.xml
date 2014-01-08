@@ -1,0 +1,85 @@
+<register width="64" name="MCFIR" prefix="MCFIR_" description="DDR Controller Fault Isolation Register">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <field bit="0" name="SBOX_ERROR" description="A parity error or check sequence error was detected on either the Write Completion or Cancel Acknowledge asynchronous interfaces between MCA and MCS." />
+  <field bit="1" name="MCS_MNT_ERROR" description="A parity error was detected on the buses between MCA and MCS which specify the address and operation type." />
+  <field bit="2" name="DISPSATHER_COLLISION_ERROR" description="An address collision occurred between two PBUS reflected commands (see 2.2.5 Collision Rules on page 41 for more details)."/>
+  <field bit="3" name="WRITE_HANG_ERROR" description="A PBUS write hang has been detected. A write remains outstanding after 3 hang pulses have arrived on the PBUS." />
+
+  <field bit="5" name="MCFGP_REGISTER_PARITY_ERROR" description="" />
+  <field bit="6" name="MCFGC0_REGISTER_PARITY_ERROR" description="" />
+  <field bit="7" name="MCFGC1_REGISTER_PARITY_ERROR" description="" />
+  <field bit="8" name="MCNTCFG_REGISTER_PARITY_ERROR" description="" />
+  <field bit="9" name="MCMODE_REGISTER_PARITY_ERROR" description="" />
+  <field bit="10" name="MEPSILON_REGISTER_PARITY_ERROR" description="" />
+  <field bit="11" name="MCTL_REGISTER_PARITY_ERROR" description="" />
+  <field bit="12" name="MCBCFG_REGISTER_PARITY_ERROR" description="" />
+  <field bit="13" name="MDI_BIT_ERROR" description="" />
+  <field bit="14" name="READ_RETURN_ERROR" description="" />
+  <field bit="15" name="PACKET_COUNTER_ADDRESS_UE" description="This bit is set when an Address UE has been detected during a Packet Counter operation." />
+  <field bit="16" name="MCAMISC_REGISTER_PARITY_ERROR" description="" />
+  <field bit="17" name="MCTCNTL_REGISTER_PARITY_ERROR" description="" />
+  <field bit="18" name="MCADTAL_REGISTER_PARITY_ERROR" description="" />
+  <field bit="19" name="MCACFG0_REGISTER_PARITY_ERROR" description="" />
+  <field bit="20" name="MCAECCDIS_REGISTER_PARITY_ERROR" description="" />
+  <field bit="21" name="MAINTENANCE_INTERFACE_ERROR" description="" />
+  <field bit="22" name="ASYNC_SERIALIZER_RCMD_ERROR" description="" />
+  <field bit="23" name="ASYNC_SERIALIZER_CRESP_ERROR" description="" />
+  <field bit="24" name="WRITE_COMPLETION_READ_DONE_ERROR" description="" />
+  <field bit="25" name="WRITE_COMPLETION_CANCEL_ERROR" description="" />
+  <field bit="26" name="RSMFIFO_PARITY_ERROR" description="" />
+  <field bit="27" name="READ_BUFFER_OVERRUN" description="" />
+  <field bit="28" name="READ_BUFFER_UNDERRUN" description="" />
+
+  <field bit="32" name="MEMORY_CE" description="This bit is set when a memory CE is detected on a non-maintenance memory read op." />
+  <field bit="33" name="MEMORY_FAST_DECODER_UE" description="This bit is set when a memory UE is detected by the Fast Decoder on a non-maintenance memory read op." />
+  <field bit="34" name="MEMORY_SUE" description="This bit is set when a memory SUE is detected on a non-maintenance memory read op." />
+  <field bit="35" name="MAINTENANCE_CE" description="This bit is set when a memory CE is detected on a maintenance memory read op." />
+  <field bit="36" name="MAINTENANCE_FAST_DECODER_UE" description="This bit is set when a memory UE is detected by the Fast Decoder on a maintenance memory read op." />
+  <field bit="37" name="MAINTENANCE_SUE" description="This bit is set when a memory SUE is detected on a maintenance memory read op." />
+  <field bit="38" name="POWERBUS_WRITE_BUFFER_CE" description="This bit is set when a PBUS ECC CE is detected on a PBus write buffer read op." />
+  <field bit="39" name="POWERBUS_WRITE_BUFFER_UE" description="This bit is set when a PBUS ECC UE is detected on a PowerBus write buffer read op." />
+  <field bit="40" name="POWERBUS_WRITE_BUFFER_SUE" description="This bit is set when a PBUS ECC SUE is detected on a PowerBus write buffer read op." />
+  <field bit="41" name="POWERBUS_READ_BUFFER_CE" description="This bit is set when a PBUS ECC CE is detected on a PowerBus read buffer read op." />
+  <field bit="42" name="POWERBUS_READ_BUFFER_UE" description="This bit is set when a PBUS ECC UE is detected on a PowerBus read buffer read op." />
+  <field bit="43" name="POWERBUS_READ_BUFFER_SUE" description="This bit is set when a PBUS ECC SUE is detected on a PowerBus read buffer read op." />
+  <field bit="44" name="PACKET_COUNTER_DATA_SUE" description="This bit is set when an ECC data SUE is detected on a Packet Counter operation." />
+  <field bit="45" name="READ_CHANNEL_BUFFER_PARITY_ERROR" description="Parity when data is read from channel burrer during ECC correction process." />
+  <field bit="46" name="MEMORY_ECC_MARKING_STORE_UPDATED" description="BGQ: This bit is set when the memory ECC check logic has updated the marking store. Firmware must read the marking store to determine which entry (or entires) have been updated." />
+  <field bit="47" name="MEMORY_ECC_MARKING_STORE_PARITY_ERROR" description="This bit is set when a parity error is detected when the ECC mark store is read by the ECC check logic. If a parity error is detected, the ECC check logic uses zero mark data for the correction (i.e. nothing marked)." />
+  <field bit="48" name="WRITE_ECC_GEN_PARITY_ERROR" description="A data parity error was detected in the write dataflow, by the Memory ECC generation logic." />
+  <field bit="49" name="MEMORY_REFRESH_ERROR" description="" />
+  <field bit="50" name="PACKET_COUNTER_CORRECTABLE_ERRORS" description="This bit is set for the following errors: ECC address CE during a Packet Counter operation, a non-supported PBUS ttype to Packet Counter address space or a non-supported address alignment for a Packet Counter operation." />
+  <field bit="51" name="PACKET_COUNTER_DATA_CE" description="This bit is set when an ECC data CE is detected during a Packet Counter operation." />
+  <field bit="52" name="IOM0_PHY_ERROR" description="" />
+  <field bit="53" name="ECC_ERROR_COUNTER_THRESHOLD_REACHED" description="BGQ: ECC ERROR COUNTER THRESHOLD REACHED" />
+  <field bit="54" name="MCA_REGISTER_PARITY_ERROR_RECOVERABLE" description="This bit is set for the following errors:MCARETRY parity error, MCZMRINT parity error or MCACFG1 parity error. Firmware can read these registers to determine which one is in error, and rewrite the correct value." />
+  <field bit="55" name="MCS_REGISTER_PARITY_ERROR_RECOVERABLE" description="This bit is set for the following errors:MCCLMSK parity error or MCDBGSEL parity error. Firmware can read these registers to determine which one is in error, and rewrite the correct value." />
+  <field bit="56" name="INVALID_MAINTENANCE_COMMAND" description="This bit is set when a maintenance command is started with an invalid maintenance command code entered in MCMCT" />
+  <field bit="57" name="NO_CHANNELS_SELECTED" description="A reflected command address matches the addresses accepted by this MC (matches MCFGP address/mask), but does not lie within the address range of either channel. If this condition is detected, MCFIR(23) is set and the operation is not enqueued in a MCS command list entry. This bit is set due to a software error (read/write address does not match memory range behind this MC), or a hardware error (read/write address does match memory range behind this MC, but MC does not respond correctly)." />
+  <field bit="58" name="MULTIPLE_CHANNELS_SELECTED" description="A reflected command address matches the addresses accepted by this MC (matches MCFGP address/mask), and also matches more than one channel (matches multiple MCFGE addresses/masks). If this condition is detected, MCFIR(24) is set and the operation is not enqueued in a MCS command list entry. This bit is set due to a software error (read/write address matches multiple memory ranges behind this MC), or a hardware error (read/write address does not match multiple memory ranges behind this MC, but MC extent hardware detects multiple matches)." />
+  <field bit="59" name="ADDRESS_BAD_EXTENT" description="This bit is set when a PBUS reflected command arrives and the sum of the extents of Channels 0 and 1 do not match the total extent specified for the memory controller. These extents are specified in registers MCFGC0 bits 0:8, MCFG1 bits 0:8 and MCFGP bits 0:9 respectively. This bit is set when MCFGC0(0:8) + MCFGC1(0:8) does not equal MCFGP(0:9) when a PBUS reflected command arrives." />
+  <field bit="60" name="INVALID_RANK" description="This bit is set when the logical rank address (given in the PBUS reflected command address) does not map onto a valid physical rank." />
+  <field bit="61" name="SCOM_INTERFACE_ERROR" description="This bit is a general summary of Scom interface errors detected by the MCS scom satellite or the MCA scom satellite." />
+  <field bit="62" name="HTM_HPC_WRITE_COLLISION" description="" />
+  <field bit="63" name="MC_SCOM_ERROR" description="This bit is set when an internal error is detected by the scom fir logic." />
+
+
+</register>

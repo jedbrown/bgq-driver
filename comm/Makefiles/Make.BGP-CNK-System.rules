@@ -1,0 +1,60 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+include ${ROOTDIR}/../Make.rules
+
+
+    # ----------------- basic definitions --------------------------------------
+    PLATFORM             = BGP
+    PLATFORMlc           = bgp
+    OS                   = CNK
+    ENV                  = System
+    INSTALL_DIR          = ${BGP_COMM_PATH}
+
+
+
+
+    BUILD_TARGET         = powerpc-bgp-linux
+    BUILD_HOST           = powerpc-bgp-linux
+
+    BUILD_BUILD          = ${BUILD_ALIAS}
+
+
+    # ---------------- PAMI Information -----------------------------------------
+    PAMI_CONFIG           = --with-target=${PLATFORMlc} --with-installdir=${INSTALL_DIR}/sys      --with-pami-extension=torus_network
+    PAMI_CONFIG_FAST      = --with-target=${PLATFORMlc} --with-installdir=${INSTALL_DIR}/sys-fast --with-pami-extension=torus_network --without-shared-lib --with-assert-level=0 --without-error-checks
+
+
+    # ---------------- default compilation targets -----------------------------
+    HOST_AR              =${AR_LINUX}
+    HOST_LD              =${LD_LINUX}
+    HOST_NM              =${BGP_GNU_LINUX_PATH}/bin/*nm
+    HOST_OBJCOPY         =${BGP_GNU_LINUX_PATH}/bin/*objcopy
+
+    HOST_CC              =${CC_LINUX}
+    HOST_CXX             =${CXX_LINUX}
+    HOST_F77             =${F77_LINUX} -fno-underscoring
+    HOST_F90             =${F77_LINUX} -fno-underscoring
+
+    FAST_CC              =/opt/ibmcmp/vacpp/bg/9.0/bin/bgxlc_r
+    FAST_CXX             =/opt/ibmcmp/vacpp/bg/9.0/bin/bgxlC_r
+    FAST_F77             =/opt/ibmcmp/xlf/bg/11.1/bin/bgxlf_r
+    FAST_F90             =/opt/ibmcmp/xlf/bg/11.1/bin/bgxlf90_r
+
+    HOST_INCLUDE         =-I${INSTALL_DIR}/sys/include -I${BGP_ARCH_PATH}/include
+    HOST_LIB             =-L${INSTALL_DIR}/sys/lib      -lpami -L${BGP_RUNTIME_PATH}/SPI -lSPI.cna      -lrt -lpthread
+    HOST_LIB_FAST        =-L${INSTALL_DIR}/sys-fast/lib -lpami -L${BGP_RUNTIME_PATH}/SPI -lSPI-fast.cna -lrt -lpthread

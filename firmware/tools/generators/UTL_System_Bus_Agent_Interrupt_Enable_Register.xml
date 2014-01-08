@@ -1,0 +1,50 @@
+<register width="32" name="UTL System Bus Agent Interrupt Enable Register" prefix="UTL_SBAIER_" 
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+ description="Each bit in this register enables UTL interrupts assertion upon detection of events indicated by the
+corresponding bits in the UTL System Bus Agent Status Register."
+>
+  <field 
+	   bit="0" 
+	   name="RNPI" 
+	   description="RXNP array (inbound non-posted requests FIFO) parity error enable."
+	   />
+     <field 
+       bit="2" 
+       name="RPCI" 
+       description="RXPC array (inbound posted requests FIFO) parity error enable."
+       />
+     <field 
+       bit="4" 
+       name="RCII" 
+       description="RXCIF array (Received completions indications FIFO) parity error enable."
+       />
+     <field 
+       bit="5" 
+       name="RCCI" 
+       description="Receive completions control arrays parity error enable."
+       />
+     <field 
+       bit="8" 
+       name="RFTI" 
+       description="RXFT array (inbound read tags queue array) parity error enable."
+       />
+	   
+</register>

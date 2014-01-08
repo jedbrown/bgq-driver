@@ -1,0 +1,48 @@
+<register width="32" name="UTL System Bus Agent Status Register" prefix="UTL_SBASR_" 
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+ description="When an error occurs, the relevant bit is set by the hardware.  Software should write '1' to reset error indication; writing a '0' has no effect.">
+	<field 
+	   bit="0" 
+	   name="RNPP" 
+	   description="RXNP array (inbound non-posted requests FIFO) parity error.  When set, indicates that the parity error was detected on array's read port."
+	   />
+     <field 
+       bit="2" 
+       name="RPCP" 
+       description="RXPC array (inbound posted requests FIFO) parity error.  When set, indicates that the parity error was detected on array's read port."
+       />
+     <field 
+       bit="4" 
+       name="RCIP" 
+       description="RXCIF array (Received completions indications FIFO) parity error.  When set, indicates that the parity error was detected on array's read port."
+       />
+     <field 
+       bit="5" 
+       name="RCCP" 
+       description="Receive completions control arrays parity error.  When set, indicates that the parity error was detected on array's read port."
+       />
+     <field 
+       bit="8" 
+       name="RFTP" 
+       description="RXFT array (inbound read tags queue array) parity error.  When set, indicates that the parity error was detected on array's read port."
+       />
+	   
+</register>

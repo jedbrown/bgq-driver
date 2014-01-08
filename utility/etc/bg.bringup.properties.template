@@ -1,0 +1,110 @@
+
+# Blue Gene configuration file.
+
+[database]
+computeRackRows     = 1
+computeRackColumns  = 1
+
+[security.ca]
+certificate = /bgsys/local/etc/security/ca/cert.pem
+use_default_paths = false
+
+[security.admin]
+certificate = /bgsys/local/etc/security/admin/cert.pem
+key_file = /bgsys/local/etc/security/admin/key.pem
+cn = Blue Gene administrative
+
+[security.command]
+certificate = /bgsys/local/etc/security/command/cert.pem
+key_file = /bgsys/local/etc/security/command/key.pem
+cn = Blue Gene command
+
+[mmcs]
+boot_options=
+
+[mmcs_lite]
+reconnect_blocks=false
+clockHz=1600
+nfsIpAddress=172.16.3.1
+nfsExportDir=/bgsys
+nfsMountDir=/bgsys
+serviceNode=172.16.3.1
+computeNodeMemory=4096
+ioNodeMemory=4096
+ioInterfaceName=ib0
+mtu=9000
+gateway=172.16.3.4
+broadcast=172.16.255.255
+netmask=255.255.0.0
+sqlite=/tmp/$USERID.sqlite
+ionodeip=172.16.103.0
+ionodemac=00:14:5E:7D:01:00
+    # the values above are typically stored in the machine database but are copied
+    # here to generate the machine XML description within mmcs_lite since there
+    # is no database
+
+uloader=/bgsys/drivers/ppcfloor/boot/firmware
+cn_domains={images=/bgsys/drivers/ppcfloor/boot/cnk id=CNK cores=0-16 memory=0-0x3fff}
+io_domains={images=/bgsys/drivers/ppcfloor/boot/linux,/bgsys/drivers/ppcfloor/boot/ramdisk id=IO cores=0-16 memory=0-0x3fff}
+ioDrawer=R00-IC
+#ioLink = R00-IC-J00,R00-IC-J02,T06,T04
+#ioLink=R00-M0-N00-J11,R00-IC-J05,T00,T19
+    # compute,io,compute port,io port
+
+#ioTorus=true
+#computeTorus=true
+    # determines if a single IO drawer block will have its torus enabled
+
+cmd_failure_exit=true
+
+#print_all_ras=true
+
+[machinecontroller]
+clientPort=1206 
+machineType=0
+hostName=localhost
+bringup=true
+alteraPath=/bgsys/drivers/ppcfloor/ctrlnet/bin/icon/fpgaImages
+bringupOptions=
+secure=false
+
+[machinecontroller.subnet.0]
+Name = Row0
+PrimaryServer = dd2sys1fen2   
+PrimaryServerInterface = eth1 
+PrimaryServerPort = 30000  
+PrimaryBGInterface = eth0 
+BackupServer =  dd2sys1fen3  
+BackupServerInterface = eth3 
+BackupServerPort = 30001       
+BackupBGInterface = eth2 
+HardwareToManage = R00,Q01
+
+[ras]
+environment = PROD
+filter = %%BGQ_INSTALL_DIR%%/ras/etc/ras_environment_filter.xml
+md_install_path = %%BGQ_INSTALL_DIR%%
+decoder_install_path = %%BGQ_INSTALL_DIR%%
+
+[logging]
+# ibm logger - Root for logging done by IBM components ('level' progression - TRACE, DEBUG, INFO, WARN, ERROR, FATAL)
+log4j.logger.ibm = INFO, default
+log4j.additivity.ibm = false
+
+log4j.logger.ibm.utility                = INFO   # Utility functions
+log4j.logger.ibm.utility.Properties     = INFO   # Configuration file reader
+log4j.logger.ibm.utility.cxxsockets     = WARN   # CxxSockets library
+log4j.logger.ibm.mc                     = INFO   # MC (machine controller)
+log4j.logger.ibm.icon                   = INFO   # iCon
+log4j.logger.ibm.mmcs.lite              = INFO   # mmcs_lite
+
+[logging.default]
+log4j.appender.default = org.apache.log4j.ConsoleAppender
+log4j.appender.default.layout = org.apache.log4j.PatternLayout
+log4j.appender.default.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss.SSS} (%-5p) [%t] %c: %m%n
+
+[logging.mc]
+log4j.appender.default = org.apache.log4j.ConsoleAppender
+log4j.appender.default.layout = org.apache.log4j.PatternLayout
+log4j.appender.default.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss.SSS} (%-5p) [%X{subnet}] %c{1} - %m%n
+

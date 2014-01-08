@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY product "reload_config">
+]>
+
+<refentry lang="en" id="reload_config">
+<refentryinfo>
+    <productname>&product;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>© Copyright IBM Corp. 2010, 2011</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+<refmeta>
+    <refentrytitle>&product;</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&product;</refname>
+    <refpurpose>Manual for BGmaster reload_config </refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id="reload_config.synopsis">
+    <title>Synopsis</title>
+    <cmdsynopsis><command>
+reload_config [ OPTIONS ] filename
+</command>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id="reload_config.options">
+    <title>Arguments</title>
+    <para>Accepted arguments:</para>
+    <variablelist>
+        <varlistentry>
+            <term><option>--help</option></term>
+            <listitem>
+            <para>usage </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>filename</option></term>
+            <listitem>
+            <para>bg.properties configuration file to use </para>
+            </listitem>
+        </varlistentry>
+
+    </variablelist>
+
+</refsect1>
+
+<refsect1 id="reload_config.description">
+    <title>Description</title>
+    <para>Start a controlled process or bgmaster_server.</para>
+</refsect1>
+
+
+<refsect1 id="reload_config.seealso">
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>master_status</refentrytitle>
+           <manvolnum>8</manvolnum>
+	</citerefentry>
+    </para>
+</refsect1>
+
+</refentry>

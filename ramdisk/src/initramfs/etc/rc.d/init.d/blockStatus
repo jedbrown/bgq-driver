@@ -1,0 +1,91 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# blockStatus	Signals boot and shutdown completion to the control system via firmware.	
+#               (1 is sent to signal boot complete, 2 for shutdown complete)
+#
+# Author:	Jay S. Bryant (jsbryant@us.ibm.com)
+#
+
+# Source function library
+. /etc/init.d/functions
+
+LOCKFILE=/var/lock/subsys/blockStatus
+
+function start
+{
+        echo -n $"Sending Boot Completion Signal to the Control System: "
+	if [ -e /dev/bgfirmware ] ; then
+	        echo "1" > /dev/bgfirmware
+	        RETVAL=$?
+	else
+		echo -en "\nERROR: Unable to find /dev/bgfirmware device.  Boot Completion Signalling: "
+		RETVAL=1
+	fi
+
+	if [ $RETVAL -ne 0 ] ; then
+	    failure
+	else
+	    touch $LOCKFILE
+	    success
+	fi
+	echo
+        return ${RETVAL}
+}
+
+function stop
+{
+	echo -n $"Sending Shutdown Completion Signal to the Control System: "
+	if [ -e /dev/bgfirmware ] ; then
+    		echo "2" > /dev/bgfirmware
+    		RETVAL=$?
+    	else
+		echo -en "\nERROR:  Unable to find /dev/bgfirmware device.  Shutdown Completion Signalling: "
+		RETVAL=1
+	fi
+
+	if [ $RETVAL -ne 0 ] ; then
+		failure
+   	else
+		[ -e $LOCKFILE ] && rm -f $LOCKFILE
+		success
+    	fi
+    	echo
+    	return ${RETVAL}
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop}"
+        exit 3
+        ;;
+esac
+
+exit $?
+
+
+

@@ -1,0 +1,376 @@
+<table class="bgpm" cellpadding=0 cellspacing=0  style='border:1.5pt solid black;
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2012, 2012                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+'>
+ <tr  style=''>
+  <th rowspan=2    
+      style='border:1.5pt solid black;'>Modes</th>
+  <th rowspan=2   
+      style='border:1.5pt solid black; '>Unit</th>
+  <th rowspan=2  style='border-bottom:1.5pt solid black;
+  '>ctrs</th>
+  <th rowspan=2  style='border-bottom:1.5pt solid black;
+  '>thds | links</th>
+
+  <th rowspan=2  style='border-bottom:1.5pt solid black;
+  '>bits</th>
+  <th colspan=3  style='
+  border-left:none;'>Access Methods</th>
+  <th rowspan=2  style='border-bottom:1.5pt solid black;
+  '>Mux</th>
+  <th colspan=3  style='
+  border-left:none;'>Overflow</th>
+  <th rowspan=2  style='border-bottom:1.5pt solid black;
+  '>Description</th>
+ </tr>
+
+ <tr  style=''>
+  <th   style=';border-top:none;
+  border-left:none;border-bottom:1.5pt solid black;'>Std</th>
+  <th  style='border-top:none;border-left:none;border-bottom:1.5pt solid black;'>Fast</th>
+  <th  style='border-top:none;border-left:none;border-bottom:1.5pt solid black;'>LL</th>
+  <th  style='border-top:none;border-left:none;border-bottom:1.5pt solid black;'>Fast</th>
+  <th  style='border-top:none;border-left:none;border-bottom:1.5pt solid black;'>Fast
+  Bcast</th>
+  <th  style='border-top:none;border-left:none;border-bottom:1.5pt solid black;'>Slow
+  Bcast</th>
+  
+ </tr>
+ <tr  style=''>
+  <td rowspan=5   style='border-bottom:1.5pt solid black;border-top:1.5pt solid black;'><font class='bplus'>Low Lat Distrib</font><br />
+    <br />
+    BGPM_MODE_LLDISTRIB</td>
+  <td rowspan=3  style='border-bottom:1.0pt solid black;
+  border-top:none;'>Punit</td>
+
+  <td  style='border-top:1.5pt solid black;border-left:none;'
+  >6</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'
+  >4</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'
+  >14</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>yes</td>
+
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td rowspan=5  style='border-bottom:1.5pt solid black; text-align:left;
+  border-top:1.5pt solid black;'><font class='bplus'>Low Latency Distributed</font><br />
+    Punit 14 bit counters<br />
+
+    Indep upc_p operation<br />
+    fine-grained instrumentation<br />
+    low latency access methods<br />
+    No ovf, ctx sw support<br />
+    </td>
+ </tr>
+ 
+ <tr  style=''>
+
+  <td   style=';border-left:none;
+  ' >12</td>
+  <td  style='border-left:none;' >2</td>
+  <td  style='border-left:none;' >14</td>
+  <td  style='border-left:none;'>no</td>
+  <td  style='border-left:none;'>no</td>
+  <td  style='border-left:none;'>yes</td>
+
+  <td  style='border-left:none;'>no</td>
+  <td  style='border-left:none;'>no</td>
+  <td  style='border-left:none;'>no</td>
+  <td  style='border-left:none;'>no</td>
+ </tr>
+ <tr  style=''>
+  <td   style=';border-top:none;
+  border-left:none;' >24</td>
+
+  <td  style='border-top:none;border-left:none;'
+  >1</td>
+  <td  style='border-top:none;border-left:none;'
+  >14</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+ </tr>
+ <tr  style=''>
+  <td   style=';border-top:none;
+  border-left:none;'>L2-I/O</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'
+  >64</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+ </tr>
+ <tr  style=''>
+  <td   style=';border-top:none;
+  border-left:none;'>Network</td>
+  <td  style='border-top:none;border-left:none;'
+  >6</td>
+  <td  style='border-top:none;border-left:none;'
+  >11</td>
+
+  <td  style='border-top:none;border-left:none;'
+  >64</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+ </tr>
+ 
+ 
+ 
+ 
+ <tr  style=''>
+  <td rowspan=5   style='border-bottom:1.5pt solid black;border-top:1.5pt solid black;'><font class='bplus'>SW Distrib</font><br />
+    <br />
+    BGPM_MODE_SWDISTRIB</td>
+  <td rowspan=3  style='border-bottom:1.0pt solid black;
+  border-top:1.5pt solid black;'>Punit</td>
+
+  <td  style='border-top:1.5pt solid black;border-left:none;'
+  >6</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'
+  >4</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'
+  >64</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>yes</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>yes</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+
+  <td  style='border-top:1.5pt solid black;border-left:none;'>yes</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>yes</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td rowspan=5  style='border-bottom:1.5pt solid black;
+  border-top:1.5pt solid black;text-align:left;'><font class='bplus'>Software Distributed</font><br />
+    Global accumulation in UPC_C<br />
+    Punit 64 bit counters<br />
+    Current thread counting<br />
+    Counters controlled independently</td>
+ </tr>
+ 
+ <tr  style=''>
+  <td   style=';border-top:none;
+  border-left:none;' >12</td>
+  <td  style='border-top:none;border-left:none;'
+  >2</td>
+
+  <td  style='border-top:none;border-left:none;'
+  >64</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+ </tr>
+ <tr  style=''>
+  <td   style=';border-top:none;
+  border-left:none;' >24</td>
+  <td  style='border-top:none;border-left:none;'
+  >1</td>
+  <td  style='border-top:none;border-left:none;'
+  >64</td>
+
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+
+  <td  style='border-top:none;border-left:none;'>no</td>
+ </tr>
+ <tr  style=''>
+  <td   style=';border-top:none;
+  border-left:none;'>L2-I/O</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'
+  >64</td>
+
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+
+ </tr>
+ <tr  style=''>
+  <td   style=';border-top:none;
+  border-left:none;'>Network</td>
+  <td  style='border-top:none;border-left:none;'
+  >6</td>
+  <td  style='border-top:none;border-left:none;'
+  >11</td>
+  <td  style='border-top:none;border-left:none;'
+  >64</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+ </tr>
+ <tr  style=''>
+
+
+
+
+  <td rowspan=5   style='border-bottom:1.5pt solid black;border-top:1.5pt solid black;'><font class='bplus'>HW Distrib</font><br />
+    <br />
+    BGPM_MODE_HWDISTRIB</td>
+  <td rowspan=3  style='border-bottom:1.0pt solid black;
+  border-top:1.5pt solid black;'>Punit</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'
+  >6</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'
+  >4</td>
+
+  <td  style='border-top:1.5pt solid black;border-left:none;'
+  >64</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>yes</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>yes</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td  style='border-top:1.5pt solid black;border-left:none;'>no</td>
+  <td rowspan=5  style='border-bottom:1.5pt solid black;
+  border-top:1.5pt solid black; text-align:left;'><font class='bplus'>HW Distributed</font><br />
+    Sync Control of Punit, L2 &amp; I/O Counters.<br />
+    Use Bgpm_Attach() instead of Bgpm_Apply() to attached Punit event sets to particular hardware threads<br />
+    </td>
+ </tr>
+ 
+ <tr  style=''>
+  <td   style=';border-top:none;
+  border-left:none;' >12</td>
+  <td  style='border-top:none;border-left:none;'
+  >2</td>
+  <td  style='border-top:none;border-left:none;'
+  >64</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+
+ </tr>
+ <tr  style=''>
+  <td   style=';border-top:none;
+  border-left:none;' >24</td>
+  <td  style='border-top:none;border-left:none;'
+  >1</td>
+  <td  style='border-top:none;border-left:none;'
+  >64</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+ </tr>
+
+ <tr  style=''>
+  <td   style=';border-top:none;
+  border-left:none;'>L2-I/O</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'
+  >64</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>no</td>
+ </tr>
+ <tr  style=''>
+  <td   style=';border-top:none;
+  border-left:none;'>Network</td>
+
+  <td  style='border-top:none;border-left:none;'
+  >6</td>
+  <td  style='border-top:none;border-left:none;'
+  >11</td>
+  <td  style='border-top:none;border-left:none;'
+  >64</td>
+  <td  style='border-top:none;border-left:none;'>yes</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+  <td  style='border-top:none;border-left:none;'>&nbsp;</td>
+ </tr>
+ 
+ 
+ 
+ 
+ <tr  style=''>
+  <td rowspan=1   style='border-bottom:1.5pt solid black;border-top:1.5pt solid black;'><font class='bplus'>Default</font><br />
+    BGPM_MODE_DEFAULT</td>
+
+  <td colspan=12 rowspan=1  style='text-align:left;
+  border-bottom:1.5pt solid black;'>Use mode value from environment
+  variable BGPM_ENV_MODE, or use BGPM_MODE_SWDISTRIB by default.</td>
+ </tr>
+ 
+ 
+ 
+ </table>

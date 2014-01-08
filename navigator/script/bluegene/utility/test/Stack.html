@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<html>
+
+<head>
+
+<title>Stack Browser Tests</title>
+
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+
+<script>
+
+
+require(
+[
+    "bluegene/utility/Stack",
+    "bluegene/utility/utility",
+    "dojo/dom",
+    "dojo/parser",
+    "dojo/ready",
+    "dijit/_base/manager",
+    "dijit/form/Button",
+    "doh/runner"
+],
+function(
+        b_utility_Stack,
+        b_utility,
+        d_dom,
+        d_parser,
+        d_ready,
+        j_manager,
+        j_form_Button,
+        doh
+    )
+{
+
+
+var tests = [
+
+function test1() {
+    // When create stack,
+    // first child is selected and visible, other children are hidden.
+
+    var stack1 = new b_utility_Stack( "stack1" );
+    doh.is( d_dom.byId( "child1" ), stack1.getSelectedChild() );
+    doh.t( b_utility.isVisible( "child1" ) );
+    doh.t( ! b_utility.isVisible( "child2" ) );
+},
+
+
+function selectChild_byElement() {
+    // Can select a different child by selectChild.
+    // getSelectedChild returns the slected element, only that one isVisible.
+
+    var stack1 = new b_utility_Stack( "stack2" );
+
+    stack1.selectChild( d_dom.byId( "s2-2" ) );
+
+    doh.t( stack1.getSelectedChild() === d_dom.byId( "s2-2" ) );
+    doh.t( ! b_utility.isVisible( "s2-1" ) );
+    doh.t( b_utility.isVisible( "s2-2" ) );
+},
+
+function selectChild_byId() {
+    // Can also selectChild with just ID rather than element.
+
+    var stack1 = new b_utility_Stack( "stack3" );
+
+    stack1.selectChild( "s3-2" );
+
+    doh.t( stack1.getSelectedChild() === d_dom.byId( "s3-2" ) );
+},
+
+
+function stack_dijit() {
+    // Can work with a Stack containing a dijit.
+
+    var stack1 = new b_utility_Stack( "stack4" );
+    doh.is( d_dom.byId( "s4-1" ), stack1.getSelectedChild() );
+    doh.t( b_utility.isVisible( "s4-1" ) );
+    doh.t( ! b_utility.isVisible( "s4-2" ) );
+
+    stack1.selectChild( "s4-2" );
+
+    doh.t( stack1.getSelectedChild() === j_manager.byId( "s4-2" ).domNode );
+    doh.t( ! b_utility.isVisible( "s4-1" ) );
+    doh.t( b_utility.isVisible( "s4-2" ) );
+
+},
+
+
+function childfn_noData() {
+    // Can set a fn for a child, that fn is called when the child is set.
+    // Should be able to set the args if the default child has a fn.
+    
+    var called = false;
+
+    var stack1 = new b_utility_Stack(
+            "stack5",
+            [ { node: "s5-2", fn: function() { called = true; } } ]
+        );
+
+    stack1.selectChild( "s5-2" );
+
+    doh.t( called );
+},
+
+function childfn_data() {
+    // Can pass a single argument to the function when call selectChild.
+
+    var called = "";
+
+    var stack1 = new b_utility_Stack(
+            "stack6",
+            [ { node: "s6-2", fn: function( s ) { called = s; } } ]
+        );
+
+    stack1.selectChild( "s6-2", "theValue" );
+
+    doh.is( "theValue", called );
+}
+
+];
+
+
+var onLoad = function() {
+    doh.register( "bluegene/utility/test/StackHTML", tests );
+    doh.run();
+};
+
+
+d_ready( onLoad );
+
+
+} );
+
+
+</script>
+
+</head>
+
+<body>
+
+    <span id="stack1">
+        <span id="child1">Test2</span>
+        <span id="child2">Test3</span>
+    </span>
+
+    <span id="stack2">
+        <span id="s2-1">Test2</span>
+        <span id="s2-2">Test3</span>
+    </span>
+
+    <span id="stack3">
+        <span id="s3-1">Test2</span>
+        <span id="s3-2">Test3</span>
+    </span>
+
+    <span id="stack4">
+        <span id="s4-1">Test3</span>
+        <button id="s4-2" data-dojo-type="dijit.form.Button">Test2</button>
+    </span>
+
+    <span id="stack5">
+        <span id="s5-1">Test3</span>
+        <span id="s5-2">Test2</span>
+    </span>
+
+    <span id="stack6">
+        <span id="s6-1">Test3</span>
+        <span id="s6-2">Test2</span>
+    </span>
+
+</body>
+
+</html>

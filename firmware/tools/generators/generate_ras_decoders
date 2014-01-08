@@ -1,0 +1,47 @@
+
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp.  2010, 2012                              
+# US Government Users Restricted Rights - Use, duplication or      
+#   disclosure restricted by GSA ADP Schedule Contract with IBM    
+#   Corp.                                                          
+#                                                                  
+# This software is available to you under the Eclipse Public       
+# License (EPL).                                                   
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+generate() {
+
+  java -classpath . com.ibm.bluegene.tools.registers.RasDecoder --f $1.xml > _$1.c
+}
+
+
+LST="bedram_interrupt_status clockstop_interrupt_state dc_arbiter_interrupt_status ddr_arbiter_interrupt_status devbus_interrupt_state envmon_interrupt_status
+gea_interrupt_state l1p_interrupt_state l2_central_interrupt_state l2_counter_interrupt_state l2_interrupt_state msgc_interrupt_state testint_interrupt_state
+upc_interrupt_state wu_interrupt_state"
+
+for F in $LST ; 
+do
+
+  echo "--$F--"
+  generate $F
+done
+
+
+#PCIE_Interrupt_State_Register.xml
+#Root_Complex_Status_Register.xml
+#UTL_PCI_Express_Port_Error_Severity_Register.xml
+#UTL_PCI_Express_Port_Interrupt_Enable_Register.xml
+#UTL_PCI_Express_Port_Status_Register.xml
+#UTL_System_Bus_Agent_Error_Severity_Register.xml
+#UTL_System_Bus_Agent_Interrupt_Enable_Register.xml
+#UTL_System_Bus_Agent_Status_Register.xml
+

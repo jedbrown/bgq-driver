@@ -1,0 +1,37 @@
+<register width="64" name="ENVMON_INTERRUPT_STATE" prefix="EN_DCR" description="tbd">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <field bit="0" name="LOCAL_RING" description="Parity error on DCR ring." category="fatal" />
+  <field bit="1" name="EXCEEDS_EN0" description="en0 input reg exceeds maximum threshold" category="reserved" />
+  <field bit="2" name="EXCEEDS_EN1" description="en1 input reg exceeds maximum threshold" category="reserved" />
+  <field bit="3" name="EXCEEDS_EN2" description="en2 input reg exceeds maximum threshold" category="reserved" />
+  <field bit="4" name="EXCEEDS_EN3" description="en3 input reg exceeds maximum threshold" category="reserved" />
+  <field bit="5" name="EXCEEDS_EN4" description="en4 input reg exceeds maximum threshold" category="reserved" />
+  <field bit="6" name="GENERAL_INTERRUPT_EN5" description="en5 general interrupt is true" category="reserved" />
+  <field bit="7" name="LESSTHAN_EN0" description="en0 input reg less than minimum threshold" category="reserved" />
+  <field bit="8" name="LESSTHAN_EN1" description="en1 input reg less than minimum threshold" category="reserved" />
+  <field bit="9" name="LESSTHAN_EN2" description="en2 input reg less than minimum threshold" category="reserved" />
+  <field bit="10" name="LESSTHAN_EN3" description="en3 input reg less than minimum threshold" category="reserved" />
+  <field bit="11" name="LESSTHAN_EN4" description="en4 input reg less than minimum threshold" category="reserved" />
+  <field bit="12" name="FSM_CHECKSUM_FAIL" description="FSM checksum fail" category="fatal" />
+  <field bit="13" name="FSM_SEQ_FAIL" description="FSM bad sequence detected" category="fatal" />
+  <field bit="14" name="TVSENSE_EXCEEDS_MAX" description="trigger for tvsense exceeded maximum detected " category="reserved" />
+  <field bit="15" name="TVSENSE_LESSTHAN_MIN" description="trigger for tvsense less than minimum detected " category="reserved" />
+</register>

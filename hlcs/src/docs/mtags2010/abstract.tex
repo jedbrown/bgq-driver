@@ -1,0 +1,26 @@
+% begin_generated_IBM_copyright_prolog                             %
+%                                                                  %
+% This is an automatically generated copyright prolog.             %
+% After initializing,  DO NOT MODIFY OR MOVE                       %
+% ================================================================ %
+%                                                                  %
+% (C) Copyright IBM Corp.  2011, 2011                              %
+% Eclipse Public License (EPL)                                     %
+%                                                                  %
+% ================================================================ %
+%                                                                  %
+% end_generated_IBM_copyright_prolog                               %
+As supercomputers scale to a million processor cores and beyond, the underlying resource management
+architecture needs to provide a flexible mechanism to manage the wide variety of workloads executing on the
+machine. In this paper we describe the novel approach of the Blue Gene/Q (BG/Q) supercomputer in addressing
+these workload requirements by providing resource management services that support both the high performance
+computing (HPC) and high-throughput computing (HTC) paradigms. We explore how the resource management
+implementations of the prior generation Blue Gene (BG/L and BG/P) systems evolved and led us down the path to
+developing services on BG/Q that focus on scalability, flexibility and efficiency. Also provided is an
+overview of the main components comprising the BG/Q resource management architecture and how they interact
+with one another. Introduced in this paper are BG/Q concepts for partitioning I/O and compute resources to
+provide I/O resiliency while at the same time providing for faster block (partition) boot times. New features, such as
+the ability to run a mix of HTC and HPC workloads on the same block are explained, and the advantages of this
+type of environment are examined. Similar to how Many-task computing (MTC) \cite{raicu:08} aims to combine elements of HTC
+and HPC, the focus of BG/Q has been to unify the two models in a flexible manner where hybrid workloads
+having both HTC and HPC characteristics are managed simultaneously.

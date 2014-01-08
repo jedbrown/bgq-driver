@@ -1,0 +1,35 @@
+<register width="64" name="UPC_C_INTERRUPT_STATE" prefix="UPC_C_DCR" description="tbd">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <field bit="62" name="DEVBUS_CTL_PERR" description="DevBus control parity error " category="fatal" />
+  <field bit="61" name="PRING_ERROR" description="An error was detected on the Processor/L2 UPC Daisy Chain " category="fatal" />
+  <field bit="60" name="PRING_SEND_SM_ERROR" description="Processor ring send state machine error. " category="fatal" />
+  <field bit="59" name="PRING_RCV_SM_ERROR" description="Processor ring receive state machine error. " category="fatal" />
+  <field bit="58" name="MMIO_SM_ERROR" description="MMIO state machine error. " category="fatal" />
+  <field bit="57" name="ACCUM_SM_ERROR" description="Accumulate state machine error. " category="fatal" />
+  <field bit="56" name="UPC_P_SRAM_PERR" description="upc_p sram parity error" category="fatal" />
+  <field bit="55" name="IO_SRAM_PERR" description="IO sram parity error" category="fatal" />
+  <field bit="54" name="IORING_RCV_SM_ERROR" description="IO ring receive state machine error. " category="fatal" />
+  <field bit="53" name="IORING_ERROR" description="An error was detected on the IO UPC Daisy Chain " category="fatal" />
+  <field bit="51" name="M1_OVF" description="Mode1 counter overflow " category="software" />
+  <field bit="63" name="PROC_COUNTER_OVF" description="One of the Processor/L2 Upc counters overflowed. " category="software" />
+  <field bit="62" name="IO_COUNTER_OVF" description="One of the IO counters overflowed. " category="software" />
+  <field bit="61" name="MODE2_DONE" description="Mode2 Capture is complete " category="software" />
+</register>

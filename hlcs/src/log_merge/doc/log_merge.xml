@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY product "log_merge">
+]>
+
+<refentry lang="en" id="log_merge">
+
+<refentryinfo>
+    <productname>&product;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>IBM</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+
+<refmeta>
+    <refentrytitle>&product;</refentrytitle>
+    <manvolnum>1</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&product;</refname>
+    <refpurpose>merge Blue Gene log files</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id="log_merge.synopsis">
+    <title>Synopsis</title>
+    <cmdsynopsis>
+        <command>log_merge</command>
+        <arg rep="repeat">OPTION</arg>
+        <arg rep="repeat">FILE or DIRECTORY</arg>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id="log_merge.description">
+    <title>Description</title>
+    <para>
+        log_merge reads Blue Gene log files and merges them, displaying log entries from different files in order.
+        This can be useful for gathering the log output from multiple processes to help diagnose a problem.
+        Blue Gene log files use a common format for log entries that allows them to be merged in this way.
+    </para>
+    <para>
+        The output of log_merge is the log entries from the log files, with each entry prefixed
+        with the filename or the process name.
+        Use the --map (or -m) option to print the process name rather than the filename.
+    </para>
+    <para>
+        The input files can be specified on the command line or read from stdin.
+        If no files are given then the log files used are the ones in the default location,
+        /bgsys/logs/BGQ or the value  for the log directory in the Blue Gene configuration file (bg.properties).
+        If a directory is given then log_merge will use every file in the directory.
+        It does not recurse into subdirectories of the given directory.
+    </para>
+    <para>
+        If -, -0, or --null is given on the command line then log_merge will read file or directory names from stdin.
+        The filenames must be separated by a newline character unless -0 or --null is given on the command line.
+        The filenames must be separated by a null character if -0 or --null is used.
+        If you use the find command to generate the list of files, use -print0 to generate a list of filenames separated by a null character.
+    </para>
+    <para>
+        log_merge works in one of two modes: 'historical' or 'live'.
+        The default mode is historical.
+        In historical mode, log_merge reads log entries within the interval from the existing log files and merges them into a single stream.
+        The interval is specified using the --start and --end command line options.
+    </para>
+    <para>
+        In live mode, log_merge monitors the log files for new output and prints the log entries as they are added.
+        This is useful for monitoring the Blue Gene control system processes.
+        Use the --live option to run log_merge in live mode.
+    </para>
+</refsect1>
+
+<refsect1 id="log_merge.options">
+    <title>Options</title>
+    <variablelist>
+        <varlistentry>
+            <term><option>--live</option></term>
+            <listitem>
+                <para>Display new log entries as they are written.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--map, -m</option></term>
+            <listitem>
+                <para>Map log filenames prefixed to the log entry to shorter server names.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--start</option> timestamp</term>
+            <listitem>
+                <para>The start time for the interval. See TIMESTAMP FORMAT.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--end</option> timestamp</term>
+            <listitem>
+                <para>The end time for the interval. See TIMESTAMP FORMAT.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--null, -0</option></term>
+            <listitem>
+                <para>File names read from stding are terminated by a null character instead of by a newline.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--properties</option> filename</term>
+            <listitem>
+                <para>Blue Gene configuration file.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--verbose</option> logging-spec</term>
+            <listitem>
+                <para>The --verbose argument can be given multiple times. The format for the argument is as follows:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>logger=level : set the logger to the level</para></listitem>
+                    <listitem><para>level : set the default logger to the level</para></listitem>
+                    <listitem><para>logger : set the logger's level to DEBUG</para></listitem>
+                    <listitem><para>"" : set the default logger's level to DEBUG</para></listitem>
+                </itemizedlist>
+                <para>These values are allowed for the level:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>OFF / O / 0</para></listitem>
+                    <listitem><para>FATAL / F / 1</para></listitem>
+                    <listitem><para>ERROR / E / 2</para></listitem>
+                    <listitem><para>WARN / W / 3</para></listitem>
+                    <listitem><para>INFO / I / 4</para></listitem>
+                    <listitem><para>DEBUG / D / 5</para></listitem>
+                    <listitem><para>TRACE / T / 6</para></listitem>
+                    <listitem><para>ALL / A / 7</para></listitem>
+                </itemizedlist>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>-h, --help</option></term>
+            <listitem>
+                <para>Print help text</para>
+            </listitem>
+        </varlistentry>
+    </variablelist>
+</refsect1>
+
+<refsect1 id="log_merge.timestamp">
+    <title>timestamp format</title>
+    <para>
+        The format of timestamps, used in the --start and --end options, are as follows:
+    </para>
+    <itemizedlist spacing="compact">
+        <listitem><para>YYYY-mm-dd HH:MM::SS.sss</para></listitem>
+        <listitem><para>YYYY-mm-dd</para></listitem>
+        <listitem><para>mm-dd</para></listitem>
+        <listitem><para>HH:MM::SS.sss</para></listitem>
+    </itemizedlist>
+    <para>
+        Where YYYY is the year, mm is the month number, dd is the day, HH is the hour in 24-hour format, MM is the minute, SS is the seconds, and sss is the fractions of a second.
+    </para>
+    <para>
+        When a date is given without a timestamp, the actual time is midnight of that day if it's the --start option or midnight of the next day if it's the --end option.
+        For example, to show the log entries for June 7, you could use --start 06-07 --end 06-07.
+    </para>
+</refsect1>
+
+<refsect1 id="log_merge.seealso">
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>bgmaster_server</refentrytitle>
+           <manvolnum>8</manvolnum>
+    </citerefentry>
+    </para>
+</refsect1>
+
+</refentry>

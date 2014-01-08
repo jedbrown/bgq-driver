@@ -1,0 +1,17 @@
+ The --verbose argument can be given multiple times and requires 1 parameter. The format is as follows:
+ - logger=level : set the logger to the level.
+ - level : set the default logger to the level.
+ - logger : set the logger's level to DEFAULT (the logger name must contain a '.' character).
+ - "" : set the default logger's level to DEFAULT.
+ 
+ These values are allowed for the level:
+ 
+ - OFF / O / 0
+ - FATAL / F / 1
+ - ERROR / E / 2
+ - WARN / W / 3
+ - INFO / I / 4
+ - DEBUG / D / 5
+ - TRACE / T / 6
+ - ALL / A / 7
+

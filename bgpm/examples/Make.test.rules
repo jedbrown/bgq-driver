@@ -1,0 +1,24 @@
+#
+# rules for building CNK applications
+# 
+
+
+BASENAME = /bin/basename
+RM_F = /bin/rm -f
+
+
+
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) -c $< -o $*.o
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $*.o
+
+%.o: %.S
+	$(CC) $(CFLAGS) -Os $< -o $*.o
+
+%.elf:
+	$(CXX) -o $@ $(filter %.o,$^) $(LDFLAGS) $(foreach e,$(LIB_DIRS),-L$(e)) $(foreach e,$(LIBS),-l$(e))
+
+
+	

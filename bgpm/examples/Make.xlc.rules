@@ -1,0 +1,38 @@
+
+CFLAGS = -qpic=small
+
+#optimization
+CFLAGS += -O3 -qhot 
+
+# CPU Flags
+CFLAGS += -q64 -qarch=qp -qtune=qp -qflag=w:w 
+
+# Creates a dependency file
+CFLAGS += -qmakedep -MF .dep.$(<F).d
+
+# path for BGQ installation
+CFLAGS += -I$(BGQ_INSTALL_DIR)
+
+# path for cnk application implementation of SPIs
+CFLAGS += -I$(BGQ_INSTALL_DIR)/spi/include/kernel/cnk
+
+# for additional command line args, ie "make ARGS=-Dxxx=yyy"
+CFLAGS += $(ARGS)
+
+
+# -qnortti -qnoeh 
+CXXFLAGS = $(CFLAGS) 
+
+
+LDFLAGS  =
+LIB_DIRS = 
+LIBS = rt stdc++
+
+
+LD      = $(BGQ_CROSS_LD)
+CXX     = $(XLBIN)/bgxlC_r
+CC      = $(XLBIN)/bgxlC_r
+FC      = $(BGQ_CROSS_FC)
+AR      = $(BGQ_CROSS_AR) crv
+
+

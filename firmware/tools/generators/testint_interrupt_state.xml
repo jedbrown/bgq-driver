@@ -1,0 +1,53 @@
+<register width="64" name="TI_INTERRUPT_STATE" prefix="TESTINT_DCR" description="tbd">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <field bit="0" name="BIC_TDR_0" description="BIC TDR bit 0"  category="software" />
+  <field bit="1" name="BIC_TDR_1" description="BIC TDR bit 1"  category="software" />
+  <field bit="2" name="BIC_TDR_2" description="BIC TDR bit 2"  category="software" />
+  <field bit="3" name="BIC_TDR_3" description="BIC TDR bit 3"  category="software" />
+  <field bit="4" name="BIC_TDR_4" description="BIC TDR bit 4"  category="software" />
+  <field bit="5" name="BIC_TDR_5" description="BIC TDR bit 5"  category="software" />
+  <field bit="6" name="BIC_TDR_6" description="BIC TDR bit 6"  category="software" />
+  <field bit="7" name="BIC_TDR_7" description="BIC TDR bit 7"  category="software" />
+  <field bit="8" name="BIC_TDR_8" description="BIC TDR bit 8"  category="software" />
+  <field bit="9" name="BIC_TDR_9" description="BIC TDR bit 9"  category="software" />
+  <field bit="10" name="BIC_TDR_10" description="BIC TDR bit 10"  category="software" />
+  <field bit="11" name="BIC_TDR_11" description="BIC TDR bit 11"  category="software" />
+  <field bit="12" name="BIC_TDR_12" description="BIC TDR bit 12"  category="software" />
+  <field bit="13" name="BIC_TDR_13" description="BIC TDR bit 13"  category="software" />
+  <field bit="14" name="BIC_TDR_14" description="BIC TDR bit 14"  category="software" />
+  <field bit="15" name="BIC_TDR_15" description="BIC TDR bit 15"  category="software" />
+  <field bit="16" name="BIC_TDR_16" description="BIC TDR bit 16"  category="software" />
+  <field bit="17" name="BIC_TDR_17" description="BIC TDR bit 17"  category="software" />
+  <field bit="18" name="BIC_TDR_18" description="BIC TDR bit 18"  category="software" />
+  <field bit="19" name="BIC_TDR_19" description="BIC TDR bit 19"  category="software" />
+  <field bit="20" name="BIC_TDR_20" description="BIC TDR bit 20"  category="software" />
+  <field bit="21" name="BIC_TDR_21" description="BIC TDR bit 21"  category="software" />
+  <field bit="22" name="BIC_TDR_22" description="BIC TDR bit 22"  category="software" />
+  <field bit="23" name="BIC_TDR_23" description="BIC TDR bit 23"  category="software" />
+  <field bit="24" name="GSYNC" description="Global Sync pulse"  category="software" />
+  <field bit="25" name="DCR_TO_PCB_ERR" description="DCR-to-PCB interface error"  category="fatal" />
+  <field bit="26" name="LOCAL_RING" description="Parity error on DCR ring." category="fatal" />
+  <field bit="27" name="INT_PARITY_ERROR" description="TestInt Parity Error"  category="fatal" />
+  <field bit="28" name="INT_MBOX_01_EQ" description="Mailbox_Reg0 == Mailbox_Reg1"  category="reserved" />
+  <field bit="29" name="INT_MBOX_01_NE" description="Mailbox_Reg0 != Mailbox_Reg1"  category="reserved" />
+  <field bit="30" name="INT_MBOX_23_EQ" description="Mailbox_Reg2 == Mailbox_Reg3"  category="reserved" />
+  <field bit="31" name="INT_MBOX_23_NE" description="Mailbox_Reg2 != Mailbox_Reg3"  category="reserved" />
+</register>

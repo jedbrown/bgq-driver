@@ -1,0 +1,25 @@
+
+####################################
+%package navigator
+
+Summary: Blue Gene Navigator administrative web application
+Group: %{product_group}
+Release: 0
+Requires: httpd,mod_ssl
+
+%description navigator
+%{bgq_package_description}
+
+This package contains the Blue Gene Navigator administrative web application.
+
+
+%files navigator
+
+%defattr(644,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/navigator
+
+%{_base_dir}/navigator/etc
+%{_base_dir}/navigator/WebContent

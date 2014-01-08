@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+
+<html>
+<head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+<title>Blue Gene Web Services Explorer</title>
+
+<style>
+    @import "resources/script/bg_navigator/dojo/resources/dojo.css";
+    @import "resources/script/bg_navigator/dijit/themes/claro/claro.css";
+    @import "resources/script/bg_navigator/dijit/themes/claro/document.css";
+    @import "resources/script/bg_navigator/dojox/grid/enhanced/resources/EnhancedGrid.css";
+    @import "resources/script/bg_navigator/dojox/grid/enhanced/resources/claro/EnhancedGrid.css";
+
+    @import "resources/style/bluegene.css";
+
+    html, body, #main-div, #explorer2 { width: 100%; height: 100%; border: 0; margin: 0; padding: 0; }
+</style>
+
+<script src="resources/script/bg_navigator/dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'bluegene': '../bluegene' }"></script>
+<script src="resources/script/bg_navigator/dojo/moreDojoLayer.js"></script>
+<script src="resources/script/bg_navigator/bluegene/bluegeneLayer.js"></script>
+
+<script>
+
+console.log( "before require!" );
+
+require(
+[
+    "bluegene/explorer/Explorer",
+    "dojo/ready"
+],
+
+function(
+        b_explorer_Explorer,
+        d_ready
+    )
+{
+
+    console.log( "in require()" );
+    d_ready( b_explorer_Explorer.onLoad );
+
+} );
+
+
+</script>
+
+</head>
+
+<body class="claro">
+
+<div id="main-div" data-dojo-type="bluegene.explorer.dijit.Explorer"></div>
+
+</body>

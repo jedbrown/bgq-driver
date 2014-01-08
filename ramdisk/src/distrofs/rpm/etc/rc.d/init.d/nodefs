@@ -1,0 +1,227 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# nodefs 	Script to configure persistent file spaces for a BG/Q I/O node or	
+#               Log-In node.
+#
+#		Persistent data goes to /bgsys/linux/nodefs/<IP Address>/<persistent directory> .
+#
+#		NOTE: This script must be run after /bgsys is mounted.
+#
+# Author:	Jay S. Bryant (jsbryant@us.ibm.com)
+#
+
+# Source function library
+. /etc/init.d/functions
+
+if [ ! -z $BG_INTF0_IPV4 ] && [ $BG_INTF0_IPV4 != "0.0.0.0" ] ; then
+	NODE_IP=$BG_INTF0_IPV4
+elif [ ! -z $BG_INTF1_IPV4 ] && [ $BG_INTF1_IPV4 != "0.0.0.0" ] ; then
+	NODE_IP=$BG_INTF1_IPV4
+elif [ ! -z $BG_INTF0_IPV6 ] && [ $BG_INTF0_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+	NODE_IP=$BG_INTF0_IPV6
+elif [ ! -z $BG_INTF1_IPV6 ] && [ $BG_INTF1_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+	NODE_IP=$BG_INTF1_IPV6
+fi
+
+NODEFS_LOC=/bgsys/linux/nodefs/$NODE_IP
+LOCKFILE=/var/lock/subsys/nodefs
+
+# Define the persistent files/directories here.  NOTE: Dirs need to end with a '/' .
+DIRS="var/adm/ var/log/btmp var/log/messages var/log/secure var/log/wtmp var/spool/abrt/ var/mmfs/"
+
+function start
+{
+	SUCCESS=1	
+
+        echo -n $"Configuring persistent file spaces: "
+
+	if [ ! -z $NODE_IP ] ; then
+
+		# Make sure the ndoe's directory exists.
+		if [ ! -d $NODEFS_LOC ] ; then
+			RC=$( mkdir $NODEFS_LOC 2>&1 )
+			if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+                                        "nodefs - Failure creating persistent nodefs directory $NODEFS_LOC. mkdir returned: $RC"
+			fi
+		fi
+
+		# NOTE: Dirs need to end with '/'.
+		for DIR in $DIRS ; do
+			
+			# Resetting the return values.  Try to continue and bind the rest of the
+			# directories if a problem is encountered.
+			RET=0
+			RC=""
+
+			if [[ $DIR =~ /$ ]] && [ ! -d $NODEFS_LOC/$DIR ] ; then
+				
+				RC=$( mkdir -p $NODEFS_LOC/$DIR 2>&1 )
+				if [ ! -z "$RC" ]  ; then
+					SUCCESS=0
+					RET=1
+					bgras $BGRAS_ID_SCRIPT_FAILURE \
+						"nodefs - Failure creating persistent nodefs directory $NODEFS_LOC/$DIR. mkdir returned: $RC"
+				else
+					# If making the var/tmp dir, set the right permissions.
+					if [ $DIR == "var/tmp" ] ; then
+						chmod 1777 $NODEFS_LOC/$DIR
+					fi
+
+					# If we are making the directory for the first time populate it with
+					# the default data from nfs.
+					cp -a $DIR/* $NODEFS_LOC/$DIR &> /dev/null
+				fi
+			# If it isn't a directory it must be a file.  Handle accordingly.
+			elif [ ! -e $NODEFS_LOC/$DIR ] ; then
+				# Need to create the parent directory if they don't exist.
+				BASEDIR=`dirname $DIR`
+				if [ ! -d $NODEFS_LOC/$BASEDIR ] ; then
+					RC=$(mkdir -p $NODEFS_LOC/$BASEDIR 2>&1 )
+					if [ ! -z "$RC" ] ; then
+                                        	bgras $BGRAS_ID_SCRIPT_FAILURE \
+                                              	      "nodefs - Failure initializing persistent nodefs file $NODEFS_LOC/$BASEDIR. mkdr returned: $RC"
+					fi
+				fi
+				RC=$( cp -a $DIR $NODEFS_LOC/$DIR 2>&1 )
+				if [ ! -z "$RC" ] ; then
+					SUCCESS=0
+					RET=1
+					bgras $BGRAS_ID_SCRIPT_FAILURE \
+					      "nodefs - Failure initializing persistent nodefs file $NODEFS_LOC/$DIR. cp returned: $RC"
+				fi
+			fi
+			# Make the mount point if it doesn't already exist.
+			if [[ $DIR =~ /$ ]] && [ ! -d $DIR ] ; then
+				RC=$( mkdir -p $DIR 2>&1 )
+				if [ ! -z "$RC" ] ; then
+					SUCCESS=0
+					RET=1
+					bgras $BGRAS_ID_SCRIPT_FAILURE \
+					"nodefs - Failure creating mount point $DIR .  mkdir returned: $RC"
+				fi
+			else
+                                RC=$( touch $DIR 2>&1 )
+                                if [ ! -z "$RC" ] ; then
+                                        SUCCESS=0
+                                        RET=1
+                                        bgras $BGRAS_ID_SCRIPT_FAILURE \
+                                        "nodefs - Failure creating mount point $DIR .  touch returned: $RC"
+                                fi
+			fi
+			# Bind mount  to the persistent space.
+			if [ $RET -eq 0 ] ; then
+				RC=$( mount --bind $NODEFS_LOC/$DIR $DIR 2>&1 )
+				if [ ! -z "$RC" ] ; then
+					SUCCESS=0
+					bgras $BGRAS_ID_SCRIPT_FAILURE \
+					"nodefs - Failure binding persistent nodefs directory $NODEFS_LOC/$DIR to $DIR. mount returned: $RC"
+				fi
+			fi
+		done
+
+		# Special case for the random-seed.  If it already exists we just want to bind to it,
+		# otherwise touch the file and bind to it.
+		if [ ! -d $NODEFS_LOC/var/lib ] ; then
+			mkdir -p $NODEFS_LOC/var/lib
+		fi
+		if [ ! -f $NODEFS_LOC/var/lib/random-seed ] ; then 
+		    touch $NODEFS_LOC/var/lib/random-seed
+		fi
+		if [ ! -f /var/lib/random-seed ] ; then
+		    touch /var/lib/random-seed
+		fi
+		mount --bind $NODEFS_LOC/var/lib/random-seed /var/lib/random-seed
+
+		# Make sure we don't have an old RPM database sitting around
+		rpm -qif /usr/bin/gcc | grep "Version" | grep "4.4.4" &> /dev/null
+		if [ $? -eq 0 ] ; then
+			cp -a /bgsys/linux/ionfloor/var/lib/rpm /var/lib
+		fi
+
+		if [ $SUCCESS -eq 1 ] ; then
+			touch $LOCKFILE
+			success
+			echo -en "\n"
+			exit 0
+		else
+			failure
+			echo -en "\n"
+			exit 1
+		fi
+
+	else
+		skipped
+	fi
+
+
+}
+
+function stop
+{
+       if [ ! -z $NODE_IP ] ; then
+
+	       SUCCESS=1
+
+	       echo -n $"Unmounting persistent file spaces: "
+
+                for DIR in $DIRS ; do 
+			# Make sure the point is mounted.
+			cat /proc/mounts | grep "$DIR" &> /dev/null
+			if [ $? -eq 0 ] ; then
+				umount -l $DIR
+				if [ $? -ne 0 ] && [ $SUCCESS -eq 1 ] ; then
+					SUCCESS=0
+				fi
+			fi
+		done
+
+                if [ $SUCCESS -eq 1 ] ; then
+                        rm -f $LOCKFILE
+                        success
+                        echo -en "\n"
+                        exit 0
+                else
+                        failure
+                        echo -en "\n"
+                        exit 1
+                fi
+	fi
+
+
+} 
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+	stop
+	;;
+    *)
+        echo $"Usage: $0 {start} {stop}"
+        exit 3
+        ;;
+esac
+
+exit $?
+

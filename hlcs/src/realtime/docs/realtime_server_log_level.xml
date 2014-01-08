@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY command "realtime_server_log_level">
+<!ENTITY manSection "8">
+]>
+
+<refentry lang="en" id="realtime_server_log_level">
+
+<refentryinfo>
+    <productname>&command;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>IBM</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+
+<refmeta>
+    <refentrytitle>&command;</refentrytitle>
+    <manvolnum>&manSection;</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&command;</refname>
+    <refpurpose>Update the run-time logging level for the Blue Gene real-time server</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id="realtime_server_log_level.synopsis">
+    <title>Synopsis</title>
+    <cmdsynopsis>
+        <command>realtime_server_log_level</command>
+        <arg rep="repeat"><replaceable>OPTION</replaceable></arg>
+        <arg rep="repeat"><replaceable>LOGGER</replaceable>=<replaceable>LEVEL</replaceable></arg>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id="realtime_server_log_level.description">
+    <title>Description</title>
+    <para>
+        The realtime_server_log_level command updates the run-time logging level for the real-time server.
+    </para>
+    <para>
+        The positional parameters to the realtime_server_log_level command are new settings for the loggers.
+    </para>
+    <para>
+        The logger part of the positional parameters is a logger name, for example, "ibm.realtime".
+    </para>
+    <para>
+        The level part of the positional parameters is a logging level, the logging levels are as follows:
+        <itemizedlist spacing="compact">
+            <listitem><para>OFF / O / 0</para></listitem>
+            <listitem><para>FATAL / F / 1</para></listitem>
+            <listitem><para>ERROR / E / 2</para></listitem>
+            <listitem><para>WARN / W / 3</para></listitem>
+            <listitem><para>INFO / I / 4</para></listitem>
+            <listitem><para>DEBUG / D / 5</para></listitem>
+            <listitem><para>TRACE / T / 6</para></listitem>
+            <listitem><para>ALL / A / 7</para></listitem>
+        </itemizedlist>
+    </para>
+</refsect1>
+
+<refsect1 id="realtime_server_log_level.options">
+    <title>Options</title>
+    <variablelist>
+        <varlistentry>
+            <term><option>--properties</option> filename</term>
+            <listitem>
+                <para>Blue Gene configuration file</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--host</option> port-spec</term>
+            <listitem>
+                <para>
+                    Server host and port to connect to.
+                    Enclose ipv6 addresses in square brackets.
+                    For link-local addresses, append the interface to the address after a % character.
+                    Specify the port after the interface using a colon.
+                </para>
+                <para>
+                    The following are example port-spec values:
+                </para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>127.0.0.1</para></listitem>
+                    <listitem><para>172.16.3.1:12345</para></listitem>
+                    <listitem><para>[::1]</para></listitem>
+                    <listitem><para>[fe80::214:5eff:fre9c:52ce%eth0]</para></listitem>
+                    <listitem><para>[::1]:24555</para></listitem>
+                </itemizedlist>
+            </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+            <term><option>--verbose</option> logging-spec</term>
+            <listitem>
+                <para>The --verbose argument can be given multiple times. The format for the argument is as follows:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>logger=level : set the logger to the level</para></listitem>
+                    <listitem><para>level : set the default logger to the level</para></listitem>
+                    <listitem><para>logger : set the logger's level to DEBUG</para></listitem>
+                    <listitem><para>"" : set the default logger's level to DEBUG</para></listitem>
+                </itemizedlist>
+                <para>These values are allowed for the level:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>OFF / O / 0</para></listitem>
+                    <listitem><para>FATAL / F / 1</para></listitem>
+                    <listitem><para>ERROR / E / 2</para></listitem>
+                    <listitem><para>WARN / W / 3</para></listitem>
+                    <listitem><para>INFO / I / 4</para></listitem>
+                    <listitem><para>DEBUG / D / 5</para></listitem>
+                    <listitem><para>TRACE / T / 6</para></listitem>
+                    <listitem><para>ALL / A / 7</para></listitem>
+                </itemizedlist>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>-h, --help</option></term>
+            <listitem>
+                <para>Print help text</para>
+            </listitem>
+        </varlistentry>
+    </variablelist>
+</refsect1>
+
+<refsect1 id="realtime_server_log_level.seealso">
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>bg_realtime_server</refentrytitle>
+           <manvolnum>8</manvolnum>
+	</citerefentry>
+    </para>
+</refsect1>
+
+<refsect1>
+    <title>COPYRIGHT</title>
+    <para>© Copyright IBM Corp. 2010, 2011</para>
+</refsect1>
+
+</refentry>

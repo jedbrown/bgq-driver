@@ -1,0 +1,35 @@
+<File filename="Picture">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!-- Eclipse Public License (EPL)                                     -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <Class name="Picture">
+     <Class name="Circle">
+        <DataMember type="uint32" name="x" />
+        <DataMember type="uint32" name="y" />
+        <DataMember type="uint32" name="radius" />
+        <DataMember type="uchar" name="width" />
+        <DataMember type="bool" name="transparent" />
+        <DataMember type="text" name="name" />
+     </Class>
+
+     <Class name="Polygon">
+        <DataMember type="uint32" name="xvec" occurrences="many" />
+        <DataMember type="uint32" name="yvec" occurrences="many" />
+        <DataMember type="text" name="name" />
+     </Class>
+
+     <DataMember type="Circle" name="circles" occurrences="many" />
+     <DataMember type="Polygon" name="border" />
+     <DataMember type="binary" name="image" />
+     <DataMember type="text" name="designer" />
+  </Class>
+</File>

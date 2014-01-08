@@ -1,0 +1,40 @@
+# -*- mode: makefile-gmake; -*-
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+#  This is an automatically generated copyright prolog.            
+#  After initializing,  DO NOT MODIFY OR MOVE                      
+#   ---------------------------------------------------------------
+#  Licensed Materials - Property of IBM                            
+#  Blue Gene/Q 5765-PER 5765-PRP                                   
+#                                                                  
+#  (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved          
+#  US Government Users Restricted Rights -                         
+#  Use, duplication, or disclosure restricted                      
+#  by GSA ADP Schedule Contract with IBM Corp.                     
+#                                                                  
+#   ---------------------------------------------------------------
+#                                                                   
+#  end_generated_IBM_copyright_prolog
+#
+
+ifneq (${PAMI_PLATFORM},PE)
+include ${ROOTDIR}/Make.config.rules
+else
+include ${ROOTDIR}/Makefiles/Make.${PAMI_PLATFORM}-${PAMI_OS}-${PAMI_ENV}.rules
+endif
+
+# This assumes that ${FAST_CC} is an XL compiler which won't execute
+# on an Intel build host or may not even be installed.  If it isn't
+# XL, one can just ignore the ${XL} variable.  We also don't support
+# RHEL6 yet.
+XL = ${shell if uname -i | grep -qi ppc &&	\
+	test					\
+	 -x "${word 1, ${FAST_CC}}"  -a		\
+	 -x "${word 1, ${FAST_CXX}}" -a		\
+	 -x "${word 1, ${FAST_F77}}" -a		\
+	 -x "${word 1, ${FAST_F90}}"		\
+	; then echo XL ; else echo GCC ; fi}
+
+# This attempts to guess if we are building in parallel.  If not,
+# JLEVEL is set and we can try to do sub-builds in parallel
+JLEVEL = ${shell if echo ${MAKEFLAGS} ${MFLAGS} | grep -qv jobserver; then echo -j6; fi}

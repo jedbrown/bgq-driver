@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<html>
+
+<head>
+
+<title>calcNode Browser Tests</title>
+
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+
+<script>
+
+require(
+[
+    "bluegene/utility/utility",
+    "dojo/dom",
+    "dojo/parser",
+    "dojo/ready",
+    "dijit/_base/manager",
+    "dijit/form/Button",
+    "doh/runner"
+],
+function(
+        b_utility,
+        d_dom,
+        d_parser,
+        d_ready,
+        j_manager,
+        j_form_Button,
+        doh
+    )
+{
+
+
+var u = b_utility;
+
+
+var tests = [
+
+function calcNodeDomNode() {
+    // If pass an DOM Node to calcNode then returns the DOM Node
+    doh.assertTrue( u.calcNode( d_dom.byId( "span1" ) ) === d_dom.byId( "span1" ) )
+},
+
+function calcNodeDijit() {
+    // If pass a dijit to calcNode then get the dijit's domNode.
+    doh.assertTrue( u.calcNode( j_manager.byId( "button1" ) ) === j_manager.byId( "button1" ).domNode )
+},
+
+function calcNodeDijitId() {
+    // If pass the id of a dijit then get the dijit's domNode.
+    doh.assertTrue( u.calcNode( "button1" ) === j_manager.byId( "button1" ).domNode );
+},
+
+function calcNodeElementId() {
+    // If pass the id of an element then get the element.
+    doh.assertTrue( u.calcNode( "span1" ) === d_dom.byId( "span1" ) );
+},
+
+function calcNodesDomNode() {
+    // calcNodes allows multiple arguments.
+    var res = u.calcNodes( "span1" );
+    var exp = [ d_dom.byId( "span1" ) ];
+    doh.t( res.length === exp.length && res[0] === exp[0] );
+},
+
+function calcNodesEmpty() {
+    doh.t( u.calcNodes().length === 0 );
+},
+
+function calcNodesMultiple() {
+    var res = u.calcNodes( "span1", "button1" );
+    var exp = [ d_dom.byId( "span1" ), j_manager.byId( "button1" ).domNode ];
+    doh.t( res.length == exp.length && res[0] === exp[0] && res[1] === exp[1] );
+}
+
+];
+
+
+var onLoad = function() {
+    doh.register( "bluegene/utility/test/calcNodeHTML", tests );
+    doh.run();
+};
+
+
+d_ready( onLoad );
+
+
+} );
+
+
+</script>
+
+</head>
+
+<body>
+    <span id="span1">Sample</span>
+    <button id="button1" data-dojo-type="dijit.form.Button">Button</button>
+</body>
+
+</html>

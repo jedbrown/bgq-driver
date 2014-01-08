@@ -1,0 +1,69 @@
+-- SUMMARY_MACHINE_USAGE
+
+WITH
+
+blocksInUse( blockId, state) AS (
+
+SELECT b.blockId,
+       CASE
+           WHEN d.blockId IS NOT NULL THEN 4
+           WHEN j.blockId IS NOT NULL THEN 3
+           WHEN b.status = 'I' THEN 2
+           ELSE 1 END
+         AS state
+  FROM bgqBlock AS b
+       LEFT OUTER JOIN
+       ( SELECT DISTINCT blockId
+           FROM bgqJob
+       ) AS j
+       ON b.blockId = j.blockId
+       LEFT OUTER JOIN
+       ( SELECT blockId
+           FROM bgqDiagBlocks
+           WHERE endTime IS NULL
+       )  AS d
+       ON b.blockId = d.blockId
+  WHERE b.status <> 'F'
+
+),
+
+sbUsage( mp_location, nodeCardPos, state ) AS (
+  SELECT sb.posInMachine AS mp_location, sb.nodeCardPos, b.state AS state
+    FROM blocksInUse AS b JOIN bgqSmallBlock AS sb ON b.blockId = sb.blockId
+),
+
+lbUsage( mp_location, state ) AS (
+  SELECT bm.bpid mp_location, b.state AS state
+    FROM blocksInUse AS b JOIN bgqBpBlockMap AS bm on b.blockId = bm.blockId
+),
+
+mpNotAvailable( mp_location, state ) AS (
+  SELECT TRIM(location) AS mp_location,
+         CASE status WHEN 'S' THEN 5 ELSE 6 END AS state
+    FROM bgqMidplane
+    WHERE status <> 'A'
+),
+
+nbNotAvailable( mp_location, nodeCardPos, state ) AS (
+
+SELECT TRIM(midplanePos) AS mp_location,
+       position AS nodeCardPos,
+       CASE status WHEN 'S' THEN 5 ELSE 6 END AS state
+  FROM bgqNodeCard
+  WHERE status <> 'A' AND
+        midplanePos NOT IN (SELECT mp_location FROM mpNotAvailable)
+
+)
+
+
+SELECT TRIM(mp_location) AS mp_location, CAST( NULL AS CHAR(1) ) AS nodeCardPos, state
+  FROM lbUsage
+UNION ALL
+SELECT TRIM(mp_location) AS mp_location, nodeCardPos, state
+  FROM sbUsage
+UNION ALL
+SELECT mp_location, CAST( NULL AS CHAR(1) ) AS nodeCardPos, state
+  FROM mpNotAvailable
+UNION ALL
+SELECT mp_location, nodeCardPos, state
+  FROM nbNotAvailable

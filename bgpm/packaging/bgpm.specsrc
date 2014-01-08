@@ -1,0 +1,27 @@
+####################################
+%package bgpm-devel
+
+Summary: Bluegene Hardware Performance Monitoring API 
+Group: %{product_group}
+Release: 0
+
+%description bgpm-devel
+%{bgq_package_description}
+
+This package provides a C programming API for BG/Q Hardware Performance Counters on a 
+compute node.  In addition, the BGPM API provides access to  
+Compute Node Kernel software counters.
+
+
+%files bgpm-devel
+
+%defattr(755,root,root)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/bgpm
+
+%{_base_dir}/bgpm/include
+%{_base_dir}/bgpm/lib
+%{_base_dir}/bgpm/ras
+
+

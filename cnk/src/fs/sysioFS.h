@@ -1,0 +1,273 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/* ================================================================ */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/*                                                                  */
+/* Blue Gene/Q                                                      */
+/*                                                                  */
+/* (C) Copyright IBM Corp.  2010, 2012                              */
+/*                                                                  */
+/* US Government Users Restricted Rights -                          */
+/* Use, duplication or disclosure restricted                        */
+/* by GSA ADP Schedule Contract with IBM Corp.                      */
+/*                                                                  */
+/* This software is available to you under the                      */
+/* Eclipse Public License (EPL).                                    */
+/*                                                                  */
+/* ================================================================ */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+#ifndef _CNK_SYSIOFS_H
+#define _CNK_SYSIOFS_H
+
+// Includes
+#include "virtFS.h"
+#include <ramdisk/include/services/MessageHeader.h>
+#include <ramdisk/include/services/SysioMessages.h>
+#include <cnk/include/Verbs.h>
+#include <inttypes.h>
+#include <errno.h>
+#include <sys/types.h>
+
+class sysioFS : public virtFS
+{
+
+public:
+
+   //! \brief  Default constructor.
+
+   sysioFS(void) : virtFS() {};
+
+   //! \brief  Initialize file system when node is booted.
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int init(void);
+
+   //! \brief  Terminate file system when node is shutdown.
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int term(void);
+
+   //! \brief  Setup before running a job.
+   //! \param  fs File system type.
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int setupJob(int fs);
+
+   //! \brief  Cleanup after running a job.
+   //! \param  fs File system type.
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int cleanupJob(int fs);
+
+   //! \brief  Check if pathname is match for this file system.
+   //! \param  path Pathname to check.
+   //! \return True (always since sysioFS is a default file system).
+
+   bool isMatch(const char *path);
+
+   uint64_t access(const char *pathname, int type);
+   uint64_t accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+   uint64_t bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+   uint64_t chdir(const char *pathname);
+   uint64_t chmod(const char *pathname, mode_t mode);
+   uint64_t chown(const char *pathname, uid_t uid, gid_t gid);
+   uint64_t close(int fd);
+   uint64_t connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+   uint64_t fchown(int fd, uid_t uid, gid_t gid);
+   uint64_t fchmod(int fd, mode_t mode);
+   uint64_t fcntl(int fd, int cmd, uint64_t parm3);
+   uint64_t fstat(int fd, struct stat *statbuf);
+   uint64_t fstat64(int fd, struct stat64 *statbuf);
+   uint64_t fstatfs(int fd, struct statfs *statbuf);
+   uint64_t fstatfs64(int fd, struct statfs64 *statbuf);
+   uint64_t ftruncate(int fd, off_t length);
+   uint64_t ftruncate64(int fd, off64_t length);
+   uint64_t fsync(int fd);
+   uint64_t getdents(int fd, struct dirent *buffer, unsigned int length);
+   uint64_t getdents64(int fd, struct dirent *buffer, unsigned int length);
+   uint64_t getpeername(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+   uint64_t getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+   uint64_t getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen);
+   uint64_t ioctl(int fd, unsigned long int cmd, void *parm3);
+   uint64_t lchown(const char *path, uid_t uid, gid_t gid);
+   uint64_t link(const char *oldpathname, const char *newpathname);
+   uint64_t listen(int sockfd, int backlog);
+   uint64_t llseek(int fd, off64_t offset, off64_t *result, int whence);
+   uint64_t lseek(int fd, off_t offset, int whence);
+   uint64_t lstat(const char *__restrict__ path, struct stat  *__restrict__ statbuf);
+   uint64_t lstat64(const char *path, struct stat64 *statbuf);
+   uint64_t mkdir(const char *pathname, mode_t mode);
+   uint64_t open(const char *pathname, int oflags, mode_t mode);
+   uint64_t poll(struct pollfd *fds, nfds_t nfds, int timeout);
+   uint64_t pread64(int fd, void *buffer, size_t length, off64_t position);
+   uint64_t pwrite64(int fd, const void *buffer, size_t length, off64_t position);
+   uint64_t read(int fd, void *buffer, size_t length);
+   uint64_t recv(int fd, void *buffer, size_t length, int flags);
+   uint64_t recvfrom(int sockfd, void *buffer, size_t length, int flags, struct sockaddr *addr, socklen_t *addrlen);
+   uint64_t readlink(const char *pathname, void *buffer, size_t length);
+   uint64_t rename(const char *oldpathname, const char *newpathname);
+   uint64_t rmdir(const char *pathname);
+   uint64_t send(int sockfd, const void *buffer, size_t length, int flags);
+   uint64_t sendto(int sockfd, const void *buffer, size_t length, int flags, const struct sockaddr *addr, socklen_t addrlen);
+   uint64_t setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+   uint64_t shutdown(int sockfd, int how);
+   uint64_t socket(int domain, int type, int protocol);
+   uint64_t stat(const char *pathname, struct stat *statbuf);
+   uint64_t stat64(const char *pathname, struct stat64 *statbuf);
+   uint64_t statfs(const char *pathname, struct statfs *statbuf);
+   uint64_t statfs64(const char *pathname, struct statfs64 *statbuf);
+   uint64_t symlink(const char *oldpathname, const char *newpathname);
+   uint64_t truncate(const char* pathname, off_t length);
+   uint64_t truncate64(const char *pathname, off64_t length);
+   uint64_t unlink(const char *pathname);
+   uint64_t utime(const char *path, const struct utimbuf *buf);
+   uint64_t write(int fd, const void *buffer, size_t length);
+   uint64_t writev(int fd, const struct iovec *iov, int iovcnt);
+   uint64_t writeRdmaVirt(int fd, const void *buffer, size_t length);
+
+private:
+
+   //! \brief  Fill a message header with valid values.
+   //! \param  header Pointer to message header.
+   //! \param  type Message type value.
+   //! \return Nothing.
+
+   void fillHeader(bgcios::MessageHeader *header, uint16_t type, size_t length);
+
+   //! \brief  Simple exchange of request and reply messages.
+   //! \param  outMsg Pointer to outbound request message.
+   //! \param  inMsg Pointer to address of inbound reply message.
+   //! \return Return code.
+
+   uint64_t exchange(void *outMsg, void **inMsg);
+
+   //! \brief  Simple exchange of request (with one path name) and reply messages.
+   //! \param  outMsg Pointer to outbound request message.
+   //! \param  pathname Pointer to path name string.
+   //! \param  inMsg Pointer to address of inbound reply message.
+   //! \return Return code.
+
+   uint64_t exchange(void *outMsg, const char *pathname, void **inMsg);
+
+   //! \brief  Simple exchange of request (with two path names) and reply messages.
+   //! \param  outMsg Pointer to outbound request message.
+   //! \param  pathname1 Pointer to first path name string.
+   //! \param  pathname2 Pointer to second path name string.
+   //! \param  inMsg Pointer to address of inbound reply message.
+   //! \return Return code.
+
+   uint64_t exchange(void *outMsg, const char *pathname1, const char *pathname2, void **inMsg);
+
+   //! \brief  Exchange request and reply messages with the I/O node.
+   //! \param  sendList List of scatter/gather elements for data in request message.
+   //! \param  sendListSize Number of elements in send sge list.
+   //! \param  inMsg Pointer to address of inbound reply message.
+   //! \param  sequenceID Match this sequenceID of the message
+   //! \param  postsecond 0=no second receive posted, nonzero a second receive posted
+   //! \return Return code.
+
+   uint64_t exchangeMessages(cnv_sge *sendList, int sendListSize, void **inMsg,  uint32_t sequenceID);
+
+   //! \brief  Get the address of the first receive buffer for this hardware thread.
+   //! \return Address of receive buffer.
+   //! \note   Each hardware thread is given its own area in the memory region for inbound messages.
+
+   uint64_t getMyFirstRecvBuffer(void)
+   {
+      return (uint64_t)_inMessageRegion.addr + (ProcessorID() * 1024);
+   }
+
+   //! \brief  Get the address of the second receive buffer for this hardware thread.
+   //! \return Address of receive buffer.
+   //! \note   Each hardware thread is given its own area in the memory region for inbound messages.
+
+   uint64_t getMySecondRecvBuffer(void)
+   {
+      return (uint64_t)_inMessageRegion.addr + (ProcessorID() * 1024) + bgcios::ImmediateMessageSize;
+   }
+
+   //! \brief  Post a receive to the queue pair.
+   //! \param  addr Address of memory region.
+   //! \param  sequenceID Match this sequenceID of the message
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int postRecv(uint64_t addr, uint32_t sequenceID);
+
+   //! \brief  Post a send to the queue pair.
+   //! \param  sendList List of scatter/gather elements for data in request message.
+   //! \param  sendListSize Number of elements in send sge list.
+   //! \param  sequenceID Match this sequenceID of the message
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int postSend(cnv_sge *sendList, int listSize, uint32_t sequenceID);
+
+   //! \brief  Get work completions from the completion queue.
+   //! \param  totalCompletions Number of work completions to get from completion queue.
+   //! \param  inMsg Pointer to address of inbound reply message (only set for receive work completion).
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int getCompletions(int totalCompletions, void **inMsg);
+
+   //! \brief Post an RDMA write to cn verbs
+   //! \param  sgeList List of scatter/gather elements for data in request message.
+   //! \param  listSize Number of elements in send sge list.
+   //! \param  sequenceID Match this sequenceID of the message
+   //! \param  virtual address of remote memory
+   //! \param  rkey  rmemote key, the key for the remote memory region
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int postRdmaWrite(struct cnv_sge *sgeList, int listSize, uint32_t sequenceID,uint64_t remoteAddr,uint32_t remoteKey);
+
+   //! Sequence id for tracking message exchanges.
+   uint32_t _sequenceId;
+
+   //! Job usage counter which is incremented each time setupJob() is run and decremented each time cleanupJob() is run.
+   //! \note Required since this file system is used for multiple descriptor types.
+   uint32_t _jobCounter;
+
+   //! True when termination has completed.
+   //! \note Required since this file system is used for multiple descriptor types.
+   bool _isTerminated;
+
+   //! Device context.
+   cnv_context *_context;
+
+   //! Protection domain.
+   cnv_pd _protectionDomain;
+
+   //! Completion queue.
+   cnv_cq _completionQ;
+
+   //! Queue pair connected to sysiod.
+   cnv_qp _queuePair;
+
+   //! Memory region for user storage.
+   struct cnv_mr _userRegion;
+
+   //! Memory region for outbound messages.
+   struct cnv_mr _outMessageRegion;
+
+   //! Memory region for inbound messages.
+   struct cnv_mr _inMessageRegion;
+
+   //! Storage for outbound messages.
+   char _outMessage[bgcios::SmallMessageRegionSize] ALIGN_L1D_CACHE;
+
+   //! Storage for inbound messages.
+   char _inMessage[bgcios::SmallMessageRegionSize] ALIGN_L1D_CACHE;
+
+   uint64_t _rdmaBufferVirtAddr;  //!< RDMA buffer virtual address from last Setup message
+   uint64_t _rdmaBufferLength;    //!< length of said buffer from last Setup message
+   uint32_t _remotekey;                //!< memory key of the remote buffer, a/k/a remote key
+
+   //! Lock for serializing message exchanges.
+   Lock_Atomic_t _lock;
+};
+
+#endif // _CNK_SYSIOFS_H
+

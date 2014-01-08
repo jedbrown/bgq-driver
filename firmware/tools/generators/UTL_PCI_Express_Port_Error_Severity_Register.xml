@@ -1,0 +1,52 @@
+<register width="32" name="UTL Express Port Error Severity Register" prefix="UTL_PCIEPESR_" 
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+ description="Each bit in this register determines the type of interrupt triggered by the respective event from the
+UTL PCI Express Port Status Register. When st, the event triggers the primary interrupt (AL_PINT).  When cleared,
+the event triggers the secondary interrupt (AL_SINT).">
+     <field bit="1" name="TPCS" 
+       description="TXPC array (outbound posted requests FIFO) parity error severity."
+       />
+     <field bit="2" name="TNPS" 
+       description="TXNP array (outbound non-posted requests FIFO) parity error severity."
+       />
+     <field bit="3"  name="TFTS" 
+       description="TXFT array (output non-posted requests free tags FIFO) parity error severity."
+       />
+     <field bit="4"  name="TCAS" 
+       description="TXCA array (transmit completions attributes array) parity error severity."
+       />
+     <field bit="5"  name="TCIS" 
+       description="TXCIF array (transmit completions idications array) parity error severity."
+       />
+     <field bit="6"  name="RCAS" 
+       description="RXCA array (receive completions attributes array) parity error severity."
+       />
+     <field bit="8" name="PLUS" 
+       description="PCI Express LinkUp event severity."
+       />
+     <field bit="9" name="PLDS" 
+       description="PCI Express LinkDown event severity."
+       />
+     <field bit="10" name="OTDS" 
+       description="Outbound request discard event severity."
+       />
+	   
+</register>

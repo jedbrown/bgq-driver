@@ -1,0 +1,57 @@
+
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!-- Eclipse Public License (EPL)                                     -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+<!-- Fpga verification platform configuration file
+-->
+<File filename="FvConfiguration" >
+
+    <Method name ="FvConfiguration" comment="Fpga verification board configuraiton  parameters">
+        <Class name ="FvConfiguration">
+            <Class name="TL_Module" comment="Top level module name/filename pair">
+                <DataMember type="text" name="netPath" comment="net list path to this component"/>
+                <DataMember type="text" name="xilinxName" comment="xilinx file name for this component (without extenstion)"/>
+            </Class>
+
+            <Class name="MbCard" comment="Motherboard card information" >
+                <DataMember type="text" name="lp" comment="optional licence of the device associated with this memory card" />
+                <DataMember type="TL_Module"  name="tlModule" occurrences="many" comment="top level module name, to locate the files to load"/>
+            </Class>
+
+            <Class name="MemCard" comment="Memory Card Information">
+                <DataMember type="uint32" name="cardid" comment="unique card identifier" />
+                <DataMember type="text" name="name" comment="card name" />
+                <DataMember type="text" name="lp" comment="optional licence of the device associated with this memory card" />
+                <DataMember type="TL_Module" name="tlModule" occurrences="many" comment="top level module name, to locate the files to load"/>
+            </Class>
+
+            <Class name="Options" comment="dumping ground for additional (usually testing options)">
+                <DataMember type="text" name="key" comment="key part of the key value pair"/>
+                <DataMember type="text" name="value" comment="value part of the key value pair"/>
+            </Class>
+
+            <DataMember type="text" name="iconImageFile" comment="Icon altera image file"/>
+            <DataMember type="text" name="mbEscortFile" comment="escort file name for mother board"/>
+            <DataMember type="text" name="memCardEscortFile" comment="escort file for memory board"/>
+            <DataMember type="text" name="scanInfoFile" comment="scan information file"/>
+            <DataMember type="text" name="xilinxImagePath" comment="path to find the xilinx files in, unless a full pathspec is used"/>
+            <DataMember type="bool" name="selectMap" comment="flag to use selectMap or no"/>
+            <DataMember type="uint32" name="iconMtu" comment="icon network mtu" />
+            <DataMember type="MbCard" name="mbCard" comment="mother board card record"/>
+            <DataMember type="MemCard" name="memCard" occurrences="many"  comment="memory card records"/>
+
+            <DataMember type="Options" name="options" occurrences="many" comment="runtime options field"/>
+
+        </Class>
+    </Method>
+
+</File>

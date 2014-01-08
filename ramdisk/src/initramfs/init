@@ -1,0 +1,361 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+#
+#/etc/rc.d/rc.sysinit for the BlueGene/Q ramdisk
+#
+# Author: Jay S. Bryant <jsbryant@us.ibm.com>
+#
+#
+
+#
+# WARNING: changing this file requires a rebuild of the ramdisk
+#
+
+
+# Globals:
+CONTINUE_BOOT=1
+RAMDISK_DEBUG=0
+
+mount -n -o remount,rw /dev/root / -t root
+mount -a
+# Need /dev as a tmpfs space so that swtich_root can move it to the new root.
+mv /dev /dev.old
+mkdir /dev
+mount -t tmpfs tmpfs /dev
+mv /dev.old/* /dev
+
+chown root:root /
+export LD_LIBRARY_PATH=/lib64:/lib:/usr/lib64:/usr/lib
+
+if [ -e /etc/sysconfig/sysinit ] ; then
+        . /etc/sysconfig/sysinit
+fi
+
+chmod o-r /proc/device-tree/ibm,bluegene/personality/raw-data
+
+# Initialze personality.
+mknod /dev/bgpers c 10 111
+# Source the personality and ensure there appears to be data by checking a sampling of values
+# that shouldn't be empty:
+. /dev/bgpers
+if [ -z $BG_LOCATION ] || [ -z $BG_UCI ] || [ -z $BG_IPV4_SN ] || [ -z $BG_BGSYS_IPV4 ] ; then
+
+	# If there is no personality nothing else is going to work properly. So, we need to print
+	# an error message as a breadcrumb and then start bash so we can debug what went wrong.
+
+	echo -en "\n\n#########################################################################"
+       	echo -en "\n# ERROR!"
+       	echo -en "\n# Sourcing /dev/bgpers is not returning the expected data. "
+	echo -en "\n# "
+	echo -en "\n# Starting a console for debug ..."
+       	echo -en "\n#########################################################################\n\n"
+
+	exec /bin/bash
+fi
+
+# RAS support.
+mknod /dev/bgras c 10 112
+# Source /dev/bgras to make sure it appears to be working properly.
+. /dev/bgras
+if [ -z $BGRAS_ID_SCRIPT_FAILURE ] ; then
+       	echo -en "\n\n#########################################################################"
+       	echo -en "\n# WARNING!"
+       	echo -en "\n# The sourcing /dev/bgras is not returning the expected data."
+       	echo -en "\n#########################################################################\n\n"
+fi
+
+#Enable firmware access.
+mknod /dev/bgfirmware c 10 113
+if [ ! -e /dev/bgfirmware ] ; then
+       	echo -en "\n\n#########################################################################"
+       	echo -en "\n# WARNING!"
+       	echo -en "\n# The /dev/bgfirmware device could not be properly created.\n"
+       	echo -en "#########################################################################\n\n"
+fi
+
+# Source RHEL6 functions, bgpers and bgras
+. /etc/init.d/functions
+
+echo -en "--> BlueGene/Q Linux Init Starting"
+echo -en "\n--> Node type: $BG_NODE_TYPE"
+echo -en "\n--> PCIe"
+if [ $BG_NODE_ENABLE_PCIE -eq 1 ] ; then echo -n "+" ; else echo -n "-" ; fi
+echo -en "\n--> LOCATION:$BG_LOCATION:UCI:$BG_UCI"
+echo -en "\n--> GATEWAY:$BG_GATEWAY:FS_IP:$BG_BGSYS_IPV4:SN_IP:$BG_IPV4_SN:EXPORT_DIR:$BG_BGSYS_EXPORT_DIR"
+echo -en "\n--> BG_DISTRO_EXPORT_DIR:$BG_OSDIR"
+if [ ! -z $BG_INTF0_NAME ] ; then
+	echo -en "\n--> INTF0:$BG_INTF0_NAME:"
+	if [ $BG_INTF0_IPV4 != "0.0.0.0" ] ; then 
+		echo -en "IP:$BG_INTF0_IPV4:NETMASK:$BG_INTF0_NETMASK:BROADCAST:$BG_INTF0_BROADCAST:MTU:$BG_INTF0_MTU"
+		if [ $BG_INTF0_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+			if [ $BG_INTF0_NAME == "ib0" ] ; then
+				echo -en "\n-->           "
+			else
+				echo -en "\n-->            "
+			fi
+		fi
+	fi
+	if [ $BG_INTF0_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+		echo -en "IP:$BG_INTF0_IPV6:PREFIX:$BG_INTF0_IPV6_PREFIX"
+	fi
+fi
+if [ ! -z $BG_INTF1_NAME ] ; then
+	echo -en "\n--> INTF1:$BG_INTF1_NAME:"
+	if [ $BG_INTF1_IPV4 != "0.0.0.0" ] ; then
+		echo -en "IP:$BG_INTF1_IPV4:NETMASK:$BG_INTF1_NETMASK:BROADCAST:$BG_INTF1_BROADCAST:MTU:$BG_INTF1_MTU"
+                if [ $BG_INTF1_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+			if [ $BG_INTF1_NAME == "ib0" ] ; then
+				echo -en "\n-->           "
+			else
+				echo -en "\n-->            "
+			fi
+                fi
+        fi
+        if [ $BG_INTF1_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+                echo -en "IP:$BG_INTF1_IPV6:PREFIX:$BG_INTF1_IPV6_PREFIX"
+        fi
+fi
+if [ ! -z $BG_TOR0_NAME ] && [ $BG_NODE_ENABLE_MU -eq 1 ] && [ $BG_NODE_ENABLE_CIOS -eq 1 ] ; then
+	echo -en "\n--> TORUS:$BG_TOR0_NAME:IP:$BG_TOR0_IPV4:NETMASK:$BG_TOR0_NETMASK:BROADCAST:$BG_TOR0_BROADCAST:MTU:$BG_TOR0_MTU:MAC:$BG_TOR0_MAC"
+fi
+if [ $BG_NODE_ENABLE_MU -eq 0 ] ; then echo -en "\n--> Messaging Unit disabled ... MU, BGVRNIC and Torus configuration will be skipped." ; fi
+if [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 1 ] ; then echo -en "\n--> Diagnostics mode is enabled" ; fi
+echo -en "\n"
+
+# Configure the system to panic if the Out Of Memory process start running.
+echo "2" >> /proc/sys/vm/panic_on_oom
+
+
+# Validate any PCIe adapters.
+if [ $BG_NODE_TYPE = "ION" ] && [ $BG_NODE_ENABLE_PCIE -eq 1 ] ; then
+   if [ ! -e /etc/sysconfig/bgqadapters ] ; then
+      bgras $BGRAS_ID_SCRIPT_FAILURE \
+      	    "init - Unable to validate PCIe adapters.  /etc/sysconfig/bgqadapters is missing."
+   else
+	if [ -r /sys/bus/pci/devices/0000:01:00.0/vpd ] ; then
+		# Throw RAS if not one of the supported adapters.  The part number of the
+		# supported adapters is in /etc/sysconfig/bgqadapters
+		
+		ADAPTERARR=(`cat /etc/sysconfig/bgqadapters | grep -v '#'`)
+		MATCHED=0
+		I=0		
+
+		PN=`lspci -vv -s 0000:01:00.0 | grep -e "\[PN\]" | tr -s '\t' ' '`
+		while [ $I -lt ${#ADAPTERARR[@]} ] && [ $MATCHED -eq 0 ] ; do
+		      if [[ "$PN" =~ "${ADAPTERARR[$I]}" ]] ; then
+		      	 MATCHED=1
+		      else
+			 let I=$I+1
+	              fi
+	        done
+
+		EC=`lspci -vv -s 0000:01:00.0 | grep -e "\[EC\]" | tr -s '\t' ' '`
+		PSID=`mstflint -d 01:00.0 dc | grep PSID | tr -s '\t' ' '`
+		FW=`mstflint -d 01:00.0 q | grep FW | tr -s '\t' ' '`
+
+		NAME=`lspci -vv -s 0000:01:00.0 | grep -e "Product Name" | tr -s '\t' ' '`
+
+		if [ $MATCHED -eq 0 ] ; then
+		   #DETAILS=`echo -en $NAME - $PN - $EC - \n\t\t$FW - $PSID`
+		   MSG="Unsupported PCIe adapter detected: \n\t$NAME -\n\t\t$PN -$EC -\n\t\t $FW - $PSID."
+		   bgras $BGRAS_ID_PCIE_UNSUPPORTED_ADAPTER "$MSG"	   
+		else
+		   echo -en "\nFound supported PCIe adapter: \n\t$NAME -\n\t\t$PN -$EC -\n\t\t $FW - $PSID.\n"
+		fi
+		   
+	elif ! [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 1 ] ; then
+		# No VPD?  Throw RAS.
+		MSG="No PCIe adapter VPD found."
+		bgras $BGRAS_ID_PCIE_MISSING_ADAPTER_VPD "$MSG"
+	fi
+  fi	
+
+   # Validate adapter link speed and width.
+   LNK_STAT=`lspci -vv -s 0000:01:00.0 | grep LnkSta:`
+   LNK_SPEED_STAT=`echo $LNK_STAT | awk -F"Speed" '{print $2}' | awk -F"," '{print $1}'`
+   LNK_WIDTH_STAT=`echo $LNK_STAT | awk -F"Width" '{print $2}' | awk -F"," '{print $1}'`
+   LNK_CAP=`lspci -vv -s 0000:01:00.0 | grep LnkCap:`
+   LNK_SPEED_CAP=`echo $LNK_CAP | awk -F"Speed" '{print $2}' | awk -F"," '{print $1}'`
+   LNK_WIDTH_CAP=`echo $LNK_CAP | awk -F"Width" '{print $2}' | awk -F"," '{print $1}'`
+   if [ $LNK_SPEED_STAT != $LNK_SPEED_CAP ] || [ $LNK_WIDTH_STAT != $LNK_WIDTH_CAP ]; then
+	bgras $BGRAS_ID_PCIE_LINK_DEGRADED "PCIe link speed, width at$LNK_SPEED_STAT,$LNK_WIDTH_STAT but the adapter is capable of$LNK_SPEED_CAP,$LNK_WIDTH_CAP."
+   fi
+
+fi
+
+# Setup rpcidmapd for NFSv4 support	
+#mount -t rpc_pipefs sunrpc /var/lib/nfs/rpc_pipefs
+#/etc/init.d/rpcidmapd start
+
+# Run the Sxx startup scripts in /etc/rc.d/rc3.d
+for script in /etc/rc.d/rc3.d/S[0-9][0-9]*; do
+         if [ -x "$script" ]; then
+		name=${script##*/}
+		case $name in
+			*.[1-9] | *.[1-9][0-9] | *.[1-9][0-9][0-9])
+				atomic ${name##*.} $script start;;
+			*)
+				$script start
+				if [ $? -ne 0 ] && [ $CONTINUE_BOOT -eq 1 ] ; then 
+				   CONTINUE_BOOT=0
+				fi
+				;;
+			esac
+	else
+		# Throw RAS event
+		bgras $BGRAS_ID_SCRIPT_FAILURE \
+		      "init - $script does not have execute authority and was not run."
+	fi
+done
+
+# Move to running out of NFS root.  Don't do this if we are in diags mode or have hit
+# failure earlier in the boot.
+if [ -d $BG_OSDIR ] && [ $CONTINUE_BOOT -eq 1 ] && [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 0 ] &&
+   [ $BG_NODE_ENABLE_PCIE -eq 1 ] && [ ! $RAMDISK_DEBUG -eq 1 ] ; then
+	mkdir nfsroot
+	# Need to make sure the NFS root is mounted read-only.
+	mount -o remount,ro /bgsys 
+
+	# Need to have the OSDIR available at a mount point off of / for switch_root to work.
+	mount --bind -o ro $BG_OSDIR /nfsroot 
+	mount -t tmpfs -o rw tmpfs /nfsroot/bgfs
+
+	# Push data into bgfs
+	/etc/init.d/popbgfs start
+
+	# Switch to our NFS root!
+	exec switch_root /nfsroot /sbin/init 3
+	
+	# Throw a RAS event if we get here.  It means something went wrong with switch_root
+	bgras $BGRAS_ID_SCRIPT_FAILURE \
+		"init - switch_root encountered an error switching to nfs root. Consult node logs for additional details."
+
+	echo -en "\nStarting a console for debug ...\n"
+	exec /bin/bash
+
+elif [ $CONTINUE_BOOT -eq 0 ] && [ ! -d $BG_OSDIR ] && [ $RAMDISK_DEBUG -eq 0 ] ; then
+
+        # Need to stop the boot here if we have a major script error that has been ecnountered
+        # and do not have the BG/Q Linux directory available..
+
+        bgras $BGRAS_ID_BGQ_DISTRO_MISSING \
+        "Unable to access the specified BG/Q Linux Distribution $BG_OSDIR due to previous errors."
+
+        echo -en "\n\n#########################################################################"
+        echo -en "\n# WARNING!"
+        echo -en "\n# Stopping boot due to previous errors. "
+        echo -en "\n#"
+        echo -en "\n# One or more errors have made $BG_OSDIR inaccessible."
+        echo -en "\n# Please consult the previous errors in this log, any associated RAS"
+        echo -en "\n# events and the following debug for further details.\n"
+        echo -en "#########################################################################\n\n"
+
+        echo -en "\n/bgsys/linux contains:\n"
+        ls -al /bgsys/linux
+        echo -en "\nNetwork configuration:\n"
+        ifconfig
+        echo
+        route -n
+        echo -en "\nMounted file systems:\n"
+        mount
+        echo -en "\nTrying to ping the bgsys server\n"
+        ping -c 1 $BG_BGSYS_IPV4
+        echo -en "\nDebug output complete.  Shutting down the block ...\n\n"
+        /etc/rc.shutdown
+
+elif [ $CONTINUE_BOOT -eq 0 ] && [ -d $BG_OSDIR ] && [ $RAMDISK_DEBUG -eq 0 ] ; then
+	
+	# Need to stop the boot here if we have a major script error that has been ecnountered but
+	# do have the BG/Q Linux directory available.  That shouldn't happen, but we need to provide
+	# for that situation.
+	echo -en "\n\n#########################################################################"
+        echo -en "\n# WARNING!"
+        echo -en "\n# Stopping boot due to previous errors."
+        echo -en "\n# Please consult the previous errors in this log and any associated RAS"
+        echo -en "\n# events."
+        echo -en "\n#"
+	echo -en "\n# Holding the node in the ramdisk for further debug."
+	echo -en "\n#########################################################################\n\n"
+
+	exec /bin/bash
+
+elif [ $RAMDISK_DEBUG -eq 1 ] ; then
+	
+	# Someone has requested that we only boot into the ramdisk.  Stop the boot at this point
+	# and start bash.
+	echo -en "\n\n#########################################################################"
+	echo -en "\n# RAMDISK_DEBUG is enabled!"
+	echo -en "\n#"
+	echo -en "\n# Stopping boot in the ramdisk ..."
+	echo -en "\n#########################################################################\n\n"
+	
+	/etc/init.d/blockStatus start
+	exec /bin/bash
+
+else
+	# Throw a RAS event ...
+	# Only do this if we haven't previously hit an error that is likely to prevent this from
+	# working to avoid a bunch of extra RAS events on a failing boot.
+	if [ $CONTINUE_BOOT -eq 1 ] && [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 0 ] && 
+	   [ $BG_NODE_ENABLE_PCIE -eq 1 ] ; then
+		bgras $BGRAS_ID_BGQ_DISTRO_MISSING \
+		      "Unable to find the specified BG/Q Linux Distribution: $BG_OSDIR ."
+
+	        echo -en "\n\n#########################################################################"
+		echo -en "\n# ERROR!"
+		echo -en "\n# Unable to find the specified BG/Q Linux Distribution $BG_OSDIR"
+		echo -en "\n# Ensure it is installed on the service node or rebuild your ramdisk with a"
+		echo -en "\n# valid --with-linux-os=<path> specified."
+		echo -en "\n#"
+		echo -en "\n# See debug output below for additional details:"
+		echo -en "\n###########################################################################\n\n"
+
+		echo -en "\n/bgsys/linux contains:\n"
+		ls -al /bgsys/linux
+		echo -en "\nNetwork configuration:\n"
+		ifconfig
+		echo
+		route -n
+		echo -en "\nMounted file systems:\n"
+		mount
+		echo -en "\nTrying to ping the bgsys server\n"
+		ping -c 1 $BG_BGSYS_IPV4
+		echo -en "\nDebug output complete.  Shutting down the block ...\n\n"
+		/etc/rc.shutdown
+	fi
+	if [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 1 ] ; then
+                echo -en "\n\n#########################################################################"
+		echo -en "\n# Switch to NFS root skipped."
+		echo -en "\n# Node is running from the ramdisk in Diagnostics mode."
+                echo -en "\n###########################################################################\n\n"
+
+		# Since we are in diagnostics mode we know this is all the further we are going to get.
+		# Signal boot completion and start bash so that we can interract if necessary.
+		/etc/init.d/blockStatus start
+		exec /bin/bash	
+
+	fi
+
+fi
+
+echo -en "\nFallen through to the end of init!\n"
+exec /bin/bash

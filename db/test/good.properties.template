@@ -1,0 +1,7 @@
+[database]
+name=%%BGQDB_DBNAME%%
+user=%%BGQDB_USER%%
+password=%%BGQDB_PWD%%
+
+[my_section]
+connection_pool_size=5

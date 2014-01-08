@@ -1,0 +1,52 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2011, 2012                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+####################################
+%package comm_agent
+
+Summary: The Blue Gene Messaging Application Agent
+Group: %{product_group}
+Release: 0
+
+%description comm_agent
+%{bgq_package_description}
+
+This package contains the Blue Gene Messaging application agent that runs on the 17th core, and the header files defining its interfaces.
+
+%files comm_agent
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/agents
+%dir %{_base_dir}/agents/bin
+%dir %{_base_dir}/agents/include
+%dir %{_base_dir}/agents/include/comm
+%dir %{_base_dir}/agents/doc
+%dir %{_base_dir}/agents/doc/comm
+
+%{_base_dir}/agents/bin/*
+%{_base_dir}/agents/include/comm/*
+%{_base_dir}/agents/doc/comm/*
+
+####################################

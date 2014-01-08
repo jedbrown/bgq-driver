@@ -1,0 +1,57 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/* ================================================================ */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/*                                                                  */
+/* Blue Gene/Q                                                      */
+/*                                                                  */
+/* (C) Copyright IBM Corp.  2010, 2011                              */
+/*                                                                  */
+/* US Government Users Restricted Rights -                          */
+/* Use, duplication or disclosure restricted                        */
+/* by GSA ADP Schedule Contract with IBM Corp.                      */
+/*                                                                  */
+/* This software is available to you under the                      */
+/* Eclipse Public License (EPL).                                    */
+/*                                                                  */
+/* ================================================================ */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+/* Compiling:
+. ~bgpdb2c/sqllib/db2profile
+db2 CONNECT TO bgdb0 USER bgpsysdb
+db2 PREP sample.sqC
+
+On ppc64:
+g++ -o sample -I/opt/IBM/db2/V8.1/include64 -L/opt/IBM/db2/V8.1/lib64 -ldb2 -m64 sample.C
+
+On i386:
+g++ -o sample -I/opt/IBM/db2/V9.1/include -L/opt/IBM/db2/V9.1/lib32 -ldb2 sample.C
+
+ */
+
+#include <iostream>
+
+#include <sqlenv.h>
+#include <sqlutil.h>
+
+using namespace std;
+
+int main( int argc, char* argv[] )
+{
+  cout << "Working!" << endl;
+
+  EXEC SQL INCLUDE SQLCA;
+
+  EXEC SQL CONNECT TO "bgdb0";
+
+  if ( SQLCODE < 0 ) {
+    cout << "Failed to connect. SQLCODE=" << SQLCODE << endl;
+  }
+
+  cout << "Done!" << endl;
+} // main()

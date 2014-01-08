@@ -1,0 +1,144 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# bghealthmond		Starts the BlueGene Node Health Monitor Daemon.
+#
+# Author:		Jay S. Bryant (jsbryant@us.ibm.com)
+#
+
+# Source function library
+. /etc/init.d/functions
+
+LOCKFILE=/var/lock/subsys/bghealthmond
+
+function start
+{
+	# Start the BG Node Health Monitor Daemon.
+	if [ ! -e /etc.mirror ] ; then
+		echo -n $"Starting BG Node Health Monitor - Stage 1: "
+
+		# Set up binaries needed by bghealthmond in /bgfs so that it can continue to run after
+		# the nfs root has hung up.
+		#for DIRS in "sbin" "lib64" "usr/sbin" "usr/bin" "bin" ; do
+		#	if [ ! -e /bgfs/RHEL6/$DIRS ] ; then mkdir -p /bgfs/RHEL6/$DIRS ; fi
+		#done
+
+		#for FILES in "lib64/libc.so.6" "lib64/libtirpc.so.1" "lib64/libnsl.so.1" \
+		#	     "lib64/libgssglue.so.1" "lib64/libdl.so.2" "lib64/libpthread.so.0" \
+		#	     "lib64/libreadline.so.6" "lib64/libtinfo.so.5" "lib64/libncurses.so.5" \
+		#	     "lib64/ld64.so.1" "lib64/libresolv.so.2" ; do
+		#	cp $FILES /bgfs/RHEL6/$FILES
+		#done
+
+		#for FILES in "sbin/busybox" "usr/sbin/nfsstat" "sbin/ip" "usr/bin/bc" "bin/bash" \
+		#	     "bin/cat" "usr/bin/which" "usr/sbin/bghealthmond.sh" "usr/bin/strace" ; do
+		#	cp $FILES /bgfs/RHEL6/$FILES
+		#done
+
+		#for FILES in "top" "cat" "mount" "df" "ps" "wc" "grep" "tr" "date"  \
+		#	     "cut" "sleep" "rm" "echo" ; do
+		#	ln -s /bgfs/RHEL6/sbin/busybox /bgfs/RHEL6/sbin/$FILES
+		#done
+
+		#export LD_LIBRARY_PATH=/bgfs/RHEL6/lib64
+		#export PATH=/bgfs/RHEL6/bin:/bgfs/RHEL6/sbin:/bgfs/RHEL6/usr/bin:/bgfs/RHEL6/usr/sbin
+		/usr/sbin/bghealthmond.sh &        
+		sleep 1
+		if [ -e /var/run/bghealthmond.pid ] ; then
+			RETVAL=0
+			touch $LOCKFILE 
+			success
+		else
+			echo -n $"Startup of BG Node Health Monitor: "
+			RETVAL=1
+			failure
+		fi
+        	echo
+        	return ${RETVAL}
+
+	else
+                echo -n $"Starting BG Node Health Monitor - Stage 2: "
+		
+		if [ -e /initramfs/var/run/bghealthmond.pid ] ; then
+			cp /initramfs/var/run/bghealthmond.pid /var/run/
+		fi
+
+		if [ -e /initramfs$LOCKFILE ] ; then
+			touch $LOCKFILE
+		fi
+
+		success
+		echo
+
+	fi
+
+}
+
+function stop
+{
+    echo -n $"Stopping BG Node Health Monitor: "
+    killproc -p /var/run/bghealthmond.pid 
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ] ; then
+	rm -f $LOCKFILE
+    fi	
+    echo
+    return ${RETVAL}
+}
+
+function mystatus
+{
+    status -p /var/run/bghealthmond.pid bghealthmond.sh
+}
+
+function restart
+{
+    stop
+    start
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        mystatus
+        ;;
+    restart)
+        restart
+        ;;
+    try-restart)
+        mystatus >/dev/null 2>&1 || exit 0
+        restart
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|try-restart}"
+        exit 3
+        ;;
+esac
+
+exit $?
+
+
+

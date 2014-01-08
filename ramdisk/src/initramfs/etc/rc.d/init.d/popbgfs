@@ -1,0 +1,286 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# popbgfs       Reads /etc/bgfs.files and moves the files listed there to the tmpfs
+#		space mounted at nfsroot/bgfs.  Intended to move BlueGene specific
+#		binaries and libraries for access when the ION is running from an NFS root.
+#
+# Author:       Jay S. Bryant (jsbryant@us.ibm.com)
+#
+
+BGFS_FILES="/etc/bgfs.files"
+BGFS_LOC="/nfsroot/bgfs"
+BGFS_STAGE2_LOC="/bgsys/linux/bgfs"
+
+# Source function library including BG/Q env vars
+. /etc/init.d/functions
+
+function start {
+
+	# Going to need to do a two part bgfs population.
+	# The first part moves data from the ramdisk forward.  The second pulls data out of
+	# /bgsys/linux/bgfs .
+	if [ ! -e /etc.mirror ] ; then
+		echo -n $"Populating bgfs - Stage 1: "
+		if [ -e $BGFS_FILES ] ; then
+			# For all lines that don't start with a "#"
+			for files in `cat $BGFS_FILES | sed '/^ *#/d;s/#.*//'` ; do
+                                # Special case for a few libraries so that they do not get mixed
+                                # with in with BG/Q toolchain libraries.
+                                if [[ "$files" =~ ^lib ]] || [[ "$files" =~ ^lib64 ]] ||
+                                   [[ "$files" =~ ^usr/lib ]] || [[ "$files" =~ ^usr/lib64 ]] ; then
+                                        if [ -d $files ] && [ ! -e $BGFS_LOC/RHEL6/$files ] ; then
+                                                mkdir -p $BGFS_LOC/RHEL6/$files
+	                                        if [ $? -ne 0 ] ; then
+        	                                        echo -en $"\n\tWARNING; Unable to create directory $files in $BGFS_LOC/RHEL6\n"
+                	                        fi
+					elif [ -e $files ] && [ ! -e $BGFS_LOC/RHEL6/$files ] ; then
+                                                cp -a $files $BGFS_LOC/RHEL6/$files
+	                                        if [ $? -ne 0 ] ; then
+        	                                        echo -en $"\n\tWARNING: Unable to copy $files to $BGFS_LOC/RHEL6\n"
+						fi
+                                        else
+						echo -en $"\n\tWARNING: Request to copy $files from initramfs which doesn't exist!\n"
+					fi
+				# Check to see if the requested path is a directory.
+				# Make the dirs if they don't exist.
+				elif [ -d $files ] && [ ! -e $BGFS_LOC/$files ] ; then
+					mkdir $BGFS_LOC/$files
+					if [ $? -ne 0 ] ; then
+						echo -en $"\n\tWARNING; Unable to create directory $files in $BGFS_LOC\n"
+					fi
+				elif [ -e $files ] && [ ! -e $BGFS_LOC/$files ] ; then
+					cp $files $BGFS_LOC/$files &> /dev/null
+					if [ $? -ne 0 ] ; then
+						echo -en $"\n\tWARNING: Unable to copy $files to $BGFS_LOC\n"
+					fi
+				else
+					echo -en $"\n\tWARNING: Request to copy $files from initramfs which doesn't exist!\n"
+				fi
+			done
+		else
+			failure
+			echo -en $"\n\tERROR: Unable to find $BGFS_FILES configuration file! \n"
+			exit 1
+		fi
+		
+		# Also need to pull any start scripts out of /bgsys/linux/bgfs/etc/rc.d so that we can
+		# prepopulate /etc with those.  rc.sysinit in /distrofs will complete the process of 
+		# integrating the start scripts.
+		if [ -e /bgsys/linux/bgfs/etc/rc.d ] ; then
+			if [ ! -e $BGFS_LOC ] ; then
+				mkdir $BGFS_LOC/etc
+			fi
+			cp -a /bgsys/linux/bgfs/etc/rc.d $BGFS_LOC/etc
+		fi			
+
+		# Another special case.  Want to be able to pull a /etc/sysconfig/gpfs config file from
+		# the ramdisk if it exists.  This allows users who want to override the system wide GPFS
+		# settings to do so for development. 
+		if [ -e /etc/sysconfig/gpfs ] ; then
+			if [ ! -e /bgfs/etc/sysconfig ] ; then
+				mkdir -p /bgfs/etc/sysconfig
+			fi
+
+			cp -a /etc/sysconfig/gpfs $BGFS_LOC/etc/sysconfig
+		fi
+
+	# We are in the NFS root space
+	else
+
+                echo -n $"Populating bgfs - Stage 2: "
+
+		# What are we doing here?
+		# We need to have a place for users to add files that need to be included in the ION
+		# without them having to add files after each install of the BG/Q Linux Distro and without
+		# having to update the ramdisk.  We will look to see if there is a /bgsys/linux/bgfs directory.
+		# If there is we will process each of the directories in there.  We special case /var, /etc, and /root.
+		# Files from those directories are integrated into the r/w spaces that are mounted as part of the
+		# NFS based ION boot.  Anything else is put under /bgfs for the user's access.
+		# NOTE:  The files from /bgsys/linux/bgfs will replace the files from the BG/Q Linux Distro.
+
+                # Create an in-memory copy of the BG/Q toolchain libraries
+                # If there is a tarfile available, extract that.  Otherwise copy the libraries.
+                if [ -e /bgsys/drivers/ppcfloor/gnu-linux/powerpc64-bgq-linux/lib/bgqgnulib.tar.gz ] ; then
+                       if [ ! -e /bgfs/lib64 ] ; then
+                               mkdir /bgfs/lib64
+                       fi
+		       # This could be run in the background to go faster.
+		       # Note that if users have files in /bgsys/linux/bgfs/lib64 they could replace theses files
+                       tar -C /bgfs/lib64 -xzvf /bgsys/drivers/ppcfloor/gnu-linux/powerpc64-bgq-linux/lib/bgqgnulib.tar.gz &> /dev/null
+                else
+                       if [ ! -e /bgsys/drivers/ppcfloor/gnu-linux/powerpc64-bgq-linux/lib ] ; then
+                               echo -en "\nWARNING: Unable to make in-memory copy of BG/Q toolchain shared libraries.\n"
+                       else
+                               cp -a /bgsys/drivers/ppcfloor/gnu-linux/powerpc64-bgq-linux/lib/* /bgfs/lib64
+                       fi
+                fi
+
+		# If we are using the BG/Q toolchain we need to create an ld.so.bgq.cache file.  The ldconfig that
+		# comes with the toolchain automatically creates this in /etc based on /etc/ld.so.bgq.conf
+		if [ -e /bgsys/drivers/ppcfloor/gnu-linux/powerpc64-bgq-linux/sbin/ldconfig ] ; then
+			RC=$( /bgsys/drivers/ppcfloor/gnu-linux/powerpc64-bgq-linux/sbin/ldconfig 2>&1 )
+			
+			if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE "popbgfs - BG/Q toolchain ldconfig failed to properly execute: $RC"
+			elif [ ! -e /etc/ld.so.bgq.cache ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+					"popbgfs - BG/Q toolchain ldconfig executed but no /etc/ld.so.bgq.cache file can be found."
+			fi
+		fi
+			
+
+		# If there is an archive of MPI libraries, then extract that.
+		if [ -e /bgsys/drivers/ppcfloor/comm/shared-objects.a ] ; then
+			if [ ! -e /bgfs/usr/lib64 ] ; then
+				mkdir -p /bgfs/usr/lib64
+			fi
+			cd /bgfs/usr/lib64 && ar x /bgsys/drivers/ppcfloor/comm/shared-objects.a
+			if [ $? -ne 0 ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE
+					"popbgfs - Found an MPI library archive but extraction failed."
+			fi
+		fi
+		# Handle the tar file if it is there.  Should eventually remove the archive case.
+		if [ -e /bgsys/drivers/ppcfloor/comm/shared-objects.tgz ] ; then
+                        if [ ! -e /bgfs/usr/lib64 ] ; then
+                                mkdir -p /bgfs/usr/lib64
+                        fi
+                        cd /bgfs/usr/lib64 && tar -xzvf /bgsys/drivers/ppcfloor/comm/shared-objects.tgz &> /dev/null
+                        if [ $? -ne 0 ] ; then
+                                bgras $BGRAS_ID_SCRIPT_FAILURE
+                                        "popbgfs - Found an MPI library tar file but extraction failed."
+                        fi
+		fi	
+
+		cd /
+
+		# If ESSL is installed, set up the node to use it.
+		if [ -e /bgsys/ibm_essl/prod/opt/ibmmath ] ; then
+			# Bind to ESSL install.
+			mount --bind /bgsys/ibm_essl/prod/opt/ibmmath /opt/ibmmath
+		
+			cd /opt/ibmmath/lib64
+			LIB=$( find * | grep libesslbg.so.1.[0-9] )
+			if [ ! -z $LIB ] ; then
+				cp $LIB /usr/lib64/bgq
+				cd /usr/lib64/bgq
+				ln -s $LIB libesslbg.so.1
+				ln -s libesslbg.so.1 libesslbg.so
+			else
+				echo -en "\nWARNING: Failed to find the expected libesslbg shared library\n"
+			fi
+			cd /opt/ibmmath/lib64
+			LIB=""
+			LIB=$( find * | grep libesslsmpbg.so.1.[0-9] )
+			if [ ! -z $LIB ] ; then
+				cp $LIB /usr/lib64/bgq
+				cd /usr/lib64/bgq
+				ln -s $LIB libesslsmpbg.so.1
+				ln -s libesslsmpbg.so.1 libesslsmpbg.so
+			else
+				echo -en "\nWARNING: Failed to find the expected libesslsmpbg shared library.\n"
+			fi
+
+			cd /
+
+		fi
+
+		# Integrate files from /bgfs/etc into /etc.  These are files pulled from the ramdisk.
+		#  The files will be superseded by any files in /bgsys/linux/bgfs/etc
+		if [ -e /bgfs/etc ] ; then
+			cp -a /bgfs/etc /
+		fi
+
+
+		if [ -e /bgsys/linux/bgfs ] ; then
+			RETVAL=0
+			for files in `ls $BGFS_STAGE2_LOC` ; do
+				if [[ "$files" =~ \.tar\.gz ]] ; then
+					tar -C /bgfs -xzvf $BGFS_STAGE2_LOC/$files &> /dev/null
+					RETVAL=$? 
+				elif [ $files == "var" ] ; then
+					if [ `ls -al $BGFS_STAGE2_LOC/$files | wc -l` -ne 0 ] ; then
+						cp -a $BGFS_STAGE2_LOC/$files/ /
+						RETVAL=$?
+					fi
+				elif [ $files == "etc" ] ; then
+					if [ `ls -al $BGFS_STAGE2_LOC/$files | wc -l` -ne 0 ] ; then
+						cp -a $BGFS_STAGE2_LOC/$files/ /
+						RETVAL=$?
+					fi
+				elif [ $files == "root" ] ; then
+					if [ `ls -al $BGFS_STAGE2_LOC/$files | wc -l` -ne 0 ] ; then
+						cp -a $BGFS_STAGE2_LOC/$files/ /
+						RETVAL=$?
+					fi
+				else
+					cp -a $BGFS_STAGE2_LOC/$files /bgfs
+					RETVAL=$?
+				fi
+	
+				if [ $RETVAL -ne 0 ] ; then
+					echo -en $"\n\tWARNING: There was a problem copying/unpacking $BGFS_STAGE2_LOC/$files - RC: $RETVAL\n"
+				fi
+
+			done
+
+			# Bind mount to the few libraries in /bgfs/RHEL6
+                        if [ -e $BGFS_FILES ] ; then
+                                # For all lines that don't start with a "#"
+                                for files in `cat $BGFS_FILES | sed '/^ *#/d;s/#.*//'` ; do
+                                        # Special case for a few libraries so that they do not get mixed
+                                        # with in with BG/Q toolchain libraries.
+                                        if [[ "$files" =~ ^lib ]] || [[ "$files" =~ ^lib64 ]] ||
+                                           [[ "$files" =~ ^usr/lib ]] || [[ "$files" =~ ^usr/lib64 ]] ; then
+                                                # Skip directories
+                                                if [[ ! "$files" =~ \/$ ]] ; then
+                                                        mount --bind /bgfs/RHEL6/$files $files
+                                                fi
+                                        fi
+                                done
+                        fi
+
+		# End check for /bgsys/linux/bgfs
+		fi
+
+
+	# End check for initramfs or nfsroot.
+	fi
+
+	# If we get here, we were successful.
+	success
+	echo
+
+}
+
+case "$1" in
+        start)
+                start
+                ;;
+        *)
+                echo $"Usage: $0 {start}"
+                exit 3
+
+esac
+
+exit $?
+

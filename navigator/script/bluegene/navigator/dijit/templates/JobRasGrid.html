@@ -1,0 +1,17 @@
+<div>
+
+<table data-dojo-type="dojox.grid.EnhancedGrid"
+       data-dojo-props="rowsPerPage: 50, selectable: true, noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No RAS events for the job.&lt;/span&gt;'"
+       data-dojo-attach-point="_grid">
+    <thead><tr>
+        <th field="id" width="80px">Record ID</th>
+        <th field="eventTime" width="110px" formatter="bluegene.navigator.format.timestamp" cellStyles="text-align: right;">Time</th>
+        <th field="severity" width="70px" cellStyles="text-align: center;">Severity</th>
+        <th field="category" width="90px">Category</th>
+        <th field="msgId" width="90px">Message ID</th>
+        <th field="location" width="120px">Location</th>
+        <th field="message" width="300px">Message</th>
+    </tr></thead>
+</table>
+
+</div>

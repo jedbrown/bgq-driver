@@ -1,0 +1,778 @@
+<interrupts>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <register prefix="MU_DCR"   name="master_port0_interrupts" width="64" >
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err0" bit="0" category="fatal" description="(fatal error) sked_p_err - parity error on boundary latched value of sw_xm_sked_valid_2, sw_xm_sked_id_2 and sw_xm_sked_eager_2" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err1" bit="1" category="fatal" description="(fatal error) sked_id_err - MSB of switch sked_id is set and MU only supports 16 L2 slice destinations" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err2" bit="2" category="fatal" description="(fatal error) sked_eager_err - switch attempted eager schedule and MU doesn't support eager scheduling" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err3" bit="3" category="fatal" description="(fatal error) sked_dly_p_err - parity error on latched sked_valid and lut_wr_valid" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err4" bit="4" category="fatal" description="(fatal error) sr_xm_rd_valid_p_err - parity error on boundary latched value of sr_xm_rd_valid_2  and  sr_xm_rd_valid_p_2" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err5" bit="5" category="fatal" description="(fatal error) sr_xm_rd_info_p_err - parity error on boundary latched value of sr_xm_rd_info_2" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err6" bit="6" category="fatal" description="(fatal error) newreq_attr_p_err - parity error on internal ime_rtn_attr and newreq_info_attr" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err7" bit="7" category="fatal" description="(fatal error) rdreturn_size_err - sr_xm_rd_info(0 to 1) specified an illegal '11' size" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err8" bit="8" category="fatal" description="(fatal error) avail_ime_idx_p_err - parity error covering the avail_ime_idx vector" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err9" bit="9" category="fatal" description="(fatal error) avail_idx_p_err - parity error covering the avail_idx vector" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err10" bit="10" category="fatal" description="(fatal error) alloc_ime_idx_p_err - parity error covering alloc_ime_idx_attr" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err11" bit="11" category="fatal" description="(fatal error) alloc_idx_p_err - parity error covering alloc_idx_attr" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err12" bit="12" category="fatal" description="(fatal error) rdreturn_idx_notvalid_err - error if tag of read return is listed as unallocated" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err13" bit="13" category="fatal" description="(fatal error) ime_lut_p_err - parity error on LUT info associated with tag for read return" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err14" bit="14" category="fatal" description="(fatal error) beat_cnt_p_err - parity error on beat counter for read return data" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err15" bit="15" category="fatal" description="(fatal error) wr_pos_hot_err - wr_pos vector is not one hot, indicating error in write position tracking" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err16" bit="16" category="fatal" description="(fatal error) fifo_dest_p_err - parity error in current request's destination field stored in request FIFO" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err17" bit="17" category="fatal" description="(fatal error) lut_valid_p_err - parity error on lut_valid vector" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err18" bit="18" category="fatal" description="(fatal error) lut_attr_p_err - parity error in look-up-table attributes for current request going out to switch" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err19" bit="19" category="fatal" description="(fatal error) lut_notvalid_err - look-up-table does not contain a valid entry for switch's requested destination" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err20" bit="20" category="fatal" description="(fatal error) dealloc_idx_p_err - parity error on dealloc_idx" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err21" bit="21" category="fatal" description="(fatal error) genid_p_err - parity error on msgc_gen_ctr" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err22" bit="22" category="fatal" description="(fatal error) req_cnt_p_err - parity error on the count of outstanding write requests from each rME" />
+    <intbit register="master_port0_interrupts" name="xm0_fatal_err23" bit="23" category="fatal" description="(fatal error) newreq_valid_p_err - parity error in the incoming request valid buffers" />
+    <intbit register="master_port0_interrupts" name="xm0_software_err24" bit="24" category="software" description="(software error) newreq_write_range_err - write request address range check violation, see master port error info register" />
+    <intbit register="master_port0_interrupts" name="xm0_software_err25" bit="25" category="software" description="(software error) newreq_read_range_err - read request address range check violation, see master port error info register" />
+    <intbit register="master_port0_interrupts" name="xm0_corr_err26" bit="26" category="correctable" description="(correctable error) gen_cnt_p_err - gen_cnt latch HW correctable parity error" />
+  </register>
+  <register prefix="MU_DCR"   name="master_port1_interrupts" width="64" >
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err0" bit="0" category="fatal" description="(fatal error) sked_p_err - parity error on boundary latched value of sw_xm_sked_valid_2, sw_xm_sked_id_2 and sw_xm_sked_eager_2" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err1" bit="1" category="fatal" description="(fatal error) sked_id_err - MSB of switch sked_id is set and MU only supports 16 L2 slice destinations" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err2" bit="2" category="fatal" description="(fatal error) sked_eager_err - switch attempted eager schedule and MU doesn't support eager scheduling" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err3" bit="3" category="fatal" description="(fatal error) sked_dly_p_err - parity error on latched sked_valid and lut_wr_valid" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err4" bit="4" category="fatal" description="(fatal error) sr_xm_rd_valid_p_err - parity error on boundary latched value of sr_xm_rd_valid_2  and  sr_xm_rd_valid_p_2" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err5" bit="5" category="fatal" description="(fatal error) sr_xm_rd_info_p_err - parity error on boundary latched value of sr_xm_rd_info_2" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err6" bit="6" category="fatal" description="(fatal error) newreq_attr_p_err - parity error on internal ime_rtn_attr and newreq_info_attr" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err7" bit="7" category="fatal" description="(fatal error) rdreturn_size_err - sr_xm_rd_info(0 to 1) specified an illegal '11' size" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err8" bit="8" category="fatal" description="(fatal error) avail_ime_idx_p_err - parity error covering the avail_ime_idx vector" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err9" bit="9" category="fatal" description="(fatal error) avail_idx_p_err - parity error covering the avail_idx vector" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err10" bit="10" category="fatal" description="(fatal error) alloc_ime_idx_p_err - parity error covering alloc_ime_idx_attr" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err11" bit="11" category="fatal" description="(fatal error) alloc_idx_p_err - parity error covering alloc_idx_attr" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err12" bit="12" category="fatal" description="(fatal error) rdreturn_idx_notvalid_err - error if tag of read return is listed as unallocated" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err13" bit="13" category="fatal" description="(fatal error) ime_lut_p_err - parity error on LUT info associated with tag for read return" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err14" bit="14" category="fatal" description="(fatal error) beat_cnt_p_err - parity error on beat counter for read return data" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err15" bit="15" category="fatal" description="(fatal error) wr_pos_hot_err - wr_pos vector is not one hot, indicating error in write position tracking" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err16" bit="16" category="fatal" description="(fatal error) fifo_dest_p_err - parity error in current request's destination field stored in request FIFO" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err17" bit="17" category="fatal" description="(fatal error) lut_valid_p_err - parity error on lut_valid vector" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err18" bit="18" category="fatal" description="(fatal error) lut_attr_p_err - parity error in look-up-table attributes for current request going out to switch" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err19" bit="19" category="fatal" description="(fatal error) lut_notvalid_err - look-up-table does not contain a valid entry for switch's requested destination" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err20" bit="20" category="fatal" description="(fatal error) dealloc_idx_p_err - parity error on dealloc_idx" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err21" bit="21" category="fatal" description="(fatal error) genid_p_err - parity error on msgc_gen_ctr" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err22" bit="22" category="fatal" description="(fatal error) req_cnt_p_err - parity error on the count of outstanding write requests from each rME" />
+    <intbit register="master_port1_interrupts" name="xm1_fatal_err23" bit="23" category="fatal" description="(fatal error) newreq_valid_p_err - parity error in the incoming request valid buffers" />
+    <intbit register="master_port1_interrupts" name="xm1_software_err24" bit="24" category="software" description="(software error) newreq_write_range_err - write request address range check violation, see master port error info register" />
+    <intbit register="master_port1_interrupts" name="xm1_software_err25" bit="25" category="software" description="(software error) newreq_read_range_err - read request address range check violation, see master port error info register" />
+    <intbit register="master_port1_interrupts" name="xm1_corr_err26" bit="26" category="correctable" description="(correctable error) gen_cnt_p_err - gen_cnt latch HW correctable parity error" />
+  </register>
+  <register prefix="MU_DCR"   name="arlog_interrupts" width="64" >
+    <intbit register="arlog_interrupts" name="arlog_err0" bit="0" category="fatal" description="(fatal error) iME-to-imFIFO arbitration logic parity error in control flag latches" />
+    <intbit register="arlog_interrupts" name="arlog_err1" bit="1" category="fatal" description="(fatal error) iME-to-imFIFO arbitration stage 1 pipeline latch parity error (ready flag set request lost)" />
+    <intbit register="arlog_interrupts" name="arlog_err2" bit="2" category="fatal" description="(fatal error) iME-to-imFIFO arbitration logic, multiple requests accepted at the same time" />
+    <intbit register="arlog_interrupts" name="arlog_err3" bit="3" category="non-fatal" description="(non-fatal error) iME-to-imFIFO arbitration logic stage 1 pipeline latch parity error (recovered by retry)" />
+    <intbit register="arlog_interrupts" name="arlog_err4" bit="4" category="non-fatal" description="(non-fatal error) iME-to-imFIFO arbitration logic ime_available register bit error (recovered by retry)" />
+    <intbit register="arlog_interrupts" name="arlog_err5" bit="5" category="non-fatal" description="(non-fatal error) iME-to-imFIFO arbitration logic 136to1 arbiter random bit latch parity error" />
+    <intbit register="arlog_interrupts" name="arlog_err6" bit="6" category="non-fatal" description="(non-fatal error) iME-to-imFIFO arbitration logic 64to1 arbiter random bit latch parity error" />
+    <intbit register="arlog_interrupts" name="arlog_err7" bit="7" category="fatal" description="(fatal error) iME-to-imFIFO arbitration logic FIFO map latch scan and correct index counter parity error" />
+    <intbit register="arlog_interrupts" name="arlog_err8" bit="8" category="fatal" description="(fatal error) iME-to-imFIFO arbitration logic previous FIFO map read index latch parity error" />
+    <intbit register="arlog_interrupts" name="arlog_err9" bit="9" category="non-fatal" description="(non-fatal error) iME-to-imFIFO arbitration logic 136to1 arbitration result latch parity error" />
+  </register>
+  <register prefix="MU_DCR"   name="master_port2_interrupts" width="64" >
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err0" bit="0" category="fatal" description="(fatal error) sked_p_err - parity error on boundary latched value of sw_xm_sked_valid_2, sw_xm_sked_id_2 and sw_xm_sked_eager_2" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err1" bit="1" category="fatal" description="(fatal error) sked_id_err - MSB of switch sked_id is set and MU only supports 16 L2 slice destinations" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err2" bit="2" category="fatal" description="(fatal error) sked_eager_err - switch attempted eager schedule and MU doesn't support eager scheduling" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err3" bit="3" category="fatal" description="(fatal error) sked_dly_p_err - parity error on latched sked_valid and lut_wr_valid" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err4" bit="4" category="fatal" description="(fatal error) sr_xm_rd_valid_p_err - parity error on boundary latched value of sr_xm_rd_valid_2  and  sr_xm_rd_valid_p_2" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err5" bit="5" category="fatal" description="(fatal error) sr_xm_rd_info_p_err - parity error on boundary latched value of sr_xm_rd_info_2" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err6" bit="6" category="fatal" description="(fatal error) newreq_attr_p_err - parity error on internal ime_rtn_attr and newreq_info_attr" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err7" bit="7" category="fatal" description="(fatal error) rdreturn_size_err - sr_xm_rd_info(0 to 1) specified an illegal '11' size" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err8" bit="8" category="fatal" description="(fatal error) avail_ime_idx_p_err - parity error covering the avail_ime_idx vector" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err9" bit="9" category="fatal" description="(fatal error) avail_idx_p_err - parity error covering the avail_idx vector" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err10" bit="10" category="fatal" description="(fatal error) alloc_ime_idx_p_err - parity error covering alloc_ime_idx_attr" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err11" bit="11" category="fatal" description="(fatal error) alloc_idx_p_err - parity error covering alloc_idx_attr" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err12" bit="12" category="fatal" description="(fatal error) rdreturn_idx_notvalid_err - error if tag of read return is listed as unallocated" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err13" bit="13" category="fatal" description="(fatal error) ime_lut_p_err - parity error on LUT info associated with tag for read return" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err14" bit="14" category="fatal" description="(fatal error) beat_cnt_p_err - parity error on beat counter for read return data" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err15" bit="15" category="fatal" description="(fatal error) wr_pos_hot_err - wr_pos vector is not one hot, indicating error in write position tracking" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err16" bit="16" category="fatal" description="(fatal error) fifo_dest_p_err - parity error in current request's destination field stored in request FIFO" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err17" bit="17" category="fatal" description="(fatal error) lut_valid_p_err - parity error on lut_valid vector" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err18" bit="18" category="fatal" description="(fatal error) lut_attr_p_err - parity error in look-up-table attributes for current request going out to switch" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err19" bit="19" category="fatal" description="(fatal error) lut_notvalid_err - look-up-table does not contain a valid entry for switch's requested destination" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err20" bit="20" category="fatal" description="(fatal error) dealloc_idx_p_err - parity error on dealloc_idx" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err21" bit="21" category="fatal" description="(fatal error) genid_p_err - parity error on msgc_gen_ctr" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err22" bit="22" category="fatal" description="(fatal error) req_cnt_p_err - parity error on the count of outstanding write requests from each rME" />
+    <intbit register="master_port2_interrupts" name="xm2_fatal_err23" bit="23" category="fatal" description="(fatal error) newreq_valid_p_err - parity error in the incoming request valid buffers" />
+    <intbit register="master_port2_interrupts" name="xm2_software_err24" bit="24" category="software" description="(software error) newreq_write_range_err - write request address range check violation, see master port error info register" />
+    <intbit register="master_port2_interrupts" name="xm2_software_err25" bit="25" category="software" description="(software error) newreq_read_range_err - read request address range check violation, see master port error info register" />
+    <intbit register="master_port2_interrupts" name="xm2_corr_err26" bit="26" category="correctable" description="(correctable error) gen_cnt_p_err - gen_cnt latch HW correctable parity error" />
+  </register>
+  <register prefix="MU_DCR"   name="ecc_count_interrupts" width="64" >
+    <intbit register="ecc_count_interrupts" name="ecc_count_over0" bit="0" category="correctable" description="(correctable error) iME-to-imFIFO arbitration logic correctable ECC error count has exceeded the threshold." />
+    <intbit register="ecc_count_interrupts" name="ecc_count_over1" bit="1" category="correctable" description="(correctable error) ICSRAM correctable ECC error count has exceeded the threshold." />
+    <intbit register="ecc_count_interrupts" name="ecc_count_over2" bit="2" category="correctable" description="(correctable error) MCSRAM correctable ECC error count has exceeded the threshold." />
+    <intbit register="ecc_count_interrupts" name="ecc_count_over3" bit="3" category="correctable" description="(correctable error) RCSRAM correctable ECC error count has exceeded the threshold." />
+    <intbit register="ecc_count_interrupts" name="ecc_count_over4" bit="4" category="correctable" description="(correctable error) RPUT correctable ECC error count has exceeded the threshold." />
+    <intbit register="ecc_count_interrupts" name="ecc_count_over5" bit="5" category="correctable" description="(correctable error) MMREGS correctable ECC error count has exceeded the threshold." />
+    <intbit register="ecc_count_interrupts" name="ecc_count_over6" bit="6" category="correctable" description="(correctable error) XS correctable ECC error count has exceeded the threshold." />
+    <intbit register="ecc_count_interrupts" name="ecc_count_over7" bit="7" category="correctable" description="(correctable error) RME correctable ECC error count has exceeded the threshold." />
+  </register>
+  <register prefix="MU_DCR"   name="imu_ecc_interrupts" width="64" >
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ue0" bit="0" category="fatal" description="(fatal error) XM to MCSRAM write data word0 ECC uncorrectable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ue1" bit="1" category="fatal" description="(fatal error) XM to MCSRAM write data word1 ECC uncorrectable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ue2" bit="2" category="fatal" description="(fatal error) XM to MCSRAM write data word2 ECC uncorrectable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ue3" bit="3" category="fatal" description="(fatal error) XM to MCSRAM write data word3 ECC uncorrectable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ue4" bit="4" category="fatal" description="(fatal error) MCSRAM read data word0 ECC uncorrectable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ue5" bit="5" category="fatal" description="(fatal error) MCSRAM read data word1 ECC uncorrectable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ue6" bit="6" category="fatal" description="(fatal error) MCSRAM read data word2 ECC uncorrectable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ue7" bit="7" category="fatal" description="(fatal error) MCSRAM read data word3 ECC uncorrectable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ue8" bit="8" category="fatal" description="(fatal error) MCSRAM read data word4 ECC uncorrectable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ue9" bit="9" category="fatal" description="(fatal error) MCSRAM read data word5 ECC uncorrectable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ue10" bit="10" category="fatal" description="(fatal error) iME-to-imFIFO arbitration logic FIFO map latch ECC uncorrectable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce0" bit="11" category="correctable" description="(correctable error) XM to MCSRAM write data word0 ECC correctable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce1" bit="12" category="correctable" description="(correctable error) XM to MCSRAM write data word1 ECC correctable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce2" bit="13" category="correctable" description="(correctable error) XM to MCSRAM write data word2 ECC correctable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce3" bit="14" category="correctable" description="(correctable error) XM to MCSRAM write data word3 ECC correctable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce4" bit="15" category="correctable" description="(correctable error) MCSRAM read data word0 ECC correctable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce5" bit="16" category="correctable" description="(correctable error) MCSRAM read data word1 ECC correctable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce6" bit="17" category="correctable" description="(correctable error) MCSRAM read data word2 ECC correctable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce7" bit="18" category="correctable" description="(correctable error) MCSRAM read data word3 ECC correctable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce8" bit="19" category="correctable" description="(correctable error) MCSRAM read data word4 ECC correctable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce9" bit="20" category="correctable" description="(correctable error) MCSRAM read data word5 ECC correctable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce10" bit="21" category="correctable" description="(correctable error) iME-to-imFIFO arbitration logic FIFO map latch ECC correctable error" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce11" bit="22" category="correctable" description="(correctable error) ICSRAM start_ecc_ce - correctable ECC error on start field, can be ignored until field is initialized" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce12" bit="23" category="correctable" description="(correctable error) ICSRAM size_ecc_ce - correctable ECC error on size field, can be ignored until field is initialized" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce13" bit="24" category="correctable" description="(correctable error) ICSRAM head_ecc_ce - correctable ECC error on head field, can be ignored until field is initialized" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce14" bit="25" category="correctable" description="(correctable error) ICSRAM tail_ecc_ce - correctable ECC error on tail field, can be ignored until field is initialized" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce15" bit="26" category="correctable" description="(correctable error) ICSRAM desc_ecc_ce - correctable ECC error on desc field, can be ignored until field is initialized" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce16" bit="27" category="correctable" description="(correctable error) ICSRAM free_ecc_ce - correctable ECC error on free space field, cannot be ignored" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce17" bit="28" category="correctable" description="(correctable error) ICSRAM xmint_head_ecc_ce - correctable ECC error on head address for descriptor fetch" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce18" bit="29" category="correctable" description="(correctable error) ICSRAM rdstart_ecc_ce - correctable ECC error on start read for rGET packet" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce19" bit="30" category="correctable" description="(correctable error) ICSRAM rdsize_ecc_ce - correctable ECC error on size read for rGET packet" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce20" bit="31" category="correctable" description="(correctable error) ICSRAM rdtail_ecc_ce - correctable ECC error on tail read for rGET packet" />
+    <intbit register="imu_ecc_interrupts" name="imu_ecc_ce21" bit="32" category="correctable" description="(correctable error) ICSRAM rdfree_ecc_ce - correctable ECC error on free space read for rGET packet" />
+  </register>
+  <register prefix="MU_DCR"   name="misc_ecc_corr_interrupts" width="64" >
+    <intbit register="misc_ecc_corr_interrupts" name="mmregs_ecc_ce0" bit="0" category="correctable" description="(correctable error) wrdata_ecc_ce - Correctable ECC error on MMIO write data." />
+    <intbit register="misc_ecc_corr_interrupts" name="mmregs_ecc_ce1" bit="1" category="correctable" description="(correctable error) barrier_mu_ecc_ce - Correctable ECC error in global interrupt control register" />
+    <intbit register="misc_ecc_corr_interrupts" name="mmregs_ecc_ce2" bit="2" category="correctable" description="(correctable error) barrier_nd_ecc_ce - Correctable ECC error in global interrupt status register" />
+    <intbit register="misc_ecc_corr_interrupts" name="xs_ecc_ce0" bit="3" category="correctable" description="(correctable error) info_ecc_ce - Correctable ECC error on info field passed to MU slave by switch" />
+    <intbit register="misc_ecc_corr_interrupts" name="xs_ecc_ce1" bit="4" category="correctable" description="(correctable error) data_bvalids0_ecc_ce - Correctable ECC error on first 72b of write data  and  byte valids passed to MU slave by switch" />
+    <intbit register="misc_ecc_corr_interrupts" name="xs_ecc_ce2" bit="5" category="correctable" description="(correctable error) data_bvalids1_ecc_ce - Correctable ECC error on second 72b of write data  and  byte valids passed to MU slave by switch" />
+  </register>
+  <register prefix="MU_DCR"   name="rcsram_interrupts" width="64" >
+    <intbit register="rcsram_interrupts" name="rcsram_err0" bit="0" category="fatal" description="(fatal error) RCSRAM parity error in control flag latches" />
+    <intbit register="rcsram_interrupts" name="rcsram_err1" bit="1" category="fatal" description="(fatal error) RCSRAM parity error in slave index latch" />
+    <intbit register="rcsram_interrupts" name="rcsram_err2" bit="2" category="fatal" description="(fatal error) RCSRAM parity error in slave/get-tail request stage 1/4 latch" />
+    <intbit register="rcsram_interrupts" name="rcsram_err3" bit="3" category="fatal" description="(fatal error) RCSRAM parity error in slave/get-tail request stage 2 latch" />
+    <intbit register="rcsram_interrupts" name="rcsram_err4" bit="4" category="fatal" description="(fatal error) RCSRAM parity error in slave/get-tail request stage 3 latch" />
+    <intbit register="rcsram_interrupts" name="rcsram_err5" bit="5" category="fatal" description="(fatal error) RCSRAM parity error in interrupt index latch" />
+    <intbit register="rcsram_interrupts" name="rcsram_err6" bit="6" category="fatal" description="(fatal error) RCSRAM parity error in commit-tail request stage 1/3 latch" />
+    <intbit register="rcsram_interrupts" name="rcsram_err7" bit="7" category="fatal" description="(fatal error) RCSRAM parity error in commit-tail request stage 2 latch" />
+    <intbit register="rcsram_interrupts" name="rcsram_err8" bit="8" category="fatal" description="(fatal error) RCSRAM parity error in commit-tail request stage 4 latch" />
+    <intbit register="rcsram_interrupts" name="rcsram_err9" bit="9" category="fatal" description="(fatal error) RCSRAM get tail SRAM write data latch parity error" />
+    <intbit register="rcsram_interrupts" name="rcsram_err10" bit="10" category="fatal" description="(fatal error) RCSRAM get tail read data output latch parity error" />
+    <intbit register="rcsram_interrupts" name="rcsram_err11" bit="11" category="fatal" description="(fatal error) RCSRAM state encoding error" />
+    <intbit register="rcsram_interrupts" name="rcsram_err12" bit="12" category="software" description="(software error) RCSRAM user packet getting tail of system rmFIFO" />
+    <intbit register="rcsram_interrupts" name="rcsram_err13" bit="13" category="software" description="(software error) RCSRAM get-tail request index out of bound (>= 272)" />
+    <intbit register="rcsram_interrupts" name="rcsram_err14" bit="14" category="software" description="(software error) RCSRAM requested rmFIFO not enabled by DCR register" />
+    <intbit register="rcsram_interrupts" name="rcsram_err15" bit="15" category="software" description="(software error) RCSRAM write data from slave not aligned to 64B or greater than 2**36-1" />
+    <intbit register="rcsram_interrupts" name="rcsram_err16" bit="16" category="non-fatal" description="(non-fatal error) RCSRAM get-tail request arbiter random bit latch parity error" />
+    <intbit register="rcsram_interrupts" name="rcsram_err17" bit="17" category="non-fatal" description="(non-fatal error) RCSRAM commit-tail request arbiter random bit latch parity error" />
+    <intbit register="rcsram_interrupts" name="rcsram_err18" bit="18" category="non-fatal" description="(non-fatal error) RCSRAM backdoor tail ID read data latch parity error" />
+    <intbit register="rcsram_interrupts" name="rcsram_err19" bit="19" category="non-fatal" description="(non-fatal error) RCSRAM backdoor ECC read data latch parity error" />
+  </register>
+  <register prefix="MU_DCR"   name="mmregs_interrupts" width="64" >
+    <intbit register="mmregs_interrupts" name="mmregs_fatal_err0" bit="0" category="fatal" description="(fatal error) wrdata_ecc_err - uncorrectable ECC error on incoming write data" />
+    <intbit register="mmregs_interrupts" name="mmregs_fatal_err1" bit="1" category="fatal" description="(fatal error) imfifo_enable_status_p_err - parity error on imFIFO enabled registers" />
+    <intbit register="mmregs_interrupts" name="mmregs_fatal_err2" bit="2" category="fatal" description="(fatal error) imfifo_thold_status_p_err - parity error on imFIFO threshold crossing interrupt status register" />
+    <intbit register="mmregs_interrupts" name="mmregs_fatal_err3" bit="3" category="fatal" description="(fatal error) rmfifo_thold_status_p_err - parity error on rmFIFO threshold crossing interrupt status register" />
+    <intbit register="mmregs_interrupts" name="mmregs_fatal_err4" bit="4" category="fatal" description="(fatal error) rmfifo_pktint_status_p_err - parity error on rmFIFO packet arrival interrupt status register" />
+    <intbit register="mmregs_interrupts" name="mmregs_fatal_err5" bit="5" category="fatal" description="(fatal error) info_p_err - parity error on info register" />
+    <intbit register="mmregs_interrupts" name="mmregs_fatal_err6" bit="6" category="fatal" description="(fatal error) rd_barriers_latched_p_errn - parity error on latched barrier register read data (either barrier status or control)" />
+    <intbit register="mmregs_interrupts" name="mmregs_fatal_err7" bit="7" category="fatal" description="(fatal error) barrier_mu_ecc_err - uncorrectable ECC error on global interrupt control register" />
+    <intbit register="mmregs_interrupts" name="mmregs_fatal_err8" bit="8" category="fatal" description="(fatal error) barrier_nd_ecc_err - uncorrectable ECC error on global interrupt status register" />
+    <intbit register="mmregs_interrupts" name="mmregs_software_err9" bit="9" category="software" description="(software error) rd_imfifo_enable_err - software attempted to read the write-only enable imFIFO register" />
+    <intbit register="mmregs_interrupts" name="mmregs_software_err10" bit="10" category="software" description="(software error) rd_imfifo_disable_err - software attempted to read the write-only disable imFIFO register" />
+    <intbit register="mmregs_interrupts" name="mmregs_software_err11" bit="11" category="software" description="(software error) rd_fifo_int_clr_err - software attempted to read the write-only clear interrupt status register" />
+    <intbit register="mmregs_interrupts" name="mmregs_software_err12" bit="12" category="software" description="(software error) wr_imfifo_enable_status_err - software attempted to write the read-only imFIFO enable status register" />
+    <intbit register="mmregs_interrupts" name="mmregs_software_err13" bit="13" category="software" description="(software error) wr_fifo_int_status_err - software attempted to write the read-only interrupt status register" />
+    <intbit register="mmregs_interrupts" name="mmregs_software_err14" bit="14" category="software" description="(software error) imfifo_enable_prot_err - user attempted to enable or disable a system imFIFO" />
+    <intbit register="mmregs_interrupts" name="mmregs_software_err15" bit="15" category="software" description="(software error) fifo_int_clr_prot_err - user attempted to clear an interrupt corresponding to a system imFIFO or rmFIFO" />
+    <intbit register="mmregs_interrupts" name="mmregs_software_err16" bit="16" category="software" description="(software error) wr_range_err - software attempted to write (set) unused MMIO bits, either bits 0-31 in imFIFO enable/disable/high-priority, or bits 0-60 in global interrupt control" />
+    <intbit register="mmregs_interrupts" name="mmregs_software_err17" bit="17" category="software" description="(software error) wr_barriers_nd_err - software attempted to write the read-only global interrupt status register" />
+    <intbit register="mmregs_interrupts" name="mmregs_software_err18" bit="18" category="software" description="(software error) barrier_mu_prot_err - user attempted to write a system global interrupt control bit;" />
+  </register>
+  <register prefix="MU_DCR"   name="rmu_ecc_interrupts" width="64" >
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue0" bit="0" category="fatal" description="(fatal error) XS--RCSRAM write data ECC uncorrectable error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue1" bit="1" category="fatal" description="(fatal error) RCSRAM read data word0 ECC uncorrectable error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue2" bit="2" category="fatal" description="(fatal error) RCSRAM read data word1 ECC uncorrectable error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue3" bit="3" category="fatal" description="(fatal error) RCSRAM read data word2 ECC uncorrectable error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue4" bit="4" category="fatal" description="(fatal error) RCSRAM read data word3 ECC uncorrectable error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue5" bit="5" category="fatal" description="(fatal error) RCSRAM read data word4 ECC uncorrectable error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue6" bit="6" category="fatal" description="(fatal error) RPUT SRAM read data ECC uncorrectable error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue7" bit="7" category="fatal" description="(fatal error) RPUT SRAM write data ECC uncorrectable error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue8" bit="8" category="fatal" description="(fatal error) rME0 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue9" bit="9" category="fatal" description="(fatal error) rME0 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue10" bit="10" category="fatal" description="(fatal error) rME1 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue11" bit="11" category="fatal" description="(fatal error) rME1 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue12" bit="12" category="fatal" description="(fatal error) rME2 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue13" bit="13" category="fatal" description="(fatal error) rME2 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue14" bit="14" category="fatal" description="(fatal error) rME3 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue15" bit="15" category="fatal" description="(fatal error) rME3 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue16" bit="16" category="fatal" description="(fatal error) rME4 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue17" bit="17" category="fatal" description="(fatal error) rME4 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue18" bit="18" category="fatal" description="(fatal error) rME5 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue19" bit="19" category="fatal" description="(fatal error) rME5 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue20" bit="20" category="fatal" description="(fatal error) rME6 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue21" bit="21" category="fatal" description="(fatal error) rME6 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue22" bit="22" category="fatal" description="(fatal error) rME7 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue23" bit="23" category="fatal" description="(fatal error) rME7 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue24" bit="24" category="fatal" description="(fatal error) rME8 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue25" bit="25" category="fatal" description="(fatal error) rME8 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue26" bit="26" category="fatal" description="(fatal error) rME9 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue27" bit="27" category="fatal" description="(fatal error) rME9 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue28" bit="28" category="fatal" description="(fatal error) rME10 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue29" bit="29" category="fatal" description="(fatal error) rME10 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue30" bit="30" category="fatal" description="(fatal error) rME11 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue31" bit="31" category="fatal" description="(fatal error) rME11 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue32" bit="32" category="fatal" description="(fatal error) rME12 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue33" bit="33" category="fatal" description="(fatal error) rME12 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue34" bit="34" category="fatal" description="(fatal error) rME13 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue35" bit="35" category="fatal" description="(fatal error) rME13 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue36" bit="36" category="fatal" description="(fatal error) rME14 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue37" bit="37" category="fatal" description="(fatal error) rME14 previous 4 bytes network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue38" bit="38" category="fatal" description="(fatal error) rME15 network data latch uncorrectable ECC error" />
+    <intbit register="rmu_ecc_interrupts" name="rmu_ecc_ue39" bit="39" category="fatal" description="(fatal error) rME15 previous 4 bytes network data latch uncorrectable ECC error" />
+  </register>
+  <register prefix="MU_DCR"   name="mcsram_interrupts" width="64" >
+    <intbit register="mcsram_interrupts" name="mcsram_err0" bit="0" category="fatal" description="(fatal error) Control flag latches parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err1" bit="1" category="fatal" description="(fatal error) XM--MCSRAM 1st cycle write data latch parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err2" bit="2" category="fatal" description="(fatal error) XM--MCSRAM 2nd cycle write data latch parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err3" bit="3" category="fatal" description="(fatal error) XM--MCSRAM write index latch parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err4" bit="4" category="fatal" description="(fatal error) SRAM write index latch parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err5" bit="5" category="fatal" description="(fatal error) Descriptor output latch parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err6" bit="6" category="fatal" description="(fatal error) Header output buffer iME ID latch parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err7" bit="7" category="fatal" description="(fatal error) iME request stage 1 latch parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err8" bit="8" category="fatal" description="(fatal error) iME request stage 2 latch parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err9" bit="9" category="fatal" description="(fatal error) iME request stage 3 latch parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err10" bit="10" category="fatal" description="(fatal error) MCSRAM to arbitration logic ready flag and FIFO map set request latch parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err11" bit="11" category="fatal" description="(fatal error) ICSRAM increment index latch parity error" />
+    <intbit register="mcsram_interrupts" name="mcsram_err12" bit="12" category="fatal" description="(fatal error) Backdoor command latch parity error " />
+    <intbit register="mcsram_interrupts" name="mcsram_err13" bit="13" category="fatal" description="(fatal error) 2nd XM data return missing" />
+    <intbit register="mcsram_interrupts" name="mcsram_err14" bit="14" category="fatal" description="(fatal error) Header buffer overflow" />
+    <intbit register="mcsram_interrupts" name="mcsram_err15" bit="15" category="software" description="(software error) Remote get packet payload address is atomic" />
+    <intbit register="mcsram_interrupts" name="mcsram_err16" bit="16" category="software" description="(software error) Payload size gt 512B" />
+    <intbit register="mcsram_interrupts" name="mcsram_err17" bit="17" category="software" description="(software error) Payload size = 0 for R-put or payload size lt 64B for R-get" />
+    <intbit register="mcsram_interrupts" name="mcsram_err18" bit="18" category="software" description="(software error) Payload size != 64N for R-get" />
+    <intbit register="mcsram_interrupts" name="mcsram_err19" bit="19" category="software" description="(software error) Payload size = 0 for non-zero message length" />
+    <intbit register="mcsram_interrupts" name="mcsram_err20" bit="20" category="software" description="(software error) Payload address starts in non-atomic area but ends in atomic area" />
+    <intbit register="mcsram_interrupts" name="mcsram_err21" bit="21" category="software" description="(software error) Message len != 64N for R-get" />
+    <intbit register="mcsram_interrupts" name="mcsram_err22" bit="22" category="software" description="(software error) Message len != 8 for atomic payload address" />
+    <intbit register="mcsram_interrupts" name="mcsram_err23" bit="23" category="software" description="(software error) Message len = 0 for R-put, or message len lt 64B for R-get" />
+    <intbit register="mcsram_interrupts" name="mcsram_err24" bit="24" category="software" description="(software error) User imFIFO sending system VC packet (VC = 3,6)" />
+    <intbit register="mcsram_interrupts" name="mcsram_err25" bit="25" category="software" description="(software error) Invalid MU packet type (type = '11')" />
+    <intbit register="mcsram_interrupts" name="mcsram_err26" bit="26" category="software" description="(software error) User imFIFO specifying system iME in FIFO map" />
+    <intbit register="mcsram_interrupts" name="mcsram_err27" bit="27" category="software" description="(software error) FIFO map is 0 (i.e. specifying no iME)" />
+    <intbit register="mcsram_interrupts" name="mcsram_err28" bit="28" category="non-fatal" description="(non-fatal error) Random bit latch parity error in MCSRAM descriptor read request arbitor" />
+    <intbit register="mcsram_interrupts" name="mcsram_err29" bit="29" category="non-fatal" description="(non-fatal error) Random bit latch parity error in MCSRAM packet end request arbitor" />
+    <intbit register="mcsram_interrupts" name="mcsram_err30" bit="30" category="non-fatal" description="(non-fatal error) Random bit latch parity error in MCSRAM message end request arbitor" />
+    <intbit register="mcsram_interrupts" name="mcsram_dd2_err0" bit="31" category="software" description="(software error DD2 only) Invalid VC (VC=7 is undefined)" />
+    <intbit register="mcsram_interrupts" name="mcsram_dd2_err1" bit="32" category="software" description="(software error DD2 only) Put offset wrapped (put offset + msg len overflows 36bit limit)" />
+  </register>
+  <register prefix="MU_DCR"   name="ime_interrupts" width="64" >
+    <intbit register="ime_interrupts" name="ime_err0" bit="0" category="fatal" description="(fatal error) iME--XM request valid flag latch parity error" />
+    <intbit register="ime_interrupts" name="ime_err1" bit="1" category="fatal" description="(fatal error) XM--iME return address latch parity error" />
+    <intbit register="ime_interrupts" name="ime_err2" bit="2" category="fatal" description="(fatal error) XM--iME return data valid flag latch parity error" />
+    <intbit register="ime_interrupts" name="ime_err3" bit="3" category="fatal" description="(fatal error) iME0 parity error" />
+    <intbit register="ime_interrupts" name="ime_err4" bit="4" category="fatal" description="(fatal error) iME0 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err5" bit="5" category="fatal" description="(fatal error) iME1 parity error" />
+    <intbit register="ime_interrupts" name="ime_err6" bit="6" category="fatal" description="(fatal error) iME1 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err7" bit="7" category="fatal" description="(fatal error) iME2 parity error" />
+    <intbit register="ime_interrupts" name="ime_err8" bit="8" category="fatal" description="(fatal error) iME2 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err9" bit="9" category="fatal" description="(fatal error) iME3 parity error" />
+    <intbit register="ime_interrupts" name="ime_err10" bit="10" category="fatal" description="(fatal error) iME3 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err11" bit="11" category="fatal" description="(fatal error) iME4 parity error" />
+    <intbit register="ime_interrupts" name="ime_err12" bit="12" category="fatal" description="(fatal error) iME4 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err13" bit="13" category="fatal" description="(fatal error) iME5 parity error" />
+    <intbit register="ime_interrupts" name="ime_err14" bit="14" category="fatal" description="(fatal error) iME5 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err15" bit="15" category="fatal" description="(fatal error) iME6 parity error" />
+    <intbit register="ime_interrupts" name="ime_err16" bit="16" category="fatal" description="(fatal error) iME6 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err17" bit="17" category="fatal" description="(fatal error) iME7 parity error" />
+    <intbit register="ime_interrupts" name="ime_err18" bit="18" category="fatal" description="(fatal error) iME7 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err19" bit="19" category="fatal" description="(fatal error) iME8 parity error" />
+    <intbit register="ime_interrupts" name="ime_err20" bit="20" category="fatal" description="(fatal error) iME8 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err21" bit="21" category="fatal" description="(fatal error) iME9 parity error" />
+    <intbit register="ime_interrupts" name="ime_err22" bit="22" category="fatal" description="(fatal error) iME9 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err23" bit="23" category="fatal" description="(fatal error) iME10 parity error" />
+    <intbit register="ime_interrupts" name="ime_err24" bit="24" category="fatal" description="(fatal error) iME10 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err25" bit="25" category="fatal" description="(fatal error) iME11 parity error" />
+    <intbit register="ime_interrupts" name="ime_err26" bit="26" category="fatal" description="(fatal error) iME11 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err27" bit="27" category="fatal" description="(fatal error) iME12 parity error" />
+    <intbit register="ime_interrupts" name="ime_err28" bit="28" category="fatal" description="(fatal error) iME12 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err29" bit="29" category="fatal" description="(fatal error) iME13 parity error" />
+    <intbit register="ime_interrupts" name="ime_err30" bit="30" category="fatal" description="(fatal error) iME13 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err31" bit="31" category="fatal" description="(fatal error) iME14 parity error" />
+    <intbit register="ime_interrupts" name="ime_err32" bit="32" category="fatal" description="(fatal error) iME14 invalid state entered" />
+    <intbit register="ime_interrupts" name="ime_err33" bit="33" category="fatal" description="(fatal error) iME15 parity error" />
+    <intbit register="ime_interrupts" name="ime_err34" bit="34" category="fatal" description="(fatal error) iME15 invalid state entered" />
+  </register>
+  <register prefix="MU_DCR"   name="rme_interrupts1" width="64" >
+    <intbit register="rme_interrupts1" name="rme_err49" bit="0" category="fatal" description="(fatal error) rME8 parity error" />
+    <intbit register="rme_interrupts1" name="rme_err50" bit="1" category="fatal" description="(fatal error) rME8 invalid state has been reached" />
+    <intbit register="rme_interrupts1" name="rme_err51" bit="2" category="fatal" description="(fatal error) rME8 alignment buffer overflow" />
+    <intbit register="rme_interrupts1" name="rme_err52" bit="3" category="fatal" description="(fatal error) rME8 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts1" name="rme_err53" bit="4" category="software" description="(software error) rME8 packet header field error" />
+    <intbit register="rme_interrupts1" name="rme_err54" bit="5" category="non-fatal" description="(non-fatal error) rME8 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts1" name="rme_err55" bit="6" category="fatal" description="(fatal error) rME9 parity error" />
+    <intbit register="rme_interrupts1" name="rme_err56" bit="7" category="fatal" description="(fatal error) rME9 invalid state has been reached" />
+    <intbit register="rme_interrupts1" name="rme_err57" bit="8" category="fatal" description="(fatal error) rME9 alignment buffer overflow" />
+    <intbit register="rme_interrupts1" name="rme_err58" bit="9" category="fatal" description="(fatal error) rME9 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts1" name="rme_err59" bit="10" category="software" description="(software error) rME9 packet header field error" />
+    <intbit register="rme_interrupts1" name="rme_err60" bit="11" category="non-fatal" description="(non-fatal error) rME9 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts1" name="rme_err61" bit="12" category="fatal" description="(fatal error) rME10 parity error" />
+    <intbit register="rme_interrupts1" name="rme_err62" bit="13" category="fatal" description="(fatal error) rME10 invalid state has been reached" />
+    <intbit register="rme_interrupts1" name="rme_err63" bit="14" category="fatal" description="(fatal error) rME10 alignment buffer overflow" />
+    <intbit register="rme_interrupts1" name="rme_err64" bit="15" category="fatal" description="(fatal error) rME10 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts1" name="rme_err65" bit="16" category="software" description="(software error) rME10 packet header field error" />
+    <intbit register="rme_interrupts1" name="rme_err66" bit="17" category="non-fatal" description="(non-fatal error) rME10 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts1" name="rme_err67" bit="18" category="fatal" description="(fatal error) rME11 parity error" />
+    <intbit register="rme_interrupts1" name="rme_err68" bit="19" category="fatal" description="(fatal error) rME11 invalid state has been reached" />
+    <intbit register="rme_interrupts1" name="rme_err69" bit="20" category="fatal" description="(fatal error) rME11 alignment buffer overflow" />
+    <intbit register="rme_interrupts1" name="rme_err70" bit="21" category="fatal" description="(fatal error) rME11 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts1" name="rme_err71" bit="22" category="software" description="(software error) rME11 packet header field error" />
+    <intbit register="rme_interrupts1" name="rme_err72" bit="23" category="non-fatal" description="(non-fatal error) rME11 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts1" name="rme_err73" bit="24" category="fatal" description="(fatal error) rME12 parity error" />
+    <intbit register="rme_interrupts1" name="rme_err74" bit="25" category="fatal" description="(fatal error) rME12 invalid state has been reached" />
+    <intbit register="rme_interrupts1" name="rme_err75" bit="26" category="fatal" description="(fatal error) rME12 alignment buffer overflow" />
+    <intbit register="rme_interrupts1" name="rme_err76" bit="27" category="fatal" description="(fatal error) rME12 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts1" name="rme_err77" bit="28" category="software" description="(software error) rME12 packet header field error" />
+    <intbit register="rme_interrupts1" name="rme_err78" bit="29" category="non-fatal" description="(non-fatal error) rME12 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts1" name="rme_err79" bit="30" category="fatal" description="(fatal error) rME13 parity error" />
+    <intbit register="rme_interrupts1" name="rme_err80" bit="31" category="fatal" description="(fatal error) rME13 invalid state has been reached" />
+    <intbit register="rme_interrupts1" name="rme_err81" bit="32" category="fatal" description="(fatal error) rME13 alignment buffer overflow" />
+    <intbit register="rme_interrupts1" name="rme_err82" bit="33" category="fatal" description="(fatal error) rME13 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts1" name="rme_err83" bit="34" category="software" description="(software error) rME13 packet header field error" />
+    <intbit register="rme_interrupts1" name="rme_err84" bit="35" category="non-fatal" description="(non-fatal error) rME13 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts1" name="rme_err85" bit="36" category="fatal" description="(fatal error) rME14 parity error" />
+    <intbit register="rme_interrupts1" name="rme_err86" bit="37" category="fatal" description="(fatal error) rME14 invalid state has been reached" />
+    <intbit register="rme_interrupts1" name="rme_err87" bit="38" category="fatal" description="(fatal error) rME14 alignment buffer overflow" />
+    <intbit register="rme_interrupts1" name="rme_err88" bit="39" category="fatal" description="(fatal error) rME14 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts1" name="rme_err89" bit="40" category="software" description="(software error) rME14 packet header field error" />
+    <intbit register="rme_interrupts1" name="rme_err90" bit="41" category="non-fatal" description="(non-fatal error) rME14 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts1" name="rme_err91" bit="42" category="fatal" description="(fatal error) rME15 parity error" />
+    <intbit register="rme_interrupts1" name="rme_err92" bit="43" category="fatal" description="(fatal error) rME15 invalid state has been reached" />
+    <intbit register="rme_interrupts1" name="rme_err93" bit="44" category="fatal" description="(fatal error) rME15 alignment buffer overflow" />
+    <intbit register="rme_interrupts1" name="rme_err94" bit="45" category="fatal" description="(fatal error) rME15 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts1" name="rme_err95" bit="46" category="software" description="(software error) rME15 packet header field error" />
+    <intbit register="rme_interrupts1" name="rme_err96" bit="47" category="non-fatal" description="(non-fatal error) rME15 parity error in FIFO read timeout count" />
+  </register>
+  <register prefix="MU_DCR"   name="rme_interrupts0" width="64" >
+    <intbit register="rme_interrupts0" name="rme_err0" bit="0" category="fatal" description="(fatal error) rME--xm request valid flag latch parity error" />
+    <intbit register="rme_interrupts0" name="rme_err1" bit="1" category="fatal" description="(fatal error) rME0 parity error" />
+    <intbit register="rme_interrupts0" name="rme_err2" bit="2" category="fatal" description="(fatal error) rME0 invalid state has been reached" />
+    <intbit register="rme_interrupts0" name="rme_err3" bit="3" category="fatal" description="(fatal error) rME0 alignment buffer overflow" />
+    <intbit register="rme_interrupts0" name="rme_err4" bit="4" category="fatal" description="(fatal error) rME0 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts0" name="rme_err5" bit="5" category="software" description="(software error) rME0 packet header field error" />
+    <intbit register="rme_interrupts0" name="rme_err6" bit="6" category="non-fatal" description="(non-fatal error) rME0 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts0" name="rme_err7" bit="7" category="fatal" description="(fatal error) rME1 parity error" />
+    <intbit register="rme_interrupts0" name="rme_err8" bit="8" category="fatal" description="(fatal error) rME1 invalid state has been reached" />
+    <intbit register="rme_interrupts0" name="rme_err9" bit="9" category="fatal" description="(fatal error) rME1 alignment buffer overflow" />
+    <intbit register="rme_interrupts0" name="rme_err10" bit="10" category="fatal" description="(fatal error) rME1 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts0" name="rme_err11" bit="11" category="software" description="(software error) rME1 packet header field error" />
+    <intbit register="rme_interrupts0" name="rme_err12" bit="12" category="non-fatal" description="(non-fatal error) rME1 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts0" name="rme_err13" bit="13" category="fatal" description="(fatal error) rME2 parity error" />
+    <intbit register="rme_interrupts0" name="rme_err14" bit="14" category="fatal" description="(fatal error) rME2 invalid state has been reached" />
+    <intbit register="rme_interrupts0" name="rme_err15" bit="15" category="fatal" description="(fatal error) rME2 alignment buffer overflow" />
+    <intbit register="rme_interrupts0" name="rme_err16" bit="16" category="fatal" description="(fatal error) rME2 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts0" name="rme_err17" bit="17" category="software" description="(software error) rME2 packet header field error" />
+    <intbit register="rme_interrupts0" name="rme_err18" bit="18" category="non-fatal" description="(non-fatal error) rME2 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts0" name="rme_err19" bit="19" category="fatal" description="(fatal error) rME3 parity error" />
+    <intbit register="rme_interrupts0" name="rme_err20" bit="20" category="fatal" description="(fatal error) rME3 invalid state has been reached" />
+    <intbit register="rme_interrupts0" name="rme_err21" bit="21" category="fatal" description="(fatal error) rME3 alignment buffer overflow" />
+    <intbit register="rme_interrupts0" name="rme_err22" bit="22" category="fatal" description="(fatal error) rME3 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts0" name="rme_err23" bit="23" category="software" description="(software error) rME3 packet header field error" />
+    <intbit register="rme_interrupts0" name="rme_err24" bit="24" category="non-fatal" description="(non-fatal error) rME3 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts0" name="rme_err25" bit="25" category="fatal" description="(fatal error) rME4 parity error" />
+    <intbit register="rme_interrupts0" name="rme_err26" bit="26" category="fatal" description="(fatal error) rME4 invalid state has been reached" />
+    <intbit register="rme_interrupts0" name="rme_err27" bit="27" category="fatal" description="(fatal error) rME4 alignment buffer overflow" />
+    <intbit register="rme_interrupts0" name="rme_err28" bit="28" category="fatal" description="(fatal error) rME4 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts0" name="rme_err29" bit="29" category="software" description="(software error) rME4 packet header field error" />
+    <intbit register="rme_interrupts0" name="rme_err30" bit="30" category="non-fatal" description="(non-fatal error) rME4 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts0" name="rme_err31" bit="31" category="fatal" description="(fatal error) rME5 parity error" />
+    <intbit register="rme_interrupts0" name="rme_err32" bit="32" category="fatal" description="(fatal error) rME5 invalid state has been reached" />
+    <intbit register="rme_interrupts0" name="rme_err33" bit="33" category="fatal" description="(fatal error) rME5 alignment buffer overflow" />
+    <intbit register="rme_interrupts0" name="rme_err34" bit="34" category="fatal" description="(fatal error) rME5 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts0" name="rme_err35" bit="35" category="software" description="(software error) rME5 packet header field error" />
+    <intbit register="rme_interrupts0" name="rme_err36" bit="36" category="non-fatal" description="(non-fatal error) rME5 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts0" name="rme_err37" bit="37" category="fatal" description="(fatal error) rME6 parity error" />
+    <intbit register="rme_interrupts0" name="rme_err38" bit="38" category="fatal" description="(fatal error) rME6 invalid state has been reached" />
+    <intbit register="rme_interrupts0" name="rme_err39" bit="39" category="fatal" description="(fatal error) rME6 alignment buffer overflow" />
+    <intbit register="rme_interrupts0" name="rme_err40" bit="40" category="fatal" description="(fatal error) rME6 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts0" name="rme_err41" bit="41" category="software" description="(software error) rME6 packet header field error" />
+    <intbit register="rme_interrupts0" name="rme_err42" bit="42" category="non-fatal" description="(non-fatal error) rME6 parity error in FIFO read timeout count" />
+    <intbit register="rme_interrupts0" name="rme_err43" bit="43" category="fatal" description="(fatal error) rME7 parity error" />
+    <intbit register="rme_interrupts0" name="rme_err44" bit="44" category="fatal" description="(fatal error) rME7 invalid state has been reached" />
+    <intbit register="rme_interrupts0" name="rme_err45" bit="45" category="fatal" description="(fatal error) rME7 alignment buffer overflow" />
+    <intbit register="rme_interrupts0" name="rme_err46" bit="46" category="fatal" description="(fatal error) rME7 network reception FIFO read timeout" />
+    <intbit register="rme_interrupts0" name="rme_err47" bit="47" category="software" description="(software error) rME7 packet header field error" />
+    <intbit register="rme_interrupts0" name="rme_err48" bit="48" category="non-fatal" description="(non-fatal error) rME7 parity error in FIFO read timeout count" />
+  </register>
+  <register prefix="MU_DCR"   name="icsram_interrupts" width="64" >
+    <intbit register="icsram_interrupts" name="icsram_err0" bit="0" category="fatal" description="(fatal error) start_ecc_err - uncorrectable ECC error on start field, can be ignored until field is initialized" />
+    <intbit register="icsram_interrupts" name="icsram_err1" bit="1" category="fatal" description="(fatal error) size_ecc_err - uncorrectable ECC error on size field, can be ignored until field is initialized" />
+    <intbit register="icsram_interrupts" name="icsram_err2" bit="2" category="fatal" description="(fatal error) head_ecc_err - uncorrectable ECC error on head field, can be ignored until field is initialized" />
+    <intbit register="icsram_interrupts" name="icsram_err3" bit="3" category="fatal" description="(fatal error) tail_ecc_err - uncorrectable ECC error on tail field, can be ignored until field is initialized" />
+    <intbit register="icsram_interrupts" name="icsram_err4" bit="4" category="fatal" description="(fatal error) desc_ecc_err - uncorrectable ECC error on desc field, can be ignored until field is initialized" />
+    <intbit register="icsram_interrupts" name="icsram_err5" bit="5" category="fatal" description="(fatal error) free_ecc_err - uncorrectable ECC error on free space field, cannot be ignored" />
+    <intbit register="icsram_interrupts" name="icsram_err6" bit="6" category="fatal" description="(fatal error) fsm_p_err - parity error on FSM state registers" />
+    <intbit register="icsram_interrupts" name="icsram_err7" bit="7" category="fatal" description="(fatal error) imfifo_not_empty_p_err - parity error on register that tracks if imFIFO has descriptor(s) to fetch" />
+    <intbit register="icsram_interrupts" name="icsram_err8" bit="8" category="fatal" description="(fatal error) imfifo_cand_p_err - parity error on imFIFO candidate ID chosen for descriptor fetch" />
+    <intbit register="icsram_interrupts" name="icsram_err9" bit="9" category="fatal" description="(fatal error) fetching_desc_p_err - parity error on register that tracks if imFIFO is currently fetching descriptor" />
+    <intbit register="icsram_interrupts" name="icsram_err10" bit="10" category="fatal" description="(fatal error) xmreq_fifo_ptr_p_err - parity error on req fifo pointers that issue descriptor requests to master port" />
+    <intbit register="icsram_interrupts" name="icsram_err11" bit="11" category="fatal" description="(fatal error) xmint_head_ecc_err - uncorrectable ECC error on head address for descriptor fetch" />
+    <intbit register="icsram_interrupts" name="icsram_err12" bit="12" category="fatal" description="(fatal error) icsram_me_valid_p_err - parity error on valid bit telling rME that read of head/tail/size is done" />
+    <intbit register="icsram_interrupts" name="icsram_err13" bit="13" category="fatal" description="(fatal error) rmerd_attr_p_err - parity error on head/tail/size read by rME" />
+    <intbit register="icsram_interrupts" name="icsram_err14" bit="14" category="fatal" description="(fatal error) icsram_din_l2_p_err - parity error on icsram DIN latch containing start, size, etc" />
+    <intbit register="icsram_interrupts" name="icsram_err15" bit="15" category="fatal" description="(fatal error) rdstart_ecc_err - uncorrectable ECC error on start read for rGET packet" />
+    <intbit register="icsram_interrupts" name="icsram_err16" bit="16" category="fatal" description="(fatal error) rdsize_ecc_err - uncorrectable ECC error on size read for rGET packet" />
+    <intbit register="icsram_interrupts" name="icsram_err17" bit="17" category="fatal" description="(fatal error) rdtail_ecc_err - uncorrectable ECC error on tail read for rGET packet" />
+    <intbit register="icsram_interrupts" name="icsram_err18" bit="18" category="fatal" description="(fatal error) rdfree_ecc_err - uncorrectable ECC error on free space read for rGET packet" />
+    <intbit register="icsram_interrupts" name="icsram_err19" bit="19" category="correctable" description="(correctable error) imfifo_cand_p_err_1 - correctable parity error on intermediate register storing imFIFO candidate for descriptor fetch. Corrected by hardware re-arbitration of imFIFO candidate." />
+    <intbit register="icsram_interrupts" name="icsram_err20" bit="20" category="software" description="(software error) xs_wr_free_err - software attempted to write read-only free space" />
+    <intbit register="icsram_interrupts" name="icsram_err21" bit="21" category="software" description="(software error) startsizeheadtail_align_atomic_err - start, head, or tail address are not 64B aligned, or size is not 64B-1 aligned, or atomic address was specified" />
+    <intbit register="icsram_interrupts" name="icsram_err22" bit="22" category="software" description="(software error) startsizeheadtail_range_err - start, head, tail or size are out of range (bits(0 to 26) are non-zero)" />
+    <intbit register="icsram_interrupts" name="icsram_err23" bit="23" category="notification" description="(software notification) rget_fifo_full_err - rget FIFO is full, rME is waiting for software to free up space in fifo. See associated info register for rget FIFO ID." />
+  </register>
+  <register prefix="MU_DCR"   name="rputsram_interrupts" width="64" >
+    <intbit register="rputsram_interrupts" name="rputsram_err0" bit="0" category="fatal" description="(fatal error) RPUT SRAM control flag latch parity error" />
+    <intbit register="rputsram_interrupts" name="rputsram_err1" bit="1" category="fatal" description="(fatal error) RPUT SRAM state encoding error" />
+    <intbit register="rputsram_interrupts" name="rputsram_err2" bit="2" category="fatal" description="(fatal error) RPUT SRAM stage 1 request latch parity error" />
+    <intbit register="rputsram_interrupts" name="rputsram_err3" bit="3" category="non-fatal" description="(non-fatal error) RPUT SRAM stage 2 request latch parity error (recovered by retry)" />
+    <intbit register="rputsram_interrupts" name="rputsram_err4" bit="4" category="fatal" description="(fatal error) RPUT SRAM stage 3 request latch parity error" />
+    <intbit register="rputsram_interrupts" name="rputsram_err5" bit="5" category="fatal" description="(fatal error) RPUT SRAM stage 4 request latch parity error" />
+    <intbit register="rputsram_interrupts" name="rputsram_err6" bit="6" category="non-fatal" description="(non-fatal error) RPUT SRAM backdoor ECC read data latch parity error" />
+    <intbit register="rputsram_interrupts" name="rputsram_err7" bit="7" category="non-fatal" description="(non-fatal error) RPUT SRAM rME request arbitor random bit latch parity error" />
+    <intbit register="rputsram_interrupts" name="rputsram_err8" bit="8" category="software" description="(software error) RPUT SRAM user packet accessing put base but it is system entry" />
+    <intbit register="rputsram_interrupts" name="rputsram_err9" bit="9" category="software" description="(software error) RPUT SRAM user packet accessing counter base but it is system entry" />
+    <intbit register="rputsram_interrupts" name="rputsram_err10" bit="10" category="software" description="(software error) RPUT SRAM rput/counter address addition overflow" />
+    <intbit register="rputsram_interrupts" name="rputsram_err11" bit="11" category="software" description="(software error) RPUT SRAM rput destination area crossing atomic/nonatomic boundary" />
+    <intbit register="rputsram_interrupts" name="rputsram_err12" bit="12" category="software" description="(software error) RPUT SRAM data size != 8 for atomic rput address" />
+    <intbit register="rputsram_interrupts" name="rputsram_err13" bit="13" category="software" description="(software error) RPUT SRAM rput counter address in non-atomic" />
+  </register>
+  <register prefix="MU_DCR"   name="slave_port_interrupts" width="64" >
+    <intbit register="slave_port_interrupts" name="xs_fatal_err0" bit="0" category="fatal" description="(fatal error) info_ecc_err - uncorrectable ECC error on switch info field OR single bit error on ttype(0) bit" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err1" bit="1" category="fatal" description="(fatal error) data_bvalids_ecc_err - uncorrectable ECC error on switch data  and  byte valid fields" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err2" bit="2" category="fatal" description="(fatal error) req_valid_src_p_err - parity error on src field" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err3" bit="3" category="fatal" description="(fatal error) src_id_err - src field is >= 18, which means a non-L1p master port is trying to access MU slave" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err4" bit="4" category="fatal" description="(fatal error) req_info_chop_p_err - parity error on a subset of the request info bits" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err5" bit="5" category="fatal" description="(fatal error) dgate_valid_err - req_valid asserted by switch, but dgate not asserted so info/data fields not latched" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err6" bit="6" category="fatal" description="(fatal error) req_ack_err - more than 1 MU subunit ack asserted simultaneously" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err7" bit="7" category="fatal" description="(fatal error) req_fifo_ptr_p_err - parity error on request FIFO pointers" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err8" bit="8" category="fatal" description="(fatal error) req_fifo_full_err - request FIFO is full, should not happen b/c switch tracks MU slave tokens" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err9" bit="9" category="fatal" description="(fatal error) req_fifo_attr_p_err - parity error in request FIFO attributes" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err10" bit="10" category="fatal" description="(fatal error) req_info_p_err - parity error in request info from request buffer" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err11" bit="11" category="fatal" description="(fatal error) sked_eager_err - switch indicated eager schedule to MU slave for read return, but MU slave does not support this" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err12" bit="12" category="fatal" description="(fatal error) sked_p_err - parity error in sked_id on slave read data return side" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err13" bit="13" category="fatal" description="(fatal error) sked_id_err - sked_id is >= 18, which indicates a read return to a non-L1p master port" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err14" bit="14" category="fatal" description="(fatal error) avail_idx_p_err - parity error covering the avail_idx vector" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err15" bit="15" category="fatal" description="(fatal error) alloc_idx_p_err - parity error covering alloc_idx_attr" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err16" bit="16" category="fatal" description="(fatal error) wr_pos_hot_err - wr_pos vector is not one hot, indicating error in write position tracking" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err17" bit="17" category="fatal" description="(fatal error) fifo_dest_p_err - parity error in current request's destination field stored in read return request FIFO" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err18" bit="18" category="fatal" description="(fatal error) lut_valid_p_err - parity error on lut_valid vector" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err19" bit="19" category="fatal" description="(fatal error) lut_attr_p_err - parity error in look-up-table attributes for current read return request going out to switch" />
+    <intbit register="slave_port_interrupts" name="xs_fatal_err20" bit="20" category="fatal" description="(fatal error) lut_notvalid_err - look-up-table does not contain a valid entry for switch's requested destination" />
+    <intbit register="slave_port_interrupts" name="xs_software_err21" bit="21" category="software" description="(software error) bad_op_err - unsupported opcode (ttype) sent to MU slave, see slave error info register" />
+    <intbit register="slave_port_interrupts" name="xs_software_err22" bit="22" category="software" description="(software error) rd_size_err - read request size is not 8B, see slave error info register" />
+    <intbit register="slave_port_interrupts" name="xs_software_err23" bit="23" category="software" description="(software error) byte_valid_err - more than 8B of byte valids asserted OR byte valids inconsistent with odd/even address" />
+    <intbit register="slave_port_interrupts" name="xs_software_err24" bit="24" category="software" description="(software error) addr_range_err - request's address lies outside MU MMIO address space, see slave error info register" />
+    <intbit register="slave_port_interrupts" name="xs_software_err25" bit="25" category="software" description="(software error) icsram_perm_err - user is attempting to access a system imFIFO" />
+    <intbit register="slave_port_interrupts" name="xs_software_err26" bit="26" category="software" description="(software error) rcsram_perm_err - user is attempting to access a system rmFIFO" />
+    <intbit register="slave_port_interrupts" name="xs_software_err27" bit="27" category="software" description="(software error) rputsram_perm_err - user is attempting to access a system rput base address" />
+  </register>
+  <register prefix="MU_DCR"   name="rmu_ecc_corr_interrupts" width="64" >
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce0" bit="0" category="correctable" description="(correctable error) XS--RCSRAM write data ECC correctable error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce1" bit="1" category="correctable" description="(correctable error) RCSRAM read data word0 ECC correctable error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce2" bit="2" category="correctable" description="(correctable error) RCSRAM read data word1 ECC correctable error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce3" bit="3" category="correctable" description="(correctable error) RCSRAM read data word2 ECC correctable error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce4" bit="4" category="correctable" description="(correctable error) RCSRAM read data word3 ECC correctable error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce5" bit="5" category="correctable" description="(correctable error) RCSRAM read data word4 ECC correctable error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce6" bit="6" category="correctable" description="(correctable error) RPUT SRAM read data ECC correctable error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce7" bit="7" category="correctable" description="(correctable error) RPUT SRAM write data ECC correctable error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce8" bit="8" category="correctable" description="(correctable error) rME0 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce9" bit="9" category="correctable" description="(correctable error) rME0 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce10" bit="10" category="correctable" description="(correctable error) rME1 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce11" bit="11" category="correctable" description="(correctable error) rME1 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce12" bit="12" category="correctable" description="(correctable error) rME2 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce13" bit="13" category="correctable" description="(correctable error) rME2 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce14" bit="14" category="correctable" description="(correctable error) rME3 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce15" bit="15" category="correctable" description="(correctable error) rME3 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce16" bit="16" category="correctable" description="(correctable error) rME4 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce17" bit="17" category="correctable" description="(correctable error) rME4 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce18" bit="18" category="correctable" description="(correctable error) rME5 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce19" bit="19" category="correctable" description="(correctable error) rME5 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce20" bit="20" category="correctable" description="(correctable error) rME6 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce21" bit="21" category="correctable" description="(correctable error) rME6 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce22" bit="22" category="correctable" description="(correctable error) rME7 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce23" bit="23" category="correctable" description="(correctable error) rME7 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce24" bit="24" category="correctable" description="(correctable error) rME8 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce25" bit="25" category="correctable" description="(correctable error) rME8 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce26" bit="26" category="correctable" description="(correctable error) rME9 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce27" bit="27" category="correctable" description="(correctable error) rME9 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce28" bit="28" category="correctable" description="(correctable error) rME10 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce29" bit="29" category="correctable" description="(correctable error) rME10 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce30" bit="30" category="correctable" description="(correctable error) rME11 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce31" bit="31" category="correctable" description="(correctable error) rME11 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce32" bit="32" category="correctable" description="(correctable error) rME12 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce33" bit="33" category="correctable" description="(correctable error) rME12 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce34" bit="34" category="correctable" description="(correctable error) rME13 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce35" bit="35" category="correctable" description="(correctable error) rME13 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce36" bit="36" category="correctable" description="(correctable error) rME14 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce37" bit="37" category="correctable" description="(correctable error) rME14 previous 4 bytes network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce38" bit="38" category="correctable" description="(correctable error) rME15 network data latch correctable ECC error" />
+    <intbit register="rmu_ecc_corr_interrupts" name="rmu_ecc_ce39" bit="39" category="correctable" description="(correctable error) rME15 previous 4 bytes network data latch correctable ECC error" />
+  </register>
+  <register prefix="MU_DCR"   name="misc_interrupts" width="64" >
+    <intbit register="misc_interrupts" name="icsram_select_err0" bit="0" category="fatal" description="(fatal error) rME-to-ICSRAM arbiter request valid flag latch parity error" />
+    <intbit register="misc_interrupts" name="icsram_select_err1" bit="1" category="fatal" description="(fatal error) rME-to-ICSRAM arbiter request info latch parity error" />
+    <intbit register="misc_interrupts" name="icsram_select_err2" bit="2" category="non-fatal" description="(non-fatal error) rME-to-ICSRAM arbiter random bit latch parity error" />
+    <intbit register="misc_interrupts" name="icsram_select_err3" bit="3" category="software" description="(software error) rME requested system imFIFO for user R-get packet" />
+    <intbit register="misc_interrupts" name="icsram_select_err4" bit="4" category="software" description="(software error) rME requested imFIFO whose rget flag is not set" />
+    <intbit register="misc_interrupts" name="icsram_select_err5" bit="5" category="software" description="(software error) rME requested imFIFO not enabled by DCR" />
+    <intbit register="misc_interrupts" name="ran_err0" bit="6" category="non-fatal" description="(non-fatal error) Random bit generator bit error" />
+    <intbit register="misc_interrupts" name="mu_err0" bit="7" category="fatal" description="(fatal error) redun_ctrl signal latch parity error" />
+    <intbit register="misc_interrupts" name="mu_err1" bit="8" category="fatal" description="(fatal error) slice_sel_ctrl signal latch parity error" />
+    <intbit register="misc_interrupts" name="upc_counter_ovf" bit="9" category="non-fatal" description="(non-fatal error) UPC counter overflowed, indicating a soft error in counter or a problem with UPC ring" />
+  </register>
+  <register prefix="MU_DCR"  name="fifo_interrupts" width="64" >
+    <intbit register="fifo_interrupts" name="rmfifo_insufficient_space" bit="63" category="notification" description="(software notification) There is insufficient space in an rmFIFO to receive the next packet." />
+  </register>
+  <intinfo name="xm0_err_info" description="Holds info that might help debug master port errors." >
+    <intbitref intbit="xm0_software_err24" />
+    <intbitref intbit="xm0_software_err25" />
+  </intinfo>
+  <intinfo name="xm1_err_info" description="Holds info that might help debug master port errors." >
+    <intbitref intbit="xm1_software_err24" />
+    <intbitref intbit="xm1_software_err25" />
+  </intinfo>
+  <intinfo name="xm2_err_info" description="Holds info that might help debug master port errors." >
+    <intbitref intbit="xm2_software_err24" />
+    <intbitref intbit="xm2_software_err25" />
+  </intinfo>
+  <intinfo name="xs_err_info" description="Holds info that might help debug slave errors." >
+    <intbitref intbit="xs_fatal_err0" />
+    <intbitref intbit="xs_fatal_err1" />
+    <intbitref intbit="xs_fatal_err2" />
+    <intbitref intbit="xs_fatal_err3" />
+    <intbitref intbit="xs_fatal_err4" />
+    <intbitref intbit="xs_fatal_err5" />
+    <intbitref intbit="xs_fatal_err6" />
+    <intbitref intbit="xs_fatal_err7" />
+    <intbitref intbit="xs_fatal_err8" />
+    <intbitref intbit="xs_fatal_err9" />
+    <intbitref intbit="xs_fatal_err10" />
+    <intbitref intbit="xs_software_err21" />
+    <intbitref intbit="xs_software_err22" />
+    <intbitref intbit="xs_software_err23" />
+    <intbitref intbit="xs_software_err24" />
+    <intbitref intbit="xs_software_err25" />
+    <intbitref intbit="xs_software_err26" />
+    <intbitref intbit="xs_software_err27" />
+  </intinfo>
+  <intinfo name="mmregs_fifo_prot_err" description="This register holds the internal mmregs index that resulted in a protection violation that was caused by a user attempting to write a system location." >
+    <intbitref intbit="mmregs_software_err14" />
+    <intbitref intbit="mmregs_software_err15" />
+    <intbitref intbit="mmregs_software_err18" />
+  </intinfo>
+  <intinfo name="rmfifo" description="This register holds the ID of a rmFIFO, which raised an interrupt because it did not have sufficient space to receive the next packet." >
+    <intbitref intbit="rmfifo_insufficient_space" />
+  </intinfo>
+  <intinfo name="mcsram_err_fifo_id" description="Holds imFIFO ID that caused descriptor error in MCSRAM" >
+    <intbitref intbit="mcsram_err13" />
+    <intbitref intbit="mcsram_err14" />
+    <intbitref intbit="mcsram_err15" />
+    <intbitref intbit="mcsram_err16" />
+    <intbitref intbit="mcsram_err17" />
+    <intbitref intbit="mcsram_err18" />
+    <intbitref intbit="mcsram_err19" />
+    <intbitref intbit="mcsram_err20" />
+    <intbitref intbit="mcsram_err21" />
+    <intbitref intbit="mcsram_err22" />
+    <intbitref intbit="mcsram_err23" />
+    <intbitref intbit="mcsram_err24" />
+    <intbitref intbit="mcsram_err25" />
+    <intbitref intbit="mcsram_dd2_err0" />
+    <intbitref intbit="mcsram_dd2_err1" />
+  </intinfo>
+  <intinfo name="imfifo" description="This register holds the ID of a user imFIFO, if this imFIFO is specified as a user imFIFO, and a packet from that imFIFO tries to access a system network FIFO." >
+    <intbitref intbit="mcsram_err26" />
+  </intinfo>
+  <intinfo name="rmfifo_access_error_id" description="This register holds the rmFIFO ID on which software error was detected." >
+    <intbitref intbit="rcsram_err12" />
+    <intbitref intbit="rcsram_err13" />
+    <intbitref intbit="rcsram_err14" />
+    <intbitref intbit="rcsram_err15" />
+  </intinfo>
+  <intinfo name="ime_p_err0" description="This register holds parity error type detected in iME0" >
+    <intbitref intbit="ime_err1" />
+  </intinfo>
+  <intinfo name="ime_p_err1" description="This register holds parity error type detected in iME1" >
+    <intbitref intbit="ime_err3" />
+  </intinfo>
+  <intinfo name="ime_p_err2" description="This register holds parity error type detected in iME2" >
+    <intbitref intbit="ime_err5" />
+  </intinfo>
+  <intinfo name="ime_p_err3" description="This register holds parity error type detected in iME3" >
+    <intbitref intbit="ime_err7" />
+  </intinfo>
+  <intinfo name="ime_p_err4" description="This register holds parity error type detected in iME4" >
+    <intbitref intbit="ime_err9" />
+  </intinfo>
+  <intinfo name="ime_p_err5" description="This register holds parity error type detected in iME5" >
+    <intbitref intbit="ime_err11" />
+  </intinfo>
+  <intinfo name="ime_p_err6" description="This register holds parity error type detected in iME6" >
+    <intbitref intbit="ime_err13" />
+  </intinfo>
+  <intinfo name="ime_p_err7" description="This register holds parity error type detected in iME7" >
+    <intbitref intbit="ime_err15" />
+  </intinfo>
+  <intinfo name="ime_p_err8" description="This register holds parity error type detected in iME8" >
+    <intbitref intbit="ime_err17" />
+  </intinfo>
+  <intinfo name="ime_p_err9" description="This register holds parity error type detected in iME9" >
+    <intbitref intbit="ime_err19" />
+  </intinfo>
+  <intinfo name="ime_p_err10" description="This register holds parity error type detected in iME10" >
+    <intbitref intbit="ime_err21" />
+  </intinfo>
+  <intinfo name="ime_p_err11" description="This register holds parity error type detected in iME11" >
+    <intbitref intbit="ime_err23" />
+  </intinfo>
+  <intinfo name="ime_p_err12" description="This register holds parity error type detected in iME12" >
+    <intbitref intbit="ime_err25" />
+  </intinfo>
+  <intinfo name="ime_p_err13" description="This register holds parity error type detected in iME13" >
+    <intbitref intbit="ime_err27" />
+  </intinfo>
+  <intinfo name="ime_p_err14" description="This register holds parity error type detected in iME14" >
+    <intbitref intbit="ime_err29" />
+  </intinfo>
+  <intinfo name="ime_p_err15" description="This register holds parity error type detected in iME15" >
+    <intbitref intbit="ime_err31" />
+  </intinfo>
+  <intinfo name="rme_p_err0" description="This register holds parity error type detected in rME0" >
+    <intbitref intbit="rme_err1" />
+  </intinfo>
+  <intinfo name="rme_header_err0" description="This register holds header error type detected in rME0" >
+    <intbitref intbit="rme_err5" />
+  </intinfo>
+  <intinfo name="rme_p_err1" description="This register holds parity error type detected in rME1" >
+    <intbitref intbit="rme_err7" />
+  </intinfo>
+  <intinfo name="rme_header_err1" description="This register holds header error type detected in rME1" >
+    <intbitref intbit="rme_err11" />
+  </intinfo>
+  <intinfo name="rme_p_err2" description="This register holds parity error type detected in rME2" >
+    <intbitref intbit="rme_err13" />
+  </intinfo>
+  <intinfo name="rme_header_err2" description="This register holds header error type detected in rME2" >
+    <intbitref intbit="rme_err17" />
+  </intinfo>
+  <intinfo name="rme_p_err3" description="This register holds parity error type detected in rME3" >
+    <intbitref intbit="rme_err19" />
+  </intinfo>
+  <intinfo name="rme_header_err3" description="This register holds header error type detected in rME3" >
+    <intbitref intbit="rme_err23" />
+  </intinfo>
+  <intinfo name="rme_p_err4" description="This register holds parity error type detected in rME4" >
+    <intbitref intbit="rme_err25" />
+  </intinfo>
+  <intinfo name="rme_header_err4" description="This register holds header error type detected in rME4" >
+    <intbitref intbit="rme_err29" />
+  </intinfo>
+  <intinfo name="rme_p_err5" description="This register holds parity error type detected in rME5" >
+    <intbitref intbit="rme_err31" />
+  </intinfo>
+  <intinfo name="rme_header_err5" description="This register holds header error type detected in rME5" >
+    <intbitref intbit="rme_err35" />
+  </intinfo>
+  <intinfo name="rme_p_err6" description="This register holds parity error type detected in rME6" >
+    <intbitref intbit="rme_err37" />
+  </intinfo>
+  <intinfo name="rme_header_err6" description="This register holds header error type detected in rME6" >
+    <intbitref intbit="rme_err41" />
+  </intinfo>
+  <intinfo name="rme_p_err7" description="This register holds parity error type detected in rME7" >
+    <intbitref intbit="rme_err43" />
+  </intinfo>
+  <intinfo name="rme_header_err7" description="This register holds header error type detected in rME7" >
+    <intbitref intbit="rme_err47" />
+  </intinfo>
+  <intinfo name="rme_p_err8" description="This register holds parity error type detected in rME8" >
+    <intbitref intbit="rme_err49" />
+  </intinfo>
+  <intinfo name="rme_header_err8" description="This register holds header error type detected in rME8" >
+    <intbitref intbit="rme_err53" />
+  </intinfo>
+  <intinfo name="rme_p_err9" description="This register holds parity error type detected in rME9" >
+    <intbitref intbit="rme_err55" />
+  </intinfo>
+  <intinfo name="rme_header_err9" description="This register holds header error type detected in rME9" >
+    <intbitref intbit="rme_err59" />
+  </intinfo>
+  <intinfo name="rme_p_err10" description="This register holds parity error type detected in rME10" >
+    <intbitref intbit="rme_err61" />
+  </intinfo>
+  <intinfo name="rme_header_err10" description="This register holds header error type detected in rME10" >
+    <intbitref intbit="rme_err65" />
+  </intinfo>
+  <intinfo name="rme_p_err11" description="This register holds parity error type detected in rME11" >
+    <intbitref intbit="rme_err67" />
+  </intinfo>
+  <intinfo name="rme_header_err11" description="This register holds header error type detected in rME11" >
+    <intbitref intbit="rme_err71" />
+  </intinfo>
+  <intinfo name="rme_p_err12" description="This register holds parity error type detected in rME12" >
+    <intbitref intbit="rme_err73" />
+  </intinfo>
+  <intinfo name="rme_header_err12" description="This register holds header error type detected in rME12" >
+    <intbitref intbit="rme_err77" />
+  </intinfo>
+  <intinfo name="rme_p_err13" description="This register holds parity error type detected in rME13" >
+    <intbitref intbit="rme_err79" />
+  </intinfo>
+  <intinfo name="rme_header_err13" description="This register holds header error type detected in rME13" >
+    <intbitref intbit="rme_err83" />
+  </intinfo>
+  <intinfo name="rme_p_err14" description="This register holds parity error type detected in rME14" >
+    <intbitref intbit="rme_err85" />
+  </intinfo>
+  <intinfo name="rme_header_err14" description="This register holds header error type detected in rME14" >
+    <intbitref intbit="rme_err89" />
+  </intinfo>
+  <intinfo name="rme_p_err15" description="This register holds parity error type detected in rME15" >
+    <intbitref intbit="rme_err91" />
+  </intinfo>
+  <intinfo name="rme_header_err15" description="This register holds header error type detected in rME15" >
+    <intbitref intbit="rme_err95" />
+  </intinfo>
+  <intinfo name="icsram_rget_fifo_full" description="This register holds the remote get imFIFO ID which is full." >
+    <intbitref intbit="icsram_err23" />
+  </intinfo>
+  <intinfo name="imfifo_access_error_id" description="This register holds the remote-get imFIFO ID on which software error was detected." >
+    <intbitref intbit="icsram_select_err3" />
+    <intbitref intbit="icsram_select_err4" />
+    <intbitref intbit="icsram_select_err5" />
+  </intinfo>
+</interrupts>

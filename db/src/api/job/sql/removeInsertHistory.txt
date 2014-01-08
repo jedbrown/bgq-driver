@@ -1,0 +1,36 @@
+-- REMOVE_INSERT_HISTORY
+
+INSERT INTO tbgqJob_history (
+     id, username,
+     blockId, creationId,
+     executable, workingDir,
+     startTime,
+     status, seqID,
+     args, envs, mapping,
+     nodesUsed,
+     shapeA, shapeB, shapeC, shapeD, shapeE,
+     processesPerNode,
+     schedulerData,
+     corner,
+     hostname, pid,
+     errText, exitStatus,
+     qualifier, np, client
+  ) SELECT
+    j.id, j.userName,
+    j.blockId, b.creationId,
+    j.executable, j.workingDir,
+    j.startTime,
+    ?, # status
+    j.seqId,
+    j.args, j.envs,
+    j.mapping, j.nodesUsed,
+    j.shapeA, j.shapeB, j.shapeC, j.shapeD, j.shapeE,
+    j.processesPerNode,
+    j.schedulerData,
+    j.corner,
+    j.hostname, j.pid,
+    ?,?, # errText exitStatus
+    j.qualifier, j.np, j.client
+  FROM bgqJob AS j JOIN
+       bgqBlock AS b ON j.blockId = b.blockId
+  WHERE j.id = ? # id

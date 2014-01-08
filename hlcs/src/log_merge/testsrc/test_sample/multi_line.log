@@ -1,0 +1,34 @@
+
+2010-05-05 01:49:04.523 (INFO ) [queenBee] mcservermain [0x400015f51d0] -
+clientPort=1208
+machineType=0
+hostName=bgpfs29
+computeRacks=16
+ioRacks=1
+rows=4
+columns=5
+debug=0
+autoinit=1
+bringupOptions=DoMcEmulationWithoutHardware
+alteraPath=/bgsys/drivers/ppcfloor/bin/alteraImages
+Subnet Subnet1
+  PrimaryServer = bgpfs32
+  PrimaryServerInterface = eth1
+  PrimaryServerPort = 33458
+  PrimaryBGInterface = eth0
+  BackupServer = bgpfs33
+  BackupServerInterface = eth1
+  BackupServerPort = 33458
+  BackupBGInterface = eth0
+  HardwareToManage = R00, R01, R02, R03, R10, R11, R12, R13, Q14,
+Subnet Subnet2
+  PrimaryServer = bgpfs33
+  PrimaryServerInterface = eth1
+  PrimaryServerPort = 33459
+  PrimaryBGInterface = eth0
+  BackupServer = bgpfs32
+  BackupServerInterface = eth1
+  BackupServerPort = 33459
+  BackupBGInterface = eth0
+  HardwareToManage = R20, R21, R22, R23, R30, R31, R32, R33,
+

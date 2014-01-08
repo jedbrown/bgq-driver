@@ -1,0 +1,482 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2010, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+#ifndef _FW_ND_H
+#define _FW_ND_H
+
+// +-------------------------------------------------------------------------+
+// | The following are interrupt status bit masks.  For each DCR containing  |
+// | interrupt status bits, there is a separate mask for fatal, non-fatal,   |
+// | and correctable errors.  Software and notification errors are not       |
+// | considered here since they are the responsibility of the kernels.       |
+// +-------------------------------------------------------------------------+
+
+#define ND_RESE_DCR__FATAL_ERR__FATAL_MASK ( \
+  ND_RESE_DCR__FATAL_ERR__DCR_SLAVE_CRIT_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__DCR_SLAVE_MCHK_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC0_UE_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC1_UE_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC2_UE_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC3_UE_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC4_UE_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC5_UE_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_PIPE_UE_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_PIPE_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC0_LIST_UE_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_FIFO_WR_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC0_CTRL_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC0_FIFO_RD_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC0_LIST_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC1_CTRL_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC1_FIFO_RD_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC2_CTRL_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC2_FIFO_RD_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC3_CTRL_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC3_FIFO_RD_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC4_CTRL_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC4_FIFO_RD_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC5_CTRL_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_VC5_FIFO_RD_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_E2E_CRC_ERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_DATA_IN_UE_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_TOKEN_OVERFLOW_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_TOKEN_PARITY_ERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_RETRANS_ARRAY_UE_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_RETRANS_PKT_TYPE_ERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_RETRANS_STATE_IN_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_RETRANS_STATE_OUT_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_RETRANS_POINTER_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_RETRANS_FIFO_OVERFLOW_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_GI_UE_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_ARB_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_CTRL_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_TOK_RELS_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__DCR_PIPE_PERR_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__DCR_SLAVE_NON_CRIT_set(1) | \
+  0 )
+
+#define ND_RESE_DCR__FATAL_ERR__CORRECTABLE_MASK ( \
+  ND_RESE_DCR__FATAL_ERR__RE_LINK_ERR_OVER_THRESH_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__SE_RETRANS_CNT_OVER_THRESH_set(1) | \
+  ND_RESE_DCR__FATAL_ERR__RE_CE_CNT_OVER_THRESH_set(-1) |  \
+  ND_RESE_DCR__FATAL_ERR__SE_CE_CNT_OVER_THRESH_set(1) | \
+  /*ND_RESE_DCR__FATAL_ERR__SE_DROPPED_PKT_set(1) |*/	 \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR0__FATAL_MASK ( \
+  ND_500_DCR__FATAL_ERR0__INJ_T0_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T0_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T0_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T0_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T0_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T1_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T1_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T1_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T1_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T1_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T2_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T2_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T2_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T2_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T2_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T3_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T3_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T3_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T3_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T3_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T0_T3_TOP_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T4_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T4_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T4_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T4_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T4_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T5_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T5_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T5_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T5_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T5_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T6_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T6_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T6_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T6_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T6_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T7_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T7_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T7_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T7_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T7_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T4_T7_TOP_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T8_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T8_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T8_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T8_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T8_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T9_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T9_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T9_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T9_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T9_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_L0_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_L0_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_L0_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_L0_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_L0_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_L1_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_L1_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_L1_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_L1_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_L1_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_T8_L1_TOP_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR0__INJ_HP_PARITY_ERR_set(1) | \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR0__CORRECTABLE_MASK ( \
+  0 )
+
+#define ND_X2_DCR__FATAL_ERR0__FATAL_MASK ( \
+  ND_X2_DCR__FATAL_ERR0__INJ_T0_T3_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR0__INJ_T4_T7_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR0__INJ_T8_L1_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR0__INJ_HP_C1_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR0__MU_DBUS_EN_PTR_EN_BOTH_HIGH_set(1) | \
+  ND_X2_DCR__FATAL_ERR0__INJ_TOP_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR0__MU_T0_T3_DBUS_EN_GT1_set(1) | \
+  ND_X2_DCR__FATAL_ERR0__MU_T4_T7_DBUS_EN_GT1_set(1) | \
+  ND_X2_DCR__FATAL_ERR0__MU_T8_L1_DBUS_EN_GT1_set(1) | \
+  ND_X2_DCR__FATAL_ERR0__DCR_SLAVE_MCHK_set(1) | \
+  ND_X2_DCR__FATAL_ERR0__DCR_SLAVE_CRIT_set(1) | \
+  ND_X2_DCR__FATAL_ERR0__DCR_SLAVE_NON_CRIT_set(1) | \
+  0 )
+
+#define ND_X2_DCR__FATAL_ERR0__CORRECTABLE_MASK ( \
+  0 )
+
+#define ND_X2_DCR__FATAL_ERR1__FATAL_MASK ( \
+  ND_X2_DCR__FATAL_ERR1__RCP_T0_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T0_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T1_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T1_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T2_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T2_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T3_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T3_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T4_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T4_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T5_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T5_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T6_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T6_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T7_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T7_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T8_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T8_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T9_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T9_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_L0_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_L0_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_L1_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_L1_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_HP_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_HP_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_IO_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_IO_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_C0_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_C0_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_C1_X2_PERR_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_C1_X2_INV_STATE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T0_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T0_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T1_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T1_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T2_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T2_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T3_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T3_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T4_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T4_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T5_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T5_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T6_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T6_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T7_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T7_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T8_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T8_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T9_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_T9_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_L0_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_L0_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_L1_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_L1_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_HP_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_HP_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_IO_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_IO_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_C0_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_C0_MU_INV_REQ_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_C1_MU_INV_DONE_set(1) | \
+  ND_X2_DCR__FATAL_ERR1__RCP_C1_MU_INV_REQ_set(1) | \
+  0 )
+
+#define ND_X2_DCR__FATAL_ERR1__CORRECTABLE_MASK ( \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR2__FATAL_MASK ( \
+  ND_500_DCR__FATAL_ERR2__RCP_T0_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T0_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T1_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T1_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T2_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T2_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T3_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T3_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T4_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T4_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T5_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T5_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T6_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T6_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T7_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T7_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T8_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T8_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T9_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_T9_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_L0_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_L0_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_L1_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_L1_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_HP_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_HP_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_IO_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_IO_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_C0_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_C0_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_C1_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR2__RCP_C1_INV_STATE_set(1) | \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR2__CORRECTABLE_MASK ( \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR3__FATAL_MASK ( \
+  ND_500_DCR__FATAL_ERR3__RCP_T0_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_T1_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_T2_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_T3_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_T4_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_T5_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_T6_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_T7_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_T8_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_T9_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_L0_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_L1_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_HP_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_IO_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_C0_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_C0_UE_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_C1_OVERFLOW_set(1) | \
+  ND_500_DCR__FATAL_ERR3__RCP_C1_UE_set(1) | \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR3__CORRECTABLE_MASK ( \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR4__FATAL_MASK ( \
+  ND_500_DCR__FATAL_ERR4__COLL_ALU_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR4__COLL_FP_FRONT_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR4__COLL_FP_BACK_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR4__COLL_UPTREE_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR4__COLL_DOWNTREE_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR4__COLL_TOP_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR4__COLL_UPTREE_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR4__COLL_DOWNTREE_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR4__COLL_DBUS_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR4__COLL_CE_OR_UE_set(1) | \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR4__CORRECTABLE_MASK ( \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR1__FATAL_MASK ( \
+  ND_500_DCR__FATAL_ERR1__INJ_HP_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_HP_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_HP_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_HP_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_IO_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_IO_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_IO_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_IO_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_IO_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C0_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C0_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C0_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C0_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C0_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C1_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C1_INV_STATE_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C1_UE0_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C1_UE1_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C1_VALID_BYTES_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_HP_C1_TOP_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T0_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T1_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T2_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T3_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T4_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T5_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T6_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T7_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T8_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T9_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_L0_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_L1_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_HP_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_IO_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C0_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_C1_INVALID_GRANT_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T0_ARB_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T1_ARB_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T2_ARB_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T3_ARB_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T4_ARB_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T5_ARB_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T6_ARB_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T7_ARB_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T8_ARB_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_T9_ARB_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_HP_ARB_PARITY_ERR_set(1) | \
+  ND_500_DCR__FATAL_ERR1__INJ_IO_ARB_PARITY_ERR_set(1) | \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR1__CORRECTABLE_MASK ( \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR5__FATAL_MASK ( \
+  ND_500_DCR__FATAL_ERR5__UNUSED_set(1) | \
+  ND_500_DCR__FATAL_ERR5__GI_UE_set(1) | \
+  ND_500_DCR__FATAL_ERR5__DCR_SLAVE_MCHK_set(1) | \
+  ND_500_DCR__FATAL_ERR5__DCR_SLAVE_CRIT_set(1) | \
+  0 )
+
+#define ND_500_DCR__FATAL_ERR5__CORRECTABLE_MASK ( \
+  ND_500_DCR__FATAL_ERR5__INJ_FIFO_A_CE_OVER_THRESH_set(1) | \
+  ND_500_DCR__FATAL_ERR5__INJ_FIFO_B_CE_OVER_THRESH_set(1) | \
+  ND_500_DCR__FATAL_ERR5__INJ_FIFO_C_CE_OVER_THRESH_set(1) | \
+  ND_500_DCR__FATAL_ERR5__INJ_FIFO_D_CE_OVER_THRESH_set(1) | \
+  ND_500_DCR__FATAL_ERR5__RCP_FIFO_C0_CE_OVER_THRESH_set(1) | \
+  ND_500_DCR__FATAL_ERR5__RCP_FIFO_C1_CE_OVER_THRESH_set(1) | \
+  ND_500_DCR__FATAL_ERR5__COLL_DOWNTREE_CE_OVER_THRESH_set(1) | \
+  ND_500_DCR__FATAL_ERR5__GI_CE_OVER_THRESH_set(1) | \
+  0 )
+
+typedef struct NdMachineCheckData_t {
+    uint32_t dcrInterrupt;       // DCR containing interrupt bits
+    uint32_t dcrEnable;          // DCR containing enable bits
+    struct {
+	uint64_t mask;           // Mask of interrupt bits
+	uint64_t additionalInfo; // DCR address of additional info (intinfo) register
+    } level[2];                // lvl 0 = non-fatal, lvl 1 = fatal
+} ND_MachineCheckData_t;
+
+
+int fw_nd_handleReseCorrectables( uint64_t*, unsigned*, ND_MachineCheckData_t*, unsigned,  uint64_t, uint64_t );
+int fw_nd_handle500Err5Correctables( uint64_t*, unsigned*, ND_MachineCheckData_t*, unsigned, uint64_t, uint64_t );
+
+ND_MachineCheckData_t ND_500_x2_MachineCheck_Data[] = {
+
+    { ND_500_DCR(FATAL_ERR0), ND_500_DCR(FATAL_ERR_ENABLE)+0,
+    {
+      { ND_500_DCR__FATAL_ERR0__CORRECTABLE_MASK, 0 },
+      { ND_500_DCR__FATAL_ERR0__FATAL_MASK, 0 },
+    },
+  },
+    { ND_X2_DCR(FATAL_ERR0), ND_X2_DCR(FATAL_ERR0_ENABLE),
+    {
+      { ND_X2_DCR__FATAL_ERR0__CORRECTABLE_MASK, 0 },
+      { ND_X2_DCR__FATAL_ERR0__FATAL_MASK, 0 },
+    },
+  },
+  { ND_X2_DCR(FATAL_ERR1), ND_X2_DCR(FATAL_ERR1_ENABLE), 
+    {
+      { ND_X2_DCR__FATAL_ERR1__CORRECTABLE_MASK, 0 },
+      { ND_X2_DCR__FATAL_ERR1__FATAL_MASK, 0 },
+    },
+  },
+  { ND_500_DCR(FATAL_ERR2), ND_500_DCR(FATAL_ERR_ENABLE)+2, 
+    {
+      { ND_500_DCR__FATAL_ERR2__CORRECTABLE_MASK, 0 },
+      { ND_500_DCR__FATAL_ERR2__FATAL_MASK, 0 },
+    },
+  },
+  { ND_500_DCR(FATAL_ERR3),  ND_500_DCR(FATAL_ERR_ENABLE)+3, 
+    {
+      { ND_500_DCR__FATAL_ERR3__CORRECTABLE_MASK, 0 },
+      { ND_500_DCR__FATAL_ERR3__FATAL_MASK, 0 },
+    },
+  },
+  { ND_500_DCR(FATAL_ERR4),  ND_500_DCR(FATAL_ERR_ENABLE)+4, 
+    {
+      { ND_500_DCR__FATAL_ERR4__CORRECTABLE_MASK, 0 },
+      { ND_500_DCR__FATAL_ERR4__FATAL_MASK, 0 },
+    },
+  },
+  { ND_500_DCR(FATAL_ERR1),  ND_500_DCR(FATAL_ERR_ENABLE)+1, 
+    {
+      { ND_500_DCR__FATAL_ERR1__CORRECTABLE_MASK, 0 },
+      { ND_500_DCR__FATAL_ERR1__FATAL_MASK, 0 },
+    },
+  },
+  { ND_500_DCR(FATAL_ERR5),  ND_500_DCR(FATAL_ERR_ENABLE)+5, 
+    {
+      { ND_500_DCR__FATAL_ERR5__CORRECTABLE_MASK, (uint64_t)fw_nd_handle500Err5Correctables },
+      { ND_500_DCR__FATAL_ERR5__FATAL_MASK, (uint64_t)fw_nd_handle500Err5Correctables }, // NOTE: adding handler since some correctables are currently being treated as fatal
+    },
+  },
+};
+
+
+ND_MachineCheckData_t ND_RESE_MachineCheck_Data[] = {
+
+  { ND_RESE_DCR__FATAL_ERR_offset, ND_RESE_DCR__FATAL_ERR_ENABLE_offset,
+    {
+      { ND_RESE_DCR__FATAL_ERR__CORRECTABLE_MASK, (uint64_t)fw_nd_handleReseCorrectables },
+      { ND_RESE_DCR__FATAL_ERR__FATAL_MASK, 0 /*(uint64_t)fw_nd_handleReseCorrectables*/ }, // NOTE: adding handler since some correctable are currently being treated as fatal
+    },
+  },
+
+  { ND_RESE_DCR__RESE_INTERRUPTS__MACHINE_CHECK_offset, 0, 
+    {
+      { 0, 0 },
+      { -1, 0 },
+    }
+  },
+
+  { ND_RESE_DCR__INTERRUPT_INTERNAL_ERROR__MACHINE_CHECK_offset, 0,
+    {
+      { 0, 0 },
+      { -1, 0 },
+    }
+  }
+};
+
+
+#endif

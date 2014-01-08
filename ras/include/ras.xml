@@ -1,0 +1,112 @@
+<!-- Please send a request to Kiswanto Thayib @ thayib@us.ibm.com
+     for any update on this file.
+-->
+
+<ras>
+
+<!-- The categories are assigned by the BG/Q RAS team.  A category can
+     be up to 16 characters long.  It can be used by multiple components.
+-->
+  <ras_categories>
+    <category  name="BQC"              description="BG/Q Compute Card" />  
+    <category  name="BQL"              description="BG/Q Link Module" />
+    <category  name="DDR"              description="Double Data Rate Memory" />
+    <category  name="PCI"              description="PCI Adapter Card" />
+    <category  name="Ethernet"         description="Ethernet Adapter Card" />
+    <category  name="Infiniband"       description="Infiniband Adapter Card" />
+    <category  name="AC_TO_DC_PWR"     description="Bulk Power Supply" />
+    <category  name="DC_TO_DC_PWR"     description="Power Module" />
+    <category  name="Cable"            description="Cable" />
+    <category  name="Message_Unit"     description="Message Unit" />
+    <category  name="Card"             description="Generic Card/Board" />
+    <category  name="Clocks"           description="Clocks" />
+    <category  name="Clock_FPGA"       description="Clock FPGA" />
+    <category  name="Service_Card"     description="Service Card" />
+    <category  name="IO_Board"         description="I/O Board" />
+    <category  name="Node_Board"       description="Node Board" />
+    <category  name="Icon"             description="Icon FPGA" />
+    <category  name="Palomino"         description="Palomino FPGA" />
+    <category  name="DCA"              description="Direct Current Assembly Card" />
+    <category  name="Fan"              description="Fan" />
+    <category  name="Fan_Assembly"     description="Fan Assembly" />
+    <category  name="Optical_Module"   description="Optical Module" />
+    <category  name="Temp_Sensor"      description="Temperature sensor on card/board" />
+    <category  name="Job"              description="Job" />
+    <category  name="Block"            description="Block" />
+    <category  name="Process"          description="Process or daemon" />
+    <category  name="Coolant_Monitor"  description="Coolant Monitor" />
+    <category  name="Software_Error"   description="Software Error Condition" />
+    <category  name="ELF_Image"        description="ELF Image Error Condition" />
+    <category  name="UPC"              description="Universal Hardware Performance Counters" />
+    <category  name="@TODO"            description="Unknown Category" />
+ </ras_categories>
+
+
+<!-- BG/Q RAS Event identifier is a 32-bit unsigned integer.
+     Each BG/Q component is assigned a specific range of identifier  
+     to avoid multiple components using the same identifier.
+     A component can be up to 16 characters long.
+
+     COMPONENTS            RANGE
+     ==========    ====================
+     RESERVED1     00000000 - 0000FFFF
+     KERNEL        00010000 - 0001FFFF
+     ....
+     RESERVED2     FFFF0000 - FFFFFFFF
+-->
+  <ras_components>
+    <component  name="RESERVED1" start_id="00000000" end_id="0000FFFF" />
+    <component  name="CNK"       start_id="00010000" end_id="0001FFFF" />
+    <component  name="DIAGS"     start_id="00020000" end_id="0002FFFF" />
+    <component  name="BGMASTER"  start_id="00030000" end_id="0003FFFF" />
+    <component  name="MC"        start_id="00040000" end_id="0004FFFF" />
+    <component  name="MCSERVER"  start_id="00050000" end_id="0005FFFF" />
+    <component  name="MMCS"      start_id="00060000" end_id="0006FFFF" />
+    <component  name="BAREMETAL" start_id="00070000" end_id="0007FFFF" />
+    <component  name="FIRMWARE"  start_id="00080000" end_id="0008FFFF" />
+    <component  name="CTRLNET"   start_id="00090000" end_id="0009FFFF" />
+    <component  name="LINUX"     start_id="000A0000" end_id="000AFFFF" />
+    <component  name="CIOS"      start_id="000B0000" end_id="000BFFFF" />
+    <component  name="MUDM"      start_id="000C0000" end_id="000CFFFF" />
+    <component  name="SPI"       start_id="000D0000" end_id="000DFFFF" />
+    <component  name="BGPM"      start_id="000E0000" end_id="000EFFFF" />
+    <component  name="TEST"      start_id="FFFE0000" end_id="FFFEFFFF" />
+    <component  name="RESERVED2" start_id="FFFF0000" end_id="FFFFFFFF" />
+  </ras_components>
+
+  <ras_severities>
+    <severity  name="INFO"   description="An informational event that highlights the progress of system software." />
+    <severity  name="WARN"   description="An error threshold was exceeded or a redundant component failed" />
+    <severity  name="FATAL"  description="A severe error event occured." />
+  </ras_severities>
+
+  <ras_control_actions>
+    <control_action  name="COMPUTE_IN_ERROR"    description="Mark the compute card in error in the database" />
+    <control_action  name="BOARD_IN_ERROR"      description="Mark the node or I/O board in error in the database" />
+    <control_action  name="CABLE_IN_ERROR"      description="Mark the cable in error in the database" />
+    <control_action  name="END_JOB"             description="End all jobs associated with the compute or i/o node" />
+    <control_action  name="FREE_COMPUTE_BLOCK"  description="Free the compute block only" />
+    <control_action  name="SOFTWARE_IN_ERROR"   description="Mark the node in software in error state" />
+    <control_action  name="BQL_SPARE"           description="Spare the bad wire on the link chips" />
+    <control_action  name="RACK_IN_ERROR"       description="Mark all hardware in the rack in error in the database" />
+    <control_action  name="DCA_IN_ERROR"        description="Mark the DCA in error in the database" />
+  </ras_control_actions>
+
+  <ras_diagnostics>
+    <diagnostic  name="checkup"      description="A series of tests designed to provide maximum coverage for a typical 30 minutes run time for a midplane-sized block." />
+    <diagnostic  name="small"        description="A quick diagnostics run providing less fault detection." />
+    <diagnostic  name="medium"       description="A medium length diagnostics run providing moderate fault detection." />
+    <diagnostic  name="large"        description="A long length diagnostics run providing high fault detection." />
+    <diagnostic  name="complete"     description="Run all diagnostics, taking the longest time and providing the highest fault detection." />
+    <diagnostic  name="servicecard"  description="All service card specific tests." />
+    <diagnostic  name="nodeboard"    description="All node board specific tests." />
+    <diagnostic  name="ioboard"      description="All I/O board specific tests." />
+    <diagnostic  name="memory"       description="Tests that target the memory subsystem on the nodes." />
+    <diagnostic  name="processor"    description="Tests that target the BQC processors." />
+    <diagnostic  name="torus"        description="Tests that target the torus network." />
+    <diagnostic  name="power"        description="Tests that target the power subsystem." />
+    <diagnostic  name="pcie"         description="Tests that target the PCIe hardware." />
+    <diagnostic  name="@todo"        description="Unknown." />
+  </ras_diagnostics>
+
+</ras>

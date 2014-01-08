@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2012, 2012                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+
+<html>
+<head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+<title>Number Compare Sample</title>
+
+<style>
+    @import "../../../../dojo/resources/dojo.css";
+    @import "../../../../dijit/themes/claro/claro.css";
+    @import "../../../../dijit/themes/claro/document.css";
+
+    @import "../../../../../../style/bluegene.css";
+
+    html, body, #main-div { width: 100%; height: 100%; border: 0; margin: 0; padding: 0; }
+</style>
+
+<script src="../../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, isDebug: 1"></script>
+
+<script>
+
+g_b_layer = null;
+g_b_navigator_dijit_NumberCompareOption = null;
+
+
+require(
+[
+    "bluegene/layer",
+    "bluegene/navigator/dijit/NumberCompareOption",
+    "dojo/json",
+    "dojo/ready",
+    "dijit/registry"
+],
+
+function(
+        b_layer,
+        b_navigator_dijit_NumberCompareOption,
+        d_json,
+        d_ready,
+        j_registry
+    )
+{
+    // Put symbols used in navigator.html into global space.
+
+    g_b_layer = b_layer; // Note: keep this around since might be useful when using debugger.
+
+    g_b_navigator_dijit_NumberCompareOption = b_navigator_dijit_NumberCompareOption;
+
+
+    var f1_submit = function( e )
+	    {
+	        console.log( "f1_submit" );
+	        e.preventDefault();
+	        alert( d_json.stringify( j_registry.byId( "form1" ).get( "value" ), null, " " ) );
+	    };
+
+    var f2_submit = function( e )
+        {
+            console.log( "f2_submit" );
+            e.preventDefault();
+            
+            var f2_val = j_registry.byId( "form2" ).get( "value" )
+            
+            j_registry.byId( "form1" ).set( "value", f2_val );
+        };
+
+    var ready_fn = function() 
+        {
+            console.log( "Ready!" );
+            
+            j_registry.byId( "form1" ).on( "submit", f1_submit );
+            j_registry.byId( "form2" ).on( "submit", f2_submit );
+        };
+
+    d_ready( ready_fn );
+} );
+
+</script>
+
+</head>
+
+<body class="claro">
+
+<ul>
+<li data-dojo-type="g_b_navigator_dijit_NumberCompareOption" data-dojo-props="label: 'Default'"></li>
+<li data-dojo-type="g_b_navigator_dijit_NumberCompareOption" data-dojo-props="label: 'Integer', integerOnly: true"></li>
+</ul>
+
+<div>
+	<div id="form1" style="border: solid black 1px; width: 48%;" data-dojo-type="dijit.form.Form">
+	<table>
+	    <tr><td>
+	        <ul>
+            <li data-dojo-type="g_b_navigator_dijit_NumberCompareOption" data-dojo-props="label: 'Default', name: 'nco1'"></li>
+	        </ul>
+	    </td><td>
+	        <ul>
+            <li data-dojo-type="g_b_navigator_dijit_NumberCompareOption" data-dojo-props="label: 'InitialValue', name: 'nco2', value: 'le2'"></li>
+	        </ul>
+	   </td></tr>
+	</table>
+	<ul>
+	<li><label>TextBox1:</label><input name="tb1" data-dojo-type="dijit.form.TextBox" /></li>
+	</ul>
+	<button type="submit" data-dojo-type="dijit.form.Button">Submit</button>
+	</div>
+	
+	
+	<div id="form2" style="border: solid black 1px; width: 48%;" data-dojo-type="dijit.form.Form">
+	<ul>
+	<li data-dojo-type="g_b_navigator_dijit_NumberCompareOption" data-dojo-props="label: 'Default', name: 'nco1'"></li>
+	<li data-dojo-type="g_b_navigator_dijit_NumberCompareOption" data-dojo-props="label: 'InitialValue', name: 'nco2', value: 'le2'"></li>
+	<li><label>TextBox1:</label><input name="tb1" data-dojo-type="dijit.form.TextBox" /></li>
+	</ul>
+	<button type="submit" data-dojo-type="dijit.form.Button">Set</button>
+	</div>
+</div>
+
+</body>
+</html>

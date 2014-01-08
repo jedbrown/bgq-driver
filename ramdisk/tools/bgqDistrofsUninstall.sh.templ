@@ -1,0 +1,190 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# ramdisk/tools/bgqDistrofsUninstall.sh for BlueGene/Q Linux Distribution
+#
+# Author: Jay S. Bryant <jsbryant@us.ibm.com>
+#
+# Purpose:  This script is run when the bgq-distrofs RPM is uninstalled.
+#	    The script searches the directories in /bgsys/drivers
+#	    on the system.  In the case that no other drivers have a linux/OS link to
+#	    the same BG/Q Linux Distribution, it is removed.
+#
+
+# Source shared functions and variables.
+. BGQ_RAMDISK_PATH/tools/functions
+
+# Set up some global variables.
+KEEPDISTRO=0
+DISTROFS_LOC="BGQ_LINUX_OS_PATH"
+DISTRO=`/bin/echo $DISTROFS_LOC | awk 'BEGIN{FS="/"} ; {print $NF}'`
+INSTALL_SUBDIR=`/bin/echo BGQ_INSTALL_DIR | awk 'BEGIN{FS="/"} ; {print $NF}'`
+LOGFILE=`hostname -s`-bgqDistrofsUninstall-$DISTRO-`date +%Y-%m%d-%H:%M:%S`.log
+EFIX_MODE=0
+SUCCESS=1
+
+echo -en "\n\n############################################################################################################"
+echo -en "\n# Starting BG/Q Linux Distribution Uninstallation"
+echo -en "\n############################################################################################################\n\n"
+
+# Check to see if we have a .distroInstallState file.  If so, process it and make decisions.
+if [ -e /bgsys/linux/.distrofsInstallState ] ; then
+	. /bgsys/linux/.distrofsInstallState
+	if [ ! -z $PREEXISTING_DISTRO ] ; then
+		# If there is a preexisting distro listed and the one we are trying to uninstall is the one we are 
+		# installting, this must be the end of an eFix install and we really want to remove the preexisting one.
+		if [[ $INSTALLING_DISTRO =~ $DISTRO ]] ; then
+			DISTRO=$PREEXISTING_DISTRO
+			DISTROFS_LOC="/bgsys/linux/$PREEXISTING_DISTRO"
+			EFIX_MODE=1
+		fi
+	fi
+	# We don't need the file anymore, it has done its job.
+	rm -f /bgsys/linux/.distrofsInstallState
+fi
+
+echo -en "\n\tAttempting to Remove BG/Q Linux Distribution $DISTRO ...\n\n"
+
+usage () {
+
+    #Do not need to log usage output
+    LOG=0
+
+    echo -en "\n\nUsage: $0 (NOTE:  This script must be run as root.)\n"
+    echo -en "\tThis script is run at RPM removal time.  The script searches \n"
+    echo -en "\t/bgsys/drivers/.../linux/OS to see if any drivers are linked to $DISTRO.\n"
+    echo -en "\tIf no drivers are using the BG/Q Linux Distribution, the distribution is removed.\n"
+    echo -en "\tThis script takes no arguments.\n\n"
+
+}
+
+
+# Check for required arguments and do validation.
+while getopts "h" flags ; do
+    case "$flags" in
+        h) usage
+           exit 0
+           ;;
+        *) usage
+           exit 1
+           ;;
+
+    esac
+done
+
+# Need to run as root ... doing this after arg parsing so non-root
+# users may execute the -h option to see the required arguments.
+if [ "$(id -u)" != "0" ]; then
+    echo -en "\n\n\tERROR! This script must be executed as root.\n\n"
+    exit 1
+fi
+
+for DRIVER in `ls -d /bgsys/drivers/*` ; do
+	# Not worried about the driver that this was built for, as that is what we are uninstalling.
+	# Check all other drivers for usage of the same distro.
+	if [ "$DRIVER/$INSTALL_SUBDIR" != "BGQ_INSTALL_DIR" ] ; then
+		LINK=`readlink $DRIVER/$INSTALL_SUBDIR/linux/OS`
+	        if [ "$LINK" == "$DISTROFS_LOC" ] || [ "$LINK" == "$DISTROFS_LOC/" ] ; then		
+                	echo -en "\n\tFound $DRIVER using $DISTRO\n"
+                	KEEPDISTRO=1
+        	fi
+	fi
+done
+
+if [ $KEEPDISTRO -eq 0 ] ; then
+	echo -en "\tNo other drivers are using $DISTRO.  Removing ..."
+	RC=$( rm -rf $DISTROFS_LOC 2>&1 )
+	if [ ! -z $RC ] ; then
+		echo -en "\n\tERROR: rm returned: $RC"
+		echo -en "\n\t$DISTROFS_LOC has not been fully removed from the system.\n\n"
+		exit 1
+	fi
+
+        # If /bgsys/linux/ionfloor is pointing to the distro we are removing, also remove it.
+        LINK=`readlink /bgsys/linux/ionfloor`
+        if [[ $LINK =~ $DISTRO ]] ; then
+                echo -en "\n\t/bgsys/linux/ionfloor matches the BG/Q Linux Distro being removed.  Removing ..."
+                rm /bgsys/linux/ionfloor
+        fi
+else
+	echo -en "\n\t$DISTRO is still in use ... Skipping removal."
+fi
+
+# We want to make sure that the extra files that are pulled in at install time are all removed.
+# Note that we only want to do this if it doesn't appear that we are installing an eFix.
+# If we are installing an eFix we should rebuild the ramdisk.
+if [ -e BGQ_INSTALL_DIR/ramdisk ] && [ $EFIX_MODE -eq 0 ] ; then
+        rm -rf BGQ_INSTALL_DIR/ramdisk
+else
+
+   echo -en "\n\n\tRunning in eFix mode:  Attempting rebuild of the ramdisk ...\n" 
+
+   BGQ_RAMDISK_PATH/tools/bgqPopulateInitramfs.sh
+    if [ ! -e BGQ_INITRAMFS_PATH/bin/busybox ] ; then
+        echo -en "\n\n\tERROR: bgqPopulateInitramfs.sh encountered a failure.\n"
+        echo -en "\t       Consult the logs above for further details.\n\n"
+        SUCCESS=0
+    else
+        if [ -e BGQ_RAMDISK_PATH/bin/build-ramdisk ] ; then
+            echo -en "\n\n\tBuilding BG/Q Ramdisk ...\n\n"
+            BGQ_RAMDISK_PATH/bin/build-ramdisk --saveimg --verbose \
+                --rootfs BGQ_INITRAMFS_PATH \
+                -o BGQ_RAMDISK_PATH/bin/ramdisk.gz 2>&1 | tee -a $LOG_DIR/$LOGFILE
+            if [ ! -e BGQ_RAMDISK_PATH/bin/ramdisk.gz ] ; then
+                echo -en "\n\n\tERROR: build-ramdisk failed to run properly.\n"
+                echo -en "\t       Consult the logs above and correct the problem.\n"
+                echo -en "\t       You may manually rebuild the ramdisk with the following command: \n"
+                echo -en "\t       BGQ_RAMDISK_PATH/bin/build-ramdisk --saveimg --verbose \\ \n"
+                echo -en "\t\t     --rootfs BGQ_INITRAMFS_PATH \\ \n"
+                echo -en "\t\t     -o BGQ_RAMDISK_PATH/bin/ramdisk.gz \n"
+                echo -en "\t       Complete the process by linking ramdisk to ramdisk.gz in BGQ_RAMDISK_PATH/bin\n\n"
+                SUCCESS=0
+            else
+               ln -sf BGQ_RAMDISK_PATH/bin/ramdisk.gz \
+                    BGQ_RAMDISK_PATH/bin/ramdisk
+                # Need to do a chmod for systems where the umask is 077.
+                chmod a+rx BGQ_RAMDISK_PATH/bin/ramdisk.gz
+
+
+                # Also put a copy in the BG/Q Linux Distro for future use.
+                echo -en "\n\n\t Ramdisk build successful.  Putting a copy in /bgsys/linux/$INSTALLING_DISTRO/boot ...\n\n"
+                cp -a BGQ_RAMDISK_PATH/bin/ramdisk.gz /bgsys/linux/$INSTALLING_DISTRO/boot
+
+            fi
+        else
+            echo -en "\n\n\tWARNING: Unable to find the BGQ_RAMDISK_PATH/bin/build-ramdisk utility\n"
+        fi
+    fi
+fi
+
+if [ $SUCCESS -eq 1 ] ; then
+        echo -en "\n\n############################################################################################################"
+        echo -en "\n# BG/Q Linux Distribution Removal Complete."
+        echo -en "\n############################################################################################################\n\n"
+else
+        echo -en "\n\n############################################################################################################"
+        echo -en "\n# BG/Q Linux Distribution Removal Completed with Errors."
+        echo -en "\n#"
+        echo -en "\n# Please review the logs above for details."
+        echo -en "\n############################################################################################################\n\n"
+fi
+
+exit 0

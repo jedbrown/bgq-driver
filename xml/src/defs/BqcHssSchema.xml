@@ -1,0 +1,33 @@
+<File filename="BqcHssSchema" version="1" >
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!-- Eclipse Public License (EPL)                                     -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <Class name="BqcHss">  
+    <Class name="setting" comment="hss setting">
+        <DataMember type="text" name="key" comment="location or group"/>
+        <DataMember type="uint32" name="rxeq" comment="receiver equalization"/>
+        <DataMember type="uint32" name="txeq" comment="transmitter equalization"/>
+        <DataMember type="uint32" name="txamp" comment="transmitter amplitude"/>
+        <DataMember type="uint32" name="rxvosd0" isOptional="true" comment="TBD"/>
+        <DataMember type="uint32" name="rxvosd1" isOptional="true" comment="TBD"/>
+        <DataMember type="uint32" name="rxvose0" isOptional="true" comment="TBD"/>
+        <DataMember type="uint32" name="rxvose1" isOptional="true" comment="TBD"/>
+        <DataMember type="uint32" name="rxvoseq" isOptional="true" comment="TBD"/>
+    </Class>
+    <DataMember type="setting" name="settings" occurrences="many" comments="vector of bqc hss settings"/>
+    <Class name="grouping" comment="hss grouping">
+        <DataMember type="text" name="key" comment="location"/>
+        <DataMember type="text" name="group" comment="associated group"/>
+    </Class>
+    <DataMember type="grouping" name="groupings" occurrences="many" comments="vector of groupings"/>
+  </Class>
+</File>

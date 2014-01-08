@@ -1,0 +1,14 @@
+
+WITH res AS (
+
+SELECT subfunction, 
+       AVG( duration ) AS avg_duration
+  FROM bgqComponentPerf
+  WHERE component = 'runjob' AND function = 'submission'
+  GROUP BY subfunction
+
+)
+
+SELECT subfunction, avg_duration
+  FROM res
+  ORDER BY avg_duration DESC

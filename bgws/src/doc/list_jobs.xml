@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY command "list_jobs">
+<!ENTITY manSection "1">
+]>
+
+<refentry lang="en">
+
+<refentryinfo>
+    <productname>&command;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>IBM</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+
+<refmeta>
+    <refentrytitle>&command;</refentrytitle>
+    <manvolnum>&manSection;</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&command;</refname>
+    <refpurpose>list jobs running on the Blue Gene system</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv>
+    <title>Synopsis</title>
+    <cmdsynopsis>
+        <command>list_jobs</command>
+        <arg rep="repeat"><replaceable>OPTION</replaceable></arg>
+        <arg><replaceable>JOBID</replaceable></arg>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1>
+    <title>Description</title>
+    <para>
+        Lists information about the jobs on the Blue Gene system. Only current jobs are listed by default.
+    </para>
+    <para>
+        Be default all running jobs are returned. To display completed jobs, set the status using the --status option.
+        To display details for a single job, use the job ID as the positional parameter.
+    </para>
+    <para>
+        Because there may be a lot of jobs on the system, the server sends back some maximum number of jobs for each request.
+        By default, the list_jobs command requests and displays one "page" of data.
+        Using the --all option, the list_jobs command will make multiple requests and display all pages returned.
+        Note that when using the --all option, the results may not be consistent because the data may change between requests.
+    </para>
+    <para>
+        Only jobs that the user has READ access to will be listed.
+    </para>
+</refsect1>
+
+<refsect1 id="list_jobs.options">
+    <title>Options</title>
+    <variablelist>
+        <varlistentry>
+            <term><option>--long, -l</option></term>
+            <listitem>
+                <para>Print summary using long format, which displays more fields. The default is short format.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--all, -a</option></term>
+            <listitem>
+                <para>Request all jobs rather than limit results to some maximum number.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--status</option> arg</term>
+            <listitem>
+                <para>List only jobs with the given statuses. The default statuses are the statuses for current jobs (DLNPRS).</para>
+                <para>The format is a string of characters, where each character is a status code. The status codes are as follows:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>D : Debug</para></listitem>
+                    <listitem><para>E : Error</para></listitem>
+                    <listitem><para>L : Loading</para></listitem>
+                    <listitem><para>N : eNding</para></listitem>
+                    <listitem><para>P : setuP</para></listitem>
+                    <listitem><para>R : Running</para></listitem>
+                    <listitem><para>S : Starting</para></listitem>
+                    <listitem><para>T : Terminated</para></listitem>
+                </itemizedlist>                
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--block</option> block-id</term>
+            <listitem>
+                <para>List only jobs with the given block ID.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--executable</option> executable</term>
+            <listitem>
+                <para>List only jobs with the given executable.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--user</option> username</term>
+            <listitem>
+                <para>List only jobs with the given user name.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--start-time</option> time-interval</term>
+            <listitem>
+                <para>List only jobs that started in the time duration. See the section TIME INTERVAL for the format.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--end-time</option> time-interval</term>
+            <listitem>
+                <para>List only jobs that ended in the time duration. See the section TIME INTERVAl for the format.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--exit-status</option> number</term>
+            <listitem>
+                <para>List only jobs that exited with the given exit status.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--sort</option> sort-spec</term>
+            <listitem>
+                <para>List the jobs in the given order.</para>
+                <para>
+                    The sort-spec is made up of a direction indicator and field.
+                    The direction indicator sets the direction of sorting, either ascending or descending.
+                    If the direction indicator is '-' then the jobs will be sorted in descending order, and if left off the jobs are sorted in ascending order.
+                    The fields are as follows:
+                </para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>block</para></listitem>
+                    <listitem><para>endTime</para></listitem>
+                    <listitem><para>executable</para></listitem>
+                    <listitem><para>id</para></listitem>
+                    <listitem><para>nodesUsed</para></listitem>
+                    <listitem><para>processesPerNode</para></listitem>
+                    <listitem><para>startTime</para></listitem>
+                    <listitem><para>status</para></listitem>
+                    <listitem><para>username</para></listitem>
+                </itemizedlist>
+                <para>The following are example sort specs:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>id -- sort by job ID ascending</para></listitem>
+                    <listitem><para>-endTime -- sort by start time descending</para></listitem>
+                </itemizedlist>                
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--properties</option> filename</term>
+            <listitem>
+                <para>Blue Gene configuration file.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--base</option> URL</term>
+            <listitem>
+                <para>Blue Gene Web Services (BGWS) server base URL.</para>
+                <para>
+                    This overrides the BGWS server base URL as specified in the Blue Gene configuration file.
+                    The format is a URL, like https://localhost:32071/bg.
+                </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--verbose</option> logging-spec</term>
+            <listitem>
+                <para>The --verbose argument can be given multiple times. The format for the argument is as follows:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>logger=level : set the logger to the level</para></listitem>
+                    <listitem><para>level : set the default logger to the level</para></listitem>
+                    <listitem><para>logger : set the logger's level to DEBUG</para></listitem>
+                    <listitem><para>"" : set the default logger's level to DEBUG</para></listitem>
+                </itemizedlist>
+                <para>These values are allowed for the level:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>OFF / O / 0</para></listitem>
+                    <listitem><para>FATAL / F / 1</para></listitem>
+                    <listitem><para>ERROR / E / 2</para></listitem>
+                    <listitem><para>WARN / W / 3</para></listitem>
+                    <listitem><para>INFO / I / 4</para></listitem>
+                    <listitem><para>DEBUG / D / 5</para></listitem>
+                    <listitem><para>TRACE / T / 6</para></listitem>
+                    <listitem><para>ALL / A / 7</para></listitem>
+                </itemizedlist>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>-h, --help</option></term>
+            <listitem>
+                <para>Print help text</para>
+            </listitem>
+        </varlistentry>
+    </variablelist>
+</refsect1>
+
+<refsect1>
+    <title>Time Interval</title>
+    <para>
+        An interval has one of the following formats:
+    </para>
+    <itemizedlist spacing="compact">
+        <listitem><para>timestamp/timestamp -- start and end time</para></listitem>
+        <listitem><para>duration -- a duration, the end time is now</para></listitem>
+        <listitem><para>timestamp/duration -- start time and duration</para></listitem>
+        <listitem><para>duration/timestamp -- duration and end time</para></listitem>
+    </itemizedlist>
+    <para>
+        The format of a timestamp is: YYYYMMDDThhmmss
+    </para>
+    <para>
+        The format of a duration is: PnYnMnDTnHnMnS, where n is the number of years, months, days, hours, minutes, or seconds. Parts can be left off if they're 0s.
+    </para>
+    <para>
+        Here's some examples:
+    </para>
+    <itemizedlist spacing="compact">
+        <listitem><para>20100715T155500/20100716T155500 -- start and end time</para></listitem>
+        <listitem><para>P1D -- the previous 1 day</para></listitem>
+        <listitem><para>PT1H -- the previous 1 hour</para></listitem>
+        <listitem><para>20100715T155500/P1D -- 1 day since start time</para></listitem>
+    </itemizedlist>
+</refsect1>
+
+<refsect1>
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>bgws_server</refentrytitle>
+           <manvolnum>8</manvolnum>
+	</citerefentry>
+    </para>
+</refsect1>
+
+<refsect1>
+    <title>COPYRIGHT</title>
+    <para>© Copyright IBM Corp. 2010, 2011</para>
+</refsect1>
+
+</refentry>

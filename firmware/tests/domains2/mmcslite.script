@@ -1,0 +1,25 @@
+gen_io_block Q00-I0-J02 Q00-I0 1 J02 
+connect mode=reserve
+boot_block uloader=/bghome/tmusta/bgq.bu.8.3.2010/bgq/firmware/src/bgq_firmware.elf domain={images=/bghome/tmusta/bgq.bu.8.3.2010/bgq/firmware/tests/domains2/domains2.elf cores=0-7 memory=0-0x3fffffff} domain={images=/bghome/tmusta/bgq.bu.8.3.2010/bgq/firmware/tests/domains2/domains2.elf cores=8-16 memory=0x40000000--1} standalone steps=enableNodes,initDevbus,startTraining,enableLinkChips,trainLinkChips,trainTorus,installFirmware,installPersonalities,startCores,verifyMailbox,monitorMailbox,verifyMailboxReady,installKernelImages,configureDomains,launchKernels,verifyKernelReady  svchost_options=/bghome/tmusta/bgq.bu.8.3.2010/bgq/firmware/tests/domains2/domains2.svchost numcores=17,
+wait_for_terminate 60
+disconnect
+dump_ras ras.out
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2010, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */

@@ -1,0 +1,35 @@
++LoopBack(A)=TORUS
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp.  2010, 2012                              
+# US Government Users Restricted Rights - Use, duplication or      
+#   disclosure restricted by GSA ADP Schedule Contract with IBM    
+#   Corp.                                                          
+#                                                                  
+# This software is available to you under the Eclipse Public       
+# License (EPL).                                                   
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
++LoopBack(B)=NONE
++LoopBack(C)=SERDES
+-IPAddress[0]=1.2.3.4
+-IPNetMask[0]=255.254.253.252
+-IPBroadcast[0]=8.9.10.11
+-Interface[0]=tor0
+-IFID[0]=112233445566778899aaBBCcdDeeffED
+-MTU[0]=2048
+
+-IPAddress[1]=5.6.7.8
+-IPNetMask[1]=249.248.247.246
+-IPBroadcast[1]=20.21.22.23
+-Interface[1]=ib0
+-IFID[1]=BABEFACEBABEFACEBABEFACEBABEFACE
+-MTU[1]=3333

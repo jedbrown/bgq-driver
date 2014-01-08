@@ -1,0 +1,53 @@
+# -*- mode: makefile-gmake; -*-
+# begin_generated_IBM_copyright_prolog                             #
+#                                                                  #
+# This is an automatically generated copyright prolog.             #
+# After initializing,  DO NOT MODIFY OR MOVE                       #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# (C) Copyright IBM Corp.  2007, 2008                              #
+# IBM CPL License                                                  #
+#                                                                  #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# end_generated_IBM_copyright_prolog                               #
+
+PLATFORM_DEFAULT_MPICH2=gcc
+POST_PROCESS_LIST=gcc gcc.legacy
+ifeq (${XL},XL)
+    ifneq ($(origin XL_PAMI), undefined)
+      POST_PROCESS_LIST += xl xl.legacy xxl.legacy.ndebug xxl.ndebug
+    else
+      POST_PROCESS_LIST += xl xl.legacy xl.legacy.ndebug xl.ndebug
+    endif
+endif
+
+    # ---------------- locations for MPICH2 ------------------------------------
+    THREAD_LEVEL         = default
+    MPICH2DIR            = ${ROOTDIR}/lib/dev/mpich2
+    BUILDDIR             = ${ROOTDIR}/build/mpich2
+    MPICH2BUILD          = ${BUILDDIR}/pami
+    FILE_SYSTEM          = bg+bglockless
+    # debuginfo is special cased for XL compiler targets. If set to bgq it only
+    # sets the proper #idefine and builds dbginit.o. It does not try to build the
+    # libtvmpich2.so file. Only the xl.* scripts look for this particular setting
+    DEBUGINFO            = bgq
+
+    # ---------------- Flags MPICH2 --------------------------------------------
+    # These flags become part of the mpi{cc,cxx,f77,f90} scripts
+    MPI_LDFLAGS          =
+    MPI_CFLAGS           =${HOST_INCLUDE}
+    MPI_CXXFLAGS         =${HOST_INCLUDE}
+    MPI_FFLAGS           =${HOST_INCLUDE}
+
+    # These flags are used during a regular build (generally GCC)
+    HOST_FLAGS           =-g -O3 -Wall
+    HOST_CFLAGS          =${HOST_FLAGS} -D__${PLATFORM}__
+    HOST_CXXFLAGS        =${HOST_FLAGS}
+    HOST_FFLAGS          =${HOST_FLAGS}
+
+    # These flags are used during a fast build (generally XL)
+    FAST_FLAGS           =-g -O3 -qhot -qinline=800 -qflag=i:i -qsaveopt
+    FAST_CFLAGS          =${FAST_FLAGS} -D__${PLATFORM}__
+    FAST_CXXFLAGS        =${FAST_FLAGS}
+    FAST_FFLAGS          =${FAST_FLAGS}

@@ -1,0 +1,12 @@
+<BgRasEnvironments>
+   <BgRasEnvironment environment="FCT">
+      <!-- RasEventChangeSpec id="xxxxxxxx" key="BG_SEV" value="FATAL"/ -->
+   </BgRasEnvironment>
+
+   <BgRasEnvironment environment="PROD">
+      <!-- RasEventChangeSpec id="xxxxxxxx" key="BG_SEV" value="WARN"/ -->
+      <!-- RasEventChangeSpec id="xxxxxxxx" key="BG_CTL_ACT" value="NONE"/ -->
+      <!-- RasEventChangeSpec id="xxxxxxxx" key="BG_CTL_ACT" value="COMPUTE_IN_ERROR"/ -->
+      <RasEventChangeSpec id="00000001" key="BG_SEV" value="WARN"/>
+   </BgRasEnvironment>
+</BgRasEnvironments>

@@ -1,0 +1,48 @@
+
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2011, 2011                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+####################################
+%package database
+
+Summary: Blue Gene database
+Group: %{product_group}
+Release: 0
+
+%description database
+%{bgq_package_description}
+
+This package contains files used to set up the Blue Gene database and the shared library used by components to access it.
+
+
+%files database
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/db
+%dir %{_base_dir}/db/lib
+
+%{_base_dir}/db/lib/libbgdb.so.1
+%{_base_dir}/db/lib/libbgdb.so.1.0.0
+%{_base_dir}/db/schema
+

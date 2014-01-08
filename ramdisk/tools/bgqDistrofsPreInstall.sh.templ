@@ -1,0 +1,154 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+#
+# ramdisk/tools/bgqDistrofsPreInstall.sh for BlueGene/Q Linux Distribution
+#
+# Author: Jay S. Bryant <jsbryant@us.ibm.com>
+#
+# Purpose:  This script is run before the bgq-ramdisk RPM is installed and ensures that the
+# 	    system meets the necessary pre-reqs for the ramdisk and BG/Q Linux Distribution
+#	    to successfully
+#
+
+# Source the shared functions and variables.
+. BGQ_RAMDISK_PATH/tools/functions
+
+LOGFILE=`hostname -s`-bgqDistrofsPreInstall-`date +%Y-%m%d-%H:%M:%S`.log
+DIAGS=0
+
+usage () {
+
+	#Do not need to log usage output
+	LOG=0
+
+	echo -en "\n\nUsage: $0 [OPTIONS] (NOTE: Must be run as root)\n"
+	echo -en "\t[-d check prerequisites for diagnostics ]\n"
+	echo -en "\t[-h displays this help text ]\n\n"
+
+}
+
+# Check for required arguments and do validation.
+while getopts "dh" flags ; do
+    case "$flags" in
+	d) DIAGS=1
+	   ;;
+	h) usage
+	   exit 0
+	   ;;
+	*) usage
+	   exit 1
+	   ;;
+
+     esac
+done
+
+echo -en "\n\n######################################################"
+echo -en "\n# Starting BG/Q Linux Distrofs Pre-Installation Script"
+echo -en "\n######################################################\n"
+
+if [ $DIAGS -eq 1 ] ; then
+
+	echo -en "\n\n\tChecking prerequisites for diagnostics installation..."
+
+	if [ ! -e BGQ_RAMDISK_PATH/initramfs/bin/busybox ] ; then
+		echo -en "\n\n\t\tERROR: BGQ_RAMDISK_PATH/initramfs doesn't appear to be fully populated."
+		echo -en "\n\t\t       Ensure that the bgq-distrofs RPM is properly installed before installing bgq-diags."
+		echo -en "\n\n\tRPM installation will not continue.\n\n"
+		exit 1
+	else
+		echo -en "\n\n\t\tBGQ_RAMDISK_PATH/initramfs appears properly populated."
+		echo -en "\n\n\tContinuting RPM installation ...\n\n"
+		exit 0
+	fi
+
+else
+
+	# See if tftpboot is a link.  We have YACI installation as a pre-req so 
+	# we know /tftpboot should exist.  We will double check.  Want to move
+	# /tftpboot to /bgsys/linux to ensure we have enough space for installation.
+
+	echo -en "\n\n\tChecking the state of YACI on the system ..."
+	if [ -e /tftpboot ] ; then
+		if [ ! -L /tftpboot ] ; then
+			if [ ! -e /bgsys/linux/tftpboot ] ; then
+				mv /tftpboot /bgsys/linux
+				if [ $? -ne 0 ] ; then
+					echo -en "\n\n\t\tWARNING: Failed to move /tftpboot to /bgsys/linux\n\n"
+				else
+					ln -s /bgsys/linux/tftpboot /tftpboot
+					if [ $? -ne 0 ] ; then
+						echo -en "\n\n\t\tERROR: Failed to link /tftpboot to /bgsys/linux/tftpboot.\n\n"
+						exit 1
+					fi
+				fi
+			else
+				echo -en "\n\n\t\tWARNING: /bgsys/linux/tftpboot already exists but /tftpboot doesn't link to it."
+				echo -en "\n\t\t         Attemping to just use the existing /tftpboot space.\n\n"
+			fi
+		fi
+	else
+		echo -en "\n\n\t\tERROR: YACI prerequisite check passed but cannot find /tftpboot directory."
+		echo -en "\n\t\t       Please ensure YACI is properly installed and then install the"
+		echo -en "\n\t\t       bgq-distrofs and bgq-diags rpms.\n\n"
+		exit 1
+	fi
+
+	echo -en "\n\n\t\tYACI is properly configured for BG/Q Linux Distribution Installation."
+
+	# Need to make sure we have enough sapce to install the RHEL6 image.
+	echo -en "\n\n\tPlease wait.  Ensuring there is sufficient space for installation...\n"
+	dd if=/dev/zero of=/tftpboot/testFile bs=1M count=12000 &> /dev/null
+	if [ $? -ne 0 ] ; then
+		echo -en "\n\n\t\tERROR: Insufficient space to create the BG/Q Linux Distribution.\n"
+		echo -en "\n\t\t       12 GB of space is required to install the BG/Q Linux Distribution.\n"
+		echo -en "\n\t\t       Free up the required space on the filesystem containing /tftpboot and/or /bgsys"
+		echo -en "\n\t\t       and then install the bgq-distrofs and bgq-diags rpms.\n\n"
+		rm -f /tftpboot/testFile
+		exit 1
+	else
+		# Create this file so I know whether to check for space usage in the bgqDistrofsInstall.sh script.
+		touch /tftpboot/.spaceChecked
+		echo -en "\n\t\tSufficient space found.  Continuing ..."
+		rm -f /tftpboot/testFile
+	fi
+
+	echo -en "\n\n\tChecking for $CURR_RHEL package repository at $RHEL6_PATH or an existing BGQ_DISTROFS_BASE_PATH .\n"
+	if [ ! -e $RHEL6_PATH ] && [ ! -e BGQ_DISTROFS_BASE_PATH ] ; then
+		echo -en "\n\n\t\tERROR: The required $CURR_RHEL package repository could not be found at $RHEL6_PATH"
+		echo -en "\n\t\t       and there is not a pre-existing BGQ_DISTROFS_BASE_PATH installation."
+		echo -en "\n\t\t       Please make the repository available and then install the bgq-distrofs and bgq-diags rpms.\n\n"
+		exit 1
+	else
+		if [ -e $RHEL6_PATH ] ; then
+			echo -en "\n\t\t$CURR_RHEL package repository found."
+		fi
+		if [ -e BGQ_DISTROFS_BASE_PATH ] ; then
+			echo -en "\n\t\t$CURR_RHEL base installation found."
+		fi
+	fi
+
+	echo -en "\n\n\tBG/Q Linux Distribution prerequisites successfully met!"
+	echo -en "\n\n\t\tContinuing RPM installation ... \n\n"
+
+fi
+
+exit 0

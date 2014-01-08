@@ -1,0 +1,7 @@
+-- INSERT_QUERY_SUB_NODE_USER
+
+SELECT username, corner
+  FROM bgqjob
+  WHERE corner like ? # corner
+  AND
+  username <> ? # username

@@ -1,0 +1,58 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2010, 2011                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog
+tld=ras
+install_base_dir=$(BGQ_INSTALL_DIR)/$(tld)
+include_install_dir=$(install_base_dir)/include
+etc_install_dir=$(install_base_dir)/etc
+decoder_install_dir=$(install_base_dir)/ras/decoder
+BGQ_LIB_INSTALL_DIR=$(install_base_dir)/lib
+
+#bitness stuff
+ifeq ($(BITS),)
+UNAME_PROC=$(shell uname -m)
+BITS=32
+ifeq ($(UNAME_PROC),ppc64)
+BITS=64
+endif
+ifeq ($(UNAME_PROC),x86_64)
+BITS=64
+endif
+endif
+ifneq ($(BITS),32)
+obj_ext = o_64
+lib_ext = _s.a
+LDFLAGS += -m64
+else
+obj_ext=o
+lib_ext = .a
+endif
+
+# 64 bit build rules
+CFLAGS_64   = -m64
+CXXFLAGS_64 = -m64
+%.o_64: %.cc
+	$(CXX) $(CXXFLAGS) $(CXXFLAGS_64) -c $< -o $@
+%.o_64: %.cpp
+	$(CXX) $(CXXFLAGS) $(CXXFLAGS_64) -c $< -o $@
+%.o_64: %.c
+	$(CC) $(CFLAGS) $(CFLAGS_64) -c $< -o $@

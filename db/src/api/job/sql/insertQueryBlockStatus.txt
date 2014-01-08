@@ -1,0 +1,5 @@
+-- INSERT_QUERY_BLOCK_STATUS
+
+SELECT status, action, qualifier, sizeA, sizeB, sizeC, sizeD, sizeE
+  FROM bgqBlock
+  WHERE blockId = ? # blockId

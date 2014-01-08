@@ -1,0 +1,355 @@
+
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+<!DOCTYPE html>
+
+<html>
+<head>
+
+<meta charset="utf-8">
+
+<title>Blue Gene Navigator</title>
+
+</head>
+
+<body>
+
+<h1>Blue Gene Navigator</h1>
+
+<p>The Blue Gene Navigator is the administrative web application for Blue Gene.</p>
+
+
+<h2>Usage</h2>
+
+<h3>Login</h3>
+
+<p>
+Start the Navigator by pointing your browser to
+<ul>
+ <li>http://<i>serviceNode</i></li>
+ <li>https://<i>serviceNode</i></li>
+ <li>http://<i>serviceNode</i>/navigator</li>
+ <li>https://<i>serviceNode</i>/navigator</li>
+ <li>http://<i>serviceNode</i>/navigator/navigator.html</li>
+</ul>
+
+<p>
+The Navigator first shows a Login dialog.
+When you submit your credentials,
+the Navigator uses them to create a BGWS session.
+This typically requires a user on the Service Node,
+but the administrator could configure the BGWS differently.
+</p>
+
+<p>
+Tip: The user name can be set automatically by setting the <b>user</b> search parameter in the Navigator's URL,
+like this: http://<i>serviceNode</i>/navigator?user=<i>bknudson</i>.
+Then you'll only have to enter your password.
+</p>
+
+<h3>Page Elements</h3>
+
+<h4>Username</h4>
+
+The user name is displayed in the upper-right of the Navigator.
+
+<p>
+If you hover over the user name, a tooltip will appear that shows information about your session.
+Specifically, what authorities you have that are relevant to the Navigator.
+
+<h4>Charts</h4>
+
+If you click on a marker on the Jobs chart, you are taken to the Jobs History tab with the filter set to show the jobs started during the corresponding day.
+
+<p>
+If you click on a marker on the RAS chart, you are taken to the RAS tab with the filter set to show the RAS events that occurred during the corresponding day with the corresponding severity.
+
+<p>
+The charts update themselves automatically every 5 minutes.
+
+
+<h3>URL</h3>
+
+<p>
+You can set various parameters in the URL when you access the navigator.
+A URL is made up of several parts, the scheme, host-port, path, query parameters, and fragment.
+The scheme, host-port, and path are fixed. The user can modify the query parameters and fragment
+to configure the Navigator.
+
+<p>
+https://bgqsn1/navigator?<i>query-params</i>#<i>fragment-id</i>.
+
+<p>
+The query parameters start after ? in the URL.
+The format of the query parameters is name=value pairs separated by &amp; (the standard URL encoding for parameters).
+
+<p>
+For example, https://bgqsn1/navigator?user=bknudson&amp;dashboard=hidden.
+
+<p>
+The fragment starts after the # in the URL.
+The format for the fragment is also name=value pairs separated by &amp;.
+
+<p>
+For example, https://bgqsn1/navigator#tab=blocks&amp;status=F
+
+<p>
+You can use both query parameters and fragment ID together, for example: https://bgqsn1/navigator?user=bknudson&amp;dashboard=hidden#tab=blocks&amp;status=F
+
+
+<h4>Tab</h4>
+
+<p>
+By default, the Navigator starts showing the first tab ("System Summary"),
+but the user can start on a different tab by setting <span style="font-family: monospace;">tab=<i>tab-id</i></span> in the <i>fragment-id</i> part of the URL.
+</p>
+
+<p>
+The following table lists the tab name and it's ID:
+</p>
+<ul>
+<li>Blocks: blocks</li>
+<li>Block Builder: block-builder</li>
+<li>Diagnostics: diags</li>
+<li>Environmentals: env</li>
+<li>Hardware: hardware</li>
+<li>I/O Blocks: io-blocks</li>
+<li>Jobs: jobs</li>
+<li>Job History: job-history</li>
+<li>Performance Monitoring: perf</li>
+<li>Prepare Service Action: prepare-service-action</li>
+<li>RAS: ras</li>
+<li>Service Actions: service-actions</li>
+<li>System Summary: summary</li>
+</ul>
+
+<p>
+Here's an example:
+http://<i>serviceNode</i>/navigator#tab=hardware
+</p>
+
+<h4>User</h4>
+
+<p>
+You can set the user parameter in the search parameters to set the user name that you want automatically filled in to the login form,
+then you only have to type your password.
+Here's an example: http://<i>serviceNode</i>/navigator?user=<i>username</i>
+</p>
+
+
+<h4>Initial dashboard visibility</h4>
+
+<p>
+You can hide the dashboard by setting dashboard=hidden in the search parameters. For example:
+http://<i>serviceNode</i>/navigator?dashboard=hidden
+</p>
+
+
+<h4>Machine layout</h4>
+
+<p>
+The machine display is on the left-hand side by default.
+In extremely wide configurations it may be better to put the machine display on the top.
+This can be achieved by setting the <b>machineRegion</b> parameter in the search parameters.
+Here's an example: http://<i>serviceNode</i>/navigator?machineRegion=top
+</p>
+
+
+<h4>BGWS path</h4>
+
+<p>
+The Navigator can be configured to use a non-standard path for the BGWS.
+The standard, default path is "/bg".
+A different path is set by setting ?bgwsPath=/<i>whatever</i> in the URL.
+For example, http://<i>serviceNode</i>/navigator?bgwsPath=/bg-bknudson
+
+<p>
+This can be useful if you are developing the Navigator and you have your own instance of the BGWS server.
+You can configure Apache to forward a different path to your BGWS server and then run Navigator
+against that BGWS server using bgwsPath.
+
+
+<h4>Measurement system</h4>
+
+<p>
+The Navigator environmentals display some measurements in US customary units (e.g., coolant inlet flow rat in gal / min).
+Some customers may prefer to see these measurements in SI units (e.g., L/min).
+The Navigator gets the measurement system to use from the BGWS.
+The user can override the BGWS setting by setting the <b>measurements</b> parameter to SI or US.
+
+<p>
+For example, http://<i>serviceNode</i>/navigator?measurements=SI
+
+
+<h3>Security</h3>
+
+<p>
+If the user doesn't have block CREATE authority then the Create button on the Blocks tab will not be displayed.
+</p>
+
+<p>
+If the user doesn't have hardware READ authority then the following tabs will not be displayed:
+</p>
+
+<ul>
+<li>Alerts</li>
+<li>Diagnostics</li>
+<li>Environmentals</li>
+<li>Hardware Replacements</li>
+<li>Service Actions</li>
+<li>RAS</li>
+<li>Performance Monitoring</li>
+<li>RAS tab in Job and Job History details</li>
+</ul>
+
+<p>
+If the user isn't a Blue Gene administrator then the "Close Alert" button in the Alerts tab will not be displayed.
+</p>
+
+<p>
+If the user isn't a Blue Gene administrator then the Configure Diagnostics Run tab in the Diagnostics tab will not be displayed.
+</p>
+
+<p>
+If the user isn't a Blue Gene administrator then the "Prepare Hardware for Service" button in the Service Actions tab will not be displayed.
+</p>
+
+
+<h3>Pages</h3>
+
+This section contains documentation on some of the pages where it might not be obvious.
+
+<h4>Service Actions</h4>
+
+<p>
+The Navigator provides a wizard to start a service action.
+Initially, it displays a list of the types of service actions that are available.
+Some of these types of service actions may not be available based on how the machine is configured.
+Following is a list of the types of service actions that may not be available and the condition:
+</p>
+
+<ul>
+<li>"Service an I/O drawer in a compute rack" -- only if there are I/O drawers in the compute racks.</li>
+<li>"Service an I/O rack" -- only if there are I/O racks.</li>
+<li>"Service an I/O drawer in an I/O rack" -- only if there are I/O drawers in I/O racks.</li>
+<li>"Service a bulk power module in an I/O rack" -- only if there are I/O racks.</li>
+<li>"Service a clock card in an I/O rack" -- only if there are I/O racks.
+</ul>  
+
+
+<h4>Performance Monitoring</h4>
+
+<p>
+The initial graph shows the measurements for block boots averaged over the past 7 days for all the different "detail"s.
+A detail encodes the block size, like c<i>compute-node-count</i>i<i>IO-node-count</i>.
+
+<p>
+Change the interval from the past 7 days by changing the "Measurements in past" field in the filter options.
+
+<p>
+Click on a bar in the chart to show a pie chart for that same data.
+When you click on the bar, the filter options change to what's currently being displayed,
+i.e., if you click on the "c512i8" bar in the chart, the detail in the filter options will be set to "c512i8".
+
+<p>
+Another way to show a pie chart for a detail is to bring up the Filter Options, enter the detail in the Detail field, and set the Grouping to "None".
+
+<p>
+To show a pie chart for a block, type the block ID in the Block field and set the Grouping to "None" in the filter options.
+
+<p>
+You can see how the performance has changed over time by grouping the results over days, weeks, or months.
+This requires that you enter a Detail or Block and set the Grouping in the filter options to Daily, Weekly, or Monthly.
+A bar chart is displayed where each bar is the average of the measurements for each function for the detail or block for that day, week, or month.
+You can click on the bar to show a pie chart for the same data.
+
+<p>
+All the charts supply tooltips so hover over the part of the bar or the pie slice for details.
+
+<p>
+The "Back" button restores the previous filter options and re-loads the data.
+
+
+<h3>System setup / configuration</h3>
+
+<p>
+Serve up the Navigator from a web server.
+The easiest way is to include the configuration file that ships with the driver in the Apache configuration file.
+Create a symlink /etc/httpd/conf.d/navigator.conf to /bgsys/drivers/ppcfloor/navigator/etc/navigator.conf.
+</p>
+
+<pre>
+# ln -s /bgsys/drivers/ppcfloor/navigator/etc/navigator.conf /etc/httpd/conf.d/
+</pre>
+
+Also, if there's a /etc/httpd/conf.d/welcome.conf, comment out all the lines in it, like it says.
+
+<p>
+The Navigator uses Blue Gene Web Services (BGWS), so make sure that's set up and running, too.
+</p>
+
+
+<h2>Development</h2>
+
+<h3>Stuff to do every release</h3>
+
+<ul>
+<li>Update the version of the bluegene package, in script/bluegene/package.json.
+<li>Check for a new version of Dojo.
+<li>Re-do script/bluegene/moreDojoLayer.js
+</ul>
+
+<h3>Code documentation</h3>
+
+Code is documented using JSDoc. <a href="jsdoc/index.html">Jsdoc documentation</a>
+
+<p>
+JSDoc links:
+<ul>
+<li><a href="http://code.google.com/p/jsdoc-toolkit/wiki/TagReference">Tags</a></li>
+<li><a href="http://code.google.com/p/jsdoc-toolkit/">Main page</a></li>
+</ul>
+
+
+<h3>Dojo</h3>
+
+Navigator is built on <a href="http://www.dojotoolkit.org/">Dojo</a> <a href="http://dojotoolkit.org/reference-guide/releasenotes/1.7.html">1.7.2</a>
+(see <a href="http://livedocs.dojotoolkit.org/releasenotes/1.7">here</a> if that hasn't been updated yet).
+See the release notes for browser support.
+
+<p>See dojo/InternalUseOnly/notes.txt for info about how I get Dojo from iRAM.
+
+<p><a href="http://mathiasbynens.be/notes/html5-levels">HTML 5</a></p>
+
+
+<h3>Unit tests using DOH</h3>
+
+Go to <a href="https://localhost/nav-devel/navigator/resources/script/bg_navigator/bluegene/test/test.html">navigator/resources/script/bg_navigator/bluegene/test/test.html</a> to run the unit tests.
+
+
+<h3>Sample Pages</h3>
+
+Go to <a href="https://localhost/nav-devel/resources/script/bg_navigator/bluegene/test/SamplePages.html">navigator/resources/script/bg_navigator/bluegene/test/SamplePages.html</a> for the sample pages.
+
+</body>
+</html>

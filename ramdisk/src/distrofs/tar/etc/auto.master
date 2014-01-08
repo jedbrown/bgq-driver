@@ -1,0 +1,33 @@
+#
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+# $Id: auto.master,v 1.4 2005/01/04 14:36:54 raven Exp $
+#
+# Sample auto.master file
+# This is an automounter map and it has the following format
+# key [ -mount-options-separated-by-comma ] location
+# For details of the format look at autofs(5).
+#/misc	/etc/auto.misc --timeout=60
+#/smb	/etc/auto.smb
+#/misc	/etc/auto.misc
+#/net	/etc/auto.net
+/bgusr /etc/auto.bgusr -vers=3 -noac
+#/gsa /etc/auto.gsa
+#/gsaro /etc/auto.gsaro

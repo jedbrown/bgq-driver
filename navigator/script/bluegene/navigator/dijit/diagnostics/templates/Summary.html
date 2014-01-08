@@ -1,0 +1,28 @@
+<div>
+
+<div style="overflow-y: scroll;" data-dojo-type="dijit.layout.ContentPane" data-dojo-props="style: 'overflow-y: scroll;'">
+    <div>
+        <h2>Running Diagnostics <img src="resources/image/ajax-loader.gif" style="height: 15px;" data-dojo-type="bluegene.dijit.Hideable"" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_runningLoading" /></h2> 
+
+        <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-props="emptyText: 'No diagnostics runs in progress.', showHeader: false" data-dojo-attach-point="_runningTable"></table>
+
+
+        <h2>Midplanes <img src="resources/image/ajax-loader.gif" style="height: 15px;" data-dojo-type="bluegene.dijit.Hideable"" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_midplanesLoading" /></h2>
+
+        <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_midplanesTable"></table>
+
+
+        <h2>I/O Drawers <img src="resources/image/ajax-loader.gif" style="height: 15px;" data-dojo-type="bluegene.dijit.Hideable"" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_ioDrawersLoading" /></h2>
+
+        <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_ioDrawersTable"></table>
+
+
+        <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_userHideable">
+            <h2>User-defined Blocks <img src="resources/image/ajax-loader.gif" style="height: 15px;" data-dojo-type="bluegene.dijit.Hideable"" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_userLoading" /></h2>
+
+            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_userTable"></table>
+        </div>
+    </div>
+</div>
+
+</div>

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY product "bgmaster_server_log_level">
+]>
+
+<refentry lang="en" id="bgmaster_server_log_level">
+<refentryinfo>
+    <productname>&product;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>© Copyright IBM Corp. 2010, 2011</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+<refmeta>
+    <refentrytitle>&product;</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&product;</refname>
+    <refpurpose>Manual for BGmaster bgmaster_server_log_level </refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id="bgmaster_server_log_level.synopsis">
+    <title>Synopsis</title>
+    <cmdsynopsis><command>
+bgmaster_server_log_level [ OPTIONS ] [ logger=level ]
+</command>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id="bgmaster_server_log_level.options">
+    <title>Arguments</title>
+    <para>Accepted arguments:</para>
+    <variablelist>
+        <varlistentry>
+            <term><option>--help</option></term>
+            <listitem>
+            <para>usage </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>logger=level</option></term>
+            <listitem>
+            <para>logger to change and new level </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--host host:port</option></term>
+            <listitem>
+            <para>TCP host and port pair to use to connect to bgmaster_server </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--verbose verbosity</option></term>
+            <listitem>
+            <para>Add program trace information.  Levels of verbosity are TRACE, DEBUG, INFO, WARN, ERROR, FATAL. </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--properties filename</option></term>
+            <listitem>
+            <para>bg.properties file to use </para>
+            </listitem>
+        </varlistentry>
+
+    </variablelist>
+
+</refsect1>
+
+<refsect1 id="bgmaster_server_log_level.description">
+    <title>Description</title>
+    <para>Display and optionally update bgmaster_server's logging configuration.</para>
+</refsect1>
+
+
+<refsect1 id="bgmaster_server_log_level.seealso">
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>master_status</refentrytitle>
+           <manvolnum>8</manvolnum>
+	</citerefentry>
+    </para>
+</refsect1>
+
+</refentry>

@@ -1,0 +1,26 @@
+<register width="64" name="GEA_INTERRUPT_STATE" prefix="GEA_DCR" description="tbd">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <field bit="1" name="DEVBUS_CTL_PERR" description="DevBus control parity error " category="fatal" />
+  <field bit="2" name="TIMER0_INT" description="Global Timer 0 Interrupt" category="software" />
+  <field bit="3" name="TIMER1_INT" description="Global Timer 1 Interrupt" category="software" />
+  <field bit="4" name="TIMER2_INT" description="Global Timer 2 Interrupt" category="software" />
+  <field bit="5" name="TIMER3_INT" description="Global Timer 3 Interrupt" category="software" />
+</register>

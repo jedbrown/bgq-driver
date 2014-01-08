@@ -1,0 +1,86 @@
+<div>
+
+<div data-dojo-type="dijit.layout.BorderContainer" data-dojo-props="gutters: false">
+
+    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'top'">
+        <div data-dojo-type="dijit.form.DropDownButton" data-dojo-attach-point="_foDropDown">
+            <span>Filter Options</span>
+            <div style="width: 580px;" data-dojo-type="dijit.TooltipDialog">
+                <div class="bgFilterOptions bgFilterOptionsEnvNc" data-dojo-type="dijit.form.Form" data-dojo-props="'class': 'bgFilterOptions bgFilterOptionsEnvNc'" data-dojo-attach-point="_foForm">
+                    <fieldset>
+                        <ul>
+                            <li><input data-dojo-type="bluegene.navigator.dijit.TimeInterval" data-dojo-props="name: 'interval', label: 'Entries'" /></li>
+                            <li>
+                                <label for="${id}-fo-location">Location</label>
+                                <input id="${id}-fo-location" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'location'" />
+                            </li>
+                        </ul>
+                        <table>
+                            <tr><td style="width: 50%;">
+                                <ul>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="integerOnly: true, label: 'Temp0', name: 'temp0'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev08', name: 'v08'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev25', name: 'v25'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev120p', name: 'v120p'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev09', name: 'v09'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev33p', name: 'v33p'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev12b', name: 'v12b'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev25p', name: 'v25p'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev18p', name: 'v18p'"></li>
+                                </ul>
+                            </td><td>
+                                <ul>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="integerOnly: true, label: 'Temp1', name: 'temp1'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev14', name: 'v14'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev33', name: 'v33'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev15', name: 'v15'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev10', name: 'v10'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev12a', name: 'v12a'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev18', name: 'v18'"></li>
+                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev12p', name: 'v12p'"></li>
+                                </ul>
+                            </td></tr>
+                        </table>
+                    </fieldset>
+                    <fieldset class="submit">
+                        <button type="submit" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'submit'">Apply</button>
+                        <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_foResetButton">Reset</button>
+                    </fieldset>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'center'">
+        <table style="height: 100%;" data-dojo-type="dojox.grid.EnhancedGrid"
+                data-dojo-props="rowsPerPage: 50, selectable: true, style: 'height: 100%;', noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No entries match the filter options.&lt;/span&gt;'"
+                data-dojo-attach-point="_grid"
+                >
+            <colgroup span="2" noscroll="true"></colgroup>
+            <colgroup span="17"></colgroup>
+            <thead><tr>
+                <th field="location" width="100px">Location</th>
+                <th field="time" formatter="bluegene.navigator.format.timestamp" width="110px" cellStyles="text-align: right;">Time</th>
+                <th field="v08" width="90px" cellStyles="text-align: right;">voltagev08</th>
+                <th field="v14" width="90px" cellStyles="text-align: right;">voltagev14</th>
+                <th field="v25" width="90px" cellStyles="text-align: right;">voltagev25</th>
+                <th field="v33" width="90px" cellStyles="text-align: right;">voltagev33</th>
+                <th field="v120p" width="100px" cellStyles="text-align: right;">voltagev120p</th>
+                <th field="v15" width="90px" cellStyles="text-align: right;">voltagev15</th>
+                <th field="v09" width="90px" cellStyles="text-align: right;">voltagev09</th>
+                <th field="v10" width="90px" cellStyles="text-align: right;">voltagev10</th>
+                <th field="v33p" width="90px" cellStyles="text-align: right;">voltagev33p</th>
+                <th field="v12a" width="90px" cellStyles="text-align: right;">voltagev12a</th>
+                <th field="v12b" width="90px" cellStyles="text-align: right;">voltagev12b</th>
+                <th field="v18" width="90px" cellStyles="text-align: right;">voltagev18</th>
+                <th field="v25p" width="90px" cellStyles="text-align: right;">voltagev25p</th>
+                <th field="v12p" width="90px" cellStyles="text-align: right;">voltagev12p</th>
+                <th field="v18p" width="90px" cellStyles="text-align: right;">voltagev18p</th>
+                <th field="temp0" width="80px" cellStyles="text-align: right;" formatter="bluegene.navigator.format.colorizeTemp">Temp0</th>
+                <th field="temp1" width="80px" cellStyles="text-align: right;" formatter="bluegene.navigator.format.colorizeTemp">Temp1</th>
+            </tr></thead>
+        </table>
+    </div>
+</div>
+
+</div>

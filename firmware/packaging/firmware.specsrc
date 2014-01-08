@@ -1,0 +1,36 @@
+####################################
+%package firmware
+
+Summary: Firmware
+Group: %{product_group}
+Release: 0
+
+%description firmware
+%{bgq_package_description}
+
+The firmware component consists of the lowest level software for a BQC.  It provides bootstrapping
+function, JTAG mailbox protocol and first level initialization of various hardware facilities,
+such as memory controller.  Firmware also provides a machine check handler to detect and report
+defective hardware.
+
+
+%files firmware
+
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/boot
+%dir %{_base_dir}/firmware
+%dir %{_base_dir}/firmware/tests
+
+%{_base_dir}/boot/firmware
+%{_base_dir}/firmware/bin
+%{_base_dir}/firmware/include
+%{_base_dir}/firmware/lib
+%{_base_dir}/firmware/ras
+%{_base_dir}/firmware/tools
+%{_base_dir}/firmware/tests/hss_rx_cal
+
+
+

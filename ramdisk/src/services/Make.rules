@@ -1,0 +1,100 @@
+
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2011, 2012                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+# Figure out current architecture
+ifndef $(OS_ARCH)
+OS_ARCH := $(shell uname -m)
+endif
+
+# Figure out if 64-bit or 32-bit architecture
+ifndef $(BITS)
+BITS=32
+ifeq ($(OS_ARCH),ppc64)
+BITS=64
+endif
+ifeq ($(OS_ARCH),x86_64)
+BITS=64
+endif
+endif
+
+# Set variables based on architecture
+ifeq ($(BITS),64)
+CFLAGS   += -m64
+CXXFLAGS += -m64
+LDFLAGS  += -m64
+endif
+
+# Set up distrofs rpm location
+BGQ_DISTROFS_CIOS_PATH=$(BGQ_DISTROFS_PATH)/cios
+
+# Set install directory variables
+IOS_PROGRAM_DIR=$(BGQ_DISTROFS_CIOS_PATH)/sbin
+IOS_LIBRARY_DIR=$(BGQ_DISTROFS_CIOS_PATH)/lib64
+
+# Set compiler flags
+CXXFLAGS += -MD
+CXXFLAGS += -O2
+CXXFLAGS += -g
+CXXFLAGS += -Wall
+CXXFLAGS += -W
+CXXFLAGS += -Wunused
+CXXFLAGS += -Wcomment
+CXXFLAGS += -Wparentheses
+CXXFLAGS += -Wconversion
+CXXFLAGS += -Wsign-compare
+CXXFLAGS += -Wsign-conversion
+CXXFLAGS += -Wundef
+CXXFLAGS += -pthread
+CXXFLAGS += -rdynamic
+
+# Set include flags
+#CXXFLAGS += -iquote $(BGQ_BUILD_DIR)/ramdisk/src/services
+CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)
+CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)/extlib/include
+
+# Set linker flags
+LDFLAGS  += -pthread
+LDFLAGS  += -Wl,-rpath,/usr/lib64
+LDFLAGS  += -WL,-rpath,/usr/lib
+LDFLAGS  += -Wl,-rpath,/lib64
+LDFLAGS  += -Wl,-rpath,/lib
+LDFLAGS  += -Wl,-rpath,$(IOS_LIBRARY_DIR)
+LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
+LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/extlib/lib
+LDFLAGS  += -L $(BGQ_INSTALL_DIR)/extlib/lib
+LDFLAGS  += -L $(BGQ_INSTALL_DIR)/utility/lib
+LDFLAGS  += -lbgutility
+LDFLAGS  += -lboost_system-mt
+LDFLAGS  += -lboost_program_options-mt
+
+# Set 64-bit build rules
+%.o_64: %.cc
+	$(CXX) $(CXXFLAGS) $(CXXFLAGS_64) -c $< -o $@
+%.o_64: %.cpp
+	$(CXX) $(CXXFLAGS) $(CXXFLAGS_64) -c $< -o $@
+%.o_64: %.c
+	$(CC) $(CFLAGS) $(CFLAGS_64) -c $< -o $@
+
+# Set utility commands
+OBJDUMP = objdump -dfhl
+

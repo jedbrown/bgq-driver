@@ -1,0 +1,82 @@
+<register width="64" name="DB_INTERRUPT_STATE" prefix="DEVBUS_DCR" description="tbd">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <field bit="0" name="LOCAL_RING" description="Parity error on DCR ring." category="fatal" />
+  <field bit="1" name="SLAVE_BAD_STORE" description="Outbound store with ttype not equal to 100000"  category="fatal" />
+  <field bit="2" name="SLAVE_BAD_LOAD" description="Outbound load with lwarx ttype (001001)"  category="fatal" />
+  <field bit="3" name="SLAVE_VALIDSRC_PARITY" description="Parity error on outbound source, valid from request switch"  category="fatal" />
+  <field bit="4" name="SLVOUT_CTRL_ECC" description="Uncorrectable error in outbound control from request switch"  category="fatal" />
+  <field bit="5" name="SLAVE_FIFO_PARITY" description="Parity error in outbound request FIFO control"  category="fatal" />
+  <field bit="6" name="SLAVE_FIFO_SM" description="State machine error in outbound request FIFO"  category="fatal" />
+  <field bit="7" name="SLAVE_FIFO_DATA" description="Parity error in outbound request FIFO data"  category="fatal" />
+  <field bit="8" name="SLVOUT_WDATA_ECC" description="Uncorrectable error in outbound write data from request switch"  category="fatal" />
+  <field bit="9" name="PCIE_IW_ADDR_PARITY" description="Parity error in address received from PCIe inbound write interface"  category="fatal" />
+  <field bit="10" name="PCIE_IW_BEN_PARITY" description="Parity error in byte enables received from PCIe inbound write interface"  category="fatal" />
+  <field bit="11" name="PCIE_IW_WDATA_UE" description="Uncorrectable ECC error in write data received from PCIe inbound write interface"  category="fatal" />
+  <field bit="12" name="PCIE_IR_IO_RCVD" description="IO space request received by PCIe inbound read interface"  category="fatal" />
+  <field bit="13" name="PCIE_IR_ATTR" description="Parity error in attributes received from PCIe inbound read interface"  category="fatal" />
+  <field bit="14" name="PCIE_IR_RANGE_START" description="Received inbound PCIe read request with out-of-range start address"  category="fatal" />
+  <field bit="15" name="PCIE_IR_RANGE_END" description="Received inbound PCIe read request with out-of-range end address"  category="fatal" />
+  <field bit="16" name="PCIE_IR_MAX_TOP" description="Received inbound PCIe read request exceeding 64GB maximum boundary"  category="fatal" />
+  <field bit="17" name="PCIE_IR_BOUNDS" description="Received inbound PCIe read request that is not within configured bounds"  category="fatal" />
+  <field bit="18" name="PCIE_IR_SM" description="Illegal state reached by PCIe inbound read state machine"  category="fatal" />
+  <field bit="19" name="SR_RD_ATTR" description="Parity error in response switch read attributes"  category="fatal" />
+  <field bit="20" name="SR_TAG_FIFO" description="Parity error in response switch read attribute tag FIFO"  category="fatal" />
+  <field bit="21" name="SW_STACK" description="Parity error in inbound request switch bookkeeping stack"  category="fatal" />
+  <field bit="22" name="SW_RA_CTRL" description="Parity error in inbound request switch control FIFO"  category="fatal" />
+  <field bit="23" name="SW_TGT_FIFO" description="Parity error in inbound request switch target FIFO"  category="fatal" />
+  <field bit="24" name="SW_GRANT" description="Parity error in inbound request switch grant attributes"  category="fatal" />
+  <field bit="25" name="MSYNC_GEN" description="Parity error in msync generation for two cycles"  category="fatal" />
+  <field bit="26" name="BEDRAM_SIZE" description="Unsupported 128-byte request made to the boot eDRAM"  category="fatal" />
+  <field bit="27" name="BEDRAM_FIFO" description="Parity error in boot eDRAM attribute FIFO"  category="fatal" />
+  <field bit="28" name="BEDRAM_COUNTER" description="Boot eDRAM counter overflow or underflow"  category="fatal" />
+  <field bit="29" name="PCIE_MEM_SIZE" description="Outbound request exceeded 16 bytes in size"  category="fatal" />
+  <field bit="30" name="PCIE_CFGIO_WR_SIZE" description="Outbound configuration or IO write request exceeded 4 bytes in size"  category="fatal" />
+  <field bit="31" name="PCIE_CFGIO_RD_SIZE" description="Outbound configuration or IO read request exceeded 4 bytes in size"  category="fatal" />
+  <field bit="32" name="PCIE_OR_ALIGN" description="Outbound read request not aligned within 16-byte boundaries"  category="fatal" />
+  <field bit="33" name="PCIE_OR_ATTR" description="Parity error in outbound read response attributes"  category="fatal" />
+  <field bit="34" name="PCIE_OR_ECC" description="Uncorrectable ECC error in outbound read response data"  category="fatal" />
+  <field bit="35" name="MSI_PARITY" description="Parity error in an MSI register"  category="fatal" />
+  <field bit="36" name="UPC_REQ_PARITY" description="Parity error in UPC request attributes"  category="fatal" />
+  <field bit="37" name="UPC_WDATA_PARITY" description="Parity error in UPC request write data"  category="fatal" />
+  <field bit="38" name="UPC_RDATA_PARITY" description="Parity error in UPC read response data"  category="fatal" />
+  <field bit="39" name="UPC_REQ_TIMEOUT" description="UPC request timeout with no ack"  category="fatal" />
+  <field bit="40" name="GEA_REQ_PARITY" description="Parity error in GEA request attributes"  category="fatal" />
+  <field bit="41" name="GEA_WDATA_PARITY" description="Parity error in GEA request write data"  category="fatal" />
+  <field bit="42" name="GEA_RDATA_PARITY" description="Parity error in GEA read response data"  category="fatal" />
+  <field bit="43" name="GEA_REQ_TIMEOUT" description="GEA request timeout with no ack"  category="fatal" />
+  <field bit="44" name="L2_IFC_FIFO_PARITY" description="Parity error in L2 interface FIFOs"  category="fatal" />
+  <field bit="45" name="L2_SLICE_SELECT" description="Parity error in L2 slice select input"  category="fatal" />
+  <field bit="46" name="RDBUF_A_STACK_PTY" description="Parity error in BeDRAM port of outbound read return bookkeeping stack"  category="fatal" />
+  <field bit="47" name="RDBUF_B_STACK_PTY" description="Parity error in shared port of outbound read return bookkeeping stack"  category="fatal" />
+  <field bit="48" name="RDBUF_SR_FIFO_PTY" description="Parity error in response switch request FIFO"  category="fatal" />
+  <field bit="49" name="RDBUF_READY_REG" description="Parity error in response switch ready register"  category="fatal" />
+  <field bit="50" name="RDBUF_SR_GNT" description="Parity error in response switch grant attributes"  category="fatal" />
+  <field bit="51" name="TI_ADDR_PARITY" description="Parity error in address received with testint request"  category="fatal" />
+  <field bit="52" name="PCIE_INT_A" description="PCIe legacy interrupt A"  category="fatal" />
+  <field bit="53" name="PCIE_INT_B" description="PCIe legacy interrupt B"  category="fatal" />
+  <field bit="54" name="PCIE_INT_C" description="PCIe legacy interrupt C"  category="fatal" />
+  <field bit="55" name="PCIE_INT_D" description="PCIe legacy interrupt D"  category="fatal" />
+  <field bit="56" name="UPC_COUNTER_OVF" description="UPC counter overflow" category="fatal" />
+  <field bit="57" name="SW_SWITCH" description="Request switch error"  category="fatal" />
+  <field bit="58" name="SR_SWITCH" description="Response switch error"  category="fatal" />
+  <field bit="59" name="SI_SWITCH" description="Invalidate switch error"  category="fatal" />
+  <field bit="60" name="SLAVE_DECODE" description="Decode miss in outbound request."  category="fatal" />
+</register>

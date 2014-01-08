@@ -1,0 +1,233 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+# 
+# firmwareFlash: Simple script for flashing firmware to Mellanox IB QDR
+# 		 and Mellanox 10 GigE adapters.
+#
+# Author:  Jay S. Bryant <jsbryant@us.ibm.com>
+#
+# Notes:  This script is written with the assumption that it is being run
+# 	  on a BG/Q node with only one adapter inserted in the 01:00.0 location.
+#	  It is also assumed that we have either a IB QDR card or a 10GigE card.
+#	  We will need to add support for the combo adapter in the future.
+#
+#                                                                                                   
+
+# Source function library
+. /etc/init.d/functions  
+
+# Source BlueGene specific environmental variables.
+. /dev/bgpers                                      
+
+export LD_LIBRARY_PATH=/lib64:/lib:/usr/lib64:/usr/lib:/lib64.orig:/lib.orig:/usr/lib64.orig:/usr/lib.orig
+
+# Burn without the '-allow_psid_change' parameter by default
+PSIDOVERRIDE=0
+
+function start {
+
+	echo -en $"Flashing Mellanox Firmware: "
+
+	if [ ! -e /sbin/lspci ] ; then
+		failure
+		echo -en "\n\tERROR: /sbin/lspci is required to flash the firmware\n"
+		exit 1
+	fi
+
+	if [ ! -e /usr/bin/mstflint ] ; then
+		failure
+		echo -en "\n\tERROR: /usr/bin/mstflint is required to flash the firmware\n"
+		exit 1
+	fi
+
+	# Get the adapter number
+	ADAPTER=`/sbin/lspci -vv -s 01:00.0 | grep "Part number:" | awk '{print $4}'`
+
+	case $ADAPTER in
+	    # IB adapter
+	    46M2204 )
+		DETAILS="single port IB QDR adapter"
+		FIRMWARE="/bin/fw-25408-2_9_1000-46M2203.bin"
+		#FIRMWARE="/bin/fw-25408-2_7_700-46M2203_A1_large.bin"
+		;;
+	    # 10 GbE adapter
+	    59Y1905 )
+		DETAILS="dual port 10GbE adapter"
+		FIRMWARE="/bin/fw-25408-2_9_1000-DB2_59Y1905.bin"
+		#FIRMWARE="/bin/fw-25408-2_7_700-59Y1905_large.bin"
+		;;
+	    # Mellanox part number for IB adapter
+	    MHQH19-XTC )
+		DETAILS="IB adapter (with Mellanox P/N)"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1000-MHQH19-XTC_A1-A4.bin"
+		;;
+	    # Mellanox part number for ConnectX2 IB adapter
+	    MHQH19B-XTR )
+		DETAILS="ConnectX2 IB adapter (with Mellanox P/N)"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1000_74Y9057.bin"
+		;;
+	    # IBM part number for ConnectX2 IB adapter
+	    74Y9057 )
+	        DETAILS="ConnectX2 IB adapter"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1000_74Y9057.bin"
+		;;
+	    # Mellanox part number for ConnextX2 IB adapter
+	    MHQH19C-XTR )
+	        DETAILS="ConnectX2 IB adapter (with Mellanox P/N)"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1000_74Y9057.bin"
+		;;
+	    # Mellanox part number for Combo adapter.
+	    MHZH29-XTR )
+		DETAILS="ConnectX2 combo adapter (with Mellanox P/N)"
+		FIRMWARE="/bin/fw-25408-2_9_1000-MHZH29-XTR_A2-A3_uar7.bin"
+		;;
+	    # The combo adapter and 10GbE adapters went out with firmware that had the wrong PSID in V1R1M0.
+	    # We need to catch cards that have the wrong PSID configured and use the --alow_psid_change option when
+	    # flashing the firmware.  Don't want to use that option otherwise.
+	    # Mellanox part number for newer combo adapter.
+	    MHZH29B-XTR )
+	        EC=`/sbin/lspci -vv -s 01:00.0 | grep "Engineering changes:" | awk '{print $4}'`
+		if [ `mstflint -d 01:00.0 dc | grep PSID | tr -s '\t' ' ' | awk '{print $3}'` == "MT_0DD0120009" ] ; then
+			PSIDOVERRIDE=1
+		fi
+		DETAILS="ConnectX2 combo adapter (MHZH29B-XTR - $EC )"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1200-74Y9058.bin"
+		;;
+	    # IBM part number for newer combo adapter.
+	    74Y9058 )
+                EC=`/sbin/lspci -vv -s 01:00.0 | grep "Engineering changes:" | awk '{print $4}'`
+		if [ `mstflint -d 01:00.0 dc | grep PSID | tr -s '\t' ' ' | awk '{print $3}'` == "MT_0DD0120009" ] ; then
+			PSIDOVERRIDE=1
+		fi
+		DETAILS="ConnectX2 combo adapter (74Y9058 - $EC )"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1200-74Y9058.bin"
+		;;
+	    # Hawk Dual Port 10 GB Eth
+	    MNPH29D-XTR )
+		if [ `mstflint -d 01:00.0 dc | grep PSID | tr -s '\t' ' ' | awk '{print $3}'` == "MT_0DB0120010" ] ; then
+			PSIDOVERRIDE=1
+		fi
+	        DETAILS="Hawk ConnectX2 Dual Port 10 GB Eth (with Mellanox P/N)"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1200-74Y9059.bin"
+		;;
+	    # IBM part number for Dual Port 10 GB Eth
+	    74Y9059 )
+		if [ `mstflint -d 01:00.0 dc | grep PSID | tr -s '\t' ' ' | awk '{print $3}'` == "MT_0DB0120010" ] ; then
+			PSIDOVERRIDE=1
+		fi
+	        DETAILS="ConnectX2 Dual Port 10 GB Eth"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1200_74Y9059.bin"
+		;;
+	    
+	    ####################################################################
+	    # The following adapters don't have an update to the 2.9.1000 level
+	    # We don't appear to have any of the adapters so, not a big deal.
+	    # Adding a warning message just in case one comes along.
+	    ####################################################################
+
+	    # Single port ConnectX2 IB adapter
+	    81Y1532 )
+	        echo -en "\n\n#####################################################################"
+	        echo -en "\nWARNING: Do not have 2.9.1000 level firmware for this card!"
+		echo -en "\n#####################################################################\n\n"
+		DETAILS="single port ConnectX2 IB adapter"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_7_8200-81Y1532_UAR_7.bin"
+		;;
+	    # Dual port ConnectX2 IB adapter
+	    81Y1536 )
+	        echo -en "\n\n#####################################################################"
+	        echo -en "\nWARNING: Do not have 2.9.1000 level firmware for this card!"
+		echo -en "\n#####################################################################\n\n"
+		DETAILS="dual port ConnectX2 IB adapter"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_7_8200-81Y1536_UAR_7.bin"
+		;;
+	    # Dual port ConnectX2 10GbE adapter
+	    81Y1540 )
+	        echo -en "\n\n#####################################################################"
+	        echo -en "\nWARNING: Do not have 2.9.1000 level firmware for this card!"
+		echo -en "\n#####################################################################\n\n"
+		DETAILS="dual port ConnectX2 10GbE adapter"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_7_8200-81Y140-EN_PXE-1.5.6_UAR_7.bin"
+		;;
+	    * )
+		failure
+		echo -en "\n\tERROR: Unknown adapter found!  $ADAPTER\n"
+		exit 1
+		;;
+	    esac
+	    
+	if [ ! -e $FIRMWARE ] ; then
+	    failure
+	    echo
+	    bgras $BGRAS_ID_SCRIPT_FAILURE "ERROR: mlxFwUpdate failed.  The required image $FIRMWARE could not be found in the mlxFwUpdate ramdisk. Ensure that the required firmware images have been downloaded from Mellanox and installed into /bgsys/drivers/ppcfloor/baremetal/firmware/mlxFwUpdate and then rebuild the mlxFwUpdate ramdisk."
+	    echo 
+	    exit 1
+	fi
+
+	echo -en "\n\n    Found a $ADAPTER $DETAILS\n"
+	echo -en "    Attempting to flash firmware $FIRMWARE to 01:00.0 ...\n\n"
+
+	if [ $PSIDOVERRIDE -eq 0 ] ; then
+		/usr/bin/mstflint -y -d 01:00.0 -i $FIRMWARE burn
+	else
+		#Only take this path if we found one of the two, known bad, PSIDs.
+		PSID=`mstflint -d 01:00.0 dc | grep PSID | tr -s '\t' ' ' | awk '{print $3}'`
+		echo -en "    Found V1R1M0 firmware: $PSID Using -allow_psid_change.\n\n"
+		/usr/bin/mstflint -y -allow_psid_change -d 01:00.0 -i $FIRMWARE burn
+	fi
+
+	if [ $? -ne 0 ] ; then
+		failure
+		echo -en "\n\tERROR: A failure occurred while flashing the firmware!\n"
+		echo -en "Dumping current adapter state:\n"
+		/usr/bin/mstflint -d 01:00.0 dc
+		bgras $BGRAS_ID_SCRIPT_FAILURE "ERROR: mstflint encountered an error burning new firmware to the $ADAPTER PCIe adapter.  Consult the I/O node log /bgsys/logs/BGQ/$BG_LOCATION.log for additional details."
+		exit 1
+	fi
+
+	# If we get here we were successful.
+	echo -en "\n\nFirmware Flash to adapter type $ADAPTER completed "
+	success
+	echo -en "\n"
+
+	# When running in diagnostics mode we just want to immediately shutdown after the flash.
+	if [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 1 ] ; then
+		lspci -vv -s 0000:01:00.0
+		/etc/rc.shutdown
+	fi
+
+	exit 0		
+
+}
+
+
+case "$1" in
+        start)
+                start
+                ;;
+        *)
+                echo $"Usage: $0 {start}"
+                exit 3
+
+esac
+
+exit $?
+

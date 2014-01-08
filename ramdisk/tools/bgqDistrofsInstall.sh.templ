@@ -1,0 +1,438 @@
+#/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+#
+# ramdisk/tools/bgqDistrofsInstall.sh for BlueGene/Q Linux Distribution
+#
+# Author: Jay S. Bryant <jsbryant@us.ibm.com>
+#
+# Purpose:  This script pulls down YACI and configures it to install
+#           the RHEL6 based BG/Q Linux Distribution.  It then runs
+#           YACI.
+
+# Source shared variables and functions
+. BGQ_RAMDISK_PATH/tools/functions
+
+DISTROFS_LOC=/tftpboot/images/distrofs.ppc64
+YACI_RPM=yaci-12-7.4.ch4.noarch.rpm
+RPMLIST=BGQ_RAMDISK_PATH/tools/bgqDistrofs.rpmlist
+POSTINSTALL=BGQ_RAMDISK_PATH/tools/bgqDistrofsPostInstall.sh
+SKIP_POSTINSTALL=0
+INSTALL_DIR=/bgsys/linux
+DISTROFS_TAR=BGQ_RAMDISK_PATH/bin/distrofs.tar
+BGSYS_DIR=BGQ_DISTROFS_BASE_PATH
+IONFLOOR=0
+USER_BGSYS=0
+LOGFILE=`hostname -s`-bgqDistrofsInstall-$BGSYS_DIR-`date +%Y-%m%d-%H:%M:%S`.log
+SUCCESS=1
+
+usage () {
+
+    #Do not need to log usage output
+    LOG=0
+
+    echo -en "\n\nUsage: $0 [OPTIONS] (NOTE: Must be run as root)\n"
+    echo -en "\t[-p <path to $CURR_RHEL rpms>] (default: $RHEL6_PATH)\n"
+    echo -en "\t[-d <name of BG/Q Distrofs directory to create>] (default: $BGSYS_DIR)\n"
+    echo -en "\t[-n <path to install BG/Q Distrofs at> ] (default: /bgsys/linux)\n"
+    echo -en "\t[-r <rpm list file>] (default: $RPMLIST)\n"
+    echo -en "\t[-i <bgqDistrofsPostInstall script>] (default: $POSTINSTALL)\n" 
+    echo -en "\t[-f make this installation the ionfloor]\n"
+    echo -en "\t[-t <tar file containing customizations for distrofs>] (default: $DISTROFS_TAR)\n"
+    echo -en "\t[-s skip post install script execution]"
+    echo -en "\t[-h displays this help text]\n\n"
+
+}
+
+# Check for required arguments and do validation.
+while getopts "p:d:n:r:i:t:fsh" flags ; do
+    case "$flags" in
+	p) RHEL6_PATH=$OPTARG
+	   ;;
+	d) BGSYS_DIR=$OPTARG
+	   USER_BGSYS=1
+	   ;;
+	n) INSTALL_DIR=$OPTARG
+	   ;;
+	r) RPMLIST=$OPTARG
+	   ;;
+	i) POSTINSTALL=$OPTARG
+	   ;;
+	t) DISTROFS_TAR=$OPTARG
+	   if [ ! -e $DISTROFS_TAR ] ; then
+		echo -en "\n\nERROR: Unable to find distrofs tarfile $DISTROFS_TAR\n\n"
+		exit 1
+	   fi
+	   ;;
+	f) IONFLOOR=1
+	   ;;
+	h) usage
+	   exit 0
+	   ;;
+	s) SKIP_POSTINSTALL=1
+	   ;;
+	*) usage
+	   exit 1
+	   ;;
+	    
+    esac
+done
+
+echo -en "\n\n############################################"
+echo -en "\n# Starting BG/Q Linux Distrofs Install Script"
+echo -en "\n##############################################\n"
+
+# Need to run as root ... doing this after arg parsing so non-root
+# users may execute the -h option to see the required arguments.
+if [ "$(id -u)" != "0" ]; then
+    echo -en "\n\n\tERROR! This script must be executed as root.\n\n"
+    exit 1
+fi
+
+#Make sure that we can write to the log file.  If not print a warning.
+#NOTE:  LOG_DIR is set in the functions file.
+touch $LOG_DIR/$LOGFILE
+if [ $? -ne 0 ] ; then
+
+    #Disable logging to avoid further errors.
+    LOG=0
+
+    /bin/echo -en "\n\n\tWARNING: Unable to create log file $LOG_DIR/$LOGFILE\n"
+    /bin/echo -en"\tInstallation will continue without logging.\n\n"
+    
+else
+    echo -en "\n\tLogging to: $LOG_DIR/$LOGFILE"
+fi    
+    
+if [ -z $RHEL6_PATH ] ; then
+   echo -en "\n\n\tERROR: No path to $CURR_RHEL package repository specified"
+   echo -en "\n\t       Run bgqDistroInstall.sh with the -p option and a valid path to a package repository.\n\n"
+   exit 1
+fi
+
+# Print out basic information for debug, etc.
+echo -en "\n\tUsing $CURR_RHEL RPMs in:  $RHEL6_PATH"
+echo -en "\n\tInstalling to: $INSTALL_DIR"
+echo -en "\n\tBG/Q Linux Distribution:  $BGSYS_DIR"
+echo -en "\n\tRPM list file:  $RPMLIST"
+echo -en "\n\tPost install script:  $POSTINSTALL"
+echo -en "\n\tDistrofs tar file:  $DISTROFS_TAR"
+if [ $IONFLOOR -eq 1 ] ; then
+   echo -en "\n\tPost install script will make the new distro the ionfloor."
+fi
+
+echo -en "\n\n\t-----------------------------------------------------------------------------------------\n"
+
+#Check to see if we have created /bgsys/linux yet
+if [ ! -e /bgsys/linux ] ; then
+	mkdir /bgsys/linux
+fi
+
+# Still check the RHEL6_PATH incase we are called directly.
+if [ ! -d $RHEL6_PATH ] && [ ! -d $INSTALL_DIR/$BGSYS_DIR ] ; then
+    echo -en "\n\n\tERROR: Cannot find $CURR_RHEL RPM path: $RHEL6_PATH\n\n"
+    exit 1
+fi
+
+if [ ! -e $INSTALL_DIR ] ; then
+    mkdir -p $INSTALL_DIR
+    if [ $? -ne 0 ] ; then
+	echo -en "\n\n\tERROR:  Unable to create $INSTALL_DIR for installation.\n\n"
+	exit 1
+    fi
+fi
+
+if [ ! -e $RMPLIST ] ; then
+    echo -en "\n\n\tERROR: Unable to find RPM list file: $RPMLIST\n\n"
+    exit 1
+fi
+
+if [ ! -e $POSTINSTALL ] ; then
+    echo -en "\n\n\tERROR: Unable to find post installation script file: $POSTINSTALL \n\n"
+    exit 1
+fi
+
+# Setup the distrofs tar file if necessary
+if [ $DISTROFS_TAR != "/bgsys/linux/distrofs.tar" ] ; then
+	cp $DISTROFS_TAR /bgsys/linux/distrofs.tar
+else
+	if [ ! -e $DISTROFS_TAR ] ; then
+		echo -en "\n\n\tERROR: Unable to find distrofs.tar in the driver at: $DISTROFS_TAR\n\n"
+		exit 1
+	else
+		cp /bgsys/drivers/ppcfloor/ramdisk/bin/distrofs.tar $DISTROFS_TAR
+	fi
+fi
+
+# Check to see if the base distro has been installed yet.  If not,
+# we need to first install the RHEL6.X base image.
+
+if [ ! -e $INSTALL_DIR/$BGSYS_DIR ] ; then
+
+   echo -en "\n\n\t$CURR_RHEL base image $INSTALL_DIR/$BGSYS_DIR not found.\n"
+   echo -en "\n\tPreparing the service node for image installation ...\n"   
+
+    # Make sure that yaci is already installed ...
+    rpm -qa | grep yaci &> /dev/null
+
+    # If not already installed ...
+    if [ ! $? -eq 0 ] ; then
+
+	echo -en "\n\n\tERROR! YACI is not installed on the Service Node!\n"
+	echo -en "\tYACI must be installed to facilitate installation of the BG/Q Linux Distribution.\n"
+	echo -en "\tPlease go to http://www.yaci.org/rpms and download $YACI_RPM\n"
+	echo -en "\tAfter you have installed the YACI rpm execute\n"
+	echo -en "\t/bgsys/drivers/ppcfloor/ramdisk/tools/bgqDistrofsInstall.sh to install the BG/Q Linux Distribution\n"
+
+#    echo -en "\n\nInstalling YACI ... \n"
+#
+#    if [ ! -d /bgsys/linux/tftpboot ] ; then
+#	mkdir /bgsys/linux/tftpboot
+#    fi
+#
+    # YACI wants to run under tftpboot but we are more likely to have the
+    # space we need under /bgsys/linux so I make a link.
+#    if [ ! -e /tftpboot ] ; then
+#	ln -s /bgsys/linux/tftpboot /
+#    fi
+#    
+#    cd /tm
+#
+#    if [ ! -e $YACI_RPM ] ; then
+#
+#	wget --tries=10 http://www.yaci.org/rpms/$YACI_RPM
+#	if [ $? -ne 0 ] ; then
+#	    echo -en "\n\nERROR: Unable to download YACI!\n\n"
+#	    exit 1
+#	fi
+#    fi
+
+    #rpm -ivh $YACI_RPM
+	#if [ $? -ne 0 ] ; then
+	#    echo -en "\n\nERROR: Unable to install YACI.  RC: $?\n\n"
+	#    exit 1
+	#fi
+    fi
+
+    # Now that YACI is installed we need to get the install source in place.
+    if [ -e /tftpboot/rpms ] ; then
+	DATE=`date +%Y-%m%d-%H:%M:%S`
+	if [ -L /tftpboot/rpms ] ; then
+		if [ `readlink /tftpboot/rpms` != "$RHEL6_PATH" ] ; then
+			echo -en "\n\tINFO: Found existing /tftpboot/rpms directory. Moving to /tftpboot/rpms.backup.$DATE\n"
+			mv /tftpboot/rpms /tftpboot/rpms.backup.$DATE
+		else
+			echo -en "\n\tINFO: /tftpboot/rpms is already linked to $RHEL6_PATH.  Using existing link ...\n"
+		fi
+	else
+		# We found a directory.  Move it out of the way incase the custoemr has something they want to keep.
+		echo -en "\n\tINFO: Found existing /tftpboot/rpms/directory.  Moving to /tftpboot/rpms.backup.$DATE\n"
+		mv /tftpboot/rpms /tftpboot/rpms.backup.$DATE
+	fi
+    elif [ -L /tftpboot/rpms ] ; then
+	# The directory doesn't exist but there is a link.  Remove the dead link.
+	echo -en "\n\tINFO: Found existing /tftpboot/rpms link but it appears dead.  Removing ...\n"
+	rm -f /tftpboot/rpms
+	ln -s $RHEL6_PATH /tftpboot/rpms &> /dev/null
+    fi
+	
+    if [ ! -e /tftpboot/rpms ] ; then
+    	ln -s $RHEL6_PATH /tftpboot/rpms &> /dev/null
+
+    	# Need to make sure we were able to create a link.  If not, it is possible that there is a dead link
+    	# in place.  Try to remove it and then try to make the link again.  If that fails throw an error
+    	# so we don't get the less obvious "MISSING RPMS" output from YACI.
+    	if [ $? -ne 0 ] ; then 
+		if [ -e /tftpboot/rpms ] ; then
+	   		rm /tftpboot/rpms
+			fi 
+			RC=$(ln -s $RHEL6_PATH /tftpboot/rpms 2>&1)
+		if [ ! -z "$RC" ] ; then
+			echo -en "\n\n\tERROR: Unable to create a link to the RPM installation source!"
+			echo -en "\n\t       ln returned: $RC\n\n"
+			exit 1
+		fi
+    	fi
+
+    fi
+
+    # Need to make sure we have enough sapce to install the RHEL6 image.
+    # If the .spaceChecked file is there then we know that we were not called 
+    # directly and can skip this step.
+    if [ ! -e /tftpboot/.spaceChecked ] ; then
+	    echo -en "\n\tPlease wait.  Ensuring there is sufficient space for installation...\n"
+	    dd if=/dev/zero of=/tftpboot/testFile bs=1M count=12000 &> /dev/null
+	    if [ $? -ne 0 ] ; then
+		echo -en "\n\n\tERROR: Insufficient space to create the BG/Q Linux Distribution.\n\n"
+		rm -f /tftpboot/testFile
+		exit 1
+	    else
+		echo -en "\nSufficient space found.  Continuing installation...\n\n"
+		rm -f /tftpboot/testFile
+	    fi
+    else
+	    rm -f /tftpboot/.spaceChecked
+    fi
+
+
+    # Now it is time to let YACI do the work:
+    cd /tftpboot/scripts
+    if [ ! -e ./create_image ] ; then
+	echo -en "\n\n\tERROR: Cannot find YACI's create_image script!\n\n"
+	exit 1
+    else
+	echo -en "\n\n\tStarting image installation.  This may take some time ...\n\n"
+	./create_image $RPMLIST distrofs ./post_create noramdisk 2>&1 | tee -a $LOG_DIR/$LOGFILE
+	if [ $? -ne 0 ] ; then
+	    echo -en "\n\n\tERROR: YACI encountered an error.  Please consult the logs above for the source of the error\n\n"
+	    exit 1
+	else
+	    cd $DISTROFS_LOC
+
+	    # Unmount the proc that YACI may mount.
+	    mount | grep "$DISTROFS_LOC/proc" &> /dev/null
+	    if [ $? -eq 0 ] ; then
+		umount -f ./proc
+	    fi
+
+	    cd /
+	    echo -en "\n\tInstalling $BGSYS_DIR to $INSTALL_DIR.  This may take some time ...\n"
+	    mv $DISTROFS_LOC $INSTALL_DIR/$BGSYS_DIR
+	    if [ $? -ne 0 ] ; then
+		echo -en "\n\n\tERROR: Unable to completely move BG/Q Linux Distribution to /bgsys/linux/$BGSYS_DIR\n\n"
+		exit 1
+	    fi
+	fi
+
+    fi
+    
+    #If we get here we were successful.
+    echo -en "\n\n\tInstallation of $CURR_RHEL base distro $BGSYS_DIR completed successfully.\n"
+    if [ $SKIP_POSTINSTALL -eq 0 ] ; then
+       echo -en "\tContinuing to Post Installation to apply BG/Q Linux Distribution customizations.\n\n"
+    fi
+else
+    echo -en "\n\n\t$CURR_RHEL Base installation $INSTALL_DIR/$BGSYS_DIR is already installed.\n"
+    echo -en "\t\tChecking for any package updates ...\n\n"
+
+    for RPM in `rpm --root=$INSTALL_DIR/$BGSYS_DIR -qa | sort` ; do 
+	/bin/echo "$RPM.rpm" >> /tmp/$BGSYS_DIR.temp.rpmlist
+    done
+
+    ADDRPMS=0
+
+    for RPM in `cat $RPMLIST` ; do 
+	cat /tmp/$BGSYS_DIR.temp.rpmlist | grep "$RPM" &> /dev/null
+
+	if [ $? -ne 0 ] && [[ ! "$RPM" =~ ^kernel ]] ; then 
+		/bin/echo -en "$RHEL6_PATH/$RPM " >> /tmp/$BGSYS_DIR.temp.newrpms
+		echo -en "\t\t\tScheduling $RPM for addition to $BGSYS_DIR\n"
+		ADDRPMS=1		
+	fi
+
+    done
+
+    if [ $ADDRPMS -eq 1 ] ; then
+    	if [ -e $RHEL6_PATH ] ; then
+		rpm --root $INSTALL_DIR/$BGSYS_DIR -ivh `cat /tmp/$BGSYS_DIR.temp.newrpms` 2>&1 | tee -a $LOG_DIR/$LOGFILE
+		if [ $? -ne 0 ] ; then 
+			echo -en "\n\n\t\t\t\tERROR! One or more errors were encountered by RPM.\n"
+			echo -en "\t\t\t\t       See errors above for details.\n\n"
+		fi
+    	else
+		echo -en "\n\n\t\t\t\tWARNING! New RPMs were scheduled for addition to the BG/Q Linux Image but\n"
+		echo -en "\t\t\t\t         the $RHEL6_PATH install source is not available.\n"
+		echo -en "\t\t\t\t         Please add the required RPMs to the $BGSYS_DIR distro by hand.\n\n"
+    	fi
+    fi
+
+    # Clean up
+    if [ -e /tmp/$BGSYS_DIR.temp.rpmlist ] ; then rm -f /tmp/$BGSYS_DIR.temp.rpmlist ; fi
+    if [ -e /tmp/$BGSYS_DIR.temp.newrpms ] ; then rm -f /tmp/$BGSYS_DIR.temp.newrpms ; fi
+
+    if [ $SKIP_POSTINSTALL -eq 0 ] ; then
+    	echo -en "\n\tMoving to Post Installation to apply BG/Q Linux Distribution customizations.\n\n"
+    fi
+fi
+
+
+# Call the bgaDistrofsPostInstall.sh script
+# If the user specified a custom BGSYS_DIR we need to treat it like a new base and make sure
+# that the post install script uses that as the base.
+
+if [ $SKIP_POSTINSTALL -eq 0 ] ; then
+
+   if [ $USER_BGSYS -eq 1 ] && [ $IONFLOOR -eq 1 ] ; then
+
+      $POSTINSTALL -f -b $INSTALL_DIR/$BGSYS_DIR
+        if [ $? -ne 0 ] ; then
+                SUCCESS=0
+        fi
+
+   elif [ $USER_BGSYS -eq 1 ] ; then
+
+        $POSTINSTALL -b $INSTALL_DIR/$BGSYS_DIR
+        if [ $? -ne 0 ] ; then
+                SUCCESS=0
+        fi
+
+   elif [ $IONFLOOR -eq 1 ] ; then
+
+        $POSTINSTALL -f
+        if [ $? -ne 0 ] ; then
+                SUCCESS=0
+        fi
+
+   else
+
+        $POSTINSTALL
+        if [ $? -ne 0 ] ; then
+                SUCCESS=0
+        fi
+
+   fi
+
+   if [ $SUCCESS -eq 1 ] ; then
+        echo -en "\n\n\tPost install script execution completed successfully.\n\n"
+   else
+        echo -en "\n\n\tPost install script execution encountered an error.\n\n"
+   fi
+
+else
+   echo -en "\n\n\tPost install script execution skipped.\n\n"
+fi
+    
+
+# If we make it this far the and success is 1, installation should have been successful
+
+if [ $SUCCESS -eq 1 ] ; then
+        echo -en "\n\n#############################################################"
+        echo -en "\n# BG/Q Linux Distrofs Installation Completed Successfully!"
+        echo -en "\n###############################################################\n"
+
+        exit 0
+else
+        echo -en "\n\n#############################################################"
+        echo -en "\n# BG/Q Linux Distrofs Installation Completed with Errors!"
+        echo -en "\n###############################################################\n"
+
+        exit 1
+fi

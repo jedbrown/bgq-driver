@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY product "master_start">
+]>
+
+<refentry lang="en" id="master_start">
+<refentryinfo>
+    <productname>&product;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>© Copyright IBM Corp. 2010, 2011</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+<refmeta>
+    <refentrytitle>&product;</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&product;</refname>
+    <refpurpose>Manual for BGmaster master_start </refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id="master_start.synopsis">
+    <title>Synopsis</title>
+    <cmdsynopsis><command>
+master_start [ alias ] | [ "bgmaster" ] [ "binaries" ] [ OPTIONS ]
+</command>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id="master_start.options">
+    <title>Arguments</title>
+    <para>Accepted arguments:</para>
+    <variablelist>
+        <varlistentry>
+            <term><option>alias</option></term>
+            <listitem>
+            <para>The properties defined alias of the server you wish to start</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>bgmaster</option></term>
+            <listitem>
+            <para>Start the bgmaster_server process and any servers specified in bg.properties'
+[master.startup] start_order parameter.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>bgmaster_only</option></term>
+            <listitem>
+            <para>Start the bgmaster_server process, but do not start any managed servers.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>binaries</option></term>
+            <listitem>
+            <para>Start the managed binaries specified in the bg.properties file.  
+bgmaster_server and the associated bgagentds must be running.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--help</option></term>
+            <listitem>
+            <para>usage </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--properties</option></term>
+            <listitem>
+            <para>bg.properties configuration file to use </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--host host:port</option></term>
+            <listitem>
+            <para>TCP host and port pair to use to connect to bgmaster_server </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--verbose verbosity</option></term>
+            <listitem>
+            <para>Add program trace information.  Levels of verbosity are TRACE, DEBUG, INFO, WARN, ERROR, FATAL. </para>
+            </listitem>
+        </varlistentry>
+
+    </variablelist>
+
+</refsect1>
+
+<refsect1 id="master_start.description">
+    <title>Description</title>
+    <para>master_start is the tool to start processes under the management of bgmaster_server
+and bgagentd.  It is also capable of starting bgmaster_server.  bgagentd processes should
+be started by system init scripts.  A single alias or all managed binaries may be started.</para>
+</refsect1>
+
+
+<refsect1 id="master_start.seealso">
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>master_stop</refentrytitle>
+           <manvolnum>8</manvolnum>
+       </citerefentry>, <citerefentry>
+           <refentrytitle>master_status</refentrytitle>
+           <manvolnum>8</manvolnum>
+	</citerefentry>
+    </para>
+</refsect1>
+
+</refentry>

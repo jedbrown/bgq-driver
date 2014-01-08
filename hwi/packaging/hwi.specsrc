@@ -1,0 +1,23 @@
+####################################
+%package hwi
+
+Summary: HWI 
+Group: %{product_group}
+Release: 0
+
+%description hwi
+%{bgq_package_description}
+
+The hwi component is a collection of header files that are shared among numerous software components.  This
+includes header files that describe both the compute (BQC) and link (BQL) chips.
+
+
+%files hwi
+%defattr(-,root,root,755)
+
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hwi
+
+%{_base_dir}/hwi/include
+

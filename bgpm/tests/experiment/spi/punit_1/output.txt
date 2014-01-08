@@ -1,0 +1,33 @@
+//# begin_generated_IBM_copyright_prolog                             
+//#                                                                  
+//# This is an automatically generated copyright prolog.             
+//# After initializing,  DO NOT MODIFY OR MOVE                       
+//# ================================================================ 
+//#                                                                  
+//# Licensed Materials - Property of IBM                             
+//#                                                                  
+//# Blue Gene/Q                                                      
+//#                                                                  
+//# (C) Copyright IBM Corp.  2012, 2012                              
+//#                                                                  
+//# US Government Users Restricted Rights -                          
+//# Use, duplication or disclosure restricted                        
+//# by GSA ADP Schedule Contract with IBM Corp.                      
+//#                                                                  
+//# This software is available to you under the                      
+//# Eclipse Public License (EPL).                                    
+//#                                                                  
+//# ================================================================ 
+//#                                                                  
+//# end_generated_IBM_copyright_prolog                               
+
+The Output from running this example looks like this: 
+
+punit_1: Example tracking small sample of Punit Events
+Counter Results:
+0x0000000000000032 <= PEVT_L1P_BAS_LD
+0x0000000000000101 <= PEVT_L1P_BAS_ST_WC
+0x00000000000015e1 <= PEVT_L1P_STRM_WRT_INVAL
+0x0000000000000d2b <= PEVT_XU_BR_COMMIT
+0x000000000003c18c <= PEVT_CYCLES
+0x0000000000000101 <= PEVT_L1P_BAS_LD

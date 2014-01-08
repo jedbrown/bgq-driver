@@ -1,0 +1,37 @@
+<File filename="RasEventMetadatas" namespace="RasMeta" version="1" >
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!-- Eclipse Public License (EPL)                                     -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  
+<Method name="Factory" comment="RAS Metadata Factory">
+  <Class name="BgRasEventMetadatas" comment="ras metadatas">  
+    <DataMember type="text" name="gen" comments="time of generation"/>
+    <Class name="rasevent" comment="ras metadata">
+        <DataMember type="text" name="id" comment="RasEvent Id"/>
+        <DataMember type="text" name="category" comment="RasEvent category"/>
+        <DataMember type="text" name="component" comment="component name"/>
+        <DataMember type="text" name="severity" comment="event severity" />
+        <DataMember type="text" name="message" comment="event message" />
+        <DataMember type="text" name="description" comment="detailed description of the event" />
+        <DataMember type="text" name="service_action" comment="service action" />
+        <DataMember type="text" name="decoder" comment="event decoder" />
+        <DataMember type="text" name="control_action" comment="control action" />
+        <DataMember type="text" name="threshold_count" comment="threshold count policy" />
+        <DataMember type="text" name="threshold_period" comment="threshold period policy" />
+        <DataMember type="text" name="relevant_diags" comment="relevant diagnostics" />
+        <DataMember type="text" name="file_name" comment="src file of event" />
+        <DataMember type="text" name="line_num" comment="src file line number" />
+    </Class>
+    <DataMember type="rasevent" name="metadatas" occurrences="many" comments="The set of ras event metadatas"/>
+  </Class>
+</Method>
+</File>

@@ -1,0 +1,45 @@
+# -*- mode: makefile-gmake; -*-
+# begin_generated_IBM_copyright_prolog                             #
+#                                                                  #
+# This is an automatically generated copyright prolog.             #
+# After initializing,  DO NOT MODIFY OR MOVE                       #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# (C) Copyright IBM Corp.  2007, 2008                              #
+# IBM CPL License                                                  #
+#                                                                  #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# end_generated_IBM_copyright_prolog                               #
+
+PLATFORM_DEFAULT_MPICH2=gcc.legacy
+POST_PROCESS_LIST=gcc.legacy
+ifeq (${XL},XL)
+    POST_PROCESS_LIST += xl.legacy xl.legacy.ndebug
+endif
+
+    # ---------------- locations for MPICH2 ------------------------------------
+    THREAD_LEVEL         = default
+    MPICH2DIR            = ${ROOTDIR}/lib/dev/mpich2
+    BUILDDIR             = ${ROOTDIR}/build/mpich2
+    MPICH2BUILD          = ${BUILDDIR}/pami
+    FILE_SYSTEM          = bg+bglockless
+
+    # ---------------- Flags MPICH2 --------------------------------------------
+    # These flags become part of the mpi{cc,cxx,f77,f90} scripts
+    MPI_LDFLAGS          =
+    MPI_CFLAGS           =${HOST_INCLUDE}
+    MPI_CXXFLAGS         =${HOST_INCLUDE}
+    MPI_FFLAGS           =${HOST_INCLUDE}
+
+    # These flags are used during a regular build (generally GCC)
+    HOST_FLAGS           =-g -O3 -Wall -mcpu=450fp2
+    HOST_CFLAGS          =${HOST_FLAGS} -D__${PLATFORM}__
+    HOST_CXXFLAGS        =${HOST_FLAGS}
+    HOST_FFLAGS          =${HOST_FLAGS}
+
+    # These flags are used during a fast build (generally XL)
+    FAST_FLAGS           =-g -O4 -qflag=i:i
+    FAST_CFLAGS          =${FAST_FLAGS} -D__${PLATFORM}__
+    FAST_CXXFLAGS        =${FAST_FLAGS}
+    FAST_FFLAGS          =${FAST_FLAGS}

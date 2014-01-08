@@ -1,0 +1,25 @@
+
++-----------------------------------------------------------------------------------+
+|                                                                                   |
+|  WARNING [01/22/2008] : svc_host support is experimental at this point in time.   |
+|     We (kernel team) are contemplating some different ways of implementing        |
+|     personalization.  Use of svc_host is at your own risk.  We may remove or      |
+|     stop support of this at any time.                                             |
+|                                                                                   |
++-----------------------------------------------------------------------------------+
+
+
+What's New in svc_host for BG/Q?
+
+1) Many BG/P personality bits have been removed.  Thus many options and switches
+   have also been removed.  An effort has been made to make this soft errors
+   (warning message).  All .svchost files from the BG/P cvs repository have been
+   run through the tool to validate this.
+
+2) Personalization of CNK (including environment variables) has been removed.
+
+3) svc_host expects bootloader images to be 64 bit.
+
+4) Option & switch handling has been made into table-driven code and thus should
+   be simpler to maintain as personality bits are added and removed.
+

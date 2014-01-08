@@ -1,0 +1,66 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+####################################
+%package mpich2
+
+Summary: MPICH2 libraries
+Group: %{product_group}
+
+%description mpich2
+%{bgq_package_description}
+This package provides the MPICH2 communications libraries
+
+%files mpich2
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/comm
+
+%{_base_dir}/comm/gcc
+%{_base_dir}/comm/gcc.legacy
+%{_base_dir}/comm/xl
+%{_base_dir}/comm/xl.legacy
+%{_base_dir}/comm/xl.legacy.ndebug
+%{_base_dir}/comm/xl.ndebug
+
+%{_base_dir}/comm/shared-objects.tgz
+%{_base_dir}/comm/HEAD
+%{_base_dir}/comm/COMPILER
+%{_base_dir}/comm/README
+
+
+####################################
+%package pami
+
+Summary: PAMI Libraries
+Group: %{product_group}
+
+%description pami
+%{bgq_package_description}
+This package provides the low-level PAMI communications libraries
+
+%files pami
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/comm
+
+%{_base_dir}/comm/sys
+%{_base_dir}/comm/sys-fast

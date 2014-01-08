@@ -1,0 +1,66 @@
+
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2011, 2011                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+# install paths
+TOP_DIR=hlcs
+TOP_INSTALL_DIR=$(BGQ_INSTALL_DIR)/$(TOP_DIR)
+MODULE_LIB_DIR=$(TOP_INSTALL_DIR)/lib
+MODULE_BIN_DIR=$(TOP_INSTALL_DIR)/bin
+MODULE_SBIN_DIR=$(TOP_INSTALL_DIR)/sbin
+
+# setup compiler flags
+CXXFLAGS += -MD
+CXXFLAGS += -MP
+CXXFLAGS += -O0
+CXXFLAGS += -W
+CXXFLAGS += -Wall
+CXXFLAGS += -Wcomment
+CXXFLAGS += -Wconversion
+CXXFLAGS += -Wextra
+CXXFLAGS += -Wformat
+CXXFLAGS += -Wformat=2
+CXXFLAGS += -Wformat-security
+CXXFLAGS += -Woverloaded-virtual
+CXXFLAGS += -Wundef
+CXXFLAGS += -pthread
+CXXFLAGS += -std=c++0x
+CXXFLAGS += -O2
+
+# setup include flags
+CXXFLAGS += -iquote $(BGQ_BUILD_DIR)/hlcs/src/runjob
+CXXFLAGS += -isystem $(BGQ_BUILD_DIR)
+CXXFLAGS += -isystem $(BGQ_BUILD_DIR)/hlcs/include
+CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)
+
+# setup linker flags
+LDFLAGS  += -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility
+LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
+
+# default rule for all Makefiles
+default: all
+
+SILENT = @
+
+%.o: %.cc
+	@echo "$(CXX) $(shell echo `pwd` | sed s,$(BGQ_BUILD_DIR)/hlcs/src/,,)/$<"
+	$(SILENT)$(CXX) $(CXXFLAGS) -c -o $@ $<

@@ -1,0 +1,219 @@
+####################################
+%package ramdisk
+
+Summary: BG/Q Ramdisk 
+Group: %{product_group}
+Release: 0
+requires: %{_bgq_name}-linux
+
+%description ramdisk
+%{bgq_package_description}
+
+Contains the initramfs tools and images required to build a ramdisk for booting a BG/Q I/O or Log-in node.
+
+%files ramdisk
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/boot
+%dir %{_base_dir}/ramdisk
+%dir %{_base_dir}/ramdisk/bin
+%dir %{_base_dir}/ramdisk/initramfs
+%dir %{_base_dir}/ramdisk/initramfs/bin
+%dir %{_base_dir}/ramdisk/initramfs/lib
+%dir %{_base_dir}/ramdisk/initramfs/lib64
+%dir %{_base_dir}/ramdisk/initramfs/sbin
+%dir %{_base_dir}/ramdisk/initramfs/usr
+%dir %{_base_dir}/ramdisk/initramfs/usr/bin
+%dir %{_base_dir}/ramdisk/initramfs/usr/lib
+%dir %{_base_dir}/ramdisk/initramfs/usr/lib64
+%dir %{_base_dir}/ramdisk/initramfs/usr/sbin/
+%dir %{_base_dir}/ramdisk/initramfs/var
+%dir %{_base_dir}/ramdisk/initramfs/var/log
+%dir %{_base_dir}/ramdisk/initramfs/var/tmp
+%dir %{_base_dir}/ramdisk/initramfs/var/run
+%dir %{_base_dir}/ramdisk/initramfs/var/lib
+%dir %{_base_dir}/ramdisk/initramfs/var/lib/nfs
+%dir %{_base_dir}/ramdisk/initramfs/var/local
+
+%{_base_dir}/boot/ramdisk
+%{_base_dir}/ramdisk/bin/build-ramdisk
+%{_base_dir}/ramdisk/bin/start_job_simulation
+%{_base_dir}/ramdisk/initramfs/init
+%{_base_dir}/ramdisk/initramfs/bin/bgras
+%{_base_dir}/ramdisk/initramfs/etc/
+%{_base_dir}/ramdisk/initramfs/sbin/bghalt
+%{_base_dir}/ramdisk/initramfs/usr/bin/bgsethostid
+%{_base_dir}/ramdisk/initramfs/var/empty/
+%{_base_dir}/ramdisk/initramfs/var/lock/
+%{_base_dir}/ramdisk/initramfs/var/lib/
+%{_base_dir}/ramdisk/initramfs/var/lib/nfs/rpc_pipefs
+%{_base_dir}/ramdisk/tools/bgqDistrofsPreInstall.sh
+%{_base_dir}/ramdisk/tools/functions
+
+####################################
+%package cio_services
+
+Summary: Common I/O Services
+Group: %{product_group}
+Release: 0
+
+
+%description cio_services 
+%{bgq_package_description}
+
+The binaries, libraries and scripts for Common I/O Services.
+
+%files cio_services 
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/ramdisk
+%dir %{_base_dir}/ramdisk/distrofs
+%dir %{_base_dir}/ramdisk/distrofs/cios
+%dir %{_base_dir}/ramdisk/distrofs/cios/etc
+%dir %{_base_dir}/ramdisk/distrofs/cios/etc/rc.d
+%dir %{_base_dir}/ramdisk/distrofs/cios/etc/rc.d/rc0.d
+%dir %{_base_dir}/ramdisk/distrofs/cios/etc/rc.d/rc3.d
+%dir %{_base_dir}/ramdisk/distrofs/cios/etc/rc.d/init.d
+%dir %{_base_dir}/ramdisk/distrofs/cios/etc/sysconfig
+%dir %{_base_dir}/ramdisk/distrofs/cios/lib
+%dir %{_base_dir}/ramdisk/distrofs/cios/var
+%dir %{_base_dir}/ramdisk/distrofs/cios/var/cios
+%dir %{_base_dir}/ramdisk/distrofs/cios/jobs
+%dir %{_base_dir}/ramdisk/distrofs/cios/sbin
+%dir %{_base_dir}/ramdisk/distrofs/cios/lib64
+%dir %{_base_dir}/ramdisk/docs
+%dir %{_base_dir}/ramdisk/include
+%dir %{_base_dir}/ramdisk/ras
+%dir %{_base_dir}/ramdisk/ras/metadata
+%dir %{_base_dir}/ramdisk/rpms
+
+%{_base_dir}/ramdisk/docs/services
+%{_base_dir}/ramdisk/include/services
+%{_base_dir}/ramdisk/distrofs/cios/etc/
+%{_base_dir}/ramdisk/distrofs/cios/lib/
+%{_base_dir}/ramdisk/distrofs/cios/sbin/
+%{_base_dir}/ramdisk/distrofs/cios/lib64/
+%{_base_dir}/ramdisk/ras/metadata/cios_ras.xml
+%{_base_dir}/ramdisk/rpms/bgq-cio_services_runtime-*.rpm
+
+####################################
+%package linux_modules 
+
+Summary: BG/Q Specific Linux Modules
+Group: %{product_group}
+Release: 0
+requires: %{_bgq_name}-linux
+
+%description linux_modules
+%{bgq_package_description}
+
+The Linux modules to support BG/Q specific functionality including bgmudev, bgvrnic, bgpersdev, bgrasdev and bgfirmwaredev.
+
+%files linux_modules
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/ramdisk
+%dir %{_base_dir}/ramdisk/initramfs
+%dir %{_base_dir}/ramdisk/initramfs/lib
+%dir %{_base_dir}/ramdisk/initramfs/usr
+%dir %{_base_dir}/ramdisk/initramfs/usr/lib64
+
+%{_base_dir}/ramdisk/initramfs/lib/modules/
+
+####################################
+%package distrofs
+
+Summary: BG/Q Linux Distribution Image and tooling.
+Group: %{product_group}
+Release: 0
+requires: %{_bgq_name}-linux,%{_bgq_name}-ramdisk,%{_bgq_name}-cio_services,%{_bgq_name}-linux_modules,yaci >= 12-7.4.ch4,redhat-lsb >= 4.0-3,mstflint,%{_bgq_name}-baremetal
+
+%description distrofs 
+%{bgq_package_description}
+
+Files which are applied to a base RHEL6 image to create the BG/Q Linux Distro NFS image for use by LNs and IONs, and associated tooling.
+
+%pre distrofs
+%{_base_dir}/ramdisk/tools/bgqDistrofsPreInstall.sh
+
+%post distrofs 
+%{_base_dir}/ramdisk/tools/bgqDistrofsInstall.sh -f 
+
+%preun distrofs
+%{_base_dir}/ramdisk/tools/bgqDistrofsUninstall.sh
+
+%files distrofs
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/ramdisk
+%dir %{_base_dir}/ramdisk/bin
+%dir %{_base_dir}/ramdisk/distrofs
+%dir %{_base_dir}/ramdisk/distrofs/rpm/
+%dir %{_base_dir}/ramdisk/distrofs/rpm/bgfs
+%dir %{_base_dir}/ramdisk/distrofs/rpm/bgsys
+%dir %{_base_dir}/ramdisk/distrofs/rpm/etc
+%dir %{_base_dir}/ramdisk/distrofs/rpm/etc/rc.d
+%dir %{_base_dir}/ramdisk/distrofs/rpm/etc/rc.d/rc0.d
+%dir %{_base_dir}/ramdisk/distrofs/rpm/etc/rc.d/rc3.d
+%dir %{_base_dir}/ramdisk/distrofs/rpm/etc/rc.d/init.d
+%dir %{_base_dir}/ramdisk/distrofs/rpm/etc/udev
+%dir %{_base_dir}/ramdisk/distrofs/rpm/etc/udev/rules.d
+%dir %{_base_dir}/ramdisk/distrofs/rpm/etc/libibverbs.d
+%dir %{_base_dir}/ramdisk/distrofs/rpm/etc/profile.d
+%dir %{_base_dir}/ramdisk/distrofs/rpm/etc.mirror
+%dir %{_base_dir}/ramdisk/distrofs/rpm/lib
+%dir %{_base_dir}/ramdisk/distrofs/rpm/lib/modules.mirror
+%dir %{_base_dir}/ramdisk/distrofs/rpm/lib64
+%dir %{_base_dir}/ramdisk/distrofs/rpm/lib64/bgq
+%dir %{_base_dir}/ramdisk/distrofs/rpm/root.mirror
+%dir %{_base_dir}/ramdisk/distrofs/rpm/usr
+%dir %{_base_dir}/ramdisk/distrofs/rpm/usr/bin
+%dir %{_base_dir}/ramdisk/distrofs/rpm/usr/sbin
+%dir %{_base_dir}/ramdisk/distrofs/rpm/usr/lib64
+%dir %{_base_dir}/ramdisk/distrofs/rpm/usr/lib64/bgq
+%dir %{_base_dir}/ramdisk/distrofs/rpm/var.mirror
+%dir %{_base_dir}/ramdisk/distrofs/tar/etc
+%dir %{_base_dir}/ramdisk/distrofs/tar/etc/init
+%dir %{_base_dir}/ramdisk/distrofs/tar/etc/rc.d
+%dir %{_base_dir}/ramdisk/distrofs/tar/etc/rc.d/rc0.d
+%dir %{_base_dir}/ramdisk/distrofs/tar/etc/rc.d/rc3.d
+%dir %{_base_dir}/ramdisk/distrofs/tar/etc/rc.d/init.d
+%dir %{_base_dir}/ramdisk/distrofs/tar/etc/udev
+%dir %{_base_dir}/ramdisk/distrofs/tar/etc/udev/rules.d
+%dir %{_base_dir}/ramdisk/distrofs/tar/sbin
+%dir %{_base_dir}/ramdisk/rpms
+%dir %{_base_dir}/ramdisk/tools
+%dir %{_base_dir}/ramdisk/tools/mlxFwUpdate
+%dir %{_base_dir}/ramdisk/tools/mlxFwUpdate/bin
+%dir %{_base_dir}/ramdisk/tools/mlxFwUpdate/etc
+%dir %{_base_dir}/ramdisk/tools/mlxFwUpdate/etc/rc.d
+%dir %{_base_dir}/ramdisk/tools/mlxFwUpdate/etc/rc.d/rc3.d
+%dir %{_base_dir}/ramdisk/tools/mlxFwUpdate/etc/rc.d/init.d
+%dir %{_base_dir}/ramdisk/tools/mlxFwUpdate/lib64
+%dir %{_base_dir}/ramdisk/tools/mlxFwUpdate/usr
+%dir %{_base_dir}/ramdisk/tools/mlxFwUpdate/usr/bin
+
+%{_base_dir}/ramdisk/bin/distrofs.tar
+%{_base_dir}/ramdisk/distrofs/rpm/bin/
+%{_base_dir}/ramdisk/distrofs/rpm/etc/
+%{_base_dir}/ramdisk/distrofs/rpm/usr/bin/
+%{_base_dir}/ramdisk/distrofs/rpm/usr/sbin/
+%{_base_dir}/ramdisk/distrofs/rpm/usr/lib64/
+%{_base_dir}/ramdisk/distrofs/tar/etc/
+%{_base_dir}/ramdisk/distrofs/tar/sbin/
+%{_base_dir}/ramdisk/rpms/bgq-distrofs_runtime-*.rpm
+%{_base_dir}/ramdisk/tools/bgqDistrofs*
+%{_base_dir}/ramdisk/tools/bgqPopulateInitramfs.sh
+%{_base_dir}/ramdisk/tools/mlxFwUpdate/bin
+%{_base_dir}/ramdisk/tools/mlxFwUpdate/etc/
+%{_base_dir}/ramdisk/tools/mlxFwUpdate/lib64
+%{_base_dir}/ramdisk/tools/mlxFwUpdate/usr
+%{_base_dir}/ramdisk/tools/mlxFwUpdate/usr/bin/

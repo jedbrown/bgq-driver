@@ -1,0 +1,87 @@
+[event_monitor.RealtimeEventMonitor]
+class = ibm.teal.monitor.realtime_monitor.RealtimeMonitor
+notifier =  ibm.teal.monitor.teal_semaphore.Semaphore
+enabled = realtime
+
+[event_monitor.HistoricEventMonitor]
+class = ibm.teal.monitor.historic_monitor.HistoricMonitor
+enabled = historic
+
+[db_interface.PyODBC]
+class = ibm.teal.database.db_interface_pyodbc.DBInterfacePyODBC
+config = ibm.bgq.bgq_dbconfig.BgqConfiguration
+enabled = all
+
+[connector.bgq]
+poll_interval = 60
+
+[location.Location]
+config = ibm/bgq/xml/bgq_location.xml
+
+[environment]
+TEAL_LOG_DIR = /bgsys/logs/BGQ/teal
+TEAL_EVENT_Q_NOT_ANALYZED_LOG_LEVEL = debug
+TEAL_SHUTDOWN_MODE = immediate
+
+[event_analyzer.bgqHardwareInErrorEventAnalyzer]
+class = ibm.bgq.analyzer.bgq_HardwareInErrorAnalyzer.bgqHardwareInErrorEventAnalyzer
+enabled = all
+
+[event_analyzer.bgqJobFatalEventAnalyzer]
+class = ibm.bgq.analyzer.bgq_JobFatalRasAnalyzer.bgqJobFatalEventAnalyzer
+enabled = all
+
+[event_analyzer.bgqBqlEventAnalyzer]
+class = ibm.bgq.analyzer.bgq_BqlEventAnalyzer.bgqBqlEventAnalyzer
+enabled = all
+
+[event_analyzer.bgqThresholdExceededEventAnalyzer]
+class = ibm.bgq.analyzer.bgq_ThresholdExceededAnalyzer.bgqThresholdExceededEventAnalyzer
+enabled = all
+# excludeMsgIDs = 000x000y, 000x00yy
+
+[event_analyzer.bgqCommonModeEventAnalyzer]
+class = ibm.bgq.analyzer.bgq_CommonModeAnalyzer.bgqCommonModeEventAnalyzer
+enabled = all
+#windowTime = n (in seconds)
+windowTime = 60
+
+[event_analyzer.bgqSampleAnalyzer]
+class = ibm.bgq.analyzer.bgq_SampleAnalyzer.bgqSampleAnalyzer
+enabled = false
+
+[alert_filter.DuplicateAlertFilter]
+class = ibm.teal.filter.duplicate_alert_filter.DuplicateAlertFilter
+enabled = all
+
+[alert_filter.NoiseFilter]
+class = ibm.teal.filter.noise_alert_filter.NoiseAlertFilter
+enabled = false
+#msg_level = <error, warn, info, debug>
+# regex on alert_id, severity, urgency, event_loc, event_loc_type, fru_loc, src_name
+severity = I
+
+[alert_listener.SmtpAlertListener]
+class = ibm.teal.listener.smtp_alert_listener.SmtpAlertListener
+enabled = false
+filters = DuplicateAlertFilter
+server=<server:port>
+#login=<uid:password>
+to=<receiver_email_address_1,receiver_email_address_2>
+from=<sender_email_address>
+
+[alert_listener.FileAlertListener]
+class = ibm.teal.listener.file_alert_listener.FileAlertListener
+enabled = all
+filters = DuplicateAlertFilter
+#format = <csv|json|text|brief>
+format = text
+file = /bgsys/logs/BGQ/teal/teal_alert.log
+#mode = <append|write>
+mode = append
+
+[alert_listener.CallAlertListener]
+class = ibm.teal.listener.call_alert_listener.CallAlertListener
+enabled = false
+program = <"absolute" path name within data directory>
+

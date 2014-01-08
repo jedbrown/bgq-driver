@@ -1,0 +1,28 @@
+<register width="64" name="L2_INTERRUPT_STATE" prefix="DR_ARB_DCR" description="tbd">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+  <field bit="0" name="LOCAL_RING" description="Parity error on DCR ring." category="fatal" />
+  <field bit="1" name="MC_ERR" description="MC SCOM error" category="fatal" />
+  <field bit="2" name="MCS_ERR" description="MCS SCOM error" category="fatal" />
+  <field bit="3" name="IOM_ERR" description="IOM SCOM error" category="fatal" />
+  <field bit="4" name="XSTOP" description="MC check stop" category="fatal" />
+  <field bit="5" name="SPEC_ATTN" description="MC special attention" category="fatal" />
+  <field bit="6" name="RECOV_ERR" description="MC recoverable error" category="fatal" />
+</register>

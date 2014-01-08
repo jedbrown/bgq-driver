@@ -1,0 +1,5 @@
+-- SUMMARY_SERVICE_ACTIONS
+
+SELECT id, location, serviceAction, usernamePrepareForService, usernameEndServiceAction
+  FROM bgqServiceAction
+  WHERE status='O' OR status='A' OR status='P'

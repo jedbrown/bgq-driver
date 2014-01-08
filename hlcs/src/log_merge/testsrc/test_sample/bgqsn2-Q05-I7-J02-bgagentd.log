@@ -1,0 +1,6 @@
+bgagent [16391] starting...
+2010-05-12 00:17:58.556 (ERROR) [0x40002045d60] ibm.utility.cxxsockets.TCPSocket: cannot connect() Connection refused
+2010-05-12 00:17:58.556 (DEBUG) [0x40002045d60] ibm.hlcs.master.BGMasterProtocol: Server not available.  connect error: Connection refused Retrying.
+2010-05-12 00:17:58.562 (ERROR) [0x40002045d60] ibm.utility.cxxsockets.TCPSocket: cannot connect() Connection refused
+2010-05-12 00:17:58.562 (DEBUG) [0x40002045d60] ibm.hlcs.master.BGMasterProtocol: Server not available.  connect error: Connection refused Retrying.
+2010-05-12 00:17:58.613 (ERROR) [0x40002045d60] ibm.utility.cxxsockets.TCPSocket: cannot connect() Connection refused

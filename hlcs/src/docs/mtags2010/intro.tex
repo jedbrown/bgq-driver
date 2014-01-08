@@ -1,0 +1,34 @@
+% begin_generated_IBM_copyright_prolog                             %
+%                                                                  %
+% This is an automatically generated copyright prolog.             %
+% After initializing,  DO NOT MODIFY OR MOVE                       %
+% ================================================================ %
+%                                                                  %
+% (C) Copyright IBM Corp.  2011, 2011                              %
+% Eclipse Public License (EPL)                                     %
+%                                                                  %
+% ================================================================ %
+%                                                                  %
+% end_generated_IBM_copyright_prolog                               %
+\section{Introduction}
+Blue Gene/Q (BG/Q) is the third generation computer architecture in the Blue Gene family of supercomputers. 
+The BG/Q system will be capable of scaling to over a million processor cores while making the trade-off of 
+lower power consumption over raw processor speed.
+
+Blue Gene systems are connected to multiple communications networks. BG/L, the first generation member of the
+Blue Gene supercomputers, and BG/P, the second generation, both provide a three dimensional (3D) torus network that is used for peer-to-peer
+communication between compute nodes. BG/Q advances the technology by supporting a five dimensional (5D) torus network. All the Blue Gene 
+systems incorporate a collective network for collective communication operations and a global interrupt network for fast barriers.
+An Ethernet network provides communication to external I/O attached to Blue Gene while a private Ethernet network
+provides access for managing hardware resources.   
+
+By default a custom lightweight operating system called Compute Node Kernel (CNK) is loaded on compute nodes while I/O nodes
+run the Linux operating system. I/O nodes were integrated on the same board as compute nodes for BG/L and BG/P. The BG/Q
+hardware design moves the I/O nodes to separate I/O drawers and I/O racks.
+
+Just as the Blue Gene hardware has advanced over multiple generations, the resource management software on Blue Gene 
+known as the Control System has also evolved to support the latest supercomputer workload models.
+
+This position paper describes the BG/Q resource management software design at an early stage of development.
+While the software architecture is in place, the development team is not able to share performance results
+with the community at this point in time.

@@ -1,0 +1,58 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+# Get the BlueGene environment vars. 
+. /proc/personality.sh
+
+# Redirect output to the console.
+exec > /dev/console 2>&1
+
+# Stop CIOD
+/etc/init.d/ciod stop
+
+# Initiate SerDes training.
+echo "1" > /proc/bgpnet/SerDes
+
+# Wait for SerDes training to complete.
+until [ $(cat /proc/bgpnet/SerDes) -ne "1" ]; do
+	sleep 1
+done
+
+# Allow any cold-booted IONs to get through barriers during NFS mount.
+let Node=0
+let MaxBarrierAttempts=20
+echo 6000 > /proc/bgpnet/barrier
+while [ $Node -lt $BG_NUMPSETS ]; do
+        let Attempt=0
+	until [ $(cat /proc/bgpnet/barrier) -eq "0" ]; do
+                let Attempt=$Attempt+1
+                if [ $Attempt -gt $MaxBarrierAttempts ]; then
+                        echo "Barrier failure in $0"
+                        bgras 1 0x22 2 "Barrier failure in $0"
+                        exit
+                fi
+        done
+        let Node=$Node+1
+done
+echo 0 > /proc/bgpnet/barrier
+
+# Start CIOD
+/etc/init.d/ciod start 

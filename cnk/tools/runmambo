@@ -1,0 +1,8 @@
+#!/bin/bash
+
+DRIVER=/ltmp/tgooding/bgq/work
+TESTCASE=/ltmp/tgooding/hellobgq
+ENVFILE=omp.env
+
+$DRIVER/cnk/tools/mkstandalone.pl -driver=$DRIVER -exe=$TESTCASE -envfile=$ENVFILE -o=/ltmp/tgooding/bgq/cnk/tools/hellobgq_ldr.elf 
+/auto/BGQ/releases/floor-mambo/mambo -n -f /ltmp/tgooding/bgq/cnk/tools/run_bgq_firmware.fw.tcl

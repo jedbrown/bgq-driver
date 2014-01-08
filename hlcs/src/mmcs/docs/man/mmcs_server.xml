@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY product "mmcs_server">
+]>
+
+<refentry lang="en" id="mmcs_server">
+<refentryinfo>
+    <productname>&product;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>© Copyright IBM Corp. 2010, 2011</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+<refmeta>
+    <refentrytitle>&product;</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&product;</refname>
+    <refpurpose>Manual for mmcs_server </refpurpose>
+</refnamediv>
+
+<refsynopsisdiv id="mmcs_server.synopsis">
+  <title>Synopsis</title>
+  <cmdsynopsis><command>mmcs_server [-hp] [OPTIONS] </command>
+  </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1 id="mmcs_server.options">
+    <title>Arguments</title>
+    <para>Accepted arguments:</para>
+    <variablelist>
+        <varlistentry>
+            <term><option>-p --properties</option></term>
+            <listitem>
+            <para>The bg.properties configuration file to use.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>-h --help</option></term>
+            <listitem>
+            <para>usage </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--listen-ports portpairs</option></term>
+            <listitem>
+            <para>Listen on the comma separated list of host:port pairs. </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--mcserverip </option></term>
+            <listitem>
+            <para> Connect to mc_server on the specified IP address.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--mcserverport </option></term>
+            <listitem>
+            <para> 
+	      Connect to mc_server on the specified port.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--no-poll-db </option></term>
+            <listitem>
+            <para> 
+	      Do not poll the database for block actions.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--poll-db </option></term>
+            <listitem>
+            <para> 
+	      Poll the database for block actions.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--monitor-master </option></term>
+            <listitem>
+            <para> 
+	      Monitor bgmaster_server to determine if subnet_mc processes have failed.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--no-reconnect </option></term>
+            <listitem>
+            <para> 
+	      Do not reconnect blocks booted in a previous instantiation of mmcs_server.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--reconnect </option></term>
+            <listitem>
+            <para> 
+	      Reconnect blocks booted in a previous instantiation of mmcs_server.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--poll-envs </option></term>
+            <listitem>
+            <para> 
+	      Poll for environmental monitoring data.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--test </option></term>
+            <listitem>
+            <para> 
+	      Combination of --no-poll-db, --no-poll-envs, and --no-reconnect. Used with --listen-ports.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--secure true|false </option></term>
+            <listitem>
+            <para> 
+	      Use secure connections to bg_console and other servers.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--iolog directory </option></term>
+            <listitem>
+            <para> 
+	      Log output from IO nodes to the specified directory.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--shutdown-timeout seconds </option></term>
+            <listitem>
+            <para> 
+	      Seconds to wait for I/O nodes to shut down.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--bringup-option option </option></term>
+            <listitem>
+            <para> 
+	      Send this option to mc_server for hardware bringup. May be specified multiple times.
+	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--boot-timeout-and-free minutes</option></term>
+            <listitem>
+            <para> 
+	      Default number of minutes to wait for a boot to complete before freeing the block.
+	    </para>
+            </listitem>
+        </varlistentry>
+
+    </variablelist>
+
+</refsect1>
+
+<refsect1 id="mmcs_server.description">
+    <title>Description</title>
+    <para>mmcs_server is the BG/Q control system's multi-user block and hardware management server.  It provides the facilities to 
+create blocks, allocate and free them.  It provides multi-user hardware arbitration and environmental montoring.
+mmcs_server works with the BG/Q database to store hardware and block state, RAS, and monitoring data.</para>
+</refsect1>
+
+
+<refsect1 id="mmcs_server.seealso">
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>bg_console</refentrytitle>
+           <manvolnum>8</manvolnum>
+       </citerefentry>
+    </para>
+</refsect1>
+
+</refentry>

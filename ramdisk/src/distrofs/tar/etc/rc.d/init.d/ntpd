@@ -1,0 +1,167 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# ntpd		This shell script takes care of starting and stopping
+#		ntpd (NTPv4 daemon).
+#
+# Some modifications have been made for running on BlueGene nodes.
+#
+# chkconfig: - 58 74
+# description: ntpd is the NTPv4 daemon. \
+# The Network Time Protocol (NTP) is used to synchronize the time of \
+# a computer client or server to another server or reference time source, \
+# such as a radio or satellite receiver or modem.
+
+### BEGIN INIT INFO
+# Provides: ntpd
+# Required-Start: $network $local_fs $remote_fs
+# Required-Stop: $network $local_fs $remote_fs
+# Should-Start: $syslog $named ntpdate
+# Should-Stop: $syslog $named
+# Short-Description: start and stop ntpd
+# Description: ntpd is the NTPv4 daemon. The Network Time Protocol (NTP)
+#              is used to synchronize the time of a computer client or
+#              server to another server or reference time source, such
+#              as a radio or satellite receiver or modem.
+### END INIT INFO
+
+# Source function library including BG/Q env vars.
+. /etc/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+prog=ntpd
+lockfile=/var/lock/subsys/$prog
+ntp_conf=/etc/ntp.conf
+
+# Create a back-up of the existing NTP config file and create our own.
+if [ -e $ntp_conf ] ; then
+	mv $ntp_conf $ntp_conf.orig
+fi
+
+echo "restrict default nomodify" >> $ntp_conf
+echo "restrict 127.0.0.1" >> $ntp_conf
+if [ $BG_IPV4_SN != "0.0.0.0" ] ; then 
+	echo "server $BG_IPV4_SN" >> $ntp_conf
+elif [ $BG_IPV6_SN != "0:0:0:0:0:0:0:0" ] ; then
+	echo "server $BG_IPV6_SN" >> $ntp_conf
+else
+	echo -en "Start-up of ntpd: "
+	failure
+	echo
+	bgras $BGRAS_ID_SCRIPT_FAILURE \
+	      "ntpd - Unable to find an IPv4 or IPv6 address for the Service Node."
+	exit 2
+fi
+	
+echo "server 127.127.1.0" >> $ntp_conf
+echo "fudge 127.127.1.0" >> $ntp_conf
+echo "driftfile /var/lib/ntp/drift/ntp.drift" >> $ntp_conf
+echo "keys	/etc/ntp/keys" >> $ntp_conf
+
+
+
+start() {
+	[ "$EUID" != "0" ] && exit 4
+	[ "$NETWORKING" = "no" ] && exit 1
+	[ -x /usr/sbin/ntpd ] || exit 5
+	[ -f /etc/sysconfig/ntpd ] || exit 6
+	. /etc/sysconfig/ntpd
+
+        # Start daemons.
+        echo -en $"Starting $prog... \n"
+
+	[ ! -d /var/lib/ntp/drift ] && mkdir -p /var/lib/ntp/drift ; chown ntp:ntp /var/lib/ntp/drift
+	
+	# Start NTP once to set the initial time
+	$prog -q -g -c $ntp_conf &> /dev/null
+	if [ $? -ne 0 ] ; then
+		bgras $BGRAS_ID_SCRIPT_FAILURE \
+		      "ntpd - Unable to set the initial time!"
+	fi
+
+	# For some reason ntpd always returns successful so we do our own check
+	# to see if ntpd worked.
+        daemon $prog $OPTIONS &> /dev/null
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ] ; then
+		touch $lockfile
+		date | grep "1969" &>/dev/null
+		RETVAL=$?
+		if [ $RETVAL -eq 0 ] ; then
+			echo -en "Start-up of ntpd: "
+			failure
+			echo
+			bgras $BGRAS_ID_SCRIPT_FAILURE "ntpd - Failed to properly set the system time."
+		else
+		        echo -en "Start-up of ntpd completed: "
+			success
+		fi
+		echo	
+		return $RETVAL
+	else
+		echo -en "Start-up of ntpd: "
+		failure
+		echo
+		bgras $BGRAS_ID_SCRIPT_FAILURE "ntpd - Failed to start."
+		return $RETVAL
+	fi
+}
+
+stop() {
+	[ "$EUID" != "0" ] && exit 4
+        echo -n $"Shutting down $prog: "
+	killproc $prog
+	RETVAL=$?
+        echo
+	[ $RETVAL -eq 0 ] && rm -f $lockfile
+	return $RETVAL
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  status)
+	status $prog
+	;;
+  restart|force-reload)
+	stop
+	start
+	;;
+  try-restart|condrestart)
+	if status $prog > /dev/null; then
+	    stop
+	    start
+	fi
+	;;
+  reload)
+	exit 3
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|status|restart|try-restart|force-reload}"
+	exit 2
+esac

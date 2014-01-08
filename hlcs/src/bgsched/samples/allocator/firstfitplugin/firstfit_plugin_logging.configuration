@@ -1,0 +1,33 @@
+# Set logger level to INFO and its only appender to default
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2011, 2011                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+# 'level' progression - TRACE, DEBUG, INFO, WARN, ERROR, FATAL)
+log4j.logger.ibmfirstfit = INFO, default
+log4j.additivity.ibmfirstfit = false
+
+# default is set to be a ConsoleAppender.
+log4j.appender.default=org.apache.log4j.ConsoleAppender
+
+# default uses PatternLayout.
+log4j.appender.default.layout = org.apache.log4j.PatternLayout
+log4j.appender.default.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss.SSS} (%-5p) %c: %m%n

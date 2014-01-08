@@ -1,0 +1,66 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+. /etc/init.d/functions
+
+LOCKFILE=/var/lock/subsys/bgvrnic
+
+
+case "$1" in
+    start)
+	echo -n $"Starting BG/Q OFED: "
+	if [ $BG_NODE_ENABLE_MU -eq 1 ] && [ $BG_NODE_ENABLE_CIOS -eq 1 ] ; then
+		echo options bgvrnic tor0_name=\"$BG_TOR0_NAME\" tor0_id=\"$BG_TOR0_MAC\" > /etc/modprobe.d/bgvrnic.conf
+		modprobe bgvrnic
+		lsmod | grep bgvrnic &> /dev/null
+		if [ $? -ne 0 ] ; then
+			/bin/bgras $BGRAS_ID_SCRIPT_FAILURE "bgvrnic - The bgvrnic module failed to load."
+			failure
+		else
+			RC=$( ifconfig $BG_TOR0_NAME $BG_TOR0_IPV4 netmask $BG_TOR0_NETMASK mtu 498 up 2>&1 )
+			if [ ! -z $RC ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+					"bgvrnic - Failure configuring device $BG_TOR0_NAME. ifconfig returned: '$RC' ."
+				failure
+			else
+				touch $LOCKFILE
+				success
+			fi
+		fi
+	else
+		skipped	
+	fi
+        ;;
+    stop)
+	echo -n $"Stopping BG/Q OFED: "
+	rm -f $LOCKFILE
+	success
+	;;
+    *)
+        echo $"Usage: $0 {start} {stop}"
+        exit 3
+        ;;
+esac
+
+echo -en "\n"
+
+exit $?
+

@@ -1,0 +1,73 @@
+#
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp.  2010, 2012                              
+# US Government Users Restricted Rights - Use, duplication or      
+#   disclosure restricted by GSA ADP Schedule Contract with IBM    
+#   Corp.                                                          
+#                                                                  
+# This software is available to you under the Eclipse Public       
+# License (EPL).                                                   
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+# BlueGene/Q svc_host - Version 1.0
+#
+# Node controls (use '-' to disable, '+' to enable)
+   -Simulation          # Support VHDL Simulation
+   -Mambo               # Running under Mambo?
+   -StandAlone          # Disable CIOD Interface (Requires Collective)
+   -JTagLoader          # JTag Host Kernel Loader Support
+   +FPU                 # Enable QPX
+   -L2Counters          # Enable L2 atomics
+   -Wakeup              # Enable Sleep-on-Pin unit
+   +BIC                 # BG/P Interrupt Controller
+   +DDR                 # DDR Controllers (not Fusion DDR)
+   -LoopBack            # Single-Node LoopBack
+   -Network             # Blue Gene Network (5-D torus, etc.)
+   +GlobalInts          # Global interrupts
+   +SerDes              # SerDes Support
+   -UPC                 # Universal Performance Counters
+   +EnvMon              # Environmental Monitor
+   -PCIe                # PCI Express
+   -Ethernet            # Ethernet Driver (Disables Torus)
+   -PowerSave           # Enable Power Savings
+   -Reproducibility     # Enable Cycle Reproducibility support
+   -HighThroughput      # Enable high throughput support
+   -Diagnostics         # Enable diagnostics mode
+# Kernel Tracing Controls:
+   -TraceConfig         # Display encoded configuration
+   -TraceEntry          # Function entry and return
+   -TraceInts           # Standard Interrupt Dispatch
+   -TraceCInts          # Critical Interrupt Dispatch
+   -TraceMChk           # Machine Check Dispatch
+   -TraceSysCall        # System Calls
+   -TraceVMM            # Virtual Memory Manager
+   -TraceDebug          # Debug Events
+   -TraceNetworks       # Blue Gene Networks
+   -TraceGlobInt        # Global Interrupts
+   -TraceDMA            # DMA Setup
+   -TraceSerDes         # SerDes Init
+   -TraceTestInt        # Test Interface, ECID, Config
+   -TracePower          # Power Control
+   -TraceProcess        # Process/Thread Setup
+   -TraceExitSummary    # Error summary on exit
+   -TraceScheduler      # Thread Scheduler Activity
+   -TraceRAS            # RAS Message Generation
+   -TraceECID           # Report UCI and ECID on Boot
+   -TraceFutex          # Futex Activity
+   -TraceMemAlloc       # Memory Allocations
+   -TraceControl        # Control messages
+   -TraceMsgs           # Messages and packets
+   -TraceDebugger       # Debugger messages
+   -TraceWarnings       # Enable Warning messages
+   -TraceVerbose        # Enable verbose trace output
+# RAS Policy Controls:
+   -RASFatalExit        # Exit on Fatal RAS Event

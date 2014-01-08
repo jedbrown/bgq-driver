@@ -1,0 +1,349 @@
+<interrupts>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- Blue Gene/Q                                                      -->
+<!-- (C) Copyright IBM Corp.  2010, 2012                              -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!--   disclosure restricted by GSA ADP Schedule Contract with IBM    -->
+<!--   Corp.                                                          -->
+<!--                                                                  -->
+<!-- This software is available to you under the Eclipse Public       -->
+<!-- License (EPL).                                                   -->
+<!--                                                                  -->
+<!--  --------------------------------------------------------------- -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<register name="FATAL_ERR0" prefix="ND_500_DCR" width="64" >
+  <field bit="0"  category="fatal" name="inj_t0_parity_err"  description="injection FIFO t0 clk_500 parity error. " />
+  <field bit="1"  category="fatal" name="inj_t0_inv_state"  description="injection FIFO t0 clk_500 FSM invalid state. " />
+  <field bit="2"  category="fatal" name="inj_t0_ue0"  description="injection FIFO t0 clk_500 uncorrectable error 0. " />
+  <field bit="3"  category="fatal" name="inj_t0_ue1"  description="injection FIFO t0 clk_500 uncorrectable error 1. " />
+  <field bit="4"  category="fatal" name="inj_t0_valid_bytes_err"  description="injection FIFO t0 packet number of valid bytes is greater than packet size. " />
+  <field bit="5"  category="fatal" name="inj_t1_parity_err"  description="injection FIFO t1 clk_500 parity error. " />
+  <field bit="6"  category="fatal" name="inj_t1_inv_state"  description="injection FIFO t1 clk_500 FSM invalid state. " />
+  <field bit="7"  category="fatal" name="inj_t1_ue0"  description="injection FIFO t1 clk_500 uncorrectable error 0. " />
+  <field bit="8"  category="fatal" name="inj_t1_ue1"  description="injection FIFO t1 clk_500 uncorrectable error 1. " />
+  <field bit="9"  category="fatal" name="inj_t1_valid_bytes_err"  description="injection FIFO t1 packet number of valid bytes is greater than packet size. " />
+  <field bit="10"  category="fatal" name="inj_t2_parity_err"  description="injection FIFO t2 clk_500 parity error. " />
+  <field bit="11"  category="fatal" name="inj_t2_inv_state"  description="injection FIFO t2 clk_500 FSM invalid state. " />
+  <field bit="12"  category="fatal" name="inj_t2_ue0"  description="injection FIFO t2 clk_500 uncorrectable error 0. " />
+  <field bit="13"  category="fatal" name="inj_t2_ue1"  description="injection FIFO t2 clk_500 uncorrectable error 1. " />
+  <field bit="14"  category="fatal" name="inj_t2_valid_bytes_err"  description="injection FIFO t2 packet number of valid bytes is greater than packet size. " />
+  <field bit="15"  category="fatal" name="inj_t3_parity_err"  description="injection FIFO t3 clk_500 parity error. " />
+  <field bit="16"  category="fatal" name="inj_t3_inv_state"  description="injection FIFO t3 clk_500 FSM invalid state. " />
+  <field bit="17"  category="fatal" name="inj_t3_ue0"  description="injection FIFO t3 clk_500 uncorrectable error 0. " />
+  <field bit="18"  category="fatal" name="inj_t3_ue1"  description="injection FIFO t3 clk_500 uncorrectable error 1. " />
+  <field bit="19"  category="fatal" name="inj_t3_valid_bytes_err"  description="injection FIFO t3 packet number of valid bytes is greater than packet size. " />
+  <field bit="20"  category="fatal" name="inj_t0_t3_top_parity_err"  description="injection FIFO t0 to t3 clk_500 top level parity error. " />
+  <field bit="21"  category="fatal" name="inj_t4_parity_err"  description="injection FIFO t4 clk_500 parity error. " />
+  <field bit="22"  category="fatal" name="inj_t4_inv_state"  description="injection FIFO t4 clk_500 FSM invalid state. " />
+  <field bit="23"  category="fatal" name="inj_t4_ue0"  description="injection FIFO t4 clk_500 uncorrectable error 0. " />
+  <field bit="24"  category="fatal" name="inj_t4_ue1"  description="injection FIFO t4 clk_500 uncorrectable error 1. " />
+  <field bit="25"  category="fatal" name="inj_t4_valid_bytes_err"  description="injection FIFO t4 packet number of valid bytes is greater than packet size. " />
+  <field bit="26"  category="fatal" name="inj_t5_parity_err"  description="injection FIFO t5 clk_500 parity error. " />
+  <field bit="27"  category="fatal" name="inj_t5_inv_state"  description="injection FIFO t5 clk_500 FSM invalid state " />
+  <field bit="28"  category="fatal" name="inj_t5_ue0"  description="injection FIFO t5 clk_500 uncorrectable error 0. " />
+  <field bit="29"  category="fatal" name="inj_t5_ue1"  description="injection FIFO t5 clk_500 uncorrectable error 1. " />
+  <field bit="30"  category="fatal" name="inj_t5_valid_bytes_err"  description="injection FIFO t5 packet number of valid bytes is greater than packet size. " />
+  <field bit="31"  category="fatal" name="inj_t6_parity_err"  description="injection FIFO t6 clk_500 parity error. " />
+  <field bit="32"  category="fatal" name="inj_t6_inv_state"  description="injection FIFO t6 clk_500 FSM invalid state. " />
+  <field bit="33"  category="fatal" name="inj_t6_ue0"  description="injection FIFO t6 clk_500 uncorrectable error 0. " />
+  <field bit="34"  category="fatal" name="inj_t6_ue1"  description="injection FIFO t6 clk_500 uncorrectable error 1. " />
+  <field bit="35"  category="fatal" name="inj_t6_valid_bytes_err"  description="injection FIFO t6 packet number of valid bytes is greater than packet size. " />
+  <field bit="36"  category="fatal" name="inj_t7_parity_err"  description="injection FIFO t7 clk_500 parity error. " />
+  <field bit="37"  category="fatal" name="inj_t7_inv_state"  description="injection FIFO t7 clk_500 FSM invalid state. " />
+  <field bit="38"  category="fatal" name="inj_t7_ue0"  description="injection FIFO t7 clk_500 uncorrectable error 0. " />
+  <field bit="39"  category="fatal" name="inj_t7_ue1"  description="injection FIFO t7 clk_500 uncorrectable error 1. " />
+  <field bit="40"  category="fatal" name="inj_t7_valid_bytes_err"  description="injection FIFO t7 packet number of valid bytes is greater than packet size. " />
+  <field bit="41"  category="fatal" name="inj_t4_t7_top_parity_err"  description="injection FIFO t4 to t7 clk_500 top level parity error. " />
+  <field bit="42"  category="fatal" name="inj_t8_parity_err"  description="injection FIFO t8 clk_500 parity error. " />
+  <field bit="43"  category="fatal" name="inj_t8_inv_state"  description="injection FIFO t8 clk_500 FSM invalid state. " />
+  <field bit="44"  category="fatal" name="inj_t8_ue0"  description="injection FIFO t8 clk_500 uncorrectable error 0. " />
+  <field bit="45"  category="fatal" name="inj_t8_ue1"  description="injection FIFO t8 clk_500 uncorrectable error 1. " />
+  <field bit="46"  category="fatal" name="inj_t8_valid_bytes_err"  description="injection FIFO t8 packet number of valid bytes is greater than packet size. " />
+  <field bit="47"  category="fatal" name="inj_t9_parity_err"  description="injection FIFO t9 clk_500 parity error. " />
+  <field bit="48"  category="fatal" name="inj_t9_inv_state"  description="injection FIFO t9 clk_500 FSM invalid state. " />
+  <field bit="49"  category="fatal" name="inj_t9_ue0"  description="injection FIFO t9 clk_500 uncorrectable error 0. " />
+  <field bit="50"  category="fatal" name="inj_t9_ue1"  description="injection FIFO t9 clk_500 uncorrectable error 1. " />
+  <field bit="51"  category="fatal" name="inj_t9_valid_bytes_err"  description="injection FIFO t9 packet number of valid bytes is greater than packet size. " />
+  <field bit="52"  category="fatal" name="inj_l0_parity_err"  description="injection FIFO l0 clk_500 parity error. " />
+  <field bit="53"  category="fatal" name="inj_l0_inv_state"  description="injection FIFO l0 clk_500 FSM invalid state. " />
+  <field bit="54"  category="fatal" name="inj_l0_ue0"  description="injection FIFO l0 clk_500 uncorrectable error 0. " />
+  <field bit="55"  category="fatal" name="inj_l0_ue1"  description="injection FIFO l0 clk_500 uncorrectable error 1. " />
+  <field bit="56"  category="fatal" name="inj_l0_valid_bytes_err"  description="injection FIFO l0 packet number of valid bytes is greater than packet size. " />
+  <field bit="57"  category="fatal" name="inj_l1_parity_err"  description="injection FIFO l1 clk_500 parity error. " />
+  <field bit="58"  category="fatal" name="inj_l1_inv_state"  description="injection FIFO l1 clk_500 FSM invalid state. " />
+  <field bit="59"  category="fatal" name="inj_l1_ue0"  description="injection FIFO l1 clk_500 uncorrectable error 0. " />
+  <field bit="60"  category="fatal" name="inj_l1_ue1"  description="injection FIFO l1 clk_500 uncorrectable error 1. " />
+  <field bit="61"  category="fatal" name="inj_l1_valid_bytes_err"  description="injection FIFO l1 packet number of valid bytes is greater than packet size. " />
+  <field bit="62"  category="fatal" name="inj_t8_l1_top_parity_err"  description="injection FIFO t8, t9, l0, l1 clk_500 top level parity error. " />
+  <field bit="63"  category="fatal" name="inj_hp_parity_err"  description="injection FIFO hp clk_500 parity error. " />
+</register>
+<register name="fatal_err1" prefix="ND_500_DCR" width="64" >
+  <field bit="0"  category="fatal" name="inj_hp_inv_state"  description="injection FIFO hp clk_500 FSM invalid state. " />
+  <field bit="1"  category="fatal" name="inj_hp_ue0"  description="injection FIFO hp clk_500 uncorrectable error 0. " />
+  <field bit="2"  category="fatal" name="inj_hp_ue1"  description="injection FIFO hp clk_500 uncorrectable error 1. " />
+  <field bit="3"  category="fatal" name="inj_hp_valid_bytes_err"  description="injection FIFO hp packet number of valid bytes is greater than packet size. " />
+  <field bit="4"  category="fatal" name="inj_io_parity_err"  description="injection FIFO IO clk_500 parity error. " />
+  <field bit="5"  category="fatal" name="inj_io_inv_state"  description="injection FIFO IO clk_500 FSM invalid state. " />
+  <field bit="6"  category="fatal" name="inj_io_ue0"  description="injection FIFO IO clk_500 uncorrectable error 0. " />
+  <field bit="7"  category="fatal" name="inj_io_ue1"  description="injection FIFO IO clk_500 uncorrectable error 1. " />
+  <field bit="8"  category="fatal" name="inj_io_valid_bytes_err"  description="injection FIFO IO packet number of valid bytes is greater than packet size. " />
+  <field bit="9"  category="fatal" name="inj_c0_parity_err"  description="injection FIFO c0 clk_500 parity error. " />
+  <field bit="10"  category="fatal" name="inj_c0_inv_state"  description="injection FIFO c0 clk_500 FSM invalid state. " />
+  <field bit="11"  category="fatal" name="inj_c0_ue0"  description="injection FIFO c0 clk_500 uncorrectable error 0. " />
+  <field bit="12"  category="fatal" name="inj_c0_ue1"  description="injection FIFO c0 clk_500 uncorrectable error 1. " />
+  <field bit="13"  category="fatal" name="inj_c0_valid_bytes_err"  description="injection FIFO c0 packet number of valid bytes is greater than packet size. " />
+  <field bit="14"  category="fatal" name="inj_c1_parity_err"  description="injection FIFO c1 clk_500 parity error. " />
+  <field bit="15"  category="fatal" name="inj_c1_inv_state"  description="injection FIFO c1 clk_500 FSM invalid state. " />
+  <field bit="16"  category="fatal" name="inj_c1_ue0"  description="injection FIFO c1 clk_500 uncorrectable error 0. " />
+  <field bit="17"  category="fatal" name="inj_c1_ue1"  description="injection FIFO c1 clk_500 uncorrectable error 1. " />
+  <field bit="18"  category="fatal" name="inj_c1_valid_bytes_err"  description="injection FIFO c1 packet number of valid bytes is greater than packet size. " />
+  <field bit="19"  category="fatal" name="inj_hp_c1_top_parity_err"  description="injection FIFO hp, io, c0, c1 clk_500 top level parity error. " />
+  <field bit="20"  category="fatal" name="inj_t0_invalid_grant"  description="injection FIFO t0 received grant in incorrect state. " />
+  <field bit="21"  category="fatal" name="inj_t1_invalid_grant"  description="injection FIFO t1 received grant in incorrect state. " />
+  <field bit="22"  category="fatal" name="inj_t2_invalid_grant"  description="injection FIFO t2 received grant in incorrect state. " />
+  <field bit="23"  category="fatal" name="inj_t3_invalid_grant"  description="injection FIFO t3 received grant in incorrect state. " />
+  <field bit="24"  category="fatal" name="inj_t4_invalid_grant"  description="injection FIFO t4 received grant in incorrect state. " />
+  <field bit="25"  category="fatal" name="inj_t5_invalid_grant"  description="injection FIFO t5 received grant in incorrect state. " />
+  <field bit="26"  category="fatal" name="inj_t6_invalid_grant"  description="injection FIFO t6 received grant in incorrect state. " />
+  <field bit="27"  category="fatal" name="inj_t7_invalid_grant"  description="injection FIFO t7 received grant in incorrect state. " />
+  <field bit="28"  category="fatal" name="inj_t8_invalid_grant"  description="injection FIFO t8 received grant in incorrect state. " />
+  <field bit="29"  category="fatal" name="inj_t9_invalid_grant"  description="injection FIFO t9 received grant in incorrect state. " />
+  <field bit="30"  category="fatal" name="inj_l0_invalid_grant"  description="injection FIFO l0 received grant in incorrect state. " />
+  <field bit="31"  category="fatal" name="inj_l1_invalid_grant"  description="injection FIFO l1 received grant in incorrect state. " />
+  <field bit="32"  category="fatal" name="inj_hp_invalid_grant"  description="injection FIFO hp received grant in incorrect state. " />
+  <field bit="33"  category="fatal" name="inj_io_invalid_grant"  description="injection FIFO IO received grant in incorrect state. " />
+  <field bit="34"  category="fatal" name="inj_c0_invalid_grant"  description="injection FIFO c0 received grant in incorrect state. " />
+  <field bit="35"  category="fatal" name="inj_c1_invalid_grant"  description="injection FIFO c1 received grant in incorrect state. " />
+  <field bit="36"  category="fatal" name="inj_t0_arb_parity_err"  description="injection FIFO t0 arbiter parity error. " />
+  <field bit="37"  category="fatal" name="inj_t1_arb_parity_err"  description="injection FIFO t1 arbiter parity error. " />
+  <field bit="38"  category="fatal" name="inj_t2_arb_parity_err"  description="injection FIFO t2 arbiter parity error. " />
+  <field bit="39"  category="fatal" name="inj_t3_arb_parity_err"  description="injection FIFO t3 arbiter parity error. " />
+  <field bit="40"  category="fatal" name="inj_t4_arb_parity_err"  description="injection FIFO t4 arbiter parity error. " />
+  <field bit="41"  category="fatal" name="inj_t5_arb_parity_err"  description="injection FIFO t5 arbiter parity error. " />
+  <field bit="42"  category="fatal" name="inj_t6_arb_parity_err"  description="injection FIFO t6 arbiter parity error. " />
+  <field bit="43"  category="fatal" name="inj_t7_arb_parity_err"  description="injection FIFO t7 arbiter parity error. " />
+  <field bit="44"  category="fatal" name="inj_t8_arb_parity_err"  description="injection FIFO t8 arbiter parity error. " />
+  <field bit="45"  category="fatal" name="inj_t9_arb_parity_err"  description="injection FIFO t9 arbiter parity error. " />
+  <field bit="46"  category="fatal" name="inj_hp_arb_parity_err"  description="injection FIFO hp arbiter parity error. " />
+  <field bit="47"  category="fatal" name="inj_io_arb_parity_err"  description="injection FIFO IO arbiter parity error. " />
+</register>
+<register name="FATAL_ERR2" prefix="ND_500_DCR" width="64" >
+  <field bit="0"  category="fatal" name="rcp_t0_parity_err"  description="reception FIFO t0 clk_500 parity error. " />
+  <field bit="1"  category="fatal" name="rcp_t0_inv_state"  description="reception FIFO t0 clk_500 invalid state. " />
+  <field bit="2"  category="fatal" name="rcp_t1_parity_err"  description="reception FIFO t1 clk_500 parity error. " />
+  <field bit="3"  category="fatal" name="rcp_t1_inv_state"  description="reception FIFO t1 clk_500 invalid state. " />
+  <field bit="4"  category="fatal" name="rcp_t2_parity_err"  description="reception FIFO t2 clk_500 parity error. " />
+  <field bit="5"  category="fatal" name="rcp_t2_inv_state"  description="reception FIFO t2 clk_500 invalid state. " />
+  <field bit="6"  category="fatal" name="rcp_t3_parity_err"  description="reception FIFO t3 clk_500 parity error. " />
+  <field bit="7"  category="fatal" name="rcp_t3_inv_state"  description="reception FIFO t3 clk_500 invalid state. " />
+  <field bit="8"  category="fatal" name="rcp_t4_parity_err"  description="reception FIFO t4 clk_500 parity error. " />
+  <field bit="9"  category="fatal" name="rcp_t4_inv_state"  description="reception FIFO t4 clk_500 invalid state. " />
+  <field bit="10"  category="fatal" name="rcp_t5_parity_err"  description="reception FIFO t5 clk_500 parity error. " />
+  <field bit="11"  category="fatal" name="rcp_t5_inv_state"  description="reception FIFO t5 clk_500 invalid state. " />
+  <field bit="12"  category="fatal" name="rcp_t6_parity_err"  description="reception FIFO t6 clk_500 parity error. " />
+  <field bit="13"  category="fatal" name="rcp_t6_inv_state"  description="reception FIFO t6 clk_500 invalid state. " />
+  <field bit="14"  category="fatal" name="rcp_t7_parity_err"  description="reception FIFO t7 clk_500 parity error. " />
+  <field bit="15"  category="fatal" name="rcp_t7_inv_state"  description="reception FIFO t7 clk_500 invalid state. " />
+  <field bit="16"  category="fatal" name="rcp_t8_parity_err"  description="reception FIFO t8 clk_500 parity error. " />
+  <field bit="17"  category="fatal" name="rcp_t8_inv_state"  description="reception FIFO t8 clk_500 invalid state. " />
+  <field bit="18"  category="fatal" name="rcp_t9_parity_err"  description="reception FIFO t9 clk_500 parity error. " />
+  <field bit="19"  category="fatal" name="rcp_t9_inv_state"  description="reception FIFO t9 clk_500 invalid state. " />
+  <field bit="20"  category="fatal" name="rcp_l0_parity_err"  description="reception FIFO l0 clk_500 parity error. " />
+  <field bit="21"  category="fatal" name="rcp_l0_inv_state"  description="reception FIFO l0 clk_500 invalid state. " />
+  <field bit="22"  category="fatal" name="rcp_l1_parity_err"  description="reception FIFO l1 clk_500 parity error. " />
+  <field bit="23"  category="fatal" name="rcp_l1_inv_state"  description="reception FIFO l1 clk_500 invalid state. " />
+  <field bit="24"  category="fatal" name="rcp_hp_parity_err"  description="reception FIFO hp clk_500 parity error. " />
+  <field bit="25"  category="fatal" name="rcp_hp_inv_state"  description="reception FIFO hp clk_500 invalid state. " />
+  <field bit="26"  category="fatal" name="rcp_io_parity_err"  description="reception FIFO IO clk_500 parity error. " />
+  <field bit="27"  category="fatal" name="rcp_io_inv_state"  description="reception FIFO IO clk_500 invalid state. " />
+  <field bit="28"  category="fatal" name="rcp_c0_parity_err"  description="reception FIFO c0 clk_500 parity error. " />
+  <field bit="29"  category="fatal" name="rcp_c0_inv_state"  description="reception FIFO c0 clk_500 invalid state. " />
+  <field bit="30"  category="fatal" name="rcp_c1_parity_err"  description="reception FIFO c1 clk_500 parity error. " />
+  <field bit="31"  category="fatal" name="rcp_c1_inv_state"  description="reception FIFO c1 clk_500 invalid state. " />
+</register><register name="FATAL_ERR3" prefix="ND_500_DCR" width="64" >
+  <field bit="0"  category="fatal" name="rcp_t0_overflow"  description="reception FIFO t0 overflow. " />
+  <field bit="3"  category="fatal" name="rcp_t1_overflow"  description="reception FIFO t1 overflow. " />
+  <field bit="6"  category="fatal" name="rcp_t2_overflow"  description="reception FIFO t2 overflow. " />
+  <field bit="9"  category="fatal" name="rcp_t3_overflow"  description="reception FIFO t3 overflow. " />
+  <field bit="12"  category="fatal" name="rcp_t4_overflow"  description="reception FIFO t4 overflow. " />
+  <field bit="15"  category="fatal" name="rcp_t5_overflow"  description="reception FIFO t5 overflow. " />
+  <field bit="18"  category="fatal" name="rcp_t6_overflow"  description="reception FIFO t6 overflow. " />
+  <field bit="21"  category="fatal" name="rcp_t7_overflow"  description="reception FIFO t7 overflow. " />
+  <field bit="24"  category="fatal" name="rcp_t8_overflow"  description="reception FIFO t8 overflow. " />
+  <field bit="27"  category="fatal" name="rcp_t9_overflow"  description="reception FIFO t9 overflow. " />
+  <field bit="30"  category="fatal" name="rcp_l0_overflow"  description="reception FIFO l0 overflow. " />
+  <field bit="33"  category="fatal" name="rcp_l1_overflow"  description="reception FIFO l0 overflow. " />
+  <field bit="36"  category="fatal" name="rcp_hp_overflow"  description="reception FIFO hp overflow. " />
+  <field bit="39"  category="fatal" name="rcp_io_overflow"  description="reception FIFO IO overflow. " />
+  <field bit="42"  category="fatal" name="rcp_c0_overflow"  description="reception FIFO c0 overflow. " />
+  <field bit="45"  category="fatal" name="rcp_c0_ue"  description="reception FIFO c0 uncorrectable ecc error. " />
+  <field bit="46"  category="fatal" name="rcp_c1_overflow"  description="reception FIFO c1 overflow. " />
+  <field bit="49"  category="fatal" name="rcp_c1_ue"  description="reception FIFO c1 uncorrectable ecc error. " />
+</register><register name="FATAL_ERR4" prefix="ND_500_DCR" width="64" >
+  <field bit="0"  category="fatal" name="coll_alu_parity_err"  description="collective logic alu tree parity error. " />
+  <field bit="1"  category="fatal" name="coll_fp_front_parity_err"  description="collective floating point front end logic parity error. " />
+  <field bit="2"  category="fatal" name="coll_fp_back_parity_err"  description="collective floating point back end logic parity error. " />
+  <field bit="3"  category="fatal" name="coll_uptree_parity_err"  description="collective up tree arbiters parity error. " />
+  <field bit="4"  category="fatal" name="coll_downtree_parity_err"  description="collective down tree arbiters parity error. " />
+  <field bit="5"  category="fatal" name="coll_top_parity_err"  description="collective top level logic parity error. " />
+  <field bit="6"  category="fatal" name="coll_uptree_inv_state"  description="collective up tree FSM invalid state. " />
+  <field bit="7"  category="fatal" name="coll_downtree_inv_state"  description="collective down tree FSM invalid state. " />
+  <field bit="8"  category="fatal" name="coll_dbus_err"  description="collective any input data bus feeding both up and down tree logic in the same cycle. " />
+  <field bit="9"  category="fatal" name="coll_ce_or_ue"  description="collective logic correctable or uncorrectable ecc error. " />
+</register>
+<register name="fatal_err5" prefix="nd_500_dcr" width="64" >
+  <field bit="0"  category="correctable" name="inj_fifo_a_ce_over_thresh"  description="injection FIFO group A: t0, t1, t2, t3, correctable ecc error count over threshold. " />
+  <field bit="1"  category="correctable" name="inj_fifo_b_ce_over_thresh"  description="injection FIFO group B: t4, t5, t6, t7, correctable ecc error count over threshold. " />
+  <field bit="2"  category="correctable" name="inj_fifo_c_ce_over_thresh"  description="injection FIFO group C: t8, t9, l0, l1, correctable ecc error count over threshold. " />
+  <field bit="3"  category="correctable" name="inj_fifo_d_ce_over_thresh"  description="injection FIFO group D: hp, io, c0, c1, correctable ecc error count over threshold. " />
+  <field bit="4"  category="correctable" name="rcp_fifo_c0_ce_over_thresh"  description="reception FIFO c0 correctable ecc error count over threshold. " />
+  <field bit="5"  category="correctable" name="rcp_fifo_c1_ce_over_thresh"  description="reception FIFO c1 correctable ecc error count over threshold. " />
+  <field bit="6"  category="correctable" name="coll_downtree_ce_over_thresh"  description="collective down tree logic correctable ecc error count over threshold. " />
+  <field bit="7"  category="fatal" name="unused"  description="reserved, tied to zero. " />
+  <field bit="8"  category="correctable" name="gi_ce_over_thresh"  description="global barrier logic correctable ecc error count over threshold. " />
+  <field bit="9"  category="fatal" name="gi_ue"  description="global barrier logic uncorrectable ecc error. " />
+  <field bit="10"  category="fatal" name="dcr_slave_mchk"  description="DCR slave machine check interrupt. " />
+  <field bit="11"  category="fatal" name="dcr_slave_crit"  description="DCR slave crital interrupt. " />
+</register><register name="FATAL_ERR" prefix="ND_RESE_DCR" width="64" >
+  <field bit="0"  category="fatal" name="dcr_slave_mchk"  description="DCR slave machine check interrupt. " />
+  <field bit="1"  category="fatal" name="dcr_slave_crit"  description="DCR slave critical interrupt. " />
+  <field bit="2"  category="correctable" name="re_link_err_over_thresh"  description="receiver link error count over threshold. " />
+  <field bit="3"  category="correctable" name="se_retrans_cnt_over_thresh"  description="sender retransmission count over threshold. " />
+  <field bit="4"  category="correctable" name="vc0_re_ce_cnt_over_thresh"  description="VC0 receiver correctable error count over threshold. " />
+  <field bit="5"  category="correctable" name="vc1_re_ce_cnt_over_thresh"  description="VC1 receiver correctable error count over threshold. " />
+  <field bit="6"  category="correctable" name="vc2_re_ce_cnt_over_thresh"  description="VC2 receiver correctable error count over threshold. " />
+  <field bit="7"  category="correctable" name="vc3_re_ce_cnt_over_thresh"  description="VC3 receiver correctable error count over threshold. " />
+  <field bit="8"  category="correctable" name="vc4_re_ce_cnt_over_thresh"  description="VC4 receiver correctable error count over threshold. " />
+  <field bit="9"  category="correctable" name="vc5_re_ce_cnt_over_thresh"  description="VC5 receiver correctable error count over threshold. " />
+  <field bit="10"  category="correctable" name="vc0pl_re_ce_cnt_over_thresh"  description="VC0 pointer list receiver correctable error count over threshold. " />
+  <field bit="11"  category="correctable" name="recp_re_ce_cnt_over_thresh"  description="Receiver pipe correctable error count over threshold. " />
+  <field bit="12"  category="correctable" name="se_ce_cnt_over_thresh"  description="sender retransmission FIFO array ce count over threshold. " />
+  <field bit="13"  category="fatal" name="re_vc0_ue"  description="receiver vc0 FIFO read ecc uncorrectable error. " />
+  <field bit="14"  category="fatal" name="re_vc1_ue"  description="receiver vc1 FIFO read ecc uncorrectable error. " />
+  <field bit="15"  category="fatal" name="re_vc2_ue"  description="receiver vc2 FIFO read ecc uncorrectable error. " />
+  <field bit="16"  category="fatal" name="re_vc3_ue"  description="receiver vc3 FIFO read ecc uncorrectable error. " />
+  <field bit="17"  category="fatal" name="re_vc4_ue"  description="receiver vc4 FIFO read ecc uncorrectable error. " />
+  <field bit="18"  category="fatal" name="re_vc5_ue"  description="receiver vc5 FIFO read ecc uncorrectable error. " />
+  <field bit="19"  category="fatal" name="re_pipe_ue"  description="receiver pipe data ecc uncorrectable error. " />
+  <field bit="20"  category="fatal" name="re_pipe_perr"  description="receiver pipe internal parity error. " />
+  <field bit="21"  category="fatal" name="re_vc0_list_ue"  description="receiver vc0 list pointers ecc uncorrectable error. " />
+  <field bit="22"  category="fatal" name="re_fifo_wr_perr"  description="receiver FIFO write logic internal parity error. " />
+  <field bit="23"  category="fatal" name="re_vc0_ctrl_perr"  description="receiver vc0 control logic internal parity error. " />
+  <field bit="24"  category="fatal" name="re_vc0_fifo_rd_perr"  description="receiver vc0 FIFO read logic internal parity error. " />
+  <field bit="25"  category="fatal" name="re_vc0_list_perr"  description="receiver vc0 list logic internal parity error. " />
+  <field bit="26"  category="fatal" name="re_vc1_ctrl_perr"  description="receiver vc1 control logic internal parity error. " />
+  <field bit="27"  category="fatal" name="re_vc1_fifo_rd_perr"  description="receiver vc1 FIFO read logic internal parity error. " />
+  <field bit="28"  category="fatal" name="re_vc2_ctrl_perr"  description="receiver vc2 control logic internal parity error. " />
+  <field bit="29"  category="fatal" name="re_vc2_fifo_rd_perr"  description="receiver vc2 FIFO read logic internal parity error. " />
+  <field bit="30"  category="fatal" name="re_vc3_ctrl_perr"  description="receiver vc3 control logic internal parity error. " />
+  <field bit="31"  category="fatal" name="re_vc3_fifo_rd_perr"  description="receiver vc3 FIFO read logic internal parity error. " />
+  <field bit="32"  category="fatal" name="re_vc4_ctrl_perr"  description="receiver vc4 control logic internal parity error. " />
+  <field bit="33"  category="fatal" name="re_vc4_fifo_rd_perr"  description="receiver vc4 FIFO read logic internal parity error. " />
+  <field bit="34"  category="fatal" name="re_vc5_ctrl_perr"  description="receiver vc5 control logic internal parity error. " />
+  <field bit="35"  category="fatal" name="re_vc5_fifo_rd_perr"  description="receiver vc5 FIFO read logic internal parity error. " />
+  <field bit="37"  category="fatal" name="se_e2e_crc_err"  description="sender input packet end-to-end crc error. " />
+  <field bit="38"  category="fatal" name="se_data_in_ue"  description="sender input dbus ecc uncorrectable error. " />
+  <field bit="39"  category="fatal" name="se_token_overflow"  description="sender token overflow. " />
+  <field bit="40"  category="fatal" name="se_token_parity_err"  description="sender token parity error. " />
+  <field bit="41"  category="fatal" name="se_retrans_array_ue"  description="sender retransmission FIFO array ecc uncorrectable error. " />
+  <field bit="42"  category="fatal" name="se_retrans_pkt_type_err"  description="sender retransmission FIFO packet type error on read. " />
+  <field bit="43"  category="fatal" name="se_retrans_state_in_perr"  description="sender retransmission FIFO write state machine parity error. " />
+  <field bit="44"  category="fatal" name="se_retrans_state_out_perr"  description="sender retransmission FIFO read state machine parity error. " />
+  <field bit="45"  category="fatal" name="se_retrans_pointer_perr"  description="sender retransmission FIFO pointer parity error. " />
+  <field bit="46"  category="fatal" name="se_retrans_fifo_overflow"  description="sender retransmission FIFO overflow. " />
+  <field bit="47"  category="fatal" name="se_gi_ue"  description="sender gi unit ecc uncorrectable error. " />
+  <field bit="48"  category="fatal" name="se_arb_perr"  description="sender arbiter internal parity error. " />
+  <field bit="49"  category="fatal" name="se_ctrl_perr"  description="sender control logic internal parity error. " />
+  <field bit="50"  category="fatal" name="se_tok_rels_perr"  description="sender token release parity error. " />
+  <field bit="52"  category="fatal" name="dcr_pipe_perr"  description="DCR pipeline latch parity error. " />
+  <field bit="62"  category="fatal" name="dcr_slave_non_crit"  description="DCR slave non critical interrupt. " />
+  <field bit="63"  category="correctable" name="se_dropped_pkt"  description="sender dropped packets. " />
+</register><register name="FATAL_ERR0" prefix="ND_X2_DCR" width="64" >
+  <field bit="0"  category="fatal" name="inj_t0_t3_x2_perr"  description="injection FIFO t0-t3 clk_x2 parity error. " />
+  <field bit="1"  category="fatal" name="inj_t4_t7_x2_perr"  description="injection FIFO t4-t7 clk_x2 parity error. " />
+  <field bit="2"  category="fatal" name="inj_t8_l1_x2_perr"  description="injection FIFO t8, t9, l0, l1 clk_x2 parity error. " />
+  <field bit="3"  category="fatal" name="inj_hp_c1_x2_perr"  description="injection FIFO hp, io, c0, c1 clk_x2 parity error. " />
+  <field bit="4"  category="fatal" name="mu_dbus_en_ptr_en_both_high"  description="MU drives dbus enable and ptr enable for same injection FIFO high in the same cycle. " />
+  <field bit="5"  category="fatal" name="inj_top_x2_perr"  description="injection FIFO top level clk_x2 parity err. " />
+  <field bit="6"  category="fatal" name="mu_t0_t3_dbus_en_gt1"  description="MU drives more than one t0-t3 dbus enables high. " />
+  <field bit="7"  category="fatal" name="mu_t4_t7_dbus_en_gt1"  description="MU drives more than one t4-t7 dbus enables high. " />
+  <field bit="8"  category="fatal" name="mu_t8_l1_dbus_en_gt1"  description="MU drives more than one of t8, t9, l0, l1 dbus enables high. " />
+  <field bit="61"  category="fatal" name="dcr_slave_mchk"  description="DCR slave machine check interrupt. " />
+  <field bit="62"  category="fatal" name="dcr_slave_crit"  description="DCR slave critical interrupt. " />
+  <field bit="63"  category="fatal" name="dcr_slave_non_crit"  description="DCR slave non critical interrupt, tie to non fatal error, nd_gip_int(1). " />
+</register><register name="FATAL_ERR1" prefix="ND_X2_DCR" width="64" >
+  <field bit="0"  category="fatal" name="rcp_t0_x2_perr"  description="reception FIFO t0 clk_x2 parity err. " />
+  <field bit="1"  category="fatal" name="rcp_t0_x2_inv_state"  description="reception FIFO t0 clk_x2 invalid state. " />
+  <field bit="2"  category="fatal" name="rcp_t1_x2_perr"  description="reception FIFO t1 clk_x2 parity err. " />
+  <field bit="3"  category="fatal" name="rcp_t1_x2_inv_state"  description="reception FIFO t1 clk_x2 invalid state. " />
+  <field bit="4"  category="fatal" name="rcp_t2_x2_perr"  description="reception FIFO t2 clk_x2 parity err. " />
+  <field bit="5"  category="fatal" name="rcp_t2_x2_inv_state"  description="reception FIFO t2 clk_x2 invalid state. " />
+  <field bit="6"  category="fatal" name="rcp_t3_x2_perr"  description="reception FIFO t3 clk_x2 parity err. " />
+  <field bit="7"  category="fatal" name="rcp_t3_x2_inv_state"  description="reception FIFO t3 clk_x2 invalid state. " />
+  <field bit="8"  category="fatal" name="rcp_t4_x2_perr"  description="reception FIFO t4 clk_x2 parity err. " />
+  <field bit="9"  category="fatal" name="rcp_t4_x2_inv_state"  description="reception FIFO t4 clk_x2 invalid state. " />
+  <field bit="10"  category="fatal" name="rcp_t5_x2_perr"  description="reception FIFO t5 clk_x2 parity err. " />
+  <field bit="11"  category="fatal" name="rcp_t5_x2_inv_state"  description="reception FIFO t5 clk_x2 invalid state. " />
+  <field bit="12"  category="fatal" name="rcp_t6_x2_perr"  description="reception FIFO t6 clk_x2 parity err. " />
+  <field bit="13"  category="fatal" name="rcp_t6_x2_inv_state"  description="reception FIFO t6 clk_x2 invalid state. " />
+  <field bit="14"  category="fatal" name="rcp_t7_x2_perr"  description="reception FIFO t7 clk_x2 parity err. " />
+  <field bit="15"  category="fatal" name="rcp_t7_x2_inv_state"  description="reception FIFO t7 clk_x2 invalid state. " />
+  <field bit="16"  category="fatal" name="rcp_t8_x2_perr"  description="reception FIFO t8 clk_x2 parity err. " />
+  <field bit="17"  category="fatal" name="rcp_t8_x2_inv_state"  description="reception FIFO t8 clk_x2 invalid state. " />
+  <field bit="18"  category="fatal" name="rcp_t9_x2_perr"  description="reception FIFO t9 clk_x2 parity err. " />
+  <field bit="19"  category="fatal" name="rcp_t9_x2_inv_state"  description="reception FIFO t9 clk_x2 invalid state. " />
+  <field bit="20"  category="fatal" name="rcp_l0_x2_perr"  description="reception FIFO l0 clk_x2 parity err. " />
+  <field bit="21"  category="fatal" name="rcp_l0_x2_inv_state"  description="reception FIFO l0 clk_x2 invalid state. " />
+  <field bit="22"  category="fatal" name="rcp_l1_x2_perr"  description="reception FIFO l1 clk_x2 parity err. " />
+  <field bit="23"  category="fatal" name="rcp_l1_x2_inv_state"  description="reception FIFO l1 clk_x2 invalid state. " />
+  <field bit="24"  category="fatal" name="rcp_hp_x2_perr"  description="reception FIFO hp clk_x2 parity err. " />
+  <field bit="25"  category="fatal" name="rcp_hp_x2_inv_state"  description="reception FIFO hp clk_x2 invalid state. " />
+  <field bit="26"  category="fatal" name="rcp_io_x2_perr"  description="reception FIFO IO clk_x2 parity err. " />
+  <field bit="27"  category="fatal" name="rcp_io_x2_inv_state"  description="reception FIFO IO clk_x2 invalid state. " />
+  <field bit="28"  category="fatal" name="rcp_c0_x2_perr"  description="reception FIFO c0 clk_x2 parity err. " />
+  <field bit="29"  category="fatal" name="rcp_c0_x2_inv_state"  description="reception FIFO c0 clk_x2 invalid state. " />
+  <field bit="30"  category="fatal" name="rcp_c1_x2_perr"  description="reception FIFO c1 clk_x2 parity err. " />
+  <field bit="31"  category="fatal" name="rcp_c1_x2_inv_state"  description="reception FIFO c1 clk_x2 invalid state. " />
+  <field bit="32"  category="fatal" name="rcp_t0_mu_inv_done"  description="reception FIFO t0 raises done during wrong state. " />
+  <field bit="33"  category="fatal" name="rcp_t0_mu_inv_req"  description="reception FIFO t0 raises request during wrong state. " />
+  <field bit="34"  category="fatal" name="rcp_t1_mu_inv_done"  description="reception FIFO t1 raises done during wrong state. " />
+  <field bit="35"  category="fatal" name="rcp_t1_mu_inv_req"  description="reception FIFO t1 raises request during wrong state. " />
+  <field bit="36"  category="fatal" name="rcp_t2_mu_inv_done"  description="reception FIFO t2 raises done during wrong state. " />
+  <field bit="37"  category="fatal" name="rcp_t2_mu_inv_req"  description="reception FIFO t2 raises request during wrong state. " />
+  <field bit="38"  category="fatal" name="rcp_t3_mu_inv_done"  description="reception FIFO t3 raises done during wrong state. " />
+  <field bit="39"  category="fatal" name="rcp_t3_mu_inv_req"  description="reception FIFO t3 raises request during wrong state. " />
+  <field bit="40"  category="fatal" name="rcp_t4_mu_inv_done"  description="reception FIFO t4 raises done during wrong state. " />
+  <field bit="41"  category="fatal" name="rcp_t4_mu_inv_req"  description="reception FIFO t4 raises request during wrong state. " />
+  <field bit="42"  category="fatal" name="rcp_t5_mu_inv_done"  description="reception FIFO t5 raises done during wrong state. " />
+  <field bit="43"  category="fatal" name="rcp_t5_mu_inv_req"  description="reception FIFO t5 raises request during wrong state. " />
+  <field bit="44"  category="fatal" name="rcp_t6_mu_inv_done"  description="reception FIFO t6 raises done during wrong state. " />
+  <field bit="45"  category="fatal" name="rcp_t6_mu_inv_req"  description="reception FIFO t6 raises request during wrong state. " />
+  <field bit="46"  category="fatal" name="rcp_t7_mu_inv_done"  description="reception FIFO t7 raises done during wrong state. " />
+  <field bit="47"  category="fatal" name="rcp_t7_mu_inv_req"  description="reception FIFO t7 raises request during wrong state. " />
+  <field bit="48"  category="fatal" name="rcp_t8_mu_inv_done"  description="reception FIFO t8 raises done during wrong state. " />
+  <field bit="49"  category="fatal" name="rcp_t8_mu_inv_req"  description="reception FIFO t8 raises request during wrong state. " />
+  <field bit="50"  category="fatal" name="rcp_t9_mu_inv_done"  description="reception FIFO t9 raises done during wrong state. " />
+  <field bit="51"  category="fatal" name="rcp_t9_mu_inv_req"  description="reception FIFO t9 raises request during wrong state. " />
+  <field bit="52"  category="fatal" name="rcp_l0_mu_inv_done"  description="reception FIFO l0 raises done during wrong state. " />
+  <field bit="53"  category="fatal" name="rcp_l0_mu_inv_req"  description="reception FIFO l0 raises request during wrong state. " />
+  <field bit="54"  category="fatal" name="rcp_l1_mu_inv_done"  description="reception FIFO l1 raises done during wrong state. " />
+  <field bit="55"  category="fatal" name="rcp_l1_mu_inv_req"  description="reception FIFO l1 raises request during wrong state. " />
+  <field bit="56"  category="fatal" name="rcp_hp_mu_inv_done"  description="reception FIFO hp raises done during wrong state. " />
+  <field bit="57"  category="fatal" name="rcp_hp_mu_inv_req"  description="reception FIFO hp raises request during wrong state. " />
+  <field bit="58"  category="fatal" name="rcp_io_mu_inv_done"  description="reception FIFO IO raises done during wrong state. " />
+  <field bit="59"  category="fatal" name="rcp_io_mu_inv_req"  description="reception FIFO IO raises request during wrong state. " />
+  <field bit="60"  category="fatal" name="rcp_c0_mu_inv_done"  description="reception FIFO c0 raises done during wrong state. " />
+  <field bit="61"  category="fatal" name="rcp_c0_mu_inv_req"  description="reception FIFO c0 raises request during wrong state. " />
+  <field bit="62"  category="fatal" name="rcp_c1_mu_inv_done"  description="reception FIFO c1 raises done during wrong state. " />
+  <field bit="63"  category="fatal" name="rcp_c1_mu_inv_req"  description="reception FIFO c1 raises request during wrong state. " />
+</register>
+
+</interrupts>

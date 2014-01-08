@@ -1,0 +1,118 @@
+-- SUMMARY_HARDWARE_PROBLEMS
+
+WITH
+badMidplane AS (
+  SELECT location, status
+    FROM bgqMidplane
+    WHERE status NOT IN ('A','S')
+),
+badNodeBoard AS (
+  SELECT location, status, midplanePos, position
+    FROM bgqNodeCard
+    WHERE status NOT IN ('A','S') AND
+          midplanePos NOT IN (SELECT location FROM badMidplane)
+),
+badLinkChip AS (
+  SELECT location, status
+    FROM bgqLinkChip
+    WHERE status NOT IN ('A','S') AND
+          (midplanePos,nodeCardPos) NOT IN (SELECT midplanePos, position FROM badNodeBoard) AND
+          midplanePos NOT IN (SELECT location FROM badMidplane)
+),
+badNodeBoardDca AS (
+  SELECT location, status
+    FROM bgqNodeCardDca
+    WHERE status NOT IN ('A','S') AND
+          (midplanePos, nodeCardPos) NOT IN (SELECT midplanePos, position FROM badNodeBoard) AND
+          midplanePos NOT IN (SELECT location FROM badMidplane)
+          
+),
+badServiceCard AS (
+  SELECT location, status
+    FROM bgqServiceCard
+    WHERE status NOT IN ('A','S') AND
+          midplanePos NOT IN (SELECT location FROM badMidplane)
+),
+badSwitch AS (
+  SELECT switchId AS location, status
+    FROM bgqSwitch
+    WHERE status NOT IN ('A','S') AND
+          midplanePos NOT IN (SELECT location FROM badMidplane)
+),
+badIoRack AS (
+  SELECT location, status
+    FROM bgqIoRack
+    WHERE status NOT IN ('A','S')
+),
+badClockCard AS (
+  SELECT location, status
+    FROM bgqClockCard
+    WHERE status NOT IN ('A','S') AND
+          SUBSTR(location,3) NOT IN (SELECT location FROM badIoRack)
+),
+badBulkPowerSupply AS (
+  SELECT location, status
+    FROM bgqBulkPowerSupply
+    WHERE status NOT IN ('A','S') AND
+          SUBSTR(location,3) NOT IN (SELECT location FROM badIoRack)
+),
+badIoDrawer AS (
+  SELECT location, status
+    FROM bgqIoDrawer
+    WHERE status NOT IN ('A','S') AND
+          SUBSTR(location,3) NOT IN (SELECT location FROM badIoRack)
+),
+badIoNode AS (
+  SELECT location, status
+    FROM bgqIoNode
+    WHERE status NOT IN ('A','S') AND
+          ioPos NOT IN (SELECT location FROM badIoDrawer)
+),
+badIoLinkChip AS (
+  SELECT location, status
+    FROM bgqIoLinkChip
+    WHERE status NOT IN ('A','S') AND
+          ioPos NOT IN (SELECT location FROM badIoDrawer)
+),
+badLink AS (
+  SELECT source || ',' || destination AS location, status
+    FROM bgqLink
+    WHERE status NOT IN ('A','S')
+),
+nodeCounts AS (
+  SELECT midplanePos AS location, COUNT(*) AS nodeCount
+    FROM bgqNode
+    WHERE status NOT IN ('A','S') AND
+          midplanePos NOT IN (SELECT location FROM badMidplane)
+    GROUP BY midplanePos
+)
+
+SELECT location, status, NULL AS nodeCount FROM badMidplane
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badNodeBoard
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badLinkChip
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badNodeBoardDca
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badServiceCard
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badSwitch
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badIoRack
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badClockCard
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badBulkPowerSupply
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badIoDrawer
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badIoNode
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badIoLinkChip
+UNION ALL
+SELECT location, status, NULL AS nodeCount FROM badLink
+UNION ALL
+SELECT location, NULL AS status, nodeCount FROM nodeCounts
+
+ ORDER BY location

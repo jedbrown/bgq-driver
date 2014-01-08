@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<html>
+
+<head>
+
+<title>Optional Browser Tests</title>
+
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+
+<script>
+
+
+require(
+[
+    "bluegene/utility/Optional",
+    "dojo/dom",
+    "dojo/parser",
+    "dojo/ready",
+    "dijit/_base/manager",
+    "dijit/form/Button",
+    "doh/runner"
+],
+function(
+        b_utility_Optional,
+        d_dom,
+        d_parser,
+        d_ready,
+        j_manager,
+        j_form_Button,
+        doh
+    )
+{
+
+var tests = [
+
+function getNode_element() {
+    // When create optional, can get the ID later.
+    var opt1 = b_utility_Optional( "optional1" );
+    doh.is( d_dom.byId( "optional1" ), opt1.getNode() );
+},
+
+function getNode_dijit() {
+    var opt1 = b_utility_Optional( "button1" );
+    doh.is( j_manager.byId( "button1" ).domNode, opt1.getNode() );
+},
+
+
+function isVisible_visible() {
+    var opt1 = b_utility_Optional( "optional1" );
+    doh.t( opt1.isVisible() );
+},
+
+function isVisible_hidden() {
+    var opt1 = b_utility_Optional( "optional2" );
+    doh.t( ! opt1.isVisible() );
+},
+
+function hide() {
+    var opt1 = b_utility_Optional( "optional3" );
+    opt1.hide();
+    doh.t( ! opt1.isVisible() );
+},
+
+function show() {
+    var opt1 = b_utility_Optional( "optional4" );
+    opt1.show();
+    doh.t( opt1.isVisible() );
+},
+
+function initiallyHidden() {
+    var opt1 = b_utility_Optional( "optional5", bluegene.utility.Optional.HIDDEN );
+    doh.t( ! opt1.isVisible() );
+},
+
+function setVisibility_hideOnly() {
+    var opt1 = b_utility_Optional( "optional6" );
+    var opt2 = b_utility_Optional( "optional7" );
+
+    b_utility_Optional.setVisibility( { hide: [ opt1, opt2 ] } );
+
+    doh.t( ! opt1.isVisible() );
+    doh.t( ! opt2.isVisible() );
+},
+
+function setVisibility_showOnly() {
+    var opt1 = b_utility_Optional( "optional8", bluegene.utility.Optional.HIDDEN );
+    var opt2 = b_utility_Optional( "optional9", bluegene.utility.Optional.HIDDEN );
+
+    b_utility_Optional.setVisibility( { show: [ opt1, opt2 ] } );
+
+    doh.t( opt1.isVisible() );
+    doh.t( opt2.isVisible() );
+}
+
+];
+
+
+var onLoad = function() {
+    doh.register( "bluegene/utility/test/OptionalHTML", tests );
+    doh.run();
+};
+
+
+d_ready( onLoad );
+
+} );
+
+</script>
+
+</head>
+
+<body>
+    <span id="optional1">Stuff</span>
+    <span id="optional2" class="dijitHidden">Stuff</span>
+    <span id="optional3">Stuff</span>
+    <span id="optional4" class="dijitHidden">Stuff</span>
+    <span id="optional5">Stuff</span>
+    
+    <span id="optional6">Stuff</span><span id="optional7">Stuff</span>
+
+    <span id="optional8">Stuff</span><span id="optional9">Stuff</span>
+    
+    <button id="button1" data-dojo-type="dijit.form.Button">Button1</button>
+</body>
+
+</html>

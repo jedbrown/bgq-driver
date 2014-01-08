@@ -1,0 +1,153 @@
+//
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp.  2010, 2012                              
+# US Government Users Restricted Rights - Use, duplication or      
+#   disclosure restricted by GSA ADP Schedule Contract with IBM    
+#   Corp.                                                          
+#                                                                  
+# This software is available to you under the Eclipse Public       
+# License (EPL).                                                   
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+// Parameter file for setting options we want to run with this
+// for local testing...
+//
+
+
+// this controls the maximum number of cycles to run until a timeout.
+Fusion.MaxTime=11000000;
+
+//
+// enable 1 core
+Stage1ResetDriver.CoreEnables=0x80000000;
+
+// Specify to run with half network speed...
+// Method 1:
+//   Bit 14 is ON.
+//   The other bits are set as they always are (default) as determined
+//   by reading DCR 0x0c8420.
+//     Stage1ResetDriver.TiClkCtrl[18]=0x0002110000001100;
+// Method 2:
+#prefix Stage1ResetDriver {
+ TiTorusHalfRate = 1;       // 0 or 1, default 0 (full-rate) 
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Monitors
+//////////////////////////////////////////////////////////////////////////////
+
+
+#prefix IfarMonitor[00-17] {
+  EnableDriver=true;
+}
+#prefix GprMonitor[00-17] {
+  EnableDriver=false;
+}
+
+#prefix A2L1pMonitor[00-17] {
+  EnableDriver=true;
+  TraceReq=true;
+  TraceLoad=true;
+  TraceStore=true;
+  TraceLwarxAndStwcx=false;
+  TraceInvalidate=true;
+
+}
+#prefix L1pSwMonitor[00-17] {
+  EnableDriver=true;
+  TraceReq=true;
+  TraceLoad=true;
+  TraceStore=true;
+}
+
+#prefix L2DdrDriver[00-15] {
+EnableDriver=false;
+TraceRead=false;
+TraceWrite=false;
+TraceReq=false;
+TraceArb=false;
+TraceMem=false;
+};
+
+#prefix DcrMonitor {
+EnableDriver=true;
+TraceRead=true;
+TraceWrite=true;
+TraceReq=true;
+
+};
+
+#prefix DevbusMonitor {
+  EnableDriver=false;
+  TraceReq=true;
+  TraceStore=true;
+  TraceLoad=true;
+};
+
+#prefix BedramMonitor {
+  EnableDriver=false;
+  TraceReq=true;
+  TraceWrite=true;
+  TraceRead=true;
+  TraceAtomicOps=true;
+
+};
+
+#prefix BedramLoader {		
+  TraceLoad=false;
+  ValidateLoad=false;
+  DumpSram=false;
+  SuppressLoad=false;
+};
+
+#prefix L2Monitor[00-15] {
+  EnableDriver=false;
+  TraceStore=false;
+  TraceLoad=false;
+  TraceReq=false;
+  TraceLwarxAndStwcx=false;
+  TraceInvalidate=false;
+};
+
+#prefix L2DdrDriver[00-15] {
+  TraceRead=false;
+  TraceWrite=false;
+  TraceReq=false;
+  TraceArb=false;
+  TraceMem=false;
+};
+
+#prefix EratMonitor[00-17] {
+  EnableDriver=true;
+}
+
+#prefix MuSlaveMonitor {
+  EnableDriver=true;
+  TraceReq=true;
+  TraceStore=true;
+  TraceLoad=true;
+};
+
+#prefix MuMasterMonitor[0-2] {
+  EnableDriver=true;
+  TraceReq=true;
+  TraceStore=true;
+  TraceLoad=true;
+};
+
+#prefix MuMonitor {
+  EnableDriver=true;
+  TraceInjBus=true;
+  TraceRecBus=true;
+  TraceInt=true;
+};
+

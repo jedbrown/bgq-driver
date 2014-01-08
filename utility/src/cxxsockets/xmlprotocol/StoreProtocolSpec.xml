@@ -1,0 +1,55 @@
+<File filename="StoreProtocolSpec" type="xmlapi" namespace="StoreProtocolSpec" version="1" >
+<!-- Several optional files to generate -->
+<!-- A special API header file name -->
+	<APIHeader filename="StoreProtocolAPI" /> 
+<!-- An implementation file -->
+	<APIImplementation filename="StoreProtocol.stubs" /> 
+<!-- A console -->
+	<APIConsole filename="StoreConsole" /> 
+
+<!-- Define a 'method' -->
+<!-- If no 'type' is specified, just the related classes will be created, no methods -->
+<!-- In this case, we're building a shoppping list for books and music -->
+	<Method name="storespec" comment="Specification of a target for the command">
+<!-- Create the classes that will be arguments for the method -->
+    <Class name="StoreListRequest" superclass="true">
+         <DataMember type="text" name="shopping_list" comment="name of shopping list" />
+         <DataMember type="text" name="books" occurrences="many" comment="book titles" />
+         <DataMember type="text" name="songs" occurrences="many" comment="song names" />
+    </Class>
+	</Method>
+	
+<!-- Our base reply object.  Also typeless. -->
+	<Method name="returnspec" comment="Specification of return message for a command">
+    <Class name="Reply" superclass="true">
+      <DataMember type="int32" name="rc" comment="return error code" />
+      <DataMember type="text" name="rt" comment="return error text" />
+    </Class>
+	</Method>
+	
+<!-- A specific protocol message -->
+<!-- This is a store inventory request -->
+  <Method name="storeinventory" type="RequestReply" comment="Ask MC to initialize the machine and fill up the skeleton bglmachine data structures with available hardware">
+    <Class name="StoreInventoryRequest">
+    </Class>
+    <Class name="StoreInventoryReply" parent="Reply">
+      <Class name="Book">
+         <DataMember type="text" name="title" comment="book title" />
+         <DataMember type="text" name="author" comment="book author" />
+         <DataMember type="uint32" name="isbns" occurrences="many" comment="isbn numbers" />
+         <DataMember type="uint32" name="count" comment="number in stock" />
+
+      </Class>
+      <Class name="MP3">
+         <DataMember type="text" name="name" comment="song name" />
+         <DataMember type="text" name="artist" comment="artist name" />
+         <DataMember type="uint32" name="ids" occurrences="many" comment="id numbers" />
+         <DataMember type="uint32" name="count" comment="number in stock" />
+      </Class>
+
+      <DataMember type="uint32" name="error" comment="store error code" />
+      <DataMember type="Book" name="books" occurrences="many" comment="all service cards" />
+      <DataMember type="MP3" name="mp3s" occurrences="many" comment="all node cards" />
+    </Class>
+  </Method>
+</File>

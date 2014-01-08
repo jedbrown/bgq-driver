@@ -1,0 +1,619 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+
+#
+# WARNING: changing this file requires a rebuild of the ramdisk
+#
+
+BASE=16
+SUCCESS=0
+LOCKFILE=/var/lock/subsys/network
+
+# Source function library, bgpers and bgras.
+. /etc/init.d/functions
+
+# A function that converts the IP address for INTF0 to hex and
+# then uses it to set the hostid for the node.  The standard 
+# for RHEL 6 appears to be OCTET3.OCTET4.OCTET1.OCTET2.
+# When using IPv6 addresses, just take the bottom 16 
+set_hostid()
+{
+	#Needed for sethostid to work.
+	if [ ! -e /var/adm ] ; then
+		mkdir /var/adm
+	fi
+
+	if [ ! -z $BG_INTF0_IPV4 ] && [ $BG_INTF0_IPV4 != "0.0.0.0" ] ; then
+	    IPARR=(${BG_INTF0_IPV4//./ });
+
+	    if [ ${IPARR[0]} -gt 127 ] ; then
+		let IPARR[0]=${IPARR[0]}-128
+	    fi
+
+	    for x in 0 1 2 3 ; do
+		HEXARR[$x]=`echo ""${IPARR[$x]}" "$BASE" o p" | dc`
+
+	    done
+
+	    bgsethostid 0x${HEXARR[0]}${HEXARR[1]}${HEXARR[2]}${HEXARR[3]} &> /dev/null
+
+	    if [ $? -ne 0 ] ; then
+		bgras $BGRAS_ID_SCRIPT_FAILURE \
+                      "network - Failure setting hostid."
+	    fi
+
+	fi
+	if [ ! -z $BG_INTF0_IPV6 ] && [ $BG_INTF0_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+
+	    IPARR=(${BG_INTF0_IPV6//:/ });
+	    
+	    let LAST=${#IPARR[@]}-1
+	    let SECONDLAST=$LAST-1
+
+	    TEST=`echo $((0x${IPARR[$LAST]}))`
+
+	    if [ $TEST -gt 32767 ] ; then
+		let TEST=$TEST-32768
+		IPARR[$LAST]=`echo ""$TEST" "$BASE" o p" | dc`
+	    fi
+
+	    bgsethostid 0x${IPARR[$LAST]}${IPARR[$SECONDLAST]} &> /dev/null
+
+	    if [ $? -ne 0 ] ; then
+		bgras $BGRAS_ID_SCRIPT_FAILURE \
+                      "network - Failure setting hostid."
+	    fi
+	fi
+
+}
+
+# A function to create a basic /etc/sysconfig/network file if one is zero size or doesn't exist.
+create_sysconfig_network()
+{
+	if [ ! -s /etc/sysconfig/network ] ; then
+		echo "NETWORKING=yes" >> /etc/sysconfig/network
+		if [ ! -z $BG_ALT_GATEWAY ] ; then
+			echo "GATEWAY=$BG_ALT_GATEWAY" >> /etc/sysconfig/network
+		else
+			echo "GATEWAY=$BG_GATEWAY"  >> /etc/sysconfig/network
+		fi
+
+	fi
+}
+
+# Set the details for each network device:
+# $1=$BG_INTFX_NAME, $2=$BG_INTFX_NETMASK, $3=$BG_INTFX_BROADCAST, $4=$BG_INTFX_MTU
+config_net_dev() 
+{
+
+	if [ ! -z $1 ] ; then
+
+		# Netmask 
+		if [ ! -z $2 ] && [ "$2" != "0.0.0.0" ] ; then
+			RC=$( ifconfig $1 netmask $2 2>&1 )
+			if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+					"network - Failure setting netmask for $1. ifconfig returned: '$RC' ."
+			fi
+		fi
+
+		# Broadcast
+		if [ ! -z $3 ] && [ "$3" != "0.0.0.0" ] ; then
+			RC=$( ifconfig $1 broadcast $3 2>&1 )
+			if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+					"network - Failure setting broadcast for $1. ifconfig returned: '$RC' ."
+			fi
+		fi
+
+		# MTU -- only need to worry about setting a default for ethX devices as they default to 1500
+		# 	 the ib devices default to 2042 which is fine.
+		if [ ! -z $4 ] && [ $4 -ne 0 ] ; then
+
+			RC=$( ifconfig $1 mtu $4 2>&1 )
+			if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+					"network - Failure setting mtu for $1. ifconfig returned: '$RC' ."
+			fi
+		else
+			# If an eth device and no MTU set, default to 9000
+			if [ $1 == "eth0" ] || [ $1 == "eth1" ] ; then
+				RC=$( ifconfig $1 mtu 9000 2>&1 )
+				if [ ! -z "$RC" ] ; then
+					bgras $BGRAS_ID_SCRIPT_FAILURE \
+						"network - Failure setting default mtu for $1. ifconfig returned: '$RC' ."
+				fi
+			fi
+
+			if [ $1 == "ib0" ] ; then
+                        	RC=$( ifconfig $1 mtu 65520 2>&1 )
+                                if [ ! -z "$RC" ] ; then
+                                	bgras $BGRAS_ID_SCRIPT_FAILURE \
+                                        	"network - Failure setting default mtu for $1. ifconfig returned: '$RC' ."
+                                fi
+			fi
+		fi
+	
+		if [ $1 == "ib0" ] ; then
+			RC=$( ifconfig $1 txqueuelen 250000 2>&1 )
+			if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+					"network - Failure setting txqueuelen for $1. ifconfig returned '$RC' ."
+			fi
+		fi
+
+	fi
+}
+
+case "$1" in
+    start)
+
+	START=`date +%s`
+	let RUNTIME=0
+	let IB_LINK_TIMEOUT=60
+	let ETH_LINK_TIMEOUT=60
+
+	create_sysconfig_network
+	set_hostid
+
+	if [ ! -e /etc.mirror ] ; then
+		echo -n $"Starting network interfaces - Stage 1: "
+
+		# If PCIE is not enabled we do not want to continue.  Just skip network configuraiton.
+		if [ $BG_NODE_ENABLE_PCIE -eq 0 ] ; then
+		    echo -en "\n\tPCIE is not enabled." 
+		    echo -en "\nNetwork Configuration: "
+		    skipped
+		    echo -en "\n"
+		    exit 0
+		fi
+
+		# Need to increase the PCIe payload size to 256 bytes to get the best utilization.
+		setpci -s 0:0.0 48.b=0x20
+		if [ $? -ne 0 ] ; then
+		    echo -en "\n\tWARNING: setpci failed to increase the PCIe payload size for bus 0\n"
+		fi
+		setpci -s 1:0.0 68.b=0x20
+		if [ $? -ne 0 ] ; then
+		    echo -en "\n\tWARNING: setpci failed to increase the PCIe payload size for bus 1\n"
+		fi
+
+		# Make sure that one of the interfaces is configured.  If not, throw a RAS event
+		if [ -z $BG_INTF0_NAME ] && [ -z $BG_INTF1_NAME ] ; then
+		    
+		    echo -en "\n\t"
+		    bgras $BGRAS_ID_NO_NETWORK_INTERFACE_DEFINED \
+			  "No eth or ib device specified in the personality for node $BG_LOCATION."
+		    
+		    echo -en "\nNetwork configuration "
+		    failure
+		    echo -en "\n"
+		    exit 1
+		fi
+
+	else
+		echo -n $"Starting network interfaces - Stage 2: "
+	fi
+
+	# Set up the loopback device.
+	ifconfig lo 127.0.0.1 netmask 255.0.0.0 broadcast 127.255.255.255
+	
+	#######################################################################################################################
+	# Interface0 and Interface1 configuration ....
+	#
+	# Note that the script will attempt to set both IPv4 and IPv6 addresses.  If both are configured in the database
+	# the interface will have an IPv4 and IPv6 address.  Otherwise, if only one type of IP address is configured, that
+	# is what will be used.  If only one type is used it is important that the BGSYSIPXADDRESS and SNIPXADDRESS fields
+	# in the BGQMACHINE table are configured accrodingly. If both IPv4 and IPv6 addresses are configured for BGSYS and the
+	# SN, IPv4 will be used as the default.
+	#######################################################################################################################
+
+        # if not undefined
+        if [ ! -z $BG_INTF0_NAME ] ; then
+		#Make sure the device exists. 
+		ip addr show $BG_INTF0_NAME &> /dev/null
+		if [ $? -eq 255 ] && [ ! -e /etc.mirror ] ; then
+			bgras $BGRAS_ID_SCRIPT_FAILURE "network - Device $BG_INTF0_NAME does not exist"
+			CONFIGURED=1
+		else
+			#Check if the interface is already configured.  If not, configure it.
+			ip addr show $BG_INTF0_NAME | grep "DOWN" &> /dev/null
+			CONFIGURED=$?
+		fi
+
+		#ib0 configuration
+		if [ $BG_INTF0_NAME == "ib0" ] && [ $CONFIGURED -eq 0 ] ; then
+
+			echo -en $"\n\tWaiting for $BG_INTF0_NAME link ...\n"
+
+			#Might need to change this for multiport IB cards.
+			until [ ! -z "`cat /sys/class/infiniband/mlx4_0/ports/1/state | grep ACTIVE`" ] || [ $RUNTIME -gt $IB_LINK_TIMEOUT ]; do
+                            sleep 1;
+			    let RUNTIME=$((`date +%s`))-$START
+                        done
+			if [ $RUNTIME -gt $IB_LINK_TIMEOUT ] ; then
+			    bgras $BGRAS_ID_IB_LINK_TIMEOUT \
+				"network - IB link timeout is $IB_LINK_TIMEOUT seconds."	
+			    exit 1
+			else
+			    echo -en "\tIB link took $RUNTIME seconds to come up.\n"
+			fi
+			
+			# Setting the device to run in connected mode.
+			if [ -e /sys/class/net/$BG_INTF0_NAME/mode ] ; then
+				echo "connected" > /sys/class/net/$BG_INTF0_NAME/mode
+			else
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+					"network - Failure to set ib connected mode: Unable to find /sys/class/net/$BG_INTF0_NAME/mode ."
+			fi
+
+			if [ ! -z $BG_INTF0_IPV4 ] && [ $BG_INTF0_IPV4 != "0.0.0.0" ] ; then
+                            RC=$( ifconfig $BG_INTF0_NAME $BG_INTF0_IPV4 2>&1 )
+			    if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+                                      "network - Failure configuring device $BG_INTF0_NAME. ifconfig returned: '$RC' ."
+			    else
+				config_net_dev $BG_INTF0_NAME $BG_INTF0_NETMASK $BG_INTF0_BROADCAST $BG_INTF0_MTU
+			    fi
+			fi
+			
+			# Customers may want an IPv4 and IPv6 address configured.  So, add the IPv6 here if configged.
+			if [ ! -z $BG_INTF0_IPV6 ] && [ $BG_INTF0_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+
+			    # If no prefix is specified then 64 bits is the default, otherwise use the prefix defined.
+			    if [ -z $BG_INTF0_IPV6_PREFIX ] ; then
+				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/64 ...\n"
+				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/64 up 2>&1 )
+			    else
+				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX ...\n"
+				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX up 2>&1 )
+			    fi
+
+			    if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+				      "network - Failure configuring $BG_INTF0_NAME. ifconfig retured: '$RC' ."
+			    else
+			        # If there isn't an IPv4 address configured then we need to run through this code
+			        # to get an MTU configured.  
+				if [ -z $BG_INTF0_IPV4 ] || [ $BG_INTF0_IPV4 == "0.0.0.0" ] && [ ! -z $BG_INTF0_MTU ] ; then
+					RC=$( ifconfig $BG_INTF0_NAME mtu $BG_INTF0_MTU )
+				    	if [ ! -z "$RC" ] ; then
+						bgras $BGRAS_ID_SCRIPT_FAILURE \
+					      	      "network - Failure configure MTU for device $BG_INTF0_NAME. ifconfig returned: '$RC' ."
+				    	fi
+				fi
+			    fi
+			fi
+
+		fi
+
+		# eth0/1 configuration
+		if [ $BG_INTF0_NAME == "eth0" ] || [ $BG_INTF0_NAME == "eth1" ] && [ $CONFIGURED -eq 0 ] ; then
+			echo -en $"\n\tConfiguring $BG_INTF0_NAME ...\n"
+
+			# First set up the IPv4 address.
+			if [ ! -z $BG_INTF0_IPV4 ] && [ $BG_INTF0_IPV4 != "0.0.0.0" ] ; then 
+			    RC=$( ifconfig $BG_INTF0_NAME $BG_INTF0_IPV4 2>&1 )
+			    if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+				      "network - Failure setting default mtu for $BG_INTF0_NAME. ifconfig returned: '$RC' ."
+			    else
+                       		config_net_dev $BG_INTF0_NAME $BG_INTF0_NETMASK $BG_INTF0_BROADCAST $BG_INTF0_MTU
+			    fi
+			fi
+
+			# Customers may want an IPv4 and IPv6 address configured.  So, add the IPv6 here if configged.
+			if [ ! -z $BG_INTF0_IPV6 ] && [ $BG_INTF0_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+
+			    # If no prefix is specified then 64 bits is the default, otherwise use the prefix defined.
+			    if [ -z $BG_INTF0_IPV6_PREFIX ] ; then
+				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/64 ...\n"
+				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/64 up 2>&1 )
+			    else
+				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX ...\n"
+				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX up 2>&1 )
+			    fi
+
+			    if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+				      "network - Failure configuring $BG_INTF0_NAME. ifconfig retured: '$RC' ."
+			    else
+				# Need to set up the MTU if an IPv4 address wasn't specified.
+				if [ -z $BG_INTF0_IPV4 ] || [ $BG_INTF0_IPV4 == "0.0.0.0" ] && [ ! -z $BG_INTF0_MTU ] ; then
+				    RC=$( ifconfig $BG_INTF0_NAME mtu $BG_INTF0_MTU )
+				    if [ ! -z "$RC" ] ; then
+					bgras $BGRAS_ID_SCRIPT_FAILURE \
+					      "network - Failure configure MTU for device $BG_INTF0_NAME. ifconfig returned: '$RC' ."
+				    fi
+				fi
+			    fi
+			fi
+
+			START=`date +%s`
+			RUNTIME=0			
+			echo -en $"\n\tWaiting for $BG_INTF0_NAME link ...\n"
+
+			until [ ! -z "`cat /sys/class/net/$BG_INTF0_NAME/operstate | grep up`" ] ||
+			      [ $RUNTIME -gt $ETH_LINK_TIMEOUT ] ; do
+			    sleep 1
+			    let RUNTIME=$((`date +%s`))-$START
+			done
+			
+			if [ $RUNTIME -gt $ETH_LINK_TIMEOUT ] ; then
+			    bgras $BGRAS_ID_ETHERNET_LINK_TIMEOUT \
+				"Ethernet link timeout is $ETH_LINK_TIMEOUT seconds."
+			    exit 1
+			else
+			    if [ $RUNTIME -eq 0 ] ; then
+				echo -en "\tEthernet link took less than 1 second to come up.\n"
+			    else
+				echo -en "\tEthernet link took $RUNTIME seconds to come up.\n"
+			    fi
+			fi
+			
+			# Give the interface a second to start.
+		       sleep 1
+                    fi
+		fi
+
+        # if not undefined
+        if [ ! -z $BG_INTF1_NAME ] ; then
+
+		#Make sure the interface exists before continuing. Only do it on the first time around.
+                ip addr show $BG_INTF1_NAME &> /dev/null
+                if [ $? -eq 255 ] && [ ! -e /etc.mirror ] ; then
+	                bgras $BGRAS_ID_SCRIPT_FAILURE "network - Device $BG_INTF1_NAME does not exist"
+			CONFIGURED=1
+                else
+	                #Check if the interface is already configured.  If not, configure it.
+	                ip addr show $BG_INTF1_NAME | grep "DOWN" &> /dev/null
+	                CONFIGURED=$?
+		fi
+
+                #ib0 configuration
+                if [ $BG_INTF1_NAME == "ib0" ] && [ $CONFIGURED -eq 0 ] ; then
+
+		    echo -en $"\n\tWaiting for $BG_INTF1_NAME link ...\n"
+
+                    #Might need to change this for multiport IB cards.
+		    until [ ! -z "`cat /sys/class/infiniband/mlx4_0/ports/1/state | grep ACTIVE`" ] || [ $RUNTIME -gt $IB_LINK_TIMEOUT ]; do
+			sleep 1;
+			let RUNTIME=$((`date +%s`))-$START
+                    done
+		    if [ $RUNTIME -gt $IB_LINK_TIMEOUT ] ; then
+			bgras $BGRAS_ID_IB_LINK_TIMEOUT "IB link timeout is $IB_LINK_TIMEOUT seconds."
+			exit 1
+		    else
+                        echo -en "\tIB link took $RUNTIME seconds to come up.\n"
+		    fi
+
+
+                    # Setting the device to run in connected mode.
+                    if [ -e /sys/class/net/$BG_INTF1_NAME/mode ] ; then
+                    	echo "connected" > /sys/class/net/$BG_INTF1_NAME/mode
+                    else
+                    	bgras $BGRAS_ID_SCRIPT_FAILURE \
+                        	"network - Failure to set ib connected mode: Unable to find /sys/class/net/$BG_INTF1_NAME/mode ."
+                   fi
+
+		    # First configure the IPv4 address if present.
+		    if [ ! -z $BG_INTF1_IPV4 ] && [ $BG_INTF1_IPV4 != "0.0.0.0" ] ; then
+			
+                        RC=$( ifconfig $BG_INTF1_NAME $BG_INTF1_IPV4 2>&1 )
+			if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+					"network - Failure configuring $BG_INTF1_NAME. ifconfig retured: '$RC' ."
+			else
+                      		config_net_dev $BG_INTF1_NAME $BG_INTF1_NETMASK $BG_INTF1_BROADCAST $BG_INTF1_MTU
+			fi
+		    fi
+
+		    # Customers may want an IPv4 and IPv6 address configured.  So, add the IPv6 here if configged.
+		    if [ ! -z $BG_INTF1_IPV6 ] && [ $BG_INTF1_IPV6 != "0:0:0:0:0:0:0:0" ; then
+
+			# If no prefix is specified then 64 bits is the default, otherwise use the prefix defined.
+			if [ -z $BG_INTF1_IPV6_PREFIX ] ; then
+			    echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/64 ...\n"
+			    RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/64 up 2>&1 )
+			else
+			    echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX ...\n"
+			    RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX up 2>&1 )
+			fi
+
+			if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+					"network - Failure configuring $BG_INTF1_NAME. ifconfig retured: '$RC' ."
+			else
+			    # If there isn't an IPv4 address configured then we need to run through this code
+			    # to get an MTU configured.  
+			    if [ -z $BG_INTF1_IPV4 ] || [ $BG_INTF1_IPV4 == "0.0.0.0" ] && [ ! -z $BG_INTF1_MTU ] ; then
+				RC=$( ifconfig $BG_INTF1_NAME mtu $BG_INTF1_MTU )
+				if [ ! -z "$RC" ] ; then
+				    bgras $BGRAS_ID_SCRIPT_FAILURE \
+					  "network - Failure configure MTU for device $BG_INTF1_NAME. ifconfig returned: '$RC' ."
+				fi
+			    fi
+			fi
+			    
+		    fi
+                fi
+
+                # eth0/1 configuration
+                if [ $BG_INTF1_NAME == "eth0" ] || [ $BG_INTF1_NAME == "eth1" ]  && [ $CONFIGURED -eq 0 ] ; then
+
+                        echo -en $"\n\tConfiguring $BG_INTF1_NAME ...\n"
+
+			# First set up the IPv4 addressing if it is configured.
+			if [ ! -z $BG_INTF1_IPV4 ] && [ $BG_INTF1_IPV4 != "0.0.0.0" ] ; then
+                            RC=$( ifconfig $BG_INTF1_NAME $BG_INTF1_IPV4 2>&1 )
+			    if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+				      "network - Failure configuring $BG_INTF1_NAME. ifconfig returned: '$RC' ."
+			    else
+                        	config_net_dev $BG_INTF1_NAME $BG_INTF1_NETMASK $BG_INTF1_BROADCAST $BG_INTF1_MTU
+			    fi
+			fi
+			
+			# Customers may want an IPv4 and IPv6 address configured.  So, add the IPv6 here if configged.
+			if [ ! -z $BG_INTF1_IPV6 ] && [ $BG_INTF1_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+
+			    # If no prefix is specified then 64 bits is the default, otherwise use the prefix defined.
+			    if [ -z $BG_INTF1_IPV6_PREFIX ] ; then
+				echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/64 ...\n"
+				RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/64 up 2>&1 )
+			    else
+				echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX ...\n"
+				RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX up 2>&1 )
+			    fi
+
+			    if [ ! -z "$RC" ] ; then
+				bgras $BGRAS_ID_SCRIPT_FAILURE \
+				      "network - Failure configuring $BG_INTF1_NAME. ifconfig retured: '$RC' ."
+			    else
+				# Need to set up the MTU if an IPv4 address wasn't specified.
+				if [ -z $BG_INTF1_IPV4 ] || [ $BG_INTF1_IPV4 == "0.0.0.0" ] && [ ! -z $BG_INTF1_MTU ] ; then
+				    RC=$( ifconfig $BG_INTF1_NAME mtu $BG_INTF1_MTU )
+				    if [ ! -z "$RC" ] ; then
+					bgras $BGRAS_ID_SCRIPT_FAILURE \
+					      "network - Failure configure MTU for device $BG_INTF1_NAME. ifconfig returned: '$RC' ."
+				    fi
+				fi
+			    fi
+			fi
+
+			START=`date +%s`
+			RUNTIME=0
+			echo -en $"\n\tWaiting for $BG_INTF1_NAME link ...\n"
+
+			until [ ! -z "`cat /sys/class/net/$BG_INTF1_NAME/operstate | grep up`" ] ||
+			      [ $RUNTIME -gt $ETH_LINK_TIMEOUT ] ; do
+			    sleep 1
+			    let RUNTIME=$((`date +%s`))-$START
+			done
+			
+			if [ $RUNTIME -gt $ETH_LINK_TIMEOUT ] ; then
+			    bgras $BGRAS_ID_ETHERNET_LINK_TIMEOUT \
+				"Ethernet link timeout is $ETH_LINK_TIMEOUT seconds."
+			    exit 1
+			else
+			    if [ $RUNTIME -eq 0 ] ; then
+				echo -en "\tEthernet link took less than 1 second to come up.\n"
+			    else
+				echo -en "\tEthernet link took $RUNTIME seconds to come up.\n"
+			    fi
+			fi
+
+			# Give the interface a second to start.
+			sleep 1
+                fi
+        fi	
+
+	# Set up the default gateway
+	# If the customer has a BG_ALT_GATEWAY in the config service we want to use that.
+	if [ ! -z $BG_ALT_GATEWAY ] ; then
+
+                # Make sure that the gateway has not already been set.  Just to be safe
+                # in the case a customer adds their own script.
+                route -n | grep $BG_ALT_GATEWAY &> /dev/null
+                if [ $? -ne 0 ] ; then
+                        RC=$( route add default gw $BG_ALT_GATEWAY 2>&1 )
+                        if [ ! -z "$RC" ] ; then
+                                bgras $BGRAS_ID_SCRIPT_FAILURE \
+                                      "network - Failure setting a default gateway. route returned: '$RC' .  Ensure the appropriate gateway has been set for the node via dbNetConfig.pl."
+                        fi
+                fi
+
+	else
+		 
+		if [ ! -z $BG_GATEWAY ] && [ $BG_GATEWAY != "0.0.0.0" ] ; then
+
+			# Make sure that the gateway has not already been set.  Just to be safe
+			# in the case a customer adds their own script.
+			route -n | grep $BG_GATEWAY &> /dev/null
+			if [ $? -ne 0 ] ; then
+				RC=$( route add default gw $BG_GATEWAY 2>&1 )
+				if [ ! -z "$RC" ] ; then
+					bgras $BGRAS_ID_SCRIPT_FAILURE \
+				      	      "network - Failure setting a default gateway. route returned: '$RC' .  Ensure the appropriate gateway has been set in the BGQETHGATEWAY table."
+				fi
+			fi
+		fi
+	fi
+
+	# Need to make sure that a network device is configured. If not, throw RAS.
+        for DEVICE in "ib0" "eth0" "eth1" ; do
+            ip addr show dev $DEVICE 2>&1 | grep "UP" &> /dev/null
+            RETCODE=$?
+            if [ $SUCCESS -eq 0 ] && [ $RETCODE -eq 0 ] ; then
+                SUCCESS=1
+            fi
+        done
+
+	if [ $SUCCESS -eq 0 ] ; then
+	    # Lack of a network adapter only causes RAS when not running in diagnostics mode.
+	    if [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 0 ] ; then
+		echo -en "\n\t"
+		bgras $BGRAS_ID_NETWORK_CONFIG_FAILURE \
+		      "No external network device could be configured for node: $BG_LOCATION"
+		echo -en "\nNetwork configuration: "
+		failure
+		echo -en "\n"
+		exit 1
+	    else
+		echo -en "\n\t No external network device could be configured for node $BG_LOCATION"
+		echo -en "\n\t Continuing node boot since it is in Diagnostics mode."
+		echo -en "\nNetwork configuration: "
+		skipped
+		echo -en "\n"
+		exit 0
+	    fi
+	fi
+
+
+	if [ $CONFIGURED -eq 0 ] ; then
+		echo -n $"Network configuration completed: "
+	else 
+		touch $LOCKFILE 
+		echo -en $"\nNetwork configuration in /etc/sysconfig updated: "
+	fi
+	success
+	echo
+	;;
+	
+    stop)
+	# Stop all network interfaces.
+	echo -n $"Stopping network interfaces... "
+	[ ! -z $BG_INTF1_NAME ] && ifconfig $BG_INTF1_NAME down
+	[ ! -z $BG_INTF0_NAME ] && ifconfig $BG_INTF0_NAME down
+	ifconfig lo down
+	rm -f $LOCKFILE 
+	success
+	echo -en "\n"
+	;;
+
+    *)
+	echo "Usage: $0 {start | stop}"
+	exit 1
+	;;
+esac
+
+exit $?

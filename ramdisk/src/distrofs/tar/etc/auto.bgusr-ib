@@ -1,0 +1,74 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+
+if [ $(expr match $1 a) -gt 0 -o $(expr match $1 b) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs3-ib:/bgusr/$1"
+fi
+
+if [ $(expr match $1 c) -gt 0 -o $(expr match $1 d) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs3-ib:/bgusr/$1"
+fi
+
+if [ $(expr match $1 e) -gt 0 -o $(expr match $1 f) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs3-ib:/bgusr/$1"
+fi
+
+if [ $(expr match $1 g) -gt 0 -o $(expr match $1 h) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs4-ib:/bgusr/$1"
+fi
+
+if [ $(expr match $1 i) -gt 0 -o $(expr match $1 j) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs5-ib:/bgusr/$1"
+fi
+
+if [ $(expr match $1 k) -gt 0 -o $(expr match $1 l) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs6-ib:/bgusr/$1"
+fi
+
+if [ $(expr match $1 m) -gt 0 -o $(expr match $1 n) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs7-ib:/bgusr/$1"
+fi
+
+if [ $(expr match $1 o) -gt 0 -o $(expr match $1 p) -gt 0 -o $(expr match $1 q) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs8-ib:/bgusr/$1"
+fi
+
+if [ $(expr match $1 r) -gt 0 -o $(expr match $1 s) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs9-ib:/bgusr/$1"
+fi
+
+if [ $(expr match $1 t) -gt 0 -o $(expr match $1 u) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs10-ib:/bgusr/$1"
+fi
+
+if [ $(expr match $1 v) -gt 0 -o $(expr match $1 w) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs11-ib:/bgusr/$1"
+fi
+
+if [ $(expr match $1 x) -gt 0 -o $(expr match $1 y) -gt 0 -o $(expr match $1 z) -gt 0 -a "$PWD" = "/bgusr" ]; then
+ echo "-noacl bgqfs12-ib:/bgusr/$1"
+fi
+
+
+
+
+

@@ -1,0 +1,47 @@
+#
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# /etc/sysconfig/bgqadapaters
+#
+# Author: Jay S. Bryant <jsbryant@us.ibm.com>
+#
+#
+# This file contains the list of PCIe adapters that are valid to associate with a
+# BG/Q Node.  The list is checked, at boot time, by rc.sysinit and compared to
+# the PCIe adapters associated with the ION.  If an attached adapter is not found in
+# this list, a RAS event is thrown.  Note that we are checking for both the IBM and
+# Mellanox part numbers in each adapter's VPD.
+
+#
+# WARNING: changing this file requires a rebuild of the ramdisk
+#
+
+# ConnectX2 IB Adapter (Kestrel)
+MHQH19B-XTR
+74Y9057
+
+# ConnectX2 Dual Port 10GbE Adapter (Hawk)
+MNPH29D-XTR
+74Y9059
+
+# ConnectX2 Combo 10GbE/IB Adapter (Raptor)
+MHZH29B-XTR
+74Y9058

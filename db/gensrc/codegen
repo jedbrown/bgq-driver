@@ -1,0 +1,158 @@
+#!/bin/ksh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# (C) Copyright IBM Corp.  2004, 2011                              
+# Eclipse Public License (EPL)                                     
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+COPYRIGHT_FILE=copyright.ch.txt
+command=$(basename $0 .ksh)
+export INCALL="bgqtableapi"        #file name for the main include file
+trap 'rm -f *$$ tablekeys' EXIT
+
+#set -x
+#
+# creates header files based on database tables
+# parameteres: database name, user and password.
+# default: BGDB0 for database name; userid running this script as dabase user
+#          if userid is provided, password should be also provided
+#
+[ $# -lt 6 ] && echo "Usage: $command db2instancedir src_dir include_dir database_name user password [schema]" && exit
+dbprofile=$1/db2profile
+. $dbprofile
+
+SRC_DIR=$2
+INC_DIR=$3
+BGQDB_DBNAME=$4
+BGQDB_USER=$5
+BGQDB_PWD=$6
+if [ $# -eq 7 ]; then
+  BGQDB_SCHEMA=$7
+else
+  BGQDB_SCHEMA=$USER
+fi
+
+LOG_FILE="$command.log"
+exec > $LOG_FILE 2>&1
+echo "$command started at $(date +%m/%d/%y-%H:%M:%S)"
+
+if  [[ $BGQDB_SCHEMA == "" ]]; then
+  echo "Error: BGQDB_SCHEMA not set. Check if \$USER environment variable is set."
+  exit 1
+fi
+
+typeset -u  BGQDB_SCHEMA
+echo $BGQDB_DBNAME $BGQDB_USER $BGQDB_PWD $BGQDB_SCHEMA
+
+if ! db2 connect to $BGQDB_DBNAME user $BGQDB_USER using $BGQDB_PWD
+then
+  echo "Error connecting to database"
+  exit 2
+fi
+if [ $BGQDB_USER !=  $BGQDB_SCHEMA ]; then
+  db2 set schema $BGQDB_SCHEMA
+fi
+
+temp1="temp1.$$"
+temp2="temp2.$$"
+f1file="f1.$$"
+f2file="f2.$$"
+f3file="f3.$$"
+f4file="f4.$$"
+f5file="f5.$$"
+f6file="f6.$$"
+f7file="f7.$$"
+f8file="f8.$$"
+incdef=$(echo $INCALL| awk '{print toupper($1)}')
+incdef=$incdef"_H"
+INCALL=$INC_DIR/$INCALL".h"
+
+# print copyright
+if  [ ! -s  $COPYRIGHT_FILE ]; then
+  echo "copyright file not found"
+  db2 "terminate"
+  exit  3
+fi
+
+cat $COPYRIGHT_FILE >$INCALL
+echo "// Automatically generated: don't edit it\n" >> $INCALL
+echo "#ifndef $incdef"             >>$INCALL
+echo "#define $incdef"             >>$INCALL
+echo "#include <db/include/api/tableapi/dbdataconv.h>"   >>$INCALL
+echo "#include <db/include/api/tableapi/TxObject.h>"     >>$INCALL
+echo "#include <db/include/api/tableapi/DBConnection.h>" >>$INCALL
+echo "listing table description:\n"
+
+
+echo db2 "select tbname, coltype, name, length, codepage from sysibm.syscolumns where tbname like 'TBGQ%' AND tbcreator='$BGQDB_SCHEMA' AND keyseq IS NOT NULL order by tbname"
+db2 "select tbname, coltype, name, length, codepage from sysibm.syscolumns where tbname like 'TBGQ%' AND tbcreator='$BGQDB_SCHEMA' AND keyseq IS NOT NULL order by tbname"|grep "^TBGQ" > tablekeys.$$
+cat tablekeys.$$ | awk  '{printf "%s %s %s %d %d\n", $1, $2, $3, $4, $5}'  > tablekeys
+db2 "select name from sysibm.systables where name like 'TBGQ%' AND creator='$BGQDB_SCHEMA'"|grep "^TBGQ" > tables.$$
+db2 "select name from sysibm.sysviews where name like 'BGQ%' AND creator='$BGQDB_SCHEMA'"|grep "^BGQ" >> tables.$$
+for i in `cat tables.$$`
+do
+  echo "\nTable=$i "
+  prefix=$(echo $i |awk '{print substr($i,1,1)}')
+  db2 "select substr(tbname,1,30), coltype,length,substr(name,1,30), keyseq, default, codepage from sysibm.syscolumns where tbname='$i' AND tbcreator='$BGQDB_SCHEMA' order by colno"|grep "^$i" > $$
+  tbname=$(echo $i |awk '{print tolower($i)}')
+  if [[ $prefix == "T" ]]; then # table
+     tbname="DBT"$(echo $tbname |awk '{printf "%s%s",toupper(substr($tbname,5,1)),substr($tbname,6,length($tbname))}')
+  else                          # view
+     prefix="V"
+     tbname="DBV"$(echo $tbname |awk '{printf "%s%s",toupper(substr($tbname,4,1)),substr($tbname,5,length($tbname))}')
+  fi
+  echo "Code=$tbname.cc\n"
+  NLINES=$(wc -l $$| awk '{print $1}')
+  if [ $NLINES -eq 0 ]; then
+     echo "Error generating the table description"
+     db2 "terminate"
+     exit 4
+  fi
+  #
+  # header files
+  #
+  echo awk -f ./headergen.awk TABLENAME=$tbname DBFILE=$$ OUTFILE=$temp1 TMPFILE=$temp2 FLAG=$prefix
+  if ! echo | awk -f ./headergen.awk TABLENAME=$tbname DBFILE=$$ OUTFILE=$temp1 TMPFILE=$temp2 FLAG=$prefix
+  then
+    echo "Error generating the header files"
+    db2 "terminate"
+    exit 5
+  fi
+  cat $COPYRIGHT_FILE $temp1 $temp2 >$INC_DIR/$tbname.h
+  echo "#include <db/include/api/tableapi/gensrc/$tbname.h>" >> $INCALL
+  #
+  #  c files
+  #
+  ### find out if there is a char for bit data column, so we don't define unnecessary var
+  hasbd=$(cat $$ | awk '{ if ((($2=="CHAR")||($2=="VARCHAR")) && ($7==0)) print $7 }' | wc -l)
+  hasbd=$((hasbd+0))
+  ###echo $hasbd
+  if [ $hasbd -eq 0 ]; then
+     HASBD="F"
+  else
+     HASBD="T"
+  fi
+  ####
+  echo awk -f ./functiongen.awk TABLENAME=$tbname DBFILE=$$ F1FILE=$f1file F2FILE=$f2file F3FILE=$f3file F4FILE=$f4file F5FILE=$f5file F6FILE=$f6file F7FILE=$f7file F8FILE=$f8file FLAG=$prefix HASBD=$HASBD
+  if ! echo | awk -f ./functiongen.awk TABLENAME=$tbname DBFILE=$$ F1FILE=$f1file F2FILE=$f2file F3FILE=$f3file F4FILE=$f4file F5FILE=$f5file F6FILE=$f6file F7FILE=$f7file F8FILE=$f8file FLAG=$prefix HASBD=$HASBD
+  then
+    echo "Error generating the c file"
+    db2 "terminate"
+    exit 6
+  fi
+  cat $COPYRIGHT_FILE $f1file $f2file $f3file $f4file $f5file $f6file $f7file $f8file >$SRC_DIR/$tbname.cc
+done
+
+echo "#endif      // $incdef" >> $INCALL
+echo "\n\nfiles generated:"; wc -l $INC_DIR/*.h $SRC_DIR/*.cc
+echo "\n\n$command ended at $(date +%m/%d/%y-%H:%M:%S)"
+
+db2 "terminate"
+exit 0

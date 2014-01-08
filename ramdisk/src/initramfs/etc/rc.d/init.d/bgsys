@@ -1,0 +1,213 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# bgsys		Mounts /bgsys, if specified in the personality.
+#
+# Author:	Jay S. Bryant (jsbryant@us.ibm.com)
+#
+
+
+# Globals
+MAX_MOUNT_ATTEMPTS=5
+ATTEMPT_SLEEP=2
+LOCKFILE=/var/lock/subsys/bgsys
+
+# Source function library including BG/Q env variables.
+. /etc/init.d/functions
+
+# If we were not sent mount options, set the default.
+# Using all the same setting right now until we get NFSv4 issues worked out.
+if [ -z $BG_BGSYS_EXPORT_MOUNT_OPTS ] ; then
+    if [ $BG_BGSYS_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+	BG_BGSYS_EXPORT_MOUNT_OPTS="nolock,vers=3"
+    elif [ -e /etc.mirror ] ; then
+	#BG_BGSYS_EXPORT_MOUNT_OPTS="tcp,nolock,vers=3"
+	BG_BGSYS_EXPORT_MOUNT_OPTS="tcp,nolock,vers=3"
+    else
+	BG_BGSYS_EXPORT_MOUNT_OPTS="tcp,nolock,vers=3"
+    fi
+fi
+
+function start {
+
+	DO_MOUNTS=0
+
+        # Only try to mounts bgsys if a network device is configured.
+        # Need to make sure that a network device is configured. If not, throw RAS.
+	if [ "$BG_INTF0_NAME" == ib0 ] || [ "$BG_INTF1_NAME" == ib0 ] ; then 
+	        for DEVICE in "ib0" ; do
+        	    ip addr show dev $DEVICE 2>&1 | grep "UP" &> /dev/null
+           	    RETCODE=$?
+            	    if [ $DO_MOUNTS -eq 0 ] && [ $RETCODE -eq 0 ] ; then
+                	DO_MOUNTS=1
+            	    fi
+        	done
+	else
+		for DEVICE in "eth0" "eth1" ; do
+	    	    ip addr show dev $DEVICE 2>&1 | grep "UNKNOWN" &> /dev/null
+	    	    RETCODE=$?
+	    	    if [ $DO_MOUNTS -eq 0 ] && [ $RETCODE -ne 0 ] ; then
+			ip addr show dev $DEVICE 2>&1 | grep "DOWN" &> /dev/null
+			if [ $? -ne 0 ] ; then
+				DO_MOUNTS=1
+			fi
+	    	    fi
+		done
+	fi
+
+        ip addr show dev bond0 2>&1 | grep "UP" &> /dev/null
+	RETCODE=$?
+	if [ $DO_MOUNTS -eq 0 ] && [ $RETCODE -eq 0 ] ; then
+	    DO_MOUNTS=1
+	fi
+
+	if [ $DO_MOUNTS -eq 1 ] && [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 0 ] ; then
+
+		let ATTEMPT=0
+
+		if [ ! -e /etc.mirror ] ; then
+			echo -en $"Mounting bgsys - Stage 1... \n"
+		else
+			echo -en $"Mounting bgsys - Stage 2... \n"
+		fi
+
+		if [ ! -z $BG_BGSYS_EXPORT_DIR ] && [ ! -z $BG_BGSYS_IPV4 ] &&
+		   [ ! -z $BG_BGSYS_IPV6 ] ; then
+			mkdir -p /bgsys
+			if [ $? -ne 0 ] ; then
+				MSG="NFS mount requested but mkdir of /bgsys failed."
+				#echo -en "\n$MSG\n"
+				bgras $BGRAS_ID_BGSYS_MOUNT_FAILURE "$MSG"
+				echo -en "Mouting bgsys: "
+				failure
+				echo -en "\n"
+				exit 3
+			else
+
+			    if [ $BG_BGSYS_IPV4 != "0.0.0.0" ] ; then
+
+				until mount -t nfs $BG_BGSYS_IPV4:$BG_BGSYS_EXPORT_DIR /bgsys -o $BG_BGSYS_EXPORT_MOUNT_OPTS || [ $ATTEMPT -gt $MAX_MOUNT_ATTEMPTS ]; do
+				    sleep $ATTEMPT_SLEEP
+				    let ATTEMPT=$ATTEMPT+1
+				    if [ $ATTEMPT -gt $MAX_MOUNT_ATTEMPTS ] ; then
+					MSG="All attempts to mount $BG_BGSYS_IPV4:$BG_BGSYS_EXPORT_DIR failed!"
+					bgras $BGRAS_ID_BGSYS_MOUNT_FAILURE "$MSG"
+					echo -en "Mouting bgsys: "
+					failure
+					echo -en "\n"
+					exit 3
+				    # End if beyond max attempts
+				    fi
+			        # End until we successfully mount
+				done
+			    # If no BG_BGSYS_IPV4 address, try an IPv6 address.
+			    elif [ $BG_BGSYS_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+				until mount -t nfs [$BG_BGSYS_IPV6]:$BG_BGSYS_EXPORT_DIR /bgsys -o $BG_BGSYS_EXPORT_MOUNT_OPTS || [ $ATTEMPT -gt $MAX_MOUNT_ATTEMPTS ]; do
+				    sleep $ATTEMPT_SLEEP
+				    let ATTEMPT=$ATTEMPT+1
+				    if [ $ATTEMPT -gt $MAX_MOUNT_ATTEMPTS ] ; then
+					MSG="All attempts to mount $BG_BGSYS_IPV6:$BG_BGSYS_EXPORT_DIR failed!"
+					bgras $BGRAS_ID_BGSYS_MOUNT_FAILURE "$MSG"
+					echo -en "Mouting bgsys: "
+					failure
+					echo -en "\n"
+					exit 3
+                                    # End if beyond max attempts
+				    fi
+                                # End until we successfully mount
+				done
+			    # Hmmm, no IPv4 or IPv6 address 
+			    else
+				bgras $BGRAS_ID_BGSYS_MOUNT_FAILURE \
+				    "No IPv4 or IPv6 bgsys server address specified."
+				echo -en "Mouting bgsys: "
+				failure
+				echo -en "\n"
+				exit 3
+  			    # End checks for IPv4 and IPv6 bgsys server addresses.
+			    fi
+
+			    # If we get here, we were successful.
+			    echo -en "Mounting bgsys completed: "
+			    # Need to lock the subsys when running in stage 2.
+			    if [ -e /etc.mirror ] ; then
+				touch $LOCKFILE 
+			    fi
+			    success
+			    echo
+	                # End check for creating mount point.
+			fi
+	        #End check for $BG_BGSYS_EXPORT_DIR & $BG_BGSYS_IPV4
+	        else
+	            if [ -z $BG_BGSYS_EXPORT_DIR ] ; then
+			bgras $BGRAS_ID_SCRIPT_FAILURE "bgsys - ERROR: No bgsys export directory configured."
+		    fi
+
+		    if [ -z $BG_BGSYS_IPV4 ] && [ -z $BG_BGSYS_IPV6 ] ; then
+			bgras $BGRAS_ID_SCRIPT_FAILURE "bgsys - ERROR: No bgsys server IPv4 or IPv6 address configured."
+		    fi
+
+		    echo -n $"Mouting bgsys: "
+		    failure
+		    echo
+		    exit 0
+
+	        fi
+
+        # If we are in simulation, diagnostics mode or if no network is configured we want
+        # to skip bgsys start to avoid unnecessary 
+	else
+	    echo -n $"Mounting bgsys:  "
+	    skipped
+	    exit 0
+	fi
+# End of the start function.
+}
+
+function stop {
+
+        # Unmmount /bgsys.
+	echo -n $"Unmounting bgsys... "
+        sync
+        umount -l $BG_BGSYS_EXPORT_DIR
+	rm -f $LOCKFILE 
+	success
+	echo -en "\n"
+
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	*)
+		echo $"Usage: $0 {start|stop}"
+		exit 3
+
+esac
+
+exit $?
+
+
+

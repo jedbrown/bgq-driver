@@ -1,0 +1,109 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+#
+# hostname	Script that makes sure we get a valid hostname set-up for a BG/Q I/O Node or	
+#               Log-In node.
+#
+#		NOTE: This script must be run after /bgsys is mounted.
+#
+# Author:	Jay S. Bryant (jsbryant@us.ibm.com)
+#
+
+# Source function library
+. /etc/init.d/functions
+
+function start
+{
+        echo -n $"Configuring Hostname: "
+
+	# Decide which IP to use for /etc/hosts ...
+	# Try the two IB adapters with INTF0 being the preferred if both are configured.
+	# If no IPv4 addresses, move on and try IPv6 addresses
+	# Fall back to localhost if necessary.
+	if [ ! -z $BG_INTF0_IPV4 ] && [ $BG_INTF0_IPV4 != "0.0.0.0" ] && \
+	   [ ! -z $BG_INTF1_IPV4 ] && [ $BG_INTF1_IPV4 != "0.0.0.0" ] ; then
+		BG_IP=$BG_INTF0_IPV4
+	elif [ ! -z $BG_INTF1_IPV4 ] && [ $BG_INTF1_IPV4 != "0.0.0.0" ] ; then
+        	BG_IP=$BG_INTF1_IPV4
+	elif [ ! -z $BG_INTF0_IPV4 ] && [ $BG_INTF0_IPV4 != "0.0.0.0" ] ; then
+        	BG_IP=$BG_INTF0_IPV4
+	elif [ ! -z $BG_INTF0_IPV6 ] && [ $BG_INTF0_IPV6 != "0:0:0:0:0:0:0:0" ] && \
+             [ ! -z $BG_INTF1_IPV6 ] && [ $BG_INTF1_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+		BG_IP=$BG_INTF0_IPV6
+        elif [ ! -z $BG_INTF1_IPV6 ] && [ $BG_INTF1_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+                BG_IP=$BG_INTF1_IPV6
+        elif [ ! -z $BG_INTF0_IPV6 ] && [ $BG_INTF0_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
+                BG_IP=$BG_INTF0_IPV6
+	else
+        	BG_IP="127.0.0.1"
+	fi
+
+	# Set the hostname from /etc/hosts or create /etc/hosts.
+	if [ -e /etc/hosts ] && [ -r /etc/hosts ] ; then
+        	#If the files exists and is readable see if our IP is already in the file.
+		cat /etc/hosts | grep $BG_IP >> /dev/null
+		if [ $? -ne 0 ] ; then
+			#If not, add our IP wiht the location as the hostname
+			echo "$BG_IP $BG_LOCATION $BG_LOCATION" >> /etc/hosts
+			BG_HOSTNAME=$BG_LOCATION
+		else
+			#If our IP is there try to get the hostname from the 3rd or 2nd fields.
+			#otherwise there is something odd going on, set-up the default.
+			BG_HOSTNAME=`awk "/^$BG_IP[ |\t]+/"' {print $3}' /etc/hosts`
+			if [ -z $BG_HOSTNAME ] ; then
+				BG_HOSTNAME=`awk "/^$BG_IP[ |\t]+/"' {print $2}' /etc/hosts`
+				if [ -z $BG_HOSTNAME ] ; then
+					BG_HOSTNAME=$BG_LOCATION
+					echo "$BG_IP $BG_LOCATION $BG_LOCATION" >> /etc/hosts
+				fi
+			fi
+		fi
+
+	else
+		#Else try to create a basic hosts file using the location.
+		echo "$BG_IP $BG_LOCATION $BG_LOCATION" >> /etc/hosts
+		BG_HOSTNAME=$BG_LOCATION
+	fi
+
+	hostname $BG_HOSTNAME
+	echo "HOSTNAME=$BG_HOSTNAME" >> /etc/sysconfig/network
+	RETVAL=$?
+	if [ $RETVAL -ne 0 ] ; then
+	    failure
+	else
+	    success
+	fi
+	echo
+        return ${RETVAL}
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    *)
+        echo $"Usage: $0 {start}"
+        exit 3
+        ;;
+esac
+
+exit $?
+

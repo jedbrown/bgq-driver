@@ -1,0 +1,54 @@
+#!/bin/sh
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
+# US Government Users Restricted Rights - Use,                     
+# duplication or disclosure restricted by GSA ADP                  
+# Schedule contract with IBM Corp.                                 
+#                                                                  
+# This software is available to you under the                      
+# GNU General Public License (GPL).                                
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+# Redirect to the console.
+exec > /dev/console 2>&1
+
+# Get the BlueGene environment vars. 
+. /etc/init.d/functions 
+
+# Run the Kxx kill scripts in /etc/init.d/rc0.d
+for script in ./rc.d/rc0.d/K[0-9][0-9]*; do
+	if [ -x "$script" ]; then
+                name=${script##*/}
+                case $name in
+                        *.[1-9] | *.[1-9][0-9] | *.[1-9][0-9][0-9])
+                                #/etc/init.d/atomic ${name##*.} $script stop;;
+				${name##*.} $script stop;;	
+                        *)
+                                $script stop;;
+                esac
+	fi
+done
+
+# Bring down any remaining file systems.
+sync
+# Only try to unmount bgsys if it is already mounted.
+mount | grep "bgsys" &> /dev/null
+if [ $? -eq 0 ] ; then
+	 /etc/init.d/bgsys stop 
+fi
+/etc/init.d/network stop
+/etc/init.d/blockStatus stop
+/etc/init.d/killall start
+
+# Halt the OS.
+/sbin/bghalt

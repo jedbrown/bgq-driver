@@ -1,0 +1,98 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q                                                      
+# (C) Copyright IBM Corp.  2010, 2012                              
+# US Government Users Restricted Rights - Use, duplication or      
+#   disclosure restricted by GSA ADP Schedule Contract with IBM    
+#   Corp.                                                          
+#                                                                  
+# This software is available to you under the Eclipse Public       
+# License (EPL).                                                   
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+function Usage
+{
+
+cat <<EOF
+
+  Usage: dumpPersonality --location <LOCATION> [--driver <DRIVER>] [--svchost <FILE>] [--numnodes <N>]
+                
+     --location <LOCATION> specfies the target.
+
+     --driver <DRIVER> specifies the path to the driver you want to use.  Make
+       sure that you point to the install image (i.e.. blah-blah/bgq/work). The
+       default is the floor.
+
+     --svchost <FILE> passes an optional .svchost file.  The default is to simply show the
+       default settings.
+
+     --numnodes <N> specifies the number of nodes in the block.  The default is 1.
+
+  Examples:
+
+    dumpPersonality --location Q00-I0-J04
+
+    dumpPersonality --location Q00-I0-J04 --driver /bgsys/home/tmusta/bgq.7.9.2010/bgq/work
+
+EOF
+}
+
+DRIVER=/bgsys/drivers/ppcfloor/
+LOCATION=
+NUM_NODES=1
+SVCHOST=
+
+while [ $# -gt 0 ]; do
+
+    case $1 in
+
+        --driver) shift;
+		DRIVER=$1;
+		shift;
+		;;
+
+	--location) shift;
+		LOCATION=$1;
+		shift;
+		;;
+
+        --numnodes) shift;
+                NUM_NODES=$1;
+                shift;
+                ;;
+
+        --svchost) shift;
+                SVCHOST=${SVCHOST}" --svchost "$1;
+                shift;
+                ;;
+
+        *) Usage;
+                exit 0;
+		;;
+
+    esac
+done
+
+if [ z${LOCATION} == z ] ; then
+  echo "(E) You must specify a location via --location (try --help)."
+  exit -1
+fi
+
+${DRIVER}/scripts/runfctest.sh \
+        --ttype fwddr \
+        --program ${DRIVER}/firmware/tests/personality/personality.elf \
+        --script runMmcsLite \
+        --envvar DISABLE.VALIDATE.PERSONALIZED=1 \
+        --envvar DISABLE.VALIDATE.DEFAULT=1 \
+        --location ${LOCATION} \
+        ${SVCHOST} \
+ 	--numnodes ${NUM_NODES}

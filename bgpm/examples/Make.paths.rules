@@ -1,0 +1,25 @@
+
+# Override the following in your Makefile if you wish to be different
+BGQ_INSTALL_DIR       = /bgsys/drivers/ppcfloor
+BGQ_CROSS_TOOLS_DIR   = $(BGQ_INSTALL_DIR)/gnu-linux
+BGQ_CROSS_TARGET_ARCH = powerpc64-bgq-linux
+
+BGQ_CROSS_AS      = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-as
+BGQ_CROSS_CC      = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-gcc
+BGQ_CROSS_CXX     = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-g++
+BGQ_CROSS_FC      = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-gfortran
+BGQ_CROSS_LD      = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-ld
+BGQ_CROSS_AR      = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-ar
+BGQ_CROSS_OBJDUMP = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-objdump
+BGQ_CROSS_OBJCOPY = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-objcopy
+BGQ_CROSS_READELF = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-readelf
+BGQ_CROSS_SIZE    = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-size
+BGQ_CROSS_GDB     = $(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-gdb
+
+
+#XLBIN = $(BGQ_INSTALL_DIR)/comm/xl/bin
+#XLBIN = /gsa/tlbgsa/projects/x/xlcmpbld/run/vacpp/dev_lite/bgq/daily/latest/bin
+XLBIN = /opt/ibmcmp/vacpp/bg/12.1/bin
+
+
+TEST_INSTALL_DIR = /bgusr/$(USER)/examples

@@ -1,0 +1,30 @@
+###############################################
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+#                                                                  
+# (C) Copyright IBM Corp.  2007, 2007                              
+# IBM CPL License                                                  
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+BGL Core Processor tool
+
+Coreprocessor is a basic parallel debugger that can be used to examine BlueGene/L compute node corefiles or attach to running partions via mmcs.  When attached to mmcs, coreprocessor uses the low-level JTAG interface (via the BG/L service network) to extract the debug information.  
+
+Advantages:
+ - OS can be completely dead and handles debug
+ - Quick isolation of nodes that abnormal
+ - Scales to 131,072 processors
+
+Limitations:
+ - no breakpoints
+ - no visibility
+
+To see the usage information:
+  ./coreprocessor.pl -h				(show help text)
+
+###############################################

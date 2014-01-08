@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+<!DOCTYPE refentry PUBLIC 
+"-//OASIS//DTD DocBook XML V4.5//EN"
+"/usr/share/apps/ksgmltools2/docbook/xml-dtd-4.2/docbookx.dtd"
+[
+<!ENTITY command "create_block">
+]>
+
+<refentry lang="en">
+
+<refentryinfo>
+    <productname>&command;</productname>
+    <authorgroup>
+        <author>
+            <contrib>Developer</contrib>
+            <firstname>IBM</firstname>
+        </author>
+    </authorgroup>
+</refentryinfo>
+
+<refmeta>
+    <refentrytitle>&command;</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="version">@VERSION@</refmiscinfo>
+</refmeta>
+
+<refnamediv>
+    <refname>&command;</refname>
+    <refpurpose>Define a new block on the Blue Gene system</refpurpose>
+</refnamediv>
+
+<refsynopsisdiv>
+    <title>Synopsis</title>
+    <cmdsynopsis>
+        <command>&command;</command>
+        <arg rep="repeat"><replaceable>OPTION</replaceable></arg>
+        <arg choice="plain"><replaceable>BLOCKID</replaceable></arg>
+        <group>
+            <arg>--large <replaceable>LARGE_PARAMS</replaceable></arg>
+            <arg>--small <replaceable>SMALL_PARAMS</replaceable></arg>
+            <arg>--mps <replaceable>MIDPLANE_PARAMS</replaceable></arg>
+            <arg>--nbs <replaceable>NODE_BOARD_PARAMS</replaceable></arg>
+        </group>
+    </cmdsynopsis>
+</refsynopsisdiv>
+
+<refsect1>
+    <title>Description</title>
+    <para>
+        This command can be used to define a new block on the Blue Gene system.
+    </para>
+    <para>
+        This command attempts to guess the block type from the arguments. You can typically provide
+
+        <itemizedlist spacing="compact">
+            <listitem><para>a list of midplanes for a large block</para></listitem>
+            <listitem><para>a corner midplane and dimension specifications for a large block</para></listitem>
+            <listitem><para>a list of node boards for a small block</para></listitem>
+            <listitem><para>a node board and count for a small block</para></listitem>
+        </itemizedlist>                
+        
+    </para>
+    <para>
+        The user must have block CREATE authority to create blocks.
+    </para>
+</refsect1>
+
+<refsect1>
+    <title>Examples</title>
+    <example label=" 1">
+        <title> Create a block called block1 on midplane R00-M0</title>
+        <programlisting>
+    &command; block1 R00-M0
+        </programlisting>
+    </example>
+    
+    <example label=" 2">
+        <title> Create a block on midplanes R00-M0 and R00-M1</title>
+        <programlisting>
+    &command; block1 R00-M0 R00-M1
+        </programlisting>
+    </example>
+    
+    <example label=" 3">
+        <title> Create a block on midplanes R00-M0 and R00-M1, passing through R01-M0 and R01-M1</title>
+        <programlisting>
+    &command; block1 R00-M0 R00-M1 --pts R01-M0 R01-M1
+        </programlisting>
+    </example>
+
+    <example label=" 4">
+        <title> Create a block on midplanes R00-M0 and R00-M1 that is a mesh in the D dimension</title>
+        <programlisting>
+    &command; block1 R00-M0 R00-M1 --torus ABC
+        </programlisting>
+    </example>
+
+    <example label=" 5">
+        <title> Create a block starting at midplane R00-M0 whose size is 2 in the D dimension</title>
+        <programlisting>
+    &command; block1 R00-M0 1 1 1 2
+    &command; block1 R00-M0 1 1 1 :11
+        </programlisting>
+    </example>
+    
+    <example label=" 6">
+        <title> Create a block starting at midplane R00-M0 whose size is 2 in the D dimension and is a mesh</title>
+        <programlisting>
+    &command; block1 R00-M0 1 1 1 2M
+    &command; block1 R00-M0 1 1 1 M:11
+        </programlisting>
+    </example>
+    
+    <example label=" 7">
+        <title> Create a block starting at R00-M0 that includes the next midplane in the D dimension and passes through the next two midplanes</title>
+        <programlisting>
+    &command; block1 R00-M0 1 1 1 :1100
+        </programlisting>
+    </example>
+
+    <example label=" 8">
+        <title> Create a block starting at midplane R00-M0 that uses the entire machine</title>
+        <programlisting>
+    &command; block1 R00-M0 0 0 0 0
+        </programlisting>
+    </example>
+
+    <example label=" 9">
+        <title> Create a small block on R00-M0-N00</title>
+        <programlisting>
+    &command; block1 R00-M0-N00
+        </programlisting>
+    </example>
+
+    <example label=" 10">
+        <title> Create a small block on R00-M0-N00 and R00-M0-N00</title>
+        <programlisting>
+    &command; block1 R00-M0-N00 R00-M0-N01
+    &command; block1 R00-M0-N00 2
+        </programlisting>
+    </example>
+</refsect1>
+
+<refsect1>
+    <title>Argument Details</title>
+    <para> For --large, the arguments are CORNER_MIDPLANE A_DIMENSION_SPEC B_DIMENSION_SPEC C_DIMENSION_SPEC D_DIMENSION_SPEC.
+The format for dimension specifications is "[&lt;size&gt;][&lt;connectivity&gt;][:&lt;midplane_indicators&gt;]" where
+	    <itemizedlist>
+	        <listitem><para>&lt;size&gt; is optional and is the size in midplanes, the default is to use the midplane_indicators to specify the size.</para></listitem>
+	        <listitem><para>&lt;connectivity&gt; is optional and specifies whether the dimension is connected in a torus (T) or a mesh (M), the default is torus.</para></listitem>
+	        <listitem><para>:&lt;midplane_indicators&gt; is optional and specifies the midplanes to include in the dimension, where 1 indicates include and 0 indicates pass-through. The default is to include all midplanes</para></listitem>
+	    </itemizedlist>
+    </para>
+    <para>For --small, the arguments are NODE_BOARD NODE_BOARD_COUNT.</para>
+    <para>For --mps, the arguments are midplane locations. --pts specifies the passthrough locations. --torus specifies the torus dimensions.</para>
+    <para>For --nbs, the arguments are node board locations.</para>
+</refsect1>
+
+<refsect1>
+    <title>Options</title>
+    <variablelist>
+        <varlistentry>
+            <term><option>--description</option> arg</term>
+            <listitem>
+                <para>Block description</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--large, -l</option> CORNER_MIDPLANE DIMENSION_SPECS</term>
+            <listitem>
+                <para>Large block</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--small</option> MIDPLANE START_NODE_BOARD NODE_BOARD_COUNT</term>
+            <listitem>
+                <para>Small block</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--mps, -m</option> MIDPLANE...</term>
+            <listitem>
+                <para>Large block</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--pts</option> MIDPLANE...</term>
+            <listitem>
+                <para>Large block passthrough midplanes</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--torus</option> ABCDE</term>
+            <listitem>
+                <para>Large block connectivity, by default is a torus in all dimensions.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--nbs, -n</option> NODE_BOARD...</term>
+            <listitem>
+                <para>Small block</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
+            <term><option>--properties</option> filename</term>
+            <listitem>
+                <para>Blue Gene configuration file.</para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--base</option> URL</term>
+            <listitem>
+                <para>Blue Gene Web Services (BGWS) server base URL.</para>
+                <para>
+                    This overrides the BGWS server base URL as specified in the Blue Gene configuration file.
+                    The format is a URL, like https://localhost:32071/bg.
+                </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--verbose</option> logging-spec</term>
+            <listitem>
+                <para>The --verbose argument can be given multiple times. The format for the argument is as follows:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>logger=level : set the logger to the level</para></listitem>
+                    <listitem><para>level : set the default logger to the level</para></listitem>
+                    <listitem><para>logger : set the logger's level to DEBUG</para></listitem>
+                    <listitem><para>"" : set the default logger's level to DEBUG</para></listitem>
+                </itemizedlist>
+                <para>These values are allowed for the level:</para>
+                <itemizedlist spacing="compact">
+                    <listitem><para>OFF / O / 0</para></listitem>
+                    <listitem><para>FATAL / F / 1</para></listitem>
+                    <listitem><para>ERROR / E / 2</para></listitem>
+                    <listitem><para>WARN / W / 3</para></listitem>
+                    <listitem><para>INFO / I / 4</para></listitem>
+                    <listitem><para>DEBUG / D / 5</para></listitem>
+                    <listitem><para>TRACE / T / 6</para></listitem>
+                    <listitem><para>ALL / A / 7</para></listitem>
+                </itemizedlist>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>-h, --help</option></term>
+            <listitem>
+                <para>Print help text</para>
+            </listitem>
+        </varlistentry>
+    </variablelist>
+</refsect1>
+
+<refsect1>
+    <title>See also</title>
+    <para><citerefentry>
+           <refentrytitle>bgws_server</refentrytitle>
+           <manvolnum>8</manvolnum>
+	</citerefentry>
+    </para>
+</refsect1>
+
+<refsect1>
+    <title>COPYRIGHT</title>
+    <para>© Copyright IBM Corp. 2010, 2011</para>
+</refsect1>
+
+</refentry>

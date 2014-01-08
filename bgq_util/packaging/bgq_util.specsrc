@@ -1,0 +1,23 @@
+####################################
+%package libutil
+
+Summary: BGQ Utilities 
+Group: %{product_group}
+Release: 0
+
+%description libutil
+%{bgq_package_description}
+
+Utility library used by control system components.
+
+%files libutil
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/bgq_util
+%dir %{_base_dir}/bgq_util/lib
+
+%{_base_dir}/bgq_util/lib/libbgq_util.so.1
+%{_base_dir}/bgq_util/lib/libbgq_util.so.1.0.0
+

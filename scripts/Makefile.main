@@ -1,0 +1,356 @@
+# Top level make file for BGQ.
+#
+include Make.rules
+
+OS := $(shell uname)
+OS_ARCH := $(shell uname -m)
+
+
+DIRS=
+
+  DIRS+= agents  
+  DIRS+= spi
+  DIRS+= hwi
+  DIRS+= scripts
+  DIRS+= gnu
+# DIRS+= xl
+  DIRS+= utility
+  DIRS+= xml
+  DIRS+= bgq_util
+  DIRS+= ras
+  DIRS+= mudm
+  DIRS+= bgpm
+  DIRS+= ramdisk
+  DIRS+= ctrlnet
+  DIRS+= mambo
+  DIRS+= control
+  DIRS+= baremetal
+  DIRS+= diags
+  DIRS+= extlib
+  DIRS+= scantools
+  DIRS+= coreprocessor
+  DIRS+= bgws
+  DIRS+= tools
+
+#
+# note if both gnu and the toolchain are present 
+# running the toolchain directory will replace the $prefix/gnu_linux directory
+# with a link to a floor directory.
+#
+# i.e. exeucting make in the toolchain directory does:
+#    rm -f -rf /ltmp/ralphbel/fl/bgq/work/gnu-linux
+#    ln -s /bgsys/bgq/drivers/toolchain/V1R1M0-110804/gnu-linux /ltmp/ralphbel/fl/bgq/work/gnu-linux
+# 
+# so the directoreis and any additional makes after this will be done
+# with that floor link.
+#
+
+ifeq ($(BGQDB),yes)
+  # Only build db if BGQDB is set (via ./configure --with-db=yes)
+  DIRS+= db
+endif
+
+  #
+  # chipscope plugin, but not part of the bluegene q svn tree
+  # this directory is overlayed to the svn tree so we can
+  # keep xilinx propritary code from contonaminating the our
+  # cvs tree...
+  DIRS += chipscope
+
+# directorys that we have to explicitly use the -j1 option...
+J1DIRS=
+# J1DIRS=hwverify
+# J1DIRS+=cnk
+# J1DIRS+=ramdisk
+
+ifeq ($(BGQ_ENABLE_HWSIM),yes)
+  DIRS+= hwsim_unitsim
+  DIRS+= hwsim_fullchip
+endif
+
+ifeq (${BGQ_GNU_MAKEFILE},Makefile.linux.glibc)
+  DIRS+= firmware
+  DIRS+= cnk
+  DIRS+= hwverify
+  DIRS+= comm
+endif
+
+ifeq ($(OS_ARCH),ppc64)
+  DIRS+= toolchain
+  DIRS+= linux
+  DIRS+= hlcs
+  DIRS += navigator
+  DIRS+= teal
+
+else
+  DIRS += fpga_accel
+endif
+
+#subset for aix, awan build
+ifeq ($(OS),AIX)
+   DIRS =
+   DIRS += scripts
+   DIRS += hwi
+   DIRS += bgq_util
+   DIRS += ctrlnet
+   DIRS += hwverify
+   DIRS += hwsim_fullchip
+   DIRS += xml
+   DIRS += scantools 
+   DIRS += ras
+   DIRS += scantools
+endif
+
+ifeq ($(OS_ARCH),ppc64)
+  DIRS+= build
+endif
+  # Want to build the build component last because this creates rpms.
+  # But will not build rpms for any AIX platform build.
+  # Again MUST MUST be last component.
+
+#.NOTPARALLEL: gnu gnu.install
+
+
+TARGETS_INSTALL	= $(addsuffix .install,$(DIRS))
+
+TARGETS_INC=$(addsuffix .install,$(foreach d,$(DIRS),$(subst /Makefile,,$(wildcard $(d)/include/Makefile))))
+
+
+
+TARGETS_CLEAN		= $(addsuffix .clean,$(DIRS))
+TARGETS_DISTCLEAN	= $(addsuffix .distclean,$(DIRS))
+
+ifneq ($(OS_ARCH),ppc64)
+TARGETS_CLEAN += $(addsuffix .install,$(subst /Makefile,,$(wildcard linux/Makefile)))
+TARGETS_DISTCLEAN += $(addsuffix .install,$(subst /Makefile,,$(wildcard linux/Makefile)))
+endif
+
+
+
+TARGETS =$(TARGETS_INSTALL)   \
+	 $(TARGETS_CLEAN)     \
+	 $(TARGETS_DISTCLEAN)
+
+
+#
+# toto copy the install directories first...
+#
+
+
+TOPLEVEL_FILES=$(BGQ_INSTALL_DIR)/Make.rules
+
+.SUFFIXES:
+
+.PHONY: default all install clean dist_clean $(TARGETS) $(TARGETS_INSTALL) extlib.install cnk.tools ras_gen build_ras_gen
+
+
+default:	install
+
+
+all:		install
+
+install:	includes this.install $(TOPLEVEL_FILES) $(TARGETS_INSTALL) build_ras_gen
+
+includes:       $(TARGETS_INC)
+
+clean:		$(TARGETS_CLEAN)      this.clean
+
+distclean:	$(TARGETS_DISTCLEAN)  this.distclean
+
+$(BGQ_INSTALL_DIR)/Make.rules: Make.rules
+	@mkdir -p $(BGQ_INSTALL_DIR)
+	cp  $< $@
+
+
+print:
+	@echo DIRS        = $(DIRS)
+	@echo TARGETS_INSTALL   =  $(TARGETS_INSTALL)
+	@echo TARGETS_CLEAN     =  $(TARGETS_CLEAN)
+	@echo TARGETS_DISTCLEAN =  $(TARGETS_DISTCLEAN)
+	@echo TARGETS_INC       =  $(TARGETS_INC)
+	@echo TOPLEVEL_FILES    =  $(TOPLEVEL_FILES)
+
+#
+# this section establishes the build order
+#
+$(TARGETS_INSTALL): $(TARGETS_INC)
+
+#
+# dependencies...
+#
+ifeq ($(OS),AIX)   # only the diag library part of ctrlnet builds in aix
+hwverify.install:  bgq_util.install xml.install ctrlnet.install ras.install 
+ras.install: xml.install bgq_util.install 
+# removed gnu.install under AIX from firmware.install
+firmware.install: hwi.install
+# removed gnu.install, cnk.install under AIX from spi.install
+spi.install: hwi.install firmware.install
+else
+hwverify.install: cnk.install bgq_util.install xml.install spi.install firmware.install ctrlnet.install ras.install diags.install
+ras.install: xml.install bgq_util.install utility.install extlib.install
+firmware.install: hwi.install gnu.install
+spi.install: hwi.install gnu.install firmware.install cnk.tools
+endif
+ctrlnet.install: bgq_util.install xml.install ras.install hwi.install
+hwsim_fullchip.install: xml.install ctrlnet.install  hwi.install bgq_util.install 
+hwsim_unitsim.install: bgq_util.install hwi.install
+control.install: bgq_util.install ctrlnet.install xml.install utility.install firmware.install spi.install
+db.install: bgq_util.install ras.install utility.install control.install
+diags.install: utility.install firmware.install ctrlnet.install ras.install xml.install bgq_util.install ramdisk.install cnk.install comm.install bgpm.install spi.install linux.install
+xl.install: gnu.install
+fpga_accel.install: bgq_util.install ctrlnet.install xml.install control.install utility.install ras.install
+utility.install: bgq_util.install extlib.install
+cnk.install: firmware.install ramdisk.install spi.install
+hlcs.install: bgq_util.install control.install utility.install db.install ramdisk.install
+bgq_util.install: hwi.install extlib.install
+bgws.install: extlib.install utility.install hlcs.install
+bgpm.install: spi.install comm.install
+baremetal.install: xml.install
+comm.install: spi.install hwi.install agents.install
+xml.install: extlib.install
+tools.install: extlib.install utility.install
+scantools.install: ctrlnet.install bgq_util.install ras.install xml.install control.install
+navigator.install: diags.install
+build.install: $(addsuffix .install,$(filter-out build,$(DIRS))) build_ras_gen
+agents.install: hwi.install spi.install cnk.install
+coreprocessor.install: ramdisk.install utility.install
+toolchain.install: gnu.install
+teal.install: hlcs.install
+
+
+linux.install: firmware.install hwi.install gnu.install mudm.install
+ramdisk.install: utility.install linux.install mudm.install baremetal.install
+mudm.install: spi.install
+
+
+# hlcs include depends upon the python scripts in xml/include
+hlcs/include.install: $(addsuffix .install,$(foreach d,xml,$(subst /Makefile,,$(wildcard $(d)/include/Makefile))))
+
+linux/include.install: $(addsuffix .install,$(foreach d,firmware mudm spi hwi,$(subst /Makefile,,$(wildcard $(d)/include/Makefile))))
+
+$(BGQ_INSTALL_DIR)/bin:
+	mkdir -p $@
+
+$(BGQ_INSTALL_DIR)/include:
+	mkdir -p $@ \
+	
+$(BGQ_INSTALL_DIR)/lib:
+	mkdir -p $@
+
+
+
+# +++
+#	Each element in "$TARGETS" is of the form:
+#		subdirectory.target
+#	"$(basename $@)" picks off "subdirectory"
+#	"$(subst .,,$(suffix $@))" picks off "target"
+# ---
+
+# NOTE: The gnu directory currently does not like the -jx option so
+# override it here if we are compling gnu
+$(TARGETS):
+	@if [ -e $(basename $@) ]; then \
+	  (echo -e "\n=== Building $(basename $@) $(subst .,,$(suffix $@)) ===" `date`) ; \
+	  if [ -z "$(filter ${J1DIRS}, $(basename $@))" ]; then \
+	    (cd $(basename $@); $(MAKE) $(subst .,,$(suffix $@)); exit $$?) ; \
+	  else \
+	    (echo $(basename $@); cd $(basename $@); make -j1 $(subst .,,$(suffix $@)); exit $$?) ; \
+	  fi \
+	fi
+
+
+
+
+$(TARGETS_INC):
+	@if [ -e $(basename $@) ]; then \
+	  (echo -e "\n=== Building $(basename $@) $(subst .,,$(suffix $@)) ===" `date`) ; \
+	  if [ -z "$(filter ${J1DIRS}, $(basename $@))" ]; then \
+	    (cd $(basename $@); $(MAKE) $(subst .,,$(suffix $@)); exit $$?) ; \
+	  else \
+	    (cd $(basename $@); make -j1 $(subst .,,$(suffix $@)); exit $$?) ; \
+	  fi \
+	fi
+
+#
+# WARNING:  A bit of an ugly hack (RB 5/23/2010)
+# this lets this porting install common tools, without building cnk first which depends on 
+# spi
+# spi dpends on cnk tools, but no the rest of cnk??
+cnk.tools: hwi.install
+	@if [ -e $(basename $@) ]; then \
+	  (echo -e "\n=== Building $(basename $@) $(subst .,,$(suffix $@)) ===" `date`) ; \
+	  if [ -z "$(filter ${J1DIRS}, $(basename $@))" ]; then \
+	    (cd $(basename $@); $(MAKE) $(subst .,,$(suffix $@)).install ; exit $$?) ; \
+	  else \
+	    (cd $(basename $@); make -j1 $(subst .,,$(suffix $@)).install ; exit $$?) ; \
+	  fi \
+	fi
+
+# 
+ras_gen:
+	$(BGQ_BUILD_DIR)/scripts/rasGen.py '$(BGQ_INSTALL_DIR)' '$(BGQ_INSTALL_DIR)/scripts'
+
+build_ras_gen: $(addsuffix .install,$(filter-out build,$(DIRS)))
+	@if [[ -d $(BGQ_INSTALL_DIR)/ras && ! -L $(BGQ_INSTALL_DIR)/ras ]]; then \
+	  $(BGQ_BUILD_DIR)/scripts/rasGen.py '$(BGQ_INSTALL_DIR)' '$(BGQ_INSTALL_DIR)/ras/etc'; \
+	  if [[ -d $(BGQ_INSTALL_DIR)/db && ! -L $(BGQ_INSTALL_DIR)/db ]]; then \
+	    $(CP) $(BGQ_INSTALL_DIR)/ras/etc/event_code_table.txt $(BGQ_INSTALL_DIR)/db/schema/ddl; \
+	  fi \
+	else \
+	  $(BGQ_BUILD_DIR)/scripts/rasGen.py '$(BGQ_INSTALL_DIR)' '$(BGQ_INSTALL_DIR)/scripts'; \
+	  if [[ -d $(BGQ_INSTALL_DIR)/db && ! -L $(BGQ_INSTALL_DIR)/db ]]; then \
+	    $(CP) $(BGQ_INSTALL_DIR)/scripts/event_code_table.txt $(BGQ_INSTALL_DIR)/db/schema/ddl; \
+	  fi \
+	fi
+
+
+# +++
+#	Targets to be executed in the current directory
+# ---
+this.install:
+	@echo "making install"
+
+this.clean:
+	@echo "making clean"
+	rm -f *~
+
+this.distclean: this.clean
+	@echo "making distclean"
+	rm -rf ./autom4te.cache ./config.log ./config.status ./Makefile ./Make.rules ./scripts/hwsim_env.sh
+
+
+printmakerules:
+	@echo "BGQ_BUILD_DIR=${BGQ_BUILD_DIR}"
+	@echo "BGQ_INSTALL_DIR=${BGQ_INSTALL_DIR}"
+	@echo "BGQ_CROSS_TOOLS_DIR=${BGQ_CROSS_TOOLS_DIR}"
+	@echo "BGQ_CROSS_BIN_DIR=${BGQ_INSTALL_DIR}"
+	@echo "BGQ_MAMBO_DIR=${BGQ_MAMBO_DIR}"
+	@echo "BGQ_FLOOR_DIR=${BGQ_FLOOR_DIR}"
+	@echo
+	@echo "BGQ_ENABLE_HWSIM=${BGQ_ENABLE_HWSIM}"
+	@echo "BGQ_HWSIM_STAGE0=${BGQ_HWSIM_STAGE0}"
+	@echo
+	@echo "CTEPATH=${CTEPATH}"
+	@echo "CTEFUSIONPATH=${CTEFUSIONPATH}"
+	@echo "CTESIMARAMABASE=${CTESIMARAMABASE}"
+	@echo "CTESIMARAMAPATH=${CTESIMARAMAPATH}"
+	@echo "FUSION_RELEASE=${FUSION_RELEASE}"
+	@echo "CTETEXSIMPATH=${CTETEXSIMPATH}"
+	@echo "CTEDENALIPATH=${CTEDENALIPATH}"
+	@echo "CTEPROJPATH=${CTEPROJPATH}"
+	@echo "CDS_INST_DIR=${CDS_INST_DIR}"
+	@echo "BGQ_CROSS_TARGET_NAME=${BGQ_CROSS_TARGET_NAME}"
+
+	@echo "BGQ_CROSS_TARGET_ARCH=${BGQ_CROSS_TARGET_ARCH}"
+	@echo "BGQ_GNU_MAKEFILE=${BGQ_GNU_MAKEFILE}"
+	@echo
+	@echo "TARGETS_INC=${TARGETS_INC}"
+	@echo
+	@echo "BGQ_RPMRELEASE=${BGQ_RPMRELEASE}"
+	@echo "BGQ_RPMVERSION=${BGQ_RPMVERSION}"
+	@echo "BGQ_RPMMODIFICATION=${BGQ_RPMMODIFICATION}"
+	@echo "BGQ_RPMDRIVER=${BGQ_RPMDRIVER}"
+	@echo "BGQ_RPMSUFFIX=${BGQ_RPMSUFFIX}"
+
+	
+

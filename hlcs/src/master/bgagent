@@ -1,0 +1,132 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+# ================================================================ 
+#                                                                  
+# Licensed Materials - Property of IBM                             
+#                                                                  
+# Blue Gene/Q                                                      
+#                                                                  
+# (C) Copyright IBM Corp.  2011, 2011                              
+#                                                                  
+# US Government Users Restricted Rights -                          
+# Use, duplication or disclosure restricted                        
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+# This software is available to you under the                      
+# Eclipse Public License (EPL).                                    
+#                                                                  
+# ================================================================ 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+#
+# bgagentd	This shell script takes care of starting and stopping
+#		bgagentd
+#
+# chkconfig: 2345 90 10
+# description: bgagentd is the Blue Gene distributed process monitor. \
+# It executes policy decisions directed by bgmaster_server and provides \
+# monitoring data back to bgmaster_server.
+
+### BEGIN INIT INFO
+# Provides: bgagentd
+# Required-Start: $network $local_fs $remote_fs
+# Required-Stop: $network $local_fs $remote_fs
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: start and stop bgagentd
+# Description: bgagentd is the Blue Gene distributed process monitor. \
+# It executes policy decisions directed by bgmaster_server and provides \
+# monitoring data back to bgmaster_server.
+#              
+### END INIT INFO
+
+# Source function library.
+. /etc/init.d/functions
+
+workingdir=/
+OPTIONS="--users bgqadmin,bgws,bgqsysdb --workingdir $workingdir"
+PATH=$PATH:/sbin:/bin:/bgsys/drivers/ppcfloor/hlcs/sbin/
+prog=bgagentd
+lockfile=/var/lock/subsys/bgagent
+
+start() {
+#	[ "$EUID" != "0" ] && exit 4
+# Source db2profile if it is there
+    if [ -f ~bgqsysdb/sqllib/db2profile ]; then
+	. ~bgqsysdb/sqllib/db2profile
+    fi
+    
+    [ -x /bgsys/drivers/ppcfloor/hlcs/sbin/bgagentd ] || exit 5
+    [ -f /bgsys/local/etc/bg.properties ] || exit 6
+
+    if echo `uname -r` | grep --silent bgq; then
+        # we are an I/O or Login node, source the personality
+        . /dev/bgpers
+
+        # Only start bgagent if I/O services are disabled
+	if [ $BG_NODE_ENABLE_CIOS -eq 1 ]; then
+            echo -n $"Starting $prog: "
+            skipped
+            echo -en "\n"
+            exit 0
+        fi
+    fi
+
+    export JAVA_HOME=/usr/lib/jvm/jre
+
+    PROPFILE=/bgsys/local/etc/bg.properties
+
+        # Start daemons.
+    echo -n $"Starting $prog: "
+    umask 022
+        # log files created by bgagentd should be world readable
+    daemon $prog $OPTIONS "--properties " $PROPFILE
+    RETVAL=$?
+    echo
+    [ $RETVAL -eq 0 ] && touch $lockfile
+    return $RETVAL
+}
+
+stop() {
+#	[ "$EUID" != "0" ] && exit 4
+    echo -n $"Shutting down $prog: "
+# Add a ten second delay to wait a bit for child procs to end.
+    killproc -d 10 $prog -SIGUSR2
+    RETVAL=$?
+    echo
+    [ $RETVAL -eq 0 ] && rm -f $lockfile
+    return $RETVAL
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  status)
+	status $prog
+	;;
+  restart|force-reload)
+	stop
+	start
+	;;
+  try-restart|condrestart)
+	if status $prog > /dev/null; then
+	    stop
+	    start
+	fi
+	;;
+  reload)
+	exit 3
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|status|restart|try-restart|force-reload}"
+	exit 2
+esac

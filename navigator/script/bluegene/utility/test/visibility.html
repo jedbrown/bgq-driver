@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<html>
+
+<head>
+
+<title>visibility Browser Tests</title>
+
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+
+<script>
+
+
+require(
+[
+    "bluegene/utility/utility",
+    "dojo/dom",
+    "dojo/parser",
+    "dojo/ready",
+    "dijit/form/Button",
+    "doh/runner"
+],
+function(
+        b_utility,
+        d_dom,
+        d_parser,
+        d_ready,
+        j_form_Button,
+        doh
+    )
+{
+
+
+var tests = [
+
+function isVisible_visible() {
+    doh.t( b_utility.isVisible( "v_1" ) );
+},
+
+function isVisible_hidden() {
+    doh.t( ! b_utility.isVisible( "v_2" ) );
+},
+
+
+function hide_byElement() {
+    b_utility.hide( d_dom.byId( "span1" ) );
+    doh.t( ! b_utility.isVisible( "span1" ) );
+},
+
+
+function show_byElement() {
+    b_utility.show( d_dom.byId( "span2" ) );
+    doh.t( b_utility.isVisible( "span2" ) );
+},
+
+
+function hide_multiple() {
+    b_utility.hide( "span3", "span4" );
+
+    doh.t( ! b_utility.isVisible( "span3" ) );
+    doh.t( ! b_utility.isVisible( "span4" ) );
+},
+
+
+function show_multiple() {
+    b_utility.show( "sm1", "sm2" );
+    
+    doh.t( b_utility.isVisible( "sm1" ) );
+    doh.t( b_utility.isVisible( "sm2" ) );
+},
+
+
+function setVisibility_hideOnly() {    
+    b_utility.setVisibility( { hide: [ "sv1", "sv2" ] } );
+    
+    doh.t( ! b_utility.isVisible( "sv1" ) );
+    doh.t( ! b_utility.isVisible( "sv2" ) );
+},
+
+
+function setVisibility_showOnly() {
+    b_utility.setVisibility( { show: [ "sv3", "sv4" ] } );
+    
+    doh.t( b_utility.isVisible( "sv3" ) );
+    doh.t( b_utility.isVisible( "sv4" ) );
+},
+
+
+function setVisibility_hideShow() {
+    b_utility.setVisibility( {
+        show: [ "sv5" ],
+        hide: [ "sv6" ]
+    } );
+
+    doh.t( b_utility.isVisible( "sv5" ) );
+    doh.t( ! b_utility.isVisible( "sv6" ) );
+},
+
+
+function isVisible_dijit() {
+    doh.t( b_utility.isVisible( "vs-button1" ) );
+
+    b_utility.hide( "vs-button1" );
+
+    doh.t( ! b_utility.isVisible( "vs-button1" ) );
+}
+
+];
+
+
+var onLoad = function() {
+    doh.register( "bluegene/utility/test/calcNodeHTML", tests );
+    doh.run();
+};
+
+
+d_ready( onLoad );
+
+
+} );
+
+
+</script>
+
+</head>
+
+<body>
+    <span id="v_1">Sample</span>
+    <span id="v_2" class="dijitHidden">Sample</span>
+
+    <span id="span1">Sample</span>
+    <span id="span2" class="dijitHidden">Sample</span>
+    <span id="span3">Sample</span><span id="span4">Sample</span>
+
+    <span id="sm1" class="dijitHidden">Sample</span><span id="sm2" class="dijitHidden">Sample</span>
+
+    <span id="sv1">Sample</span><span id="sv2">Sample</span>
+    <span id="sv3" class="dijitHidden">Sample</span><span id="sv4" class="dijitHidden">Sample</span>
+
+    <span id="sv5" class="dijitHidden">Sample</span><span id="sv6">Sample</span>
+    
+    <button id="vs-button1">Button1</button> <!-- This should be a dijit.form.Button! -->
+</body>
+
+</html>

@@ -1,0 +1,177 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Time::HiRes qw(gettimeofday tv_interval);
+
+my $location = $ARGV[0];
+if (@ARGV < 1) {
+    die "ERROR: pass R00-M0-N08-J11 or other location on which to run\n";
+}
+
+my $startTime = &GetTime();
+my @skipTests = qw( stress/spi-dcr-slv-op );
+my @skipGrps  = qw( experiment mpi test_utils se-tm );
+
+
+sub InclInTest # $dir, @listToSkip
+{
+    my $dir = shift;
+    my $incl = 1;
+    for my $check (@_) {
+        if ($dir eq $check) {
+            $incl = 0;
+        }
+    }
+    return $incl;
+}
+
+# Walk dir tree to find testcases to run.
+my @tests;
+my @groupdirs;
+my @dirs = split ' ', `ls`;
+
+foreach my $dir (@dirs) {
+    if (-d $dir) {
+        if (InclInTest($dir, @skipGrps)) {
+            push @groupdirs, $dir;
+        }
+    }
+}
+print "TestGroups: @groupdirs\n\n";
+
+foreach my $groupdir (@groupdirs) { 
+    my @dirs = split ' ', `ls $groupdir`;
+    foreach my $dir (@dirs) {
+        my $test = "$groupdir/$dir";
+        if (-d $test) {
+            if (InclInTest($test, @skipTests)) {
+                push @tests, $test;
+            }
+        }
+    }
+}
+print "Tests: @tests\n\n";
+
+my @expandedTests;
+foreach my $testdir (@tests) { 
+    my @dirs = split ' ', `ls $testdir`;
+    my @vars = ();
+    foreach my $dir (@dirs) {
+        my $var = "$testdir/$dir";
+        if (($dir !~ m/FCTest/o) && (-d $var)) {
+            push @vars, $var;
+        }
+    }
+    if (@vars) {
+        push @expandedTests, @vars;
+    }
+    else {
+        push @expandedTests, $testdir;
+    }
+}
+@tests = @expandedTests;
+print "Incl variations: @tests\n\n";
+
+print "Total Variations: ", scalar(@tests), "\n\n";
+
+
+
+
+
+
+
+
+my $logPrint = "runhw.print.log";
+unlink "$logPrint.old";
+rename($logPrint,"$logPrint.old");
+
+
+#open SAVEOUT, ">&STDOUT";
+open STDOUT, ">$logPrint" or die "ERROR: Can't redirect stdout to $logPrint\n";
+
+foreach my $test (@tests) {
+   #print STDERR "\nPress Enter to submit test $test\n";
+   #my $wait = <>;
+    
+   #print STDOUT "\n\n\n\n\n---------------------------\n";
+   #print STDOUT "submit $test...\n";
+   print STDERR "\n---------------------------\n";
+   print STDERR "submit $test...\n";
+   system("cd $test; make runmmcslite block=$location");
+   #print STDOUT "completed $test\n";
+   #print STDOUT "---------------------------\n";
+   print STDERR "completed $test\n";
+   print STDERR "---------------------------\n";
+   sleep 1;  # makes it easier to ctr-c the tests.
+}
+
+
+my $done = 0;
+while (!$done) {
+    sleep 30;
+    my $more = `llq -W | grep \$LOGNAME`;
+    if ($more eq '') { $done = 1; }
+}
+
+
+my $numPass = 0;
+my $numFail = 0;
+my $numTests = 0;
+my @failed;
+foreach my $test (@tests) {
+    $numTests++;
+    print "\n\n\n\n\n\n--------------------------\n$test\n-----------------------------\n";
+    my $dir = `ls -d1 $test/FC* | tail -1`;
+    chomp($dir);
+    my $data = `cat $dir/RunMmcsLite.Log1`;
+    #my $data = `cat $dir/std.out`;
+    $data =~ s|^.*BootBlockRequest>\n||so;
+    #print $data;
+    if ($data =~ m/Software Test PASS. 0/so) {
+        $numPass++;
+    }
+    else {
+        $numFail++;
+        push @failed, $test;
+    }
+}
+
+
+my $doneStrg = "\n\n\ndone Tests: $numTests, Pass: $numPass,  Fail: $numFail - check $logPrint\n";
+if ($numFail) {
+    $doneStrg .= "\nFailed Tests: @failed\n";
+}
+
+my $etime = &ElapsedTimeText($startTime);
+my $elapsedStrg = "\nOverall Elapsed Time = $etime\n";
+
+print $doneStrg;
+print $elapsedStrg;
+print STDERR $doneStrg;
+print STDERR $elapsedStrg;
+
+
+
+
+
+
+#----------------------------------
+# Elapsed Time routines.
+# synopsis:
+#    $startTime = &GetTime();
+#    print &ElapsedTimeText($startTime), "\n";
+sub GetTime { return [gettimeofday]; }
+sub ElapsedTimeFloatSec { return tv_interval( $_[0], [gettimeofday] ); }
+
+sub ElapsedTimeText {
+    my $timesec = &ElapsedTimeFloatSec( $_[0] );
+    $timesec = int( $timesec * 1000 ) / 1000;    # ms value.
+    my $hrs  = int( $timesec / ( 60 * 60 ) );
+    my $min  = int( $timesec / 60 ) - $hrs * 60;
+    my $sec  = sprintf( "%0.3f", $timesec - $min * 60 - $hrs * 60 * 60 );
+    my $strg = "";
+    $strg .= "$hrs hrs, "  if ( $hrs > 0 );
+    $strg .= "$min mins, " if ( $min > 0 );
+    $strg .= "$sec secs, " if ( $sec > 0 );
+    return $strg;
+}

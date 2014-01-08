@@ -1,0 +1,36 @@
+####################################
+%package cnk
+
+Summary: Compute Node Kernel (CNK)
+Group: %{product_group}
+Release: 0
+
+%description cnk
+%{bgq_package_description}
+The cnk component contains the lightweight compute node kernel (CNK) and related tools.
+
+%files cnk
+
+%defattr(755,root,root)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/boot
+%dir %{_base_dir}/cnk
+%dir %{_base_dir}/cnk/bin
+%dir %{_base_dir}/cnk/tools
+%dir %{_base_dir}/cnk/include
+%dir %{_base_dir}/cnk/ras
+%dir %{_base_dir}/cnk/ras/metadata
+
+%defattr(-,root,root,-)
+%{_base_dir}/boot/cnk
+%{_base_dir}/cnk/bin/*
+%{_base_dir}/cnk/include/*
+%{_base_dir}/cnk/ras/metadata/cnk_ras.xml
+%dir %{_base_dir}/cnk/tools/AppAgent0.lds
+%dir %{_base_dir}/cnk/tools/AppAgent1.lds
+%dir %{_base_dir}/cnk/tools/staticmapper
+%dir %{_base_dir}/cnk/tools/mkstandalone.pl
+%dir %{_base_dir}/cnk/tools/standaloneldrinfo.lds
+%dir %{_base_dir}/cnk/tools/standaloneldrinfo_l2.lds
+%dir %{_base_dir}/cnk/tools/bldmemfs

@@ -1,0 +1,53 @@
+# -*- mode: makefile-gmake; -*-
+# begin_generated_IBM_copyright_prolog                             #
+#                                                                  #
+# This is an automatically generated copyright prolog.             #
+# After initializing,  DO NOT MODIFY OR MOVE                       #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# (C) Copyright IBM Corp.  2007, 2008                              #
+# IBM CPL License                                                  #
+#                                                                  #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# end_generated_IBM_copyright_prolog                               #
+
+PLATFORM_DEFAULT_MPICH2=gcc.sctx.fast
+POST_PROCESS_LIST=gcc.sctx gcc.sctx.fast gcc.sctx.debug gcc.mctx gcc.mctx.debug gcc.mctx.fast
+ifeq (${XL},XL)
+    POST_PROCESS_LIST += xl xl.legacy xl.legacy.ndebug xl.ndebug
+endif
+
+    # ---------------- locations for MPICH2 ------------------------------------
+    THREAD_LEVEL         = default
+    MPICH2DIR            = ${ROOTDIR}/lib/dev/mpich2
+    BUILDDIR             ?= ${ROOTDIR}/build/mpich2
+    MPICH2BUILD          = ${BUILDDIR}/pami
+    FILE_SYSTEM          =nfs
+# This is to prevent any change of behavior in the XL build targets with 
+# PE. All the GNU targets are the same as before.
+    DEBUGINFO            = no
+
+    # ---------------- Flags MPICH2 --------------------------------------------
+    # These flags become part of the mpi{cc,cxx,f77,f90} scripts
+    MPI_LDFLAGS          =
+    MPI_CFLAGS           =${HOST_INCLUDE}
+    MPI_CXXFLAGS         =${HOST_INCLUDE}
+    MPI_FFLAGS           =${HOST_INCLUDE}
+
+    # These flags are used during a regular build (generally GCC)
+    HOST_FLAGS           ?=-g -O0 -lpthread -lrt
+    # Add -DMPICH_DEFINE_2COMPLEX to enable data types MPI_2COMPLEX and
+    # MPI_2DOUBLE_COMPLEX for backward compatibility purpose.
+    HOST_CFLAGS          =${HOST_FLAGS} -D__${PLATFORM}__ -DMPICH_DEFINE_2COMPLEX
+    HOST_LDFLAGS         ?=
+    HOST_CXXFLAGS        =${HOST_FLAGS}
+    HOST_FFLAGS          =${HOST_FLAGS}
+
+    # These flags are used during a fast build (generally XL)
+    FAST_FLAGS           =-g -O0 -lpthread -lrt
+    # Add -DMPICH_DEFINE_2COMPLEX to enable data types MPI_2COMPLEX and
+    # MPI_2DOUBLE_COMPLEX for backward compatibility purpose.
+    FAST_CFLAGS          =${FAST_FLAGS} -D__${PLATFORM}__ -DMPICH_DEFINE_2COMPLEX
+    FAST_CXXFLAGS        =${FAST_FLAGS}
+    FAST_FFLAGS          =${FAST_FLAGS}

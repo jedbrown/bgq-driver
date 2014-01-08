@@ -1,0 +1,40 @@
+<File filename="Example">
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2011, 2011                              -->
+<!-- Eclipse Public License (EPL)                                     -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+  <Class name="Top">
+     <Class name="SubExample">
+        <DataMember type="text" name="key" />
+     </Class>
+
+     <Class name="SubExample2">
+        <DataMember type="uint32" name="key2" />
+        <DataMember type="text" name="key3" occurrences="many" />
+     </Class>
+
+     <DataMember type="text"   name="mem1" />
+     <DataMember type="binary" name="mem2" />
+     <DataMember type="uint32" name="mem3" />
+     <DataMember type="uchar"  name="mem4" />
+     <DataMember type="bool"   name="mem5" />
+
+     <DataMember type="SubExample" name="subex" comment="subclass" occurrences="many" />
+     <DataMember type="SubExample2" name="subex2" comment="subclass" />
+     <DataMember type="uint32" name="vec1" occurrences="many" />
+  </Class>
+
+  <Class name="Top2">
+     <DataMember type="text"   name="mem1" occurrences="many" />
+  </Class>
+
+</File>
