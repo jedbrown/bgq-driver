@@ -279,12 +279,6 @@ runjob --block R00-M0 --exe /home/user/hello
  *     <td> No longer supported </td>
  *  </tr>
  *  <tr> 
- *     <td> </td> 
- *     <td> </td> 
- *     <td> --stdinrank </td> 
- *     <td> </td>
- *  </tr>
- *  <tr> 
  *     <td> -host</td> 
  *     <td></td>
  *     <td> --socket </td> 

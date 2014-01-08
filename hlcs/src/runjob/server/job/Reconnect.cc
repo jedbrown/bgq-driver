@@ -236,15 +236,21 @@ Reconnect::getJobInfo()
     info.setNp( columns[BGQDB::DBTJob::NP_COL].getInt32() );
 
     info.setMapping(
-        boost::lexical_cast<Mapping>( columns[BGQDB::DBTJob::MAPPING_COL].getString() )
-        );
+            Mapping(
+                Mapping::getType( columns[BGQDB::DBTJob::MAPPING_COL].getString() ),
+                columns[BGQDB::DBTJob::MAPPING_COL].getString(),
+                false // skip mapping file validation
+                )
+            );
 
     info.setRanksPerNode( columns[BGQDB::DBTJob::PROCESSESPERNODE_COL].getInt32() );
 
+    const bool allowRemoteUser( true );
     info.setUserId( 
             bgq::utility::UserId::Ptr(
                 new bgq::utility::UserId(
-                    columns[BGQDB::DBTJob::USERNAME_COL].getString()
+                    columns[BGQDB::DBTJob::USERNAME_COL].getString(),
+                    allowRemoteUser
                     )
                 )
             );

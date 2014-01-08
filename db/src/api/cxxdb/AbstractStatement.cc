@@ -21,6 +21,7 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
+
 #include "cxxdb/AbstractStatement.h"
 
 #include "BasicConnection.h"
@@ -33,11 +34,12 @@
 
 #include <sqlext.h>
 
+
 LOG_DECLARE_FILE( "database" );
 
-#define CHECK_VALID { if ( ! isValid() ) { CXXDB_THROW_EXCEPTION( cxxdb::InvalidObjectException( "Statement", __FUNCTION__ ) ); } }
 
 namespace cxxdb {
+
 
 AbstractStatement::AbstractStatement(
         BasicConnectionPtr connection_ptr,
@@ -48,17 +50,51 @@ AbstractStatement::AbstractStatement(
     _conn_ptr( connection_ptr ),
     _handle_ptr( new StatementHandle( connection_handle ) )
 {
-    _handle_ptr->prepare( sql );
+    prepare( sql, parameter_names );
+}
 
-    _parameters_ptr.reset( new Parameters( *_handle_ptr, parameter_names ) );
+
+AbstractStatement::AbstractStatement(
+        BasicConnectionPtr connection_ptr,
+        ConnectionHandle& connection_handle
+) :
+        _conn_ptr( connection_ptr ),
+        _handle_ptr( new StatementHandle( connection_handle ) )
+{
+    // Nothing to do.
+}
+
+
+void AbstractStatement::prepare(
+        const std::string& sql,
+        const ParameterNames& parameter_names
+    )
+{
+    _HandlePtr handle_ptr(_handle_ptr);
+
+    if ( ! handle_ptr )  { CXXDB_THROW_EXCEPTION( cxxdb::InvalidObjectException( "Statement", __FUNCTION__ ) ); }
+
+    handle_ptr->prepare( sql );
+
+    _parameters_ptr.reset( new Parameters( *handle_ptr, parameter_names ) );
 }
 
 
 Parameters& AbstractStatement::parameters()
 {
-    CHECK_VALID;
+    if ( ! _handle_ptr )  { CXXDB_THROW_EXCEPTION( cxxdb::InvalidObjectException( "Statement", __FUNCTION__ ) ); }
 
     return *_parameters_ptr;
+}
+
+
+void AbstractStatement::cancel()
+{
+    _HandlePtr handle_ptr(_handle_ptr);
+
+    if ( ! handle_ptr )  { CXXDB_THROW_EXCEPTION( cxxdb::InvalidObjectException( "Statement", __FUNCTION__ ) ); }
+
+    handle_ptr->cancel();
 }
 
 
@@ -77,7 +113,6 @@ AbstractStatement::~AbstractStatement()
 
 void AbstractStatement::_invalidate()
 {
-
     if ( ! _handle_ptr ) {
         return;
     }

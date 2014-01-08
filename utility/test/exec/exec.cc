@@ -58,8 +58,9 @@ zero_exit_status()
     // path to some binary that will always exist
     const std::string path = "/bin/true";
     const bool managed = true;
+    std::string error;
     int pipe = 0;
-    const pid_t pid = Exec::fexec( pipe, path, managed );
+    const pid_t pid = Exec::fexec( pipe, path, error, managed );
 
     // both pid and pipe should be non-zero
     BOOST_ASSERT( pid != 0u );
@@ -80,13 +81,10 @@ bad_exe_path()
     // path to some binary that does not exist
     const std::string path = "/foo/bar/baz";
     const bool managed = true;
+    std::string error;
     int pipe = 0;
-    const pid_t pid = Exec::fexec( pipe, path, managed );
-
-    int status;
-    int options = 0;
-    BOOST_ASSERT( waitpid( pid, &status, options ) == pid );
-    BOOST_ASSERT( WEXITSTATUS(status) == EXIT_FAILURE );
+    const pid_t pid = Exec::fexec( pipe, path, error, managed );
+    BOOST_ASSERT( pid == -1 );
 }
 
 void
@@ -95,9 +93,10 @@ bad_log_file_path()
     // path to some binary that does exist
     const std::string path = "/bin/true";
     const bool managed = true;
+    std::string error;
     int pipe = 0;
     const std::string logfile = "/proc/self";
-    const pid_t pid = Exec::fexec( pipe, path, managed, logfile );
+    const pid_t pid = Exec::fexec( pipe, path, error, managed, logfile );
 
     BOOST_ASSERT( pid == -1 );
 }

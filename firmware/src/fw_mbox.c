@@ -884,7 +884,7 @@ int fw_mailbox_process_inbound_msg( void ) {
 		else {
 
 		    if ( ddrEnd > ( (uint64_t)FW_Personality.DDR_Config.DDRSizeMB * 1024ull * 1024ull ) ) {
-			FW_Error( "End of memory for domain %d (%lX) exceeds configured end of memory (%lX)", d, ddrEnd, (uint64_t)FW_Personality.DDR_Config.DDRSizeMB * 1024ull * 1024ull );
+			FW_Error( "End of memory for domain %d (%lX) exceeds configured end of memory (%lX).", d, ddrEnd, (uint64_t)FW_Personality.DDR_Config.DDRSizeMB * 1024ull * 1024ull );
 			//rc = - __LINE__;
 		    }
 
@@ -1151,7 +1151,7 @@ int fw_mailbox_barrier( fw_uint64_t timeoutInMicroseconds, fw_uint64_t warningTh
    */
 
   if ( ( rc = fw_semaphore_down_w_timeout( BeDRAM_LOCKNUM_CS_BARRIER, timeoutInMicroseconds ) ) != 0 ) {
-    rc = FW_TIMEOUT;
+    rc = FW_EAGAIN;
     goto done;
   }
 
@@ -1202,11 +1202,9 @@ int fw_mailbox_barrier( fw_uint64_t timeoutInMicroseconds, fw_uint64_t warningTh
       }
     }
     else {
-	if ( warningTimeout != 0 ) {
-	    if ( GetTimeBase() > warningTimeout ) {
-		fw_mailbox_writeRASEvent( FW_CS_BARRIER_WARNING, 1, &warningThresholdInMicroseconds );
-		warningTimeout = 0;
-	    }
+	if ( ( warningTimeout != 0 ) && ( GetTimeBase() > warningTimeout ) ) {
+	    fw_mailbox_writeRASEvent( FW_CS_BARRIER_WARNING, 1, &warningThresholdInMicroseconds );
+	    warningTimeout = 0;
 	}
     }
   }
@@ -1392,7 +1390,7 @@ int fw_mailbox_pollInbox( void* message, fw_uint32_t* messageType, unsigned buff
 	_fw_illegal_messages_expiry--;
 
 	if ( _fw_illegal_messages_expiry <= 0 ) {
-	    FW_Error( "Illegal Inbox header detected ... possible control system bug.  %X : %X\n", (uint64_t)header, *((uint64_t*)header) );
+	    FW_Error( "Illegal Inbox header detected :  %X : %X", (uint64_t)header, *((uint64_t*)header) );
 	    return FW_ERROR;
 	}
       

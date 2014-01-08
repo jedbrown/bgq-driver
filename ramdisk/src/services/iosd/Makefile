@@ -44,6 +44,11 @@ ifeq ($(OS_ARCH),ppc64)
 IOSD = iosd
 endif
 
+ifeq ($(BGQ_CONTROL_SYSTEM_SIMULATION),yes)
+IOSD = iosd
+endif
+
+
 # Additional linker flags
 LDFLAGS  += -L $(IOS_LIBRARY_DIR) -lbgcios
 
@@ -62,9 +67,11 @@ objdump: $(IOSD)
 
 $(IOSD): $(IOSD_OBJS)
 	$(CXX) -o $@ $(IOSD_OBJS) $(LDFLAGS)
+	$(MKDIR) -p $(IOS_PROGRAM_DIR)
 	$(CP) $(IOSD) $(IOS_PROGRAM_DIR)
 
 $(BGQ_INSTALL_DIR)/ramdisk/bin/$(JOB_SIM): $(JOB_SIM).template
+	$(MKDIR) -p $(dir $@)
 	sed -e "s'DRIVER_INSTALL_DIR'$(BGQ_INSTALL_DIR)'g" $< > $@
 	chmod +x $@
 	

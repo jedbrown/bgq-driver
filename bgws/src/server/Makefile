@@ -32,6 +32,7 @@ CXXFLAGS += \
 
 
 LDFLAGS += \
+ -rdynamic \
  -Wl,--enable-new-dtags \
  -lssl \
  -L$(BGQ_INSTALL_DIR)/extlib/lib \
@@ -60,6 +61,7 @@ subdirs := \
   blue_gene/diagnostics \
   blue_gene/service_actions \
   query \
+  query/diagnostics \
   query/env \
   responder \
   responder/diagnostics \
@@ -81,11 +83,18 @@ blue_gene_parts := \
 
 
 query_parts := \
- DiagnosticsLocations \
- DiagnosticsLocationsOptions \
+ Alerts \
+ AlertsOptions \
+ Machine \
  Ras \
  RasIntervalOption \
- RasOptions
+ RasOptions \
+ SystemSummary \
+ diagnostics/Locations \
+ diagnostics/LocationsOptions \
+ diagnostics/Testcases \
+ diagnostics/TestcasesOptions
+
 
 query_env_parts := \
  AbstractOptions \
@@ -162,6 +171,7 @@ utility_parts := \
  ChildProcess \
  ChildProcesses \
  EasyChildProcess \
+ EzTimer \
  Pipe \
  SortDirection \
  utility
@@ -172,6 +182,7 @@ parts := \
  AbstractResponder \
  BgwsServer \
  BlueGene \
+ BlockingOperationsThreadPool \
  CheckUserAdminExecution \
  CheckUserAdminExecutor \
  dbConnectionPool \
@@ -215,6 +226,7 @@ query_files := \
  queries/rasChart.txt \
  queries/summaryHardwareProblems.txt \
  queries/summaryDiagnostics.txt \
+ queries/summaryIoStatus.txt \
  queries/summaryMachineUsage.txt \
  queries/summaryServiceActions.txt \
  queries/utilizationChart.txt
@@ -293,6 +305,7 @@ uninstall:
 -include blue_gene/diagnostics/*.d
 -include blue_gene/service_actions/*.d
 -include query/*.d
+-include query/diagnostics/*.d
 -include query/env/*.d
 -include responder/*.d
 -include responder/diagnostics/*.d

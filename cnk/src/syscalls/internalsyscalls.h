@@ -30,7 +30,8 @@ uint64_t internal_lseek(int fildes, off_t offset, int whence);
 uint64_t internal_open(const char *path, int oflag, mode_t mode);
 uint64_t internal_pread64(int fd, void* buffer, size_t length, off_t position);
 uint64_t internal_read(int fd, void* buffer, size_t length);
-uint64_t internal_write(int fd, void* buffer, size_t length);
+uint64_t internal_readlink(const char* pathname, char* buffer, size_t length);
+uint64_t internal_write(int fd, const void* buffer, size_t length);
 
 #endif // _CNK_INTERNALSYSCALLS_H
 

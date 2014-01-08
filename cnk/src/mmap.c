@@ -63,6 +63,7 @@ typedef struct
 } MMapRead_t;
 
 #define MAXMMAPFILE 64
+Lock_Atomic_t mappedFilesLock;
 MMapRead_t MMapRead[MAXMMAPFILE];
 uint64_t MMapReadDone[MAXMMAPFILE] K_ATOMIC;
 
@@ -157,6 +158,45 @@ extern int MMap_readFile(void* address, uint64_t mm_fd, uint64_t mm_ofs, uint64_
             L2_AtomicStore(&MMapReadDone[slot], 1);
         }
     }
+    
+    char filename[APP_MAX_PATHNAME];
+    // need to lookup the filename on the ionode using /proc/self since CNK does not internally store-away
+    // the filename after the open.
+    snprintf(filename, sizeof(filename), "/proc/self/fd/%d", File_GetRemoteFD(mm_fd));
+    int i;
+    AppProcess_t* proc = GetMyProcess();
+    
+    Kernel_Lock(&mappedFilesLock);
+    for(i=0; i<CONFIG_NUM_MAPPED_FILENAMES; i++)
+    {
+        if(((uint64_t)address > proc->mappedFiles[i].vaddr) && ((uint64_t)address < proc->mappedFiles[i].vaddr + proc->mappedFiles[i].size))
+        {
+            proc->mappedFiles[i].size = (uint64_t)address - proc->mappedFiles[i].vaddr;
+        }
+    }
+    for(i=0; i<CONFIG_NUM_MAPPED_FILENAMES; i++)
+    {
+        if(proc->mappedFiles[i].vaddr == 0)
+        {
+            proc->mappedFiles[i].isShar= !VMM_IsAppProcessUniqueAddress((void*)((uint64_t)address + mm_ofs), mm_len);
+            proc->mappedFiles[i].fd    = mm_fd;
+            proc->mappedFiles[i].off   = mm_ofs;
+            proc->mappedFiles[i].vaddr = (uint64_t)address;
+            proc->mappedFiles[i].size  = mm_len;
+#if (CONFIG_AVOID_READLINK==0) 
+            // Note: /proc/self/fd/* file descriptors for sysiod are owned by root and readlink from 
+            //       compute nodes returns EACCESS.  Trying another method.
+            rc = internal_readlink(filename, proc->mappedFiles[i].filename, sizeof(proc->mappedFiles[i].filename));
+#else
+            if(proc->LAST_OPEN_FD == File_GetRemoteFD(mm_fd))
+            {
+                strncpy(proc->mappedFiles[i].filename, proc->LAST_OPEN_FILENAME, sizeof(proc->mappedFiles[i].filename));
+            }
+#endif
+            break;
+        }
+    }
+    Kernel_Unlock(&mappedFilesLock);
     
     return 0;
 }
@@ -474,8 +514,7 @@ static MMapChunk_t * MMapMgr_CombineNeighbors(MmapMgr_t *mgr, MMapChunk_t* ch)
 static MMapChunk_t *  MMapMgr_FreeMemory( MmapMgr_t *mgr,
                                           MMapChunk_t* chunk,
                                           size_t len, 
-                                          uint64_t addr,
-                                          bool clear )
+                                          uint64_t addr)
 {
    MMapChunk_t *t;
    int freeError = false;
@@ -491,11 +530,6 @@ static MMapChunk_t *  MMapMgr_FreeMemory( MmapMgr_t *mgr,
         printf("(E) MMapMgr_FreeMemory[%d]: chunk already marked free. addr=0x%08lx\n",
                ProcessorID(), chunk->addr );
 
-   if ( clear )
-   {
-       memset( (void *)addr, 0, len );
-   }
-   
    // is this a partial free, i.e. do we need to create additional chunks
    if (chunk->size > rbytes)
    {
@@ -555,34 +589,23 @@ static MMapChunk_t *  MMapMgr_FreeMemory( MmapMgr_t *mgr,
    if (!freeError)
    {
       chunk->addr |= MMAPCHUNK_ADDR_FREE;
+      if (addr < mgr->low_unmap)
+      {
+          mgr->low_unmap = addr;
+      }
+      if ((addr+rbytes) > mgr->high_unmap)
+      {
+          mgr->high_unmap = addr+rbytes;
+      }
    }
-
    // can we merge this chunk with free neighbors?
    chunk = MMapMgr_CombineNeighbors(mgr,chunk);
 
    // Return the chunk that now represents the freed block after any merging that may have occurred. The orginal chunk passed into
    // this function may have been enqueued onto the freeChunk list.
    return chunk; 
-
 }
 
-//! \note 
-//      Rewrote the function that was previously implemented to just utilize the sorted
-//      linked list by address to handle the mmaps.  When writing the map by address (MAP_FIXED), 
-//      found that when running python applications that the address 
-//      allocation was not being honored and the starting application would have data overwritten
-//      as the allocator handed out chunks of memory. The allocator would not handle the python code 
-//      with the buckets and the chunks.  So a simplified approach of just using the sorted addresses to hand out 
-//      memory and to track allocations was implemented.
-//      NOTE: Because of the requirement to honor the address passed in on the MAP_FIXED, we could
-//            not utilize the code to get the smallest chunk from a bucket.
-//! \todos
-//  1) Need to investigate what happens when remapping an allocation. 
-//     Currently just check address ranges and when the MAP_FIXED occurs in an already allocated range,
-//     the chunk is allocated but not taken away.
-//     NOTE: The issue with this is what do we do with the existing chunk?  Do we adjust the original chunk
-//           to be the original address up to the new MAP_FIXED address?  Then free the rest of the chunk and 
-//           then allocate the new request?  
 // low-level malloc: rbytes pre-checked and new_chunk pre-allocated
 static void  *MMapMgr_Malloc( MmapMgr_t *mgr,
                                    size_t rbytes,
@@ -847,7 +870,10 @@ void  MMap_Init( uint64_t start, size_t bytes )
 
       mgr->ByAddr_anchor = pch;
 //printf("calling free memory. pch:%016lx size:%016lx addr:%016lx\n",(uint64_t)pch, pch->size, pch->addr); 
-      MMapMgr_FreeMemory( mgr, pch, pch->size, pch->addr, false ); 
+      MMapMgr_FreeMemory( mgr, pch, pch->size, pch->addr); 
+      // These must be initialized after the above call to FreeMemory
+      mgr->low_unmap   = mgr->mem_start+mgr->mem_size;
+      mgr->high_unmap  = mgr->mem_start;
    }
 }
 
@@ -909,9 +935,6 @@ void  *MMap_Malloc_Addr( size_t bytes, uint64_t addr )
     MMapChunk_t *new_chunk;
     size_t rbytes = MMAP_ROUND_UP( bytes );
    void *rc_mem = (void *)0;
-#if TODO
-    AppState_t *pAppState = GetMyAppState();
-#endif
 
     TRACE( TRACE_MemAlloc, ("(I) %s[%d]: Allocate 0x%08lx bytes.\n",
                                   __func__, ProcessorID(), bytes ));
@@ -1006,7 +1029,7 @@ int  MMap_Free( void *addr, size_t len )
       mgr->mem_busy -= rbytes;  // SHOK
       // Free the memory and try to merge free chunks. Update ch so that it is a chunk on our chain since
       // the original ch may be moved to the free list if it was merged with a neighboring chunk.
-      ch = MMapMgr_FreeMemory( mgr, ch, rbytes, rbase, true);  // Free the memory and try to merge free chunks
+      ch = MMapMgr_FreeMemory( mgr, ch, rbytes, rbase);  // Free the memory and try to merge free chunks
       // we must check the previous chunk for the tally of the max allocated address since it may be a new 
       // busy chunk generated by the previous call to free memory if it was a partial free.
       MMapChunk_t *pch = ch->byaddr_prev;

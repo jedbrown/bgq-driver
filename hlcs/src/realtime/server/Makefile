@@ -26,7 +26,29 @@ include ../../../../Make.rules
 include ../Make.realtime.rules
 
 
-parts =\
+db2_table_parts := \
+ Block \
+ Cable \
+ EventLog \
+ IoDrawer \
+ IoNode \
+ Job \
+ Midplane \
+ Node \
+ NodeCard \
+ Switch
+
+
+db2_parts :=\
+ AbstractTable \
+ DbChangesMonitor \
+ TableInfos \
+ Transaction \
+ Transactions \
+ ${db2_table_parts:%=table/%}
+
+
+parts :=\
  bg_realtime_server \
  BgRealtimeServer \
  Client \
@@ -37,10 +59,7 @@ parts =\
  DbChangesMonitor \
  Status \
  TcpServer \
- db2/DbChangesMonitor \
- db2/TableInfos \
- db2/Transaction \
- db2/Transactions
+ ${db2_parts:%=db2/%}
 
 
 objs = ${parts:%=%.o}
@@ -100,7 +119,7 @@ install: $(install_files) $(bg_links_targets)
 
 
 clean:
-	$(RM) $(exe) *.o *.d db2/*.o db2/*.d
+	$(RM) $(exe) *.o *.d db2/*.o db2/*.d db2/table/*.o db2/table/*.d
 
 distclean: clean
 
@@ -109,4 +128,4 @@ uninstall:
 	$(RM) -r $(install_files) $(BGQ_INSTALL_DIR)/hlcs/docs/realtime
 
 
--include *.d db2/*.d
+-include *.d db2/*.d db2/table/*.d

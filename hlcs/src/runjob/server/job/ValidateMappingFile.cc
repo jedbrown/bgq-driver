@@ -46,18 +46,9 @@ ValidateMappingFile::ValidateMappingFile(
 {
     LOGGING_DECLARE_JOB_MDC( id );
 
-    // ensure mapping has enough ranks for the job
-    if ( info.getMapping().lineCount() < static_cast<unsigned>(info.getNp()) ) {
-        LOG_RUNJOB_EXCEPTION(
-                error_code::mapping_file_invalid,
-                "job requires " << info.getNp() << " ranks, " <<
-                "but mapping only has " << info.getMapping().lineCount() 
-                );
-    }
-    
     const char names[] = {'A','B','C','D','E','T'};
 
-    // line was valid, now see if it fits within the job
+    // see if it fits within the job
     for ( unsigned i = 0; i < 6; ++i ) {
         uint8_t max;
         switch( i ) {
@@ -73,7 +64,8 @@ ValidateMappingFile::ValidateMappingFile(
             LOG_RUNJOB_EXCEPTION(
                 error_code::mapping_file_invalid,
                 names[i] << " coordinate on line " << info.getMapping().dimensions()[i].second <<
-                " is greater than job size of " << (unsigned)max
+                " exceeds the " << names[i] << " dimension range of " << (unsigned)max <<
+                " for the job"
                 );
         }
     }

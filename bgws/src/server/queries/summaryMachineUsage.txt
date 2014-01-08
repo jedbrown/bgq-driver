@@ -27,6 +27,16 @@ SELECT b.blockId,
 
 ),
 
+ptMp AS (
+
+SELECT blockid, SUBSTR(switchid,3,6) AS bpid
+  FROM bgqSwitchBlockMap
+EXCEPT
+SELECT blockid, bpid
+  FROM bgqBpBlockmap
+
+),
+
 sbUsage( mp_location, nodeCardPos, state ) AS (
   SELECT sb.posInMachine AS mp_location, sb.nodeCardPos, b.state AS state
     FROM blocksInUse AS b JOIN bgqSmallBlock AS sb ON b.blockId = sb.blockId
@@ -35,6 +45,34 @@ sbUsage( mp_location, nodeCardPos, state ) AS (
 lbUsage( mp_location, state ) AS (
   SELECT bm.bpid mp_location, b.state AS state
     FROM blocksInUse AS b JOIN bgqBpBlockMap AS bm on b.blockId = bm.blockId
+),
+
+ptUsage( mp_location, pt_state ) AS (
+
+SELECT bpt.bpid AS mp_location, us.state AS pt_state
+  FROM ptMp AS bpt
+       JOIN
+       blocksInUse AS us
+       ON bpt.blockId = us.blockId
+
+),
+
+lbptUsageAll( mp_location, state, pt_state ) AS (
+
+SELECT mp_location, state, -1 AS pt_state
+  FROM lbUsage
+UNION ALL
+SELECT mp_location, -1 AS state, pt_state
+  FROM ptUsage
+
+),
+
+lbptUsage( mp_location, state, pt_state ) AS (
+
+SELECT mp_location, MAX( state ) AS state, MAX( pt_state ) AS pt_state
+  FROM lbptUsageAll
+  GROUP BY mp_location
+
 ),
 
 mpNotAvailable( mp_location, state ) AS (
@@ -56,14 +94,14 @@ SELECT TRIM(midplanePos) AS mp_location,
 )
 
 
-SELECT TRIM(mp_location) AS mp_location, CAST( NULL AS CHAR(1) ) AS nodeCardPos, state
-  FROM lbUsage
+SELECT TRIM(mp_location) AS mp_location, CAST( NULL AS CHAR(1) ) AS nodeCardPos, state, pt_state
+  FROM lbptUsage
 UNION ALL
-SELECT TRIM(mp_location) AS mp_location, nodeCardPos, state
+SELECT TRIM(mp_location) AS mp_location, nodeCardPos, state, CAST( NULL AS INTEGER ) AS pt_state
   FROM sbUsage
 UNION ALL
-SELECT mp_location, CAST( NULL AS CHAR(1) ) AS nodeCardPos, state
+SELECT mp_location, CAST( NULL AS CHAR(1) ) AS nodeCardPos, state, CAST( NULL AS INTEGER ) AS pt_state
   FROM mpNotAvailable
 UNION ALL
-SELECT mp_location, nodeCardPos, state
+SELECT mp_location, nodeCardPos, state, CAST( NULL AS INTEGER ) AS pt_state
   FROM nbNotAvailable

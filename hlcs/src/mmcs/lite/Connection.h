@@ -31,6 +31,7 @@
 #include <ramdisk/include/services/MessageHeader.h>
 #include <ramdisk/include/services/StdioMessages.h>
 
+namespace mmcs {
 namespace lite {
 
 /*!
@@ -251,6 +252,6 @@ private:
     bool _connected;                                //!< flag if we have connected
 };
 
-} // lite
+} } // namespace mmcs::lite
 
 #endif

@@ -98,7 +98,7 @@ int     emon_mode = 0;
 /*!
  * \brief Retrieve raw power-consumption data for the current nodeboard.
  *
- *  THIS INTERFACE IS EXPERIMENTAL AND UNSUPPORTED.
+ *  \warning THIS INTERFACE IS EXPERIMENTAL AND UNSUPPORTED.
  *
  * \param[in] mode - 0 or EMON_DCA_USE_VOINTBUS
  * \param[out] fpga_version_p - NULL or location where fpga version number
@@ -125,7 +125,7 @@ uint64_t Kernel_GetRawEnvmonPowerData(int mode, uint8_t *fpga_version_p,
 /*!
  * \brief Set power-consumption control parameters.
  *
- *  THIS INTERFACE IS EXPERIMENTAL AND UNSUPPORTED.
+ * \warning THIS INTERFACE IS EXPERIMENTAL AND UNSUPPORTED.
  *
  * This interface can affect performance and power consumption for the
  * whole node, so calling it from a sub-node CNK job is disallowed.

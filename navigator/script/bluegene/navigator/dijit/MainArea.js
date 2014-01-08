@@ -48,7 +48,6 @@ function(
 
 
 var b_navigator_dijit_MainArea = d_declare(
-        "bluegene.navigator.dijit.MainArea",
         [ l_AbstractTemplatedContainer ],
 
 {

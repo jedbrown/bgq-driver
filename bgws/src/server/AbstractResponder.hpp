@@ -48,6 +48,7 @@
 
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 
+#include <exception>
 #include <string>
 
 
@@ -94,6 +95,8 @@ public:
         blue_gene::service_actions::ServiceActions &service_actions;
         Sessions &sessions;
         teal::Teal &teal;
+        BlockingOperationsThreadPool &blocking_operations_thread_pool;
+
 
         CtorArgs(
                 capena::server::RequestPtr request_ptr,
@@ -109,7 +112,8 @@ public:
                 ServerStats& server_stats,
                 blue_gene::service_actions::ServiceActions& service_actions,
                 Sessions& sessions,
-                teal::Teal& teal
+                teal::Teal& teal,
+                BlockingOperationsThreadPool &blocking_operations_thread_pool
             ) :
                 request_ptr(request_ptr),
                 requested_resource_path(requested_resource_path),
@@ -124,7 +128,8 @@ public:
                 server_stats(server_stats),
                 service_actions(service_actions),
                 sessions(sessions),
-                teal(teal)
+                teal(teal),
+                blocking_operations_thread_pool(blocking_operations_thread_pool)
         { /* Nothing to do */ }
     };
 
@@ -187,6 +192,11 @@ protected:
     /*! \brief Call this to set the response to an error response. */
     void _handleError( std::exception& e );
 
+    /*! \brief Post to my strand to write an empty JSON array as result. */
+    void _postEmptyResult();
+
+    /*! \brief Called in catch block, posts call to _handleErrorCb with current_exception. */
+    void _inCatchPostCurrentExceptionToHandlerFn();
 
     /*! \brief Overrides and implements, derived classes should not override. */
     void _processRequest();
@@ -214,6 +224,18 @@ private:
     void _handle();
 
     void _throwMethodNotAllowed();
+
+
+    void _emptyResult(
+            capena::server::ResponderPtr
+        );
+
+
+    void _handleErrorCb(
+            capena::server::ResponderPtr,
+            std::exception_ptr exc_ptr
+        );
+
 };
 
 

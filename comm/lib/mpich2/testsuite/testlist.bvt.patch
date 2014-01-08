@@ -1,0 +1,89 @@
+diff -urN gcc/attr/testlist.bvt gcc.bvt/attr/testlist.bvt
+--- gcc/attr/testlist.bvt	1969-12-31 18:00:00.000000000 -0600
++++ gcc.bvt/attr/testlist.bvt	2012-09-28 13:38:53.000000000 -0500
+@@ -0,0 +1 @@
++attrt 2
+diff -urN gcc/coll/testlist.bvt gcc.bvt/coll/testlist.bvt
+--- gcc/coll/testlist.bvt	1969-12-31 18:00:00.000000000 -0600
++++ gcc.bvt/coll/testlist.bvt	2012-09-28 13:37:24.000000000 -0500
+@@ -0,0 +1,18 @@
++allred 4
++reduce 10
++alltoallv 10
++redscat 4
++redscat 6
++gather 4
++scatterv 4
++icbcast 4
++icbcast 10
++opland 4
++opband 4
++opprod 5
++opprod 6
++opsum 4
++opmin 4
++opminloc 4
++opmax 5
++opmaxloc 5
+diff -urN gcc/datatype/testlist.bvt gcc.bvt/datatype/testlist.bvt
+--- gcc/datatype/testlist.bvt	1969-12-31 18:00:00.000000000 -0600
++++ gcc.bvt/datatype/testlist.bvt	2012-09-28 13:38:33.000000000 -0500
+@@ -0,0 +1,2 @@
++lbub 1
++lots-of-types 1
+diff -urN gcc/errhan/testlist.bvt gcc.bvt/errhan/testlist.bvt
+--- gcc/errhan/testlist.bvt	1969-12-31 18:00:00.000000000 -0600
++++ gcc.bvt/errhan/testlist.bvt	2012-09-28 13:39:03.000000000 -0500
+@@ -0,0 +1 @@
++adderr 1
+diff -urN gcc/group/testlist.bvt gcc.bvt/group/testlist.bvt
+--- gcc/group/testlist.bvt	1969-12-31 18:00:00.000000000 -0600
++++ gcc.bvt/group/testlist.bvt	2012-09-28 13:37:56.000000000 -0500
+@@ -0,0 +1 @@
++groupcreate 4
+diff -urN gcc/info/testlist.bvt gcc.bvt/info/testlist.bvt
+--- gcc/info/testlist.bvt	1969-12-31 18:00:00.000000000 -0600
++++ gcc.bvt/info/testlist.bvt	2012-09-28 13:37:35.000000000 -0500
+@@ -0,0 +1,6 @@
++infodup 1
++infodel 1
++infovallen 1
++infoorder 1
++infomany 1
++infotest 1
+diff -urN gcc/init/testlist.bvt gcc.bvt/init/testlist.bvt
+--- gcc/init/testlist.bvt	1969-12-31 18:00:00.000000000 -0600
++++ gcc.bvt/init/testlist.bvt	2012-09-28 13:38:43.000000000 -0500
+@@ -0,0 +1 @@
++initstat 1
+diff -urN gcc/pt2pt/testlist.bvt gcc.bvt/pt2pt/testlist.bvt
+--- gcc/pt2pt/testlist.bvt	1969-12-31 18:00:00.000000000 -0600
++++ gcc.bvt/pt2pt/testlist.bvt	2012-09-28 13:38:05.000000000 -0500
+@@ -0,0 +1,5 @@
++sendrecv1 4
++bsend1 1
++icsend 4
++probe-unexp 4
++scancel 2
+diff -urN gcc/testlist.bvt gcc.bvt/testlist.bvt
+--- gcc/testlist.bvt	1969-12-31 18:00:00.000000000 -0600
++++ gcc.bvt/testlist.bvt	2012-09-28 13:37:46.000000000 -0500
+@@ -0,0 +1,11 @@
++# The next item ensures that the support routines are built first
++!util:all
++attr
++coll
++datatype
++errhan
++group
++info
++init
++pt2pt
++topo
+diff -urN gcc/topo/testlist.bvt gcc.bvt/topo/testlist.bvt
+--- gcc/topo/testlist.bvt	1969-12-31 18:00:00.000000000 -0600
++++ gcc.bvt/topo/testlist.bvt	2012-09-28 13:37:14.000000000 -0500
+@@ -0,0 +1,3 @@
++cartmap1 4
++cartsuball 4
++dims1 4

@@ -99,7 +99,7 @@ public:
     /*!
      * \brief Protocol version.
      */
-    static const unsigned ProtocolVersion = 4;
+    static const unsigned ProtocolVersion = 5;
 
     /*!
      * \brief pointer type.
@@ -169,6 +169,10 @@ public:
     uint8_t _jobctlProtocol;
     uint8_t _stdioProtocol;
     bool _realtime;
+    unsigned _connectionPoolSize;
+    unsigned _connectionPoolAvailable;
+    unsigned _connectionPoolUsed;
+    unsigned _connectionPoolMax;
 
 public:
     /*!
@@ -184,7 +188,11 @@ public:
         _miscCounters( 0 ),
         _jobctlProtocol( 0 ),
         _stdioProtocol( 0 ),
-        _realtime( false )
+        _realtime( false ),
+        _connectionPoolSize( 0 ),
+        _connectionPoolAvailable( 0 ),
+        _connectionPoolUsed( 0 ),
+        _connectionPoolMax( 0 )
     {
 
     }
@@ -215,6 +223,10 @@ private:
         ar & _jobctlProtocol;
         ar & _stdioProtocol;
         ar & _realtime;
+        ar & _connectionPoolSize;
+        ar & _connectionPoolAvailable;
+        ar & _connectionPoolUsed;
+        ar & _connectionPoolMax;
     }
 };
 

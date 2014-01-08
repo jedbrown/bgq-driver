@@ -36,7 +36,6 @@
 # Setup some default variables.
 DISTROFSTAR_LOC=BGQ_RAMDISK_PATH/bin/distrofs.tar
 DISTROFS_LOC="BGQ_LINUX_OS_PATH"
-DISTRO=`/bin/echo $DISTROFS_LOC | awk 'BEGIN{FS="/"} ; {print $NF}'`
 KERNEL_RPM_LOC="BGQ_LINUX_PATH/rpms"
 USER_KERNEL_RPM_LOC=0
 ADDPKGS_LOC="/bgsys/linux/addpkgs"
@@ -45,10 +44,16 @@ ONLY_ADDPKGS=0
 RHEL6_BASE_LOC=BGQ_DISTROFS_BASE_PATH
 IONFLOOR=0
 IGNORE_EXISTING=0
-LOGFILE=`hostname -s`-bgqDistrofsPostInstall-$DISTRO-`date +%Y-%m%d-%H:%M:%S`.log
 LOCKFILE=/bgsys/linux/.distrofsPostInstall.lock
 SUCCESS=1
-
+# Need to remove trailing '/' from DISTROFS_LOC if it is there.
+if [[ $DISTROFS_LOC =~ /$ ]] ; then
+	LENGTH=${#DISTROFS_LOC}
+	let LENGTH=$LENGTH-1
+	DISTROFS_LOC=`/bin/echo $DISTROFS_LOC | cut -c -$LENGTH`
+fi
+DISTRO=`/bin/echo $DISTROFS_LOC | awk 'BEGIN{FS="/"} ; {print $NF}'`
+LOGFILE=`hostname -s`-bgqDistrofsPostInstall-$DISTRO-`date +%Y-%m%d-%H:%M:%S`.log
 
 # Export variables for use by scripts in /bgsys/linux/addpkgs
 I=0
@@ -237,18 +242,21 @@ if [ ! -e $DISTROFS_LOC ] ; then
                                 # If there is no ionfloor link that is ok for VXRXMX-0, but for any eFix installations
                                 # we need an ionfloor link so we know the old distro to remove during an RPM upgrade.
                                 # If we can't do that, we need to bail out.
-                                DISTRO_ARR=(`/bin/echo "$DISTRO" | tr "_" "\n"`)
-                                /bin/echo ${DISTRO_ARR[1] | grep "V[1-9]R[1-9]M[1-9]" >> /dev/null}
-                                if [ $? -eq 0 ] ; then
-                                        DISTRO_ARR=(`/bin/echo "${DISTRO_ARR[1]}" | tr "-" "\n"`)
-                                        if [ ${DISTRO_ARR[1]} -ne 0 ] ;then
-                                                echo -en "\n\n\tERROR: No /bgsys/linux/ionfloor link found!\n"
-                                                echo -en "\t       An ionfloor link is required for eFix installation.\n"
-                                                echo -en "\t       Link /bgsys/linux/ionfloor to the current BG/Q Linux Distro\n"
-                                                echo -en "\t       and execute BGQ_RAMDISK_PATH/tools/bgqDistrofsPostInstall.sh -f\n\n"
-                                                exit 1
-                                        fi
-                                fi
+				# If the distro isn't in VXRXMX format we must be in a local driver...Move along.
+                                if [[ $DISTRO =~ V[0-9]R[0-9]M[0-9] ]] ; then
+                                	DISTRO_ARR=(`/bin/echo "$DISTRO" | tr "_" "\n"`)
+                                	/bin/echo ${DISTRO_ARR[1] | grep "V[0-9]R[0-9]M[0-9]" >> /dev/null}
+                                	if [ $? -eq 0 ] ; then
+                                        	DISTRO_ARR=(`/bin/echo "${DISTRO_ARR[1]}" | tr "-" "\n"`)
+                                        	if [ ${DISTRO_ARR[1]} -ne 0 ] ;then
+                                                	echo -en "\n\n\tERROR: No /bgsys/linux/ionfloor link found!\n"
+                                                	echo -en "\t       An ionfloor link is required for eFix installation.\n"
+                                                	echo -en "\t       Link /bgsys/linux/ionfloor to the current BG/Q Linux Distro\n"
+                                                	echo -en "\t       and execute BGQ_RAMDISK_PATH/tools/bgqDistrofsPostInstall.sh -f\n\n"
+                                                	exit 1
+                                        	fi
+                                	fi
+				fi
                         fi
 
 			echo -en "\n\n\t\t(Please wait ... This may take some time ...)\n\n"
@@ -412,7 +420,13 @@ if [ $ONLY_ADDPKGS -eq 0 ] ; then
 	   "kernel-debug-2.6.32-131.0.15.el6.ppc64" "kernel-headers-2.6.32-131.0.15.el6.ppc64" \
 	   "kernel-debug-devel-2.6.32-131.0.15.el6.ppc64" "kernel-2.6.32-131.0.15.el6.ppc64" \
 	   "kernel-devel-2.6.32-131.0.15.el6.ppc64" "kernel-bootwrapper-2.6.32-131.0.15.el6.ppc64" \
-	   "kernel-firmware-2.6.32-131.0.15.el6.noarch" ; do
+	   "kernel-firmware-2.6.32-131.0.15.el6.noarch" "kernel-2.6.32-220.el6.ppc64" "kernel-doc-2.6.32-220.el6.noarch" \
+	   "kernel-headers-2.6.32-220.el6.ppc64" "kernel-debug-devel-2.6.32-220.el6.ppc64" \
+	   "kernel-bootwrapper-2.6.32-220.el6.ppc64" "kernel-devel-2.6.32-220.el6.ppc64" \
+	   "kernel-firmware-2.6.32-220.el6.noarch" "kernel-debug-2.6.32-220.el6.ppc64" \
+	   "kernel-bootwrapper-2.6.32-279.el6.ppc64" "kernel-devel-2.6.32-279.el6.ppc64" \
+	   "kernel-firmware-2.6.32-279.el6.noarch" "kernel-headers-2.6.32-279.el6.ppc64" \
+	   "kernel-2.6.32-279.el6.ppc64" ; do
 
 	   rpm --root $DISTROFS_LOC -qa | grep $RPM &> /dev/null 
 	   if [ $? -eq 0 ] ; then
@@ -524,6 +538,8 @@ if [ -e $ADDPKGS_LOC ] ; then
 	    for RPM in `ls $ADDPKGS_LOC/*.rpm` ; do
 
 		GPFS_RPM=""
+		SLES_FOUND=0
+		UPDATE_RPM=0
 
 		# Pull the RPM name off the end of the string.
 		RPM_ARR=(`/bin/echo $RPM | tr "/" "\n"`)
@@ -538,6 +554,7 @@ if [ -e $ADDPKGS_LOC ] ; then
 		# to deal with this.
 		if [[ $RPM =~ "gpfs" ]] && [[ $RPM =~ "sles" ]] ; then
 			GPFS_RPM=$RPM
+			SLES_FOUND=1
 			GPFS_ARR=(`/bin/echo $RPM | tr "." "\n"`)
 			if [ ${#GPFS_ARR[@]} -gt 5 ] ; then
 				RPM="${GPFS_ARR[0]}.${GPFS_ARR[1]}.${GPFS_ARR[2]}.${GPFS_ARR[3]}.${GPFS_ARR[`expr ${#GPFS_ARR[@]} - 1`]}"
@@ -545,11 +562,15 @@ if [ -e $ADDPKGS_LOC ] ; then
 		fi
 
 		if [[ $RPM =~ "gpfs" ]] && [[ $RPM =~ "update" ]] ; then
-			GPFS_RPM=$RPM
+			# Already have the original name if it has been processed for SLES naming/
+			if [ $SLES_FOUND -eq 0 ] ; then
+				GPFS_RPM=$RPM
+			fi
 			# Remove .update from the string for checking if the RPM is installed.
 			LENGTH=${#RPM}
 			let LENGTH=$LENGTH-7
 			RPM=`/bin/echo $RPM | cut -c -$LENGTH`
+			UPDATE_RPM=1
 		fi
 
 		rpm --root $DISTROFS_LOC -qi $RPM &> /dev/null
@@ -557,7 +578,8 @@ if [ -e $ADDPKGS_LOC ] ; then
 		# If the RPM has not yet been installed we copy it to a new directory for
 		# installation.  This way once we have the list built up, all we ahve to do is
 		# an rpm install of all the RPMs and let rpm handle dependencies.
-		if [ $? -ne 0 ] ; then
+		# If it is a GPFS update RPM we need to try installing it anyway.
+		if [ $? -ne 0 ] || [ $UPDATE_RPM -eq 1 ] ; then
 
 		    if [ ! -z $GPFS_RPM ] ; then
 			RPM=$GPFS_RPM
@@ -656,7 +678,7 @@ if [ -e $ADDPKGS_LOC ] ; then
 
 	if [ $? -eq 0 ] ; then
 		if [ -e $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/bin/new_install ] && 
-		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.2.gcc446 ] ; then
+		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446 ] ; then
 			echo -en "\n\tFound the full IBM XL C/C++ Compiler RPM set.  Configuring ...\n"
 			echo "1" > $DISTROFS_LOC/tempKeyFile
 			mount --bind /bgsys $DISTROFS_LOC/bgsys
@@ -665,9 +687,9 @@ if [ -e $ADDPKGS_LOC ] ; then
 				./new_install < /tempKeyFile ; \
 				exit " 2>&1 | tee -a $LOG_DIR/$LOGFILE
 			umount $DISTROFS_LOC/bgsys
-                        mv $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.2.gcc446 \
-			   $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.2.gcc446.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
-                        cat $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.2.gcc446.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.2.gcc446 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        mv $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446 \
+			   $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        cat $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.3.gcc446 2>&1 | tee -a $LOG_DIR/$LOGFILE
 			rm $DISTROFS_LOC/tempKeyFile
 		fi
 	fi
@@ -676,7 +698,7 @@ if [ -e $ADDPKGS_LOC ] ; then
 
 	if [ $? -eq 0 ] ; then
 		if [ -e $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/bin/new_install ] &&
-		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.2.gcc446 ] ; then
+		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446 ] ; then
 			echo -en "\n\tFound the full IBM XL Fortran Compiler RPM set.  Configuring ...\n"
 			echo "1" > $DISTROFS_LOC/tempKeyFile
 			mount --bind /bgsys $DISTROFS_LOC/bgsys
@@ -684,9 +706,9 @@ if [ -e $ADDPKGS_LOC ] ; then
 			chroot $DISTROFS_LOC /bin/bash -c "cd opt/ibmcmp/xlf/bg/14.1/bin/ ; \
 				./new_install < /tempKeyFile ; \
 				exit " 2>&1 | tee -a $LOG_DIR/$LOGFILE
-                        mv $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.2.gcc446 \
-			   $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.2.gcc446.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
-                        cat $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.2.gcc446.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.2.gcc446 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        mv $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446 \
+			   $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        cat $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.3.gcc446 2>&1 | tee -a $LOG_DIR/$LOGFILE
 			rm $DISTROFS_LOC/tempKeyFile
 			umount $DISTROFS_LOC/bgsys
 		fi

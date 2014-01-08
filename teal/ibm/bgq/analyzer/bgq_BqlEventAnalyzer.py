@@ -77,16 +77,16 @@ class bgqBqlEventAnalyzer(bgqBaseAnalyzer):
         self.msgidCount['00090200'] = 2
         self.msgidCount['00090201'] = 1
         self.msgidCount['00090202'] = 1
-        self.msgidCount['00090210'] = 2
-        self.msgidCount['00090211'] = 2
+        self.msgidCount['00090210'] = 4
+        self.msgidCount['00090211'] = 4
 
         # set the window = 2 X the period 
         self.msgidPeriod = dict()
-        self.msgidPeriod['00090200'] = '5 seconds'
-        self.msgidPeriod['00090201'] = '5 seconds'
-        self.msgidPeriod['00090202'] = '5 seconds'
-        self.msgidPeriod['00090210'] = '5 seconds'
-        self.msgidPeriod['00090211'] = '5 seconds'
+        self.msgidPeriod['00090200'] = '11 seconds'
+        self.msgidPeriod['00090201'] = '11 seconds'
+        self.msgidPeriod['00090202'] = '11 seconds'
+        self.msgidPeriod['00090210'] = '11 seconds'
+        self.msgidPeriod['00090211'] = '11 seconds'
 
         # BQL related ras events
         self.bqlIDs = list() 
@@ -96,7 +96,7 @@ class bgqBqlEventAnalyzer(bgqBaseAnalyzer):
         #    parameter 1 = location
         #    parameter 2 = event time
         eventTable = self.appendSchema('tbgqeventlog')
-        self.period_query = "select count(*) from " + eventTable + " where location = ? and event_time <=  (timestamp('MYTIME') + PERIOD) and event_time > (timestamp('MYTIME') - PERIOD)"
+        self.period_query = "select count(*) from " + eventTable + " where location like ? and category='BQL' and event_time <=  (timestamp('MYTIME') + PERIOD) and event_time > (timestamp('MYTIME') - PERIOD)"
 
         # define query for count of open alerts at this location
         # within a day from the event time
@@ -163,8 +163,11 @@ class bgqBqlEventAnalyzer(bgqBaseAnalyzer):
         xmsg = " in a period of " + self.msgidPeriod[msg_id].strip()
         query = self.period_query.replace('PERIOD',self.msgidPeriod[msg_id].strip())
         query = query.replace('MYTIME', str(event_time))
-        registry.get_logger().debug(query + " xmsgId=" + msg_id + " loc=" + location.strip() + " ev_time=" + str(event_time)) 
-        cursor.execute(query, location.strip())    
+
+        # search for events associated with this location's midplane or I/O board
+        qryloc = location.strip()[0:6] + '%'
+        registry.get_logger().debug(query + " xmsgId=" + msg_id + " loc=" + qryloc + " ev_time=" + str(event_time)) 
+        cursor.execute(query, qryloc)    
         row = cursor.fetchone()
         msgCount = row[0]
 

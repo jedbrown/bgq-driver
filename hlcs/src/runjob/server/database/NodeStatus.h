@@ -73,7 +73,9 @@ public:
 private:
     void subBlock();
 
-    void fullBlock();
+    void smallBlock();
+
+    void largeBlock();
 
 protected:
     std::ostringstream _sql;

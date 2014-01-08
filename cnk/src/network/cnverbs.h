@@ -74,7 +74,8 @@ struct cnverbs_wc
    uint32_t sequence_id;                    //!< sequence_id to match if qp is set to sequence_id
    struct cnv_wc wc;                        //!< External work completion (can be partially filled in).
    int num_recv_sge;                        //!< Number of scatter/gather elements in list.
-   struct cnv_sge recv_sge[CNV_MAX_SGE];    //!< List of sge for posted recv. 
+   struct cnv_sge recv_sge[CNV_MAX_SGE];    //!< List of sge for posted recv.
+   struct cnverbs_wc * next;                //!< For linked list characteristic processing 
 };
   
 //! Internal completion queue.
@@ -86,6 +87,14 @@ struct cnverbs_cq
    Lock_Atomic_t num_wc;                    //!< Number of posted work completions.
    Lock_Atomic_t wc_lock;                   //!< Lock to synchronize access to list of work completions.
    uint32_t      cq_character;              //!< flags modifying cq operation characteristics   
+   struct cnverbs_wc * free_wc_list;        //!< free list for post_send or post_receive work requests
+   struct cnverbs_wc * send_wc_list;        //!< send work requests in progress
+   struct cnverbs_wc * receive_wc_list;     //!< receive work requests in progress
+   struct cnverbs_wc * completed_wc_list;   //!< completed work requests for completion queue handling
+   struct cnverbs_wc * send_wc_tail;        //!< send work requests in progress tail
+   struct cnverbs_wc * receive_wc_tail;     //!< receive work requests in progress tail
+   struct cnverbs_wc * completed_wc_tail;   //!< completed work requests for completion queue handling tail
+   
 };
 
 //! Internal queue pair.
@@ -196,6 +205,10 @@ struct cnverbs_wc *cnverbs_find_recv_wc(struct cnverbs_cq *cqe, struct cnv_qp *q
 struct cnverbs_wc *cnverbs_find_recv_wc_by_id(struct cnverbs_wc *wc_list, struct cnv_qp *qp, uint32_t proc_id);
 
 struct cnverbs_wc *cnverbs_find_recv_wc_by_seqid(struct cnverbs_wc *wc_list, struct cnv_qp *qp, uint32_t sequenceID);
+
+int cnv_post_send_no_comp(struct cnv_qp *qp, struct cnv_send_wr *wr_list);
+
+int cnv_poll_cq_for_single_recv(struct cnv_cq *cq, uint32_t proc_id);
 
 //! \brief  Dump a buffer in hexadecimal format.
 //! \param  identifier String to identify buffer.

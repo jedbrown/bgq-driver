@@ -116,8 +116,7 @@ public:
     );
 
     /*!
-     * \brief Set compute block user filter. This is the user that booted the block and only applies
-     * to booted blocks.
+     * \brief Set compute block user filter. This is the user that booted the block and only applies to booted blocks.
      */
     void setUser(
             const std::string& user           //!< [in] Compute block user to filter on
@@ -165,7 +164,7 @@ public:
      * If this filter option is true, then information about midplanes, switches and node boards will be included
      * for compute block objects.
      *
-     * If this is filter option is false, then only basic block information will be set for block objects.
+     * If this filter option is false, then only basic block information will be set for block objects.
      *
      * \return Level of compute block details option.
      */

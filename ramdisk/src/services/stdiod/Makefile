@@ -40,6 +40,10 @@ ifeq ($(OS_ARCH),ppc64)
 STDIOD = stdiod
 endif
 
+ifeq ($(BGQ_CONTROL_SYSTEM_SIMULATION),yes)
+STDIOD = stdiod
+endif
+
 # Additional compiler flags
 #CXXFLAGS +=
 
@@ -61,6 +65,7 @@ objdump: $(STDIOD)
 
 $(STDIOD): $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
+	$(MKDIR) -p $(IOS_PROGRAM_DIR)
 	$(CP) $(STDIOD) $(IOS_PROGRAM_DIR)
 
 #include our dependency rules

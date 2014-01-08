@@ -133,38 +133,52 @@ logEvent() {
     echo -en "Start BG/Q Node Health Monitor Event at: $DATE\n" >> $LOG
     echo -en "#################################################################\n\n" >> $LOG
 
-    echo -en "/proc/meminfo output:\n\n" >> $LOG
-    cat /proc/meminfo >> $LOG
+    case $2 in
 
-    echo -en "\n\n\n#################################################################\n" >> $LOG
-    echo -en "Top output:\n" >> $LOG
-    echo -en "NOTE: The following system processes have been excluded to reduce output: \n" >> $LOG
-    echo -en "\tksoftirqd, migration, watchdog, events, kintegrityd, kblockd, md, md_misc, rpciod\n" >> $LOG
-    echo -en "\taio, crypto, infiniband, ib_cm, ktrotld\n\n" >> $LOG
-    top -b -n 1 | grep -v ksoftirqd | grep -v migration | grep -v watchdog | grep -v events | grep -v kintegrityd | grep -v kblockd | grep -v md | grep -v rpciod | grep -v aio | grep -v crypto | grep -v infiniband | grep -v ib_cm | grep -v grep | grep -v kthrotld  >> $LOG
+	"processInfo" )
 
-    echo -en "\n\n\n#################################################################\n" >> $LOG
-    echo -en "Current network status:\n\n" >> $LOG
-    ip -s link show >> $LOG
+	    echo -en "/proc/meminfo output:\n\n" >> $LOG
+	    cat /proc/meminfo >> $LOG
 
-    echo -en "\n\n\n#################################################################\n" >> $LOG
-    echo -en "Number of processes: " >> $LOG
-    ps aux | wc -l >> $LOG
+	    echo -en "\n\n\n#################################################################\n" >> $LOG
+	    echo -en "Top output:\n" >> $LOG
+	    echo -en "NOTE: The following system processes have been excluded to reduce output: \n" >> $LOG
+	    echo -en "\tksoftirqd, migration, watchdog, events, kintegrityd, kblockd, md, md_misc, rpciod\n" >> $LOG
+	    echo -en "\taio, crypto, infiniband, ib_cm, ktrotld\n\n" >> $LOG
+	    top -b -n 1 | grep -v ksoftirqd | grep -v migration | grep -v watchdog | grep -v events | grep -v kintegrityd | grep -v kblockd | grep -v md | grep -v rpciod | grep -v aio | grep -v crypto | grep -v infiniband | grep -v ib_cm | grep -v grep | grep -v kthrotld  >> $LOG
 
-    echo -en "\n\n\n#################################################################\n" >> $LOG
-    echo -en "NFS Statistics: " >> $LOG
-    nfsstat -c >> $LOG
+	    echo -en "\n\n\n#################################################################\n" >> $LOG
+	    echo -en "Number of processes: " >> $LOG
+	    ps aux | wc -l >> $LOG
 
-    # Do not want to do the following if we think NFS is gone as it can block on a filesystem
-    # operation.
-    if [ $NFSERRLOGGED -eq 0 ] ; then
-	echo -en "\n\n\n#################################################################\n" >> $LOG
-	echo -en "Number of open file descriptors: " >> $LOG
-	lsof -w | wc -l >> $LOG
+            # Do not want to do the following if we think NFS is gone as it can block on a filesystem
+            # operation.
+	    if [ $NFSERRLOGGED -eq 0 ] ; then
+		echo -en "\n\n\n#################################################################\n" >> $LOG
+		echo -en "Number of open file descriptors: " >> $LOG
+		lsof -w | wc -l >> $LOG
 
+	    fi
 
-    fi
+	    ;;
+	
+	"networkInfo" )
 
+	    echo -en "\n\n\n#################################################################\n" >> $LOG
+	    echo -en "Current network status:\n\n" >> $LOG
+	    ip -s link show >> $LOG
+
+	    echo -en "\n\n\n#################################################################\n" >> $LOG
+	    echo -en "NFS Statistics: " >> $LOG
+	    nfsstat -c >> $LOG
+
+	    ;;
+
+	* )
+	    echo -en "\n\nERROR:  Unknown event requsted from bghealthmond's logEvent function.\n\n"
+	    ;;
+
+    esac
 
     echo -en "\n\n\n#################################################################\n" >> $LOG    
     echo -en "End BG/Q Node Health Monitor Event Log\n" >> $LOG
@@ -276,11 +290,10 @@ if [ $ENABLED -eq 1 ] ; then
 	print "\n\tSampling free memory"
 	
 	CURRMEM=`cat /proc/meminfo | grep MemFree: | tr -s " " | cut -d" " -f 2`
-	CURRMEM=$MEMTHRESHOLD
 	
 	if [ $CURRMEM -lt $MEMTHRESHOLD ] ; then
 	    
-	    logEvent "Low memory threshold exceeded - Threshold: $MEMTHRESHOLD, Actual: $CURRMEM"
+	    logEvent "Low memory threshold exceeded - Threshold: $MEMTHRESHOLD, Actual: $CURRMEM" processInfo
 
 	fi
 
@@ -296,77 +309,60 @@ if [ $ENABLED -eq 1 ] ; then
 
 	    while [ $DEVICE -lt $NUMADAPTERS ] ; do
 		print "\n\t\tChecking device ${ADAPTERS[$DEVICE]} ... "
-		#ip -s link show ${ADAPTERS[$DEVICE]}
 
-		# Set up the fields to check coming from IP depending on whether bonding is configured
-		# or not.  If we are cehcking the bond0 device the fields are also different.
-		if [ ${ADAPTERS[$DEVICE]} == "eth0" ] || [ ${ADAPTERS[$DEVICE]} == "eth1" ] ||
-		   [ ${ADAPTERS[$DEVICE]} == "ib0" ] ; then
-		   
-			if [ -z "$BONDINGOPTS" ] ; then
-				RX_BYTES_FIELD=23
-				RX_PACKETS_FIELD=24
-				RX_ERRORS_FIELD=25
-				RX_DROPPED_FIELD=26
-				TX_BYTES_FIELD=36
-				TX_PACKETS_FIELD=37
-				TX_ERRORS_FIELD=38
-				TX_DROPPED_FIELD=39
-			else
-                                RX_BYTES_FIELD=25
-                                RX_PACKETS_FIELD=26
-                                RX_ERRORS_FIELD=27
-				RX_DROPPED_FIELD=28
-                                TX_BYTES_FIELD=38
-                                TX_PACKETS_FIELD=39
-                                TX_ERRORS_FIELD=40
-				TX_DROPPED_FIELD=41
-			fi
+		#Pull the data out of sysfs if possible.  If not, throw a RAS event.
+		if [ ! -e /sys/class/net/${ADAPTERS[$DEVICE]}/statistics ] ; then
+		     bgras $BGRAS_ID_NODE_HEALTH_MONITOR_WARNING \
+			   "Unable to find statistics for device ${ADAPTER[$DEVICE]} in /sys/class/net/${ADAPTERS[$DEVICE]}/statistics."
 		else
-			RX_BYTES_FIELD=21
-			RX_PACKETS_FIELD=22
-			RX_ERRORS_FIELD=23
-			RX_DROPPED_FIELD=24
-			TX_BYTES_FIELD=34
-			TX_PACKETS_FIELD=35
-			TX_ERRORS_FIELD=36
-			TX_DROPPED_FIELD=37
-		fi
+		    RX_BYTES=`cat /sys/class/net/${ADAPTERS[$DEVICE]}/statistics/rx_bytes `
+		    RX_PACKETS=`cat /sys/class/net/${ADAPTERS[$DEVICE]}/statistics/rx_packets `
+		    RX_DROPPED=`cat /sys/class/net/${ADAPTERS[$DEVICE]}/statistics/rx_dropped `
+		    RX_ERRORS=`cat /sys/class/net/${ADAPTERS[$DEVICE]}/statistics/rx_errors `
+		    TX_BYTES=`cat /sys/class/net/${ADAPTERS[$DEVICE]}/statistics/tx_bytes `
+		    TX_PACKETS=`cat /sys/class/net/${ADAPTERS[$DEVICE]}/statistics/tx_packets `
+		    TX_DROPPED=`cat /sys/class/net/${ADAPTERS[$DEVICE]}/statistics/tx_dropped `
+		    TX_ERRORS=`cat /sys/class/net/${ADAPTERS[$DEVICE]}/statistics/tx_errors `
+		    
 
-		IPARR=( `ip -s link show ${ADAPTERS[$DEVICE]} | tr -s " " | tr "\n" " " ` )
-		if [ ${IPARR[$RX_ERRORS_FIELD]} -gt $NETERRTHRESHOLD ] ; then
-		   logEvent "Network RX error threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold: $NETERRTHRESHOLD, Actual: ${IPARR[$RX_ERRORS_FIELD]} "
-		   NETERRLOGGED=1
-		fi
+		    if [ $RX_ERRORS -gt $NETERRTHRESHOLD ] ; then
+			logEvent "Network RX error threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold: $NETERRTHRESHOLD, Actual: $RX_ERRORS " networkInfo
+			NETERRLOGGED=1
+		    fi
 
-		# Need to calculate a percentage of the total packets RXd for the drop threshold.
-		if [ ${IPARR[$RX_DROPPED_FIELD]} -gt 0 ] && [ ${IPARR[$RX_BYTES_FIELD]} -gt 0 ] && [ $NOTBOOTED -eq 0 ] ; then
-		   let DROPPEDPERC=`echo "scale=0; ${IPARR[$RX_DROPPED_FIELD]}*100/${IPARR[$RX_BYTES_FIELD]}" | bc`
-		   if [ $DROPPEDPERC -ge $NETDRPTHRESHOLD ] ; then
-		      logEvent "Network RX dropped packets threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold $NETDRPTHRESHOLD: %, Actual: $DROPPEDPERC %"
-		      NETERRLOGGED=1
-		   fi
-		elif [ ${IPARR[$RX_DROPPED_FIELD]} -gt 0 ] && [ ${IPARR[$RX_BYTES_FIELD]} -eq 0 ] ; then
-		   logEvent "All RX packets are being dropped on ${ADAPTERS[$DEVICE]} - Dropped: ${IPARR[$RX_DROPPED_FIELD]}, Received: ${IPARR[$RX_BYTES_FIELD]} "
-		   NETERRLOGGED=1
-		fi
+		    # Need to calculate a percentage of the total packets RXd for the drop threshold.
+		    if [ $RX_DROPPED -gt 0 ] && [ $RX_PACKETS -gt 0 ] && [ $NOTBOOTED -eq 0 ] ; then
+			let DROPPEDPERC=`echo "scale=0; $RX_DROPPED*100/$RX_PACKETS " | bc`
+			if [ $DROPPEDPERC -ge $NETDRPTHRESHOLD ] ; then
+			    logEvent "Network RX dropped packets threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold $NETDRPTHRESHOLD: %, Actual: $DROPPEDPERC %" networkInfo
+			    NETERRLOGGED=1
+			fi
+		    elif [ $RX_DROPPED -gt 0 ] && [$RX_PACKETS -eq 0 ] ; then
+			logEvent "All RX packets are being dropped on ${ADAPTERS[$DEVICE]} - Dropped: $RX_DROPPED, Received: $RX_PACKETS " networkInfo
+			NETERRLOGGED=1
+		    fi
 
-	        if [ ${IPARR[$TX_ERRORS_FIELD]} -gt $NETERRTHRESHOLD ] ; then
-		   logEvent "Network TX error threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold: $NETERRTHRESHOLD, Actual: ${IPARR[$TX_ERRORS_FIELD]} "
-		   NETERRLOGGED=1
-		fi
+	            if [ $TX_ERRORS -gt $NETERRTHRESHOLD ] ; then
+			logEvent "Network TX error threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold: $NETERRTHRESHOLD, Actual: $TX_ERRORS " networkInfo
+			NETERRLOGGED=1
+		    fi
 
-	        # Need to calculate a percentage of the total packets RXd for the drop threshold.
-		if [ ${IPARR[$TX_DROPPED_FIELD]} -gt 0 ] && [ ${IPARR[$TX_BYTES_FIELD]} -gt 0 ] && [ $NOTBOOTED -eq 0 ] ; then
-		   let DROPPEDPERC=`echo "scale=0; ${IPARR[$TX_DROPPED_FIELD]}*100/${IPARR[$TX_BYTES_FIELD]}" | bc`
-		   if [ $DROPPEDPERC -ge $NETDRPTHRESHOLD ] ; then
-		      logEvent "Network TX dropped packets threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold: $NETDRPTHRESHOLD %, Actual: $DROPPEDPERC %"
-		      NETERRLOGGED=1
-		   fi
-		# If there are dropped packets but none transmitted we need to log an event.
-		elif [ ${IPARR[$TX_DROPPED_FIELD]} -gt 0 ] && [ ${IPARR[$TX_BYTES_FIELD]} -eq 0 ] ; then
-		    logEvent "All TX packets are being dropped on ${ADAPTERS[$DEVICE]} - Dropped: ${IPARR[$TX_DROPPED_FIELD]}, Transmitted: ${IPARR[$TX_BYTES_FIELD]} "
-		    NETERRLOGGED=1
+		    # Reset, just to be safe.
+		    DROPPEDPERC=""
+
+	            # Need to calculate a percentage of the total packets RXd for the drop threshold.
+		    if [ $TX_DROPPED -gt 0 ] && [ $TX_PACKETS -gt 0 ] && [ $NOTBOOTED -eq 0 ] ; then
+			let DROPPEDPERC=`echo "scale=0; $TX_DROPPED*100/$TX_PACKETS" | bc`
+			if [ $DROPPEDPERC -ge $NETDRPTHRESHOLD ] ; then
+			    logEvent "Network TX dropped packets threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold: $NETDRPTHRESHOLD %, Actual: $DROPPEDPERC %" networkInfo
+			    NETERRLOGGED=1
+			fi
+		    # If there are dropped packets but none transmitted we need to log an event.
+		    elif [ $TX_DROPPED -gt 0 ] && [ $TX_PACKETS -eq 0 ] ; then
+			logEvent "All TX packets are being dropped on ${ADAPTERS[$DEVICE]} - Dropped: $TX_DROPPED, Transmitted: $TX_PACKETS " networkInfo
+			NETERRLOGGED=1
+		    fi
+
 		fi
 
 		let DEVICE=$DEVICE+1
@@ -410,7 +406,7 @@ if [ $ENABLED -eq 1 ] ; then
 		    		if [ $? -ne 0 ] ; then
 		    			bgras $BGRAS_ID_IB_LINK_LOST "Link lost for $SECONDS or more seconds on interface ${ADAPTERS[$DEVICE]}."
 		    		else
-					logEvent "Link lost for $SECONDS or more seconds on IB interface ${ADAPTERS[$DEVICE]}."
+					logEvent "Link lost for $SECONDS or more seconds on IB interface ${ADAPTERS[$DEVICE]}." networkInfo
 					# Record that we know we have list this link given that it is not fatal, we don't want
 					# to start spamming the logs with output.
 					LINKLOST="$LINKLOST ${ADAPTERS[$DEVICE]}"
@@ -448,7 +444,7 @@ if [ $ENABLED -eq 1 ] ; then
 		    		if [ $? -ne 0 ] ; then
 		    			bgras $BGRAS_ID_ETHERNET_LINK_LOST "Link lost for $SECONDS or more seconds on interface ${ADAPTERS[$DEVICE]} "
 		    		else
-					logEvent "Link lost for $SECONDS or more seconds on ethernet interface ${ADAPTERS[$DEVICE]}"
+					logEvent "Link lost for $SECONDS or more seconds on ethernet interface ${ADAPTERS[$DEVICE]}" networkInfo
                                         # Record that we know we have list this link given that it is not fatal, we don't want
                                         # to start spamming the logs with output.
                                         LINKLOST="$LINKLOST ${ADAPTERS[$DEVICE]}"
@@ -467,7 +463,7 @@ if [ $ENABLED -eq 1 ] ; then
 	LOADARR=( `cat /proc/loadavg ` )
 	FIVEMINLOADARR=( `echo "${LOADARR[1]}" | tr "." "\n" ` )
 	if [ ${FIVEMINLOADARR[0]} -gt $LOADAVGTHRESHOLD ] ; then
-	    logEvent "The 5 minute load average threshold exceeded - Threshold: $LOADAVGTHRESHOLD, Actual: ${FIVEMINLOADARR[0]}"
+	    logEvent "The 5 minute load average threshold exceeded - Threshold: $LOADAVGTHRESHOLD, Actual: ${FIVEMINLOADARR[0]}" processInfo
 	fi
 
 	let CURRITER=$CURRITER+1
@@ -477,7 +473,7 @@ if [ $ENABLED -eq 1 ] ; then
 	if [ ${OFARR[0]} -gt 0 ] && [ ${OFARR[2]} -gt 0 ] ; then
 	    let OFPERC=`echo "scale=0; ${OFARR[0]}*100/${OFARR[2]}" | bc`
 	    if [ $OFPERC -gt $OFTHRESHOLD ] ; then
-		logEvent "The number of open file descriptors exceeds the threshold - Threshold: $OFTHRESHOLD%, Actual: $OFPERC% of total possible file descriptors"
+		logEvent "The number of open file descriptors exceeds the threshold - Threshold: $OFTHRESHOLD%, Actual: $OFPERC% of total possible file descriptors" processInfo
 	    fi
 	fi
 
@@ -487,7 +483,7 @@ if [ $ENABLED -eq 1 ] ; then
 	    if [ ${NFSSTATARR[7]} -gt $RETRANSTHRESHOLD ] ; then
 		# Set this first to avoid blocking on any FS ops.
 		NFSERRLOGGED=1
-		logEvent "The nfs retransmission threshold has been exceeded - Threshold: $RETRANSTHRESHOLD, Actual: ${NFSSTATARR[7]}"
+		logEvent "The nfs retransmission threshold has been exceeded - Threshold: $RETRANSTHRESHOLD, Actual: ${NFSSTATARR[7]}" networkInfo
 	    fi
 	else
 	    print "\n\tNFS retransmission error already logged.  Skipping further samples."
@@ -519,7 +515,7 @@ if [ $ENABLED -eq 1 ] ; then
 	    # If it is non-zero somewthing went wrong.  An RC of 2 means the device is down so we don't want to throw an error.
 	    if [ $RC -ne 0 ] && [ $RC -ne 2 ] ; then
 		RC=$(arping -D -c 1 -I $INTERFACE0 $BG_INTF0_IPV4)
-		logEvent "Possible duplicate IP address found for interface: $INTERFACE0, ip: $BG_INTF0_IPV4.  Consult the following arping output for conflicting MAC address. - arping returned: $RC"
+		logEvent "Possible duplicate IP address found for interface: $INTERFACE0, ip: $BG_INTF0_IPV4.  Consult the following arping output for conflicting MAC address. - arping returned: $RC" networkInfo
 	    fi
 	fi
 
@@ -530,7 +526,7 @@ if [ $ENABLED -eq 1 ] ; then
 	    # If it is non-zero somewthing went wrong.  An RC of 2 means the device is down so we don't want to throw an error.
 	    if [ $RC -ne 0 ] && [ $RC -ne 2 ] ; then
 		RC=$(arping -D -c 1 -I $BG_INTF1_NAME $BG_INTF1_IPV4)
-		logEvent "Possible duplicate IP address found for interface: $BG_INTF1_NAME, ip: $BG_INTF1_IPV4.  Consult the following arping output for conflicting MAC address. - arping returned: $RC"
+		logEvent "Possible duplicate IP address found for interface: $BG_INTF1_NAME, ip: $BG_INTF1_IPV4.  Consult the following arping output for conflicting MAC address. - arping returned: $RC" networkInfo
 	    fi
 	fi
 	

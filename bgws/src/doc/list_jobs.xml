@@ -159,6 +159,13 @@
         </varlistentry>
 
         <varlistentry>
+            <term><option>--client</option> hostname:pid</term>
+            <listitem>
+                <para>List the job with the given client ID, which is made up of the the runjob hostname and pid.</para>
+            </listitem>
+        </varlistentry>
+
+        <varlistentry>
             <term><option>--sort</option> sort-spec</term>
             <listitem>
                 <para>List the jobs in the given order.</para>

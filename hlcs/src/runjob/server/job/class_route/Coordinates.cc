@@ -93,6 +93,21 @@ operator==(
         ;
 }
 
+bool
+operator<(
+        const Coordinates& rhs,
+        const Coordinates& lhs
+        )
+{
+    return
+        rhs.get( Dimension::A ) < lhs.get( Dimension::A ) ||
+        rhs.get( Dimension::B ) < lhs.get( Dimension::B ) ||
+        rhs.get( Dimension::C ) < lhs.get( Dimension::C ) ||
+        rhs.get( Dimension::D ) < lhs.get( Dimension::D ) ||
+        rhs.get( Dimension::E ) < lhs.get( Dimension::E )
+        ;
+}
+
 std::ostream&
 operator<<(
         std::ostream& os,

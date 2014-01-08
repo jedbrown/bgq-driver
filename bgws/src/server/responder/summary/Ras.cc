@@ -62,6 +62,7 @@ HTTP status: 403 Forbidden
 
 #include "Ras.hpp"
 
+#include "../../BlockingOperationsThreadPool.hpp"
 #include "../../dbConnectionPool.hpp"
 #include "../../Error.hpp"
 #include "../../sqlStrings.gen.hpp"
@@ -128,37 +129,74 @@ void Ras::_doGet()
     }
 
 
-    // Do query to get count of RAS events...
+    _blocking_operations_thread_pool.post( boost::bind(
+            &Ras::_doQuery, this,
+            capena::server::AbstractResponder::shared_from_this()
+        ) );
+}
 
-    auto conn_ptr(dbConnectionPool::getConnection());
 
-    cxxdb::ResultSetPtr rs_ptr(conn_ptr->query(
-            sql::RAS_CHART // queries/rasChart.txt
-        ));
+void Ras::_doQuery(
+        capena::server::ResponderPtr
+    )
+{
+    try {
 
-    if ( ! rs_ptr->fetch() ) {
-        BOOST_THROW_EXCEPTION( std::runtime_error( "no result for RAS chart query." ) );
+        auto conn_ptr(dbConnectionPool::getConnection());
+
+        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query(
+                sql::RAS_CHART // queries/rasChart.txt
+            ));
+
+        _getStrand().post( boost::bind(
+                &Ras::_queryComplete, this,
+                capena::server::AbstractResponder::shared_from_this(),
+                conn_ptr,
+                rs_ptr
+            ) );
+
+    } catch ( std::exception& e )
+    {
+        _inCatchPostCurrentExceptionToHandlerFn();
     }
+}
 
-    const cxxdb::Columns &cols(rs_ptr->columns());
 
-    json::ArrayValue arr_val;
-    json::Array &arr(arr_val.get());
+void Ras::_queryComplete(
+        capena::server::ResponderPtr,
+        cxxdb::ConnectionPtr,
+        cxxdb::ResultSetPtr rs_ptr
+    )
+{
+    try {
 
-    for ( int i(1) ; i <= 5 ; ++i ) {
-        json::Object &obj(arr.addObject());
+        if ( ! rs_ptr->fetch() ) {
+            BOOST_THROW_EXCEPTION( std::runtime_error( "no result for RAS chart query." ) );
+        }
 
-        obj.set( "date", boost::gregorian::to_iso_string( cols[string() + "d" + lexical_cast<string>(i)].getDate() ) );
-        obj.set( "fatal", cols[string() + "f" + lexical_cast<string>(i)].as<uint64_t>() );
-        obj.set( "warn", cols[string() + "w" + lexical_cast<string>(i)].as<uint64_t>() );
-        obj.set( "info", cols[string() + "i" + lexical_cast<string>(i)].as<uint64_t>() );
+        const cxxdb::Columns &cols(rs_ptr->columns());
+
+        json::ArrayValue arr_val;
+        json::Array &arr(arr_val.get());
+
+        for ( int i(1) ; i <= 5 ; ++i ) {
+            json::Object &obj(arr.addObject());
+
+            obj.set( "date", boost::gregorian::to_iso_string( cols[string() + "d" + lexical_cast<string>(i)].getDate() ) );
+            obj.set( "fatal", cols[string() + "f" + lexical_cast<string>(i)].as<uint64_t>() );
+            obj.set( "warn", cols[string() + "w" + lexical_cast<string>(i)].as<uint64_t>() );
+            obj.set( "info", cols[string() + "i" + lexical_cast<string>(i)].as<uint64_t>() );
+        }
+
+        capena::server::Response &response(_getResponse());
+
+        response.setContentTypeJson();
+        response.headersComplete();
+        json::Formatter()( arr_val, response.out() );
+
+    } catch ( std::exception& e ) {
+        _handleError( e );
     }
-
-    capena::server::Response &response(_getResponse());
-
-    response.setContentTypeJson();
-    response.headersComplete();
-    json::Formatter()( arr_val, response.out() );
 }
 
 

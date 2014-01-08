@@ -26,7 +26,7 @@
 
 #include <bgsched/realtime/Client.h>
 #include <bgsched/realtime/ClientConfiguration.h>
-#include <bgsched/realtime/ClientEventListener.h>
+#include <bgsched/realtime/ClientEventListenerV2.h>
 #include <bgsched/realtime/Filter.h>
 
 #include <db/include/api/cxxdb/cxxdb.h>
@@ -301,7 +301,7 @@ static std::ostream& operator<<( std::ostream& os, bgsched::realtime::RasSeverit
 }
 
 
-class MyListener : public bgsched::realtime::ClientEventListener
+class MyListener : public bgsched::realtime::ClientEventListenerV2
 {
 public:
 
@@ -400,6 +400,23 @@ public:
         cout << "\n";
         ++_total_events;
     }
+
+    void handleIoDrawerStateChangedEvent( const IoDrawerStateChangedEventInfo& info )
+    {
+        cout << "I/O drawer. location=" << info.getLocation() <<
+                   " state=" << info.getState() << " sequenceId=" << info.getSequenceId() <<
+                   " previousState=" << info.getPreviousState() << " previousSequenceId=" << info.getPreviousSequenceId() << "\n";
+        ++_total_events;
+    }
+
+    void handleIoNodeStateChangedEvent( const IoNodeStateChangedEventInfo& info )
+    {
+        cout << "I/O node. location=" << info.getLocation() <<
+                   " state=" << info.getState() << " sequenceId=" << info.getSequenceId() <<
+                   " previousState=" << info.getPreviousState() << " previousSequenceId=" << info.getPreviousSequenceId() << "\n";
+       ++_total_events;
+    }
+
 
 private:
 
@@ -551,6 +568,9 @@ int main( int argc, char* argv[] )
 
         bool fetch_ras_message_ind(false);
 
+        bool io_drawers_ind(false);
+        bool io_nodes_ind(false);
+
 
         po::options_description options( "Options" );
 
@@ -586,6 +606,8 @@ int main( int argc, char* argv[] )
                 ( "midplanes", po::bool_switch( &midplanes_ind ), "Toggle midplane changes" )
                 ( "nodeboards", po::bool_switch( &node_boards_ind ), "Toggle node board changes" )
                 ( "nodes", po::bool_switch( &nodes_ind ), "Toggle node changes" )
+                ( "io-drawers", po::bool_switch( &io_drawers_ind ), "Toggle I/O drawer changes" )
+                ( "io-nodes", po::bool_switch( &io_nodes_ind ), "Toggle I/O node changes" )
                 ( "switches", po::bool_switch( &switches_ind ), "Toggle switch changes" )
                 ( "torus-cables", po::bool_switch( &torus_cables_ind ), "Toggle torus cable changes" )
                 ( "io-cables", po::bool_switch( &io_cables_ind ), "Toggle I/O cable changes" )
@@ -674,6 +696,14 @@ int main( int argc, char* argv[] )
 
         if ( nodes_ind ) {
             filter_holder.get().setNodes( ! filter_holder.get().getNodes() );
+        }
+
+        if ( io_drawers_ind ) {
+            filter_holder.get().setIoDrawers( ! filter_holder.get().getIoDrawers() );
+        }
+
+        if ( io_nodes_ind ) {
+            filter_holder.get().setIoNodes( ! filter_holder.get().getIoNodes() );
         }
 
         if ( switches_ind ) {

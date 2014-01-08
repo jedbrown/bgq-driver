@@ -31,7 +31,6 @@ define(
     "dojo/_base/array",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -42,7 +41,6 @@ function(
         d_array,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -67,16 +65,19 @@ var b_navigator_Charts = d_declare( null,
 
 
     /** @constructs */
-    constructor : function( bgws )
+    constructor : function(
+            bgws,
+            charts_dij
+        )
     {
-        this._charts_dij = j_registry.byId( "navigator" ).footer.charts;
+        this._charts_dij = charts_dij;
 
         this._charts_dij.on( "visibilityChanged", d_lang.hitch( this, this._visibilityChanged ) );
 
         this._charts = [
-                new l_RasChart( bgws ),
-                new l_JobsChart( bgws ),
-                new l_UtilizationChart( bgws )
+                new l_RasChart( bgws, charts_dij.ras ),
+                new l_JobsChart( bgws, charts_dij.jobs ),
+                new l_UtilizationChart( bgws, charts_dij.utilization )
             ];
 
         l_topic.subscribe( l_topic.loggedIn, d_lang.hitch( this, this._loggedIn ) );

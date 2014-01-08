@@ -29,11 +29,10 @@ define(
     "../FilterOptions",
     "../../BlueGene",
     "dojo/dom-construct",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
-    "dojo/_base/sniff",
     "dojox/charting/Chart",
     "dojox/charting/action2d/MoveSlice",
     "dojox/charting/action2d/Tooltip",
@@ -64,11 +63,10 @@ function(
         ll_FilterOptions,
         b_BlueGene,
         d_construct,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
-        d_sniff,
         x_charting_Chart,
         x_charting_action2d_MoveSlice,
         x_charting_action2d_Tooltip,
@@ -85,7 +83,6 @@ function(
 
 
 var b_navigator_dijit_PerformanceMonitoring = d_declare(
-        "bluegene.navigator.dijit.PerformanceMonitoring",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -255,6 +252,7 @@ var b_navigator_dijit_PerformanceMonitoring = d_declare(
 
         // first cancel current request if in progress.
         if ( this._fetch_def != null ) {
+            console.log( module + ": canceling current request." );
             this._fetch_def.cancel();
             this._fetch_def = null;
         }
@@ -273,18 +271,20 @@ var b_navigator_dijit_PerformanceMonitoring = d_declare(
 
         this._updatePagingButtonState();
 
-        d_Deferred.when(
-                this._fetch_def,
+        d_when(
+                this._fetch_def.response,
                 d_lang.hitch( this, this._gotData )
             );
     },
 
 
-    _gotData : function( data )
+    _gotData : function( response )
     {
         this._loadingInd.hide();
 
-        var content_range = this._fetch_def.ioArgs.xhr.getResponseHeader( "Content-Range" );
+        var content_range = response.getHeader( "Content-Range" );
+
+        var data = response.data;
 
         console.log( module.id + ": _gotData. data=", data, "content_range=", content_range );
 
@@ -478,10 +478,8 @@ var b_navigator_dijit_PerformanceMonitoring = d_declare(
                 radius: 200
             };
 
-        if ( ! d_sniff( "ie" ) ) { // For some reason, this type of wiring doesn't display on IE.
-            pie_plot_args.labelWiring = "ccc";
-            pie_plot_args.labelStyle = "columns";
-        }
+        pie_plot_args.labelWiring = "ccc";
+        pie_plot_args.labelStyle = "columns";
 
         this._chart.addPlot( "default",
                 pie_plot_args

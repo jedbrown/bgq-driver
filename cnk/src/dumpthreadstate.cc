@@ -55,8 +55,8 @@ int dumpThreadState()
                         // core hwt tid state running  migrationData iar  signal pendingsigmask 
                         const char *isRunning = (NodeState.CoreState[core].HWThreads[hwt].pCurrentThread == kthread) ? yes_string : no_string;
                         // limit the string printed but keep the fields aligned for viewing
-                        printf("TID=%03d State=%08x curHWT=%02d curSlot=%01d kHWT=%02d kSlot=%01d Run=%s Migrated=%s R3=%016lx DBG=%01d ExitFutex=%016lx Pri=%02d futex=%016lx sc=%04d\n",
-                               GetTID(kthread),kthread->State,curHwt,curSlot, kHwt, kSlot,isRunning,isMigrated,kthread->Reg_State.gpr[3],kthread->pad3,(uint64_t)kthread->pChild_TID,kthread->Priority,(uint64_t)kthread->FutexVAddr,(uint16_t)kthread->syscallNum);      
+                        printf("TID=%03d State=%08x curHWT=%02d curSlot=%01d kHWT=%02d kSlot=%01d Run=%s Migrated=%s R3=%016lx ExitFutex=%016lx Pri=%02d futex=%016lx sc=%04d\n",
+                               GetTID(kthread),kthread->State,curHwt,curSlot, kHwt, kSlot,isRunning,isMigrated,kthread->Reg_State.gpr[3],(uint64_t)kthread->pChild_TID,kthread->Priority,(uint64_t)kthread->FutexVAddr,(uint16_t)kthread->syscallNum);      
                     }
                 }
             }

@@ -159,6 +159,7 @@ HTTP status: 500 Internal Server Error
 #include "Run.hpp"
 #include "RunsQueryOptions.hpp"
 
+#include "../../BlockingOperationsThreadPool.hpp"
 #include "../../blue_gene.hpp"
 #include "../../dbConnectionPool.hpp"
 #include "../../Error.hpp"
@@ -239,23 +240,24 @@ void Runs::_doGet()
         LOG_DEBUG_MSG( "Query includes running, getting snapshot." );
 
         _diagnostics_runs.getSnapshot(
-                _getStrand().wrap( boost::bind(
-                        &Runs::_gotSnapshot,
-                        this,
+                boost::bind(
+                        &Runs::_gotSnapshot, this,
                         capena::server::AbstractResponder::shared_from_this(),
                         _1,
                         query_options
-                    ) )
+                    )
             );
 
     } else { // Did not request running diagnostics.
 
         LOG_DEBUG_MSG( "Query does not include running, skipping snapshot." );
 
-        _doQuery(
+        _blocking_operations_thread_pool.post( boost::bind(
+                &Runs::_startQuery, this,
+                capena::server::AbstractResponder::shared_from_this(),
                 blue_gene::diagnostics::Runs::SnapshotPtr(),
                 query_options
-            );
+            ) );
 
     }
 
@@ -418,38 +420,42 @@ void Runs::_gotSnapshot(
         const RunsQueryOptions& query_options
     )
 {
-    try { // This is a callback function so needs to wrap in try/catch to call handleError if any exception.
+    try { // This is a callback function not in the Responder's strand, so needs to wrap in try/catch to call _inCatchPostCurrentExceptionToHandlerFn if error.
 
-        _doQuery(
+        _blocking_operations_thread_pool.post( boost::bind(
+                &Runs::_startQuery, this,
+                capena::server::AbstractResponder::shared_from_this(),
                 snapshot_ptr,
                 query_options
-            );
+            ) );
 
     } catch ( std::exception& e ) {
 
-        _handleError( e );
+        _inCatchPostCurrentExceptionToHandlerFn();
 
     }
 }
 
 
-void Runs::_doQuery(
+void Runs::_startQuery(
+        capena::server::ResponderPtr,
         blue_gene::diagnostics::Runs::SnapshotPtr snapshot_ptr,
         const RunsQueryOptions& query_options
     )
 {
-    WhereClause where_clause;
-    cxxdb::ParameterNames param_names;
-    string sort_clause_sql;
+    try {
+        WhereClause where_clause;
+        cxxdb::ParameterNames param_names;
+        string sort_clause_sql;
 
-    query_options.addToWhereClause(
-            &where_clause,
-            &param_names,
-            &sort_clause_sql
-        );
+        query_options.addToWhereClause(
+                &where_clause,
+                &param_names,
+                &sort_clause_sql
+            );
 
 
-    string runs_sql = string() +
+        string runs_sql = string() +
 
 "SELECT " + BGQDB::DBTDiagruns::RUNID_COL + ", " + BGQDB::DBTDiagruns::STARTTIME_COL + ", " + BGQDB::DBTDiagruns::ENDTIME_COL + ", " + BGQDB::DBTDiagruns::DIAGSTATUS_COL + ", " + BGQDB::DBTDiagruns::LOGDIR_COL +
  " FROM " + BGQDB::DBTDiagruns().getTableName() +
@@ -458,18 +464,18 @@ void Runs::_doQuery(
 
            ;
 
-    auto conn_ptr(dbConnectionPool::getConnection());
+        auto conn_ptr(dbConnectionPool::getConnection());
 
-    LOG_DEBUG_MSG( "preparing: " << runs_sql );
+        LOG_DEBUG_MSG( "preparing: " << runs_sql );
 
-    cxxdb::QueryStatementPtr runs_stmt_ptr(conn_ptr->prepareQuery( runs_sql, param_names ));
+        cxxdb::QueryStatementPtr runs_stmt_ptr(conn_ptr->prepareQuery( runs_sql, param_names ));
 
-    query_options.bindParameters( *runs_stmt_ptr );
+        query_options.bindParameters( *runs_stmt_ptr );
 
-    cxxdb::ResultSetPtr runs_rs_ptr(runs_stmt_ptr->execute());
+        cxxdb::ResultSetPtr runs_rs_ptr(runs_stmt_ptr->execute());
 
 
-    string blocks_sql =
+        string blocks_sql =
 
 "SELECT bs.blockId,"
       " COALESCE( tr.testsAnalyzed, 0 ) AS testsAnalyzed,"
@@ -488,82 +494,106 @@ void Runs::_doQuery(
       " ON bs.blockId = tr.blockId"
  " WHERE bs.runId = ?"; // runId
 
-        ;
+            ;
 
 
-    cxxdb::QueryStatementPtr blocks_stmt_ptr(conn_ptr->prepareQuery( blocks_sql, boost::assign::list_of( "runId" )( "runId" ) ));
+        cxxdb::QueryStatementPtr blocks_stmt_ptr(conn_ptr->prepareQuery( blocks_sql, boost::assign::list_of( "runId" )( "runId" ) ));
 
 
-    json::ArrayValue arr_val;
+        json::ArrayValuePtr arr_val_ptr(json::Array::create());
 
-    json::Array &arr(arr_val.get());
+        json::Array &arr(arr_val_ptr->get());
 
-    while ( runs_rs_ptr->fetch() )
-    {
-        json::Object &obj(arr.addObject());
+        while ( runs_rs_ptr->fetch() )
+        {
+            json::Object &obj(arr.addObject());
 
-        const cxxdb::Columns &run_cols(runs_rs_ptr->columns());
+            const cxxdb::Columns &run_cols(runs_rs_ptr->columns());
 
-        int64_t run_id = run_cols["runId"].as<int64_t>();
+            int64_t run_id = run_cols["runId"].as<int64_t>();
 
-        obj.set( "runId", lexical_cast<string>( run_id ) );
-        obj.set( "start", run_cols["startTime"].getTimestamp() );
-        if ( run_cols["endTime"] )   obj.set( "end", run_cols["endTime"].getTimestamp() );
+            obj.set( "runId", lexical_cast<string>( run_id ) );
+            obj.set( "start", run_cols["startTime"].getTimestamp() );
+            if ( run_cols["endTime"] )   obj.set( "end", run_cols["endTime"].getTimestamp() );
 
-        string diag_status( "unknown" );
+            string diag_status( "unknown" );
 
-        if ( run_cols["diagStatus"] ) {
-            diag_status = run_cols["diagStatus"].getString();
-            obj.set( "status", diag_status );
-        }
-
-        obj.set( "logDirectory", run_cols["logdir"].getString() );
-
-        bool is_running(! run_cols["endTime"]);
-
-
-        json::Array &blocks_arr(obj.createArray( "blocks" ));
-
-        blocks_stmt_ptr->parameters()["runId"].cast( run_id );
-
-        cxxdb::ResultSetPtr blocks_rs_ptr(blocks_stmt_ptr->execute());
-
-        while ( blocks_rs_ptr->fetch() ) {
-            const cxxdb::Columns &block_cols(blocks_rs_ptr->columns());
-
-            json::Object &block_obj(blocks_arr.addObject());
-
-            const string block_id(block_cols["blockId"].getString());
-            if ( boost::algorithm::starts_with( block_id, blue_gene::diagnostics::HARDWARE_BLOCK_PREFIX ) ) {
-                block_obj.set( "location", block_id.substr( blue_gene::diagnostics::HARDWARE_BLOCK_PREFIX.size() ) );
-            } else {
-                block_obj.set( "blockId", block_id );
+            if ( run_cols["diagStatus"] ) {
+                diag_status = run_cols["diagStatus"].getString();
+                obj.set( "status", diag_status );
             }
 
-            if ( is_running ) {
-                block_obj.set( "testsAnalyzed", block_cols["testsAnalyzed"].as<int64_t>() );
-                block_obj.set( "testsToAnalyze", block_cols["testsToAnalyze"].as<int64_t>() );
-                block_obj.set( "testsFailed", block_cols["testsFailed"].as<int64_t>() );
+            obj.set( "logDirectory", run_cols["logdir"].getString() );
+
+            bool is_running(! run_cols["endTime"]);
+
+
+            json::Array &blocks_arr(obj.createArray( "blocks" ));
+
+            blocks_stmt_ptr->parameters()["runId"].cast( run_id );
+
+            cxxdb::ResultSetPtr blocks_rs_ptr(blocks_stmt_ptr->execute());
+
+            while ( blocks_rs_ptr->fetch() ) {
+                const cxxdb::Columns &block_cols(blocks_rs_ptr->columns());
+
+                json::Object &block_obj(blocks_arr.addObject());
+
+                const string block_id(block_cols["blockId"].getString());
+                if ( boost::algorithm::starts_with( block_id, blue_gene::diagnostics::HARDWARE_BLOCK_PREFIX ) ) {
+                    block_obj.set( "location", block_id.substr( blue_gene::diagnostics::HARDWARE_BLOCK_PREFIX.size() ) );
+                } else {
+                    block_obj.set( "blockId", block_id );
+                }
+
+                if ( is_running ) {
+                    block_obj.set( "testsAnalyzed", block_cols["testsAnalyzed"].as<int64_t>() );
+                    block_obj.set( "testsToAnalyze", block_cols["testsToAnalyze"].as<int64_t>() );
+                    block_obj.set( "testsFailed", block_cols["testsFailed"].as<int64_t>() );
+                }
+            }
+
+
+            if ( snapshot_ptr ) {
+                blue_gene::diagnostics::Runs::Snapshot::const_iterator running_diags_i(snapshot_ptr->find( run_id ));
+
+                if ( running_diags_i != snapshot_ptr->end() ) {
+                    obj.set( "user", running_diags_i->second.user );
+                    obj.set( "cancelable", running_diags_i->second.canceled ? "canceled" : "cancelable" );
+                }
             }
         }
 
+        _getStrand().post( boost::bind(
+                &Runs::_queryComplete, this,
+                capena::server::AbstractResponder::shared_from_this(),
+                arr_val_ptr
+            ) );
 
-        if ( snapshot_ptr ) {
-            blue_gene::diagnostics::Runs::Snapshot::const_iterator running_diags_i(snapshot_ptr->find( run_id ));
+    } catch ( std::exception& e ) {
 
-            if ( running_diags_i != snapshot_ptr->end() ) {
-                obj.set( "user", running_diags_i->second.user );
-                obj.set( "cancelable", running_diags_i->second.canceled ? "canceled" : "cancelable" );
-            }
-        }
+        _inCatchPostCurrentExceptionToHandlerFn();
+
     }
+}
 
-    capena::server::Response &response(_getResponse());
 
-    response.setContentTypeJson();
-    response.headersComplete();
+void Runs::_queryComplete(
+        capena::server::ResponderPtr,
+        json::ArrayValuePtr arr_val_ptr
+    )
+{
+    try {
+        capena::server::Response &response(_getResponse());
 
-    json::Formatter()( arr_val, response.out() );
+        response.setContentTypeJson();
+        response.headersComplete();
+
+        json::Formatter()( *arr_val_ptr, response.out() );
+
+    } catch ( std::exception& e ) {
+        _handleError( e );
+    }
 }
 
 

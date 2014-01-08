@@ -49,41 +49,58 @@ class AgentRep : public AgentBase, public boost::enable_shared_from_this<AgentRe
     //! \brief bgmaster is ending this agent in an orderly fashion.
     bool _orderly;
 
-    //! \brief Archived last binary run
-    BinaryControllerPtr _last_bin;
-
     //! \brief Thread to wait for requests
     boost::thread _agent_socket_poller;
 
     pthread_t _my_tid;
 
-    // Must be mutable even when the rest of the world is
-    // const because locks don't get copied.
-    mutable boost::mutex _agent_mutex;
+    boost::mutex _agent_mutex;
 
+    void doCompleteRequest(
+            const BGMasterAgentProtocolSpec::CompleteRequest& compreq
+            );
 
-    void doCompleteRequest(const BGMasterAgentProtocolSpec::CompleteRequest& compreq);
-    void doFailedRequest(const BGMasterAgentProtocolSpec::FailedRequest& failreq);
+    void doFailedRequest(
+            const BGMasterAgentProtocolSpec::FailedRequest& failreq
+            );
 
     //! These functions are non-locking.  Functions that call them must lock the agent object!
-    void executePolicyAndClear_nl(BinaryControllerPtr binptr, AgentRepPtr rep_p, int signo = 0);
+    void executePolicyAndClear_nl(
+            BinaryControllerPtr binptr, 
+            AgentRepPtr rep_p, 
+            int signo = 0
+            );
 
     //! \brief Just execute the policy, don't clear.
-    void executePolicy_nl(const BinaryId& reqbid, AgentRepPtr rep_p,
-                          AliasPtr al, int signo = 0);
-    BinaryId startBin_nl(const BGMasterAgentProtocolSpec::StartRequest& startreq,
-                         BGMasterAgentProtocolSpec::StartReply& startrep);
-    void stopBin_nl(const BinaryId& bid,
-                    const BinaryLocation& binloc,
-                    const int signal,
-                    BGMasterAgentProtocolSpec::StopReply& stoprep,
-                    bool failover);
+    void executePolicy_nl(
+            const BinaryId& reqbid, AgentRepPtr rep_p,
+            AliasPtr al, 
+            int signo = 0
+            );
 
-    void agentAbend(std::ostringstream& msg);
+    BinaryId startBin_nl(
+            const BGMasterAgentProtocolSpec::StartRequest& startreq,
+            BGMasterAgentProtocolSpec::StartReply& startrep
+            );
+
+    void stopBin_nl(
+            const BinaryId& bid,
+            const BinaryLocation& binloc,
+            const int signal,
+            BGMasterAgentProtocolSpec::StopReply& stoprep,
+            bool failover
+            );
+
+    void agentAbend(
+            const std::ostringstream& msg
+            );
+
 public:
-    AgentRep(AgentProtocolPtr p,
-             BGMasterAgentProtocolSpec::JoinRequest& joinreq,
-             BGMasterAgentProtocolSpec::JoinReply& joinrep);
+    AgentRep(
+            AgentProtocolPtr p,
+            const BGMasterAgentProtocolSpec::JoinRequest& joinreq,
+            BGMasterAgentProtocolSpec::JoinReply& joinrep
+            );
 
     ~AgentRep();
 
@@ -97,37 +114,42 @@ public:
 
     //! \brief Stop a binary and execute a policy for it.  If there is no policy,
     //!        this method will fail with an exception.
-    void stopBinaryAndExecutePolicy(const BinaryId& bid,
-                                    const BinaryLocation& binloc,
-                                    const int signal,
-                                    BGMasterAgentProtocolSpec::StopReply& stoprep,
-                                    BinaryControllerPtr binptr,
-                                    std::string& trigger);
+    void stopBinaryAndExecutePolicy(
+            const BinaryId& bid,
+            const BinaryLocation& binloc,
+            const int signal,
+            BGMasterAgentProtocolSpec::StopReply& stoprep,
+            const std::string& trigger
+            );
 
-    BinaryId startBin(const BGMasterAgentProtocolSpec::StartRequest& startreq,
-                      BGMasterAgentProtocolSpec::StartReply& startrep);
+    BinaryId startBin(
+            const BGMasterAgentProtocolSpec::StartRequest& startreq,
+            BGMasterAgentProtocolSpec::StartReply& startrep
+            );
 
-    void stopBin(const BinaryId& bid,
-                 const BinaryLocation& binloc,
-                 int signal,
-                 BGMasterAgentProtocolSpec::StopReply& stoprep,
-                 bool failover);
+    void stopBin(
+            const BinaryId& bid,
+            const BinaryLocation& binloc,
+            int signal,
+            BGMasterAgentProtocolSpec::StopReply& stoprep,
+            bool failover
+            );
 
     //! \brief Stop all binaries running on this agent.  Locking.
-    void stopAllBins(BGMasterClientProtocolSpec::StopReply& stoprep, int signal);
+    void stopAllBins(
+            BGMasterClientProtocolSpec::StopReply& stoprep, 
+            int signal
+            );
 
     //! \brief Cancel polling thread processing and optionally end the agent process.
-    //! \param agent Also end the agent process.
     //! \param binaries Also end the managed binaries.
     //! \param signal Signal to use to end the binaries.
-    void cancel(bool agent, bool binaries, unsigned signal);
+    void cancel(
+            bool binaries, 
+            unsigned signal
+            );
 
-    //! \brief request the bgagentd process to end
-    bool endAgent(BGMasterAgentProtocolSpec::End_agentReply& agentdierep);
-
-    size_t binCount() const { return _binaries.size(); }
-
-    BinaryControllerPtr get_last_bin() { return _last_bin; }
+    size_t binCount() const { return this->get_binaries().size(); }
 };
 
 

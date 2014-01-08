@@ -26,18 +26,19 @@ define(
 [
     "./AbstractTemplatedContainer",
     "./MonitorActiveMixin",
+    "../format",
     "../../BlueGene",
     "../../utility/Stack",
     "dojo/dom-construct",
+    "dojo/number",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred" ,
     "dojo/_base/lang",
     "dojo/text!./templates/SystemSummary.html",
     "module",
 
     // Used only in template.
-    "../format",
     "../../dijit/Hideable",
     "../../dijit/OutputFormat",
     "dijit/form/CheckBox",
@@ -46,12 +47,14 @@ define(
 function(
         l_AbstractTemplatedContainer,
         l_MonitorActiveMixin,
+        ll_format,
         b_BlueGene,
         b_utility_Stack,
         d_construct,
+        d_number,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         template,
         module
@@ -79,7 +82,6 @@ var _calcColorForStatus = function( status ) {
 
 
 var b_navigator_dijit_SystemSummary = d_declare(
-        "bluegene.navigator.dijit.SystemSummary",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -89,6 +91,7 @@ var b_navigator_dijit_SystemSummary = d_declare(
     _fetch_summary_fn : null,
 
     _system_cpu_count: 1024,
+    _io_drawers : null, // [] I/O drawer locations.
 
     _promise: null, // not null when loading.
 
@@ -121,6 +124,7 @@ var b_navigator_dijit_SystemSummary = d_declare(
         console.log( module.id + ": setMachineInfo. args=", args );
 
         this._system_cpu_count = args.machineInfo.systemCpuCount;
+        this._io_drawers = args.machineInfo.ioDrawers;
 
         console.log( module.id + ": calling update from setMachineInfo." );
         this._update();
@@ -245,7 +249,7 @@ var b_navigator_dijit_SystemSummary = d_declare(
             this._timeout_id = null;
         }
 
-        this._promise = d_Deferred.when(
+        this._promise = d_when(
                 this._fetch_summary_fn(),
                 d_lang.hitch( this, this._handleSummaryData ),
                 d_lang.hitch( this, function() { this._promise = null; } )
@@ -435,8 +439,36 @@ var b_navigator_dijit_SystemSummary = d_declare(
             }
         }
 
+
+        // Note that if the I/O drawer is BLOCK_READY, it's not included in the data.
+        // So need to mark all I/O drawers as BLOCK_READY and then update with data from the server.
+
+        // Initially, mark all the I/O drawers as BLOCK_READY.
+        d_array.forEach( this._io_drawers, d_lang.hitch( this, function( drawer_location ) {
+            this._current_hw[drawer_location] = { color: _calcColorForStatus( "BLOCK_READY" ) };
+        } ) );
+
+        for ( rack_location in data.racks ) {
+            var rack_info = data.racks[rack_location];
+
+            if ( rack_info.status ) {
+                this._current_hw[rack_location] = { color: _calcColorForStatus( rack_info.status ) };
+            }
+
+            for ( drawer_pos in rack_info.drawers ) {
+
+                var drawer_location = (rack_location + "-" + drawer_pos);
+                this._current_hw[drawer_location] = { color: _calcColorForStatus( rack_info.drawers[drawer_pos] ) };
+
+            }
+        }
+
         this.onMachineHighlightDataChanged();
-    }
+    },
+
+
+    _d_number : d_number,
+    _ll_format : ll_format
 
 } );
 

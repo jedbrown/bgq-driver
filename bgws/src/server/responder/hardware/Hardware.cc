@@ -244,6 +244,7 @@ HTTP status: 403 Forbidden
 
 #include "Machine.hpp"
 
+#include "../../BlockingOperationsThreadPool.hpp"
 #include "../../dbConnectionPool.hpp"
 #include "../../Error.hpp"
 
@@ -336,8 +337,20 @@ void Hardware::_doGet()
 
     const string &location_str(_getRequestedResourcePath().back());
 
-    try {
+    _blocking_operations_thread_pool.post( boost::bind(
+            &Hardware::_startQuery, this,
+            capena::server::AbstractResponder::shared_from_this(),
+            location_str
+        ) );
+}
 
+
+void Hardware::_startQuery(
+        capena::server::ResponderPtr,
+        const std::string& location_str
+    )
+{
+    try {
         bgq::util::Location location( location_str );
 
         json::ValuePtr val_ptr;
@@ -363,6 +376,47 @@ void Hardware::_doGet()
             val_ptr = _getIoDrawer( location_str );
         }
 
+
+        _getStrand().post( boost::bind(
+                &Hardware::_queryComplete, this,
+                capena::server::AbstractResponder::shared_from_this(),
+                location_str, val_ptr
+            ) );
+
+    } catch ( bgq::util::LocationError& e ) {
+
+        try {
+
+            Error::Data data;
+            data["location"] = location_str;
+
+            BOOST_THROW_EXCEPTION( Error(
+                    boost::str( boost::format( "Could not get details for hardware '%1%' because that location is not valid." ) % location_str ),
+                    "getHardwareDetails", "invalidLocation", data,
+                    capena::http::Status::BadRequest
+                ) );
+
+        } catch ( std::exception& e ) {
+
+            _inCatchPostCurrentExceptionToHandlerFn();
+
+        }
+
+    } catch ( std::exception& e ) {
+
+        _inCatchPostCurrentExceptionToHandlerFn();
+
+    }
+}
+
+
+void Hardware::_queryComplete(
+        capena::server::ResponderPtr,
+        const std::string& location_str,
+        json::ValuePtr val_ptr
+    )
+{
+    try {
         if ( val_ptr ) {
 
             capena::server::Response &response(_getResponse());
@@ -374,20 +428,7 @@ void Hardware::_doGet()
 
             return;
         }
-    } catch ( bgq::util::LocationError& e ) {
 
-        Error::Data data;
-        data["location"] = location_str;
-
-        BOOST_THROW_EXCEPTION( Error(
-                boost::str( boost::format( "Could not get details for hardware '%1%' because that location is not valid." ) % location_str ),
-                "getHardwareDetails", "invalidLocation", data,
-                capena::http::Status::BadRequest
-            ) );
-
-    }
-
-    {
         Error::Data data;
         data["location"] = location_str;
 
@@ -396,7 +437,12 @@ void Hardware::_doGet()
                 "getHardwareDetails", "invalidType", data,
                 capena::http::Status::BadRequest
             ) );
+    } catch ( std::exception& e ) {
+
+        _handleError( e );
+
     }
+
 }
 
 

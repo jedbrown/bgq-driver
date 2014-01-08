@@ -21,15 +21,17 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#include "lite/Job.h"
+#include "Job.h"
 
-#include "lite/Database.h"
-#include "lite/SecurityKey.h"
+#include "Database.h"
+#include "SecurityKey.h"
 
-#include "BlockControllerBase.h"
-#include "CNBlockController.h"
-#include "IOBlockController.h"
-#include "MMCSProperties.h"
+#include "server/BCNodeInfo.h"
+#include "server/BlockControllerBase.h"
+#include "server/CNBlockController.h"
+#include "server/IOBlockController.h"
+
+#include "common/Properties.h"
 
 #include <bgq_util/include/Location.h>
 
@@ -46,13 +48,22 @@
 
 #include <fstream>
 
-LOG_DECLARE_FILE( "mmcs" );
 
-using namespace lite;
+using namespace mmcs::server;
+
+using mmcs::common::Properties;
+
+
+LOG_DECLARE_FILE( "mmcs.lite" );
+
+
+namespace mmcs {
+namespace lite {
+
 
 Job::Job(
         const JobInfo& info,
-        const BlockPtr& block
+        const server::BlockPtr& block
         ) :
     _io_service( new boost::asio::io_service() ),
     _timer( *_io_service ),
@@ -85,13 +96,13 @@ Job::Job(
 
     LOG_TRACE_MSG( "creating job " << _info.getId() << " with " << _size << " nodes" );
     // look for jobsim key in properties file
-    if ( !MMCSProperties::getProperty( "jobsim" ).empty() ) {
+    if ( !Properties::getProperty( "jobsim" ).empty() ) {
         // set IP to localhost
         _info.setIp( "127.0.0.1" );
 
         // get job sim ID
         try {
-            _sim_id = boost::lexical_cast<uint32_t>( MMCSProperties::getProperty( "jobsim" ) );
+            _sim_id = boost::lexical_cast<uint32_t>( Properties::getProperty( "jobsim" ) );
             LOG_TRACE_MSG( "using job simulation ID " << _sim_id );
 
             // get control and data port numbers
@@ -106,13 +117,13 @@ Job::Job(
             }
         } catch ( const boost::bad_lexical_cast& e ) {
             std::ostringstream msg;
-            msg << "bad jobsim value in properties file: " << MMCSProperties::getProperty( "jobsim" );
+            msg << "bad jobsim value in properties file: " << Properties::getProperty( "jobsim" );
             BOOST_THROW_EXCEPTION( std::runtime_error(msg.str()) );
         }
     } else {
         // not simulating, set control and data ports from the properties file
         try {
-            bgq::utility::Properties::ConstPtr properties( MMCSProperties::getProperties() );
+            bgq::utility::Properties::ConstPtr properties( Properties::getProperties() );
             _control_port = boost::lexical_cast<uint16_t>(
                     properties->getValue( "cios.jobctld", "listenPort" )
                     );
@@ -978,3 +989,4 @@ Job::handleTimer(
     }
 }
 
+} } // namespace mmcs::lite

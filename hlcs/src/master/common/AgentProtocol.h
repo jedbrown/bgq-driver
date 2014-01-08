@@ -36,7 +36,7 @@
 class AgentProtocol: public Protocol
 {
 public:
-    AgentProtocol(bgq::utility::Properties::Ptr p) : Protocol(p) {}
+    AgentProtocol(const bgq::utility::Properties::ConstPtr& p) : Protocol(p) {}
    ~AgentProtocol() { }
 
   /*!
@@ -89,19 +89,6 @@ public:
    void status(const BGMasterAgentProtocolSpec::StatusRequest& request, BGMasterAgentProtocolSpec::StatusReply& reply)
   {
     sendReceive(BGMasterAgentProtocolSpec::StatusRequest::getClassName(), request, BGMasterAgentProtocolSpec::StatusReply::getClassName(), reply);
-  }
-
-  /*!
-   * Tell bgagent to commit suicide and take its binaries with it.
-   *
-   * @param End_agentRequest
-   *           request object
-   * @param End_agentReply
-   *           reply object
-   */
-   void end_agent(const BGMasterAgentProtocolSpec::End_agentRequest& request, BGMasterAgentProtocolSpec::End_agentReply& reply)
-  {
-    sendReceive(BGMasterAgentProtocolSpec::End_agentRequest::getClassName(), request, BGMasterAgentProtocolSpec::End_agentReply::getClassName(), reply);
   }
 
   /*!

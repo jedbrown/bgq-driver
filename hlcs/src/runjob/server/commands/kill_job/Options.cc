@@ -37,6 +37,11 @@
  *
  * \section OPTIONS
  *
+ * \subsection pid --pid.
+ *
+ * runjob process ID. Either this parameter
+ * or --id must be given.
+ *
  * \subsection id --id
  *
  * Numeric job ID, this may be specified as the first positional argument as well.
@@ -45,7 +50,8 @@
  *
  * Signal to send. This may be specified as an integer or string. The --signal and -s switch is optional,
  * instead the signal number or string can be prefixed by a single - character similar to the kill command
- * in most shell environments.
+ * in most shell environments. When specifying a string, it must be one of the well known signals, see
+ * --list for more information. When specifying a number, it must be greater than zero.
  *
  * If no signal is provided, SIGKILL is sent by default.
  *
@@ -53,7 +59,13 @@
  *
  * A positive non-zero number of seconds to start a timeout when delivering SIGKILL. If the job has not finished
  * on its own after this value, it is forcefully terminated and the nodes in use will be unavailable for
- * future jobs until the block is rebooted. This value is ignored for signals other than SIGKILL.
+ * future jobs until the block is rebooted. This value is ignored for signals other than SIGKILL. The time
+ * remaining for this timeout can be queried with the job_status command. It can also be reduced by subsequent
+ * invocations of kill_job with a smaller --timeout parameter.
+ *
+ * \subsection list --list
+ *
+ * Display a list of signal names and numbers.
  *
  * COMMON_ARGUMENTS_GO_HERE
  *
@@ -148,6 +160,8 @@ Options::Options(
         char** argv
         ) :
     runjob::commands::Options( defaults::ServerCommandService, runjob::server::commands::log, runjob::commands::Message::Tag::KillJob, argc, argv ),
+    _pid( 0 ),
+    _hostname(),
     _options( "Options" ),
     _signal(),
     _timeout( 0 )
@@ -155,10 +169,17 @@ Options::Options(
     namespace po = boost::program_options;
 
     _options.add_options()
+        ("pid", po::value(&_pid), "runjob process ID")
         ("id", po::value(&_job), "job ID to signal")
         ("signal,s", po::value(&_signal)->default_value("KILL"), "signal to deliver")
         ("list,l", po::bool_switch(), "list all valid signals")
         ("timeout", po::value(&_timeout)->default_value(defaults::ServerKillJobTimeout), "number of seconds to wait after\ndelivering a SIGKILL. Ignored for other\nsignals.")
+        ;
+
+    // --runjob-hostname is hidden
+    boost::program_options::options_description hidden;
+    hidden.add_options()
+        ("runjob-hostname", po::value(&_hostname), "hostname where runjob was started")
         ;
 
     // job ID is positional
@@ -172,11 +193,14 @@ Options::Options(
                 _1
                 );
 
+    po::options_description both;
+    both.add( _options );
+    both.add( hidden );
 
     // add generic args
     Options::add( 
             runjob::server::commands::PropertiesSection,
-            _options,
+            both,
             &extra
             );
 }
@@ -201,12 +225,12 @@ Options::description() const
 void
 Options::doValidate() const
 {
-    if ( _job == 0 ) {
+    if ( _job == 0 && _pid == 0 ) {
         BOOST_THROW_EXCEPTION( boost::program_options::error("missing required option 'id'") );
     }
 
     // convert signal to integer
-    int signal = this->convertSignal( _signal );
+    const int signal = this->convertSignal( _signal );
     if ( !signal ) {
         BOOST_THROW_EXCEPTION( boost::program_options::invalid_option_value("signal") );
     }
@@ -215,6 +239,8 @@ Options::doValidate() const
             boost::static_pointer_cast<runjob::commands::request::KillJob>( this->getRequest() )
             );
     request->_job = _job;
+    request->_pid = _pid;
+    request->_hostname = _hostname;
     request->_signal = signal;
     request->_timeout = _timeout;
 }
@@ -225,6 +251,8 @@ Options::convertSignal(
         ) const
 {
     int result = 0;
+
+    if ( signal.empty() ) return result;
 
     BOOST_FOREACH( const Signal& i, signals ) {
         // name of signal is first tuple
@@ -246,6 +274,17 @@ Options::convertSignal(
         }
     }
 
+    if ( !result ) {
+        // we didn't match a signal name or number we know about so
+        // check for valid positive numbers
+        try {
+            result = boost::lexical_cast<int>(signal);
+            if ( result <= 0 ) return 0;
+        } catch ( const boost::bad_lexical_cast& e ) {
+            LOG_WARN_MSG( e.what() );
+        }
+    }
+
     return result;
 }
 
@@ -256,13 +295,15 @@ Options::signalParser(
 {
     std::pair<std::string,std::string> result;
 
-    // only look at args that are prefix with a -
-    if ( arg[0] == '-' ) {
-        // strip off leading - char
-        int signal = this->convertSignal( arg.substr(1) );
-        if ( signal ) {
-            result = std::make_pair("signal", arg.substr(1) );
-        }
+    // only look at args that are prefixed with a single -
+    if ( arg[0] != '-' ) return result;
+    if ( arg.size() < 2) return result;
+    if ( arg[1] == '-' ) return result;
+
+    // strip off leading - char
+    const int signal = this->convertSignal( arg.substr(1) );
+    if ( signal ) {
+        result = std::make_pair("signal", arg.substr(1) );
     }
 
     return result;

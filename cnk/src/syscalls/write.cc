@@ -52,7 +52,7 @@ uint64_t sc_write(SYSCALL_FCN_ARGS)
     return File_GetFSPtr(fd)->write(fd, buf, cnt);
 }
 
-uint64_t internal_write(int fd, void* buffer, size_t cnt)
+uint64_t internal_write(int fd, const void* buffer, size_t cnt)
 {
    uint64_t rc;
    BEGIN_KERNELINTERNALSC();

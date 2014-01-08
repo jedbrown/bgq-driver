@@ -26,7 +26,7 @@
 var profile = (function()
 {
     return {
-        resourceTags:{
+        resourceTags: {
             test: function( filename, mid )
             {
                 return /^bluegene\/test/.test( mid ) ||
@@ -35,23 +35,26 @@ var profile = (function()
                        /^bluegene\/utility\/test/.test( mid );
             },
 
-            copyOnly: function( filename, mid ) {
-                    if ( /\.json$/.test( mid ) )  return true;
-                    return false;
-                },
+            copyOnly: function( filename, mid )
+            {
+                if ( /\.json$/.test( mid ) )  return true;
+                return false;
+            },
 
-            amd: function( filename, mid ) {
-                    if ( /\.js$/.test( filename ) )  return true;
-                    return false;
-                },
+            amd: function( filename, mid )
+            {
+                if ( /\.js$/.test( filename ) )  return true;
+                return false;
+            },
 
-            miniExclude: function( filename, mid ){
-                    return false;
-                }
+            miniExclude: function( filename, mid ) 
+            {
+                return false;
+            }
         },
 
         trees: [
-                [ ".", ".", /(\/\.)|(~$)/ ]
+                [ ".", ".", /(\/\.)|(~$)|(\.svn)/ ]
             ]
     };
 })();

@@ -749,6 +749,7 @@ HwJobController::completionChannelHandler(void)
                      case ExitProcess: exitProcess(client,msghdr); break;
                      case ExitJob: exitJob(client,msghdr); break;
                      case CleanupJobAck: cleanupJobAck(msghdr); break;
+                     case SignalJobAck: signalJobAck(msghdr); break;
 
                      case ErrorAck: break; // Nothing to do here
 
@@ -900,6 +901,7 @@ HwJobController::discoverNodeStep1(const RdmaClientPtr& client, bgcios::MessageH
    reqMsg->header.length = sizeof(bgcios::iosctl::StartNodeServicesMessage);
    reqMsg->serviceId = serviceId;
    client->setUniqueId(serviceId);
+   reqMsg->CNtorus = coordsToNodeId(inMsg->coords.aCoord,inMsg->coords.bCoord,inMsg->coords.cCoord,inMsg->coords.dCoord,inMsg->coords.eCoord);
 
    // Send StartNodeServices message to iosd.
    sendToCommandChannel(_iosdCmdChannelPath, reqMsg);
@@ -1007,6 +1009,7 @@ HwJobController::setupJob(void)
    job->loadJobAckAccumulator.setLimit((int)job->numComputeNodes());
    job->startJobAckAccumulator.setLimit((int)job->numComputeNodes());
    job->cleanupJobAckAccumulator.setLimit((int)job->numComputeNodes());
+   job->signalJobAckAccumulator.setLimit((int)job->numComputeNodes());
    job->exitProcessAccumulator.setLimit(1); // Only one message is sent by CNK
    job->exitJobAccumulator.setLimit(1); // Only one message is sent by CNK
 
@@ -1450,10 +1453,37 @@ HwJobController::signalJob(void)
    if (inMsg->signo == SIGKILL) {
       job->endAllTools(SIGTERM); // Give the tools a chance to cleanup and end.
    }
+   return 0;
+}
 
-   // Send SignalJobAck message on data channel.
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": SignalJobAck message sent on data channel");
-   return sendToDataChannel(outMsg); 
+void
+HwJobController::signalJobAck(bgcios::MessageHeader * mh)
+{
+   // Get pointer to inbound SignalJobAck message.
+   SignalJobAckMessage *inMsg = (SignalJobAckMessage *)mh;
+
+   // Validate the job id.
+   JobPtr job = _jobs.get(inMsg->header.jobId);
+   if (job == NULL) {
+      LOG_ERROR_MSG("Job " << inMsg->header.jobId << " is not active, SignalJobAck message was ignored");
+      return;
+   }
+
+   // Accumulate messages and forward one message on data channel when all messages have been received.
+   bool ready = job->signalJobAckAccumulator.add(&(inMsg->header));
+   if (ready) {
+      LOG_CIOS_INFO_MSG("Job " << inMsg->header.jobId << ": SignalJobAck message received from " << job->signalJobAckAccumulator.getLimit() << " compute nodes");
+
+      LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": SignalJobAck message sent on data channel");
+      int err = sendToDataChannel((void *)job->signalJobAckAccumulator.get());
+      if (err == 0) {
+         job->signalJobAckAccumulator.resetCount();
+      }
+      else {
+         LOG_ERROR_MSG("Job " << inMsg->header.jobId << ": error sending SignalJobAck message on data channel: " << bgcios::errorString(err));
+      }
+   }
+   return;
 }
 
 int

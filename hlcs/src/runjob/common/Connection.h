@@ -67,7 +67,7 @@ public:
      * 
      * \throws boost::system::system_error
      */
-    boost::asio::ip::tcp::endpoint getEndpoint() { return _socket->next_layer().remote_endpoint(); }
+    boost::asio::ip::tcp::endpoint getEndpoint() const { return _socket->next_layer().remote_endpoint(); }
 
     /*!
      * \brief Start handling requests on this connection.
@@ -83,6 +83,11 @@ public:
      * \brief Get remote hostname.
      */
     const std::string& hostname() const { return _hostname; }
+    
+    /*!
+     * \brief Get remote hostname (short).
+     */
+    const std::string& shortHostname() const { return _shortHostname; }
 
 protected:
     /*!
@@ -120,6 +125,7 @@ protected:
     const bgq::utility::portConfig::SocketPtr _socket;  //!< Socket object
     boost::asio::ip::tcp::resolver _resolver;           //!< resolver
     std::string _hostname;                              //!< hostname
+    std::string _shortHostname;                         //!< short hostname
     boost::asio::streambuf _incomingMessage;            //!< incoming message buffer
     boost::asio::streambuf _outgoingMessage;            //!< outgoing message buffer
 

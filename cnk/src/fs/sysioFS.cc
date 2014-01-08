@@ -34,6 +34,11 @@
 
 
 using namespace bgcios::sysio;
+   //! Storage for outbound messages.  
+static char _outMessage[CONFIG_MAX_HWTHREADS * bgcios::ImmediateMessageSize] ALIGN_L1D_CACHE;
+
+   //! Storage for inbound messages.
+static char _inMessage[CONFIG_MAX_HWTHREADS * bgcios::ImmediateMessageSize] ALIGN_L1D_CACHE;
 
 int
 sysioFS::init(void)
@@ -42,7 +47,7 @@ sysioFS::init(void)
    fetch_and_and(&_lock, 0);
 
    // Start sequence ids from 1.
-   _sequenceId = 1;
+   for (int i=0;i<CONFIG_MAX_HWTHREADS;i++) _procSequenceId[i]= 1;
    _isTerminated = false;
 
    // Where to initialize context?  How do we get context pointer here?
@@ -75,6 +80,9 @@ sysioFS::init(void)
       TRACE( TRACE_SysioFS, ("(E) sysioFS::init%s: cnv_reg_mr() failed for outbound message region, error %d\n", whoami(), err) );
       return err;
    }
+
+   // initialize send message subregions in _outMessage
+   initSendHeaders();
 
    // Create a completion queue.
    if (  ( err = cnv_create_cq(&_completionQ, _context, CNV_MAX_WC) )  ) return err;
@@ -122,6 +130,12 @@ sysioFS::term(void)
 {
    int rc = 0;
 
+   if (_isTerminated == true) {
+       return 0;
+   }
+   // Obtain the lock to serialize message exchange with sysiod.
+   Kernel_Lock(&_lock);
+   
    // Just return if the method has already completed successfully.
    if (_isTerminated == true) {
       return 0;
@@ -193,10 +207,11 @@ sysioFS::setupJob(int fs)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
+   int procID=ProcessorID();
    AppState_t *app = GetMyAppState();
-   SetupJobMessage *requestMsg = (SetupJobMessage *)_outMessageRegion.addr;
+   SetupJobMessage *requestMsg = (SetupJobMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), SetupJob, 
-                  sizeof(SetupJobMessage)-sizeof(requestMsg->shortCircuitPath));
+                  sizeof(SetupJobMessage));
    requestMsg->userId = app->UserID;
    requestMsg->groupId = app->GroupID;
    requestMsg->numGroups = app->NumSecondaryGroups;
@@ -219,22 +234,6 @@ sysioFS::setupJob(int fs)
    }
    else {
       requestMsg->logFunctionShipErrors = -1;
-   }
-   const char *pathname;
-   
-   if (App_GetEnvString("BG_SYSIODSHORTCIRCUITPATH", &pathname)) {
-      strncpy(requestMsg->shortCircuitPath, pathname, sizeof(requestMsg->shortCircuitPath));
-      const unsigned int stringLength = strlen(pathname);
-      if (stringLength>=sizeof(requestMsg->shortCircuitPath)){
-        requestMsg->header.length += sizeof(requestMsg->shortCircuitPath);
-      }
-      else{
-        requestMsg->header.length += stringLength+1;
-      }
-   }
-   else {
-      requestMsg->shortCircuitPath[0] = 0;
-      requestMsg->header.length ++; 
    }
    
    // Exchange messages with sysiod.
@@ -282,7 +281,8 @@ sysioFS::cleanupJob(int fs)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   CleanupJobMessage *requestMsg = (CleanupJobMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   CleanupJobMessage *requestMsg = (CleanupJobMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), CleanupJob, sizeof(CleanupJobMessage));
    
    // Exchange messages with sysiod.
@@ -339,15 +339,15 @@ sysioFS::postSend(struct cnv_sge *sgeList, int listSize, uint32_t sequenceID)
    wr.next = NULL;
    wr.sg_list = sgeList;
    wr.num_sge = listSize;
-   wr.opcode = CNV_WR_SEND_WITH_IMM;
+   if (listSize > 1)  wr.opcode = CNV_WR_SEND_WITH_IMM;
+   else  wr.opcode = CNV_WR_SEND;
    wr.send_flags = 0;
-   wr.imm_data = ProcessorID() | CNV_DIRECTED_RECV;
+   wr.imm_data = sequenceID;
    wr.remote_addr = -1;
    wr.rkey = 0;
 
    // Post a send for outbound message.
-   cnv_send_wr *bad_wr;
-   int err = cnv_post_send_seqID(&_queuePair, &wr, &bad_wr,sequenceID);
+   int err = cnv_post_send_no_comp(&_queuePair, &wr);
    if (err != 0) {
       return err;
    }
@@ -390,88 +390,40 @@ sysioFS::postRdmaWrite(struct cnv_sge *sgeList, int listSize, uint32_t sequenceI
 }
 
 
-int
-sysioFS::getCompletions(int totalCompletions, void **inMsg)
-{
-   bool sendFailed = false;
-   bool recvFailed = false;
-   
-   // Wait for completions for the work requests posted previously.
-   int numCompletions = totalCompletions;
-   cnv_wc completions[totalCompletions];
-   int foundCompletions = 0;
-   
-   // Keep looking for completions until all of them are found.
-   while (numCompletions > 0) {
-      // Remove available completions from the completion queue after getting completion event.
-     int err = cnv_poll_cq(&_completionQ, numCompletions, completions, &foundCompletions, ProcessorID());
-      if (err != 0) {
-         printf("(E) sysioFS::getCompletions: failed to remove completions, error %d\n", err);
-         return err;
-      }
-
-      // Process each found completion.
-      
-      for (int index = 0; index < foundCompletions; ++index) {
-         numCompletions -= 1;
-         if (completions[index].opcode == CNV_WC_RECV) {
-            if (completions[index].status == CNV_WC_SUCCESS) {
-               *inMsg = (void *)completions[index].wr_id; // Address was saved in this field        
-               Kernel_WriteFlightLog(FLIGHTLOG, FL_GETCOMPLT, totalCompletions, foundCompletions, index, completions[index].wr_id);
-               
-               uint64_t * data = (uint64_t * )*inMsg;
-               Kernel_WriteFlightLog(FLIGHTLOG, FL_SYSMSGRCV, data[0],data[1],data[2],data[3] );
-
-            }
-            else {
-               printf("(E) sysioFS::getCompletions: recv failed, status %d\n", completions[index].status);
-               recvFailed = true;
-            }
-         }
-         if ((completions[index].opcode == CNV_WC_SEND) && (completions[index].status != CNV_WC_SUCCESS)) {
-            printf("(E) sysioFS::getCompletions: send failed, status %d\n", completions[index].status);
-            sendFailed = true;
-         }
-      }
-
-      // There is a completion available, but it was not for us.  Add a delay to give the other thread a chance to get the completion.
-      if (foundCompletions == 0) {
-          Delay(100);
-      }
-   }
-
-   if (sendFailed || recvFailed) {
-      return EINVAL;
-   }
-
-   return 0;
-}
-
 uint64_t
 sysioFS::exchangeMessages(cnv_sge *sendList, int sendListSize, void **inMsg, uint32_t sequenceID)
 {
    // Post a receive for the inbound reply message.
-  int err = postRecv(getMyFirstRecvBuffer(), sequenceID);
+  int procID = ProcessorID();
+  uint64_t addr = getRecvBuffer(procID);
+  *inMsg = (void *)addr;
+  int err = postRecv(addr, sequenceID);
    if (err != 0) {
       return CNK_RC_FAILURE(err);
    }
 
    // Post a send for the outbound request message.
    err = postSend(sendList, sendListSize,sequenceID);
-   if (err != 0) {
+   if (__UNLIKELY(err != 0) ){
       return CNK_RC_FAILURE(err);
    }
 
-   // Get the work completions for the two posted operations.
-   err = getCompletions(2, inMsg);
-   if (err != 0) {
+   // Get the work completion for the Receive
+
+   err = cnv_poll_cq_for_single_recv(&_completionQ, procID);
+   
+   if (__UNLIKELY (err != 0) ) {
+      printf("err=%d \n",err);
       return CNK_RC_FAILURE(err);
    }
+   
+   uint64_t * data = (uint64_t * )*inMsg;
+   Kernel_WriteFlightLog(FLIGHTLOG, FL_SYSMSGRCV, data[0],data[1],data[2],data[3] );
 
    // Check the return code in the received message.
    bgcios::MessageHeader *replyMsg = (bgcios::MessageHeader *)*inMsg;
    uint64_t rc = CNK_RC_SUCCESS(0);
-   if (replyMsg->returnCode != bgcios::Success) {
+   if (__UNLIKELY (replyMsg->returnCode != bgcios::Success) ){
       rc = CNK_RC_FAILURE(replyMsg->errorCode);
    }
 
@@ -493,7 +445,7 @@ sysioFS::exchange(void *outMsg, void **inMsg)
    uint64_t rc = exchangeMessages(&sge, 1, inMsg,requestMsg->sequenceId);
    return rc;
 }
-
+// FYI: PATH_MAX=4096 when checked on 7/5/2012
 uint64_t
 sysioFS::exchange(void *outMsg, const char *pathname, void **inMsg)
 {
@@ -513,7 +465,7 @@ sysioFS::exchange(void *outMsg, const char *pathname, void **inMsg)
    // If possible, pack the message and path into one packet.  Note this optimization assumes that the path is
    // always placed right after the message.
    uint32_t pathlen = strnlen(pathname, PATH_MAX) + 1;
-   if ((requestMsg->length + pathlen) <= bgcios::ImmediateMessageSize) {
+   if (__LIKELY ((requestMsg->length + pathlen) <= bgcios::ImmediateMessageSize) ) {
       char *pathPtr = (char *)requestMsg + requestMsg->length;
       memcpy(pathPtr, pathname, pathlen);
       sgeList[0].length += pathlen;
@@ -631,7 +583,8 @@ sysioFS::access(const char *pathname, int type)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   AccessMessage *requestMsg = (AccessMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   AccessMessage *requestMsg = (AccessMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Access, sizeof(AccessMessage));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->type = type;
@@ -673,7 +626,8 @@ sysioFS::accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   AcceptMessage *requestMsg = (AcceptMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   AcceptMessage *requestMsg = (AcceptMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Accept, sizeof(AcceptMessage));
    requestMsg->sockfd = remoteFD;
    if ( (addr!=NULL) && (addrlen!=NULL) ){
@@ -728,7 +682,8 @@ sysioFS::bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   BindMessage *requestMsg = (BindMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   BindMessage *requestMsg = (BindMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Bind, sizeof(BindMessage));
    requestMsg->sockfd = remoteFD;
    memcpy(requestMsg->addr, addr, addrlen);
@@ -748,8 +703,10 @@ sysioFS::bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 uint64_t
 sysioFS::chdir(const char *pathname)
 {
+    AppProcess_t *app = GetMyProcess();
+    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
+    
    AppProcess_t *process = GetMyProcess();
-   CNK_Descriptors_t *pFD = &(process->App_Descriptors);
 
    // Obtain the lock to serialize message exchange with sysiod.
    Kernel_Lock(&_lock);
@@ -758,7 +715,8 @@ sysioFS::chdir(const char *pathname)
    int previousDirFD = File_GetCurrentDirFD();
 
    // Build request message in outbound message buffer.
-   OpenMessage *requestMsg = (OpenMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   OpenMessage *requestMsg = (OpenMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Open, sizeof(OpenMessage));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->mode = 0;
@@ -786,7 +744,8 @@ sysioFS::chdir(const char *pathname)
       // Close the previous working directory if one was open.
       if (previousDirFD >= 0) {
          // Build request message in outbound message buffer.
-         CloseMessage *closeMsg = (CloseMessage *)_outMessageRegion.addr;
+         int procID=ProcessorID();
+         CloseMessage *closeMsg = (CloseMessage *)getSendBuffer(procID);
          fillHeader(&(requestMsg->header), Close, sizeof(CloseMessage));
          closeMsg->fd = previousDirFD;
 
@@ -813,7 +772,8 @@ sysioFS::chmod(const char *pathname, mode_t mode)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   ChmodMessage *requestMsg = (ChmodMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   ChmodMessage *requestMsg = (ChmodMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Chmod, sizeof(ChmodMessage));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->mode = mode;
@@ -838,7 +798,8 @@ sysioFS::chown(const char *pathname, uid_t uid, gid_t gid)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   ChownMessage *requestMsg = (ChownMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   ChownMessage *requestMsg = (ChownMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Chown, sizeof(ChownMessage));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->uid = uid;
@@ -870,7 +831,8 @@ sysioFS::close(int fd)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   CloseMessage *requestMsg = (CloseMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   CloseMessage *requestMsg = (CloseMessage *)getSendBuffer(procID);
       if ( GetMyKThread()->KernelInternal == 1){
      fillHeader(&(requestMsg->header), CloseKernelInternal, sizeof(CloseMessage)); 
    }
@@ -913,7 +875,8 @@ sysioFS::connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   ConnectMessage *requestMsg = (ConnectMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   ConnectMessage *requestMsg = (ConnectMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Connect, sizeof(ConnectMessage));
    requestMsg->sockfd = remoteFD;
    memcpy(requestMsg->addr, addr, addrlen);
@@ -945,7 +908,8 @@ sysioFS::fchmod(int fd, mode_t mode)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   FchmodMessage *requestMsg = (FchmodMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   FchmodMessage *requestMsg = (FchmodMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Fchmod, sizeof(FchmodMessage)); 
    requestMsg->fd = remoteFD;
    requestMsg->mode = mode;
@@ -974,7 +938,8 @@ sysioFS::fchown(int fd, uid_t uid, gid_t gid)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   FchownMessage *requestMsg = (FchownMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   FchownMessage *requestMsg = (FchownMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Fchown, sizeof(FchownMessage));
    requestMsg->fd = remoteFD;
    requestMsg->uid = uid;
@@ -1004,7 +969,8 @@ sysioFS::fcntl(int fd, int cmd, uint64_t parm3)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   FcntlMessage *requestMsg = (FcntlMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   FcntlMessage *requestMsg = (FcntlMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Fcntl, sizeof(FcntlMessage));
    requestMsg->fd = remoteFD;
    requestMsg->cmd = cmd;
@@ -1105,7 +1071,8 @@ sysioFS::fstat64(int fd, struct stat64 *statbuf)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   Fstat64Message *requestMsg = (Fstat64Message *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   Fstat64Message *requestMsg = (Fstat64Message *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Fstat64, sizeof(Fstat64Message));
    requestMsg->fd = remoteFD;
 
@@ -1145,7 +1112,8 @@ sysioFS::fstatfs64(int fd, struct statfs64 *statbuf)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   Fstatfs64Message *requestMsg = (Fstatfs64Message *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   Fstatfs64Message *requestMsg = (Fstatfs64Message *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Fstatfs64, sizeof(Fstatfs64Message)); 
    requestMsg->fd = remoteFD;
 
@@ -1185,7 +1153,8 @@ sysioFS::ftruncate64(int fd, off64_t length)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   Ftruncate64Message *requestMsg = (Ftruncate64Message *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   Ftruncate64Message *requestMsg = (Ftruncate64Message *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Ftruncate64, sizeof(Ftruncate64Message));
    requestMsg->fd = remoteFD;
    requestMsg->length = length;
@@ -1214,7 +1183,8 @@ sysioFS::fsync(int fd)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   FsyncMessage *requestMsg = (FsyncMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   FsyncMessage *requestMsg = (FsyncMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Fsync, sizeof(FsyncMessage));
    requestMsg->fd = remoteFD;
 
@@ -1256,7 +1226,8 @@ sysioFS::getdents64(int fd, struct dirent *buffer, unsigned int length)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   Getdents64Message *requestMsg = (Getdents64Message *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   Getdents64Message *requestMsg = (Getdents64Message *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Getdents64, sizeof(Getdents64Message));
    requestMsg->fd = remoteFD;
    requestMsg->length = length;
@@ -1304,7 +1275,8 @@ sysioFS::getpeername(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   GetpeernameMessage *requestMsg = (GetpeernameMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   GetpeernameMessage *requestMsg = (GetpeernameMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Getpeername, sizeof(GetpeernameMessage));
    requestMsg->sockfd = remoteFD;
    requestMsg->addrlen = *addrlen;
@@ -1347,7 +1319,8 @@ sysioFS::getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   GetsocknameMessage *requestMsg = (GetsocknameMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   GetsocknameMessage *requestMsg = (GetsocknameMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Getsockname, sizeof(GetsocknameMessage));
    requestMsg->sockfd = remoteFD;
    requestMsg->addrlen = *addrlen;
@@ -1390,7 +1363,8 @@ sysioFS::getsockopt(int sockfd, int level, int optname, void *optval, socklen_t 
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   GetsockoptMessage *requestMsg = (GetsockoptMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   GetsockoptMessage *requestMsg = (GetsockoptMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Getsockopt, sizeof(GetsockoptMessage)); 
    requestMsg->sockfd = remoteFD;
    requestMsg->level = level;
@@ -1429,7 +1403,8 @@ sysioFS::ioctl(int fd, unsigned long int cmd, void *parm3)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   IoctlMessage *requestMsg = (IoctlMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   IoctlMessage *requestMsg = (IoctlMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Ioctl, sizeof(IoctlMessage));
    requestMsg->fd = remoteFD;
    requestMsg->cmd = cmd;
@@ -1504,7 +1479,8 @@ sysioFS::lchown(const char *pathname, uid_t uid, gid_t gid)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   ChownMessage *requestMsg = (ChownMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   ChownMessage *requestMsg = (ChownMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Chown, sizeof(ChownMessage));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->uid = uid;
@@ -1530,7 +1506,8 @@ sysioFS::link(const char *oldpathname, const char *newpathname)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   LinkMessage *requestMsg = (LinkMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   LinkMessage *requestMsg = (LinkMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Link, sizeof(LinkMessage));
    requestMsg->olddirfd = File_GetCurrentDirFD();
    requestMsg->newdirfd = File_GetCurrentDirFD();
@@ -1562,7 +1539,8 @@ sysioFS::listen(int sockfd, int backlog)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   ListenMessage *requestMsg = (ListenMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   ListenMessage *requestMsg = (ListenMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Listen, sizeof(ListenMessage));
    requestMsg->sockfd = remoteFD;
    requestMsg->backlog = backlog;
@@ -1602,7 +1580,8 @@ sysioFS::llseek(int fd, off64_t offset, off64_t *result, int whence)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   Lseek64Message *requestMsg = (Lseek64Message *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   Lseek64Message *requestMsg = (Lseek64Message *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Lseek64, sizeof(Lseek64Message));
    requestMsg->fd = remoteFD;
    requestMsg->offset = offset;
@@ -1639,7 +1618,8 @@ sysioFS::lstat64(const char *pathname, struct stat64 *statbuf)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   Stat64Message *requestMsg = (Stat64Message *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   Stat64Message *requestMsg = (Stat64Message *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Stat64, sizeof(Stat64Message));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->flags = AT_SYMLINK_NOFOLLOW;
@@ -1669,7 +1649,8 @@ sysioFS::mkdir(const char *pathname, mode_t mode)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   MkdirMessage *requestMsg = (MkdirMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   MkdirMessage *requestMsg = (MkdirMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Mkdir, sizeof(MkdirMessage));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->mode = mode & ~(GetMyProcess()->CurrentUmask);
@@ -1699,7 +1680,8 @@ sysioFS::open(const char *pathname, int flags, mode_t mode)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   OpenMessage *requestMsg = (OpenMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   OpenMessage *requestMsg = (OpenMessage *)getSendBuffer(procID);
    if ( GetMyKThread()->KernelInternal == 1){
      fillHeader(&(requestMsg->header), OpenKernelInternal, sizeof(OpenMessage)); 
    }
@@ -1717,6 +1699,16 @@ sysioFS::open(const char *pathname, int flags, mode_t mode)
 
    if (CNK_RC_IS_SUCCESS(rc)) {
       OpenAckMessage *replyMsg = (OpenAckMessage *)inRegion;
+      
+#if CONFIG_AVOID_READLINK
+       AppProcess_t* proc = GetMyProcess();
+       if(proc)
+       {
+           proc->LAST_OPEN_FD = replyMsg->fd;
+           strncpy(proc->LAST_OPEN_FILENAME, pathname, sizeof(proc->LAST_OPEN_FILENAME));
+       }
+#endif
+       
       File_SetFD(fd, replyMsg->fd, FD_FILE);
       rc = CNK_RC_SUCCESS(fd);
    }
@@ -1745,7 +1737,8 @@ sysioFS::poll(struct pollfd *fds, nfds_t nfds, int timeout)
    // Obtain the lock to serialize message exchange with sysiod.
    Kernel_Lock(&_lock);
    // Build request message in outbound message buffer.
-   PollMessage *requestMsg = (PollMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   PollMessage *requestMsg = (PollMessage *)getSendBuffer(procID);
 
    requestMsg->pollBasic.nfd = nfds;
    fillHeader(&(requestMsg->header), Poll, sizeof(PollMessage));  
@@ -1805,7 +1798,8 @@ sysioFS::pread64(int fd, void *buffer, size_t length, off64_t position)
    TRACE( TRACE_SysioFS, ("(I) sysioFS::pread64%s: buffer=%p length=%ld position=%lu\n", whoami(), buffer, length, position) );
 
    // Build request message in outbound message buffer.
-   Pread64Message *requestMsg = (Pread64Message *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   Pread64Message *requestMsg = (Pread64Message *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Pread64, sizeof(Pread64Message));
    requestMsg->fd = rfd;
    requestMsg->length = length;
@@ -1858,7 +1852,8 @@ sysioFS::pwrite64(int fd, const void *buffer, size_t length, off64_t position)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   Pwrite64Message *requestMsg = (Pwrite64Message *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   Pwrite64Message *requestMsg = (Pwrite64Message *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Pwrite64, sizeof(Pwrite64Message));
    requestMsg->fd = rfd;
    requestMsg->length = length;
@@ -1913,7 +1908,8 @@ sysioFS::read(int fd, void *buffer, size_t length)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   ReadMessage *requestMsg = (ReadMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   ReadMessage *requestMsg = (ReadMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Read, sizeof(ReadMessage));
    requestMsg->fd = rfd;
    requestMsg->length = length;
@@ -1946,6 +1942,24 @@ sysioFS::read(int fd, void *buffer, size_t length)
    return rc;
 }
 
+uint64_t sysioFS::readv(int fd, const struct iovec *iov, int iovcnt)
+{
+    uint64_t rc = 0;
+    uint64_t totalbytes = 0;
+    int x;
+    for(x=0; x<iovcnt; x++)
+    {
+        rc = sysioFS::read(fd, iov[x].iov_base, iov[x].iov_len);
+        if (CNK_RC_IS_FAILURE(rc))
+        {
+            return rc;
+        }
+        totalbytes += rc;
+    }
+    return CNK_RC_SUCCESS(totalbytes);
+}
+
+
 uint64_t
 sysioFS::readlink(const char *pathname, void *buffer, size_t length)
 {
@@ -1966,7 +1980,8 @@ sysioFS::readlink(const char *pathname, void *buffer, size_t length)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   ReadlinkMessage *requestMsg = (ReadlinkMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   ReadlinkMessage *requestMsg = (ReadlinkMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Readlink, sizeof(ReadlinkMessage));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->length = length;
@@ -2018,7 +2033,8 @@ sysioFS::recv(int sockfd, void *buffer, size_t length, int flags)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   RecvMessage *requestMsg = (RecvMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   RecvMessage *requestMsg = (RecvMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Recv, sizeof(RecvMessage));
    requestMsg->sockfd = rfd;
    requestMsg->length = length;
@@ -2079,7 +2095,8 @@ sysioFS::recvfrom(int sockfd, void *buffer, size_t length, int flags, struct soc
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   RecvfromMessage *requestMsg = (RecvfromMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   RecvfromMessage *requestMsg = (RecvfromMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Recvfrom, sizeof(RecvfromMessage));
    requestMsg->sockfd = rfd;
    requestMsg->length = length;
@@ -2125,7 +2142,8 @@ sysioFS::rename(const char *oldpathname, const char *newpathname)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   RenameMessage *requestMsg = (RenameMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   RenameMessage *requestMsg = (RenameMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Rename, sizeof(RenameMessage));
    requestMsg->olddirfd = File_GetCurrentDirFD();
    requestMsg->newdirfd = File_GetCurrentDirFD();
@@ -2150,7 +2168,8 @@ sysioFS::rmdir(const char *pathname)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   UnlinkMessage *requestMsg = (UnlinkMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   UnlinkMessage *requestMsg = (UnlinkMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Unlink, sizeof(UnlinkMessage));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->flags = AT_REMOVEDIR;
@@ -2188,7 +2207,8 @@ sysioFS::send(int sockfd, const void *buffer, size_t length, int flags)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   SendMessage *requestMsg = (SendMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   SendMessage *requestMsg = (SendMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Send, sizeof(SendMessage));
    requestMsg->sockfd = rfd;
    requestMsg->length = length;
@@ -2246,7 +2266,8 @@ sysioFS::sendto(int sockfd, const void *buffer, size_t length, int flags, const 
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   SendtoMessage *requestMsg = (SendtoMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   SendtoMessage *requestMsg = (SendtoMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Sendto, sizeof(SendtoMessage));
    requestMsg->sockfd = rfd;
    requestMsg->length = length;
@@ -2310,7 +2331,8 @@ sysioFS::setsockopt(int sockfd, int level, int optname, const void *optval, sock
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   SetsockoptMessage *requestMsg = (SetsockoptMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   SetsockoptMessage *requestMsg = (SetsockoptMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Setsockopt, sizeof(SetsockoptMessage));
    requestMsg->sockfd = remoteFD;
    requestMsg->level = level;
@@ -2343,7 +2365,8 @@ sysioFS::shutdown(int sockfd, int how)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   ShutdownMessage *requestMsg = (ShutdownMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   ShutdownMessage *requestMsg = (ShutdownMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Shutdown, sizeof(ShutdownMessage));
    requestMsg->sockfd = remoteFD;
    requestMsg->how = how;
@@ -2372,7 +2395,8 @@ sysioFS::socket(int domain, int type, int protocol)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   SocketMessage *requestMsg = (SocketMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   SocketMessage *requestMsg = (SocketMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Socket, sizeof(SocketMessage));
    requestMsg->domain = domain;
    requestMsg->type = type;
@@ -2411,7 +2435,8 @@ sysioFS::stat64(const char *pathname, struct stat64 *statbuf)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   Stat64Message *requestMsg = (Stat64Message *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   Stat64Message *requestMsg = (Stat64Message *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Stat64, sizeof(Stat64Message));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->flags = 0;
@@ -2447,7 +2472,8 @@ sysioFS::statfs64(const char *pathname, struct statfs64 *statbuf)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   Statfs64Message *requestMsg = (Statfs64Message *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   Statfs64Message *requestMsg = (Statfs64Message *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Statfs64, sizeof(Statfs64Message));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->offset = sizeof(Statfs64Message);
@@ -2476,7 +2502,8 @@ sysioFS::symlink(const char *oldpathname, const char *newpathname)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   SymlinkMessage *requestMsg = (SymlinkMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   SymlinkMessage *requestMsg = (SymlinkMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Symlink, sizeof(SymlinkMessage));
    requestMsg->newdirfd = File_GetCurrentDirFD();
    requestMsg->oldoffset = sizeof(SymlinkMessage);
@@ -2506,7 +2533,8 @@ sysioFS::truncate64(const char *pathname, off64_t length)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   Truncate64Message *requestMsg = (Truncate64Message *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   Truncate64Message *requestMsg = (Truncate64Message *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Truncate64, sizeof(Truncate64Message));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->length = length;
@@ -2530,7 +2558,8 @@ sysioFS::unlink(const char *pathname)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   UnlinkMessage *requestMsg = (UnlinkMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   UnlinkMessage *requestMsg = (UnlinkMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Unlink, sizeof(UnlinkMessage));
    requestMsg->dirfd = File_GetCurrentDirFD();
    requestMsg->flags = 0;
@@ -2554,7 +2583,8 @@ sysioFS::utime(const char *pathname, const struct utimbuf *buf)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   UtimesMessage *requestMsg = (UtimesMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   UtimesMessage *requestMsg = (UtimesMessage *)getSendBuffer(procID);
    fillHeader(&(requestMsg->header), Utimes, sizeof(UtimesMessage));
    requestMsg->dirfd = File_GetCurrentDirFD();
    if (buf == NULL) {
@@ -2586,19 +2616,18 @@ sysioFS::utime(const char *pathname, const struct utimbuf *buf)
 }
 
 uint64_t
-//sysioFS::writeRdmaVirt(int fd, const void *buffer, size_t length)
 sysioFS::write(int fd, const void *buffer, size_t length)
 {
    // Make sure file descriptor is valid.
    int rfd = File_GetRemoteFD(fd);
-   if (rfd < 0) {
+   if ( __UNLIKELY(rfd < 0) ) {
       return CNK_RC_FAILURE(EBADF);
    }
 
    // Register a memory region for the caller's data.
    struct cnv_mr userRegion;
    int err = cnv_reg_mr(&userRegion, &_protectionDomain, (void *)buffer, length, CNV_ACCESS_LOCAL_WRITE);
-   if (err != 0) {
+   if (__UNLIKELY (err != 0) ){
       Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVREGMRE, (uint64_t)buffer, length, _protectionDomain.handle, err);
       return CNK_RC_FAILURE(err);
    }
@@ -2607,8 +2636,9 @@ sysioFS::write(int fd, const void *buffer, size_t length)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   WriteMessage *requestMsg = (WriteMessage *)_outMessageRegion.addr;
-   if ( GetMyKThread()->KernelInternal == 1){
+   int procID=ProcessorID();
+   WriteMessage *requestMsg = (WriteMessage *)getSendBuffer(procID);
+   if(__UNLIKELY  ( GetMyKThread()->KernelInternal == 1)){
      fillHeader(&(requestMsg->header), WriteKernelInternal, sizeof(WriteMessage));
    }
    else{
@@ -2624,7 +2654,7 @@ sysioFS::write(int fd, const void *buffer, size_t length)
    uint64_t rc = exchange(requestMsg, &inRegion);
 
    WriteAckMessage *replyMsg = (WriteAckMessage *)inRegion;
-   if (replyMsg->header.returnCode == bgcios::Success) {
+   if (__LIKELY  (replyMsg->header.returnCode == bgcios::Success) ){
          rc = CNK_RC_SUCCESS(replyMsg->bytes);
    }
    else {
@@ -2650,15 +2680,15 @@ sysioFS::writev(int fd, const struct iovec *iov, int iovcnt)
 {
    // Make this simple -- write each vector individually.
    int bytesWritten = 0;
-   for ( int index = 0 ; index < iovcnt ; ++index ) {
-      if((iov[index].iov_base == NULL) && (iov[index].iov_len == 0))
-          continue;
-
-      uint64_t rc = write(fd, iov[index].iov_base, iov[index].iov_len);
-      if (CNK_RC_IS_FAILURE(rc)) {
-         return rc;
-      }
-      bytesWritten += CNK_RC_VALUE(rc);
+   for ( int index = 0 ; index < iovcnt ; ++index ) 
+   {
+       if((iov[index].iov_base == NULL) && (iov[index].iov_len == 0))
+           continue;
+       uint64_t rc = write(fd, iov[index].iov_base, iov[index].iov_len);
+       if (CNK_RC_IS_FAILURE(rc)) {
+           return rc;
+       }
+       bytesWritten += CNK_RC_VALUE(rc);
    }
 
    return CNK_RC_SUCCESS(bytesWritten);
@@ -2667,7 +2697,6 @@ sysioFS::writev(int fd, const struct iovec *iov, int iovcnt)
 
 uint64_t
 sysioFS::writeRdmaVirt(int fd, const void *buffer, size_t length)
-//sysioFS::write(int fd, const void *buffer, size_t length)
 {
    // Make sure file descriptor is valid.
    int rfd = File_GetRemoteFD(fd);
@@ -2687,7 +2716,8 @@ sysioFS::writeRdmaVirt(int fd, const void *buffer, size_t length)
    Kernel_Lock(&_lock);
 
    // Build request message in outbound message buffer.
-   WriteRdmaVirtMessage *requestMsg = (WriteRdmaVirtMessage *)_outMessageRegion.addr;
+   int procID=ProcessorID();
+   WriteRdmaVirtMessage *requestMsg = (WriteRdmaVirtMessage *)getSendBuffer(procID);
    if ( GetMyKThread()->KernelInternal == 1){
      fillHeader(&(requestMsg->header), WriteRdmaVirtKernelInternal, sizeof(WriteRdmaVirtMessage));
    }
@@ -2747,25 +2777,182 @@ sysioFS::writeRdmaVirt(int fd, const void *buffer, size_t length)
    return rc;
 }
 
-void
-sysioFS::fillHeader(bgcios::MessageHeader *header, uint16_t type, size_t length)
-{
-   header->service = bgcios::SysioService;
-   header->version = ProtocolVersion;
-   header->type = type;
-   header->rank = GetMyProcess()->Rank;
-   header->sequenceId = _sequenceId++;
-   header->returnCode = 0;
-   header->errorCode = 0;
-   header->length = (uint32_t)length;
-   header->jobId = GetMyAppState()->JobID;
-   return;
-}
-
 
 bool 
 sysioFS::isMatch(const char *path)
 {
    return ((IsAppAgent()) ? false : true);
+}
+
+int 
+sysioFS::sendx(char * mInput){
+  struct MsgInputs * msgInput = (struct MsgInputs *)mInput;
+  if (!VMM_IsAppAddress(msgInput, sizeof(struct MsgInputs) ) ) {
+            return CNK_RC_FAILURE(EFAULT);
+  }
+  // check mInput address is valid and length for user
+  if (msgInput->options==MSG_DATA_PLUS ){
+    return sendxDataPlus(msgInput);
+  }
+  else if (msgInput->options==MSG_DATA_ONLY){
+    return sendxDataOnly(msgInput);
+  }
+  else {
+    return CNK_RC_FAILURE(ENOSYS);
+  }
+}
+
+
+int 
+sysioFS::sendxDataOnly(struct MsgInputs * msgInput){
+
+  if ( (msgInput->data_length>0) && !VMM_IsAppAddress(msgInput->dataRegion,msgInput->data_length ) ) {
+            return CNK_RC_FAILURE(EFAULT);
+  }
+  if ( msgInput->data_length > bgcios::UserMessageDataSize ){
+        return CNK_RC_FAILURE(ERANGE);
+  }
+  if ( (msgInput->recv_length>0) && !VMM_IsAppAddress(msgInput->recvMessage,msgInput->recv_length ) ) {
+            return CNK_RC_FAILURE(EFAULT);
+  }
+  printf("sendxDataOnly msgInput->recv_length=%ld\n",(long int)msgInput->recv_length);
+   // Obtain the lock to serialize message exchange with sysiod.
+   Kernel_Lock(&_lock);
+
+   // Build request message in outbound message buffer.
+   int procID=ProcessorID();
+   bgcios::UserMessage * requestMsg = (bgcios::UserMessage *)getSendBuffer(procID);
+   fillUserHeader(requestMsg, msgInput->version, msgInput->type, bgcios::SysioUserService);
+   if (msgInput->data_length){
+      memcpy(requestMsg->MessageData,msgInput->dataRegion,msgInput->data_length);
+      requestMsg->header.length = sizeof(bgcios::MessageHeader) + msgInput->data_length;
+   }
+   // Exchange messages with sysiod.
+   void *inRegion;
+   uint64_t rc = exchange(requestMsg, &inRegion);
+   bgcios::UserMessage *replyMsg = (bgcios::UserMessage *)inRegion;
+   printf("UserMessage rc=%lld \n",(long long unsigned int)rc);
+   printf(" msgInput->recv_length=%lld ",(long long unsigned int)msgInput->recv_length);
+   printf(" replyMsg->header.length=%lld ",(long long unsigned int)replyMsg->header.length);
+      if (msgInput->recv_length){
+        
+        if (msgInput->recv_length<replyMsg->header.length)
+          memcpy(msgInput->recvMessage, replyMsg, msgInput->recv_length);
+        else
+          memcpy(msgInput->recvMessage, replyMsg, replyMsg->header.length ); 
+      }
+
+   // Release the lock.
+   Kernel_Unlock(&_lock);
+
+   return rc;
+
+}
+
+int 
+sysioFS::sendxDataPlus(struct MsgInputs * msgInput){
+
+  if ( (msgInput->data_length>0) && !VMM_IsAppAddress(msgInput->dataRegion,msgInput->data_length ) ) {
+            return CNK_RC_FAILURE(EFAULT);
+  }
+  if ( msgInput->data_length > bgcios::UserMessageFdRDMADataSize){
+        return CNK_RC_FAILURE(ERANGE);
+  }
+  if ( (msgInput->recv_length>0) && !VMM_IsAppAddress(msgInput->recvMessage,msgInput->recv_length ) ) {
+            return CNK_RC_FAILURE(EFAULT);
+  }
+  if ( msgInput->numberOfRdmaRegions > bgcios::MostRdmaRegions){
+        return CNK_RC_FAILURE(ERANGE);
+  }
+
+   // Make sure file descriptor is valid.
+   int rfd1 = 0;
+   if (msgInput->cnkFileDescriptor[0]){
+      rfd1 = File_GetRemoteFD(msgInput->cnkFileDescriptor[0]);
+      if (rfd1 < 0) {
+         return CNK_RC_FAILURE(EBADF);
+      }
+   }
+   int rfd2 = 0;
+   if (msgInput->cnkFileDescriptor[1]){
+      rfd2 = File_GetRemoteFD(msgInput->cnkFileDescriptor[1]);
+      if (rfd2 < 0) {
+         return CNK_RC_FAILURE(EBADF);
+      }
+   }
+
+
+   for (int i=0;i<msgInput->numberOfRdmaRegions;i++){
+      if ( msgInput->data_length==0) return CNK_RC_FAILURE(EFAULT);
+      if (!VMM_IsAppAddress( msgInput->cnkUserRDMA[i].cnk_address, msgInput->cnkUserRDMA[i].cnk_bytes) )
+         return CNK_RC_FAILURE(EFAULT);
+   }
+   
+   // Obtain the lock to serialize message exchange with sysiod.
+   Kernel_Lock(&_lock);
+
+   // Register a memory region for the caller's data.
+   struct cnv_mr userRegion[msgInput->numberOfRdmaRegions];
+   
+   int err = 0;
+   for (int i=0;i<msgInput->numberOfRdmaRegions;i++){
+     err = cnv_reg_mr(userRegion+i, &_protectionDomain, msgInput->cnkUserRDMA[i].cnk_address, msgInput->cnkUserRDMA[i].cnk_bytes, CNV_ACCESS_LOCAL_WRITE);
+     if (__UNLIKELY (err != 0) ){
+       Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVREGMRE, (uint64_t)msgInput->cnkUserRDMA[i].cnk_address, msgInput->cnkUserRDMA[i].cnk_bytes, _protectionDomain.handle, err);
+       for(int k=0;k<i;k++){
+          // Deregister memory region for caller's data.
+          cnv_dereg_mr(userRegion+k);
+       }
+       // Release the lock.
+       Kernel_Unlock(&_lock);
+       return CNK_RC_FAILURE(err);
+     };
+   }
+
+
+   // Build request message in outbound message buffer.
+   int procID=ProcessorID();
+   bgcios::UserMessageFdRDMA * requestMsg = (bgcios::UserMessageFdRDMA *)getSendBuffer(procID);
+   fillUserHeader( (bgcios::UserMessage *)requestMsg, msgInput->version, msgInput->type, bgcios::SysioUserServiceFdRDMA);
+   requestMsg->header.length = sizeof(bgcios::UserMessageFdRDMA) - bgcios::UserMessageFdRDMADataSize;
+   requestMsg->ionode_fd[0]=rfd1;
+   requestMsg->ionode_fd[1]=rfd2;
+
+   requestMsg->numberOfRdmaRegions = msgInput->numberOfRdmaRegions;
+   for (int i=0;i<msgInput->numberOfRdmaRegions;i++){
+     requestMsg->uRDMA[i].cnk_address = (uint64_t)userRegion[i].addr;
+     requestMsg->uRDMA[i].cnk_bytes = msgInput->cnkUserRDMA[i].cnk_bytes;
+     requestMsg->uRDMA[i].cnk_memkey = userRegion[i].rkey;
+   }
+
+   if (msgInput->data_length){
+      memcpy(requestMsg->MessageData,msgInput->dataRegion,msgInput->data_length);
+      requestMsg->header.length +=  msgInput->data_length;
+   }
+
+   // Exchange messages with sysiod.
+   void *inRegion;
+   uint64_t rc = exchange(requestMsg, &inRegion);
+
+   for(int k=0;k<msgInput->numberOfRdmaRegions;k++){
+      // Deregister memory region for caller's data.
+      cnv_dereg_mr(userRegion+k);
+   }
+   //bgcios::UserMessage *replyMsg = (bgcios::UserMessage *)inRegion;
+   //printf("rc=%ld\n",rc);
+   // Copy response message to caller storage.
+   if (msgInput->recv_length){
+        bgcios::UserMessage *replyMsg = (bgcios::UserMessage *)inRegion;
+        if (msgInput->recv_length<replyMsg->header.length)
+          memcpy(msgInput->recvMessage, replyMsg, msgInput->recv_length);
+        else
+          memcpy(msgInput->recvMessage, replyMsg, replyMsg->header.length ); 
+   }
+
+   // Release the lock.
+   Kernel_Unlock(&_lock);
+
+   return rc;
+
 }
 

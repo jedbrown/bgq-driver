@@ -19,9 +19,9 @@
 #                                                                  
 # end_generated_IBM_copyright_prolog                               
 +MailBox
-+TraceMChk
+-TraceMChk
 #+L2Only
 #-DDR
 -TraceExitSummary
-+Diagnostics
-#+MaskCorrectables
+-Diagnostics
+-MaskCorrectables

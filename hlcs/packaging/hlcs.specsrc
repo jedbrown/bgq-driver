@@ -21,7 +21,7 @@ Job scheduler library.
 %dir %{_base_dir}/hlcs/lib
 
 %{_base_dir}/hlcs/lib/libbgsched.so.1
-%{_base_dir}/hlcs/lib/libbgsched.so.1.0.1
+%{_base_dir}/hlcs/lib/libbgsched.so.1.2.0
 %{_base_dir}/hlcs/etc/firstfit_plugin_logging.configuration
 %{_base_dir}/hlcs/lib/libfirstfit.so
 %{_base_dir}/hlcs/lib/libfirstfit.so.1
@@ -109,6 +109,7 @@ Release: 0
 %{_base_dir}/hlcs/etc/init/bgagent
 %{_base_dir}/hlcs/etc/init/bgagent.v1r1m0
 %{_base_dir}/hlcs/etc/init/bgagent.v1r1m1
+%{_base_dir}/hlcs/etc/init/bgagent.v1r1m2
 %{_base_dir}/sbin/bgagentd
 
 
@@ -214,11 +215,7 @@ Blue Gene interactive console.
 %dir %{_base_dir}
 %dir %{_base_dir}/hlcs
 %dir %{_base_dir}/hlcs/bin
-%dir %{_base_dir}/hlcs/lib
 %dir %{_base_dir}/bin
-
-%{_base_dir}/hlcs/lib/libconsolecmds.so.1
-%{_base_dir}/hlcs/lib/libconsolecmds.so.1.0.0
 
 %attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/bg_console
 %{_base_dir}/bin/bg_console
@@ -245,7 +242,6 @@ Blue Gene python console.
 %dir %{_base_dir}/bin
 
 %attr(4755,bgqcommand,root) %{_base_dir}/hlcs/bin/bg_consolepy
-%{_base_dir}/bin/bg_consolepy
 
 
 
@@ -597,3 +593,51 @@ This package provides a utility for merging the various Blue Gene log files.
 
 %{_base_dir}/hlcs/bin/log_merge
 %{_base_dir}/bin/log_merge
+
+
+####################################
+%package libmmcs_client
+
+Summary: Blue Gene MMCS client library.
+Group: %{product_group}
+Release: 0
+
+%description libmmcs_client
+%{bgq_package_description}
+
+This package provides a library used to connect to MMCS server and issue commands.
+
+%files libmmcs_client
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/lib
+
+%{_base_dir}/hlcs/lib/libmmcs_client.so.1
+%{_base_dir}/hlcs/lib/libmmcs_client.so.1.0.0
+
+
+####################################
+%package libmmcs_common
+
+Summary: Blue Gene MMCS library for common parts.
+Group: %{product_group}
+Release: 0
+
+%description libmmcs_common
+%{bgq_package_description}
+
+This package provides a library used to connect to MMCS server and issue commands.
+
+%files libmmcs_common
+
+%defattr(-,root,root,755)
+%dir %{_parent_dir}
+%dir %{_base_dir}
+%dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/lib
+
+%{_base_dir}/hlcs/lib/libmmcs_common.so.1
+%{_base_dir}/hlcs/lib/libmmcs_common.so.1.0.0

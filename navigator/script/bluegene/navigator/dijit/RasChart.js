@@ -26,9 +26,9 @@ define(
 [
     "../ChartsCommon",
     "../../TimeInterval",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dijit/_WidgetBase",
     "dijit/_TemplatedMixin",
@@ -45,9 +45,9 @@ define(
 function(
         ll_ChartsCommon,
         b_TimeInterval,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         j__WidgetBase,
         j__TemplatedMixin,
@@ -65,7 +65,6 @@ function(
 
 
 var b_navigator_dijit_RasChart = d_declare(
-        "bluegene.navigator.dijit.RasChart",
         [ j__WidgetBase, j__TemplatedMixin ],
 
 {
@@ -188,7 +187,7 @@ var b_navigator_dijit_RasChart = d_declare(
 
         this._promise = this._fetch_ras_data_fn();
 
-        d_Deferred.when(
+        d_when(
                 this._promise,
                 d_lang.hitch( this, this._gotChartData )
             );

@@ -29,10 +29,14 @@
 
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 
 namespace bgws {
 namespace blue_gene {
+
+
+extern const std::vector<std::string> ALL_NB_POS;
 
 
 namespace diagnostics {

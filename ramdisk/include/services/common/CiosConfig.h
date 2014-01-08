@@ -56,11 +56,6 @@ public:
 
    size_t getLargeRegionSize(void) const;
 
-   //! \brief  Get the value of the num_large_regions configuration variable.
-   //! \return Number of large memory regions.
-
-   uint16_t getNumLargeRegions(void) const;
-
    //! \brief  Get pointer to properties object.
    //! \return Properties object pointer.
 

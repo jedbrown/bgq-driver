@@ -23,6 +23,8 @@
 #include "server/job/KillTimer.h"
 
 #include "server/block/Compute.h"
+#include "server/block/IoNode.h"
+#include "server/job/Status.h"
 
 #include "common/JobInfo.h"
 #include "common/SubBlock.h"
@@ -85,10 +87,15 @@ KillTimer::start(
 {
     const boost::posix_time::time_duration expires = _timer.expires_from_now();
     if ( !expires.is_not_a_date_time() ) {
-        BOOST_THROW_EXCEPTION(
+        if ( expires.total_seconds() > static_cast<int32_t>(seconds) ) {
+            LOG_INFO_MSG( "reducing timeout to " << seconds << " seconds" );
+            // allow reducing kill timeout, fall through
+        } else {
+            BOOST_THROW_EXCEPTION(
                 std::logic_error(
                     "kill timeout expires in " + boost::lexical_cast<std::string>( expires.total_seconds() ) + " seconds" )
                 );
+        }
     }
 
     LOG_DEBUG_MSG( "expires in " << seconds << " seconds" );
@@ -154,8 +161,9 @@ KillTimer::handler(
             );
     job->remove();
 
-    // add RAS event
     this->insertRas( job, seconds );
+
+    this->breadcrumbs( job );
 }
 
 void
@@ -199,6 +207,41 @@ KillTimer::getNodeCount(
     }
 
     return result;
+}
+
+void
+KillTimer::breadcrumbs(
+        const Job::Ptr& job
+        ) const
+{
+    // log some useful information why killing this job may have timed out
+
+    const Status::Value status( job->status().get() );
+    switch ( status ) {
+        case Status::Running:
+        case Status::Cleanup:
+            // fall through
+            break;
+        default:
+            return;
+    }
+
+    BOOST_FOREACH( IoNode::Map::value_type& i, job->io() ) {
+        LOGGING_DECLARE_LOCATION_MDC( i.first );
+        IoNode& node = i.second;
+        if ( node.exited() ) {
+            LOG_INFO_MSG( "exited" );
+        }
+        if ( status == Status::Running ) {
+            if ( node.drained() ) continue;
+            LOG_INFO_MSG( "has not closed stdio for " << node.getComputes() << " compute nodes" );
+        } else if ( status == Status::Cleanup ) {
+            if ( node.ended() ) continue;
+            LOG_INFO_MSG( "has not cleaned up for " << node.getComputes() << " compute nodes" );
+        } else {
+            BOOST_ASSERT( !"shouldn't get here" );
+        }
+    }
 }
 
 } // job

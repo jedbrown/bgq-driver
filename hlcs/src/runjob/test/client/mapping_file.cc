@@ -52,6 +52,24 @@ struct InitializeLoggingFixture {
 
 BOOST_GLOBAL_FIXTURE( InitializeLoggingFixture );
 
+BOOST_FIXTURE_TEST_CASE( blank_line, MyFixture )
+{
+    _mapping <<
+        "# line one is a comment\n" <<
+        "\n" // line two is blank
+        "0 0 0 0 0 0\n"
+        "\n" // line four is blank
+        ;
+    _mapping.flush();
+
+    BOOST_CHECK_NO_THROW(
+            runjob::Mapping(
+                runjob::Mapping::Type::File,
+                "my_mapping_file"
+                )
+            );
+}
+
 BOOST_FIXTURE_TEST_CASE( comment, MyFixture )
 {
     _mapping <<
@@ -170,7 +188,7 @@ BOOST_FIXTURE_TEST_CASE( negative_t_coordinates, MyFixture )
 BOOST_FIXTURE_TEST_CASE( missing_a_coordinates, MyFixture )
 {
     _mapping << "0 0 0 0 0 0\n";
-    _mapping << "\n";
+    _mapping << " \n";
     _mapping << "0 0 1 0 0 0\n";
     _mapping.flush();
 

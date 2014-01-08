@@ -37,6 +37,7 @@ Connection::Connection(
     _socket( socket ),
     _resolver( socket->get_io_service() ),
     _hostname(),
+    _shortHostname(),
     _incomingMessage(),
     _outgoingMessage(),
     _timer( socket->get_io_service() ),
@@ -60,7 +61,7 @@ Connection::start()
     LOG_INFO_MSG( "connection from " << ep);
 
     // use address as hostname
-    _hostname = boost::lexical_cast<std::string>( ep.address() );
+    _hostname = _shortHostname = boost::lexical_cast<std::string>( ep.address() );
 
     // resolve hostname
     _resolver.async_resolve(
@@ -100,11 +101,13 @@ Connection::resolveHandler(
     } else {
         LOG_INFO_MSG( "resolved hostname " << endpoint_iterator->host_name() << " for " << _hostname );
         if ( _hostname != endpoint_iterator->host_name() ) {
+            _shortHostname = _hostname = endpoint_iterator->host_name();
             // shorten to basename
-            _hostname = boost::filesystem::basename(
-                    endpoint_iterator->host_name()
-                    );
-            LOG_DEBUG_MSG( "truncated hostname to " << _hostname );
+            const std::string::size_type period( _shortHostname.find_first_of('.') );
+            if ( period != std::string::npos ) {
+                _shortHostname.erase(period);
+                LOG_DEBUG_MSG( "shortened hostname to " << _shortHostname );
+            }
         }
     }
 

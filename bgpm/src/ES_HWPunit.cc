@@ -112,7 +112,7 @@ int ES_HWPunit::Attach(uint64_t target, uint64_t agentTarg)
             // yet until the target SWEvtSet is been created below
             BGPM_TRACE_DATA_L2(fprintf(stderr, "%s" _AT_ " targAttachedCtrGrpMask[%02d]=0x%02x\n", IND_STRG, targThdId, targAttachedCtrGrpMask[targThdId]));
 
-            if (targAttachedCtrGrpMask[targThdId]) {
+            if (targAttachedCtrGrpMask.size() > 0 && targAttachedCtrGrpMask[targThdId]) {
                 return lastErr.PrintOrExit(BGPM_WALREADY_ATTACHED, BGPM_ERRLOC);
             }
 
@@ -136,7 +136,7 @@ int ES_HWPunit::Attach(uint64_t target, uint64_t agentTarg)
                 // swpunit portion of the hwpunit evtset.  This will configure the punit for the target
                 // and resolve any needed reservations for that target and events.
                 unsigned emptyEvtList;
-                ES_SWPunit *p = (ES_SWPunit*)((ES_SWPunit *)this->Clone(targThdId, &emptyEvtList, 0));
+                ES_SWPunit *p = (ES_SWPunit*)((ES_SWPunit*)this->Clone(targThdId, &emptyEvtList, 0));
                 if (p == NULL) {
                     return lastErr.PrintOrExit(BGPM_ENOMEM, BGPM_ERRLOC);
                 }
@@ -219,6 +219,9 @@ int ES_HWPunit::Detach()
         }
     }
 
+    targAttachedCtrGrpMask.resize(0);
+    targAppliedRsvMask.resize(0);
+
     return 0;
 }
 
@@ -254,26 +257,30 @@ int ES_HWPunit::Stop() {
 }
 
 
-int ES_HWPunit::ResetStart() { return DefaultError(); }
+int ES_HWPunit::ResetStart() { 
 
+    ES_HWPunit::Reset();
+    ES_HWPunit::Start();
+    return 0;
+
+ }
 
 int ES_HWPunit::Reset() {
     BGPM_TRACE_L2;
-
-    UpciBool_t syncRunning = UPC_C_Stop_Sync_Counting();
+    int rc=0;
 
     unsigned targThdId;
     for (targThdId=0; targThdId<CONFIG_MAX_HWTHREADS; ++targThdId) {
         if (targPuList[targThdId]) {
-            Upci_Punit_Reset_Stopped_Counters(targPuList[targThdId], UPCI_CTL_OVF);
+            rc = Upci_Punit_Attach(targPuList[targThdId]);
+            if (rc >= 0) {
+            frozen = true;
+            mbar();  // other threads can't access event set until frozen.
+            }
         }
     }
-
-    if (syncRunning) UPC_C_Start_Sync_Counting();
-
     return 0;
 }
-
 
 
 int ES_HWPunit::ReadEvent(unsigned idx, uint64_t *pVal) {

@@ -26,7 +26,7 @@
 #include "Kernel.h"
 #include "spi/include/kernel/memory.h"
 
-//! \brief  Implement the sc_GETMEMORYREGION system call.
+//! \brief  Implement the sc_GETMEMORYSIZE system call.
 //! \param  r3,r4,...,r8 Syscall parameters.
 //! \return CNK_RC_SPI(0) or CNK_RC_SPI(errno). 
 
@@ -40,12 +40,11 @@ uint64_t  sc_GETMEMORYSIZE(SYSCALL_FCN_ARGS)
         return CNK_RC_SPI(EFAULT);
     }
     
-    // Get current core and process object
-    int processorID = ProcessorID();
-    AppProcess_t* pProc = GetProcessByProcessorID(processorID);
-    HWThreadState_t *pProcLeader_HwThState = GetHWThreadStateByProcessorID(pProc->ProcessLeader_ProcessorID);
-    KThread_t *ProcLeaderKthread = pProcLeader_HwThState->SchedSlot[CONFIG_SCHED_SLOT_FIRST];
-    Regs_t *firstAppThrRegs =  &(ProcLeaderKthread->Reg_State);  // process leader is always in the first slot
+    // Get current process object
+    AppProcess_t* pProc = GetMyProcess();
+    uint64_t processLeaderR1 = pProc->ProcessLeader_KThread->Reg_State.gpr[1];
+    uint64_t highestAllocCurrent = MAX(pProc->MmapMgr.high_mark, pProc->Heap_Break);
+    uint64_t highestAllocMax = MAX(pProc->MmapMgr.high_mark_max, pProc->Heap_Break); 
     
     switch(type)
     {
@@ -56,10 +55,10 @@ uint64_t  sc_GETMEMORYSIZE(SYSCALL_FCN_ARGS)
             *size = NodeState.PersistentMemory.Size;
             break;
         case KERNEL_MEMSIZE_HEAP:
-            *size = pProc->MmapMgr.high_mark - pProc->Heap_VStart;
+            *size = highestAllocCurrent - pProc->Heap_VStart;
             break;
         case KERNEL_MEMSIZE_HEAPMAX:
-            *size = pProc->MmapMgr.high_mark_max - pProc->Heap_VStart;
+            *size = highestAllocMax - pProc->Heap_VStart;
             break;
         case KERNEL_MEMSIZE_HEAPAVAIL:
             if(!IsProcessLeader())
@@ -68,7 +67,7 @@ uint64_t  sc_GETMEMORYSIZE(SYSCALL_FCN_ARGS)
             }
             /*fallthru*/
         case KERNEL_MEMSIZE_ESTHEAPAVAIL:
-            *size = firstAppThrRegs->gpr[1] - pProc->MmapMgr.high_mark;
+            *size = processLeaderR1 - highestAllocCurrent;
             break;
         case KERNEL_MEMSIZE_STACKAVAIL:
             if(!IsProcessLeader())
@@ -77,7 +76,7 @@ uint64_t  sc_GETMEMORYSIZE(SYSCALL_FCN_ARGS)
             }
             /*fallthru*/
         case KERNEL_MEMSIZE_ESTSTACKAVAIL:
-            *size = firstAppThrRegs->gpr[1] - pProc->MmapMgr.high_mark;
+            *size = processLeaderR1 - highestAllocCurrent;
             break;
         case KERNEL_MEMSIZE_STACK:
             if(!IsProcessLeader())
@@ -86,7 +85,7 @@ uint64_t  sc_GETMEMORYSIZE(SYSCALL_FCN_ARGS)
             }
             /*fallthru*/
         case KERNEL_MEMSIZE_ESTSTACK:
-            *size = pProc->Heap_VEnd - firstAppThrRegs->gpr[1];
+            *size = pProc->Heap_VEnd - processLeaderR1;
             break;
         case KERNEL_MEMSIZE_GUARD:
             *size = pProc->Guard_Size;

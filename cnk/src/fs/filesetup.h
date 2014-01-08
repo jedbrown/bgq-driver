@@ -45,6 +45,8 @@
 #include "memFS.h"
 #include "sysioFS.h"
 #include "localFS.h"
+#include "procFS.h"
+#include "rdmaFS.h"
 
 // Define maximum storage need by a file system class.
 // This is used in virtFS.cc to allocate storage for the file system classes.
@@ -60,6 +62,8 @@ typedef union {
   char  memFS_store[sizeof(memFS)];         // FD_MEMFILE
   char  persistFS_store[sizeof(persistmemFS)];         // FD_SHM
   char  localFS_store[sizeof(localFS)];     // FD_LOCAL
+  char  procFS_store[sizeof(procFS)];       // FD_PROC_MEM
+  char  rdmaFS_store[sizeof(rdmaFS)];       // FD_RDMA
 } ALIGN_QUADWORD StoreFS_t;
 
 #ifdef __cplusplus

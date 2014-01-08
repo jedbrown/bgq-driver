@@ -149,6 +149,14 @@ runmesahelp:
 	$(BGQ_INSTALL_DIR)/scripts/runfctest.sh --help
 
 
+runmmcslite: install
+	$(BGQ_INSTALL_DIR)/scripts/runfctest.sh \
+        --ttype fwddr \
+	--program $(TEST).elf \
+	--svchost $(TEST).svchost \
+	--script runMmcsLite \
+	 $(parms)
+
 ifeq ($(filter distclean clean,$(MAKECMDGOALS)),)	
 -include .dep.*.d
 endif

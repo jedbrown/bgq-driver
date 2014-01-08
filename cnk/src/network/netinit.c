@@ -91,7 +91,7 @@ int network_init(void)
    struct mudm_init_info mudminit;
    memset(&mudminit, 0, sizeof(mudminit));
    mudminit.callers_version = MUDM_VERSION;
-   mudminit.req_inbound_connections = 0;
+   mudminit.req_inbound_connections = 5;
    mudminit.req_inj_fifos = 1;
    mudminit.req_rec_fifos = 1;
    mudminit.req_num_pollers = 1;

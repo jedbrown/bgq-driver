@@ -27,13 +27,11 @@
 #include "AliasList.h"
 #include "MasterController.h"
 #include "Policy.h"
+#include "ras.h"
 
 #include "common/AgentProtocol.h"
 #include "common/BinaryController.h"
 #include "common/Ids.h"
-#include "common/ThreadLog.h"
-
-#include "../MasterRasMetadata.h"
 
 #include "../lib/exceptions.h"
 
@@ -63,65 +61,59 @@ const int SPECIAL_ABEND = -2;
 
 AgentRep::AgentRep(
         AgentProtocolPtr prot,
-        BGMasterAgentProtocolSpec::JoinRequest& joinreq,
+        const BGMasterAgentProtocolSpec::JoinRequest& joinreq,
         BGMasterAgentProtocolSpec::JoinReply& joinrep
-        )
-    :
-        _failover(true),
-        _orderly(false),
-        _my_tid( 0 )
+        ) :
+    _failover(true),
+    _orderly(false),
+    _my_tid( 0 ),
+    _agent_mutex( )
 {
+    _agent_id = BGAgentId(joinreq._port, joinreq._ip_address);
+    _host = CxxSockets::Host(joinreq._ip_address);
+    _prot = prot;
+
     LOGGING_DECLARE_ID_MDC(_agent_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
-    std::string& ipaddr = joinreq._ip_address;
-    int port = joinreq._port;
-
-    std::ostringstream p;
-    p << port;
 
     // Spin through the list of existing binaries and create binary controllers and alias entries.
     // We'll run through this code if bgmaster_server is restarted while servers are running under the control of agents.
     // We'll also do this if the connection to the agent goes down and gets restarted.
-    BOOST_FOREACH(BGMasterAgentProtocolSpec::JoinRequest::WorkingBins& wb, joinreq._running_binaries) {
+    BOOST_FOREACH(const BGMasterAgentProtocolSpec::JoinRequest::WorkingBins& wb, joinreq._running_binaries) {
         // First, we need to check the list of aliases to determine if it is valid.
         // Then check to see if this binary id is already under accounting.  Then, if not, update the alias.
         // After that, we need to update the list of managed binaries for the agent
-        // Find the alias:
-        bool found = false;
-        BOOST_FOREACH(AliasPtr& al, MasterController::_aliases) {
-            if (al->get_name() == wb._alias) {
-                LOG_INFO_MSG("Found running binary id " << wb._binary_id << " on agent for alias " << al->get_name() << ".");
-                found = true;  // Got it!
-                BinaryId working_bid(wb._binary_id);
-                BinaryLocation loc;
-                if (MasterController::get_agent_manager().findBinary(working_bid, loc) == true) {
-                    continue;
-                }
-
-                al->add_binary(working_bid);
-                std::string ausr = al->get_user();
-                BinaryControllerPtr binary(new BinaryController(working_bid.str(),
-                                           wb._name, wb._alias, ausr, 0,
-					   BinaryController::RUNNING));
-                _binaries.push_back(binary);
-                LOG_DEBUG_MSG("Updated alias and agent's binary list for " << al->get_name() << ".");
-                break;
-            }
-        }
-
-        if (!found) {
-            // Invalid alias. Tell agent to kill it.
+        AliasPtr alias;
+        if ( !MasterController::_aliases.find_alias( wb._alias, alias) ) {
+            LOG_INFO_MSG( "Did not find alias for running binary " << wb._binary_id );
             joinrep._bad_bins.push_back(wb._binary_id);
             continue;
         }
+
+        BOOST_ASSERT( alias );
+        LOG_INFO_MSG("Found running binary id " << wb._binary_id << " for alias " << alias->get_name());
+
+        BinaryLocation unused;
+        if (MasterController::get_agent_manager().findBinary(wb._binary_id, unused)) {
+            LOG_DEBUG_MSG( "alias accounting already current" );
+            continue;
+        }
+        alias->add_binary(wb._binary_id);
+
+        const BinaryControllerPtr binary(
+                new BinaryController(
+                    wb._binary_id,
+                    wb._name, 
+                    wb._alias, 
+                    alias->get_user(),
+                    0,
+                    BinaryController::RUNNING
+                    )
+                );
+        this->addController( binary );
+        LOG_DEBUG_MSG("Updated alias and agent's binary list for " << alias->get_name());
     }
-
-    BGAgentId id(port, ipaddr);
-    _agent_id = id;
-
-    _host = CxxSockets::Host(ipaddr);
-    _prot = prot;
-};
+}
 
 AgentRep::~AgentRep()
 {
@@ -133,7 +125,7 @@ void
 AgentRep::stopBin(
         const BinaryId& bid,
         const BinaryLocation& location,
-        int signal,
+        const int signal,
         BGMasterAgentProtocolSpec::StopReply& stoprep,
         bool failover = false
         )
@@ -169,13 +161,13 @@ AgentRep::stopBin_nl(
         stoprep._rc = exceptions::OK;
         try {
             _prot->stop(stop_to_agent, stoprep);
-        } catch(CxxSockets::SockSoftError& err) {
+        } catch(const CxxSockets::SoftError& err) {
             LOG_WARN_MSG("Agent connection interrupted, will retry.");
             success = false;
             --retries;
             usleep(750);
             continue;
-        } catch(CxxSockets::CxxError& err) {
+        } catch(const CxxSockets::Error& err) {
             std::string nrs("No requester socket.");
             if (err.errcode == -1 || err.what() == nrs) {
                 // Agent not yet set up. Just return.
@@ -192,10 +184,10 @@ AgentRep::stopBin_nl(
             success = true;
             location.first->set_status(BinaryController::COMPLETED);
             LOG_DEBUG_MSG("Removing stopped binary id " << bid.str() << " from agent.");
-            _binaries.erase(std::remove(_binaries.begin(),_binaries.end(), location.first), _binaries.end()); // Controller removed from agent.
+            this->removeController( location.first );
             // Update database with ras message
             AliasPtr alptr;
-            BOOST_FOREACH(AliasPtr& al, MasterController::_aliases) {
+            BOOST_FOREACH(const AliasPtr& al, MasterController::_aliases) {
                 if (al->find_binary(bid)) {
                     alptr = al;
                 }
@@ -224,9 +216,10 @@ AgentRep::stopBin_nl(
 
         // Now find my alias and decrement
         if (failover) {
-            // LOG_DEBUG_MSG("Removing binary id " << myid.str() << " from alias.");
-            BOOST_FOREACH(AliasPtr& al, MasterController::_aliases) {
-                al->remove_binary(myid);  // Remove the id from the alias' list.
+            BOOST_FOREACH(const AliasPtr& al, MasterController::_aliases) {
+                if (al->find_binary(myid)) {
+                    al->remove_binary(myid);  // Remove the id from the alias' list.
+                }
             }
         }
     }
@@ -239,7 +232,7 @@ AgentRep::startBin(
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
-    BinaryId bid("0");
+    const BinaryId bid("0");
     if (MasterController::get_end_requested()) {
         return bid;  // Don't do anything if we're ending.
     }
@@ -249,7 +242,7 @@ AgentRep::startBin(
 
 void
 AgentRep::agentAbend(
-        std::ostringstream& msg
+        const std::ostringstream& msg
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
@@ -280,7 +273,7 @@ AgentRep::startBin_nl(
     // We already lock this method so we can't have two threads in this code.
     // We just need to be sure we don't stack up a start from a failover/restart
     // and a new agent connection.
-    BOOST_FOREACH(AliasPtr& al, MasterController::_aliases) {
+    BOOST_FOREACH(const AliasPtr& al, MasterController::_aliases) {
         if (al->get_name() == startreq._alias) {
             if (al->check_instances() == false) {
                 LOG_ERROR_MSG("Cannot start an additional instance of " << al->get_name());
@@ -292,11 +285,11 @@ AgentRep::startBin_nl(
     LOG_DEBUG_MSG("Sending start request");
     try {
         _prot->start(startreq,startrep);
-    } catch(CxxSockets::SockSoftError& err) {
+    } catch(const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
         LOG_ERROR_MSG("Agent connection error during start send request.");
         return bid;
-    } catch(CxxSockets::CxxError& err) {
+    } catch(const CxxSockets::Error& err) {
         std::string nrs("No requester socket.");
         if (err.errcode == -1 || err.what() == nrs) {
             // Agent not yet set up. Just return.
@@ -321,9 +314,16 @@ AgentRep::startBin_nl(
 
         AliasPtr al;
         MasterController::_aliases.find_alias(startreq._alias, al);
-        std::string apth = al->get_path();
-        std::string ausr = al->get_user();
-        BinaryControllerPtr bincont(new BinaryController(bid, apth, startreq._alias, ausr, 0, BinaryController::RUNNING));
+        const BinaryControllerPtr bincont(
+                new BinaryController(
+                    bid, 
+                    al->get_path(),
+                    startreq._alias,
+                    al->get_user(),
+                    0,
+                    BinaryController::RUNNING
+                    )
+                );
         addController(bincont);
 
         // Update database with ras message
@@ -337,26 +337,26 @@ AgentRep::startBin_nl(
         al->add_binary(bid);
         LOG_INFO_MSG(startmsg.str());
     } else {
-        int estat = startrep._status._exit_status;
+        const int estat = startrep._status._exit_status;
         int signo = 0;
         std::ostringstream msg;
-        msg << "Binary " << startreq._alias << ": " << startrep._status._binary_id << " exited. ";
+        msg << "Binary " << startreq._alias << ": " << startrep._status._binary_id << " exited.";
         if (WIFEXITED(estat)) {
             const int statnum = WEXITSTATUS(estat);
-            msg << "Status: " << statnum;
+            msg << " Status: " << statnum;
         }
 
         if (WIFSIGNALED(estat)) {
             signo = WTERMSIG(estat);
-            msg << "Signal: " << signo << ". ";
+            msg << " Signal: " << signo << ".";
             if (WCOREDUMP(estat)) {
-                msg << "Core dumped on " << _host.fqhn() << ". ";
+                msg << " Core dumped on " << _host.fqhn() << ".";
             }
             LOG_INFO_MSG(msg.str());
         }
 
         if (startrep._rt.length() != 0) {
-            msg << "Error text is " << startrep._rt << ". ";
+            msg << " Error text is " << startrep._rt << ".";
         }
 
         failmsg << msg.str();
@@ -379,34 +379,28 @@ AgentRep::startBin_nl(
 void
 setTriggerFromSignal(
         Policy::Trigger& t,
-        int signo
+        const int signo
         )
 {
     switch(signo) {
     case AGENTFAIL:
         t = Policy::AGENT_ABEND;
         break;
+    case SIGKILL:
+        t = Policy::KILL_REQUESTED;
+        break;
     case SPECIAL_ABEND:
-    case SIGILL:
-    case SIGABRT:
-    case SIGFPE:
-    case SIGSEGV:
-    case SIGPIPE:
-    case SIGALRM:
-    case SIGUSR1:
-    case SIGUSR2:
-        // All these signals fall through as indications of abnormal endings.
+    default:
+        // All other signals fall through as indications of abnormal endings.
         t = Policy::BINARY_ABEND;
         break;
-    default: // Otherwise, somebody killed it.
-        t = Policy::KILL_REQUESTED;
     }
 }
 
 void
 setTriggerFromString(
         Policy::Trigger& t,
-        std::string& trigger
+        const std::string& trigger
         )
 {
     if (trigger == "b") {
@@ -426,15 +420,14 @@ AgentRep::stopBinaryAndExecutePolicy(
         const BinaryLocation& binloc,
         const int signal,
         BGMasterAgentProtocolSpec::StopReply& stoprep,
-        BinaryControllerPtr /* binptr */,
-        std::string& trigger
+        const std::string& trigger
         )
 {
     LOGGING_DECLARE_ID_MDC(_agent_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     boost::mutex::scoped_lock scoped_lock(_agent_mutex);
     // First see if there's a policy.
-    BOOST_FOREACH(AliasPtr& al, MasterController::_aliases) {
+    BOOST_FOREACH(const AliasPtr& al, MasterController::_aliases) {
         if (al->find_binary(bid)) {
             al->remove_binary(bid);
             Policy::Trigger t;
@@ -444,15 +437,15 @@ AgentRep::stopBinaryAndExecutePolicy(
                 setTriggerFromString(t, trigger);
             }
             BinaryControllerPtr null;
-            AgentRepPtr rep_p = al->evaluatePolicy(t, _agent_id, bid, null);
+            const AgentRepPtr rep_p = al->evaluatePolicy(t, _agent_id, bid, null);
             if (rep_p) {
-                int sigtosend = (signal == SIGUSR2?SIGUSR2:SIGTERM);
+                const int sigtosend = (signal == SIGUSR2?SIGUSR2:SIGTERM);
                 stopBin_nl(bid, binloc, sigtosend, stoprep, true);
                 // We've already removed the binary, so just execute the policy!
                 BinaryId binid = binloc.first->get_binid();
                 executePolicy_nl(binid, rep_p, al, signal);
                 // Now get rid of the old binary controller.
-                _binaries.erase(std::remove(_binaries.begin(),_binaries.end(),binloc.first), _binaries.end());
+                this->removeController( binloc.first );
             } else {
                 // Put the binary back since we couldn't stop it.
                 al->add_binary(bid);
@@ -467,7 +460,7 @@ AgentRep::executePolicy_nl(
         const BinaryId& reqbid,
         AgentRepPtr rep_p,
         AliasPtr al,
-        int signo
+        const int signo
         )
 {
     LOGGING_DECLARE_ID_MDC(_agent_id.str());
@@ -523,7 +516,7 @@ AgentRep::executePolicy_nl(
                 LOG_WARN_MSG("Not starting alias " << al->get_name());
             }
         }
-    } catch (exceptions::InternalError& e) {
+    } catch(const exceptions::InternalError& e) {
         std::ostringstream msg;
         msg << "Unable to execute policy for " << reqbid.str() << "|" << al->get_name() << " " << e.what();
         MasterController::handleErrorMessage(msg.str());
@@ -534,15 +527,16 @@ AgentRep::executePolicy_nl(
 void
 AgentRep::executePolicyAndClear_nl(
         BinaryControllerPtr binptr,
-        AgentRepPtr rep_p, int signo
+        AgentRepPtr rep_p, 
+        const int signo
         )
 {
     LOGGING_DECLARE_ID_MDC(_agent_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
-    BinaryId reqbid = binptr->get_binid();
+    const BinaryId reqbid = binptr->get_binid();
     if (binptr->stopping() != true) {
         // We haven't explicitly stopped, so we have to check our policy
-        BOOST_FOREACH(AliasPtr& al, MasterController::_aliases) {
+        BOOST_FOREACH(const AliasPtr& al, MasterController::_aliases) {
             if (al->find_binary(reqbid)) {
                 // This alias has my binary id, so remove my id and execute the policy
                 al->remove_binary(reqbid);
@@ -551,13 +545,13 @@ AgentRep::executePolicyAndClear_nl(
         }
     } else {
         // No policy, so remove only.
-        BOOST_FOREACH(AliasPtr& al, MasterController::_aliases) {
+        BOOST_FOREACH(const AliasPtr& al, MasterController::_aliases) {
             al->remove_binary(reqbid);
         }
     }
 
     // Now get rid of the old binary controller.
-    _binaries.erase(std::remove(_binaries.begin(),_binaries.end(),binptr), _binaries.end());
+    this->removeController( binptr );
 }
 
 void
@@ -569,72 +563,53 @@ AgentRep::doCompleteRequest(
     LOGGING_DECLARE_ID_MDC(_agent_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     // First, find our binary id
-    BinaryId reqbid(compreq._status._binary_id);
+    const BinaryId reqbid(compreq._status._binary_id);
 
     // Find the corresponding controller
-    const size_t max = _binaries.size();
-    std::string alias_name = "unknown";
-
-    if (max == 0) {
+    BinaryControllerPtr bptr;
+    if ( !this->find_binary(reqbid, bptr) ) {
         LOG_WARN_MSG( "Binary " << reqbid.str() << " is not in our list." );
-        // Instead of bailing out here, we still need to send a reply. Agent is expecting it!
     } else {
-        BinaryControllerPtr bptr = *(_binaries.begin());
-        for (size_t i = 0; i < max; ++i) {
-            // Pull it out of the controller vector and invalidate it.
-            // This is now the last binary run on this agent.
-            if (bptr) {
-                if (bptr->get_binid() == reqbid) {
-                    // Pull it out of the controller vector and invalidate it
-                    (bptr)->set_status(BinaryController::COMPLETED);
-                    // This is now the last binary run on this agent
-                    _last_bin = bptr;
-                    LOG_INFO_MSG("Removing completed binary id " << reqbid.str() << "|" << bptr->get_binary_bin_path());
-                    _binaries.erase(std::remove(_binaries.begin(),_binaries.end(),bptr), _binaries.end());
-                    break;
-                }
-            }
-            if (_binaries[i + 1]) {
-                bptr = _binaries[i + 1];
-            }
-        }
+        bptr->set_status(BinaryController::COMPLETED);
+        LOG_INFO_MSG("Removing completed binary id " << reqbid.str() << "|" << bptr->get_binary_bin_path());
+        this->removeController( bptr );
 
         // Now find my alias and decrement
-        BOOST_FOREACH(AliasPtr& al, MasterController::_aliases) {
-            if (al->find_binary(reqbid) == true) {
-                alias_name = al->get_name();
+        BOOST_FOREACH(const AliasPtr& al, MasterController::_aliases) {
+            if (al->find_binary(reqbid)) {
+                al->remove_binary(reqbid);
+                break;
             }
-            al->remove_binary(reqbid);
         }
     }
 
     if (compreq._exit_status != 0) {
-        int status = WEXITSTATUS(compreq._exit_status);
+        const int status = WEXITSTATUS(compreq._exit_status);
         std::ostringstream error;
-        error << "Binary id " << reqbid.str() << "|" << alias_name << " failed with exit status " << status;
+        error << "Binary id " << reqbid.str() << "|" << bptr->get_alias_name() << " failed with exit status " << status;
         MasterController::handleErrorMessage(error.str());
     }
 
     // Update database with RAS message
     std::map<std::string, std::string> details;
     details["BIN"] = reqbid.str();
-    details["ALIAS"] = alias_name;
+    details["ALIAS"] = bptr->get_alias_name();
     std::string signal = "0";
     details["SIGNAL"] = signal;
     MasterController::putRAS(BINARY_STOP_RAS, details);
     std::ostringstream startmsg;
-    startmsg << "Binary id " << reqbid.str() << " for alias " << alias_name << " stopped on " << _agent_id.str();
+    startmsg << "Binary id " << reqbid.str() << " for alias " << bptr->get_alias_name() << " stopped on " << _agent_id.str();
     MasterController::addHistoryMessage(startmsg.str());
 
     BGMasterAgentProtocolSpec::CompleteReply comprep(0, "success");
 
     try {
         _prot->sendReply(comprep.getClassName(), comprep);
-    } catch(CxxSockets::SockSoftError& err) {
+    } catch(const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
         LOG_ERROR_MSG("Agent connection error during complete reply send.");
         return;
-    } catch(CxxSockets::CxxError& err) {
+    } catch(const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         // Bad, bad, bad.  This object must die
         std::ostringstream msg;
@@ -653,29 +628,29 @@ AgentRep::doFailedRequest(
     LOGGING_DECLARE_ID_MDC(_agent_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     // First, find our binary id
-    BinaryId reqbid(failreq._status._binary_id);
+    const BinaryId reqbid(failreq._status._binary_id);
 
     // Update our exit status
     BinaryControllerPtr binptr;
     int signo = 0;
-    if (find_binary(reqbid, binptr) == true) {
+    if (find_binary(reqbid, binptr)) {
         binptr->set_status(BinaryController::COMPLETED);
-        int estat = failreq._status._exit_status;
+        const int estat = failreq._status._exit_status;
         int statnum = 1;
         std::ostringstream msg;
-        msg << "Alias " << binptr->get_alias_name() << " binary id " << binptr->get_binid().str() << " exited.";
+        msg << "Alias " << binptr->get_alias_name() << " binary id " << binptr->get_binid().str() << " exited";
         if (WIFEXITED(estat)) {
             statnum = WEXITSTATUS(estat);
-            msg << "  Status: " << statnum;
+            msg << ". Status: " << statnum;
         }
         binptr->set_exit_status(statnum);
 
         // Log what happened
         if (WIFSIGNALED(estat)) {
             signo = WTERMSIG(estat);
-            msg << "  Signal: " << signo << ". ";
+            msg << ". Signal: " << signo;
             if (WCOREDUMP(estat)) {
-                msg << "Core dumped on " << _host.fqhn();
+                msg << ". Core dumped on " << _host.fqhn();
             }
             LOG_INFO_MSG(msg.str());
         }
@@ -684,7 +659,7 @@ AgentRep::doFailedRequest(
         std::map<std::string, std::string> details;
         details["ALIAS"] = binptr->get_alias_name();
         details["BIN"] = reqbid.str();
-        details["SIGNAL"] = boost::lexical_cast<std::string>(signo?signo:0);
+        details["SIGNAL"] = boost::lexical_cast<std::string>(signo);
         details["ESTAT"] = boost::lexical_cast<std::string>(estat);
         details["EMSG"] = msg.str();
         MasterController::putRAS(BINARY_FAIL_RAS, details);
@@ -715,11 +690,11 @@ AgentRep::doFailedRequest(
 
     try {
         _prot->sendReply(failrep.getClassName(), failrep);
-    } catch(CxxSockets::SockSoftError& err) {
+    } catch(const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
         LOG_ERROR_MSG("Agent connection error during failed reply send.");
         return;
-    } catch(CxxSockets::CxxError& err) {
+    } catch(const CxxSockets::Error& err) {
         // Client aborted with an incomplete transmission
         // Bad, bad, bad.  This object must die
         std::ostringstream msg;
@@ -735,14 +710,14 @@ AgentRep::processRequest()
     LOGGING_DECLARE_ID_MDC(_agent_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
     // These will be requests coming from the bgagent
-    std::string request_name = "";
+    std::string request_name;
     try {
         _prot->getName(request_name);
-    } catch(CxxSockets::SockSoftError& err) {
+    } catch(const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
         LOG_ERROR_MSG("Agent connection error processing request from agent.");
         return true;
-    } catch(CxxSockets::CxxError& err) {
+    } catch(const CxxSockets::Error& err) {
         // Any other error, we bail
         std::ostringstream msg;
         msg << "Agent connection ended.";
@@ -756,11 +731,11 @@ AgentRep::processRequest()
         BGMasterAgentProtocolSpec::CompleteRequest compreq;
         try {
             _prot->getObject(&compreq);
-        } catch(CxxSockets::SockSoftError& err) {
+        } catch(const CxxSockets::SoftError& err) {
             // For soft errors, we just back out and let it try again
             LOG_ERROR_MSG("Agent connection error processing request from agent.");
             return true;
-        } catch(CxxSockets::CxxError& err) {
+        } catch(const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission.
             // Bad, bad, bad.  This object must die.
             std::ostringstream msg;
@@ -773,11 +748,11 @@ AgentRep::processRequest()
         BGMasterAgentProtocolSpec::FailedRequest failreq;
         try {
             _prot->getObject(&failreq);
-        } catch(CxxSockets::SockSoftError& err) {
+        } catch(const CxxSockets::SoftError& err) {
             // For soft errors, we just back out and let it try again.
             LOG_ERROR_MSG("Agent connection error processing request from agent.");
             return true;
-        } catch(CxxSockets::CxxError& err) {
+        } catch(const CxxSockets::Error& err) {
             // Client aborted with an incomplete transmission.
             // Bad, bad, bad.  This object must die.
             std::ostringstream msg;
@@ -800,8 +775,7 @@ AgentRep::waitMessages()
 {
     LOGGING_DECLARE_ID_MDC(_agent_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
-   // Wait for requests and send responses from the associated bgagent.
-    ThreadLog tl("Agent waiter");
+    // Wait for requests and send responses from the associated bgagent.
 
     _my_tid = pthread_self();
 
@@ -817,7 +791,7 @@ AgentRep::waitMessages()
         LOG_INFO_MSG("Connected bgagentd " << get_agent_id().str() << " on " << get_host().uhn() << " failed.");
     }
 
-    if (MasterController::get_agent_manager().get_ending_agents() == true) {
+    if (MasterController::get_agent_manager().get_ending_agents()) {
         _failover = false;
     }
 
@@ -838,35 +812,10 @@ AgentRep::startPoller()
     _agent_socket_poller = boost::thread(&AgentRep::waitMessages, this);
 }
 
-bool
-AgentRep::endAgent(
-        BGMasterAgentProtocolSpec::End_agentReply& agentdierep
-        )
-{
-    LOGGING_DECLARE_ID_MDC(_agent_id.str());
-    LOG_TRACE_MSG(__FUNCTION__);
-    BGMasterAgentProtocolSpec::End_agentRequest agentdiereq;
-    bool success = true;
-    try {
-        _prot->end_agent(agentdiereq, agentdierep);
-    } catch(CxxSockets::SockSoftError& err) {
-        // For soft errors, we just back out and let it try again
-        LOG_ERROR_MSG("Agent connection error during end agent request.");
-        success = false;
-    } catch(CxxSockets::CxxError& err) {
-        // Client aborted with an incomplete transmission
-        LOG_ERROR_MSG("Agent connection ended during end agent request.");
-        success = false;
-    }
-    _orderly = true;
-    return success;
-}
-
 void
 AgentRep::cancel(
-        bool agent,
-        bool binaries,
-        unsigned signal
+        const bool binaries,
+        const unsigned signal
         )
 {
     LOGGING_DECLARE_ID_MDC(_agent_id.str());
@@ -885,32 +834,11 @@ AgentRep::cancel(
     } else {
         // Mark all bins UNINITIALIZED to free all waiters.
         boost::mutex::scoped_lock scoped_lock(_agent_mutex);
-        const size_t bincnt = _binaries.size();
-        for (size_t i = 0; i < bincnt; ++i) {
-            BinaryControllerPtr rit = _binaries[i];  // Always pull out the first one.
-            if (rit) {
-                LOG_DEBUG_MSG("Setting alias " << rit->get_alias_name() << " to UNINITIALIZED");
-                rit->set_status(BinaryController::UNINITIALIZED);
-            }
-        }
-    }
-
-    if (agent) {
-        // Now send an end request
-        BGMasterAgentProtocolSpec::End_agentReply agentdierep(exceptions::OK, "success");
-        if (endAgent(agentdierep) == true) {
-            // Update database with RAS message
-            std::map<std::string, std::string> details;
-            details["AGENT_ID"] = get_agent_id();
-            MasterController::putRAS(AGENT_KILL_RAS, details);
-            std::ostringstream endmsg;
-            endmsg << "Agent " << _agent_id.str() << " killed.";
-            MasterController::addHistoryMessage(endmsg.str());
-        } else {
-            std::ostringstream errstr;
-            errstr << "bgmaster_server failed to end agent " << get_agent_id().str() << ".";
-            LOG_WARN_MSG(errstr.str());
-            throw exceptions::InternalError(exceptions::WARN, errstr.str());
+        const Binaries binaries = this->get_binaries();
+        for ( Binaries::const_iterator i = binaries.begin(); i != binaries.end(); ++i ) {
+            BinaryControllerPtr rit = *i;
+            LOG_DEBUG_MSG("Setting alias " << rit->get_alias_name() << " to UNINITIALIZED");
+            rit->set_status(BinaryController::UNINITIALIZED);
         }
     }
 
@@ -926,17 +854,21 @@ AgentRep::cancel(
 void
 AgentRep::stopAllBins(
         BGMasterClientProtocolSpec::StopReply& reply,
-        int signal
+        const int signal
         )
 {
     LOGGING_DECLARE_ID_MDC(_agent_id.str());
     LOG_TRACE_MSG(__FUNCTION__);
 
-    boost::mutex::scoped_lock scoped_lock(_agent_mutex);
-    const size_t bincnt = _binaries.size();
-    LOG_INFO_MSG("Stopping " << bincnt << " binaries on agent " << get_agent_id().str() << ".");
-    for (size_t i = 0; i < bincnt; ++i) {
-        BinaryControllerPtr rit = _binaries[0];  // Always pull out the first one.
+    Binaries binaries;
+    {
+        boost::mutex::scoped_lock scoped_lock(_agent_mutex);
+        binaries = this->get_binaries();
+    }
+
+    LOG_INFO_MSG("Stopping " << binaries.size() << " binaries on agent " << get_agent_id().str() << " with signal " << signal);
+    for (Binaries::const_iterator i = binaries.begin(); i != binaries.end(); ++i) {
+        const BinaryControllerPtr rit = *i;
         if (rit) {
             LOG_INFO_MSG("Stopping alias " << rit->get_alias_name() << " with binary id " << rit->get_binid().str()
                          << " on agent " << get_agent_id().str() << ".");

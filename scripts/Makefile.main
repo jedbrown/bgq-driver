@@ -128,6 +128,36 @@ TARGETS_INC_EXTRA+=linux_headers
 endif
 
 
+# When building control system simulation,
+# override the DIRS to build.
+ifeq ($(BGQ_CONTROL_SYSTEM_SIMULATION),yes)
+  DIRS=
+  DIRS += extlib
+  DIRS += firmware
+  DIRS += hwi
+  DIRS += bgq_util
+  DIRS += utility
+  DIRS += xml
+  DIRS += ras
+  DIRS += db
+  DIRS += hlcs
+  DIRS += bgws
+
+  TARGETS_INC_EXTRA = control_system_simulation_headers_install
+
+  # When building the floor for control system simulation (x86_64),
+  # also build these (closed source and GPL-containing) directories:
+  ifeq ($(BGQ_FLOOR_DIR),none)
+    DIRS += control
+    DIRS += ctrlnet
+    DIRS += ramdisk
+
+    TARGETS_INC_EXTRA += linux_headers
+  endif
+
+endif
+
+
 TARGETS =$(TARGETS_INSTALL)   \
 	 $(TARGETS_CLEAN)     \
 	 $(TARGETS_DISTCLEAN)
@@ -223,9 +253,6 @@ ramdisk.install: utility.install linux.install mudm.install baremetal.install
 mudm.install: spi.install
 
 
-# hlcs include depends upon the python scripts in xml/include
-hlcs/include.install: $(addsuffix .install,$(foreach d,xml,$(subst /Makefile,,$(wildcard $(d)/include/Makefile))))
-
 linux/include.install: $(addsuffix .install,$(foreach d,firmware mudm spi hwi,$(subst /Makefile,,$(wildcard $(d)/include/Makefile))))
 ifeq ($(OS_ARCH),x86_64)
 linux_headers: $(addsuffix .install,$(foreach d,firmware mudm spi hwi,$(subst /Makefile,,$(wildcard $(d)/include/Makefile))))
@@ -305,6 +332,35 @@ build_ras_gen: $(addsuffix .install,$(filter-out build,$(DIRS)))
 	    $(CP) $(BGQ_INSTALL_DIR)/scripts/event_code_table.txt $(BGQ_INSTALL_DIR)/db/schema/ddl; \
 	  fi \
 	fi
+
+
+# Define targets for control system simulation build.
+ifeq ($(BGQ_CONTROL_SYSTEM_SIMULATION),yes)
+
+control_system_simulation_headers_install: spi/include.install
+
+gnu.install:
+
+mudm/include.install:
+	$(MAKE) -C mudm/include install
+
+spi/include.install:
+	$(MAKE) -C spi/include install
+
+
+  ifneq ($(BGQ_FLOOR_DIR),none)
+
+hlcs.install: ramdisk_control_system_simulation_build
+
+ramdisk_control_system_simulation_build: utility.install
+	$(MAKE) -C ramdisk/include install
+	$(MAKE) -C ramdisk/src/services/common install
+	$(MAKE) -C ramdisk/src/services/iosd install
+	$(MAKE) -C ramdisk/src/services/jobctld install
+	$(MAKE) -C ramdisk/src/services/stdiod install
+  endif
+
+endif
 
 
 # +++

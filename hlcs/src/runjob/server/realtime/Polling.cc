@@ -25,13 +25,17 @@
 
 #include "server/realtime/Polling.h"
 #include "server/block/Container.h"
+#include "server/Block.h"
 #include "server/Server.h"
 
+#include <db/include/api/cxxdb/cxxdb.h>
 #include <db/include/api/tableapi/gensrc/DBTBlock.h>
+#include <db/include/api/tableapi/gensrc/DBTBlock_history.h>
 #include <db/include/api/tableapi/DBConnectionPool.h>
 
 #include <boost/bind.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/foreach.hpp>
 #include <boost/throw_exception.hpp>
 
 LOG_DECLARE_FILE( runjob::server::log );
@@ -75,11 +79,11 @@ Polling::Polling(
     _callback( )
 {
     LOGGING_DECLARE_LOCATION_MDC( _sequence );
-    LOG_INFO_MSG( __FUNCTION__ );
+    LOG_INFO_MSG( "starting " << std::hex << this );
 }
 
 cxxdb::QueryStatementPtr
-Polling::prepareQuery(
+Polling::prepareSequenceQuery(
         const cxxdb::ConnectionPtr& database
         )
 {
@@ -97,6 +101,25 @@ Polling::prepareQuery(
             BGQDB::DBTBlock::SEQID_COL + " > ?"
             "ORDER BY " + BGQDB::DBTBlock::SEQID_COL,
             { BGQDB::DBTBlock::SEQID_COL }
+            );
+}
+
+cxxdb::QueryStatementPtr
+Polling::prepareDeletionQuery(
+        const cxxdb::ConnectionPtr& database
+        )
+{
+    LOG_TRACE_MSG( __FUNCTION__ );
+
+    return database->prepareQuery(
+            std::string("SELECT ") +
+            BGQDB::DBTBlock_history::BLOCKID_COL + "," +
+            BGQDB::DBTBlock_history::STATUSLASTMODIFIED_COL + " " +
+            "FROM " +
+            BGQDB::DBTBlock_history().getTableName() + " " +
+            "WHERE " +
+            BGQDB::DBTBlock::CREATIONID_COL + " = ?",
+            { BGQDB::DBTBlock_history::CREATIONID_COL }
             );
 }
 
@@ -159,7 +182,7 @@ Polling::impl(
                     );
         }
 
-        const cxxdb::QueryStatementPtr statement( this->prepareQuery(database) );
+        const cxxdb::QueryStatementPtr statement( this->prepareSequenceQuery(database) );
 
         statement->parameters()[ BGQDB::DBTBlock::SEQID_COL ].set( static_cast<int64_t>(_sequence) );
         const cxxdb::ResultSetPtr results( statement->execute() );
@@ -208,7 +231,14 @@ Polling::impl(
         if ( _stopped ) {
             // fall through
         } else {
-            this->wait();
+            server->getBlocks()->get(
+                    boost::bind(
+                        &Polling::getBlocksCallback,
+                        shared_from_this(),
+                        _1,
+                        database
+                        )
+                    );
         }
     } catch ( const std::exception& e ) {
         LOG_WARN_MSG( "could not poll: " << e.what() );
@@ -218,6 +248,46 @@ Polling::impl(
             this->wait();
         }
     }
+}
+
+void
+Polling::getBlocksCallback(
+        const block::Container::Blocks& blocks,
+        const cxxdb::ConnectionPtr& database
+        )
+{
+    const Server::Ptr server( _server.lock() );
+    if ( !server ) return;
+
+    const cxxdb::QueryStatementPtr statement( this->prepareDeletionQuery(database) );
+
+    try {
+        LOG_DEBUG_MSG( "querying for " << blocks.size() << " deleted blocks" );
+        BOOST_FOREACH( const Block::Ptr& block, blocks ) {
+            statement->parameters()[ BGQDB::DBTBlock_history::CREATIONID_COL ].cast(
+                    block->config()->blockId()
+                    );
+            const cxxdb::ResultSetPtr results( statement->execute() );
+            if ( results->fetch() ) {
+                const std::string id = results->columns()[ BGQDB::DBTBlock_history::BLOCKID_COL ].getString();
+                LOG_DEBUG_MSG( "removing deleted block " << id );
+                server->getBlocks()->remove( 
+                        id,
+                        boost::bind(
+                            &Polling::removeCallback,
+                            shared_from_this(),
+                            id,
+                            _1,
+                            _2
+                            )
+                        );
+            }
+        }
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( e.what() );
+    }
+
+    this->wait();
 }
 
 void
@@ -256,7 +326,7 @@ Polling::removeCallback(
         const std::string& block,
         const error_code::rc error,
         const std::string& message
-        )
+        ) const
 {
     LOGGING_DECLARE_BLOCK_MDC( block );
 
@@ -271,7 +341,7 @@ Polling::initializedCallback(
         const std::string& block,
         const error_code::rc error,
         const std::string& message
-        )
+        ) const
 {
     LOGGING_DECLARE_BLOCK_MDC( block );
 

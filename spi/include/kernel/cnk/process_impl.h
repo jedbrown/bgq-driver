@@ -134,5 +134,10 @@ uint64_t Kernel_GetJobID()
    return CNK_SPI_SYSCALL_0(GETJOBID);
 }
 
+__INLINE__
+uint64_t Kernel_IsGuestThread()
+{
+    return(CNK_SPI_SYSCALL_0(ISGUESTTHREAD));
+}
 
 #endif /* _KERNEL_CNK_PROCESS_IMPL_H_ */

@@ -29,7 +29,6 @@
  * \brief kill function definition.
  *
  * \ingroup V1R1M1
- * \defgroup V1R1M1 New content in V1R1M1
  *
  */
 

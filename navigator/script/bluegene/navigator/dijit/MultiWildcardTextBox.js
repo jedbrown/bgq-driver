@@ -47,7 +47,6 @@ function(
 
 
 var b_navigator_dijit_MultiWildcardTextBox = d_declare(
-        "bluegene.navigator.dijit.MultiWildcardTextBox",
         [ j__WidgetBase, j__TemplatedMixin, j__WidgetsInTemplateMixin ],
 
 /** @lends bluegene^navigator^dijit^MultiWildcardTextBox# */

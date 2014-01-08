@@ -28,7 +28,7 @@
 
 <title>dojo Browser Tests</title>
 
-<script src="../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+<script src="../../dojo/dojo.js" data-dojo-config="async: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
 
 <script>
 
@@ -67,6 +67,7 @@ function TextBox_in_form_default_value_is_empty_string() {
 
 
 d_ready( function() {
+    d_parser.parse();
     doh.register( "bluegene/test/dojoHTML", tests );
     doh.run();
 } );
@@ -80,12 +81,12 @@ d_ready( function() {
 
 <body>
 
-<input id="tb1" data-dojo-type="dijit.form.TextBox" />
+<input id="tb1" data-dojo-type="dijit/form/TextBox" />
 
-<div id="form1" data-dojo-type="dijit.form.Form">
-    <input name="tb1" data-dojo-type="dijit.form.TextBox" />
+<div id="form1" data-dojo-type="dijit/form/Form">
+    <input name="tb1" data-dojo-type="dijit/form/TextBox" />
 </div>
-
+ 
 </body>
 
 </html>

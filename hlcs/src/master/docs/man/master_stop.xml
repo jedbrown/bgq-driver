@@ -60,7 +60,8 @@ master_stop [ alias ] [ OPTIONS ]
         <varlistentry>
             <term><option>"bgmaster"</option></term>
             <listitem>
-            <para>Stop the bgmaster_server process and all managed binaries.</para>
+            <para>Stop the bgmaster_server process and all managed binaries. Note this option is asynchronous,
+            it will return before bgmaster_server and all managed binaries have terminated.</para>
             </listitem>
         </varlistentry>
         <varlistentry>
@@ -78,12 +79,6 @@ and the status of their managed binaries. </para>
             <para>Stop a specific binary ID.  An alias may, according to policy, 
 be associated with more than one instance of a binary.  This allows the user to 
 specify a particular instance by binary ID. </para>
-            </listitem>
-        </varlistentry>
-        <varlistentry>
-            <term><option>--agent</option></term>
-            <listitem>
-            <para>Specify an agent daemon to stop by agent ID.  "all" instead of an ID stops all bgagentd processes.</para>
             </listitem>
         </varlistentry>
         <varlistentry>
@@ -118,8 +113,7 @@ it to end. </para>
 
 <refsect1 id="master_stop.description">
     <title>Description</title>
-    <para>Stop any or all controlled processes, bgmaster_server, any or all bgagentd processes,
-or everything.  
+    <para>Stop any or all controlled processes, bgmaster_server or everything.
 By default, it stops bgmaster_server and all managed binaries.  Processes are allowed an 
 orderly completion with a timeout before they are forced to end.
   By default the initial signal is SIGTERM.</para>

@@ -124,7 +124,7 @@ class BreakpointController
         int remove(void* address, uint32_t originalInstruction, AppProcess_t *proc);
 
         //! Read 4 bytes of data and conditionally replace with previous data
-        uint32_t read(uint32_t* address);
+        uint32_t read(uint32_t* address, AppProcess_t *proc);
 
         //! Set/get the trap-on/trap-after indicator.
         inline void setTrapAfterDAC() { trapAfterEnabled = 1;  }
@@ -139,7 +139,7 @@ class BreakpointController
         void trapTableFree(); 
 
         //! Get the kthread of a pending step operation.
-        KThread_t* getPendingStepKThread(int processorID);
+        KThread_t* getPendingStepKThread(int processorID, AppProcess_t *proc);
 
         // ! Control access to the trap table.
         void TrapTableReadLock();

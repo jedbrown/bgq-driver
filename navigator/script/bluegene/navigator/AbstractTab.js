@@ -28,7 +28,6 @@ define(
     "./topic",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -36,7 +35,6 @@ function(
         l_topic,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -48,9 +46,20 @@ var b_navigator_AbstractTab = d_declare(
 /** @lends bluegene^navigator^AbstractTab# */
 {
 
+    _navigator_dij : null,
+
+
     /** @constructs */
     constructor: function()
     {
+        // Nothing to do.
+    },
+
+
+    setNavigatorDij : function( navigator_dij )
+    {
+        this._navigator_dij = navigator_dij;
+
         var tab_dij = this._getTabDijit();
 
         if ( tab_dij ) {
@@ -77,7 +86,7 @@ var b_navigator_AbstractTab = d_declare(
     _getTabDijit : function()
     {
         if ( ! this._getTabDijitName() )  return null;
-        return j_registry.byId( "navigator" ).getTabDij( this._getTabDijitName() );
+        return this._navigator_dij.getTabDij( this._getTabDijitName() );
     },
 
 

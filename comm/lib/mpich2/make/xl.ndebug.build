@@ -12,45 +12,46 @@
 #                                                                  #
 # end_generated_IBM_copyright_prolog                               #
 
-xl.ndebug-install: pre-install xl.ndebug
-	${MAKE} -C ${MPICH2BUILD}-xl.ndebug install
+#
+# '--enabled-debuginfo' is somehow related to bgq xl compilers and
+# totalview support.
+#
 
 xl.ndebug: autoconf
-	mkdir -p ${MPICH2BUILD}-xl.ndebug
-	cd ${MPICH2BUILD}-xl.ndebug &&					\
+	mkdir -p ${MPICH2BUILD}-$@
+	cd ${MPICH2BUILD}-$@ &&						\
 	if [ ! -f Makefile ] ; then					\
-	  GCC="${HOST_CC}"						\
 	  CC="${FAST_CC}"						\
 	  CXX="${FAST_CXX}"						\
 	  F77="${FAST_F77}"						\
 	  FC="${FAST_F90}"						\
 	  AR="${HOST_AR}"						\
 	  LD="${HOST_LD}"						\
+	  RANLIB="${HOST_RANLIB}"					\
 	  F77_OTHER_LIBS="${HOST_F77_OTHER_LIBS}"			\
 	  MPICH2LIB_CFLAGS="${FAST_CFLAGS}"				\
 	  MPICH2LIB_CXXFLAGS="${FAST_CXXFLAGS}"				\
 	  MPICH2LIB_FFLAGS="${FAST_FFLAGS}"				\
 	  MPICH2LIB_F90FLAGS="${FAST_FFLAGS}"				\
-	  MPICH2LIB_LDFLAGS="${HOST_LDFLAGS}"				\
+	  MPICH2LIB_LDFLAGS="${FAST_LDFLAGS}"				\
 	  CFLAGS="${MPI_CFLAGS}"					\
 	  CXXFLAGS="${MPI_CXXFLAGS}"					\
 	  FFLAGS="${MPI_FFLAGS}"					\
 	  FCFLAGS="${MPI_FFLAGS}"					\
 	  LDFLAGS="${MPI_LDFLAGS}"					\
-	  MPILIBNAME="mpich"						\
 	  MPICXXLIBNAME="cxxmpich"					\
-	  MSGLAYER_INCLUDE="${HOST_INCLUDE}"				\
-	  MSGLAYER_LIB="${HOST_LIB_FAST}"				\
 	  ${MPICH2DIR}/configure					\
+	  --enable-static						\
+	  --disable-shared						\
 	  --enable-cache						\
-	  --prefix=${INSTALL_DIR}/xl.ndebug				\
-	  --mandir=${INSTALL_DIR}/xl.ndebug/man				\
-	  --htmldir=${INSTALL_DIR}/xl.ndebug/www			\
+	  --prefix=${INSTALL_DIR}/$@					\
+	  --mandir=${INSTALL_DIR}/$@/man				\
+	  --htmldir=${INSTALL_DIR}/$@/www				\
 	  --host=${BUILD_HOST}						\
 	  --target=${BUILD_TARGET}					\
 	  --build=${BUILD_BUILD}					\
 	  --enable-dependencies						\
-	  --enable-g=none						\
+	  --enable-g=debug						\
 	  --with-device=pamid:${PLATFORM}				\
 	  --enable-romio=yes						\
 	  --enable-f77=yes						\
@@ -60,6 +61,7 @@ xl.ndebug: autoconf
 	  --enable-threads=${THREAD_LEVEL}				\
 	  --with-fwrapname=fmpich					\
 	  --with-cross=${MPICH2DIR}/src/mpid/pamid/cross/${PLATFORMlc}8	\
+	  --with-pm=none						\
 	  --with-mpe=no							\
 	  --enable-timing=no						\
 	  --disable-collchk						\
@@ -68,19 +70,21 @@ xl.ndebug: autoconf
 	  --disable-sample						\
 	  --disable-rpath						\
 	  --with-aint-size=8						\
+									\
 	  --with-assert-level=0						\
-	  --enable-shared=no						\
-	  --enable-sharedlibs=none					\
-	  --disable-dynamiclibs						\
-	  --disable-debuginfo						\
 	  --enable-fast=nochkmsg,notiming,O3				\
 	  --disable-error-messages					\
+	  --disable-debuginfo						\
+									\
 	  --with-atomic-primitives					\
 	  --enable-thread-cs=per-object					\
 	  --enable-handle-allocation=tls				\
 	  --enable-refcount=lock-free					\
 	  --disable-predefined-refcount					\
+									\
+	  ${CONFIGURE_WITH_PAMI}					\
+	  ${HOST_OTHER_CONFIGURE}					\
 	; fi
-	${MAKE} -j1 -C ${MPICH2BUILD}-xl.ndebug dependencies
-	${MAKE} -j1 -C ${MPICH2BUILD}-xl.ndebug
+
+	${MAKE} -C ${MPICH2BUILD}-$@
 # This lists specific options for "--enable-fast" because xlf breaks when it sees -DNDEBUG

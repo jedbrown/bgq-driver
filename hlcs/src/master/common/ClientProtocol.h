@@ -35,7 +35,7 @@
 class ClientProtocol: public Protocol
 {
 public:
-    ClientProtocol(bgq::utility::Properties::Ptr p) : Protocol(p) {}
+    ClientProtocol(const bgq::utility::Properties::ConstPtr& p) : Protocol(p) {}
     ~ClientProtocol() {}
 
     /*!
@@ -180,19 +180,6 @@ public:
     void reload(const BGMasterClientProtocolSpec::ReloadRequest& request, BGMasterClientProtocolSpec::ReloadReply& reply)
     {
         sendReceive(BGMasterClientProtocolSpec::ReloadRequest::getClassName(), request, BGMasterClientProtocolSpec::ReloadReply::getClassName(), reply);
-    }
-
-    /*!
-     * Status of managed binaries.
-     *
-     * @param Exit_statusRequest
-     *           request object
-     * @param Exit_statusReply
-     *           reply object
-     */
-    void exit_status(const BGMasterClientProtocolSpec::ExitStatusRequest& request, BGMasterClientProtocolSpec::ExitStatusReply& reply)
-    {
-        sendReceive(BGMasterClientProtocolSpec::ExitStatusRequest::getClassName(), request, BGMasterClientProtocolSpec::ExitStatusReply::getClassName(), reply);
     }
 
     /*!

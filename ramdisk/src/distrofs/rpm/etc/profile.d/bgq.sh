@@ -21,4 +21,4 @@
 
 # Add appropriate paths for BGQ.
 
-export PATH=/bgfs/bin:/bgfs/sbin:/bgfs/usr/bin:/bgfs/usr/sbin:$PATH:/bgsys/drivers/ppcfloor/bin:/bgsys/drivers/ppcfloor/sbin
+export PATH=/bgfs/bin:/bgfs/sbin:/bgfs/usr/bin:/bgfs/usr/sbin:/usr/lpp/mmfs/bin:$PATH:/bgsys/drivers/ppcfloor/bin:/bgsys/drivers/ppcfloor/sbin

@@ -145,6 +145,15 @@ __END_DECLS
     SYSCALL(ENABLEFASTSPECULATIONPATHS)     // 1090
     SYSCALL(SETPOWERCONSUMPTIONPARAM)       // 1091
     SYSCALL(GETSPECIDSELF)                  // 1092
+    SYSCALL(RDMA_CONNECT)                   // 1093
+    SYSCALL(RDMA_SEND)                      // 1094
+    SYSCALL(RDMA_RECV)                      // 1095
+    SYSCALL(RDMA_POLL_CQ)                   // 1096
+    SYSCALL(RDMA_REG_MEM)                   // 1097
+    SYSCALL(RDMA_DEREG_MEM)                 // 1098
+    SYSCALL(SENDX)                          // 1099
+    SYSCALL(ISGUESTTHREAD)                  // 1100
+    SYSCALL(RDMA_OPEN)                      // 1101
 
     // IMPORTANT!!!  Place new syscalls at the end of this list to avoid binary incompatibility breakage.  
 

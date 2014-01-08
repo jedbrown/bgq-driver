@@ -25,6 +25,8 @@ core_parts=\
  core \
  BlockSort \
  BlockSortImpl \
+ IOBlockSort \
+ IOBlockSortImpl \
  JobSort \
  JobSortImpl
 

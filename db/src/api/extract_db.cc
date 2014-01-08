@@ -34,6 +34,9 @@
 
 #include <utility/include/Log.h>
 
+#include <boost/assign/list_of.hpp>
+#include <boost/foreach.hpp>
+
 #include <bitset>
 #include <iostream>
 #include <libgen.h>
@@ -54,7 +57,6 @@ LOG_DECLARE_FILE( "database" );
 
 static extract_db_status retrieve_table(BGQDB::TxObject& tx, BGQDB::DBObj& tableObject, const std::string& whereclause = std::string());
 static extract_db_status extract_db_midplane(BGQDB::DBTMachine machine, std::ostream &os);
-static extract_db_status extract_db_gateway(BGQDB::DBTMachine machine, std::ostream &os);
 static extract_db_status extract_db_nodecardcount(BGQDB::DBVMidplane midplane, std::ostream &os);
 static extract_db_status extract_db_servicecardcount(BGQDB::DBVMidplane midplane, std::ostream &os);
 static extract_db_status extract_db_nodecard(BGQDB::DBVMidplane midplane, std::ostream &os);
@@ -475,42 +477,34 @@ extract_compact_machine(
 
 
     // handle the IO torus cables
-    condition = " where  source like 'A_%' and destination like 'A_%' ";
-    if ((result = retrieve_table(tx, iolink, condition)) == DB_OK) {
-        do {
-            trim_right_spaces((char *)iolink._source, sizeof(iolink._source));
-            trim_right_spaces((char *)iolink._destination, sizeof(iolink._destination));
-            os << "  <BGQIOCable axis='A' sourceIODrawer='" << &iolink._source[2] << "' destinationIODrawer='" << &iolink._destination[2] << "' />" << endl;
-        } while(next_line(tx, iolink));
-    }
+    const std::vector<std::string> dims = boost::assign::list_of("A")("B")("C")("D");
+    BOOST_FOREACH( const std::string& dim, dims ) {
+        condition = " where source like '" + dim + "_%' and destination like '" + dim + "_%' ";
+        if ((result = retrieve_table(tx, iolink, condition)) == DB_OK) {
+            do {
+                trim_right_spaces((char *)iolink._source, sizeof(iolink._source));
+                trim_right_spaces((char *)iolink._destination, sizeof(iolink._destination));
+                os << "  <BGQIOCable axis='" << dim << "' sourceIODrawer='" << &iolink._source[2] << "' destinationIODrawer='" << &iolink._destination[2] << "'>" << endl;
 
-    condition = " where  source like 'B_%' and destination like 'B_%' ";
-    if ((result = retrieve_table(tx, iolink, condition)) == DB_OK) {
-        do {
-            trim_right_spaces((char *)iolink._source, sizeof(iolink._source));
-            trim_right_spaces((char *)iolink._destination, sizeof(iolink._destination));
-            os << "  <BGQIOCable axis='B' sourceIODrawer='" << &iolink._source[2] << "' destinationIODrawer='" << &iolink._destination[2] << "' />" << endl;
-        } while(next_line(tx, iolink));
-    }
+                condition = " where substr(fromlocation,1,6) = '" + string(iolink._source).substr(2) +
+                    string("' and substr(tolocation,1,6) = '") + string(iolink._destination).substr(2) +
+                    string("' and badwiremask <> 0 ");
 
-    condition = " where  source like 'C_%' and destination like 'C_%' ";
-    if ((result = retrieve_table(tx, iolink, condition)) == DB_OK) {
-        do {
-            trim_right_spaces((char *)iolink._source, sizeof(iolink._source));
-            trim_right_spaces((char *)iolink._destination, sizeof(iolink._destination));
-            os << "  <BGQIOCable axis='C' sourceIODrawer='" << &iolink._source[2] << "' destinationIODrawer='" << &iolink._destination[2] << "' />" << endl;
-        } while(next_line(tx, iolink));
-    }
+                if ((result = retrieve_table(tx2, cable, condition)) == DB_OK) {
+                    do {
+                        os << "  <BGQBadWireMask  nodeBoard='' fromPort='";
+                        os << &cable._fromlocation[7];
+                        os << "' toPort='";
+                        os << &cable._tolocation[7];
+                        os << "' mask='" << cable._badwiremask;
+                        os << "'  />" << endl;
+                    } while(next_line(tx2, cable));
+                }
 
-    condition = " where  source like 'D_%' and destination like 'D_%' ";
-    if ((result = retrieve_table(tx, iolink, condition)) == DB_OK) {
-        do {
-            trim_right_spaces((char *)iolink._source, sizeof(iolink._source));
-            trim_right_spaces((char *)iolink._destination, sizeof(iolink._destination));
-            os << "  <BGQIOCable axis='D' sourceIODrawer='" << &iolink._source[2] << "' destinationIODrawer='" << &iolink._destination[2] << "' />" << endl;
-        } while(next_line(tx, iolink));
+                os << " </BGQIOCable>";
+            } while(next_line(tx, iolink));
+        }
     }
-
 
     // handle the compute to IO links
     condition = " where  ionstatus = 'A' order by 1,2";
@@ -604,52 +598,6 @@ extract_db_midplane(
         os << " </BGQMidplane>" << endl;
 
     } while(next_line(tx, midplane));
-
-    return DB_OK;
-}
-
-extract_db_status
-extract_db_gateway(
-        BGQDB::DBTMachine machine,
-        std::ostream &os
-)
-{
-    BGQDB::DBTEthgateway gw;
-    extract_db_status result;
-    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
-    if ( ! tx.getConnection() ) {
-        LOG_ERROR_MSG(__FUNCTION__ << " No connection to database");
-        return DB_COMM_ERR;
-    }
-
-    trim_right_spaces(machine._serialnumber);
-    string condition = " where  machineSerialNumber='" +  string(machine._serialnumber) + string("'");
-
-    if ((result = retrieve_table(tx, gw, condition)) == DB_OK) {
-        do {
-            trim_right_spaces(gw._ipaddress);
-            trim_right_spaces(gw._broadcast);
-            trim_right_spaces(gw._mask);
-            trim_right_spaces(gw._productid);
-            trim_right_spaces(gw._serialnumber);
-
-            os << " <BGQEthernetGateway";
-            os << " ipAddress='" << gw._ipaddress << "'";
-            os << " broadcast='" << gw._broadcast << "'";
-            os << " mask='" << gw._mask << "'>";
-            os << "    <BGQComponent";
-            os << " serialNumber='" << gw._serialnumber << "'";
-            os << " productType='" << gw._productid << "'/>" << endl;
-            os << "   </BGQEthernetGateway>" << endl;
-        } while(next_line(tx, gw));
-    } else {
-        if (result == DB_ERROR) {
-            // Error message is logged in retrieve_table
-            return DB_ERROR;
-        } else {
-            LOG_WARN_MSG(__FUNCTION__ << " No Ethernet gateway in database");
-        }
-    }
 
     return DB_OK;
 }

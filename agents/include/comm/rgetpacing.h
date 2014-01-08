@@ -73,19 +73,6 @@
  * Refer to commagentWorkRequests.h for details about the contents of
  * the remote get pacing work request. 
  *
- * Deciding When To Pace
- *
- * The application decides whether messages to a given destination are eligible
- * for pacing or not.  If the application decides "yes", then all remote gets
- * sent to that destination must be sent to the comm agent.  The comm agent
- * uses environment variable COMMAGENT_RGETPACINGSIZE to determine whether the
- * message is large enough to pace.  The comm agent will always process each
- * remote get request whether it is paced or not.  If a remote get is not paced,
- * the agent sends only one rget for the message.  If the remote get is paced,
- * the agent breaks the rget up into sub-messages.  Either way, the comm agent
- * maintains proper ordering of the messages, which is why all remote gets
- * must be sent to the comm agent for a given destination.
- *
  */
 
 
@@ -117,46 +104,128 @@
  * \default 64 requests
  *
  * \env{commagent,COMMAGENT_RGETPACINGSUBSIZE}
- * The size, in bytes, of a sub-message used
+ * Controls the size, in bytes, of a sub-message used
  * for remote get pacing.  The pacing logic breaks a large remote get into
  * sub-messages of this size.
- * \default Depends on the number of nodes in the block as follows:
+ * The complete syntax is
+ *
+ * COMMAGENT_RGETPACINGSUBSIZE=[base][,[T1:T2][,[M1:M2]]]
+ * 
+ * "base" is the initial size, in bytes, of a sub-message.  
+ *
+ * The comm agent divides the block into sub-regions and counts the number of
+ * active messages in each sub-region.  When the number of sub-regions that
+ * have active messages falls between threshold values T1 and T2 specified in
+ * this environment variable, the comm agent uses a sub-message size that is
+ * correspondingly between base*M1 and base*M2 bytes.  T2 >= T1.  M2 >= M1.
+ * The values for T1 and T2 are percentages of the number of sub-regions.
+ * The values for M1 and M2 are multiplying factors of the base.  Therefore,
+ * the sub-message size for various active message counts is as follows:
+ *
+ * Let P = percent of sub-regions that have active messages in them.
+ * Sub-message size = 
+ * (base) for P < T1;
+ * (base * M1) for P = T1;
+ * (base * M1) up to (base * M2) for T1 < P < T2;
+ * (base * M2) for T2 <= P <= 100.
+ *
+ * Setting T1 and T2 to 101 or setting M1 and M2 to 1 forces the
+ * sub-message size to always be (base).
+ *
+ * If T1 is specified, T2 must also be specified.
+ * If M1 is specified, M2 must also be specified.
+ *
+ * The defaults depend on the number of nodes in the block, as follows:
  *
  * \verbatim
- * BLOCK SIZE (RACKS)   COMMAGENT_RGETPACINGSUBSIZE
- * ------------------   ---------------------------
- *        Racks <  2                16384
- *   2 <= Racks <  4                16384
- *   4 <= Racks <  8                 8192
- *   8 <= Racks < 16                 8192
- *  16 <= Racks < 32                 8192
- *  32 <= Racks < 48                 8192
- *  48 <= Racks < 64                 8192
- *  64 <= Racks < 80                 8192
- *  80 <= Racks < 96                 8192
- *  96 <= Racks                      8192
+ * BLOCK SIZE (RACKS)   base   T1   T2   M1   M2
+ * ------------------   -----  ---  ---  --   --
+ *        Racks <  2    16384  101  101   1    1
+ *   2 <= Racks <  4    16384  101  101   1    1
+ *   4 <= Racks <  8     8192  101  101   1    1
+ *   8 <= Racks < 16     8192  101  101   1    1
+ *  16 <= Racks < 32     8192  101  101   1    1
+ *  32 <= Racks < 48     8192  101  101   1    1
+ *  48 <= Racks < 64     8192  101  101   1    1
+ *  64 <= Racks < 80     8192  101  101   1    1
+ *  80 <= Racks < 96     8192  101  101   1    1
+ *  96 <= Racks          8192  101  101   1    1
  * \endverbatim
  *
  * \env{commagent,COMMAGENT_RGETPACINGMAX}
- * The maximum number of bytes allowed into be in
- * the network at once as a result of paced remote gets from each node.
- * Must be a multiple of \ref COMMAGENT_RGETPACINGSUBSIZE.
- * \default depends on the number of nodes in the block as follows:
+ * Controls the maximum number of bytes allowed into be in
+ * the network at one time as a result of paced remote gets from each node.
+ * The number must be a multiple of \ref COMMAGENT_RGETPACINGSUBSIZE.
+ * The complete syntax is
+ *
+ * COMMAGENT_RGETPACINGMAX=[base][,[T1:T2][,[M1:M2]]]
+ * 
+ * "base" is the initial maximum, in bytes.  
+ *
+ * The comm agent divides the block into sub-regions and counts the number of
+ * active messages in each sub-region.  When the number of sub-regions that
+ * have active messages falls between threshold values T1 and T2 specified in
+ * this environment variable, the comm agent uses a maximum number of bytes
+ * that is correspondingly between base*M1 and base*M2 bytes.  T2 >= T1.
+ * M2 >= M1.  The values for T1 and T2 are percentages of the number of
+ * sub-regions.  The values for M1 and M2 are multiplying factors of the base.
+ * Therefore, the maximum number of bytes for various active message counts
+ * is as follows:
+ *
+ * Let P = percent of sub-regions that have active messages in them.
+ * Maximum number of bytes = 
+ * (base) for P < T1;
+ * (base * M1) for P = T1;
+ * (base * M1) up to (base * M2) for T1 < P < T2;
+ * (base * M2) for T2 <= P <= 100.
+ *
+ * Setting T1 and T2 to 101 or setting M1 and M2 to 1 forces the
+ * sub-message size to always be (base).
+ *
+ * If T1 is specified, the default value for T2 is 100.  If M1 is specified,
+ * the default value for M2 is M1.
+ *
+ * The defaults depend on the number of nodes in the block, as follows:
  *
  * \verbatim
- * BLOCK SIZE (RACKS)   COMMAGENT_RGETPACINGMAX
- * ------------------   -----------------------
- *        Racks <  2            65536
- *   2 <= Racks <  4            65536
- *   4 <= Racks <  8            32768
- *   8 <= Racks < 16            32768
- *  16 <= Racks < 32            32768
- *  32 <= Racks < 48            32768
- *  48 <= Racks < 64            32768
- *  64 <= Racks < 80            32768
- *  80 <= Racks < 96            32768
- *  96 <= Racks                 32768
+ * BLOCK SIZE (RACKS)   base   T1   T2   M1   M2
+ * ------------------   -----  ---  ---  --   --
+ *        Racks <  2    65536  101  101   1    1
+ *   2 <= Racks <  4    65536  101  101   1    1
+ *   4 <= Racks <  8    32768  101  101   1    1
+ *   8 <= Racks < 16    24576  101  101   1    1
+ *  16 <= Racks < 32    24576  101  101   1    1
+ *  32 <= Racks < 48    24576  101  101   1    1
+ *  48 <= Racks < 64    24576  101  101   1    1
+ *  64 <= Racks < 80    24576  101  101   1    1
+ *  80 <= Racks < 96    24576  101  101   1    1
+ *  96 <= Racks         24576  101  101   1    1
  * \endverbatim
+ *
+ * \env{commagent,COMMAGENT_RGETPACINGRANDOMZONE}
+ * The comm agent counts the number of active messages in each sub-region
+ * of the block.  When the number of sub-regions that have active messages
+ * exceeds the threshold value specified in this environment variable, the
+ * comm agent sets the dynamic routing zone to the value specified in
+ * this environment variable.
+ * The complete syntax is
+ *
+ * COMMAGENT_RGETPACINGRANDOMZONE=[THRESHOLD][,ZONE]
+ *
+ * For example, when there is traffic to random destinations, it is best to
+ * use dynamic zone 0.  The THRESHOLD value is specified in terms of a percentage of
+ * the sub-regions.  When the percentage of sub-regions having an active
+ * message equals or exceeds the threshold percentage, the message is sent
+ * using the specified ZONE.  A zero THRESHOLD means ZONE is always used.
+ * A 101 THRESHOLD means the ZONE is never used.  Possible values for ZONE
+ * include
+ *
+ * 0  Dynamic routing zone 0
+ * 1  Dynamic routing zone 1
+ * 2  Dynamic routing zone 2
+ * 3  Dynamic routing zone 3
+ *
+ * \default THRESHOLD=101, ZONE=0.
  *
  * \env{commagent,COMMAGENT_NUMRGETS}
  * The maximum number of remote gets that can be in

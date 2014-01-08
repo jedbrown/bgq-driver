@@ -59,7 +59,7 @@ bgqDistrofsInstall: bgqDistrofsInstall.sh.templ
 	@sed 's,BGQ_DISTROFS_BASE_PATH,${BASE_PATH}, ; s,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH}, ' < bgqDistrofsInstall.sh.templ > bgqDistrofsInstall.sh
 	@chmod a+x bgqDistrofsInstall.sh
 bgqPopulateInitramfs: bgqPopulateInitramfs.sh.templ
-	@sed 's,BGQ_INITRAMFS_PATH,${BGQ_INITRAMFS_PATH}, ; s,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH}, ; s,BGQ_LINUX_PATH,${BGQ_LINUX_PATH}, ; s,BGQ_LINUX_KERNEL_VERSION,${BGQ_LINUX_KERNEL_VERSION},' < bgqPopulateInitramfs.sh.templ > bgqPopulateInitramfs.sh
+	@sed 's,BGQ_INITRAMFS_PATH,${BGQ_INITRAMFS_PATH}, ; s,BGQ_RAMDISK_PATH,${BGQ_RAMDISK_PATH}, ; s,BGQ_LINUX_PATH,${BGQ_LINUX_PATH}, ; s,BGQ_LINUX_KERNEL_VERSION,${BGQ_LINUX_KERNEL_VERSION}, ; s,BGQ_DISTROFS_BASE_PATH,${BGQ_DISTROFS_BASE_PATH}, ' < bgqPopulateInitramfs.sh.templ > bgqPopulateInitramfs.sh
 	@chmod a+x bgqPopulateInitramfs.sh
 
 bgqDistrofsUninstall: bgqDistrofsUninstall.sh.templ

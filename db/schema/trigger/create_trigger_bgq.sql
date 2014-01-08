@@ -1053,6 +1053,31 @@ CREATE TRIGGER RT_CABLE_STATE
   END @
 
 
+CREATE TRIGGER RT_IONODE_STATE
+  AFTER UPDATE OF status ON TBGQIONode
+  REFERENCING NEW AS newrow OLD AS oldrow
+  FOR EACH ROW MODE DB2SQL
+  BEGIN ATOMIC
+    DECLARE nextSeqId BIGINT;
+    SET nextSeqId = NEXT VALUE FOR SEQID;
+    UPDATE TBGQIONode SET seqId = nextSeqId
+     WHERE IOPos = newrow.IOPos AND
+           position = newrow.position ;
+  END @
+
+
+CREATE TRIGGER RT_IODRAWER_STATE
+  AFTER UPDATE OF status ON TBGQIODrawer
+  REFERENCING NEW AS newrow OLD AS oldrow
+  FOR EACH ROW MODE DB2SQL
+  BEGIN ATOMIC
+    DECLARE nextSeqId BIGINT;
+    SET nextSeqId = NEXT VALUE FOR SEQID;
+    UPDATE TBGQIODrawer SET seqId = nextSeqId
+     WHERE location = newrow.location ;
+  END @
+
+
 -- - Triggers for real-time END ------------------------------------------
 
 

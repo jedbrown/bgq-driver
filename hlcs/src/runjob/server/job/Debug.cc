@@ -141,7 +141,11 @@ Debug::callback(
     if ( !mux ) return;
 
     if ( error ) {
-        if ( job->status().get() == Status::Debug ) {
+        if ( 
+                _request->getClientId() == job->client() &&
+                job->status().get() == Status::Debug 
+           )
+        {
             // if the tool does not start when bootstrapping the job, we do not
             // attempt to start the job
             job->setError(

@@ -26,19 +26,16 @@
 
 // Includes
 #include "ClientMonitor.h"
-#include <ramdisk/include/services/common/RdmaError.h>
-#include <ramdisk/include/services/common/RdmaDevice.h>
-#include <ramdisk/include/services/ServicesConstants.h>
-#include <ramdisk/include/services/MessageUtility.h>
 #include <sys/time.h>
 #include <errno.h>
 #include <stdio.h>
 #include <dirent.h>
-#include <sys/resource.h>
 #include <iomanip>
+#include <ramdisk/include/services/ServicesConstants.h>
+#include <ramdisk/include/services/MessageUtility.h>
+#include <ramdisk/include/services/common/SignalHandler.h>
 #include <ramdisk/include/services/common/logging.h>
 #include <ramdisk/include/services/common/Cioslog.h>
-#include <ramdisk/include/services/common/SignalHandler.h>
 
 using namespace bgcios::sysio;
 
@@ -90,7 +87,7 @@ ClientMonitor::startup(void)
    char cwd[1024];
    ::getcwd(cwd, sizeof(cwd));
    _currentDirFd = ::open(cwd, O_RDONLY, 0);
-
+   
    LOGGING_DECLARE_PID_MDC( getpid() );
    LOGGING_DECLARE_SERVICE_MDC( "sysiod" );
 
@@ -150,7 +147,8 @@ ClientMonitor::startup(void)
 
    // Create a memory region for inbound messages.
    _inMessageRegion = RdmaMemoryRegionPtr(new RdmaMemoryRegion());
-   int err = _inMessageRegion->allocate(_protectionDomain, bgcios::SmallMessageRegionSize);
+   //int err = _inMessageRegion->allocate(_protectionDomain, bgcios::SmallMessageRegionSize);
+   int err = _inMessageRegion->allocate64kB(_protectionDomain);
    if (err != 0) {
       LOG_ERROR_MSG("error allocating inbound message region: " << bgcios::errorString(err));
       return err;
@@ -169,7 +167,10 @@ ClientMonitor::startup(void)
 
    // Create a large memory region.
    _largeRegion = RdmaMemoryRegionPtr(new RdmaMemoryRegion());
-   err = _largeRegion->allocate(_protectionDomain, _regionSize);
+   err =  _largeRegion->allocateFromBgvrnicDevice(_protectionDomain, _regionSize);
+   if (err !=0 ) {
+      err = _largeRegion->allocate(_protectionDomain, _regionSize);
+   }
    if (err != 0) {
       LOG_ERROR_MSG("error allocating large memory region: " << bgcios::errorString(err));
       return err;
@@ -202,6 +203,10 @@ ClientMonitor::run(void)
       _done = true;
       return NULL;
    }
+   LOGGING_DECLARE_PID_MDC( getpid() );
+   LOGGING_DECLARE_SERVICE_MDC( "sysiod" );
+
+   updatePlugin();
 
    // Initialize the set of descriptors to monitor.
    _pollSet[CompChannel].fd = _completionChannel->getChannelFd();
@@ -216,14 +221,6 @@ ClientMonitor::run(void)
    _freePollSetSlots.flip(EventChannel);
    LOG_CIOS_DEBUG_MSG("added event channel using fd " << _pollSet[EventChannel].fd << " to poll descriptor list");
 
-       
-   bgcios::SigWritePipe SigWritePipe(SIGUSR1);
-
-   _pollSet[pipeForSig].fd = SigWritePipe._pipe_descriptor[0];
-   _pollSet[pipeForSig].events = POLLIN;
-   _pollSet[pipeForSig].revents = 0;
-   _freePollSetSlots.flip(pipeForSig);
-   LOG_CIOS_TRACE_MSG("added signal pipe listener using fd " << pollInfo[pipeForSig].fd << " to descriptor list");
 
    int timeout = -1; // -1 = forever, 10000 = 10 second, 1000 = 1 second, 500 = 1/2 second, 250 = 1/4 second, 100 = 1/10 second
    _pollSetSize = FixedPollSetSize;
@@ -245,21 +242,7 @@ ClientMonitor::run(void)
       _waitEventTimer.start();
       int rc = poll(_pollSet, _pollSetSize, timeout);
       _waitEventTimer.stop();
-#if 0
-      // There was no data so try again.
-      if (rc == 0) {
-         if (!_queuedMessages.empty()) {
-            LOG_CIOS_INFO_MSG(_queuedMessages.size() << " queued messages are available after poll wakeup");
-            if (_queuedMessages.size() > 1) {
-               LOG_CIOS_INFO_MSG("there are " << _queuedMessages.size() << " queued messages");
-            }
-            ClientMessagePtr message = _queuedMessages.front();
-            routeMessage(message);
-            _queuedMessages.pop_front();
-         }
-         continue;
-      } 
-#endif
+
       // There was an error so log the failure and try again.
       if (rc == -1) {
          int err = errno;
@@ -340,22 +323,6 @@ ClientMonitor::run(void)
          }
       }
 
-      // Check for an event on the pipe for signal.
-      if (_pollSet[pipeForSig].revents & POLLIN) {
-         LOG_INFO_MSG_FORCED("input event available pipe from signal handler");
-         _pollSet[pipeForSig].revents = 0;
-         siginfo_t siginfo;
-         ::read(_pollSet[pipeForSig].fd,&siginfo,sizeof(siginfo_t));
-         const size_t BUFSIZE = 1024;
-         char buffer[BUFSIZE];
-         const size_t HOSTSIZE = 256;
-         char hostname[HOSTSIZE];
-         hostname[0]=0;
-         gethostname(hostname,HOSTSIZE);
-         snprintf(buffer,BUFSIZE,"/var/spool/abrt/fl_sysiod-%d.%d.%s.log",_serviceId,getpid(),hostname);
-         LOG_INFO_MSG_FORCED("Attempting to write flight log "<<buffer);
-         printLogMsg(buffer); 
-      }
    }
 
    return NULL;
@@ -416,8 +383,8 @@ ClientMonitor::eventChannelHandler(void)
 
          // Set flag to stop processing messages.
          _done = true;
-         sleep(10);  // 
-         _exit(EXIT_SUCCESS);
+         sleep(10);
+          _exit(EXIT_SUCCESS);
          break;
       }
 
@@ -491,9 +458,7 @@ ClientMonitor::completionChannelHandler(uint64_t requestId)
 
             ClientMessagePtr inMsg = ClientMessagePtr(new ClientMessage(msghdr, completion->imm_data));
             
-            // When there is no message in progress, handle the message right away.
-            if (_inProgressMessage == 0) {
-               if (!routeMessage(inMsg)) {
+            if (!routeMessage(inMsg)) {
                   LOG_ERROR_MSG("unsupported message type " << msghdr->type << " received from client " << bgcios::printHeader(*msghdr));
                   
                   // Build ack message in outbound message region.
@@ -504,18 +469,10 @@ ClientMonitor::completionChannelHandler(uint64_t requestId)
                   
                   // Send message to client.
                   sendAckMessage();
-               }
             }
-            
-            // Put the message on the queue while waiting for in progress message to complete.
-            else {
-               inMsg->save();
-               _queuedMessages.push_back(inMsg);
-               LOG_CIOS_DEBUG_MSG("Job " << msghdr->jobId << ":" << msghdr->rank << ": " << toString(msghdr->type) << " message queued while waiting for in progress message " <<
-                             toString(_inProgressMessage) << " to complete (" << _queuedMessages.size() << " messages in queue)");
-               LOG_CIOS_INFO_MSG("Job " << msghdr->jobId << ":" << msghdr->rank << ": " << toString(msghdr->type) << " message queued processing completion " << index <<
-                            " of " << numCompletions);
-            }
+
+            //! \todo TODO remove inMsg->save() method ??
+
             
             break;
          }
@@ -568,12 +525,131 @@ ClientMonitor::completionChannelHandler(uint64_t requestId)
 }
 
 bool
+ClientMonitor::routeUserMessage(const ClientMessagePtr& message)
+{
+   _ackMessage =  allocateClientAckMessage(message, ErrorAck, sizeof(ErrorAckMessage) );
+   JobPtr job = _jobs.get(message->getJobId());
+
+   if (job==NULL){
+      _ackMessage->returnCode = bgcios::RequestFailed;
+      _ackMessage->errorCode = EBADE;//Bad exchange
+      return true;
+  }
+  else if (job->isKilled()){
+      _ackMessage->returnCode = bgcios::RequestFailed;
+      _ackMessage->errorCode = EINTR;
+      return true;
+  }
+  
+  _handle4PluginClass->message((const bgcios::UserMessage&)*message->getAddress(), *_ackMessage);
+  return true;
+}
+
+bool
+ClientMonitor::routeUserFdRDMAMessage(const ClientMessagePtr& message)
+{
+   _ackMessage =  allocateClientAckMessage(message, ErrorAck, sizeof(ErrorAckMessage) );
+   JobPtr job = _jobs.get(message->getJobId());
+
+   if (job==NULL){
+      _ackMessage->returnCode = bgcios::RequestFailed;
+      _ackMessage->errorCode = EBADE;//Bad exchange
+      return true;
+  }
+  else if (job->isKilled()){
+      _ackMessage->returnCode = bgcios::RequestFailed;
+      _ackMessage->errorCode = EINTR;
+      return true;
+  }
+  
+  _handle4PluginClass->messageFdRDMA((const bgcios:: UserMessageFdRDMA&)*message->getAddress(), *_ackMessage, 
+                                     _largeRegion->getAddress(), _largeRegion->getLength() );
+  uint64_t address = 0;
+  uint32_t length = 0;
+  uint32_t rkey   = 0;
+  uint32_t error = 0;
+  uint64_t offset=0;
+
+  
+  Plugin::RDMArequest_t* rdmaRequest = _handle4PluginClass->getRdmaRequestAddress();
+  Plugin::RDMAop op = rdmaRequest->rdmaOp;
+  if (op == Plugin::RDMAdone) return true;
+  
+  struct UserRDMA * cnkRDMAlist = _handle4PluginClass->getCnkRDMAlist();
+   
+  if (cnkRDMAlist==NULL) return true;
+
+  int cnkRDMAlistSize = _handle4PluginClass->getCnkRDMAlistSize();
+  uint64_t total_length = 0;
+  for (int j=0;j<cnkRDMAlistSize;j++){
+    total_length += cnkRDMAlist[j].cnk_bytes;
+  }
+
+  if (total_length <= _largeRegion->getLength() ){//entire array fits into RDMA buffer
+        rdmaRequest->statusReturn = 0;
+        rdmaRequest->errnoReturn =  0;
+        for (int j=0;j<cnkRDMAlistSize;j++){
+           address = cnkRDMAlist[j].cnk_address;
+           length =  cnkRDMAlist[j].cnk_bytes;
+           rkey = cnkRDMAlist[j].cnk_memkey;
+           if (Plugin::RDMAread==op){
+              error = getUserRdmaData( address, rkey, length, offset);
+           }
+           else if (Plugin::RDMAwrite==op){
+              error = putUserRdmaData( address, rkey, length,offset);
+           }
+           if (error){
+              rdmaRequest->statusReturn = -1;
+              rdmaRequest->errnoReturn = (int)error;
+              break;
+           }
+           rdmaRequest->bytesMoved += length;
+           offset += length;
+         }//end for j
+
+  }//
+  else {
+     rdmaRequest->statusReturn = -1;
+     rdmaRequest->errnoReturn = EOVERFLOW;
+  }
+
+  _handle4PluginClass->finishFdRDMA((const bgcios:: UserMessageFdRDMA&)*message->getAddress(), *_ackMessage, 
+                                     _largeRegion->getAddress(), _largeRegion->getLength() );
+  return true;
+}
+
+bool
 ClientMonitor::routeMessage(const ClientMessagePtr& message)
 {
+   if (message->getAddress()->service==SysioUserService){
+      routeUserMessage(message);
+      CIOSLOGMSG_QP(BGV_SEND_MSG, _ackMessage, _client->getQpNum()); 
+      try {        
+        _client->postSendNoImmed(_outMessageRegion , _ackMessage, _ackMessage->length);    
+      } catch( const bgcios::RdmaError& e ) {
+       LOG_ERROR_MSG( "could not send message " << toString(_ackMessage) << " to client " << _client->getRemoteAddressString() << ": " << e.what() );
+      }
+      _ackMessage=NULL;
+      return true;
+   }
+   else if (message->getAddress()->service== SysioUserServiceFdRDMA){
+      routeUserFdRDMAMessage(message);
+      CIOSLOGMSG_QP(BGV_SEND_MSG, _ackMessage, _client->getQpNum()); 
+      try {        
+        _client->postSendNoImmed(_outMessageRegion , _ackMessage, _ackMessage->length);    
+      } catch( const bgcios::RdmaError& e ) {
+       LOG_ERROR_MSG( "could not send message " << toString(_ackMessage) << " to client " << _client->getRemoteAddressString() << ": " << e.what() );
+      }
+      _ackMessage=NULL;
+      return true;
+   }
+
+  //! \todo TODO check if running stats before doing operation start/end
    _operationTimer.start();
 
    uint16_t type = message->getType();
    JobPtr job = _jobs.get(message->getJobId());
+
 
    if ( (job!=NULL) &&
         ( (job->isKilled()) && ( (KINTERNALBIT & type)==0  ) )  
@@ -687,8 +763,19 @@ ClientMonitor::routeMessage(const ClientMessagePtr& message)
    if ( (job != NULL) && (job-> removedRankEINTR( message->getRank() ) ) ){
      LOG_CIOS_DEBUG_MSG("removed message->getRank="<<message->getRank());
    }
-   sendAckMessage();
+     // Just return if there is no ack message ready.
+   if (_ackMessage) {
 
+      if (_logFunctionShipErrors) logFunctionShipError(_ackMessage);
+
+      CIOSLOGMSG_QP(BGV_SEND_MSG, _ackMessage, _client->getQpNum()); 
+      try {        
+        _client->postSendNoImmed(_outMessageRegion , _ackMessage, _ackMessage->length);    
+      } catch( const bgcios::RdmaError& e ) {
+       LOG_ERROR_MSG( "could not send message " << toString(_ackMessage) << " to client " << _client->getRemoteAddressString() << ": " << e.what() );
+      }
+      _ackMessage=NULL;
+   }
    _operationTimer.stop();
 
    return true;
@@ -716,7 +803,7 @@ ClientMonitor::sendAckMessage(void)
 
    CIOSLOGMSG_QP(BGV_SEND_MSG, _ackMessage, _client->getQpNum()); 
    try {        
-      _client->postSend(_outMessageRegion , _ackMessage, _ackMessage->length, _ackMessage->sequenceId);    
+      _client->postSendNoImmed(_outMessageRegion , _ackMessage, _ackMessage->length);    
    } catch( const bgcios::RdmaError& e ) {
        LOG_ERROR_MSG( "could not send message " << toString(_ackMessage) << " to client " << _client->getRemoteAddressString() << ": " << e.what() );
    }
@@ -725,93 +812,6 @@ ClientMonitor::sendAckMessage(void)
    return 0;
 }
 
-
-void
-ClientMonitor::waitForCompletion(uint16_t type, uint64_t requestId)
-{
-   // Initialize the set of descriptors to monitor.
-   bool ready = false;
-#if 0
-   struct pollfd pollSet;
-   pollSet.fd = _completionChannel->getChannelFd();
-   pollSet.events = POLLIN;
-   pollSet.revents = 0;
-
-   // Wait for an event on the completion channel.
-   do {
-      int rc = poll(&pollSet, 1, -1);
-      if (rc == -1) {
-         int err = errno;
-         LOG_ERROR_MSG("error polling descriptors while waiting for completion: " << bgcios::errorString(err));
-         continue;
-      }
-
-      if (pollSet.revents & POLLIN) {
-         _inProgressMessage = type;
-         if (completionChannelHandler(requestId)) {
-            ready = true;
-         }
-         _inProgressMessage = 0;
-      }
-   } while (!ready);
-#endif
-
-   _inProgressMessage = type;
-   do {
-      if (completionChannelHandler(requestId)) {
-         ready = true;
-      }
-
-   } while (!ready);
-   _inProgressMessage = 0;
-   return;
-}
-
-uint32_t
-ClientMonitor::putData(const ClientMessagePtr& message, uint64_t address, uint32_t rkey, uint32_t length)
-{
-   uint32_t rc = 0;
-   try {
-      // Post a rdma write request to the send queue using the large message region.
-      _largeRegion->setMessageLength(length);
-      uint64_t requestId = _client->postRdmaWrite(_largeRegion, address, rkey);
-      LOG_CIOS_DEBUG_MSG("Job " << message->getJobId() << ":" << message->getRank() << ": " << toString(message->getType()) << " message posted rdma write to address 0x" <<
-                    std::hex << address << std::dec << " using rkey " << rkey << " for " << length << " bytes");
-
-      // Wait for notification that the rdma write completed.
-      waitForCompletion(message->getType(), requestId);
-   }
-
-   catch (const RdmaError& e) {
-      LOG_ERROR_MSG("error transferring data to client with rdma write: " << bgcios::errorString(e.errcode()));
-      rc = (uint32_t)e.errcode();
-   }
-
-   return rc;
-}
-
-uint32_t
-ClientMonitor::getData(const ClientMessagePtr& message, uint64_t address, uint32_t rkey, uint32_t length)
-{
-   uint32_t rc = 0;
-   try {
-      // Post a rdma read request to the send queue using the large message region.
-      _largeRegion->setMessageLength(length);
-      uint64_t requestId = _client->postRdmaRead(_largeRegion, address, rkey);
-      LOG_CIOS_DEBUG_MSG("Job " << message->getJobId() << ":" << message->getRank() << ": " << toString(message->getType()) << " message posted rdma read from address 0x" <<
-                    std::hex << address << std::dec << " using rkey " << rkey << " for " << length << " bytes");
-
-      // Wait for notification that the rdma read completed.
-      waitForCompletion(message->getType(), requestId);
-   }
-
-   catch (const RdmaError& e) {
-      LOG_ERROR_MSG("error transferring data frim client with rdma read: " << bgcios::errorString(e.errcode()));
-      rc = (uint32_t)e.errcode();
-   }
-
-   return rc;
-}
 
 void
 ClientMonitor::accept(const ClientMessagePtr& message)
@@ -848,7 +848,7 @@ ClientMonitor::access(const ClientMessagePtr& message)
    AccessAckMessage *outMsg = (AccessAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg,pathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg,inMsg->dirfd,pathname);
    int rc = ::faccessat(inMsg->dirfd, pathname, inMsg->type, inMsg->flags);
    clearSyscallStart();
 
@@ -902,7 +902,7 @@ ClientMonitor::chmod(const ClientMessagePtr& message)
    ChmodAckMessage *outMsg = (ChmodAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg,pathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->dirfd, pathname);
    int rc = ::fchmodat(inMsg->dirfd, pathname, inMsg->mode, inMsg->flags);
    clearSyscallStart();
 
@@ -931,7 +931,7 @@ ClientMonitor::chown(const ClientMessagePtr& message)
    ChownAckMessage *outMsg = (ChownAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg,pathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->dirfd, pathname);
    int rc = ::fchownat(inMsg->dirfd, pathname, inMsg->uid, inMsg->gid, inMsg->flags);
    clearSyscallStart();
 
@@ -959,7 +959,7 @@ ClientMonitor::close(const ClientMessagePtr& message)
    CloseAckMessage *outMsg = (CloseAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg);
+   setSyscallStart( (struct  MessageHeader * )inMsg,inMsg->fd);
    int rc = ::close(inMsg->fd);
    clearSyscallStart();
 
@@ -1024,7 +1024,7 @@ ClientMonitor::fchmod(const ClientMessagePtr& message)
    FchmodAckMessage *outMsg = (FchmodAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    int rc = ::fchmod(inMsg->fd, inMsg->mode);
    clearSyscallStart();
 
@@ -1052,7 +1052,7 @@ ClientMonitor::fchown(const ClientMessagePtr& message)
    FchownAckMessage *outMsg = (FchownAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    int rc = ::fchown(inMsg->fd, inMsg->uid, inMsg->gid);
    clearSyscallStart();
 
@@ -1098,7 +1098,7 @@ ClientMonitor::fcntl(const ClientMessagePtr& message)
    }
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    outMsg->retval = ::fcntl(inMsg->fd, inMsg->cmd, parm3);
    clearSyscallStart();
 
@@ -1126,7 +1126,7 @@ ClientMonitor::fstat64(const ClientMessagePtr& message)
    Fstat64AckMessage *outMsg = (Fstat64AckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    int rc = ::fstat64(inMsg->fd, &(outMsg->buf));
    clearSyscallStart(); 
 
@@ -1154,7 +1154,7 @@ ClientMonitor::fstatfs64(const ClientMessagePtr& message)
    Fstatfs64AckMessage *outMsg = (Fstatfs64AckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    int rc = ::fstatfs64(inMsg->fd, &(outMsg->buf));
    clearSyscallStart();
 
@@ -1182,7 +1182,7 @@ ClientMonitor::ftruncate64(const ClientMessagePtr& message)
    Ftruncate64AckMessage *outMsg = (Ftruncate64AckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    int rc = ::ftruncate64(inMsg->fd, inMsg->length);
    clearSyscallStart();
 
@@ -1210,7 +1210,7 @@ ClientMonitor::fsync(const ClientMessagePtr& message)
    FsyncAckMessage *outMsg = (FsyncAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    int rc = ::fsync(inMsg->fd);
    clearSyscallStart();
 
@@ -1244,7 +1244,7 @@ ClientMonitor::getdents64(const ClientMessagePtr& message)
 
    // Run the operation (put the data in the large memory region).
    off64_t offset = 0; // Store to start of buffer
-   setSyscallStart( (struct  MessageHeader * )inMsg);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    outMsg->bytes = ::getdirentries64(inMsg->fd, (char *)_largeRegion->getAddress(), inMsg->length, &offset);
    clearSyscallStart();
 
@@ -1259,7 +1259,7 @@ ClientMonitor::getdents64(const ClientMessagePtr& message)
 
    // Send the data to the remote node when successful and there is data.
    if ((outMsg->header.returnCode == bgcios::Success) && (outMsg->bytes > 0)) {
-      uint32_t err = putData(message, inMsg->address, inMsg->rkey, (uint32_t)outMsg->bytes);
+      uint32_t err = putData( inMsg->address, inMsg->rkey, (uint32_t)outMsg->bytes);
       if (err != 0) {
          outMsg->header.returnCode = bgcios::RequestFailed;
          outMsg->header.errorCode = err;
@@ -1362,14 +1362,14 @@ ClientMonitor::ioctl(const ClientMessagePtr& message)
    // Run the operation.
    switch (inMsg->cmd) {
       case FIONBIO:
-         setSyscallStart( (struct  MessageHeader * )inMsg);
+         setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
          outMsg->retval = ::ioctl(inMsg->fd, inMsg->cmd, &(inMsg->arg));
          clearSyscallStart();
          break;
 
       case FIONREAD:
       case 0x800466af: // LL_IOC_GET_MDTIDX for Lustre
-         setSyscallStart( (struct  MessageHeader * )inMsg);
+         setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
          outMsg->retval = ::ioctl(inMsg->fd, inMsg->cmd, &(outMsg->arg));
          clearSyscallStart();
          break;
@@ -1377,13 +1377,13 @@ ClientMonitor::ioctl(const ClientMessagePtr& message)
       case TCGETA:
       case TCGETS:
       case 0x402c7413: // Special value used by isatty()
-         setSyscallStart( (struct  MessageHeader * )inMsg);
+         setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
          outMsg->retval = ::ioctl(inMsg->fd, inMsg->cmd, &(outMsg->termios));
          clearSyscallStart();
          break;
 
       case 0x800866a8: // LL_IOC_GETOBDCOUNT for Lustre
-         setSyscallStart( (struct  MessageHeader * )inMsg);
+         setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
          outMsg->retval = ::ioctl(inMsg->fd, inMsg->cmd, &(inMsg->arg));
          clearSyscallStart();
          outMsg->arg = inMsg->arg;
@@ -1421,7 +1421,7 @@ ClientMonitor::link(const ClientMessagePtr& message)
    LinkAckMessage *outMsg = (LinkAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg,newpathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg,inMsg->olddirfd, newpathname, oldpathname);
    int rc = ::linkat(inMsg->olddirfd, oldpathname, inMsg->newdirfd, newpathname, inMsg->flags);
    clearSyscallStart(); 
 
@@ -1477,7 +1477,7 @@ ClientMonitor::lseek64(const ClientMessagePtr& message)
    Lseek64AckMessage *outMsg = (Lseek64AckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    outMsg->result = ::lseek64(inMsg->fd, inMsg->offset, inMsg->whence);
    clearSyscallStart();
 
@@ -1506,7 +1506,7 @@ ClientMonitor::mkdir(const ClientMessagePtr& message)
    MkdirAckMessage *outMsg = (MkdirAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg,pathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->dirfd, pathname);
    int rc = ::mkdirat(inMsg->dirfd, pathname, inMsg->mode);
    clearSyscallStart();
 
@@ -1539,7 +1539,7 @@ ClientMonitor::open(const ClientMessagePtr& message)
    
    if (job-> logJobStatistics() ) job->openTimer.start();
    // Run the operation.
-   setSyscallStart((struct  MessageHeader * )inMsg,pathname);
+   setSyscallStart((struct  MessageHeader * )inMsg, inMsg->dirfd, pathname);
    outMsg->fd = ::openat(inMsg->dirfd, pathname, inMsg->flags, inMsg->mode);
    clearSyscallStart();
 
@@ -1618,7 +1618,7 @@ ClientMonitor::pread64(const ClientMessagePtr& message)
       ssize_t rc;
       uint32_t error = 0;
       if (inMsg->fd != job->getShortCircuitFd()) {
-         setSyscallStart( (struct  MessageHeader * )inMsg);
+         setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length);
          rc = ::pread64(inMsg->fd, _largeRegion->getAddress(), length, position);
          error = (uint32_t)errno;
          clearSyscallStart();
@@ -1635,7 +1635,7 @@ ClientMonitor::pread64(const ClientMessagePtr& message)
          outMsg->header.returnCode = bgcios::Success;
          outMsg->bytes += rc;
 
-         error = putData(message, address, inMsg->rkey, (uint32_t)rc); 
+         error = putData( address, inMsg->rkey, (uint32_t)rc); 
          if (error != 0) {
             outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
             outMsg->header.errorCode = error;
@@ -1706,7 +1706,7 @@ ClientMonitor::pwrite64(const ClientMessagePtr& message)
       }
 
       // Receive the data from the compute node.
-      uint32_t error = getData(message, address, inMsg->rkey, (uint32_t)length);
+      uint32_t error = getData( address, inMsg->rkey, (uint32_t)length);
       if (error != 0) {
          outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
          outMsg->header.errorCode = error;
@@ -1721,7 +1721,7 @@ ClientMonitor::pwrite64(const ClientMessagePtr& message)
       error = 0;
       if (job-> logJobStatistics() ) job->pwriteTimer.start();
       if (inMsg->fd != job->getShortCircuitFd()) {
-         setSyscallStart( (struct  MessageHeader * )inMsg);
+         setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length );
          rc = ::pwrite64(inMsg->fd, _largeRegion->getAddress(), length, position);
          error = (uint32_t)errno;
          clearSyscallStart();
@@ -1802,9 +1802,28 @@ ClientMonitor::read(const ClientMessagePtr& message)
       ssize_t rc;
       uint32_t error = 0;
       if (inMsg->fd != job->getShortCircuitFd()) {
-         setSyscallStart( (struct  MessageHeader * )inMsg);
+         setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length);
          rc = ::read(inMsg->fd, _largeRegion->getAddress(), length);
          error = (uint32_t)errno;
+#if 0
+	 if ( _syscall_mh->rank == 1 ) {
+	     static int toggle = 0;
+	     uint64_t timeout = 1600ull * 1000ull * 1000ull; // one second
+	     if ( toggle == 0 ) {
+		 timeout *= 33ull;
+		 toggle = 1;
+	     }
+	     else {
+		 timeout *= 94ull;
+		 toggle = 0;
+	     }
+
+	     LOG_CIOS_WARN_MSG_FORCED("[HEY] sleeping for " << timeout << "  in  " << __func__ << " " << _syscall_mh->type << " from rank " << _syscall_mh->rank );
+
+	     timeout += GetTimeBase();
+	     while ( GetTimeBase() < timeout );
+	 }
+#endif
          clearSyscallStart();
       }
       else {
@@ -1819,7 +1838,7 @@ ClientMonitor::read(const ClientMessagePtr& message)
          outMsg->header.returnCode = bgcios::Success;
          outMsg->bytes += rc;
 
-         error = putData(message, address, inMsg->rkey, (uint32_t)rc); 
+         error = putData( address, inMsg->rkey, (uint32_t)rc); 
          if (error != 0) {
             outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
             outMsg->header.errorCode = error;
@@ -1883,7 +1902,7 @@ ClientMonitor::readlink(const ClientMessagePtr& message)
    }
 
    // Run the operation (put the data in the large memory region).
-   setSyscallStart( (struct  MessageHeader * )inMsg,pathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->dirfd, pathname, BLANK, inMsg->length);
    outMsg->length = ::readlinkat(inMsg->dirfd, pathname, (char *)_largeRegion->getAddress(), inMsg->length);
    clearSyscallStart();
    if (outMsg->length >= 0) {
@@ -1897,7 +1916,7 @@ ClientMonitor::readlink(const ClientMessagePtr& message)
 
    // Send the data to the remote node when successful and there is data.
    if ((outMsg->header.returnCode == bgcios::Success) && (outMsg->length > 0)) {
-      uint32_t err = putData(message, inMsg->address, inMsg->rkey, (uint32_t)outMsg->length);
+      uint32_t err = putData( inMsg->address, inMsg->rkey, (uint32_t)outMsg->length);
       if (err != 0) {
          outMsg->header.returnCode = bgcios::RequestFailed;
          outMsg->header.errorCode = (uint32_t)err;
@@ -1966,7 +1985,7 @@ ClientMonitor::recv(const ClientMessagePtr& message)
 
    // Send the data to the remote node when successful and there is data.
    if ((outMsg->header.returnCode == bgcios::Success) && (outMsg->bytes > 0)) {
-      err = putData(message, inMsg->address, inMsg->rkey, (uint32_t)outMsg->bytes);
+      err = putData( inMsg->address, inMsg->rkey, (uint32_t)outMsg->bytes);
       if (err != 0) {
          outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
          outMsg->header.errorCode = (uint32_t)err;
@@ -2039,7 +2058,7 @@ ClientMonitor::recvfrom(const ClientMessagePtr& message)
 
    // Send the data to the remote node when successful and there is data.
    if ((outMsg->header.returnCode == bgcios::Success) && (outMsg->bytes > 0)) {
-      err = putData(message, inMsg->address, inMsg->rkey, (uint32_t)outMsg->bytes);
+      err = putData( inMsg->address, inMsg->rkey, (uint32_t)outMsg->bytes);
       if (err != 0) {
          outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
          outMsg->header.errorCode = err;
@@ -2067,7 +2086,7 @@ ClientMonitor::rename(const ClientMessagePtr& message)
    RenameAckMessage *outMsg = (RenameAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg,oldpathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->olddirfd, oldpathname, newpathname);
    int rc = ::renameat(inMsg->olddirfd, oldpathname, inMsg->newdirfd, newpathname);
    clearSyscallStart();
 
@@ -2109,7 +2128,7 @@ ClientMonitor::send(const ClientMessagePtr& message)
 
    // Get the data from the remote node.
    LOG_CIOS_DEBUG_MSG("getData-pre ClientMonitor::send "<<message);
-   uint32_t err = getData(message, inMsg->address, inMsg->rkey, (uint32_t)inMsg->length);
+   uint32_t err = getData( inMsg->address, inMsg->rkey, (uint32_t)inMsg->length);
    LOG_CIOS_DEBUG_MSG("getData-post ClientMonitor::send "<<message);
 
    // When message is first received, let client know operation is in progress.
@@ -2183,7 +2202,7 @@ ClientMonitor::sendto(const ClientMessagePtr& message)
    }
 
    // Get the data from the remote node.
-   uint32_t err = getData(message, inMsg->address, inMsg->rkey, (uint32_t)inMsg->length);
+   uint32_t err = getData( inMsg->address, inMsg->rkey, (uint32_t)inMsg->length);
 
    // When message is first received, let client know operation is in progress.
    if (!message->isInProgress()) {
@@ -2324,7 +2343,7 @@ ClientMonitor::stat64(const ClientMessagePtr& message)
    Stat64AckMessage *outMsg = (Stat64AckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->dirfd, pathname);
    int rc = ::fstatat64(inMsg->dirfd, pathname, &(outMsg->buf), inMsg->flags);
    clearSyscallStart();
 
@@ -2366,7 +2385,7 @@ ClientMonitor::statfs64(const ClientMessagePtr& message)
    }
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg,pathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg,(-1), pathname);//no file descriptor
    int rc = ::statfs64(pathname, &(outMsg->buf));
    clearSyscallStart();
 
@@ -2404,7 +2423,7 @@ ClientMonitor::symlink(const ClientMessagePtr& message)
    SymlinkAckMessage *outMsg = (SymlinkAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg,oldpathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg,inMsg->newdirfd, oldpathname, newpathname);
    int rc = ::symlinkat(oldpathname, inMsg->newdirfd, newpathname);
    clearSyscallStart();
 
@@ -2446,7 +2465,7 @@ ClientMonitor::truncate64(const ClientMessagePtr& message)
    }
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg,pathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg,(-1),pathname);
    int rc = ::truncate64(pathname, inMsg->length);
    clearSyscallStart();
 
@@ -2483,7 +2502,7 @@ ClientMonitor::unlink(const ClientMessagePtr& message)
    UnlinkAckMessage *outMsg = (UnlinkAckMessage *)_ackMessage;
 
    // Run the operation.
-   setSyscallStart( (struct  MessageHeader * )inMsg,pathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg,inMsg->dirfd, pathname);
    int rc = ::unlinkat(inMsg->dirfd, pathname, inMsg->flags);
    clearSyscallStart();
 
@@ -2516,7 +2535,7 @@ ClientMonitor::utimes(const ClientMessagePtr& message)
    if (!inMsg->now) {
       newtimes = inMsg->newtimes;
    }
-   setSyscallStart( (struct  MessageHeader * )inMsg,pathname);
+   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->dirfd, pathname);
    int rc = ::futimesat(inMsg->dirfd, pathname, newtimes);
    clearSyscallStart();
 
@@ -2572,7 +2591,7 @@ ClientMonitor::write(const ClientMessagePtr& message)
       }
 
       // Receive the data from the compute node.
-      uint32_t err = getData(message, address, inMsg->rkey, (uint32_t)length);
+      uint32_t err = getData( address, inMsg->rkey, (uint32_t)length);
       if (err != 0) {
          outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
          outMsg->header.errorCode = (uint32_t)err;
@@ -2589,7 +2608,7 @@ ClientMonitor::write(const ClientMessagePtr& message)
          rc = -1;
          err = EINTR;
       }else if (inMsg->fd != job->getShortCircuitFd()) {
-           setSyscallStart( (struct  MessageHeader * )inMsg);
+	   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length);
            rc = ::write(inMsg->fd, _largeRegion->getAddress(), length);
            clearSyscallStart();
            err = (uint32_t)errno;
@@ -2660,7 +2679,7 @@ ClientMonitor::writeRdmaVirt(const ClientMessagePtr& message)
 
       ssize_t rc;
       if (job-> logJobStatistics() ) job->writeTimer.start();
-      setSyscallStart( (struct  MessageHeader * )inMsg);
+      setSyscallStart( (struct  MessageHeader * )inMsg,outMsg->fd, BLANK, BLANK, bytesLeft );
       rc = ::write(outMsg->fd, (void *)address, bytesLeft);
       clearSyscallStart();
       err = (uint32_t)errno;
@@ -2765,13 +2784,7 @@ ClientMonitor::setupJob(const ClientMessagePtr& message)
    job->setLogJobStatistics(value);
    outMsg->logJobStatistics = value; 
 
-   if (inMsg->shortCircuitPath[0] != 0) {
-      job->setShortCircuitPath(inMsg->shortCircuitPath); 
-   }
-   else {
-      job->setShortCircuitPath(_shortCircuitPathDefault);
-   }
-   outMsg->isUsingShortCircuitPath = (int32_t)job->sizeShortCircuitPath(); 
+   outMsg->isUsingShortCircuitPath = 0;
    outMsg->sysiod_pid = getpid();
    outMsg->sysiod_serviceId = _serviceId;
    outMsg->rdmaBufferVirtAddr = (uint64_t) _largeRegion->getAddress();
@@ -2900,4 +2913,47 @@ ClientMonitor::addBlockedMessage(int fd, short events, ClientMessagePtr message)
    _blockedMessages.add(fd, message);
 
    return slot;
+}
+
+void 
+ClientMonitor::updatePlugin(){
+  if (_dynamicLoadLibrary.length()){
+    try{
+      _pluginHandlePtr = PluginHandleSharedPtr( new bgq::utility::PluginHandle<bgcios::sysio::Plugin>::PluginHandle(_dynamicLoadLibrary,_dynamicLoadLibrary_flags) );
+      _handle4PluginClass = _pluginHandlePtr->getPlugin();
+      if (0==(_serviceId & 0x7F) ){
+        LOG_INFO_MSG_FORCED("_serviceId="<<_serviceId<<" Loaded Plugin "<<_dynamicLoadLibrary);
+        //LOG_INFO_MSG_FORCED("_serviceId="<<_serviceId<<" Loaded Plugin "<<_dynamicLoadLibrary<<" flags="<< std::hex<<_dynamicLoadLibrary_flags);
+      }
+      CIOSLOGPLUGIN(CFG_PLGINADD,_serviceId,_dynamicLoadLibrary_flags,0,0);
+    }
+    catch(const bgq::utility::PluginHandle<bgcios::sysio::Plugin>::InvalidPlugin& e){
+      LOG_CIOS_WARN_MSG(e.what() );
+      CIOSLOGPLUGIN(CFG_PLG_INVL,_serviceId,_dynamicLoadLibrary_flags,0,0);
+      _handle4PluginClass = PluginPtr(new Plugin);
+    }
+    catch(const bgq::utility::PluginHandle<bgcios::sysio::Plugin>::MissingSymbol& e){
+      LOG_CIOS_WARN_MSG(e.what() );
+      CIOSLOGPLUGIN(CFG_PLG_SYMS,_serviceId,_dynamicLoadLibrary_flags,0,0);
+      _handle4PluginClass = PluginPtr(new Plugin);
+    }
+    catch(const bgq::utility::PluginHandle<bgcios::sysio::Plugin>::InvalidPath& e){
+      LOG_CIOS_WARN_MSG(e.what() );
+      CIOSLOGPLUGIN(CFG_PLG_PATH,_serviceId,_dynamicLoadLibrary_flags,0,0);
+      _handle4PluginClass = PluginPtr(new Plugin);
+    }
+    catch(...){
+      LOG_CIOS_WARN_MSG("Failed to load Plugin "<<_dynamicLoadLibrary);
+      //LOG_CIOS_WARN_MSG("Failed to load Plugin "<<_dynamicLoadLibrary<<" flags="<< std::hex<<_dynamicLoadLibrary_flags);
+      _handle4PluginClass = PluginPtr(new Plugin);
+    }
+    
+  }
+  else {
+    if (0==(_serviceId & 0x7F) ){
+       LOG_INFO_MSG_FORCED("No Plugin Loaded"<<_dynamicLoadLibrary<<" _serviceId="<<_serviceId);
+    }
+   CIOSLOGPLUGIN(CFG_PLGINDFT,_serviceId,0,0,0);
+    _handle4PluginClass = PluginPtr(new Plugin);
+  }
 }

@@ -153,7 +153,7 @@ const uint16_t CleanupJobAck        = 4096 | KINTERNALBIT;
 const uint16_t BaseRdmaPort = 7102;
 
 //! Current version of protocol.
-const uint8_t ProtocolVersion = 8;
+const uint8_t ProtocolVersion = 9;
 
 //! Maximum number of secondary groups.
 const int MaxGroups = 64;
@@ -1020,7 +1020,6 @@ struct SetupJobMessage
    int32_t posixMode;                  //!< Setting for posix_mode property, -1 means use default property, 0 means off, 1 means on.
    int32_t logJobStatistics;           //!< Setting for log_job_statistics property, -1 means use default property, 0 means off, 1 means on.
    int32_t logFunctionShipErrors;      //!< Setting for log_function_ship_errors property, -1 means use default property, 0 means off, 1 means on.
-   char shortCircuitPath[1024];        //!< Path to short circuit file, empty string means use default property.
 };
 
 //! Message to acknowledge setting up for a new job.

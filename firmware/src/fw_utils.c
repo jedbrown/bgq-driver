@@ -390,15 +390,9 @@ void fw_flushAllRasHistory() {
   
   fw_semaphore_up( BeDRAM_LOCKNUM_RAS_HISTORY );
 
-  extern void fw_l1p_flushCorrectables( void );
-  extern void fw_l2_flushCorrectables( void );
-  extern void fw_ddr_flushCorrectables( int flushCorrectables );
-  extern void fw_nd_flushCorrectables( void );
-  extern void fw_mu_flushCorrectables( void );
-
   fw_ddr_flushCorrectables(1);
-  fw_l1p_flushCorrectables();
-  fw_l2_flushCorrectables();
+  fw_l1p_flushCorrectables(1);
+  fw_l2_flushCorrectables(1);
   fw_mu_flushCorrectables();
   fw_nd_flushCorrectables();
 }
@@ -415,6 +409,12 @@ int fw_monitorRASEvent( uint32_t message_id ) {
   if ( ( FW_Personality.Kernel_Config.RASPolicy & PERS_RASPOLICY_VERBOSITY(-1) ) == PERS_RASPOLICY_EXTREME ) {
     return 0;
   }
+
+  // Make a few CIOS messages exempt.
+  if ( ( message_id == 0x000B0006 ) || ( message_id == 0x000B0007 ) ) {
+      return 0;
+  }
+
 
   // +----------------------------------------------------------------------+
   // | Update the RAS history.  This entails:                               |
@@ -501,6 +501,7 @@ int fw_monitorRASEvent( uint32_t message_id ) {
     rc = 1;
 
     if ( flushCode == FW_RAS_STORM_ERROR ) {
+	fw_semaphore_up( BeDRAM_LOCKNUM_RAS_HISTORY );
 	Terminate(__LINE__);
     }
   }
@@ -512,6 +513,7 @@ int fw_monitorRASEvent( uint32_t message_id ) {
   }
 
   fw_semaphore_up( BeDRAM_LOCKNUM_RAS_HISTORY );
+
 
   return rc;
 

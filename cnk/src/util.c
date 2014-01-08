@@ -25,6 +25,7 @@
 #include "ctype.h"
 #include <limits.h>
 #include <string.h>
+#include <unistd.h>
 #include "ran32.h"
 
 uint64_t hasKernelCrashed K_ATOMIC;
@@ -76,9 +77,24 @@ void __NORETURN Kernel_EarlyCrash( int status )
     while (1);
 }
 
+int usleep(useconds_t usec)
+{
+    uint64_t cyclesPerMicro = GetPersonality()->Kernel_Config.FreqMHz;
+    uint64_t end = GetTimeBase() + usec * cyclesPerMicro;
+    while(end > GetTimeBase())
+    {
+        Delay(100);
+    }
+    
+    return 0;
+}
+
 int puts( const char *s )
 {
    int rc;
+   if((NodeState.TraceConfig == 0) && (CONFIG_ALLOWPRINTF == 0))
+       return 0;
+   
    size_t len = strlen_Inline(s);
    char buffer[256];
    memcpy(buffer, s, len);
@@ -93,7 +109,10 @@ int printf( const char *fmt, ... )
 {
     va_list args;
     char buffer[256];
-
+    
+    if((NodeState.TraceConfig == 0) && (CONFIG_ALLOWPRINTF == 0))
+        return 0;
+    
     va_start( args, fmt );
 
     int len = vsnprintf(buffer, sizeof(buffer), fmt, args );

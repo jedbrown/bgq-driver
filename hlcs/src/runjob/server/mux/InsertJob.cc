@@ -70,7 +70,8 @@ InsertJob::InsertJob() :
     _mux(),
     _message(),
     _clients(),
-    _hostname()
+    _hostname(),
+    _shortHostname()
 {
 
 }
@@ -157,7 +158,7 @@ InsertJob::findBlockHandler(
 {
     const JobInfo& info = _message->getJobInfo();
 
-    LOGGING_DECLARE_LOCATION_MDC( info.getHostname() );
+    LOGGING_DECLARE_LOCATION_MDC( _shortHostname );
     LOGGING_DECLARE_JOB_MDC( _message->getClientId() );
 
     if ( !block ) {

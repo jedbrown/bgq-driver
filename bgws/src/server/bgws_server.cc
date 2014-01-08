@@ -73,7 +73,8 @@ In the [%bgws] section:
 - measurement_system : The measurement system to pass on to clients (e.g., the Navigator). Valid values are "US" and "SI", by default no measurement system is passed on to clients.
 - listen_ports: Ports to listen on, defaults to localhost:32071, see bgq::utility::ServerPortConfiguration for documentation.
 - path_base : The BGWS server will handle requests under this path, must be a valid escaped URL path starting with /, defaults to /bg.
-- thread_pool_size : The number of threads in the thread pool for handling requests. Must be a number greater than 0 or "auto". If auto then the server will pick a thread pool size based on number of hardware threads available on the machine. Defaults to auto.
+- thread_pool_size : The number of threads in a thread pool for handling requests. Must be a number greater than 0 or "auto". If auto then the server will pick a thread pool size based on number of hardware threads available on the machine. Defaults to auto.
+- blocking_operations_thread_pool_size : The number of threads in a thread pool for handling blocking operations such as database queries. Must be a number greater than 0 or "auto". If auto then the server will pick a thread pool size based on number of hardware threads available on the machine. Defaults to auto.
 - check_user_admin_exe : The program to run to check if the user has administrative authority, see \ref checkUserAdmin. If not set then all users will be regular users (not administrators).
 - diagnostics_exe : The program to run to run diagnostics. Defaults to /bgsys/drivers/ppcfloor/diags/bin/rundiags.py.
 - service_action_exe : The program to run for service actions. Defaults to /bgsys/drivers/ppcfloor/baremetal/bin/ServiceAction.
@@ -322,7 +323,7 @@ int main( int argc, char *argv[] )
                 unsigned hardware_threads = boost::thread::hardware_concurrency();
 
                 if ( hardware_threads > 2 ) {
-                    thread_pool_size = hardware_threads - 1;
+                    thread_pool_size = (hardware_threads / 2) + 1;
                 } else {
                     thread_pool_size = 2;
                 }

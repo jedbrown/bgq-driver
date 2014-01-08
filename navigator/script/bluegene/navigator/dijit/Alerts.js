@@ -27,6 +27,7 @@ define(
     "./AbstractTemplatedContainer",
     "./MonitorActiveMixin",
     "../FilterOptions",
+    "../xlate",
     "../../BlueGene",
     "dojo/_base/declare",
     "dojo/_base/lang",
@@ -38,7 +39,6 @@ define(
     "./MultiSelectCodes",
     "./MultiWildcardTextBox",
     "../format",
-    "../xlate",
     "../../dijit/Hideable",
     "../../dijit/OutputFormat",
     "../../dijit/OutputText",
@@ -55,6 +55,7 @@ function(
         l_AbstractTemplatedContainer,
         l_MonitorActiveMixin,
         ll_FilterOptions,
+        ll_xlate,
         b_BlueGene,
         d_declare,
         d_lang,
@@ -80,7 +81,6 @@ var _formToQuery = function( form_obj )
 
 
 var b_navigator_dijit_Alerts = d_declare(
-        "bluegene.navigator.dijit.Alerts",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -390,7 +390,10 @@ var b_navigator_dijit_Alerts = d_declare(
         this._grid.render();
 
         this._checkUpdateOperationButtonsStatus();
-    }
+    },
+    
+    
+    _ll_xlate : ll_xlate
 
 
 } );

@@ -28,41 +28,30 @@
 
 <title>bluegene/navigator/dijit/TimeInterval Browser Tests</title>
 
-<script src="../../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+<script src="../../../../dojo/dojo.js" data-dojo-config="async: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
 
 <script>
 
 
-g_b_navigator_dijit_TimeInterval = null;
-
-g_j_form_Form = null;
-
-
 require(
 [
-    "bluegene/navigator/dijit/TimeInterval",
     "dojo/parser",
     "dojo/ready",
     "dijit/_base/manager",
-    "dijit/form/Form",
-    "doh/runner"
+    "doh/runner",
+
+    "bluegene/navigator/dijit/TimeInterval",
+    "dijit/form/Form"
 ],
 function(
-        b_navigator_dijit_TimeInterval,
         d_parser,
         d_ready,
         j_manager,
-        j_form_Form,
         doh
     )
 {
 
     
-g_b_navigator_dijit_TimeInterval = b_navigator_dijit_TimeInterval;
-
-g_j_form_Form = j_form_Form;
-
-
 var tests = [
 
 
@@ -124,6 +113,7 @@ function set_value_form()
 
 
 var onLoad = function() {
+    d_parser.parse();
     doh.register( "bluegene/navigator/dijit/test/TimeIntervalHTML", tests );
     doh.run();
 };
@@ -141,14 +131,14 @@ d_ready( onLoad );
 
 <body>
     <ul>
-        <li id="ti1" data-dojo-type="g_b_navigator_dijit_TimeInterval" data-dojo-props="name: 'started', label: 'Started'"></li>
-        <li id="ti2" data-dojo-type="g_b_navigator_dijit_TimeInterval" data-dojo-props="name: 'ti2', label: 'ti2', value: 'P1D'"></li>
+        <li id="ti1" data-dojo-type="bluegene/navigator/dijit/TimeInterval" data-dojo-props="name: 'started', label: 'Started'"></li>
+        <li id="ti2" data-dojo-type="bluegene/navigator/dijit/TimeInterval" data-dojo-props="name: 'ti2', label: 'ti2', value: 'P1D'"></li>
     </ul>
 
-    <div id="form1" data-dojo-type="g_j_form_Form">
+    <div id="form1" data-dojo-type="dijit/form/Form">
         <ul>
-            <li data-dojo-type="g_b_navigator_dijit_TimeInterval" data-dojo-props="name: 'ti1', label: 'ti1', value: 'P2D'"></li>
-            <li data-dojo-type="g_b_navigator_dijit_TimeInterval" data-dojo-props="name: 'ti2', label: 'ti2'"></li>
+            <li data-dojo-type="bluegene/navigator/dijit/TimeInterval" data-dojo-props="name: 'ti1', label: 'ti1', value: 'P2D'"></li>
+            <li data-dojo-type="bluegene/navigator/dijit/TimeInterval" data-dojo-props="name: 'ti2', label: 'ti2'"></li>
         </ul>
     </div>    
 </body>

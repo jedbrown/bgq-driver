@@ -22,11 +22,22 @@
 /* end_generated_IBM_copyright_prolog                               */
 #include "server/job/class_route/Np.h"
 
+#include "server/job/class_route/Coordinates.h"
 #include "server/job/class_route/Mapping.h"
 
+#include "common/Environment.h"
 #include "common/JobInfo.h"
 #include "common/logging.h"
 #include "common/SubBlock.h"
+
+#include <fcntl.h> // need open() in RankMap.h
+#include <spi/include/mu/RankMap.h>
+
+#include <boost/numeric/conversion/cast.hpp>
+#include <boost/scoped_array.hpp>
+#include <boost/foreach.hpp>
+
+#include <set>
 
 LOG_DECLARE_FILE( runjob::server::log );
 
@@ -54,9 +65,11 @@ Np::Np(
 
     const unsigned np_ranks = info.getNp().get();
     LOG_TRACE_MSG( "np             : " << np_ranks << " rank" << (np_ranks == 1 ? "" : "s") );
-    const unsigned excludeCount = (size * ranksPerNode - np_ranks) / ranksPerNode;
+
+    _includeCount = this->countIncludedNodes(info, world);
+    const unsigned excludeCount = size - _includeCount;
+
     LOG_TRACE_MSG( "exclude        : " << excludeCount << " node" << (excludeCount == 1 ? "" : "s") );
-    _includeCount = size - excludeCount;
     LOG_TRACE_MSG( "np             : " << _includeCount << " node" << (_includeCount == 1 ? "" : "s") );
 
     // the container needs enough storage to hold up to the number of excluded nodes
@@ -96,6 +109,93 @@ Np::Np(
                 ")"
                 );
     }
+}
+
+unsigned
+Np::countIncludedNodes(
+        const JobInfo& info,
+        const Rectangle* world
+        ) const
+{
+    const JobInfo::EnvironmentVector& envs = info.getEnvs();
+    bool enabled = false;
+    BOOST_FOREACH( const Environment& i, envs ) {
+        enabled = ( i.getKey() == "RUNJOB_USE_NEW_NP_INCLUDE_COUNT" );
+        if ( enabled ) break;
+    }
+
+    if ( !enabled ) {
+        const unsigned excludeCount = (world->size() * info.getRanksPerNode() - info.getNp()) / info.getRanksPerNode();
+        return world->size() - excludeCount;
+    }
+    LOG_DEBUG_MSG( "using new np include count" );
+
+    // need to calculate how many nodes will be included in the np rectangle
+    // this requires calculating the coordinates for ranks 0 throug np, and 
+    // counting the number of unique a,b,c,d,e coordinates in the resulting set
+    std::set<Coordinates> result;
+
+    BG_JobCoords_t coordinates;
+    coordinates.shape.a = boost::numeric_cast<uint8_t>( world->size(Dimension::A) );
+    coordinates.shape.b = boost::numeric_cast<uint8_t>( world->size(Dimension::B) );
+    coordinates.shape.c = boost::numeric_cast<uint8_t>( world->size(Dimension::C) );
+    coordinates.shape.d = boost::numeric_cast<uint8_t>( world->size(Dimension::D) );
+    coordinates.shape.e = boost::numeric_cast<uint8_t>( world->size(Dimension::E) );
+
+    unsigned buf[2048];
+
+    const unsigned np = info.getNp().get();
+    boost::scoped_array<BG_CoordinateMapping_t> output(
+            new BG_CoordinateMapping_t[np]
+            );
+
+    const std::string& map = info.getMapping();
+
+    const int rc = MUSPI_GenerateCoordinates(
+            map.c_str(),
+            &coordinates,
+            NULL, // rank's coordinates
+            info.getRanksPerNode(),
+            np,
+            sizeof(buf),
+            buf,
+            output.get(),
+            NULL, // rank
+            NULL  // mpmd Found
+            );
+
+    if ( rc ) {
+        BOOST_THROW_EXCEPTION(
+                std::runtime_error(
+                    "could not generate mapping: rc=" +
+                    boost::lexical_cast<std::string>(rc)
+                    )
+                );
+    }
+
+    for ( unsigned i = 0; i < np; ++i ) {
+        LOG_TRACE_MSG(
+                "(" <<
+                output[i].a << "," <<
+                output[i].b << "," <<
+                output[i].c << "," <<
+                output[i].d << "," <<
+                output[i].e << "," <<
+                output[i].t << ") " << i
+                );
+
+        result.insert(
+                Coordinates(
+                    output[i].a,
+                    output[i].b,
+                    output[i].c,
+                    output[i].d,
+                    output[i].e
+                    )
+                );
+    }
+
+    return static_cast<unsigned>(result.size());
 }
 
 } // class_route

@@ -8,7 +8,7 @@
 /*                                                                  */
 /* Blue Gene/Q                                                      */
 /*                                                                  */
-/* (C) Copyright IBM Corp.  2010, 2011                              */
+/* (C) Copyright IBM Corp.  2010, 2012                              */
 /*                                                                  */
 /* US Government Users Restricted Rights -                          */
 /* Use, duplication or disclosure restricted                        */
@@ -64,23 +64,23 @@ using namespace std;
 pthread_mutex_t blockaction_lock = PTHREAD_MUTEX_INITIALIZER;
 
 namespace {
-    // Default block description
+    // Default compute block description
     const string Block_Description("Created by IBM Scheduler API");
 
     // Message strings
-    const string No_Block_Name_Str("Block name is empty.");
-    const string Block_Name_Too_Long_Str("Block name is too long.");
+    const string No_Block_Name_Str("Compute block name is empty.");
+    const string Block_Name_Too_Long_Str("Compute block name is too long.");
     const string DB_Access_Error_Str("Error occurred while accessing database.");
     const string DB_Access_Error_Str_NodeConfig("Error occurred while updating database. Possible cause is node configuration does not currently exist in the database.");
     const string DB_Connection_Error_Str("Communication error occurred while attempting to connect to database.");
     const string Unexpected_Exception_Str("Received unexpected exception from internal method.");
     const string Unexpected_Return_Code_Str("Unexpected return code from internal database function.");
-    const string Block_Description_Too_Long_Str("Block description is too long.");
-    const string Block_Options_Too_Long_Str("Block options are too long.");
+    const string Block_Description_Too_Long_Str("Compute block description is too long.");
+    const string Block_Options_Too_Long_Str("Compute block options are too long.");
     const string Block_Info_Too_Long_Str("Options, boot options, Node configuration or micro-loader image is too long.");
-    const string Midplanes_Empty_Str("Block not created, no midplanes found.");
-    const string NodeBoard_Empty_Str("Block not created, no node boards found.");
-    const string NodeBoard_Start_Invalid_Arg_Str("Block not created, node board start location argument is not valid.");
+    const string Midplanes_Empty_Str("Compute block not created, no midplanes found.");
+    const string NodeBoard_Empty_Str("Compute Block not created, no node boards found.");
+    const string NodeBoard_Start_Invalid_Arg_Str("Compute block not created, node board start location argument is not valid.");
     const string No_User_Name_Str("User name is empty.");
     const string XML_Parse_Error_Str("Error parsing XML data.");
 
@@ -132,7 +132,7 @@ Block::create(
         // Was dimension set?
         const DimensionConnectivity::const_iterator iter = dimensionConnectivity.find(dim);
         if (iter == dimensionConnectivity.end()) {
-            os << "Block not created, connectivity (Torus/Mesh) was not set for dimension " << string(dim);
+            os << "Compute block not created, connectivity (Torus/Mesh) was not set for dimension " << string(dim);
             THROW_EXCEPTION(
                     bgsched::InputException,
                     bgsched::InputErrors::InvalidConnectivity,
@@ -150,7 +150,7 @@ Block::create(
                 dimensionSpecs[dim] = DimensionSpec(BGQDB::Connectivity::Mesh);
             }
         } else {
-            os << "Block not created, connectivity (Torus/Mesh) was not set correctly for dimension " << string(dim);
+            os << "Compute block not created, connectivity (Torus/Mesh) was not set correctly for dimension " << string(dim);
             THROW_EXCEPTION(
                     bgsched::InputException,
                     bgsched::InputErrors::InvalidConnectivity,
@@ -161,7 +161,7 @@ Block::create(
 
     // Set the description, midplanes, pass-through midplanes and connectivity in the genblock params
     try {
-        // Set default block description, can be overridden later
+        // Set default compute block description, can be overridden later
         genBlockParams.setDescription(Block_Description);
         // If the dimension connectivity is a mesh, the mesh will start at the first midplane location given
         genBlockParams.setMidplanes(midplanes, passthroughMidplanes);
@@ -171,13 +171,13 @@ Block::create(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotCreated,
-                "Block not created, error is: " << e.what()
+                "Compute block not created, error is: " << e.what()
         );
     } catch (...) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotCreated,
-                "Block not created, unexpected error calling GenBlockParams"
+                "Compute block not created, unexpected error calling GenBlockParams"
                 );
     }
 
@@ -188,13 +188,13 @@ Block::create(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotCreated,
-                "Block not created, error is: " << e.what()
+                "Compute block not created, error is: " << e.what()
         );
     } catch (...) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotCreated,
-                "Block not created, unexpected error calling genBlockParamsToBlockDatabaseInfoEx"
+                "Compute block not created, unexpected error calling genBlockParamsToBlockDatabaseInfoEx"
         );
     }
 
@@ -227,7 +227,7 @@ Block::create(
     // Extract midplane location (e.g. R00-M1) from node board location (e.g. R00-M1-N08)
     string midplaneLocation = nodeBoardLocations[0].substr(0,6);
 
-    // Verify that I/O link exists for the block
+    // Verify that I/O link exists for the compute block
     try {
         // Get the I/O links for the midplane
         IOLinks = bgsched::core::getIOLinks(midplaneLocation);
@@ -264,14 +264,14 @@ Block::create(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidNodeBoards,
-                "Block not created, no I/O links found on node boards."
+                "Compute block not created, no I/O links found on node boards."
         );
     }
 */
 
-    // Set the block description and node board locations in the genblock params
+    // Set the compute block description and node board locations in the genblock params
     try {
-        // Set default block description, can be overridden later
+        // Set default compute block description, can be overridden later
         genBlockParams.setDescription(Block_Description);
         // Following throws std::invalid_argument if the node board locations are not valid
         genBlockParams.setNodeBoardLocations(nodeBoardLocations);
@@ -279,30 +279,30 @@ Block::create(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidNodeBoards,
-                "Block not created, error is: " << e.what()
+                "Compute block not created, error is: " << e.what()
         );
     } catch (...) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidNodeBoards,
-                "Block not created, unexpected error calling GenBlockParams"
+                "Compute block not created, unexpected error calling GenBlockParams"
         );
     }
 
-    // Convert from genblock format to block DB format
+    // Convert from genblock format to compute block DB format
     try {
         genBlockParamsToBlockDatabaseInfoEx(genBlockParams, *blockDBInfoPtr);
     } catch (const BGQDB::Exception& e) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidNodeBoards,
-                "Block not created, error is: " << e.what()
+                "Compute block not created, error is: " << e.what()
         );
     } catch (...) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidNodeBoards,
-                "Block not created, unexpected error calling genBlockParamsToBlockDatabaseInfoEx"
+                "Compute block not created, unexpected error calling genBlockParamsToBlockDatabaseInfoEx"
         );
     }
 
@@ -345,7 +345,7 @@ Block::create(
     // Extract midplane location (e.g. R00-M1) from node board location (e.g. R00-M1-N08)
     string midplaneLocation = nodeBoardStartLocation.substr(0,6);
 
-    // Verify that I/O link exists for the block
+    // Verify that I/O link exists for the compute block
     try {
         // Get the I/O links for the midplane
         IOLinks = bgsched::core::getIOLinks(midplaneLocation);
@@ -371,7 +371,7 @@ Block::create(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidNodeBoards,
-                "Block not created, starting node board location is not correct."
+                "Compute block not created, starting node board location is not correct."
         );
     }
 
@@ -398,7 +398,7 @@ Block::create(
             THROW_EXCEPTION(
                     bgsched::InputException,
                     bgsched::InputErrors::InvalidNodeBoards,
-                    "Block not created, the starting node board location is not correct."
+                    "Compute block not created, the starting node board location is not correct."
             );
         }
     }
@@ -408,14 +408,14 @@ Block::create(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidNodeBoards,
-                "Block not created, no I/O links found on node boards."
+                "Compute block not created, no I/O links found on node boards."
         );
     }
 */
 
-    // Set the block description, midplane, starting node board position and node board count in the genblock params
+    // Set the compute block description, midplane, starting node board position and node board count in the genblock params
     try {
-        // Set default block description, can be overridden later
+        // Set default compute block description, can be overridden later
         genBlockParams.setDescription(Block_Description);
         // Extract midplane location from node board location (Rxx-Mx)
         genBlockParams.setMidplane(nodeBoardStartLocation.substr(0, MidplaneLength));
@@ -425,17 +425,17 @@ Block::create(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidNodeBoards,
-                "Block not created, error is: " << e.what()
+                "Compute block not created, error is: " << e.what()
         );
     } catch (...) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidNodeBoards,
-                "Block not created, unexpected error calling GenBlockParams"
+                "Compute block not created, unexpected error calling GenBlockParams"
                 );
     }
 
-    // Convert from genblock format to block DB format
+    // Convert from genblock format to compute block DB format
     try {
         genBlockParamsToBlockDatabaseInfoEx(genBlockParams, *blockDBInfoPtr);
     } catch (const BGQDB::Exception& e) {
@@ -448,11 +448,11 @@ Block::create(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidNodeBoards,
-                "Block not created, unexpected error calling genBlockParamsToBlockDatabaseInfoEx"
+                "Compute block not created, unexpected error calling genBlockParamsToBlockDatabaseInfoEx"
         );
     }
 
-    // Construct Block impl from the block database info
+    // Construct Block impl from the compute block database info
     Block::Pimpl blockPimpl(new Block::Impl(blockDBInfoPtr));
     return Ptr(new Block(blockPimpl));
 }
@@ -464,10 +464,11 @@ Block::checkIO(
         vector<string>* midplanesFailingIORules
 )
 {
-    DBTBlock dbo;
-    vector<string> unconnectedAvailableIONodes;
+    DBTBlock dbblock;
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
 
-    // Verify block name was specified
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -475,8 +476,8 @@ Block::checkIO(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbo._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbblock._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
@@ -484,7 +485,56 @@ Block::checkIO(
                 );
     }
 
-    LOG_TRACE_MSG("Calling BGQDB::checkBlockIO() for block " << blockName);
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbblock.BLOCKID);
+    colBitmap.set(dbblock.NUMCNODES);
+    dbblock.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbblock._blockid, sizeof(dbblock._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbblock);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbblock);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbblock._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbblock);
+
+    vector<string> unconnectedAvailableIONodes;
+
+    LOG_TRACE_MSG("Calling BGQDB::checkBlockIO() for compute block " << blockName);
     BGQDB::STATUS result = BGQDB::checkBlockIO(blockName, unconnectedIONodes, midplanesFailingIORules, &unconnectedAvailableIONodes);
 
     switch (result) {
@@ -494,7 +544,7 @@ Block::checkIO(
             THROW_EXCEPTION(
                     bgsched::InputException,
                     bgsched::InputErrors::BlockNotFound,
-                    "Block " << blockName << " was not found"
+                    "Compute block " << blockName << " was not found"
             );
         case BGQDB::DB_ERROR:
             THROW_EXCEPTION(
@@ -524,8 +574,11 @@ Block::isIOConnected(
         vector<string>* unconnectedIONodes
 )
 {
-    DBTBlock dbo;
-    // Verify block name was specified
+    DBTBlock dbblock;
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
+
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -533,8 +586,8 @@ Block::isIOConnected(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbo._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbblock._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
@@ -542,7 +595,54 @@ Block::isIOConnected(
                 );
     }
 
-    LOG_TRACE_MSG("Calling BGQDB::checkBlockConnection() for block " << blockName);
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbblock.BLOCKID);
+    colBitmap.set(dbblock.NUMCNODES);
+    dbblock.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbblock._blockid, sizeof(dbblock._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbblock);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbblock);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbblock._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbblock);
+
+    LOG_TRACE_MSG("Calling BGQDB::checkBlockConnection() for compute block " << blockName);
     BGQDB::STATUS result = BGQDB::checkBlockConnection(blockName, unconnectedIONodes);
 
     switch (result) {
@@ -557,7 +657,7 @@ Block::isIOConnected(
             THROW_EXCEPTION(
                     bgsched::InputException,
                     bgsched::InputErrors::BlockNotFound,
-                    "Block " << blockName << " was not found"
+                    "Compute block " << blockName << " was not found"
             );
         case BGQDB::DB_ERROR:
             THROW_EXCEPTION(
@@ -588,10 +688,11 @@ Block::checkIOLinks(
         const string& blockName
 )
 {
-    vector<IOLink::ConstPtr> IOLinksVector;
+    DBTBlock dbblock;
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
 
-    DBTBlock dbo;
-    // Verify block name was specified
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -599,8 +700,8 @@ Block::checkIOLinks(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbo._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbblock._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
@@ -608,9 +709,57 @@ Block::checkIOLinks(
                 );
     }
 
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbblock.BLOCKID);
+    colBitmap.set(dbblock.NUMCNODES);
+    dbblock.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbblock._blockid, sizeof(dbblock._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbblock);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbblock);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbblock._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbblock);
+
+    vector<IOLink::ConstPtr> IOLinksVector;
     stringstream IOLinksXML;
     stringstream blockXML;
-    LOG_TRACE_MSG("Calling BGQDB::checkIOLinks for block " << blockName);
+    LOG_TRACE_MSG("Calling BGQDB::checkIOLinks for compute block " << blockName);
     BGQDB::STATUS result = BGQDB::checkIOLinks(IOLinksXML, blockName);
 
     switch (result) {
@@ -630,13 +779,13 @@ Block::checkIOLinks(
                     bgsched::DatabaseErrors::ConnectionError,
                     DB_Connection_Error_Str
             );
-        case BGQDB::NOT_FOUND: // Either block or I/O links not found
-            // Check if block exists
+        case BGQDB::NOT_FOUND: // Either compute block or I/O links not found
+            // Check if compute block exists
             if (BGQDB::NOT_FOUND == BGQDB::getBlockXML(blockXML, blockName)) {
                 THROW_EXCEPTION(
                         bgsched::InputException,
                         bgsched::InputErrors::BlockNotFound,
-                        "Block " << blockName << " was not found"
+                        "Compute block " << blockName << " was not found"
                 );
             } else {
                 // No I/O links available - return empty vector
@@ -653,7 +802,7 @@ Block::checkIOLinks(
     IOLink::Pimpl IOLinkImplPtr;
     vector<const XMLEntity *> XMLEntityPtrVector;
     vector<const XMLEntity *> subEntities;
-    // Parse the block I/O links XML file
+    // Parse the compute block I/O links XML file
     try {
         boost::scoped_ptr<XMLEntity> XMLEntityPtr(XMLEntity::readXML(IOLinksXML));
         XMLEntityPtrVector = XMLEntityPtr->subentities();
@@ -697,10 +846,11 @@ Block::checkAvailableIOLinks(
         const string& blockName
 )
 {
-    vector<IOLink::ConstPtr> IOLinksVector;
+    DBTBlock dbblock;
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
 
-    DBTBlock dbo;
-    // Verify block name was specified
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -708,8 +858,8 @@ Block::checkAvailableIOLinks(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbo._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbblock._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
@@ -717,9 +867,57 @@ Block::checkAvailableIOLinks(
                 );
     }
 
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbblock.BLOCKID);
+    colBitmap.set(dbblock.NUMCNODES);
+    dbblock.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbblock._blockid, sizeof(dbblock._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbblock);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbblock);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbblock._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbblock);
+
+    vector<IOLink::ConstPtr> IOLinksVector;
     stringstream IOLinksXML;
     stringstream blockXML;
-    LOG_TRACE_MSG("Calling BGQDB::checkIOLinks for block " << blockName);
+    LOG_TRACE_MSG("Calling BGQDB::checkIOLinks for compute block " << blockName);
     BGQDB::STATUS result = BGQDB::checkIOLinks(IOLinksXML, blockName);
 
     switch (result) {
@@ -739,13 +937,13 @@ Block::checkAvailableIOLinks(
                     bgsched::DatabaseErrors::ConnectionError,
                     DB_Connection_Error_Str
             );
-        case BGQDB::NOT_FOUND: // Either block or I/O links not found
-            // Check if block exists
+        case BGQDB::NOT_FOUND: // Either compute block or I/O links not found
+            // Check if compute block exists
             if (BGQDB::NOT_FOUND == BGQDB::getBlockXML(blockXML, blockName)) {
                 THROW_EXCEPTION(
                         bgsched::InputException,
                         bgsched::InputErrors::BlockNotFound,
-                        "Block " << blockName << " was not found"
+                        "Compute block " << blockName << " was not found"
                 );
             } else {
                 // No I/O links available - return empty vector
@@ -762,7 +960,7 @@ Block::checkAvailableIOLinks(
     IOLink::Pimpl IOLinkImplPtr;
     vector<const XMLEntity *> XMLEntityPtrVector;
     vector<const XMLEntity *> subEntities;
-    // Parse the block I/O links XML file
+    // Parse the compute block I/O links XML file
     try {
         boost::scoped_ptr<XMLEntity> XMLEntityPtr(XMLEntity::readXML(IOLinksXML));
         XMLEntityPtrVector = XMLEntityPtr->subentities();
@@ -804,7 +1002,6 @@ Block::checkAvailableIOLinks(
     return IOLinksVector;
 }
 
-
 void
 Block::checkIOLinksSummary(
         const string& blockName,
@@ -815,8 +1012,11 @@ Block::checkIOLinksSummary(
     *availableIOLinks = 0;
     *unavailableIOLinks = 0;
 
-    DBTBlock dbo;
-    // Verify block name was specified
+    DBTBlock dbblock;
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
+
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -824,8 +1024,8 @@ Block::checkIOLinksSummary(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbo._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbblock._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
@@ -833,9 +1033,56 @@ Block::checkIOLinksSummary(
                 );
     }
 
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbblock.BLOCKID);
+    colBitmap.set(dbblock.NUMCNODES);
+    dbblock.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbblock._blockid, sizeof(dbblock._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbblock);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbblock);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbblock._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbblock);
+
     stringstream IOLinksXML;
     stringstream blockXML;
-    LOG_TRACE_MSG("Calling BGQDB::checkIOLinks() for block " << blockName);
+    LOG_TRACE_MSG("Calling BGQDB::checkIOLinks() for compute block " << blockName);
     BGQDB::STATUS result = BGQDB::checkIOLinks(IOLinksXML, blockName);
 
     switch (result) {
@@ -855,13 +1102,13 @@ Block::checkIOLinksSummary(
                     bgsched::DatabaseErrors::ConnectionError,
                     DB_Connection_Error_Str
             );
-        case BGQDB::NOT_FOUND: // Either block or I/O links not found
-            // Check if block exists
+        case BGQDB::NOT_FOUND: // Either compute block or I/O links not found
+            // Check if compute block exists
             if (BGQDB::NOT_FOUND == BGQDB::getBlockXML(blockXML, blockName)) {
                 THROW_EXCEPTION(
                         bgsched::InputException,
                         bgsched::InputErrors::BlockNotFound,
-                        "Block " << blockName << " was not found"
+                        "Compute block " << blockName << " was not found"
                 );
             } else {
                 // No I/O links available
@@ -879,7 +1126,7 @@ Block::checkIOLinksSummary(
 
     vector<const XMLEntity *> XMLEntityPtrVector;
     vector<const XMLEntity *> subEntities;
-    // Parse the block I/O links XML file
+    // Parse the compute block I/O links XML file
     try {
         boost::scoped_ptr<XMLEntity> XMLEntityPtr(XMLEntity::readXML(IOLinksXML));
         XMLEntityPtrVector = XMLEntityPtr->subentities();
@@ -925,8 +1172,11 @@ Block::initiateBoot(
         const string& blockName
 )
 {
-    DBTBlock dbo;
-    // Verify block name was specified
+    BGQDB::DBTBlock dbo;
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
+
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -934,8 +1184,8 @@ Block::initiateBoot(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbo._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbo._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
@@ -943,30 +1193,77 @@ Block::initiateBoot(
                 );
     }
 
-    // Get current uid for block user
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbo.BLOCKID);
+    colBitmap.set(dbo.NUMCNODES);
+    dbo.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbo._blockid, sizeof(dbo._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbo);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbo);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbo._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbo);
+
+    // Get current uid for compute block user
     string user("root");
     try {
         bgq::utility::UserId uid;
         user = uid.getUser();
-        LOG_DEBUG_MSG("Set block user to " << user);
+        LOG_DEBUG_MSG("Set compute block user to " << user);
     } catch (const runtime_error& e) {
         LOG_WARN_MSG(e.what());
-        LOG_WARN_MSG("Using block user " << user);
+        LOG_WARN_MSG("Using compute block user " << user);
     }
 
     // Set block action to Configure:
-    // - Will fail if the block is not free or the hardware isn't free.
+    // - Will fail if the compute block is not free or the hardware isn't free.
     deque<string> options;
     options.push_back(string("user=") + user);
 
-    // Serialize block allocate requests
+    // Serialize compute block allocate requests
     pthread_mutex_lock(&blockaction_lock);
     BGQDB::STATUS result = BGQDB::setBlockAction(blockName, BGQDB::CONFIGURE_BLOCK, options);
     pthread_mutex_unlock(&blockaction_lock);
 
     switch (result) {
     case BGQDB::OK:
-        LOG_DEBUG_MSG("Initiating boot for block " << blockName);
+        LOG_DEBUG_MSG("Initiating boot for compute block " << blockName);
         break;
     case BGQDB::DB_ERROR:
         THROW_EXCEPTION(
@@ -980,29 +1277,29 @@ Block::initiateBoot(
                 bgsched::DatabaseErrors::ConnectionError,
                 DB_Connection_Error_Str
         );
-    case BGQDB::INVALID_ID: // Block name not correct
+    case BGQDB::INVALID_ID: // Compute block name not correct
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
-                "Block " << blockName << " is not valid"
+                "Compute block " << blockName << " is not valid"
         );
-    case BGQDB::NOT_FOUND: // Block not found
+    case BGQDB::NOT_FOUND: // Compute block not found
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotFound,
-                "Block " << blockName << " was not found"
+                "Compute block " << blockName << " was not found"
         );
-    case BGQDB::DUPLICATE: // Block already has action pending
+    case BGQDB::DUPLICATE: // Compute block already has action pending
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::BlockBootError,
-                "Block boot request failed because block " << blockName << " has pending action"
+                "Compute block boot request failed because compute block " << blockName << " has pending action"
         );
-    case BGQDB::FAILED: // Block is not Free or hardware unavailable
+    case BGQDB::FAILED: // Compute block is not Free or hardware unavailable
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::BlockBootError,
-                "Block boot request failed because either block " << blockName << " is not Free or dependent hardware resources are unavailable"
+                "Compute block boot request failed because either compute block " << blockName << " is not Free or dependent hardware resources are in use"
         );
     default :
         THROW_EXCEPTION(
@@ -1014,13 +1311,16 @@ Block::initiateBoot(
 }
 
 void
-Block::initiateFree(
-        const string& blockName
+Block::initiateBoot(
+        const string& blockName,
+        vector<string>* unavailableResources
 )
 {
-    DBTBlock dbo;
-    BGQDB::BLOCK_STATUS state;
-    // Verify block name was specified
+    BGQDB::DBTBlock dbo;
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
+
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1028,8 +1328,8 @@ Block::initiateFree(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbo._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbo._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
@@ -1037,13 +1337,179 @@ Block::initiateFree(
                 );
     }
 
-    // Serialize block deallocate requests
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbo.BLOCKID);
+    colBitmap.set(dbo.NUMCNODES);
+    dbo.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbo._blockid, sizeof(dbo._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbo);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbo);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbo._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbo);
+
+    // Check the required compute block resources in the database
+    LOG_TRACE_MSG("Calling BGQDB::queryMissing() for compute block " << blockName);
+    BGQDB::STATUS result = BGQDB::queryMissing(blockName, *unavailableResources, BGQDB::NO_DIAGS);
+    switch (result) {
+        case BGQDB::OK:
+            // Stop boot if required resources are missing
+            if (unavailableResources->size() > 0) {
+                THROW_EXCEPTION(
+                        bgsched::RuntimeException,
+                        bgsched::RuntimeErrors::BlockBootError,
+                        "Boot request failed because compute block " << blockName << " dependent hardware resources are unavailable."
+                );
+            }
+            break;
+        case BGQDB::DB_ERROR:
+            THROW_EXCEPTION(
+                    bgsched::DatabaseException,
+                    bgsched::DatabaseErrors::DatabaseError,
+                    DB_Access_Error_Str
+            );
+        case BGQDB::CONNECTION_ERROR:
+            THROW_EXCEPTION(
+                    bgsched::DatabaseException,
+                    bgsched::DatabaseErrors::ConnectionError,
+                    DB_Connection_Error_Str
+            );
+        case BGQDB::NOT_FOUND:
+            THROW_EXCEPTION(
+                    bgsched::InputException,
+                    bgsched::InputErrors::BlockNotFound,
+                    "Compute block " << blockName << " was not found."
+            );
+        default:
+            THROW_EXCEPTION(
+                    bgsched::DatabaseException,
+                    bgsched::DatabaseErrors::UnexpectedError,
+                    Unexpected_Return_Code_Str
+            );
+    }
+
+    // Hardware pre-check was successful or hardware is good. Let any exceptions bubble up the stack.
+    Block::initiateBoot(blockName);
+}
+
+void
+Block::initiateFree(
+        const string& blockName
+)
+{
+    BGQDB::DBTBlock dbo;
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
+
+    // Verify compute block name was specified
+    if (blockName.empty()) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::InvalidBlockName,
+                No_Block_Name_Str
+                );
+    }
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbo._blockid)) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::InvalidBlockName,
+                Block_Name_Too_Long_Str
+                );
+    }
+
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbo.BLOCKID);
+    colBitmap.set(dbo.NUMCNODES);
+    dbo.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbo._blockid, sizeof(dbo._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbo);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbo);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbo._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbo);
+
+    BGQDB::BLOCK_STATUS state;
+
+    // Serialize compute block deallocate requests
     pthread_mutex_lock(&blockaction_lock);
     BGQDB::STATUS result = BGQDB::setBlockAction(blockName, BGQDB::DEALLOCATE_BLOCK);
     pthread_mutex_unlock(&blockaction_lock);
     switch (result) {
     case BGQDB::OK:
-        LOG_DEBUG_MSG("Initiating free request for block " << blockName);
+        LOG_DEBUG_MSG("Initiating free request for compute block " << blockName);
         break;
     case BGQDB::DB_ERROR:
         THROW_EXCEPTION(
@@ -1057,41 +1523,41 @@ Block::initiateFree(
                 bgsched::DatabaseErrors::ConnectionError,
                 DB_Connection_Error_Str
         );
-    case BGQDB::INVALID_ID: // Block name not correct
+    case BGQDB::INVALID_ID: // Compute block name not correct
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
-                "Block " << blockName << " is not valid"
+                "Compute block " << blockName << " is not valid"
         );
-    case BGQDB::NOT_FOUND: // Block not found
+    case BGQDB::NOT_FOUND: // Compute block not found
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotFound,
-                "Block " << blockName << " was not found"
+                "Compute block " << blockName << " was not found"
         );
     case BGQDB::DUPLICATE:
         if (BGQDB::OK == BGQDB::getBlockStatus(blockName, state)) {
             if (state == BGQDB::FREE) {
-                LOG_WARN_MSG("Block free request ignored, " << blockName << " is already Free");
+                LOG_WARN_MSG("Compute block free request ignored, " << blockName << " is already Free");
                 return;
             }
         }
-        THROW_EXCEPTION( // Block already has action pending
+        THROW_EXCEPTION( // Compute block already has action pending
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::BlockFreeError,
-                "Block free request failed because block " << blockName << " has pending action"
+                "Compute block free request failed because compute block " << blockName << " has pending action"
         );
     case BGQDB::FAILED:
         if (BGQDB::OK == BGQDB::getBlockStatus(blockName, state)) {
             if (state == BGQDB::FREE) {
-                LOG_WARN_MSG("Block free request ignored, " << blockName << " is already Free");
+                LOG_WARN_MSG("Compute block free request ignored, " << blockName << " is already Free");
                 return;
             }
         }
-        THROW_EXCEPTION( // Block Free request is invalid or wrong status
+        THROW_EXCEPTION( // Compute block Free request is invalid or wrong status
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::BlockFreeError,
-                "Block free request failed because block " << blockName << " received invalid block action request"
+                "Compute block free request failed because compute block " << blockName << " received invalid block action request"
         );
     default :
         THROW_EXCEPTION(
@@ -1107,8 +1573,11 @@ Block::remove(
         const string& blockName
 )
 {
-    DBTBlock dbo;
-    // Verify block name was specified
+    BGQDB::DBTBlock dbo;
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
+
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1116,8 +1585,8 @@ Block::remove(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbo._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbo._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
@@ -1125,11 +1594,58 @@ Block::remove(
                 );
     }
 
-    LOG_DEBUG_MSG("Attempting to remove block " << blockName);
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbo.BLOCKID);
+    colBitmap.set(dbo.NUMCNODES);
+    dbo.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbo._blockid, sizeof(dbo._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbo);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbo);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbo._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbo);
+
+    LOG_DEBUG_MSG("Attempting to remove compute block " << blockName);
     BGQDB::STATUS result = BGQDB::deleteBlock(blockName);
     switch (result) {
         case BGQDB::OK:
-            LOG_DEBUG_MSG("Block " << blockName << " was removed");
+            LOG_DEBUG_MSG("Compute block " << blockName << " was removed");
             break;
         case BGQDB::DB_ERROR:
             THROW_EXCEPTION(
@@ -1137,11 +1653,11 @@ Block::remove(
                     bgsched::DatabaseErrors::DatabaseError,
                     DB_Access_Error_Str
                     );
-        case BGQDB::FAILED:  // Block can only be deleted if (F)ree
+        case BGQDB::FAILED:  // Compute block can only be deleted if (F)ree
             THROW_EXCEPTION(
                     bgsched::RuntimeException,
                     bgsched::RuntimeErrors::InvalidBlockState,
-                    "Block " << blockName << " must be in Free state to be removed."
+                    "Compute block " << blockName << " must be in Free state to be removed."
                     );
         case BGQDB::INVALID_ID:
             THROW_EXCEPTION(
@@ -1149,11 +1665,11 @@ Block::remove(
                     bgsched::InputErrors::InvalidBlockName,
                     Block_Name_Too_Long_Str
                     );
-        case BGQDB::NOT_FOUND: // Block not found
+        case BGQDB::NOT_FOUND: // Compute block not found
             THROW_EXCEPTION(
                     bgsched::InputException,
                     bgsched::InputErrors::BlockNotFound,
-                    "Block " << blockName << " was not found"
+                    "Compute block " << blockName << " was not found"
                     );
         case BGQDB::CONNECTION_ERROR:
             THROW_EXCEPTION(
@@ -1177,7 +1693,10 @@ Block::addUser(
 )
 {
     DBTBlock dbblock;
-    // Verify block name was specified
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
+
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1185,14 +1704,61 @@ Block::addUser(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbblock._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbblock._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
                 Block_Name_Too_Long_Str
                 );
     }
+
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbblock.BLOCKID);
+    colBitmap.set(dbblock.NUMCNODES);
+    dbblock.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbblock._blockid, sizeof(dbblock._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbblock);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbblock);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbblock._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbblock);
 
     DBTBlocksecurity dbo;
     // Verify user name was specified
@@ -1213,22 +1779,22 @@ Block::addUser(
                 );
     }
 
-    // If already authorized to block just return
+    // If already authorized to compute block just return
     try {
         if (Block::isAuthorized(blockName, user)) {
-            LOG_WARN_MSG("No action taken on add user request, user " << user << " is already authorized to block " << blockName);
+            LOG_WARN_MSG("No action taken on add user request, user " << user << " is already authorized to compute block " << blockName);
             return;
         }
     } catch (...) {
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::AuthorityError,
-                "Error adding user " << user << " to block " << blockName
+                "Error adding user " << user << " to compute block " << blockName
         );
     }
 
-    // Get runtime user and grant read and execute authority to the block for the user.
-    // Read authority is not needed to run jobs but allows job schedulers to return block info
+    // Get runtime user and grant read and execute authority to the compute block for the user.
+    // Read authority is not needed to run jobs but allows job schedulers to return compute block info
     // back to authorized users when using getBlocks() with user argument.
     try {
         bgq::utility::UserId uid;
@@ -1237,9 +1803,9 @@ Block::addUser(
         hlcs::security::Authority executeAuthority(user, hlcs::security::Action::Execute);
         hlcs::security::grant(blockObject, readAuthority, uid);
         hlcs::security::grant(blockObject, executeAuthority, uid);
-        LOG_DEBUG_MSG("Successfully added user " << user << " to block " << blockName);
+        LOG_DEBUG_MSG("Successfully added user " << user << " to compute block " << blockName);
     } catch(const runtime_error& e) {
-        LOG_ERROR_MSG("Error adding user " << user << " to block " << blockName);
+        LOG_ERROR_MSG("Error adding user " << user << " to compute block " << blockName);
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::AuthorityError,
@@ -1249,7 +1815,7 @@ Block::addUser(
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::AuthorityError,
-                "Error adding user " << user << " to block " << blockName
+                "Error adding user " << user << " to compute block " << blockName
         );
     }
 }
@@ -1261,7 +1827,10 @@ Block::removeUser(
 )
 {
     DBTBlock dbblock;
-    // Verify block name was specified
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
+
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1269,14 +1838,61 @@ Block::removeUser(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbblock._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbblock._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
                 Block_Name_Too_Long_Str
                 );
     }
+
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbblock.BLOCKID);
+    colBitmap.set(dbblock.NUMCNODES);
+    dbblock.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbblock._blockid, sizeof(dbblock._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbblock);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbblock);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbblock._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbblock);
 
     DBTBlocksecurity dbo;
     // Verify user name was specified
@@ -1297,21 +1913,21 @@ Block::removeUser(
                 );
     }
 
-    // If not already authorized to block just return
+    // If not already authorized to compute block just return
     try {
         if (Block::isAuthorized(blockName, user) == false) {
-            LOG_WARN_MSG("No action taken on remove user request, user " << user << " was not previously authorized to block " << blockName);
+            LOG_WARN_MSG("No action taken on remove user request, user " << user << " was not previously authorized to compute block " << blockName);
             return;
         }
     } catch (...) {
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::AuthorityError,
-                "Error removing user " << user << " from block " << blockName
+                "Error removing user " << user << " from compute block " << blockName
         );
     }
 
-    // Get runtime user and revoke read and execute authority on the block for the user
+    // Get runtime user and revoke read and execute authority on the compute block for the user
     try {
         bgq::utility::UserId uid;
         hlcs::security::Object blockObject(hlcs::security::Object::Block, blockName);
@@ -1319,9 +1935,9 @@ Block::removeUser(
         hlcs::security::Authority executeAuthority(user, hlcs::security::Action::Execute);
         hlcs::security::revoke(blockObject, readAuthority, uid);
         hlcs::security::revoke(blockObject, executeAuthority, uid);
-        LOG_DEBUG_MSG("Successfully removed user " << user << " from block " << blockName);
+        LOG_DEBUG_MSG("Successfully removed user " << user << " from compute block " << blockName);
     } catch(const runtime_error& e) {
-        LOG_ERROR_MSG("Error removing user " << user << " from block " << blockName);
+        LOG_ERROR_MSG("Error removing user " << user << " from compute block " << blockName);
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::AuthorityError,
@@ -1331,7 +1947,7 @@ Block::removeUser(
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::AuthorityError,
-                "Error removing user " << user << " from block " << blockName
+                "Error removing user " << user << " from compute block " << blockName
         );
     }
 }
@@ -1343,7 +1959,10 @@ Block::isAuthorized(
 )
 {
     DBTBlock dbblock;
-    // Verify block name was specified
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
+
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1351,14 +1970,61 @@ Block::isAuthorized(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbblock._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbblock._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
                 Block_Name_Too_Long_Str
                 );
     }
+
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbblock.BLOCKID);
+    colBitmap.set(dbblock.NUMCNODES);
+    dbblock.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbblock._blockid, sizeof(dbblock._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbblock);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbblock);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbblock._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbblock);
 
     DBTBlocksecurity dbo;
     // Verify user name was specified
@@ -1394,7 +2060,7 @@ Block::isAuthorized(
         }
         return false;
     } catch(const bgsched::RuntimeException& e) {
-        LOG_ERROR_MSG("Error getting user authorities for block " << blockName);
+        LOG_ERROR_MSG("Error getting user authorities for compute block " << blockName);
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::AuthorityError,
@@ -1409,7 +2075,10 @@ Block::getUsers(
 )
 {
     DBTBlock dbblock;
-    // Verify block name was specified
+    BGQDB::ColumnsBitmap colBitmap;
+    SQLRETURN sqlrc;
+
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1417,8 +2086,8 @@ Block::getUsers(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
-    if (blockName.size() >= sizeof(dbblock._blockid)) {
+    // Validate the compute block name length
+    if (blockName.length() >= sizeof(dbblock._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockName,
@@ -1426,12 +2095,59 @@ Block::getUsers(
                 );
     }
 
+    // Get database connection
+    BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::ConnectionError,
+                DB_Connection_Error_Str
+        );
+    }
+    colBitmap.set(dbblock.BLOCKID);
+    colBitmap.set(dbblock.NUMCNODES);
+    dbblock.setColumns(colBitmap);
+
+    // Validate the compute block exists in the database
+    snprintf(dbblock._blockid, sizeof(dbblock._blockid), "%s", blockName.c_str());
+
+    sqlrc = tx.queryByKey(&dbblock);
+    if (sqlrc != SQL_SUCCESS) {
+        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                DB_Access_Error_Str
+        );
+    }
+
+    sqlrc = tx.fetch(&dbblock);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Validate that block is a compute block
+    if (dbblock._numcnodes == 0) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " was not found"
+        );
+    }
+
+    // Done checking compute block so close
+    tx.close(&dbblock);
+
     vector<string> users;
 
     // Get the user permissions for the block
     try {
         hlcs::security::Object blockObject(hlcs::security::Object::Block, blockName);
-        // Get container of authorities for the block (excluding bg.properties settings)
+        // Get container of authorities for the compute block (excluding bg.properties settings)
         hlcs::security::Authorities authorities(hlcs::security::list(blockObject));
         hlcs::security::Authority::Container authorityContainer = authorities.get();
 
@@ -1446,7 +2162,7 @@ Block::getUsers(
         // Return the user vector
         return users;
     } catch(const runtime_error& e) {
-        LOG_ERROR_MSG("Error getting user authorities for block " << blockName << ". Error is: " << e.what());
+        LOG_ERROR_MSG("Error getting user authorities for compute block " << blockName << ". Error is: " << e.what());
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::AuthorityError,
@@ -1456,7 +2172,7 @@ Block::getUsers(
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::AuthorityError,
-                "Error getting user authorities for block " << blockName
+                "Error getting user authorities for compute block " << blockName
         );
     }
 }
@@ -1464,10 +2180,10 @@ Block::getUsers(
 void
 Block::update()
 {
-    LOG_DEBUG_MSG("Attempting to update block " << getName());
+    LOG_DEBUG_MSG("Attempting to update compute block " << getName());
 
     // Modify block options, boot options, micro-loader image, and Node configuration.
-    // Requires block to be in Free, Terminating or Allocated state.
+    // Requires compute block to be in Free, Terminating or Allocated state.
     BGQDB::BlockInfo info;
 
     string options = getOptions();
@@ -1483,7 +2199,7 @@ Block::update()
     BGQDB::STATUS result = BGQDB::setBlockInfo(getName(), info);
     switch (result) {
     case BGQDB::OK:
-        LOG_DEBUG_MSG("Block " << getName() << " options, boot options, micro-loader image and Node configuration updated");
+        LOG_DEBUG_MSG("Compute block " << getName() << " options, boot options, micro-loader image and Node configuration updated");
         break;
     case BGQDB::DB_ERROR:
         THROW_EXCEPTION(
@@ -1495,7 +2211,7 @@ Block::update()
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotFound,
-                "Block " << getName() << " was either not found or has a status that does not allow updates."
+                "Compute block " << getName() << " was either not found or has a status that does not allow updates."
         );
     case BGQDB::INVALID_ID:
         THROW_EXCEPTION(
@@ -1523,11 +2239,11 @@ Block::update()
         );
     }
 
-    // Modify the description (doesn't require block to be Free)
+    // Modify the description (doesn't require compute block to be Free)
     result = BGQDB::setBlockDesc(getName(), getDescription());
     switch (result) {
     case BGQDB::OK:
-        LOG_DEBUG_MSG("Block " << getName() << " description updated");
+        LOG_DEBUG_MSG("Compute block " << getName() << " description updated");
         break;
     case BGQDB::DB_ERROR:
         THROW_EXCEPTION(
@@ -1547,11 +2263,11 @@ Block::update()
                 bgsched::InputErrors::InvalidBlockDescription,
                 Block_Description_Too_Long_Str
         );
-    case BGQDB::NOT_FOUND: // Block not found
+    case BGQDB::NOT_FOUND: // Compute block not found
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotFound,
-                "Block " << getName() << " was not found"
+                "Compute block " << getName() << " was not found"
         );
     case BGQDB::CONNECTION_ERROR:
         THROW_EXCEPTION(

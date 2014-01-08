@@ -104,9 +104,6 @@ var b_navigator_Navigator = d_declare( null,
 
     _environmentals : null,
 
-    _header_dij : null,
-    _footer_dij : null,
-
     _tab_id_to_controller : null,
     _current_controller : null,
 
@@ -119,9 +116,12 @@ var b_navigator_Navigator = d_declare( null,
      *  @class Navigator web application UI.
      *  @constructs
      */
-    constructor: function()
+    constructor: function(
+            login_dij,
+            navigator_dij
+        )
     {
-        this._navigator_dij = j_registry.byId( "navigator" );
+        this._navigator_dij = navigator_dij;
 
         this._navigator_dij.on( "tabChanged", d_lang.hitch( this, this._tabChanged ) );
 
@@ -159,11 +159,8 @@ var b_navigator_Navigator = d_declare( null,
         this._navigator_dij.setMachineRegion( machine_region );
 
 
-        this._header_dij = this._navigator_dij.header;
-        this._header_dij.on( "endSession", d_lang.hitch( this, this._endSessionRequested ) );
-
-        this._footer_dij = this._navigator_dij.footer;
-        this._footer_dij.on( "refresh", function() { l_EventsMonitorMixin.refresh(); } );
+        this._navigator_dij.on( "endSession", d_lang.hitch( this, this._endSessionRequested ) );
+        this._navigator_dij.on( "refresh", function() { l_EventsMonitorMixin.refresh(); } );
 
 
         // Setup global stuff.
@@ -181,31 +178,87 @@ var b_navigator_Navigator = d_declare( null,
 
         this._login = new l_Login(
                 this._bgws,
-                this._location_search_obj
+                this._location_search_obj,
+                login_dij
             );
 
-        new l_Charts( this._bgws );
-        new l_Machine();
+        new l_Charts(
+                this._bgws,
+                this._navigator_dij.getChartsDij()
+            );
+
+        new l_Machine(
+                this._navigator_dij.getMachine()
+            );
 
         this._tab_id_to_controller = {};
 
         l_topic.subscribe( l_topic.tabControllerChange, d_lang.hitch( this, this._onTabControllerChange ) );
 
-        new l_Alerts( this._bgws, this );
-        new l_BlockBuilder( this._bgws, this );
-        new l_Blocks( this._bgws );
-        new l_diagnostics_Diagnostics( this._bgws, this );
+        var alerts = new l_Alerts( this._bgws, this );
+        alerts.setNavigatorDij( this._navigator_dij );
+
+        var block_builder = new l_BlockBuilder( this._bgws, this );
+        block_builder.setNavigatorDij( this._navigator_dij );
+
+        var blocks = new l_Blocks(
+                this._bgws,
+                this._navigator_dij.getComputeBlocksTabDij(),
+                this._navigator_dij.getComputeBlockDetailsDij()
+            );
+        blocks.setNavigatorDij( this._navigator_dij );
+
+        var diagnostics = new l_diagnostics_Diagnostics( this._bgws, this );
+        diagnostics.setNavigatorDij( this._navigator_dij );
+
         this._environmentals = new l_Environmentals( this._bgws, this );
-        new l_Hardware( this._bgws );
-        new l_HardwareReplacements( this._bgws, this );
-        new l_IoBlocks( this._bgws );
-        new l_JobHistory( this._bgws );
-        new l_Jobs( this._bgws );
-        new l_PerformanceMonitoring( this._bgws, this );
-        new l_PrepareServiceAction( this._bgws, this );
-        new l_Ras( this._bgws, this );
-        new l_ServiceActions( this._bgws, this );
-        new l_SystemSummary( this._bgws );
+        this._environmentals.setNavigatorDij( this._navigator_dij );
+
+        var hardware = new l_Hardware( this._bgws, this._navigator_dij.getHardwareTabDij() );
+        hardware.setNavigatorDij( this._navigator_dij );
+
+        var hardware_replacements = new l_HardwareReplacements( this._bgws, this );
+        hardware_replacements.setNavigatorDij( this._navigator_dij );
+
+        var io_blocks = new l_IoBlocks(
+                this._bgws,
+                this._navigator_dij.getIoBlocksTabDij(),
+                this._navigator_dij.getIoBlockDetailsDij()
+            );
+        io_blocks.setNavigatorDij( this._navigator_dij );
+
+        var job_history = new l_JobHistory(
+                this._bgws,
+                this,
+                this._navigator_dij.getJobHistoryTabDij(),
+                this._navigator_dij.getHistoryJobDetailsDij()
+            );
+        job_history.setNavigatorDij( this._navigator_dij );
+
+        var jobs = new l_Jobs(
+                this._bgws,
+                this._navigator_dij.getJobsTabDij(),
+                this._navigator_dij.getCurrentJobDetailsDij()
+            );
+        jobs.setNavigatorDij( this._navigator_dij );
+
+        var performance_monitoring = new l_PerformanceMonitoring( this._bgws, this );
+        performance_monitoring.setNavigatorDij( this._navigator_dij );
+
+        var prepare_service_action = new l_PrepareServiceAction( this._bgws, this );
+        prepare_service_action.setNavigatorDij( this._navigator_dij );
+
+        var ras = new l_Ras( this._bgws, this );
+        ras.setNavigatorDij( this._navigator_dij );
+
+        var service_actions = new l_ServiceActions( this._bgws, this );
+        service_actions.setNavigatorDij( this._navigator_dij );
+
+        var system_summary = new l_SystemSummary(
+                this._bgws,
+                this._navigator_dij.getSystemSummaryTabDij()
+            );
+        system_summary.setNavigatorDij( this._navigator_dij );
 
 
         // Start listening for global events.
@@ -222,7 +275,7 @@ var b_navigator_Navigator = d_declare( null,
 
 
         if ( this._location_search_obj && this._location_search_obj.dashboard && this._location_search_obj.dashboard === "hidden" ) {
-            this._footer_dij.setChartsVisible( false );
+            this._navigator_dij.set( "chartsVisible", false );
         }
 
 
@@ -247,36 +300,16 @@ var b_navigator_Navigator = d_declare( null,
     },
 
 
+    switchTo : function( tab_name )
+    {
+        this._navigator_dij.switchTo( tab_name );
+    },
+
+
     _loggedIn : function( args )
     {
-        this._header_dij.setUserName( args.userName );
 
-        var user_info = args.userInfo;
-
-        var user_tooltip_text = "";
-
-
-        if ( user_info.isAdministrator() ) {
-            user_tooltip_text = "User is Blue Gene Administrator";
-        } else {
-
-            var authorities = [];
-
-            if ( user_info.hasHardwareRead() ) {
-                authorities.push( "hardware read" );
-            }
-            if ( user_info.hasBlockCreate() ) {
-                authorities.push( "block create" );
-            }
-
-            if ( authorities.length > 0 ) {
-                user_tooltip_text = "User has " + authorities.join( ", " );
-            } else {
-                user_tooltip_text = "User has no special authorities";
-            }
-        }
-
-        this._header_dij.setUserAuthDesc( user_tooltip_text );
+        this._navigator_dij.set( "userInfo", args );
 
 
         if ( ! this._system ) {
@@ -315,7 +348,7 @@ var b_navigator_Navigator = d_declare( null,
     {
         var machine_info = this._system.getMachineInfo();
 
-        this._header_dij.setSystemName( machine_info.name );
+        this._navigator_dij.set( "systemName", machine_info.name );
         document.title = machine_info.name;
 
         l_topic.publish( l_topic.gotMachineInfo, { machineInfo: machine_info } );
@@ -413,7 +446,7 @@ var b_navigator_Navigator = d_declare( null,
     _updateMachineHighlighting : function( controller )
     {
         if ( this._current_controller !== controller ) {
-            console.log( module.id + ": Got request to update highlighting from different controller, discarding." );
+            console.log( module.id + ": Got request to update highlighting from different controller, discarding. _current_controller=", this._current_controller, "controller=", controller );
             return;
         }
 
@@ -457,7 +490,10 @@ b_navigator_Navigator.instance = null;
 
 b_navigator_Navigator.createInstance = function()
 {
-    b_navigator_Navigator.instance = new b_navigator_Navigator();
+    b_navigator_Navigator.instance = new b_navigator_Navigator(
+            j_registry.byId( "main-login" ),
+            j_registry.byId( "navigator" )
+        );
 };
 
 

@@ -46,7 +46,6 @@ var _DEFAULT_FORMATTER_FN = function( value )
 
 
 var b_dijit_OutputText = d_declare(
-        "bluegene.dijit.OutputText",
         [ j__WidgetBase ],
 
 /** @lends bluegene^dijit^OutputText# */

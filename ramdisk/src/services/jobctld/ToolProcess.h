@@ -65,9 +65,10 @@ public:
 
    //! \brief  Create a new process and start the program with the specified user identity.
    //! \param  identity User identity.
+   //! \param  simulation flag to indicate if we are in simulation mode
    //! \return Result of operation.
 
-   bgcios::MessageResult start(UserIdentity& identity);
+   bgcios::MessageResult start(UserIdentity& identity, bool simulation);
 
    //! \brief  Get the tool identifier.
    //! \return Tool id value.
@@ -90,6 +91,13 @@ public:
    //! \return Nothing.
 
    void setRemovalPending(bool value) { _removalPending = value; }
+   
+   int signal(int signo)
+   {
+      int rc = killpg(_processId, signo);
+      if (rc != 0) rc = errno;
+      return rc;
+   }
 
 private:
 

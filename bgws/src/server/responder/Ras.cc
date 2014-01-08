@@ -123,6 +123,7 @@ HTTP status: 403 Forbidden
 
 #include "RasDetails.hpp"
 
+#include "../BlockingOperationsThreadPool.hpp"
 #include "../dbConnectionPool.hpp"
 #include "../Error.hpp"
 #include "../RequestRange.hpp"
@@ -189,77 +190,21 @@ void Ras::_doGet()
     _checkAuthority();
 
     const capena::server::Request &request(_getRequest());
-    capena::server::Response &response(_getResponse());
 
     static const unsigned DefaultRangeSize(50), MaxRangeSize(200);
     RequestRange req_range( request, DefaultRangeSize, MaxRangeSize );
-
 
     query::RasOptions query_options(
             request.getUrl().getQuery().calcArguments(),
             req_range
         );
 
-    query::Ras ras_query( query_options );
-
-    auto conn_ptr(dbConnectionPool::getConnection());
-
-    uint64_t row_count(0);
-    cxxdb::ResultSetPtr rs_ptr;
-
-    ras_query.execute( conn_ptr, &row_count, &rs_ptr );
-
-    LOG_DEBUG_MSG( "Event log row count=" << row_count );
-
-    json::ArrayValue arr_value;
-    json::Array &arr(arr_value.get());
-
-    if ( row_count == 0 ) {
-
-        // Fast-path when no rows match the filter.
-
-        response.setContentTypeJson();
-        response.headersComplete();
-
-        json::Formatter()( arr_value, response.out() );
-        response.out() << std::endl;
-
-        return;
-
-    }
-
-
-    while ( rs_ptr->fetch() ) {
-        json::Object &js_obj(arr.addObject());
-
-        const cxxdb::Columns &cols(rs_ptr->columns());
-
-        uint64_t recid(cols["recid"].as<int64_t>());
-
-        js_obj.set( "id", recid );
-        js_obj.set( "URI", RasDetails::calcPath( _getDynamicConfiguration().getPathBase(), recid ).toString() );
-        if ( cols["msg_id"] )  js_obj.set( "msgId", cols["msg_id"].getString() );
-        if ( cols["category"] )  js_obj.set( "category", cols["category"].getString() );
-        if ( cols["component"] )  js_obj.set( "component", cols["component"].getString() );
-        if ( cols["severity"] )  js_obj.set( "severity", cols["severity"].getString() );
-        js_obj.set( "eventTime", cols["event_time"].getTimestamp() );
-        if ( cols["jobid"] )  js_obj.set( "jobId", cols["jobid"].as<int64_t>() );
-        if ( cols["block"] )  js_obj.set( "block", cols["block"].getString() );
-        if ( cols["location"] )  js_obj.set( "location", cols["location"].getString() );
-        if ( cols["serialnumber"] )  js_obj.set( "serialNumber", cols["serialnumber"].getString() );
-        if ( cols["ctlaction"] )  js_obj.set( "controlAction", cols["ctlaction"].getString() );
-        if ( cols["count"] )  js_obj.set( "count", cols["count"].as<int64_t>() );
-        if ( cols["message"] )  js_obj.set( "message", cols["message"].getString() );
-    }
-
-
-    req_range.updateResponse( response, arr.size(), row_count );
-
-    response.setContentTypeJson();
-    response.headersComplete();
-
-    json::Formatter()( arr_value, response.out() );
-    response.out() << std::endl;
+    _blocking_operations_thread_pool.post( boost::bind(
+            &Ras::_doQuery, this,
+            capena::server::AbstractResponder::shared_from_this(),
+            req_range,
+            query_options
+        ) );
 }
 
 
@@ -279,5 +224,103 @@ void Ras::_checkAuthority() const
 }
 
 
-} // namespace bgws::responder
-} // namespace bgws
+void Ras::_doQuery(
+        capena::server::ResponderPtr,
+        const RequestRange& req_range,
+        const query::RasOptions& query_options
+    )
+{
+    try {
+        query::Ras ras_query( query_options );
+
+        auto conn_ptr(dbConnectionPool::getConnection());
+
+        uint64_t row_count(0);
+        cxxdb::ResultSetPtr rs_ptr;
+
+        ras_query.execute( conn_ptr, &row_count, &rs_ptr );
+
+        _getStrand().post( boost::bind(
+                &Ras::_queryComplete, this,
+                capena::server::AbstractResponder::shared_from_this(),
+                req_range,
+                row_count,
+                conn_ptr,
+                rs_ptr
+            ) );
+    } catch ( std::exception& e )
+    {
+        _inCatchPostCurrentExceptionToHandlerFn();
+    }
+}
+
+
+void Ras::_queryComplete(
+        capena::server::ResponderPtr,
+        const RequestRange& req_range,
+        uint64_t row_count,
+        cxxdb::ConnectionPtr,
+        cxxdb::ResultSetPtr rs_ptr
+    )
+{
+    try {
+        LOG_DEBUG_MSG( "Event log row count=" << row_count );
+
+        capena::server::Response &response(_getResponse());
+
+        json::ArrayValue arr_value;
+        json::Array &arr(arr_value.get());
+
+        if ( row_count == 0 ) {
+
+            // Fast-path when no rows match the filter.
+
+            response.setContentTypeJson();
+            response.headersComplete();
+
+            json::Formatter()( arr_value, response.out() );
+            response.out() << std::endl;
+
+            return;
+
+        }
+
+
+        while ( rs_ptr->fetch() ) {
+            json::Object &js_obj(arr.addObject());
+
+            const cxxdb::Columns &cols(rs_ptr->columns());
+
+            uint64_t recid(cols["recid"].as<int64_t>());
+
+            js_obj.set( "id", recid );
+            js_obj.set( "URI", RasDetails::calcPath( _getDynamicConfiguration().getPathBase(), recid ).toString() );
+            if ( cols["msg_id"] )  js_obj.set( "msgId", cols["msg_id"].getString() );
+            if ( cols["category"] )  js_obj.set( "category", cols["category"].getString() );
+            if ( cols["component"] )  js_obj.set( "component", cols["component"].getString() );
+            if ( cols["severity"] )  js_obj.set( "severity", cols["severity"].getString() );
+            js_obj.set( "eventTime", cols["event_time"].getTimestamp() );
+            if ( cols["jobid"] )  js_obj.set( "jobId", cols["jobid"].as<int64_t>() );
+            if ( cols["block"] )  js_obj.set( "block", cols["block"].getString() );
+            if ( cols["location"] )  js_obj.set( "location", cols["location"].getString() );
+            if ( cols["serialnumber"] )  js_obj.set( "serialNumber", cols["serialnumber"].getString() );
+            if ( cols["ctlaction"] )  js_obj.set( "controlAction", cols["ctlaction"].getString() );
+            if ( cols["count"] )  js_obj.set( "count", cols["count"].as<int64_t>() );
+            if ( cols["message"] )  js_obj.set( "message", cols["message"].getString() );
+        }
+
+
+        req_range.updateResponse( response, arr.size(), row_count );
+
+        response.setContentTypeJson();
+        response.headersComplete();
+
+        json::Formatter()( arr_value, response.out() );
+        response.out() << std::endl;
+    } catch ( std::exception& e ) {
+        _handleError( e );
+    }
+}
+
+
+} } // namespace bgws::responder

@@ -125,9 +125,11 @@ public:
     }
 
     //! \brief start this binary
-    //! \param user id of the user who should run this
     //! \returns ID for started binary
-    BinaryId startBinary(const std::string& user_list);
+    BinaryId startBinary(
+            const std::string& user_list,   //!< [in]
+            const std::string& properties   //!< [in]
+            );
 
     //! \brief stop this binary
     //! \returns true if successful, false if not

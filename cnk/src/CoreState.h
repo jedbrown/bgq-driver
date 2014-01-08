@@ -218,7 +218,8 @@ typedef struct CoreState_t
 {
     // This Core's Hardware Threads
     struct HWThreadState_t HWThreads[ CONFIG_HWTHREADS_PER_CORE ];
-    Lock_Atomic_t coreBarrier; // used for core scope barrier operations. 
+    Lock_Atomic_t coreBarrier; // used for core scope barrier operations.
+    Lock_Atomic_t coreLock;    // used to control access to core scoped hardware resources. 
     uint64_t default_l1p_init;
     uint64_t default_l1p_cfgspec;
     uint64_t default_l1p_cfgpfusr;

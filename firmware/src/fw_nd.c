@@ -162,7 +162,7 @@ extern inline int fw_nd_get_is_ionode(Personality_t *p)
 extern inline int fw_nd_compare_values(uint64_t a, uint64_t b, uint64_t addr, int line_num)
 {
   if ( a == b) return 0;
-  FW_Warning(" Error: a != b addr=0x%016lx line=%d   a=0x%016lx b=0x%016lx \n",addr,line_num,a,b);
+  FW_Warning(" Error: a != b addr=0x%016lx line=%d   a=0x%016lx b=0x%016lx",addr,line_num,a,b);
   return line_num;
   
 }
@@ -402,6 +402,19 @@ extern inline  uint64_t fw_nd_get_coll_grant_timeout(Personality_t *p)
   
 }
 
+uint64_t fw_nd_getBarrierTimeoutInMicroseconds( Personality_t* p ) {
+
+    uint64_t barrier_timeout =  0;
+
+    if ( ND_TORUS_SIZE(p->Network_Config) <= 512 ) {
+	barrier_timeout = 5ull * 60ull * 1000ull * 1000ull;  // 5 minutes
+    }
+
+    if ( TRACE_ENABLED(TRACE_ND) && (p->Network_Config.Acoord==0) && (p->Network_Config.Bcoord==0) && (p->Network_Config.Ccoord==0) && (p->Network_Config.Dcoord==0) && (p->Network_Config.Ecoord==0) ) {
+	printf("(D) barrier_timeout=%ld torus_size = %d\n", barrier_timeout, ND_TORUS_SIZE(p->Network_Config));
+    }
+    return barrier_timeout;
+}
 
 extern int fw_nd_control_system_barrier( void* arg )
 {
@@ -424,7 +437,7 @@ extern int fw_nd_control_system_barrier( void* arg )
   }
 
   if ( rc != 0 ) {
-      FW_Warning( "Control System Barrier failed rc=%d", rc );
+      FW_Warning( "Control System Barrier failed rc=%d.", rc );
   }
 
   if ( TRACE_ENABLED( TRACE_ND ) )
@@ -459,7 +472,7 @@ extern int fw_nd_control_system_barrier( void* arg )
    // if there is more than one node, a control system barrier is required here
    // to ensure all senders have been released prior to releasing receivers
    
-   uint64_t barrier_timeout =  5ull * 60ull * 1000ull * 1000ull;  // 5 minutes
+   uint64_t barrier_timeout =  fw_nd_getBarrierTimeoutInMicroseconds(p);
 
 //   Can remove this barrier since receiver error counts are held at zero
 //   rc =  fw_nd_control_system_barrier((void *) barrier_timeout); 
@@ -488,7 +501,7 @@ int fw_nd_init_global_barrier(void) {
   Personality_t* p = FW_PERSONALITY_PTR();
 
   uint64_t barrierSynchronizationTimeout = 10ull * (uint64_t)p->Kernel_Config.FreqMHz * 1000ull * 1000ull;  /* 10 seconds */
-  uint64_t barrierTimeoutInMicroseconds  = 2ull * 60ull * 1000ull * 1000ull;  /* 120 seconds; might have to be adjusted */
+  uint64_t barrierTimeoutInMicroseconds  = fw_nd_getBarrierTimeoutInMicroseconds(p);
   uint64_t barrierTimeoutInCycles        = barrierTimeoutInMicroseconds * (uint64_t)p->Kernel_Config.FreqMHz;
 
   int rc;
@@ -505,13 +518,18 @@ int fw_nd_init_global_barrier(void) {
   /* Step 2: Reset the control register to the initial state */
   // Write "100" to local contribution
   rc = MUSPI_GIBarrierInitMU1(FW_GI_BARRIER_BOOT_CLASS_ROUTE);
-  if ( rc ) return rc;
+  if ( rc ) {
+      FW_RAS_printf( FW_RAS_BARRIER_INIT_ERROR,  "Barrier initialization error (rc=%d line=%d).", rc, __LINE__);
+      return rc;
+  }
 
   // Step 3: Check all receivers in the system barrier are ready
 
+#if 0
   if (FW_GI_BARRIER_BOOT_CLASS_ROUTE != 15) {
     return __LINE__;
   }
+#endif
 
   uint64_t gi_class_route = ND_500_DCR__CTRL_GI_CLASS_14_15__CLASS15_UP_PORT_I_get(DCRReadPriv(ND_500_DCR(CTRL_GI_CLASS_14_15)));
   uint64_t re_gi_val;
@@ -531,8 +549,11 @@ int fw_nd_init_global_barrier(void) {
 	  }
       }
 
-      if (GetTimeBase() > ( start_cycle + barrierTimeoutInCycles ) ) {
-	  return __LINE__;
+      if ( barrierTimeoutInCycles > 0 ){
+	  if (GetTimeBase() > ( start_cycle + barrierTimeoutInCycles ) ) {
+	      FW_RAS_printf( FW_RAS_BARRIER_INIT_ERROR,  "Barrier initialization error - receivers not ready (rc=%d, line=%d).",__LINE__ + 1,__LINE__);
+	      return __LINE__;
+	  }
       }
   }
 
@@ -541,16 +562,15 @@ int fw_nd_init_global_barrier(void) {
 
   rc = MUSPI_GIBarrierInitMU2(FW_GI_BARRIER_BOOT_CLASS_ROUTE, barrierSynchronizationTimeout);
 
+  
   /* Step 5: If no timeout, barrier one final time */
-  if ( rc == 0 )
-    {
+  if ( rc == 0 ) {
       rc =  fw_nd_control_system_barrier((void *) barrierTimeoutInMicroseconds);
-    }
- 
-  if ( ( rc != 0 ) && PERS_ENABLED(PERS_ENABLE_Mambo) ) {
-    printf("(W) Primordial Global Barrier not trained (class route=%d)\n", FW_GI_BARRIER_BOOT_CLASS_ROUTE );
-    rc = 0;
   }
+  else {
+      FW_RAS_printf( FW_RAS_BARRIER_INIT_ERROR,  "Barrier initialization error - status not sync'd (rc=%d, line=%d).", rc, __LINE__);
+  }
+ 
 
   if ( TRACE_ENABLED( TRACE_ND ) ) {
     printf("(<) %s rc=%d\n", __func__, rc );

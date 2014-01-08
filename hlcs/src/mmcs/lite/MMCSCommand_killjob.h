@@ -21,17 +21,21 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#ifndef MMCS_COMMAND_KILLJOB_H
-#define MMCS_COMMAND_KILLJOB_H
+#ifndef MMCS_LITE_MMCS_COMMAND_KILLJOB_H_
+#define MMCS_LITE_MMCS_COMMAND_KILLJOB_H_
 
-#include "MMCSCommand.h"
 
-class ConsoleController;
+#include "common/AbstractCommand.h"
+
+
+namespace mmcs {
+namespace lite {
+
 
 /*!
  * \brief
  */
-class MMCSCommand_killjob: public MMCSCommand
+class MMCSCommand_killjob: public common::AbstractCommand
 {
 public:
     /*!
@@ -40,7 +44,7 @@ public:
     MMCSCommand_killjob(
             const char* name,
             const char* description,
-            const MMCSCommandAttributes& attributes
+            const Attributes& attributes
             );
 
     /*!
@@ -48,9 +52,9 @@ public:
      */
     void execute(
             std::deque<std::string> args,
-            MMCSCommandReply& reply,
-            ConsoleController* pController,
-            BlockControllerTarget* pTarget=NULL
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            server::BlockControllerTarget* pTarget=NULL
             );
 
     /*!
@@ -58,7 +62,7 @@ public:
      */
     void help(
             std::deque<std::string> args,
-            MMCSCommandReply& reply
+            mmcs_client::CommandReply& reply
             );
 
     /*!
@@ -70,5 +74,9 @@ public:
     static  MMCSCommand_killjob* build();
     static  std::string cmdname() { return "killjob"; }
 };
+
+
+} } // namespace mmcs::lite
+
 
 #endif

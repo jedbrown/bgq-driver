@@ -1,26 +1,26 @@
 <div>
 
-<div data-dojo-type="dijit.layout.BorderContainer" data-dojo-props="gutters: false">
+<div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="gutters: false">
 
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'top'">
-        <div data-dojo-type="dijit.form.DropDownButton" data-dojo-attach-point="_foDropDown">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'top'">
+        <div data-dojo-type="dijit/form/DropDownButton" data-dojo-attach-point="_foDropDown">
             <span>Filter Options</span>
-            <div style="width: 550px;" data-dojo-type="dijit.TooltipDialog" data-dojo-props="style: 'width: 550px;'">
-                <div class="bgFilterOptions bgFilterOptionsDiagsLocations" data-dojo-type="dijit.form.Form" data-dojo-props="'class': 'bgFilterOptions bgFilterOptionsDiagsLocations'" data-dojo-attach-point="_foForm">
+            <div style="width: 550px;" data-dojo-type="dijit/TooltipDialog" data-dojo-props="style: 'width: 550px;'">
+                <div class="bgFilterOptions bgFilterOptionsDiagsLocations" data-dojo-type="dijit/form/Form" data-dojo-props="'class': 'bgFilterOptions bgFilterOptionsDiagsLocations'" data-dojo-attach-point="_foForm">
                     <fieldset>
                         <ul>
                             <li>
                                 <label for="${id}-fo-location">Location</label>
-                                <input id="${id}-fo-location" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'location'" />
+                                <input id="${id}-fo-location" data-dojo-type="bluegene/navigator/dijit/MultiWildcardTextBox" data-dojo-props="name: 'location'" />
                             </li>
                             <li>
                                 <label for="${id}-fo-status">Hardware Status</label>
-                                <input id="${id}-fo-status" data-dojo-type="bluegene.navigator.dijit.MultiSelectCodes" data-dojo-props="name: 'hardwareStatus', values: bluegene.navigator.xlate.diagnostics.hardwareStatusCode" />
+                                <input id="${id}-fo-status" data-dojo-type="bluegene/navigator/dijit/MultiSelectCodes" data-dojo-props="name: 'hardwareStatus', values: this._b_navigator_xlate.diagnostics.hardwareStatusCode" />
                             </li>
-                            <li><input data-dojo-type="bluegene.navigator.dijit.TimeInterval" data-dojo-props="name: 'interval', label: 'Last executed'" /></li>
+                            <li><input data-dojo-type="bluegene/navigator/dijit/TimeInterval" data-dojo-props="name: 'interval', label: 'Last executed'" /></li>
                             <li>
                                 <label for="${id}-fo-replace">Replace</label>
-                                <select name="replace" id="${id}-fo-replace" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'replace', maxHeight: -1">
+                                <select name="replace" id="${id}-fo-replace" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'replace', maxHeight: -1">
                                     <option value="Any">Any</option>
                                     <option value="true">True</option>
                                     <option value="false">False</option>
@@ -29,15 +29,15 @@
                         </ul>
                     </fieldset>
                     <fieldset class="submit">
-                        <button type="submit" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'submit'">Apply</button>
-                        <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_resetButton">Reset</button>
+                        <button type="submit" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'submit'">Apply</button>
+                        <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_resetButton">Reset</button>
                     </fieldset>
                 </div>
             </div>
         </div>
     </div>
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'center'">
-        <table style="height: 100%;" data-dojo-type="dojox.grid.EnhancedGrid" 
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'center'">
+        <table style="height: 100%;" data-dojo-type="dojox/grid/EnhancedGrid" 
                 data-dojo-props="selectable: true, selectionMode: 'single', style: 'height: 100%;', noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No locations match the filter options.&lt;/span&gt;'"
                 data-dojo-attach-point="_grid"
                 >

@@ -27,8 +27,8 @@ define(
     "./AbstractTemplatedContainer",
     "./MonitorActiveMixin",
     "../../Bgws",
+    "dojo/when",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dojo/text!./templates/RasDetails.html",
     "module",
@@ -43,8 +43,8 @@ function(
         l_AbstractTemplatedContainer,
         l_MonitorActiveMixin,
         b_Bgws,
+        d_when,
         d_declare,
-        d_Deferred,
         d_lang,
         template,
         module
@@ -53,7 +53,6 @@ function(
 
 
 var b_navigator_dijit_RasDetails = d_declare(
-        "bluegene.navigator.dijit.RasDetails",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -130,7 +129,7 @@ var b_navigator_dijit_RasDetails = d_declare(
 
         this._fetch_deferred = this._fetch_details_fn( this._id );
 
-        d_Deferred.when(
+        d_when(
                 this._fetch_deferred,
                 d_lang.hitch( this, this._gotEventDetails ),
                 d_lang.hitch( this, this._fetchDetailsFailed )

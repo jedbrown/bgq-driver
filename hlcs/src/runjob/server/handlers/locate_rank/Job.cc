@@ -147,7 +147,8 @@ Job::findCoordinates(
             sizeof(buf),
             buf,
             output.get(),
-            NULL // rank
+            NULL, // rank
+            NULL  // mpmd Found
             );
 
     if ( rc ) {

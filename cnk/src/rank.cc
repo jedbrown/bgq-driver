@@ -28,6 +28,7 @@
 #include <hwi/include/bqc/mu_dcr.h>
 #include <spi/include/mu/GIBarrier.h>
 #include <ramdisk/include/services/JobctlMessages.h>
+#include <unistd.h>
 #include "ctype.h"
 
 extern "C"
@@ -52,6 +53,7 @@ uint64_t mapfile_close(int fd);
 
 MUSPI_GIBarrier_t systemBlockGIBarrier;
 MUSPI_GIBarrier_t systemJobGIBarrier;
+MUSPI_GIBarrier_t systemLoadJobGIBarrier;
 
 // storage should be at least able to handle 64 * strlen("aa bb cc dd ee tt") + 1 = 1152 bytes
 
@@ -75,6 +77,7 @@ char mapping_storage[CONFIG_MAPFILETRACKS][CONFIG_MAPFILESTORAGE/CONFIG_MAPFILET
 struct remoteget_atomic_controls mapfile_remoteget;
 uint64_t mapfile_pacingsem[2] ALIGN_L2_CACHE = { 0, CONFIG_MAPFILEREMOTEPACING };
 
+Lock_Atomic_t loadSequenceUpdate;
 
 
 // Perform a Barrier Using the System GI Barrier.
@@ -220,6 +223,107 @@ int configureJobClassroutes(struct bgcios::jobctl::SetupJobMessage* jobinfo)
     return 0;
 }
 
+
+uint64_t providingClassRouteResult;
+
+uint64_t dummyCounter;
+void sendUpstream(uint64_t output)
+{
+    Personality_t* pers = GetPersonality();
+    int link;
+    uint64_t remoteLink;
+    struct directput_atomic_controls directput;
+    
+    Kernel_WriteFlightLog(FLIGHTLOG, FL_CLRTSNDUP, output,0,0,0);
+    for(link=0; link<10; link++)  // last two links are ionode and local inject, skip those.
+    {
+        if((output & (1<<(11-link))) != 0)
+        {
+            remoteLink = 1 << (11 - ((link&(~1)) + (1 - link%2))); // flip plus and minus ports
+            
+            // note:  class routes do not wrap around the torus
+            directput.torus_destination.Destination.A_Destination = pers->Network_Config.Acoord - (link==0) + (link==1);
+            directput.torus_destination.Destination.B_Destination = pers->Network_Config.Bcoord - (link==2) + (link==3);
+            directput.torus_destination.Destination.C_Destination = pers->Network_Config.Ccoord - (link==4) + (link==5);
+            directput.torus_destination.Destination.D_Destination = pers->Network_Config.Dcoord - (link==6) + (link==7);
+            directput.torus_destination.Destination.E_Destination = pers->Network_Config.Ecoord - (link==8) + (link==9);
+            
+            directput.source_val   = remoteLink;
+            directput.remote_counter_physAddr = (uint64_t)&dummyCounter;
+            directput.remote_paddr = (uint64_t)&providingClassRouteResult;
+            directput.paddr_here   = (uint64_t)&directput;
+            directput.atomic_op    = MUHWI_ATOMIC_OPCODE_STORE_OR;
+            mudm_directput_store_atomic(NodeState.MUDM, &directput);
+        }
+    }
+}
+
+
+int configureLoadJobClassroutes(int includeNode)
+{
+    int i;
+    uint64_t input;
+    uint64_t output;
+    uint64_t value;
+    uint64_t sysbarrier;
+    uint64_t* controlRegPtr;
+    int maxhops;
+    uint64_t oldResult;
+    uint64_t tmp;
+    AppState_t *appState = GetMyAppState();
+    
+    if((Personality_IsFPGA() == 0) && ((NodeState.Personality.Kernel_Config.NodeConfig & PERS_ENABLE_MU) != 0))
+    {   
+        value = DCRReadPriv(ND_500_DCR(CTRL_GI_CLASS_14_15));
+        output= ND_500_DCR__CTRL_GI_CLASS_14_15__CLASS14_UP_PORT_O_get(value);
+        
+        // trim the classroutes.  Only set input bits on links that will send up bcast data.
+        oldResult = providingClassRouteResult = 0;
+        MUSPI_GIBarrierEnterAndWait(&systemJobGIBarrier);
+        if(includeNode)
+            sendUpstream(output);
+        
+        maxhops = appState->shape.aCoord + appState->shape.bCoord + appState->shape.cCoord + appState->shape.dCoord + appState->shape.eCoord;
+        for(i=0; i<maxhops; i++)
+        {
+            tmp = providingClassRouteResult;  // protect against small timing window between barrier and if statement
+            MUSPI_GIBarrierEnterAndWait(&systemJobGIBarrier);
+            if((oldResult == 0) && (tmp != 0))
+                sendUpstream(output);
+            MUSPI_GIBarrierEnterAndWait(&systemJobGIBarrier);
+            oldResult = tmp;
+        }
+        input = providingClassRouteResult | includeNode;
+        Kernel_WriteFlightLog(FLIGHTLOG, FL_CLRTSET13, input, output,0,0);
+        
+        // Set system job-wide global interrupt classroute
+        value = DCRReadPriv(ND_500_DCR(CTRL_GI_CLASS_12_13));
+        ND_500_DCR__CTRL_GI_CLASS_12_13__CLASS13_UP_PORT_I_insert(value, input);
+        ND_500_DCR__CTRL_GI_CLASS_12_13__CLASS13_UP_PORT_O_insert(value, output);
+        DCRWritePriv(ND_500_DCR(CTRL_GI_CLASS_12_13), value);
+        
+        // Set system job-wide collective classroute
+        value = DCRReadPriv(ND_500_DCR(CTRL_COLL_CLASS_12_13));
+        ND_500_DCR__CTRL_COLL_CLASS_12_13__CLASS13_TYPE_insert(value, 1);  // system type
+        ND_500_DCR__CTRL_COLL_CLASS_12_13__CLASS13_UP_PORT_I_insert(value, input);
+        ND_500_DCR__CTRL_COLL_CLASS_12_13__CLASS13_UP_PORT_O_insert(value, output);
+        DCRWritePriv(ND_500_DCR(CTRL_COLL_CLASS_12_13), value);
+        
+        value = DCRReadPriv(MU_DCR(SYS_BARRIER));
+        sysbarrier  = MU_DCR__SYS_BARRIER__VALUE_get(value);
+        sysbarrier |=  _BN(48 + 13);   // Set classroutes 13 system-only.
+        MU_DCR__SYS_BARRIER__VALUE_insert(value, sysbarrier);
+        DCRWritePriv(MU_DCR(SYS_BARRIER), value);
+        
+        controlRegPtr = (uint64_t*)(BGQ_MU_GI_CONTROL_OFFSET(0, 13));
+        *controlRegPtr = MUSPI_GIBARRIER_INITIAL_STATE;                
+        
+        MUSPI_GIBarrierInit ( &systemLoadJobGIBarrier,
+                              13);
+    }
+    return 0;
+}
+
 int verifyJobClassroute()
 {
     uint64_t* statusRegPtr;
@@ -284,7 +388,7 @@ int computeTaskCoordinates(uint32_t startEntry, size_t mapsize, BG_CoordinateMap
     uint64_t thread = selectTrack();
     Kernel_Lock(&mapping_storageLock[thread]);
     rc = MUSPI_GenerateCoordinates(filename, &jobcoord, &mycoord, appState->ranksPerNode, np,
-                                   sizeof(mapping_storage[thread]), &mapping_storage[thread][0], map, NULL);
+                                   sizeof(mapping_storage[thread]), &mapping_storage[thread][0], map, NULL, NULL);
     Kernel_Unlock(&mapping_storageLock[thread]);
     return rc;
 }
@@ -292,11 +396,13 @@ int computeTaskCoordinates(uint32_t startEntry, size_t mapsize, BG_CoordinateMap
 int getMyRank(uint32_t* rank)
 {
     int rc;
+    uint64_t i;
     Personality_t* pers = GetPersonality();
     AppState_t *appState = GetMyAppState();
     BG_JobCoords_t jobcoord;
     BG_CoordinateMapping_t mycoord;
     const char* filename = appState->mapOrder;
+    uint32_t mpmdFound = 0;
     if(appState->mapFilePath[0] != 0)
         filename = appState->mapFilePath;
     
@@ -322,11 +428,71 @@ int getMyRank(uint32_t* rank)
     uint64_t thread = selectTrack();
     Kernel_Lock(&mapping_storageLock[thread]);
     rc = MUSPI_GenerateCoordinates(filename, &jobcoord, &mycoord, appState->ranksPerNode, appState->ranksActive,
-                                   sizeof(mapping_storage[thread]), &mapping_storage[thread][0], NULL, rank);
+                                   sizeof(mapping_storage[thread]), &mapping_storage[thread][0], NULL, rank, &mpmdFound);
+    
+    if((rc == 0) && (*rank != (~0u)) && (mpmdFound))
+    {
+        uint32_t sequence = (~0);
+        char cmdline[1024];
+        rc = MUSPI_GetMPMDData(filename, *rank, sizeof(mapping_storage[thread]), &mapping_storage[thread][0], &sequence, sizeof(cmdline), cmdline);
+        
+        if(rc == 0)
+        {
+            Kernel_Lock(&loadSequenceUpdate);
+            if(GetMyAppState()->LoadSequence == ~(0u))
+            {
+                GetMyAppState()->LoadSequence = sequence;
+                char* sourceargs = cmdline;
+                GetMyAppState()->App_Argc = 0;
+                for(i=0; i<sizeof(GetMyAppState()->App_Args); i++)
+                {
+                    if(isspace(*sourceargs))
+                    {
+                        do
+                        {
+                            sourceargs++;
+                        }
+                        while(isspace(*sourceargs));
+                        
+                        GetMyAppState()->App_Argc++;
+                        GetMyAppState()->App_Args[i] = 0;
+                    }
+                    else
+                    {
+                        GetMyAppState()->App_Args[i] = *sourceargs;
+                        if(*sourceargs == 0)
+                        {
+                            GetMyAppState()->App_Argc++;
+                            break;
+                        }
+                        sourceargs++;
+                    }
+                }
+                if(i == sizeof(GetMyAppState()->App_Args))
+                {
+                    GetMyAppState()->App_Argc++;
+                    GetMyAppState()->App_Args[i-1] = 0;
+                }
+            }
+            else if(GetMyAppState()->LoadSequence != sequence)
+            {
+                // Multiple executables running on this node.
+                rc = -1;
+            }
+            Kernel_Unlock(&loadSequenceUpdate);
+        }
+    }
+    else
+    {
+        Kernel_Lock(&loadSequenceUpdate);
+        GetMyAppState()->LoadSequence = 0;
+        Kernel_Unlock(&loadSequenceUpdate);
+    }
+    
     Kernel_Unlock(&mapping_storageLock[thread]);
+    
     return rc;
 }
-
 
 int calculateTorusNode(size_t byteOffset, uint32_t track, MUHWI_Destination_t* coord)
 {
@@ -483,6 +649,9 @@ uint64_t mapfile_read(int fd, void* ptr, size_t length)
             else
             {
                 Kernel_Lock(&cacheMapLock[0]);
+                AppState_t *app = GetMyAppState();
+                uint64_t numNodesInJob = app->jobLeaderData.NodesInJob;
+                uint64_t delaytime = 10 + numNodesInJob/128;
                 
                 do
                 {
@@ -492,6 +661,7 @@ uint64_t mapfile_read(int fd, void* ptr, size_t length)
                     mapfile_remoteget.remote_paddr = (uint64_t)(&mapfile_pacingsem[1]);
                     NodeState.remoteget.returned_val = 0;
                     NodeState.remoteget.local_counter = 8;
+                    uint64_t timeit = GetTimeBase();
                     mudm_remoteget_load_atomic(NodeState.MUDM,  &mapfile_remoteget);
                     while(mapfile_remoteget.local_counter)
                     {
@@ -501,7 +671,13 @@ uint64_t mapfile_read(int fd, void* ptr, size_t length)
                     if(mapfile_remoteget.returned_val != 0x8000000000000000)
                         break;
                     Kernel_WriteFlightLog(FLIGHTLOG, FL_MAPFILESM, coord.Destination.Destination, MAPFILE_BYTE_OFFSET[track], track, 0);
-                    Delay(1000000);
+                    if ((GetTimeBase() - timeit) > delaytime)
+                    {
+                        // Response time for our mu atomic operation was very slow. Do not pound the interface as hard.
+                        delaytime = delaytime * 2;
+                    }
+                    
+                    usleep(delaytime);
                 }
                 while(1);
                 

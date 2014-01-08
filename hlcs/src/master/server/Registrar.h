@@ -25,7 +25,7 @@
 #define MASTER_REGISTRAR_H_
 
 
-#include <utility/include/cxxsockets/SocketTypes.h>
+#include <utility/include/cxxsockets/types.h>
 
 #include <utility/include/portConfiguration/PortConfiguration.h>
 
@@ -49,13 +49,13 @@ private:
     void listenForNew(const bgq::utility::PortConfiguration::Pairs& portpairs);
 
     //! \brief Validate a new connection and put it in the agent vector.
-    void processNew(CxxSockets::SecureTCPSocketPtr sock);
+    void processNew(CxxSockets::TCPSocketPtr sock);
 
     //! \brief Listen for new agents in this thread.
     boost::thread _listenerThread;
 
     //! \brief listener for new connections
-    CxxSockets::PollingListenerSetPtr _registrationListener;
+    CxxSockets::ListenerSetPtr _registrationListener;
     bool _end;
     bool _failed;
     pthread_t _my_tid;

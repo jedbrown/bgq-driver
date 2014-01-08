@@ -29,7 +29,6 @@ define(
     "../Bgws",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -38,7 +37,6 @@ function(
         b_Bgws,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -54,11 +52,13 @@ var b_navigator_Hardware = d_declare( [ l_AbstractTab ],
 
 
     /** @constructs */
-    constructor: function( bgws )
+    constructor: function(
+            bgws,
+            hardware_dij
+        )
     {
         this._bgws = bgws;
-
-        this._hardware_dij = j_registry.byId( "navigator" ).getHardwareTabDij();
+        this._hardware_dij = hardware_dij;
 
         this._hardware_dij.on( "machineHighlightingChanged", d_lang.hitch( this, this._machineHighlightingChanged ) );
     },

@@ -56,6 +56,8 @@ Also look at capena::server::exception::Error for a way to generate responses wh
  */
 
 
+#include "../http/http.hpp"
+
 #include <utility/include/portConfiguration/types.h>
 
 #include <boost/function.hpp>
@@ -119,6 +121,20 @@ enum class DataContinuesIndicator {
     END_OF_DATA,
     EXPECT_MORE_DATA
 };
+
+
+/*! \brief Container for enum, indicates whether the headers set by the application indicate that the response has a body or not. */
+enum class BodyPresense {
+    EXPECT_BODY,
+    NO_BODY
+};
+
+
+/*! \brief This function is used by the Responder to notify that the headers are complete. */
+typedef boost::function<void ( http::Status status, const Headers& headers, BodyPresense expect_body )> NotifyStatusHeadersFn;
+
+/*! \brief This function is used by the Responder to notify data to send and end of data. */
+typedef boost::function<void ( const std::string& data, DataContinuesIndicator data_continues )> NotifyDataFn;
 
 
 } } // namespace capena::server

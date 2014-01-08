@@ -59,7 +59,7 @@ uint64_t sc_exit( SYSCALL_FCN_ARGS )
         Futex_Wake( 1 /*FUTEX_WAKE */, (Futex_t *)pKThr->pChild_TID, INT_MAX, 0, 0, 0 );
     }
 
-    App_ThreadExit( status ); // see AppCleanup.c
+    App_ThreadExit( status, kthread ); // see AppCleanup.c
 }
 
 uint64_t sc_exit_group( SYSCALL_FCN_ARGS )
@@ -71,5 +71,6 @@ uint64_t sc_exit_group( SYSCALL_FCN_ARGS )
                   __func__, ProcessorCoreID(), ProcessorThreadID(), status ));
     
     App_ProcessExit( ((status & 0xFF) << 8) ); // exit value stored in byte 2 of status.
-}
+    return CNK_RC_SUCCESS(0); // Will not reach here.
+} 
 

@@ -21,7 +21,7 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#include "lite/SecurityKey.h"
+#include "SecurityKey.h"
 
 #include <utility/include/Log.h>
 
@@ -33,9 +33,13 @@
 #include <iomanip>
 #include <sstream>
 
-LOG_DECLARE_FILE( "mmcs" );
 
+LOG_DECLARE_FILE( "mmcs.lite" );
+
+
+namespace mmcs {
 namespace lite {
+
 
 SecurityKey::SecurityKey(
         const fw_uint8_t* key,
@@ -80,4 +84,4 @@ SecurityKey::SecurityKey(
     LOG_TRACE_MSG( "encrypted: " << os.str() );
 }
 
-} // lite
+} } // namespace mmcs::lite

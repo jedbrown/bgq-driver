@@ -39,7 +39,7 @@ function(
 {
 
 
-var ret = d_declare( "bluegene.utility.Stack", null,
+var b_utility_Stack = d_declare( null,
 
 /** @lends bluegene^utility^Stack# */
 {
@@ -110,6 +110,6 @@ var ret = d_declare( "bluegene.utility.Stack", null,
 } );
 
 
-return ret;
+return b_utility_Stack;
 
 } );

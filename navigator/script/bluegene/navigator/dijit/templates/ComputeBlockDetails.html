@@ -1,25 +1,25 @@
 <div>
 
-<div data-dojo-type="dijit.layout.TabContainer" data-dojo-attach-point="_tabContainer">
-    <div title="Details" data-dojo-type="dijit.layout.StackContainer" data-dojo-attach-point="_detailsStack">
-        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_detailsNonePane">
+<div data-dojo-type="dijit/layout/TabContainer" data-dojo-attach-point="_tabContainer">
+    <div title="Details" data-dojo-type="dijit/layout/StackContainer" data-dojo-attach-point="_detailsStack">
+        <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_detailsNonePane">
             Select a block to show block details.
         </div>
-        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_detailsLoadingPane">
-            <span data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_detailsLoadingFmt">
+        <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_detailsLoadingPane">
+            <span data-dojo-type="bluegene/dijit/OutputFormat" data-dojo-attach-point="_detailsLoadingFmt">
                 Loading details for block '${_d}{name}'...
             </span>
 	    </div>
-        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_detailsLoadingErrorPane">
-            <span data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_detailsErrorFmt">
+        <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_detailsLoadingErrorPane">
+            <span data-dojo-type="bluegene/dijit/OutputFormat" data-dojo-attach-point="_detailsErrorFmt">
                 Failed to load details for block '${_d}{name}', error message follows: ${_d}{msg}
             </span>
         </div>
-        <div data-dojo-type="bluegene.navigator.dijit.BlockFields" data-dojo-attach-point="_detailsLoadedPane"></div>
+        <div data-dojo-type="bluegene/navigator/dijit/BlockFields" data-dojo-attach-point="_detailsLoadedPane"></div>
     </div>
 
     <table title="Jobs"
-           data-dojo-type="dojox.grid.EnhancedGrid"
+           data-dojo-type="dojox/grid/EnhancedGrid"
            data-dojo-props="rowsPerPage: 50, selectable: true, noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No jobs used the block.&lt;/span&gt;'"
            data-dojo-attach-point="_jobsGrid">
         <thead><tr>

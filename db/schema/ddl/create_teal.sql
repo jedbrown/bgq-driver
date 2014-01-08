@@ -55,6 +55,7 @@ CREATE TABLE x_tealalertlog (
   "raw_data" VARCHAR(2048) default NULL,
   "comment" VARCHAR(128),
   "disable" VARCHAR(128),
+  "comments" VARCHAR(128),
   PRIMARY KEY  ("rec_id")
 );
 

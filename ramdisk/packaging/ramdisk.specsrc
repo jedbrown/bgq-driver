@@ -101,38 +101,12 @@ The binaries, libraries and scripts for Common I/O Services.
 %{_base_dir}/ramdisk/rpms/bgq-cio_services_runtime-*.rpm
 
 ####################################
-%package linux_modules 
-
-Summary: BG/Q Specific Linux Modules
-Group: %{product_group}
-Release: 0
-requires: %{_bgq_name}-linux
-
-%description linux_modules
-%{bgq_package_description}
-
-The Linux modules to support BG/Q specific functionality including bgmudev, bgvrnic, bgpersdev, bgrasdev and bgfirmwaredev.
-
-%files linux_modules
-
-%defattr(-,root,root,755)
-%dir %{_parent_dir}
-%dir %{_base_dir}
-%dir %{_base_dir}/ramdisk
-%dir %{_base_dir}/ramdisk/initramfs
-%dir %{_base_dir}/ramdisk/initramfs/lib
-%dir %{_base_dir}/ramdisk/initramfs/usr
-%dir %{_base_dir}/ramdisk/initramfs/usr/lib64
-
-%{_base_dir}/ramdisk/initramfs/lib/modules/
-
-####################################
 %package distrofs
 
 Summary: BG/Q Linux Distribution Image and tooling.
 Group: %{product_group}
 Release: 0
-requires: %{_bgq_name}-linux,%{_bgq_name}-ramdisk,%{_bgq_name}-cio_services,%{_bgq_name}-linux_modules,yaci >= 12-7.4.ch4,redhat-lsb >= 4.0-3,mstflint,%{_bgq_name}-baremetal
+requires: %{_bgq_name}-linux,%{_bgq_name}-ramdisk,%{_bgq_name}-cio_services,yaci >= 12-7.4.ch4,redhat-lsb >= 4.0-3,mstflint,%{_bgq_name}-baremetal
 
 %description distrofs 
 %{bgq_package_description}
@@ -208,10 +182,9 @@ Files which are applied to a base RHEL6 image to create the BG/Q Linux Distro NF
 %{_base_dir}/ramdisk/distrofs/tar/etc/
 %{_base_dir}/ramdisk/distrofs/tar/sbin/
 %{_base_dir}/ramdisk/rpms/bgq-distrofs_runtime-*.rpm
-%{_base_dir}/ramdisk/tools/bgqDistrofs*
+%{_base_dir}/ramdisk/tools/bgqDistrofs.rpmlist
+%{_base_dir}/ramdisk/tools/bgqDistrofsInstall.sh
+%{_base_dir}/ramdisk/tools/bgqDistrofsPostInstall.sh
+%{_base_dir}/ramdisk/tools/bgqDistrofsUninstall.sh
 %{_base_dir}/ramdisk/tools/bgqPopulateInitramfs.sh
-%{_base_dir}/ramdisk/tools/mlxFwUpdate/bin
 %{_base_dir}/ramdisk/tools/mlxFwUpdate/etc/
-%{_base_dir}/ramdisk/tools/mlxFwUpdate/lib64
-%{_base_dir}/ramdisk/tools/mlxFwUpdate/usr
-%{_base_dir}/ramdisk/tools/mlxFwUpdate/usr/bin/

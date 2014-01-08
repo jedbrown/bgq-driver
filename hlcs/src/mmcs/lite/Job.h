@@ -24,11 +24,11 @@
 #ifndef MMCS_LITE_JOB_H
 #define MMCS_LITE_JOB_H
 
-#include "lite/ClassRoute.h"
-#include "lite/Connection.h"
-#include "lite/JobInfo.h"
+#include "ClassRoute.h"
+#include "Connection.h"
+#include "JobInfo.h"
 
-#include "BlockHelper.h"
+#include "server/BlockHelper.h"
 
 #include <ramdisk/include/services/MessageHeader.h>
 
@@ -45,7 +45,10 @@
 
 class BlockControllerBase;
 
+
+namespace mmcs {
 namespace lite {
+
 
 /*!
  * \brief Thread to manage a job.
@@ -116,7 +119,7 @@ public:
      */
     static Ptr create(
             const JobInfo& info,    //!< [in]
-            const BlockPtr& block   //!< [in]
+            const server::BlockPtr& block   //!< [in]
             )
     {
         return Ptr( new Job(info, block) );
@@ -157,7 +160,7 @@ private:
      */
     Job(
             const JobInfo& info,    //!< [in]
-            const BlockPtr& block   //!< [in]
+            const server::BlockPtr& block   //!< [in]
        );
 
     /*!
@@ -282,7 +285,7 @@ private:
     Connection::Ptr _control;                               //!< control connection
     Connection::Ptr _data;                                  //!< data connection
     JobInfo _info;                                          //!<
-    const BlockPtr _block;                                  //!<
+    const server::BlockPtr _block;                          //!<
     const ClassRoute _classRoute;                           //!<
     uint32_t _size;                                         //!<
     int32_t _sim_id;                                        //!<
@@ -296,6 +299,8 @@ private:
     boost::posix_time::ptime _start_time;                   //!<
 };
 
-} // lite
+
+} } // namespace mmcs::lite
+
 
 #endif

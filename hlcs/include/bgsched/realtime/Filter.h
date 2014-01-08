@@ -462,6 +462,60 @@ public:
     const std::string* getRasComputeBlockIdPattern_p() const;
 
 
+    /*!
+     *  \brief Set the I/O drawers filter option.
+     *
+     *  This is new for V1R2M0.
+     *
+     *  If this is true, then I/O drawer events will be sent.
+     *
+     *  If this is false, I/O drawer events will not be sent.
+     *
+     *  The default is false.
+     *
+     *  \ingroup V1R2
+     */
+    void setIoDrawers(
+            bool io_drawers //!< [in] New setting for the filter option. false=do not send I/O drawer state changes.
+        );
+
+    /*!
+     *  \brief Get the I/O drawers filter option.
+     *
+     *  This is new for V1R2M0.
+     *
+     *  \ingroup V1R2
+     */
+    bool getIoDrawers() const;
+
+
+    /*!
+     *  \brief Set the I/O nodes filter option.
+     *
+     *  This is new for V1R2M0.
+     *
+     *  If this is true, then I/O node events will be sent.
+     *
+     *  If this is false, I/O node events will not be sent.
+     *
+     *  The default is false.
+     *
+     *  \ingroup V1R2
+     */
+    void setIoNodes(
+            bool io_nodes //!< [in] New setting for the filter option. false=do not send I/O node state changes.
+        );
+
+    /*!
+     *  \brief Get the I/O nodes filter option.
+     *
+     *  This is new for V1R2M0.
+     *
+     *  \ingroup V1R2
+     */
+    bool getIoNodes() const;
+
+
     class Impl;
     typedef boost::shared_ptr<Impl> Pimpl;
 

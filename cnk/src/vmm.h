@@ -92,12 +92,15 @@ enum SegmentType
     IS_RAMDISK,
     IS_SCRUBWINDOW,
     IS_USERMMIO,
+    IS_COMMONHEAP,
     IS_SEGMENTTYPECOUNT // Add new types before this one
 };
 
 enum MapperFlags
 {
     MAPPERFLAGS_ALIGN16,
+    MAPPERFLAGS_NOALIASES,
+    MAPPERFLAGS_COMMONHEAP,
     MAPPERFLAGS_COUNT
 };
 

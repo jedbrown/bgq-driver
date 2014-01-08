@@ -104,7 +104,6 @@ JobControl::init(cnv_pd *protectionDomain, cnv_cq *completionQ)
    // Send the message to jobctld.  Assumption is using _inMessage1Region for receiving first message
    err = exchangeMessages(completionQ);
    if (err != 0) {
-      //! \todo Send a RAS event.
       Kernel_Unlock(&_lock);
       return err;
    }
@@ -410,7 +409,6 @@ JobControl::startJob(cnv_mr * inMsgRegion)
        }
    }
    else {
-      //! \todo Need to reset the cores so the next job can be loaded, by sending a signal?
       printf("(E) job %lu not found when handling StartJob message\n", inMsg->header.jobId);
       returnCode = bgcios::JobIdError;
    }
@@ -437,19 +435,29 @@ JobControl::startJob(cnv_mr * inMsgRegion)
 int
 JobControl::signalJob(cnv_mr * inMsgRegion)
 {
-   // No locking, oversubscription prevented at IO node
    // Get pointer to inbound SignalJob message.
    SignalJobMessage *inMsg = (SignalJobMessage *)inMsgRegion->addr;
    TRACE( TRACE_Jobctl, ("(I) JobControl::signalJob%s: Job %lu: received SignalJob message with signal %d\n", whoami(), inMsg->header.jobId, inMsg->signo) );
 
-   // Signal the job.
-   App_SignalJob(inMsg->header.jobId, inMsg->signo);
+   // Build the SignalJobAck message.
+   SignalJobAckMessage *outMsg = (SignalJobAckMessage *)_outMessageRegionAck.addr;
+   memcpy(&(outMsg->header), &(inMsg->header), sizeof(bgcios::MessageHeader));
+   outMsg->header.type = SignalJobAck;
+   outMsg->header.length = sizeof(SignalJobAckMessage);
+   outMsg->header.returnCode = bgcios::Success;
+   outMsg->header.errorCode = 0;
+   // Obtain local copy of the signal so that we can post the receive and send the ack before we actually signal the job.
+   int signo_local = inMsg->signo;
 
-   // Get the next message.
+   // Post a receive since now done with inbound
    postRecv(inMsgRegion);
+   // Send the SignalJobAck message to jobctld.
+   postSendAck();
+   // Signal the job. We purposely do this after we sent the SignalJobAck.
+   App_SignalJob(outMsg->header.jobId, signo_local);
 
-   Kernel_WriteFlightLog(FLIGHTLOG_high, FL_JOBSIGNAL, inMsg->header.jobId, inMsg->signo, 0, 0);
-   TRACE( TRACE_Jobctl, ("(I) JobControl::signalJob%s: Job %lu: delivered signal %d\n", whoami(), inMsg->header.jobId, inMsg->signo) );
+   Kernel_WriteFlightLog(FLIGHTLOG_high, FL_JOBSIGNAL, outMsg->header.jobId, signo_local, 0, 0);
+   TRACE( TRACE_Jobctl, ("(I) JobControl::signalJob%s: Job %lu: delivered signal %d\n", whoami(), outMsg->header.jobId, signo_local) );
 
    return 0;
 }
@@ -472,9 +480,9 @@ JobControl::exitJob(uint64_t jobId, uint32_t exitStatus)
    outMsg->header.returnCode = bgcios::Success;
    outMsg->header.errorCode = 0;
    outMsg->header.sequenceId = _sequenceId++;
-   outMsg->header.rank = 0; // Is it OK to use GetMyProcess()->Rank;
+   outMsg->header.rank = 0; // Rank has no meaning for the exitJob message. Also control blocks holding the rank have been initialized. Just set zero.
    outMsg->status = exitStatus;
-   outMsg->endTime = 0; //! \todo Need to set to actual value (maybe should be a timespec).
+   outMsg->endTime = 0; // This field should have been defined as usecs (to match startJob time) and not time_t. However change would ripple through control system.
 
    // Send the message to jobctld.
    postSendCmd();

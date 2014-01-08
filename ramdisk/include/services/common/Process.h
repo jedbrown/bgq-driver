@@ -114,7 +114,7 @@ public:
    //! \param  signo Signal number to send.
    //! \return 0 when successful, errno when unsuccessful.
 
-   int signal(int signo)
+   virtual int signal(int signo)
    {
       int rc = kill(_processId, signo);
       if (rc != 0) rc = errno;

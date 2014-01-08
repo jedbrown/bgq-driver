@@ -236,7 +236,7 @@ int ToolController::startup(uint32_t serviceId)
 
     // Create a memory region for inbound messages.
     RdmaMemoryRegionPtr inMessageRegion = RdmaMemoryRegionPtr(new RdmaMemoryRegion());
-    int err = inMessageRegion->allocate(_protectionDomain, bgcios::SmallMessageRegionSize);
+    int err = inMessageRegion->allocate64kB(_protectionDomain);
     if (err != 0)
     {
         LOG_ERROR_MSG("error allocating first inbound message region: " << bgcios::errorString(err));
@@ -249,7 +249,7 @@ int ToolController::startup(uint32_t serviceId)
 
     // Create a second memory region for inbound messages.
     RdmaMemoryRegionPtr inMessageRegion2 = RdmaMemoryRegionPtr(new RdmaMemoryRegion());
-    err = inMessageRegion2->allocate(_protectionDomain, bgcios::SmallMessageRegionSize);
+    err = inMessageRegion2->allocate64kB(_protectionDomain);
     if (err != 0)
     {
         LOG_ERROR_MSG("error allocating second inbound message region: " << bgcios::errorString(err));
@@ -262,7 +262,7 @@ int ToolController::startup(uint32_t serviceId)
 
     // Create a memory region for outbound messages.
     _outMessageRegion = RdmaMemoryRegionPtr(new RdmaMemoryRegion());
-    err = _outMessageRegion->allocate(_protectionDomain, bgcios::SmallMessageRegionSize);
+    err = _outMessageRegion->allocate64kB(_protectionDomain);
     if (err != 0)
     {
         LOG_ERROR_MSG("error allocating outbound message region: " << bgcios::errorString(err));
@@ -271,7 +271,7 @@ int ToolController::startup(uint32_t serviceId)
     LOG_CIOS_DEBUG_MSG("created outbound message region with local key " << _outMessageRegion->getLocalKey());
 
     _outMessageRegion2 = RdmaMemoryRegionPtr(new RdmaMemoryRegion());
-    err = _outMessageRegion2->allocate(_protectionDomain, bgcios::SmallMessageRegionSize);
+    err = _outMessageRegion2->allocate64kB(_protectionDomain);
     if (err != 0)
     {
         LOG_ERROR_MSG("error allocating outbound message region2: " << bgcios::errorString(err));
@@ -979,18 +979,18 @@ void ToolController::routeMessageFromTool(ToolctlMessagePtr& message)
 
 void ToolController::removeTool(const ToolPtr& tool)
 {
-    // get the toolid assocated with this tool
-    uint32_t toolId = tool->getToolId();
-    // Just ignore a request to remove the default tool.
-    if (toolId == DefaultToolId)
-    {
-        return;
-    }
     // Remove tool from the list of connected tool channels
     bgcios::LocalStreamSocketPtr toolChannel = tool->getChannel();
     _toolChannels.remove(toolChannel->getSd());
     toolChannel.reset();
 
+    // get the toolid assocated with this tool
+    uint32_t toolId = tool->getToolId();
+    // Just ignore a request to remove the default tool from the list of attached tools.
+    if (toolId == DefaultToolId)
+    {
+        return;
+    }
     // Remove tool from the list of attached tools.
     _tools.remove(toolId);
     LOG_CIOS_INFO_MSG(tool->getPrefix() << "removed tool from list of connected and attached tools");

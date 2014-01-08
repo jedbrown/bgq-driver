@@ -42,29 +42,32 @@ Args* pargs;
 
 pid_t
 startMaster(
-        std::string& path,
-        std::string& args
+        const std::string& path,
+        const std::string& args
         )
 {
-    std::string path_and_args = path + args;
+    const std::string path_and_args = path + args;
     int pipefd;
     std::string error;
-    // Can we check to see if the lock file gets updated before exiting?
-    return Exec::fexec(pipefd, path_and_args, error, false);
+    const pid_t result = Exec::fexec(pipefd, path_and_args, error, false);
+    if ( result == -1 ) {
+        std::cerr << error << std::endl;
+    }
+
+    return result;
 }
 
 void
 doStart(
-        std::string& target,
-        std::string location=""
+        const std::string& target
         )
 {
-    std::string commandstring = "";
-    if (target.length() != 0) {
+    std::string commandstring;
+    if (!target.empty()) {
         try {
             commandstring = pargs->get_props()->getValue("master.binmap", target);
-        } catch (std::invalid_argument& e) {
-            std::cerr << "Properties file error, invalid alias found. Error is: " << e.what() << std::endl;
+        } catch (const std::invalid_argument& e) {
+            std::cerr << "Properties file error: " << e.what() << std::endl;
             exit(EXIT_FAILURE);
         }
     }
@@ -74,8 +77,8 @@ doStart(
     tokenizer tok(commandstring, sep);
 
     int i = 0;
-    std::string path="";
-    std::string arguments="";
+    std::string path;
+    std::string arguments;
     for (tokenizer::iterator beg=tok.begin(); beg!=tok.end();++beg){
         if (i == 0) {
             path = (*beg);
@@ -86,35 +89,38 @@ doStart(
         ++i;
     }
 
-    std::string st;
-
-    pid_t child = 0;
     if (target == "bgmaster_server" || target == "bgmaster") { // bgmaster_server
         std::string propstr = "--properties";
         std::string properties = (*pargs)[propstr];
         if (properties.length() != 0)
             arguments += " --properties " + properties;
-        child = startMaster(path, arguments);
-        int exit_status = 0;
-        if (child != 0)
-            waitpid(child, &exit_status, 0);
-    } else {
-        LOG_DEBUG_MSG("Sending start message " << path << " " << arguments << " for " << target);
-        BGAgentId id(location);
-        BinaryId started_id;
-        try {
-            started_id = client.start(target, &id);
-        } catch(exceptions::BGMasterError& e) {
-            std::cerr << "Unable to start all selected binaries. Error is: " << e.what() << std::endl;
+        const pid_t child = startMaster(path, arguments);
+        if (child == -1) {
             exit(EXIT_FAILURE);
         }
-        st = started_id;
+
+        // bgmaster_server will daemonize itself so we need to wait for
+        // the child to exit
+        int exit_status = 0;
+        waitpid(child, &exit_status, 0);
+
+        return;
     }
 
-    if (child) {
-        std::cout << "Started " << target << ":" << ++child << std::endl;
+    LOG_DEBUG_MSG("Sending start message " << path << " " << arguments << " for " << target);
+    BGAgentId id;
+    BinaryId started_id;
+    try {
+        started_id = client.start(target, &id);
+    } catch(const exceptions::BGMasterError& e) {
+        std::cerr << "Unable to start all selected binaries. Error is: " << e.what() << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if ( !target.empty() ) {
+        std::cout << "started " << target << ":" << std::string(started_id) << std::endl;
     } else {
-        std::cout << "Started " << target << ":" << st << std::endl;
+        std::cout << "started all binaries" << std::endl;
     }
 }
 
@@ -138,7 +144,7 @@ int main(int argc, const char** argv)
     validargs.push_back("*"); // One argument without a "--" is allowed
     Args largs(argc, argv, &usage, &help, validargs, singles);
     pargs = &largs;
-    client.initProperties(pargs->_props);
+    client.initProperties(pargs->get_props());
 
     // See if "bgmaster" is specified
     bool bgmaster = false;
@@ -153,11 +159,11 @@ int main(int argc, const char** argv)
         }
     }
 
-    std::string s = "";
+    std::string s;
     if (bgmaster)
         s = "bgmaster_server";
     else if(binaries) {
-        s = "";
+        s.clear();
     }
     else {
         if (pargs->size() != 0)
@@ -172,7 +178,7 @@ int main(int argc, const char** argv)
         try {
             client.connectMaster(pargs->get_portpairs());
         }
-        catch(exceptions::BGMasterError& e) {
+        catch(const exceptions::BGMasterError& e) {
             std::cerr << "Unable to contact bgmaster_server, server may be down." << std::endl;
             exit(EXIT_FAILURE);
         }

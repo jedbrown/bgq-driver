@@ -77,6 +77,18 @@ typedef struct
 }
 KernelInfo_t;
 
+
+typedef struct
+{
+    int fd;
+    int isShar;
+    char filename[64];
+    uint64_t vaddr;
+    uint64_t off;
+    uint64_t size;
+}
+KernelMappedFiles_t;
+
 // We reserve a fixed amount of space in the text segment for the
 // KernelInfo structure.  Must be a power of 2.  Also, must be at least 4KB
 // so the structure remains outside the mmap'd text segment in dynamically
@@ -155,10 +167,16 @@ typedef struct AppProcess_t
 
     // ProcessorID of the process leader
     int ProcessLeader_ProcessorID;
+
+    // Request to core dump this specific rank
+    uint8_t coreDumpRank; 
+    
     // KThread of the process leader
     KThread_t *ProcessLeader_KThread;
     // hwthread mask of hwthreads in this process
     uint64_t HwthreadMask;  // bit significant for hwthread 0 through 63.
+    // hwthread mask of remote pthread_setaffinity targets
+    uint64_t HwthreadMask_Remote; 
 
     // HWThread Count: how many hardware threads are in this process
     int      HWThread_Count;
@@ -190,9 +208,6 @@ typedef struct AppProcess_t
     uint64_t Guard_Enable;
     // Size of the guard page for the process leader's  stack
     uint32_t Guard_Size;
-    // Number of entries in the futex table for this process
-    int32_t futexTableSize;
-
 
     // Virtual Address Bounds for Text/Data/Heap/Shared Segments,
     uint64_t Text_VStart,
@@ -248,15 +263,24 @@ typedef struct AppProcess_t
     
     // file descriptors
     CNK_Descriptors_t App_Descriptors;
-
+    
+#if CONFIG_AVOID_READLINK
+    // hack around readlink issue
+    int LAST_OPEN_FD;
+    char LAST_OPEN_FILENAME[APP_MAX_PATHNAME];
+#endif
+    
     // Current working directory
     char CurrentDir[ APP_MAX_PATHNAME ];
     
     // Current umask value
     mode_t CurrentUmask;
-
+    
+    // List of files that have been mmap'd into the process address space
+    KernelMappedFiles_t mappedFiles[CONFIG_NUM_MAPPED_FILENAMES];
+    
     // Futex state table for PRIVATE futexes scoped to the process. 
-    Futex_State_t *Futex_Table_Private;
+    Futex_State_t Futex_Table_Private[NUM_FUTEX];
     
     // Address of stored AuxVecs. This points into the area at the bottom of the stack where the aux vecs were stored
     // at main thread start. The debugger can ask for these vectors.
@@ -268,7 +292,7 @@ typedef struct AppProcess_t
     // Core dump control
     uint32_t coreDumpOnExit;
     KThread_t* coredump_kthread;
-    uint8_t  binaryCoredump;
+    uint8_t  binaryCoredump; // 0:not binary, 1:explicit request for binary on this rank, 2:requested binary on all ranks
 
     // Flags for dynamic library support
     uint8_t sharedObjectFile;  //!< True if this is a shared object application invocation
@@ -333,29 +357,31 @@ typedef struct AppProcess_t
 // Declarations
 void __NORETURN App_AgentExit(int phase);
 void            App_ClearMemory();
-void __NORETURN App_Exit(int phase);
+void            App_Exit(int phase, int noReturn);
 AppState_t *    App_GetAppFromJobid(uint32_t jobid);
 uint32_t        App_GetEnvString(const char* envname, const char** value);
 uint32_t        App_GetEnvValue(const char* envname, uint32_t* value);
 uint32_t        App_GetEnvValue64(const char* envname, uint64_t* value);
 void            App_Load();
 void            App_LoadAgent();
-void __NORETURN App_ProcessExit( uint32_t status);
+void            App_ProcessExit( uint32_t status);
 void            App_Reset();
 void            App_SetLoadState(uint32_t loadState, uint32_t returnCode, uint32_t errorCode);
 int             App_SignalJob(uint32_t jobid, int signum);
-void __NORETURN App_ThreadExit( int status );
+void __NORETURN App_ThreadExit( int status, KThread_t *kthread );
 int             App_Start(AppState_t *appState);
 int             App_RunPreLoadedApp(void);
 void            App_ReportProcessExit(AppProcess_t *proc);
 int             App_ReportJobExit();
 int             App_IsJobLeaderNode();
+int             App_IsLoadLeaderNode();
 void            App_RegisterNodeAvailable();
 uint64_t        App_RegisterAbnormalProcessExit();
 void            App_SavePersistent();
 int             App_IsCollectiveLoadActive();
 void            App_ActivateCollectiveLoad();
-int             App_DumpCorePacingBegin(uint64_t);
+void            App_RemoteThreadExit( AppProcess_t *proc);
+int             App_DumpCorePacingBegin();
 int             App_DumpCorePacingEnd();
 
 int             Guard_Adjust( uint64_t high_mark, MoveGuardDirection_t direction, int ipiRedrive );
@@ -370,6 +396,8 @@ void            Process_MakeHwThreadAvail(AppProcess_t *pAppProcess, int hwthrea
 void            Process_MakeHwThreadAvail(AppProcess_t*,int);
 void            Process_SetStackGuard();
 int             Process_SetupValidate(int appLeaderCoreIndex, int numProcesses, int numCores);
+
+extern int ProcFS_GenMaps(AppProcess_t* proc);
 
 #endif // __KERNEL__ and not __ASSEMBLY__
 

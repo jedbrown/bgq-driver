@@ -61,8 +61,10 @@ extern "C" void UPC_Init(uint64_t jobID);
 extern uint32_t GetEnvString(bgcios::jobctl::LoadJobMessage *msg, const char* envname, char** value);
 extern uint32_t GetEnvValue(bgcios::jobctl::LoadJobMessage *msg, const char* envname, uint32_t* value);
 extern uint32_t GetEnvValue64(bgcios::jobctl::LoadJobMessage *msg, const char* envname, uint64_t* value);
+extern void App_SetupLoadLeader();
+extern int  App_CheckGloballyForLoadFailure();
 
-
+int ProcFS_ProcessInit(AppProcess_t* proc);
 
 
 /*! \brief Returns the string of an environment variable
@@ -175,9 +177,10 @@ void App_CacheLineLockingConfig( AppProcess_t *pProc )
 
     if (!App_GetEnvValue("BG_L2_OVERLOCK_THRESHOLD", &value) || (value >= 16))
     {
-	value = 10; // restore default
+        value = 0;   // restore default
     }
     l2_set_overlock_threshold(value);
+    l2_set_spec_threshold(value);
 
     if (!App_GetEnvValue("BG_L2LOCK_L1_ONLY", &value) || (value != 1))
     {
@@ -210,13 +213,23 @@ void App_SetLoadState(uint32_t loadState, uint32_t returnCode, uint32_t errorCod
 
 // Test the progress of the Application load that is taking place. If an error has been
 // detected, gracefully exit the loading sequence
-static void App_TestLoadProgress(AppState_t *pAppState)
+static void App_TestLoadProgress(AppState_t *pAppState,uint32_t returnCode, uint32_t errorcode)
 {
+    Kernel_Barrier(Barrier_HwthreadsInApp);
+    if ( IsAppLeader() )
+    {
+        if (App_CheckGloballyForLoadFailure() != 0)
+        {
+            if(GetMyAppState()->LoadState != AppState_LoadFailed)
+            {
+                App_SetLoadState(AppState_LoadFailed, returnCode, errorcode);
+            }
+        }
+    }
+    Kernel_Barrier(Barrier_HwthreadsInApp);
     // Test to see if an application load error has been detected. 
     if (pAppState->LoadState == AppState_LoadFailed)
     {
-        // Barrier so we know that all threads are aware of the load error
-        Kernel_Barrier(Barrier_HwthreadsInApp);
         if (IsProcessLeader())
         {
             App_ProcessExit(0); // just provide normal exit status. The LoadError state info will indicate the load problem
@@ -282,7 +295,9 @@ void  App_CreateMainThread( uint64_t app_start, int priv )
     AppProcess_t *pProc = pKThr->pAppProc;
     pProc->ProcessLeader_KThread = pKThr;
     pProc->PID = GetTID(pKThr);
-
+    
+    ProcFS_ProcessInit(pProc);  // we now know the PID, create /proc files
+    
     pProc->msrRequired = priv ? (MSR_CNK|MSR_EE|MSR_FP) : MSR_APP_REQUIRED;
     pProc->msrForbidden = priv ? 0 : MSR_APP_FORBIDDEN;
     uint64_t app_sp = 0, app_tos = 0, app_bos = 0;
@@ -315,6 +330,7 @@ void  App_CreateMainThread( uint64_t app_start, int priv )
     pKThr->FutexQueueNext = (KThread_t *)0;
     pKThr->Pending        = 0;
     pKThr->AlignmentExceptionCount = 0;
+    pKThr->physical_pid = pProc->PhysicalPID;
     if (pProc->Guard_Enable)
     {
         // Setup the guard register values for this kthread. Must use real addresses. Since the 
@@ -710,7 +726,7 @@ int App_GenSegmentRanges(AppState_t &appState, SegmentRanges &segment_range)
 //
 // Note: ABI places requirements regarding Stacks in multi-threaded programs.
 //
-int  App_SetupMemory( Personality_t *pPers /* TODO !!!!, _VMM_RasData* pRasData*/ )
+int  App_SetupMemory( Personality_t *pPers)
 {
     AppState_t *pAppState = GetMyAppState();
     uint32_t numProcs = pAppState->Active_Processes;
@@ -836,31 +852,30 @@ int  App_SetupMemory( Personality_t *pPers /* TODO !!!!, _VMM_RasData* pRasData*
     {
         App_GetEnvValue("BG_PERSISTMEMSIZE", &persistmem);
     }
+    
     // If persistent memory reset has been requested and a previous allocation existed, or the size of 
     // the new persistent memory has changed (including a size of 0) we must clear that data.
     if (NodeState.PersistentMemory.VStart &&  // Test for an allocation from a previous job 
         (persistReset || (persistmem != (NodeState.PersistentMemory.Size/VMM_PAGE_SIZE_1M)))) // Reset requested or a size change
     {
+        uint64_t startPage = NodeState.PersistentMemory.PStart/VMM_PAGE_SIZE_1M;
+        uint64_t numPages  = NodeState.PersistentMemory.Size/VMM_PAGE_SIZE_1M;
+        uint64_t tempV     = 0x0000000400000000ull;
+        
+        for(uint64_t i=0; i < numPages; i++)
+        {
+            vmm_MapUserSpace( APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_ESEL(3) | APP_FLAGS_NONSPECULATIVE,
+                              (void*)((startPage+i)*VMM_PAGE_SIZE_1M),
+                              (void*)tempV,
+                              VMM_PAGE_SIZE_1M,0,0);
+            memset((void*)tempV,0x00,VMM_PAGE_SIZE_1M);
+            
+            vmm_UnmapUserSpace((void*)tempV, VMM_PAGE_SIZE_1M, 0);
+        }
+        
         // initialize the control information associated with the allocated persistent memory
         virtFS* persistFS = File_GetFSPtrFromType(FD_PERSIST_MEM);
         persistFS->clearAllocations();
-        
-        uint64_t startPage = NodeState.PersistentMemory.PStart/VMM_PAGE_SIZE_1M;
-        uint32_t numPages  = NodeState.PersistentMemory.Size/VMM_PAGE_SIZE_1M;
-        uint64_t tempV     = 0x0000000400000000;
-        
-        for(uint32_t i=0; i < numPages; i++)
-        {
-             vmm_MapUserSpace( APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_ESEL(3) | APP_FLAGS_NONSPECULATIVE,
-                          (void*)((startPage+i)*VMM_PAGE_SIZE_1M),
-                          (void*)tempV,
-                          VMM_PAGE_SIZE_1M,0,0);
-             memset((void*)tempV,0x00,VMM_PAGE_SIZE_1M);
-
-             vmm_UnmapUserSpace((void*)tempV, VMM_PAGE_SIZE_1M, 0);
-        }
-        // Initialize the persistent memory tracking object
-        memset(&NodeState.PersistentMemory, 0x00, sizeof(NodeState.PersistentMemory));
     }
     //printf("Shared mem: %d Persist mem: %d\n", sharedmem, persistmem);
     if (sharedmem || persistmem)
@@ -877,14 +892,14 @@ int  App_SetupMemory( Personality_t *pPers /* TODO !!!!, _VMM_RasData* pRasData*
         {
             uint32_t vstart = NodeState.PersistentMemory.VStart/VMM_PAGE_SIZE_1M;
             uint32_t pstart = NodeState.PersistentMemory.PStart/VMM_PAGE_SIZE_1M;
-            rc = vmm_addSegment(IS_SHAR, vstart, pstart, sharedmem+persistmem, -1, VMM_SEGMENTCOREMASK_ALL, true, true, true,  true, true, false);
+            rc = vmm_addSegment(IS_SHAR, vstart, pstart, sharedmem+persistmem, -1, VMM_SEGMENTCOREMASK_ALL, true, true, true,  true, ((numProcs==64)?true:false), false);
         }
         else
         {
             // Set the size of the persistent memory block
             NodeState.PersistentMemory.Size = (uint64_t)persistmem * VMM_PAGE_SIZE_1M;
             // Add the segment
-            rc = vmm_addSegment(IS_SHAR, 777, 0, sharedmem+persistmem, -1, VMM_SEGMENTCOREMASK_ALL, true, true, false, false, true, false);
+            rc = vmm_addSegment(IS_SHAR, 777, 0, sharedmem+persistmem, -1, VMM_SEGMENTCOREMASK_ALL, true, true, false, false, ((numProcs==64)?true:false), false);
         }
         if(rc)
             return rc;
@@ -971,6 +986,7 @@ int Process_SetupMemory()
         }
         pAppProc->Proc_EntryPoint = pAppState->App_EntryPoint + pAppProc->interpreterBase;
         vmm_getSegment(pAppProc->Tcoord, IS_SHAR, &vaddr, &paddr, &vsize);
+        
         pAppProc->Shared_VStart = vaddr;
         pAppProc->Shared_VEnd   = vaddr + ((vsize>0)?vsize-1:0);
         pAppProc->Shared_PStart = paddr;
@@ -1135,6 +1151,174 @@ void App_SetDmaRanges()
     }
 }
 
+int ProcFS_ProcessInit(AppProcess_t* proc)
+{
+    int fd;
+    char fn[APP_MAX_PATHNAME];
+    char* ptr;
+    snprintf(fn, sizeof(fn), "/proc/%d/cmdline", proc->PID);
+    fd = internal_open(fn, O_CREAT | O_TRUNC | O_WRONLY | O_LARGEFILE, 0666);
+    ptr = &proc->app->App_Args[0];
+    while(*ptr)
+    {
+        internal_write(fd, ptr, strlen(ptr));
+        ptr += strlen(ptr)+1;
+        if(*ptr != 0)
+            internal_write(fd, " ", 1);
+    }
+    internal_close(fd);
+    
+    snprintf(fn, sizeof(fn), "/proc/%d/environ", proc->PID);
+    fd = internal_open(fn, O_CREAT | O_TRUNC | O_WRONLY | O_LARGEFILE, 0666);
+    ptr = &proc->app->App_Env[0];
+    while(*ptr)
+    {
+        internal_write(fd, ptr, strlen(ptr));
+        ptr += strlen(ptr)+1;
+        if(*ptr != 0)
+            internal_write(fd, " ", 1);
+    }
+    internal_close(fd);
+    
+    // Create empty placeholder files for maps, exe, cwd.  
+    snprintf(fn, sizeof(fn), "/proc/%d/maps", proc->PID);
+    fd = internal_open(fn, O_CREAT | O_TRUNC | O_WRONLY | O_LARGEFILE, 0666);
+    internal_close(fd);
+    
+    snprintf(fn, sizeof(fn), "/proc/%d/exe", proc->PID);
+    fd = internal_open(fn, O_CREAT | O_TRUNC | O_WRONLY | O_LARGEFILE, 0666);
+    internal_close(fd);
+    
+    snprintf(fn, sizeof(fn), "/proc/%d/cwd", proc->PID);
+    fd = internal_open(fn, O_CREAT | O_TRUNC | O_WRONLY | O_LARGEFILE, 0666);
+    internal_close(fd);
+
+    return 0;
+}
+
+extern Lock_Atomic_t ShareLock;
+extern Lock_Atomic_t mappedFilesLock;
+extern ShmMgrEntry_t SharedPool[ SHM_MAX_OPENS ];
+
+int ProcFS_GenMaps(AppProcess_t* proc)
+{
+    int fd;
+    char fn[APP_MAX_PATHNAME];
+    
+    snprintf(fn, sizeof(fn), "/proc/%d/maps", proc->PID);
+    fd = internal_open(fn, O_CREAT | O_TRUNC | O_WRONLY | O_LARGEFILE, 0666);
+    char line[256];
+    off64_t  lineoffset;
+    bool     mappedheap;
+    uint64_t heapl;
+    uint64_t heaph = proc->Heap_VEnd+1;
+    uint64_t bestheapl = proc->Heap_VStart;
+    uint64_t heapslice = 0;
+#define MKMAPSENTRY(vstart, vend, perms, offset, filename, indexadjust)  index+=indexadjust; if((vstart >= rejectaddr) && (minaddr > vstart) && ((vstart > rejectaddr) || (minindex < index))) { minaddr = vstart; didwork = true; pickindex = index; lineoffset=0; if((vstart > bestheapl) && (vend <= heaph)) { lineoffset = snprintf(line, sizeof(line), "%lx-%lx rwxp %08lx 00:00 0 [heap%ld]\n", bestheapl, vstart, (uint64_t)0, heapslice); heapl=vend; mappedheap=true; } snprintf(&line[lineoffset], sizeof(line)-lineoffset, "%lx-%lx %s %08lx 00:00 0 %s\n", vstart, vend, perms, (uint64_t)offset, filename); }
+
+#define MKMAPSENTRY2(vstart, vend, perms, offset, filename, indexadjust) index+=indexadjust; if((vend >= rejectaddr) && (minaddr > vend) && ((vend > rejectaddr) || (minindex < index))) { minaddr = vend; didwork = true; pickindex = index; lineoffset=0; snprintf(&line[lineoffset], sizeof(line)-lineoffset, "%lx-%lx %s %08lx 00:00 0 %s\n", vstart, vend, perms, (uint64_t)offset, filename); }
+    
+    // This code is a bit unnecessary, but there seems to be an implicit requirement 
+    // to produce a sorted /proc/self/maps file.
+    uint64_t rejectaddr = 0;
+    uint64_t minaddr    = (uint64_t)&__KERNEL_END;  // ignore addresses in kernel space
+    uint64_t pickindex  = 0;
+    uint64_t minindex   = 0;
+    bool     didwork;
+    uint64_t index;
+    do
+    {
+        index = 0;
+        rejectaddr = minaddr;
+        minaddr  = ~0;
+        minindex = pickindex;
+        didwork      = false;
+        heapl = bestheapl;
+        mappedheap = false;
+        
+        MKMAPSENTRY((uint64_t)VA_MINADDR_MMIO,      (uint64_t)VA_MINADDR_MMIO + 1024*1024*1024, "rw-s", 0, "[mmio]", 1);
+        MKMAPSENTRY((uint64_t)CONFIG_FAST_L1P_BASE, (uint64_t)CONFIG_FAST_L1P_BASE + 1024*1024, "rw-s", 0, "[l1p]", 1);
+        MKMAPSENTRY((uint64_t)CONFIG_FAST_L2_BASE,  (uint64_t)CONFIG_FAST_L2_BASE  + 1024*1024, "rw-s", 0, "[l2]", 1);
+        
+        if(proc->app->invokeWithInterpreter)
+        {
+            MKMAPSENTRY(proc->DYN_VStart,  proc->DYN_VEnd+1,  "rwxp", 0, proc->app->InterpreterPathAndName, 1);
+        }
+        else
+        {
+            MKMAPSENTRY(proc->Text_VStart, proc->Text_VEnd+1, "r-xs", 0, proc->app->App_Args, 1);   // text segment
+            MKMAPSENTRY(proc->Data_VStart, proc->Data_VEnd+1, "rw-p", 0, proc->app->App_Args, 1);   // data segment
+        }
+        MKMAPSENTRY2(bestheapl, proc->Heap_VEnd+1, "rwxp", 0, "[heap_and_stack]", 1);
+        
+        int i;
+        char name[64];
+        uint64_t l2atomicindex = 0;
+        uint64_t processwinindex = 0;
+        for(i=0; i<512; i++)
+        {
+            index++;
+            uint64_t vaddr, paddr, size;
+            enum SegmentType type;
+            int rc = vmm_getSegmentEntryBySlot(proc->Tcoord, i, &type, &vaddr, &paddr, &size);
+            if((rc == 0) && (type == IS_ATOMICRGN))
+            {
+                snprintf(name, sizeof(name), "[l2atomic%ld]", l2atomicindex++);
+                MKMAPSENTRY(vaddr, vaddr+size, "rw-p", 0, name, 0);
+            }
+            else if((rc == 0) && (type == IS_PROCESSWINDOW))
+            {
+                snprintf(name, sizeof(name), "[process_window%ld]", processwinindex++);
+                MKMAPSENTRY(vaddr, vaddr+size, "r--s", 0, name, 0);
+            }
+        }
+        
+        // \todo this could be cleaned up.  AppSetup.cc shouldn't need to know the internal structures of shmFS
+        Kernel_Lock(&ShareLock);
+        for(i=0; i<SHM_MAX_OPENS; i++)
+        {
+            uint64_t vaddr, size;
+            index++;
+            if(SharedPool[i].AllocatedAddr != 0)
+            {
+                vaddr = SharedPool[i].AllocatedAddr;
+                size  = SharedPool[i].AllocatedSize;
+                strncpy(fn, SharedPool[i].FileName, sizeof(fn));
+                Kernel_Unlock(&ShareLock);
+                MKMAPSENTRY(vaddr, vaddr+size, "rw-s", 0, fn, 0);
+                Kernel_Lock(&ShareLock);
+            }
+        }
+        Kernel_Unlock(&ShareLock);
+        
+        Kernel_Lock(&mappedFilesLock);
+        for(i=0; i<CONFIG_NUM_MAPPED_FILENAMES; i++)
+        {
+            index++;
+            if(proc->mappedFiles[i].vaddr != 0)
+            {
+                MKMAPSENTRY(proc->mappedFiles[i].vaddr, proc->mappedFiles[i].vaddr + proc->mappedFiles[i].size, ((proc->mappedFiles[i].isShar)?"rwxs":"rwxp"), proc->mappedFiles[i].off, proc->mappedFiles[i].filename, 0);
+            }
+        }
+        Kernel_Unlock(&mappedFilesLock);
+        
+        bestheapl = heapl;
+        if(mappedheap)
+        {
+            heapslice++;
+        }
+        if(didwork)
+        {
+            internal_write(fd, line, strlen(line));
+        }
+    }
+    while(didwork);
+    
+    internal_close(fd);
+    return 0;
+}
+
+
 //
 // App_Load():
 //   This is the target of the ipi load application request and runs on all the hwthreads of the App
@@ -1161,14 +1345,25 @@ void App_Load()
         // Set the state of the Application to indicate that a Load is in progress
         App_SetLoadState(AppState_Loading, 0, 0);
         
-        // set default allowing mapping processes aligned to 16MB boundaries (as opposed to 16GB)
-        uint32_t align16 = 0;
-        App_GetEnvValue("BG_MAPALIGN16", &align16);
-        vmm_setFlags(MAPPERFLAGS_ALIGN16, align16);
-        
         // Setup the path to the appropriate static mapper objects for this job and initialize it. 
         uint32_t numProcs = pAppState->Active_Processes;
         int      numAgents = popcnt64(NodeState.AppAgents);
+        
+        // set default allowing mapping processes aligned to 16MB boundaries (as opposed to 16GB)
+        uint32_t align16 = 0;
+        if(numProcs > 16)      // set default for ppn=32, ppn=64.  
+            align16 = 1;
+        App_GetEnvValue("BG_MAPALIGN16", &align16);
+        vmm_setFlags(MAPPERFLAGS_ALIGN16, align16);
+        
+        uint32_t noaliases = 0;
+        App_GetEnvValue("BG_MAPNOALIASES", &noaliases);  // \todo find better name for option
+        vmm_setFlags(MAPPERFLAGS_NOALIASES, noaliases);
+        
+        uint32_t commonheap = 0;
+        App_GetEnvValue("BG_MAPCOMMONHEAP", &commonheap);  // \todo find better name for option
+        vmm_setFlags(MAPPERFLAGS_COMMONHEAP, commonheap);
+        
         vmm_resetStaticMap(numProcs, numAgents, ((IsSubNodeJob()) ? ProcessorCoreID() : -1));
 
         // Initialize file systems.
@@ -1176,12 +1371,12 @@ void App_Load()
         {
             TRACE( TRACE_Jobctl, ("(E) Bad return code from File_JobSetup()\n") );
         }
+        GetMyAppState()->LoadSequence = (~0);
     }
+    
+    // barrier necessary to ensure file system is setup first.  
     Kernel_Barrier(Barrier_HwthreadsInApp);
-
-    // Test to see if an application load error has been detected. 
-    App_TestLoadProgress(pAppState); // This call will not return if an application load error was detected
-
+    
     if ( IsProcessLeader() )
     {
         // Initialize process-scoped file system resources.
@@ -1189,16 +1384,7 @@ void App_Load()
         {
             TRACE( TRACE_Jobctl, ("(E) Bad return code from File_ProcessSetup()\n") );
         }
-    }
-    Kernel_Barrier(Barrier_HwthreadsInApp);
-    if ( IsAppLeader() )
-    {
-        setupMapFile();
-    }
-    Kernel_Barrier(Barrier_HwthreadsInApp);
-    
-    if ( IsProcessLeader() )
-    {
+
         // Find the rank of this process.
         rc = getMyRank(&pProc->Rank);
         if(rc)
@@ -1211,11 +1397,9 @@ void App_Load()
             pProc->State = ProcessState_RankInactive;
         }
     }
-    Kernel_Barrier(Barrier_HwthreadsInApp);
-
     // Test to see if an application load error has been detected. 
-    App_TestLoadProgress(pAppState); // This call will not return if an application load error was detected
-
+    App_TestLoadProgress(pAppState, bgcios::AppInvalidorMissingMapfile, 0); // This call will not return if an application load error was detected
+    
     // We will setup memory in the AppLeader thread other threads wait.     
     if ( IsAppLeader() )
     {
@@ -1224,10 +1408,12 @@ void App_Load()
         // Determine if we are going to proceed with a collective job load or is each App Leader going to read the elf
         if(pAppState->PreloadedApplication == 0) 
         {
+            uint32_t enableCollectiveLoad = CNK_COLLECTIVE_APPLOAD;
+            GetMyAppState()->MaxSequence = 0;
+            
             // If the job contains more than 1 node, it is a candidate for collective loading
             if (pAppState->jobLeaderData.NodesInJob > 1)
             {
-                uint32_t enableCollectiveLoad = CNK_COLLECTIVE_APPLOAD;
                 App_GetEnvValue("BG_COLLECTIVELOAD", &enableCollectiveLoad);
                 // Test to see if collective loading is enabled
                 if (enableCollectiveLoad)
@@ -1240,11 +1426,55 @@ void App_Load()
                     //}
                 }
             }
-            uint64_t physical_offset = pAppState->corner.core * ((NodeState.DomainDesc.ddrEnd + 1 - NodeState.DomainDesc.ddrOrigin)/ CONFIG_MAX_APP_CORES);
-            rc = elf_loadimage(pAppState, physical_offset);
-            if (rc != 0)
+            uint32_t sequence;
+            for(sequence=0; sequence <= GetMyAppState()->MaxSequence; sequence++)
             {
-                TRACE( TRACE_Jobctl, ("(E) Bad return code from elf_loadimage.  rc=%d\n", rc) );
+                Kernel_WriteFlightLog(FLIGHTLOG, FL_MPMDSEQST, sequence, GetMyAppState()->LoadSequence, GetMyAppState()->MaxSequence,0);
+                if(enableCollectiveLoad)
+                {
+                    MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+                    
+                    if(sequence == GetMyAppState()->LoadSequence)
+                        configureLoadJobClassroutes(1);
+                    else
+                        configureLoadJobClassroutes(0);
+                    MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+                    if(sequence == GetMyAppState()->LoadSequence)
+                    {
+                            App_SetupLoadLeader();
+                    }
+                    MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+                }
+                
+                if((sequence == GetMyAppState()->LoadSequence) || (enableCollectiveLoad == 0))
+                {
+                    uint64_t physical_offset = pAppState->corner.core * ((NodeState.DomainDesc.ddrEnd + 1 - NodeState.DomainDesc.ddrOrigin)/ CONFIG_MAX_APP_CORES);
+                    rc = elf_loadimage(pAppState, physical_offset);
+                    if (rc != 0)
+                    {
+                        TRACE( TRACE_Jobctl, ("(E) Bad return code from elf_loadimage.  rc=%d\n", rc) );
+                    }
+                }
+                if(enableCollectiveLoad)
+                {
+                    MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+                    rc = App_CheckGloballyForLoadFailure();
+                    if (rc)
+                    {
+                        if(GetMyAppState()->LoadState != AppState_LoadFailed)
+                        {
+                            App_SetLoadState(AppState_LoadFailed, bgcios::AppInvalidorMissingMapfile, 0);
+                        }
+                        break;
+                    }
+                }
+            }
+            if(enableCollectiveLoad)
+            {
+                configureLoadJobClassroutes(1);
+                MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+                App_SetupLoadLeader();
+                MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
             }
         }
         if (rc == 0)
@@ -1288,10 +1518,8 @@ void App_Load()
             }
         }
     }
-    Kernel_Barrier(Barrier_HwthreadsInApp);
-
     // Test to see if an application load error has been detected. 
-    App_TestLoadProgress(pAppState); // This call will not return if an application load error was detected
+    App_TestLoadProgress(pAppState, bgcios::RequestFailed, 0); // This call will not return if an application load error was detected
 
     // If there are Application Agents to set up, start them now. Their Static TLB mappings are now completed
     if ( IsAppLeader() )
@@ -1327,7 +1555,7 @@ void App_Load()
             printf("(E) Bad return code from Process_SetupMemory: %d\n", rc);
 
             // Indicate that we encountered an error during SetupMemory
-            App_SetLoadState(AppState_LoadFailed, bgcios::RequestFailed, rc); //! \todo bgcios::AppMemoryError
+            App_SetLoadState(AppState_LoadFailed, bgcios::AppMemoryError, rc);
 
         }
         else
@@ -1386,8 +1614,10 @@ void App_Load()
                 pProc->Guard_Start = (pProc->Guard_HighMark + guardMask) & ~guardMask;
 
             }
-            
+        
             pProc->binaryCoredump = coredump_binary_for_rank(pProc);
+            pProc->coreDumpRank = coredump_for_rank(pProc);
+
 	    // per-thread limit on number of alignment exceptions that will be
 	    // handled before signals are generated
 	    uint32_t maxcnt;
@@ -1408,13 +1638,10 @@ void App_Load()
 	    }
         }
 	Signal_ProcessInit(pProc->SignalData);
-        
         memset(pProc->resourceLimits, 0xff, sizeof(pProc->resourceLimits));
     }
-    Kernel_Barrier(Barrier_HwthreadsInApp);
-
     // Test to see if an application load error has been detected. 
-    App_TestLoadProgress(pAppState); // This call will not return if an application load error was detected
+    App_TestLoadProgress(pAppState, bgcios::RequestFailed, 0); // This call will not return if an application load error was detected
 
     if(pProc)
     {
@@ -1423,6 +1650,7 @@ void App_Load()
             vmm_installStaticTLBMap(pProc->Tcoord);
             App_SetIULivelockConfig();
         }
+        GetMyKThread()->physical_pid = pProc->PhysicalPID; // Initialize the process pid value into the kernel kthread.
         mtspr(SPRN_PID, pProc->PhysicalPID);
         isync();
 
@@ -1474,7 +1702,7 @@ void App_Load()
     }
 
     // Test to see if an application load error has been detected. 
-    App_TestLoadProgress(pAppState); // This call will not return if an application load error was detected
+    App_TestLoadProgress(pAppState, bgcios::RequestFailed, 0); // This call will not return if an application load error was detected
     
     // Setup the SPR used by the kernel to implement user-state kernel SPIs. We are setting this value directly
     // into the hardware SPR register. The low-core register state restore flows will not write to the hardware SPRs.
@@ -1572,7 +1800,7 @@ void App_Load()
     if ( IsProcessLeader() )
     {
         // Determine if this process is enabled for system call tracing.
-        if ((uint32_t)pAppState->RankForStrace == pProc->Rank)
+        if(((uint32_t)pAppState->RankForStrace == pProc->Rank) && (pProc->State != ProcessState_RankInactive))
         {
             pProc->straceEnabled = true;
         }
@@ -1589,8 +1817,8 @@ void App_Load()
         if (pProc->State == ProcessState_RankInactive)
         {
             // Begin exit flow for all threads of a process that are "Rank Inactive"
-            App_Exit(AppExit_Phase1);
-            // Previous call does not return
+            App_Exit(AppExit_Phase1, 1);
+            // Previous call will not return
         }
 
         TRACE( TRACE_Process, ("(I) App_Run[%2d:%d]: Secondary thread entering scheduler.\n",
@@ -1708,8 +1936,8 @@ void App_LoadAgent()
     {
         // install the TLBs
         vmm_installStaticTLBMap(pAgentProc->Tcoord);
-
-        // Set background scrub TLB location
+        
+        // Set background scrub TLB location                                                                                                    
         vmm_setScrubSlot();
     }
     mtspr(SPRN_PID, pAgentProc->PhysicalPID);
@@ -1951,8 +2179,112 @@ int App_IsCollectiveLoadActive()
     return ((GetMyAppState()->jobLeaderData.collectiveLoadStatus.word.iteration) ? 1 : 0);
 }
 
+int App_CheckGloballyForLoadFailure()
+{
+    MUHWI_Destination_t dest;
+    dest.Destination.Destination = 0;
+    volatile uint64_t errCount = 0;
+    if(GetMyAppState()->LoadState == AppState_LoadFailed)
+        errCount = 1;
+    
+    if ( ( NodeState.Personality.Kernel_Config.NodeConfig & PERS_ENABLE_MU) != 0 )
+    {
+        int rc;
+        rc = mudm_bcast_reduce(NodeState.MUDM, 
+                               MUDM_REDUCE_ALL,
+                               MUHWI_COLLECTIVE_OP_CODE_UNSIGNED_ADD,
+                               (void*)&errCount,
+                               sizeof(errCount),
+                               dest,  // ignored for MUHWI_COLLECTIVE_TYPE_ALLREDUCE
+                               14,
+                               MUHWI_COLLECTIVE_TYPE_ALLREDUCE,
+                               (void*)&errCount);
+        MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+        ppc_msync();
+    }
+    return errCount;
+}
+
 void App_ActivateCollectiveLoad()
 {
     // Setting the iteration count to 1 in the collective status object activates collective loading
     GetMyAppState()->jobLeaderData.collectiveLoadStatus.word.iteration = 1;
+
+    if ( ( NodeState.Personality.Kernel_Config.NodeConfig & PERS_ENABLE_MU) == 0 )
+    {
+        return;
+    }
+    
+    if(GetMyAppState()->LoadSequence == ~(0u))
+    {
+        GetMyAppState()->LoadSequence = 0;
+    }
+    
+    MUHWI_Destination_t dest;
+    dest.Destination.Destination = 0;
+    volatile uint64_t maxSequence = GetMyAppState()->LoadSequence;
+    int rc;
+    rc = mudm_bcast_reduce(NodeState.MUDM, 
+                           MUDM_REDUCE_ALL,
+                           MUHWI_COLLECTIVE_OP_CODE_UNSIGNED_MAX,
+                           (void*)&maxSequence,
+                           sizeof(maxSequence),
+                           dest,  // ignored for MUHWI_COLLECTIVE_TYPE_ALLREDUCE
+                           14,
+                           MUHWI_COLLECTIVE_TYPE_ALLREDUCE,
+                           (void*)&maxSequence);
+    MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+    
+    ppc_msync();
+    
+    GetMyAppState()->MaxSequence = maxSequence;
+    Kernel_WriteFlightLog(FLIGHTLOG, FL_MPMDSEQMX, maxSequence,0,0,0);
+}
+
+void App_SetupLoadLeader()
+{
+    Personality_t* pers = GetPersonality();
+    MUHWI_Destination_t mycoord;
+    volatile uint64_t nodeCount = 1;
+    volatile uint64_t minSequence;
+    mycoord.Destination.Destination = 0;
+    mycoord.Destination.A_Destination = pers->Network_Config.Acoord;
+    mycoord.Destination.B_Destination = pers->Network_Config.Bcoord;
+    mycoord.Destination.C_Destination = pers->Network_Config.Ccoord;
+    mycoord.Destination.D_Destination = pers->Network_Config.Dcoord;
+    mycoord.Destination.E_Destination = pers->Network_Config.Ecoord;
+    
+    minSequence = mycoord.Destination.Destination;
+    
+    int rc;
+    MUSPI_GIBarrierEnterAndWait( &systemLoadJobGIBarrier );
+    rc = mudm_bcast_reduce(NodeState.MUDM, 
+                           MUDM_REDUCE_ALL,
+                           MUHWI_COLLECTIVE_OP_CODE_UNSIGNED_MAX,
+                           (void*)&minSequence,
+                           sizeof(minSequence),
+                           mycoord,  // ignored for MUHWI_COLLECTIVE_TYPE_ALLREDUCE
+                           13,
+                           MUHWI_COLLECTIVE_TYPE_ALLREDUCE,
+                           (void*)&minSequence);
+    MUSPI_GIBarrierEnterAndWait( &systemLoadJobGIBarrier );
+    rc = mudm_bcast_reduce(NodeState.MUDM, 
+                           MUDM_REDUCE_ALL,
+                           MUHWI_COLLECTIVE_OP_CODE_UNSIGNED_ADD,
+                           (void*)&nodeCount,
+                           sizeof(nodeCount),
+                           mycoord,  // ignored for MUHWI_COLLECTIVE_TYPE_ALLREDUCE
+                           13,
+                           MUHWI_COLLECTIVE_TYPE_ALLREDUCE,
+                           (void*)&nodeCount);
+    MUSPI_GIBarrierEnterAndWait( &systemLoadJobGIBarrier );
+    
+    if(minSequence == mycoord.Destination.Destination)
+        GetMyAppState()->IsLoadLeader = 1;
+    else
+        GetMyAppState()->IsLoadLeader = 0;
+    
+    Kernel_WriteFlightLog(FLIGHTLOG, FL_MPMDSETUP, nodeCount, GetMyAppState()->IsLoadLeader, minSequence,0);
+    
+    GetMyAppState()->LoadNodeCount = nodeCount;
 }

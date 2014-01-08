@@ -53,13 +53,14 @@ int  IPI_AcknowledgeWakeup(uint64_t *mask1, uint64_t *mask2);
 int IPI_AbortForProcessExit();
 void IPI_invalidate_icache(int coreID);
 void IPI_changepolicy(KThread_t *pKThr, int newPolicy, int newPriority);
+void IPI_remote_thread_exit(int hwthread_index, AppProcess_t *proc);
 
 // Obtain IPI control for syscall usage. Returns 0:success, (-1):busy.
 int Syscall_GetIpiControl();
 // Release IPI control for syscall usage. Returns 0:success, (-1):error.
 int Syscall_ReleaseIpiControl();
-// flush pending IPIs that require an Ack
-void IPI_DeadlockAvoidance();
+// flush pending IPIs 
+void IPI_DeadlockAvoidance(int processorID);
 
 
 #ifndef IPIHANDLER
@@ -95,4 +96,6 @@ IPIHANDLER(IPI_handler_upcp_init);
 IPIHANDLER(IPI_handler_upcp_disable);
 IPIHANDLER(IPI_handler_complete_migration);
 IPIHANDLER(IPI_handler_invalidate_icache);
+IPIHANDLER(IPI_handler_remote_thread_exit);
+IPIHANDLER(IPI_handler_changepolicy);
 #undef IPIHANDLER

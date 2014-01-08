@@ -31,11 +31,15 @@
 #include <bgq_util/include/Location.h>
 #include <bgq_util/include/TempFile.h>
 
+#include <ras/include/RasEventHandlerChain.h>
+#include <ras/include/RasEventImpl.h>
+
 #include <utility/include/Log.h>
 #include <utility/include/Properties.h>
 #include <utility/include/UserId.h>
 
 #include <boost/assign.hpp>
+#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 #include <boost/shared_ptr.hpp>
@@ -670,9 +674,16 @@ public:
 
 
     void execute( const Args& args ) {
+        BGQDB::BLOCK_ACTION action = BGQDB::NO_BLOCK_ACTION;
         string blockid(args.at(0));
         string action_str(args.size() > 1 ? args.at(1) : "");
-        BGQDB::BLOCK_ACTION action = (action_str == "C" ? BGQDB::CONFIGURE_BLOCK : BGQDB::DEALLOCATE_BLOCK);
+        if (action_str == "B") {
+            action = BGQDB::CONFIGURE_BLOCK;
+        } else  if (action_str == "N") {
+            action = BGQDB::CONFIGURE_BLOCK_NO_CHECK;
+        } else if (action_str == "D") {
+            action = BGQDB::DEALLOCATE_BLOCK;
+        }
 
         initializeBGQDB();
 
@@ -1214,6 +1225,59 @@ public:
 };
 
 
+class PutRas : public AbstractCommandHandler
+{
+public:
+    std::string getName() const  { return "putRAS"; }
+    std::string getHelpText() const  { return "msgid location"; }
+
+    void execute( const Args& args ) {
+    	if ( args.size() != 2 ) {
+    		throw runtime_error( string() + "arguments: " + getHelpText() );
+    	}
+
+    	const std::string &msgid_string(args[0]);
+    	const std::string &location(args[1]);
+
+        initializeBGQDB();
+
+        std::istringstream is( msgid_string );
+        unsigned msgid;
+        is >> std::hex >> msgid;
+
+        RasEventImpl event(msgid);
+        event.setDetail( RasEvent::LOCATION, location );
+        RasEventHandlerChain::handle(event);
+
+        const std::string block;
+        const BGQDB::job::Id job( 0 );
+        const uint32_t qualifier( 0 );
+        std::vector<BGQDB::job::Id> jobs_to_kill;
+        uint32_t recid;
+
+        BGQDB::STATUS db_status(
+                BGQDB::putRAS( 
+                    event,
+                    block,
+                    job,
+                    qualifier,
+                    &jobs_to_kill,
+                    &recid
+                    )
+                );
+
+        if ( db_status != BGQDB::OK ) {
+            cout << "putRAS failed with db_status=" << db_status << "\n";
+            throw runtime_error( "failed" );
+        }
+        std::cout << "inserted RAS event with recid " << recid << std::endl;
+        BOOST_FOREACH( const BGQDB::job::Id i, jobs_to_kill ) {
+            std::cout << "job " << i << " will be killed" << std::endl;
+        }
+    }
+};
+
+
 typedef std::vector<AbstractCommandHandler*> CommandHandlers;
 
 static CommandHandlers initializeCommandHandlers()
@@ -1255,6 +1319,7 @@ static CommandHandlers initializeCommandHandlers()
             ( new ioUsage )
             ( new QueryError )
             ( new GenIoBlock )
+            ( new PutRas )
         ;
 }
 

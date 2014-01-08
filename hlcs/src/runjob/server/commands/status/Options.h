@@ -61,6 +61,10 @@ private:
    
     const char* description() const { return "display status information from the Blue Gene runjob server."; }
 
+    void displayConnectionPool(
+            const runjob::commands::response::ServerStatus::Ptr& response
+            ) const;
+
     void displayCiosProtocol(
             const runjob::commands::response::ServerStatus::Ptr& response
             ) const;

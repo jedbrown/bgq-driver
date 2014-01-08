@@ -33,7 +33,6 @@ class Generate;
 class Mapping;
 class Np;
 class Parameters;
-class Rank;
 class Rectangle;
 
 } // class_route

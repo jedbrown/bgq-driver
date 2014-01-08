@@ -5,7 +5,7 @@ Summary: BlueGene TEAL
 Group: %{product_group}
 Release: 0
 
-Requires: teal-base-bg
+Requires: teal-base-bg >= 1.1.0.6
 
 %description teal
 %{bgq_package_description}

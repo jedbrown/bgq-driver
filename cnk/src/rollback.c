@@ -70,7 +70,6 @@ int Rollback_Restore()
     }
     
     // Kernel has been traversed while in rollback window
-    // \todo reuse RollbackIndicator?
     if(NodeState.RollbackKernel != 0)
     {
         return 0;
@@ -89,7 +88,7 @@ int Rollback_Restore()
 
 void Rollback_Barrier()
 {
-    /// \todo Taking an extremely simplistic approach for now, see L2 document for a more performant implementation.
+    /// Taking an extremely simplistic approach for now, see L2 document for a more performant implementation.
     int oldspecid = 0;
     static int newspecid;
     Kernel_Barrier(Barrier_HwthreadsInNode);

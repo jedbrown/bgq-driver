@@ -30,7 +30,6 @@ define(
     "../Bgws",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -40,7 +39,6 @@ function(
         b_Bgws,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -58,11 +56,14 @@ var b_navigator_Blocks = d_declare( [ l_AbstractTab ],
 
 
     /** @constructs */
-    constructor: function( bgws )
+    constructor: function(
+            bgws,
+            blocks_dij,
+            compute_block_details_dij
+        )
     {
         this._bgws = bgws;
-
-        this._blocks_dijit = j_registry.byId( "navigator" ).getComputeBlocksTabDij();
+        this._blocks_dijit = blocks_dij;
 
         this._blocks_dijit.on( "blockSelected", function( block_id ) { l_topic.publish( l_topic.computeBlockSelected, block_id ); } );
         this._blocks_dijit.on( "createBlock", function() { l_topic.publish( l_topic.displayBlockBuilder ); } );
@@ -71,7 +72,8 @@ var b_navigator_Blocks = d_declare( [ l_AbstractTab ],
 
         this._compute_block_details = new l_ComputeBlockDetails(
                 this._bgws,
-                d_lang.hitch( this, this._updateMachineHighlighting )
+                d_lang.hitch( this, this._updateMachineHighlighting ),
+                compute_block_details_dij
             );
 
         l_topic.subscribe( l_topic.blockCreated, d_lang.hitch( this, this._refresh ) );

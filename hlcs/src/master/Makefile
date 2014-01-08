@@ -78,6 +78,7 @@ all: $(DIR_TARGS_ALL)
 install: build ras_scan $(call INSTALL_SBIN_TARGET, startagents.py)
 
 clean:			$(DIR_TARGS_CLEAN)
+	$(RM) ras_scan
 
 distclean:	clean
 
@@ -99,6 +100,6 @@ docs.all: protocol.all ras_scan
 vars:
 	echo $(DIR_TARGS_ALL) $(DIR_TARGS_CLEAN) dt $(DIR_TARGS)
 
-ras_scan: MasterRasMetadata.h
+ras_scan: server/ras.h
 	$(BGQ_BUILD_DIR)/scripts/rasScan.py '$(BGQ_BUILD_DIR)/hlcs/src/master' '$(BGQ_INSTALL_DIR)/hlcs/ras/metadata' 'bgmaster_ras.xml' '$(BGQ_INSTALL_DIR)/ras/include/ras.xml'
 	@touch $@

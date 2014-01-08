@@ -36,7 +36,6 @@ function(
 {
 
 var b_navigator_dijit_environmentals_IoCard = d_declare(
-        "bluegene.navigator.dijit.environmentals.IoCard",
         [ l_AbstractQueryResultsDijit ],
 
 {

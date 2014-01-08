@@ -100,8 +100,8 @@ SimStdioController::startup(in_port_t dataChannelPort)
    std::ostringstream portFileName;
    portFileName << _workDirectory << "standardio.port";
    std::ofstream portFile(portFileName.str().c_str(), std::ios_base::trunc);
-   portFile << _dataListener->getPort() << std::endl;
-   LOG_DEBUG_MSG("stored port number " << _dataListener->getPort() << " in file " << portFileName.str());
+   portFile << ntohs(_dataListener->getPort()) << std::endl;
+   LOG_DEBUG_MSG("stored port number " << ntohs(_dataListener->getPort()) << " in file " << portFileName.str());
 
    // Prepare socket to listen for connections.
    try {

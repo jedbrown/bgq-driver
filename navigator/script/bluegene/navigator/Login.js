@@ -25,19 +25,17 @@ define(
 [
     "./topic",
     "./dijit/Login",
+    "dojo/when",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
         l_topic,
         l_dijit_Login,
+        d_when,
         d_declare,
-        d_Deferred,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -62,12 +60,13 @@ var b_navigator_Login = d_declare( null,
      */
     constructor: function(
             /**bluegene^Bgws*/ bgws,
-            /**Object*/ location_search_obj
+            /**Object*/ location_search_obj,
+            login_dij
         )
     {
         this._bgws = bgws;
 
-        this._login_dij = j_registry.byId( "main-login" );
+        this._login_dij = login_dij;
 
         if ( location_search_obj ) {
             if ( "user" in location_search_obj ) {
@@ -94,7 +93,7 @@ var b_navigator_Login = d_declare( null,
 
             if ( ! this._username )  this._username = "user";
 
-            this._login_def = d_Deferred.when(
+            this._login_def = d_when(
                     this._bgws.startSessionAuth(
                             this._auth_str
                         ),
@@ -120,7 +119,7 @@ var b_navigator_Login = d_declare( null,
 
         this._username = login_value.username;
 
-        this._login_def = d_Deferred.when(
+        this._login_def = d_when(
                 this._bgws.startSession(
                     login_value.username,
                     login_value.password

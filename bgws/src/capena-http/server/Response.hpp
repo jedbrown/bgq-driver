@@ -61,17 +61,9 @@ class Response : boost::noncopyable
 {
 public:
 
-    /*! \brief Container for enum, indicates whether the headers set by the application indicate that the response has a body or not. */
-    struct BodyPresense {
-        enum Value {
-            EXPECT_BODY,
-            NO_BODY
-        };
-    };
-
-
     Response(
-            ConnectionPtr connection_ptr
+            NotifyStatusHeadersFn notify_status_headers_fn, //!< [copy]
+            NotifyDataFn notify_data_fn //!< [copy]
         );
 
 
@@ -158,6 +150,12 @@ public:
     std::ostream& out();
 
 
+    /*! \brief Call this to indicate that all output is complete,
+     *         otherwise output is complete when Responder goes away.
+     */
+    void notifyComplete();
+
+
     /*! \brief Get the status that was set in the response. */
     http::Status getStatus() const  { return _status; }
 
@@ -166,6 +164,9 @@ public:
 
     /*! \brief Returns true iff headersComplete() has been called. */
     bool isHeadersComplete() const  { return _headers_complete; }
+
+    /*! \brief Returns true if the response is complete. */
+    bool isComplete() const  { return _complete; }
 
     /*! \brief Returns true iff this response can and should have a body. */
     bool hasBody() const  { return (_body_presense == BodyPresense::EXPECT_BODY); }
@@ -189,13 +190,15 @@ public:
 
 private:
 
-    ConnectionPtr _connection_ptr;
+    NotifyStatusHeadersFn _notify_status_headers_fn;
+    NotifyDataFn _notify_data_fn;
 
     http::Status _status;
     Headers _headers;
     bool _headers_complete;
+    bool _complete;
 
-    BodyPresense::Value _body_presense;
+    BodyPresense _body_presense;
 
     ResponderStreambuf _body_streambuf;
     std::ostream _body;

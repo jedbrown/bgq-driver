@@ -69,7 +69,7 @@ Status::handle(
     // do this to avoid unused parameter warning
     (void)request;
 
-    Multiplexer::Ptr mux( _mux.lock() );
+    const Multiplexer::Ptr mux( _mux.lock() );
     if ( !mux ) return;
 
     const runjob::commands::response::MuxStatus::Ptr response( new runjob::commands::response::MuxStatus );

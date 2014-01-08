@@ -28,7 +28,6 @@ define(
     "../Bgws",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -36,7 +35,6 @@ function(
         b_Bgws,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -52,11 +50,13 @@ var b_navigator_JobsChart = d_declare( null,
 
 
     /** @constructs */
-    constructor: function( bgws )
+    constructor: function(
+            bgws,
+            jobs_chart_dij
+        )
     {
         this._bgws = bgws;
-
-        this._jobs_chart_dij = j_registry.byId( "navigator" ).footer.charts.jobs;
+        this._jobs_chart_dij = jobs_chart_dij;
 
         this._jobs_chart_dij.on( "selected", d_lang.hitch( this, this._onSelected ) );
 

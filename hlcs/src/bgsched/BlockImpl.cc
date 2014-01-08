@@ -8,7 +8,7 @@
 /*                                                                  */
 /* Blue Gene/Q                                                      */
 /*                                                                  */
-/* (C) Copyright IBM Corp.  2010, 2011                              */
+/* (C) Copyright IBM Corp.  2010, 2012                              */
 /*                                                                  */
 /* US Government Users Restricted Rights -                          */
 /* Use, duplication or disclosure restricted                        */
@@ -53,25 +53,25 @@ using namespace std;
 
 namespace {
     // Message strings
-    const string No_Block_Name_Str("Block name is empty.");
-    const string Block_Name_Too_Long_Str("Block name is too long.");
-    const string No_Block_Description_Str("Block description is empty.");
-    const string Block_Description_Too_Long_Str("Block description is too long.");
-    const string No_Block_Options_Str("Block options is empty.");
-    const string Block_Options_Too_Long_Str("Block options are too long.");
-    const string No_Block_BootOptions_Str("Block boot options is empty.");
-    const string Block_BootOptions_Too_Long_Str("Block boot options are too long.");
-    const string No_Block_MicroLoaderImage_Str("Block micro-loader image file path is empty.");
-    const string Block_MicroLoaderImage_Too_Long_Str("Block micro-loader image file path is too long.");
-    const string No_Block_NodeConfiguration_Str("Block Node configuration is empty.");
-    const string Block_NodeConfiguration_Too_Long_Str("Block Node configuration is too long.");
+    const string No_Block_Name_Str("Compute block name is empty.");
+    const string Block_Name_Too_Long_Str("Compute block name is too long.");
+    const string No_Block_Description_Str("Compute block description is empty.");
+    const string Block_Description_Too_Long_Str("Compute block description is too long.");
+    const string No_Block_Options_Str("Compute block options is empty.");
+    const string Block_Options_Too_Long_Str("Compute block options are too long.");
+    const string No_Block_BootOptions_Str("Compute block boot options is empty.");
+    const string Block_BootOptions_Too_Long_Str("Compute block boot options are too long.");
+    const string No_Block_MicroLoaderImage_Str("Compute block micro-loader image file path is empty.");
+    const string Block_MicroLoaderImage_Too_Long_Str("Compute block micro-loader image file path is too long.");
+    const string No_Block_NodeConfiguration_Str("Compute block Node configuration is empty.");
+    const string Block_NodeConfiguration_Too_Long_Str("Compute block Node configuration is too long.");
     const string DB_Connection_Error_Str("Communication error occurred while attempting to connect to database.");
     const string DB_MidplaneBlockMapQueryFailed_Str("Database query of bpblockmap failed.");
     const string DB_SmallBlockQueryFailed_Str("Database query of small block failed.");
     const string Internal_No_Midplane_Found_Str("No midplane found to create small block.");
     const string Internal_No_Nodeboards_Found_Str("No node boards found to create small block.");
-    const string Internal_Invalid_Block_Status_Str("Unexpected block status found.");
-    const string Block_No_Midplanes_Found_Str("No midplanes found for large block.");
+    const string Internal_Invalid_Block_Status_Str("Unexpected compute block status found.");
+    const string Block_No_Midplanes_Found_Str("No midplanes found for large compute block.");
     const string No_Midplane_Location_Str("Midplane location string is empty.");
     const string No_Nodeboard_Location_Str("Node board location string is empty.");
     const string No_Passthrough_Midplane_Location_Str("Pass-through midplane location string is empty.");
@@ -82,17 +82,17 @@ namespace {
 
 namespace bgsched {
 
-/* Does a database query to get the midplanes and pass-through midplanes for the large block.
- * Looks up the midplane locations for the block in dbBlock that are in the bpblockmap table.
+/* Does a database query to get the midplanes and pass-through midplanes for the large compute block.
+ * Looks up the midplane locations for the compute block in dbBlock that are in the bpblockmap table.
  *
- * If can't find the block in the bpblockmap table then Block::Midplanes will be empty.
+ * If can't find the compute block in the bpblockmap table then Block::Midplanes will be empty.
  *
  * Throws following exception:
  * bgsched::DatabaseException with value:
  * - bgsched::DatabaseErrors::OperationFailed - if a database operation failed (i.e query, fetch, etc.)
  */
 
-static void
+void
 queryLargeBlockInfo(
         const string& block_name,
         cxxdb::Connection& conn,
@@ -155,14 +155,14 @@ queryLargeBlockInfo(
 }
 
 /*
- * Does a database query to get the node boards for the small block.
+ * Does a database query to get the node boards for the small compute block.
  *
  * Throws following exception:
  * bgsched::DatabaseException with value:
  * - bgsched::DatabaseErrors::OperationFailed - if a database operation failed (i.e query, fetch, etc.)
  */
 
-static Block::NodeBoards
+Block::NodeBoards
 querySmallBlockNodeBoards(
         const string& block_name,
         cxxdb::Connection& conn
@@ -170,7 +170,7 @@ querySmallBlockNodeBoards(
 {
     Block::NodeBoards nodeBoards;
 
-    // Querying over small block table
+    // Querying over small compute block table
     BGQDB::DBTSmallblock sb;
 
     // Indicate columns to return
@@ -272,7 +272,7 @@ Block::Impl::statusDbCharToValue(
         char db_char
 )
 {
-    switch ( db_char ) {
+    switch (db_char) {
         case 'A':
             return Block::Allocated;
         case 'B':
@@ -284,7 +284,7 @@ Block::Impl::statusDbCharToValue(
         case 'T':
             return Block::Terminating;
         default:
-            // If get to this point the block status is unknown
+            // If get to this point the compute block status is unknown
             THROW_EXCEPTION(
                     bgsched::InternalException,
                     bgsched::InternalErrors::InconsistentDataError,
@@ -298,7 +298,7 @@ Block::Impl::statusToDbChar(
         Block::Status status
 )
 {
-    switch ( status ) {
+    switch (status) {
         case Block::Allocated:
             return 'A';
         case Block::Booting:
@@ -310,7 +310,7 @@ Block::Impl::statusToDbChar(
         case Block::Terminating:
             return 'T';
         default:
-            // If get to this point the block status is unknown
+            // If get to this point the compute block status is unknown
             THROW_EXCEPTION(
                     bgsched::InternalException,
                     bgsched::InternalErrors::InconsistentDataError,
@@ -335,7 +335,7 @@ Block::Impl::convertDBStatusToBlockStatus(
     } else if (strcmp(status,BGQDB::BLOCK_ALLOCATED) == 0) {
         return Block::Allocated;
     }
-    // If get to this point the block status is unknown
+    // If get to this point the compute block status is unknown
     THROW_EXCEPTION(
             bgsched::InternalException,
             bgsched::InternalErrors::InconsistentDataError,
@@ -348,7 +348,7 @@ Block::Impl::convertDBBlockStateToBlockStatus(
         const int state
 )
 {
-    switch( state )
+    switch(state)
     {
         case BGQDB::FREE:
             return Block::Free;
@@ -363,7 +363,7 @@ Block::Impl::convertDBBlockStateToBlockStatus(
         case BGQDB::INVALID_STATE:
             break;
     }
-    // If get to this point the block status is unknown
+    // If get to this point the compute block status is unknown
     THROW_EXCEPTION(
             bgsched::InternalException,
             bgsched::InternalErrors::InconsistentDataError,
@@ -376,25 +376,25 @@ Block::Impl::Impl(
         const Block::Pimpl fromBlock
 ) :
     _name(name),
-    _creationId(0),       // Do not copy creation id, this is not the same block
+    _creationId(0),       // Do not copy creation id, this is not the same compute block
     _description(fromBlock->_description),
     _owner(fromBlock->_owner),
-    _user(),              // Do not copy user, this is not the same block
+    _user(),              // Do not copy user, this is not the same compute block
     _bootOptions(fromBlock->_bootOptions),
     _mImage(fromBlock->_mImage),
     _nodeConfig(fromBlock->_nodeConfig),
-    _sequenceId(0),       // Do not copy sequence id, this is not the same block
-    _status(Block::Free), // Don't copy block status
+    _sequenceId(0),       // Do not copy sequence id, this is not the same compute block
+    _status(Block::Free), // Don't copy compute block status
     _numcnodes(fromBlock->_numcnodes),
     _dimensionSizes(0,0,0,0),
     _connectivity(),
     _options(fromBlock->_options),
-    _jobIds(),             // Don't copy the block jobs
+    _jobIds(),             // Don't copy the compute block jobs
     _midplanes(),
     _passthroughMidplanes(),
     _nodeBoards(),
     _blockDBInfoPtr(),     // Don't copy
-    _action(Block::Action::None)  // Don't copy block action
+    _action(Block::Action::None)  // Don't copy compute block action
 {
 
     for (Dimension dimension = Dimension::A; dimension <= Dimension::D; ++dimension)
@@ -434,7 +434,7 @@ Block::Impl::Impl(
     _midplanes(),
     _passthroughMidplanes(),
     _nodeBoards(),
-    _blockDBInfoPtr(),  // Don't set when creating from block database
+    _blockDBInfoPtr(),  // Don't set when creating from compute block database
     _action(convertDBActionToBlockAction(block_cols[BGQDB::DBTBlock::ACTION_COL].getString().c_str()))
 {
     // Convert torus char(5) in database to connectivity (Torus/Mesh) array (by dimension)
@@ -448,38 +448,38 @@ Block::Impl::Impl(
         }
     }
 
-    // Set the block shape for large blocks
+    // Set the compute block shape for large compute blocks
     if (isLarge()) {
         _dimensionSizes[Dimension::A] = (block_cols[BGQDB::DBTBlock::SIZEA_COL].as<uint32_t>())/4;
         _dimensionSizes[Dimension::B] = (block_cols[BGQDB::DBTBlock::SIZEB_COL].as<uint32_t>())/4;
         _dimensionSizes[Dimension::C] = (block_cols[BGQDB::DBTBlock::SIZEC_COL].as<uint32_t>())/4;
         _dimensionSizes[Dimension::D] = (block_cols[BGQDB::DBTBlock::SIZED_COL].as<uint32_t>())/4;
-        // Log block shape
-        //LOG_TRACE_MSG("Block shape: " << _dimensionSizes[Dimension::A] << "," << _dimensionSizes[Dimension::B] << ","
+        // Log compute block shape
+        //LOG_TRACE_MSG("Compute block shape: " << _dimensionSizes[Dimension::A] << "," << _dimensionSizes[Dimension::B] << ","
         //                              << _dimensionSizes[Dimension::C] << "," << _dimensionSizes[Dimension::D]);
     }
 
     if (isBlockExtendedInfo) {
-        if (isLarge()) {  // It's a large block.
-            // Get the midplanes and pass-through midplanes for the block
+        if (isLarge()) {  // It's a large compute block.
+            // Get the midplanes and pass-through midplanes for the compute block
             queryLargeBlockInfo(_name, conn, _midplanes, _passthroughMidplanes);
 
-            // Verify midplanes were returned - block might have been deleted
+            // Verify midplanes were returned - compute block might have been deleted
             if (_midplanes.empty()) {
                 THROW_EXCEPTION(
                         bgsched::InternalException,
                         bgsched::InternalErrors::InconsistentDataError,
-                        "No midplanes found in database for block " << _name
+                        "No midplanes found in database for compute block " << _name
                 );
             }
 
-        } else {  // It's a small block, get the node boards for the block.
+        } else {  // It's a small compute block, get the node boards for the compute block.
             _nodeBoards = querySmallBlockNodeBoards(_name, conn);
             if (_nodeBoards.empty()) {
                 THROW_EXCEPTION(
                         bgsched::InternalException,
                         bgsched::InternalErrors::InconsistentDataError,
-                        "No node boards found in database for block " << _name
+                        "No node boards found in database for compute block " << _name
                 );
             }
             // Get node board location (form of Rxx-Mx-Nxx)
@@ -502,7 +502,7 @@ Block::Impl::Impl(
     _mImage(DEFAULT_MLOADERIMG),
     _nodeConfig(DEFAULT_COMPUTENODECONFIG),
     _sequenceId(0),
-    _status(Block::Free), // New block is free
+    _status(Block::Free), // New compute block is free
     _numcnodes(0),
     _dimensionSizes(0,0,0,0),
     _connectivity(),
@@ -512,7 +512,7 @@ Block::Impl::Impl(
     _passthroughMidplanes(),
     _nodeBoards(),
     _blockDBInfoPtr(blockDBInfoPtr),
-    _action(Block::Action::None) // New block is None
+    _action(Block::Action::None) // New compute block is None
 {
     // Process generic fields: name, owner, description, micro-loader image and node config
     string blockName = blockDBInfoPtr->getId();
@@ -521,17 +521,17 @@ Block::Impl::Impl(
     string blockMloaderImg = blockDBInfoPtr->getMloaderImg();
     string blockNodeConfig = blockDBInfoPtr->getNodeConfig();
 
-    // Process block name
+    // Process compute block name
     if (!blockName.empty()) {
         _name = blockName;
     }
 
-    // Process block owner
+    // Process compute block owner
     if (!blockOwner.empty()) {
         _owner = blockOwner;
     }
 
-    // Process block description
+    // Process compute block description
     if (!blockDescription.empty()) {
         _description = blockDescription;
     }
@@ -556,7 +556,7 @@ Block::Impl::Impl(
         }
     }
 
-    // Check if large or small block
+    // Check if large or small compute block
     if (blockDBInfoPtr->isLarge()) {
         // Get dimension sizes
         BGQDB::DimensionSizes dimensionSizes = blockDBInfoPtr->getSizes();
@@ -604,8 +604,8 @@ Block::Impl::Impl(
                 _passthroughMidplanes.push_back((*iter));
             }
         }
-    } else { // Small block
-        // Get the midplane location string for the block
+    } else { // Small compute block
+        // Get the midplane location string for the compute block
         string blockMidplaneLocation = blockDBInfoPtr->getMidplane();
         // Validate location string is not empty
         if (blockMidplaneLocation.empty()) {
@@ -648,11 +648,11 @@ Block::Impl::toString(
         bool verbose
 ) const
 {
-    // Common block info
-    os << endl << "Block=" << _name << endl;                 // Block name
+    // Common compute block info
+    os << endl << "Compute block=" << _name << endl;         // Compute block name
     os << "Compute nodes=" << _numcnodes << endl;            // Block compute nodes
 
-    // Block status
+    // Compute block status
     switch (_status) {
       case Block::Allocated:
           os << "Status=Allocated" << endl;
@@ -674,7 +674,7 @@ Block::Impl::toString(
         break;
     }
 
-    // Block action
+    // Compute block action
     switch (_action) {
       case Block::Action::None:
           os << "Action=None" << endl;
@@ -690,42 +690,42 @@ Block::Impl::toString(
         break;
     }
 
-    // Verbose block details
+    // Verbose compute block details
     if (verbose) {
-        os << "Description=" << _description << endl;        // Block description
-        os << "Owner=" << _owner << endl;                    // Block owner
-        os << "Booted by=" << _user << endl;                 // Block user
-        os << "Boot options=" << _bootOptions << endl;       // Block boot options
-        os << "Options=" << _options << endl;                // Block options
-        os << "Microloader image=" << _mImage << endl;       // Block microloader image
-        os << "Node configuration=" << _nodeConfig << endl;  // Block node configuration
+        os << "Description=" << _description << endl;        // Compute block description
+        os << "Owner=" << _owner << endl;                    // Compute block owner
+        os << "Booted by=" << _user << endl;                 // Compute block user
+        os << "Boot options=" << _bootOptions << endl;       // Compute block boot options
+        os << "Options=" << _options << endl;                // Compute block options
+        os << "Microloader image=" << _mImage << endl;       // Compute block microloader image
+        os << "Node configuration=" << _nodeConfig << endl;  // Compute block node configuration
         os << "Sequence ID=" << _sequenceId << endl;         // Sequence ID
 
         if (isLarge()) {
-            // Block shape
+            // Compute block shape
             os << "Shape=" << _dimensionSizes[Dimension::A] << "x" << _dimensionSizes[Dimension::B] << "x"
                 << _dimensionSizes[Dimension::C] << "x" << _dimensionSizes[Dimension::D] << endl;
-            // Block midplanes
+            // Compute block midplanes
             if (!_midplanes.empty()) {
                 os << "Midplanes:" << endl;
                 for (Midplanes::const_iterator i = _midplanes.begin(); i != _midplanes.end(); ++i) {
                     os << (*i) << endl;
                 }
             }
-            // Block pass-through midplanes
+            // Compute block pass-through midplanes
             if (!_passthroughMidplanes.empty()) {
                 os << "Pass-through midplanes:" << endl;
                 for (PassthroughMidplanes::const_iterator i = _passthroughMidplanes.begin(); i != _passthroughMidplanes.end(); ++i) {
                     os << (*i) << endl;
                 }
             }
-            // Block connectivity
+            // Compute block connectivity
             os << "Connectivity:" << endl;
             for (Dimension dimension = Dimension::A; dimension <= Dimension::D; ++dimension) {
                 os << string(dimension) << ":" << (isTorus(dimension)?"Torus":"Mesh") << ", ";
             }
             os << endl;
-        } else { // Small block node boards
+        } else { // Small compute block node boards
             if (!_nodeBoards.empty()) {
                 os << "Node boards:" << endl;
                 for (Block::NodeBoards::const_iterator nb = _nodeBoards.begin(); nb != _nodeBoards.end(); ++nb) {
@@ -742,9 +742,9 @@ Block::Impl::add(
         bool isValidateBlockOnly
 )
 {
-    // For large blocks verify midplanes were specified
+    // For large compute blocks verify midplanes were specified
     if (isLarge()) { // Adding a large block
-        // Verify we are working with a valid large block object
+        // Verify we are working with a valid large compute block object
         if (_midplanes.empty()) {
             THROW_EXCEPTION(
                     bgsched::InputException,
@@ -755,11 +755,11 @@ Block::Impl::add(
     }
 
     bool isSlowPath = true;
-    // If only validating the block take the slow path
+    // If only validating the compute block take the slow path
     if (isValidateBlockOnly)  {
         isSlowPath = true;
     } else {
-        // Take slow path for small blocks
+        // Take slow path for small compute blocks
         if (isSmall()) {
             isSlowPath = true;
         } else {
@@ -772,19 +772,19 @@ Block::Impl::add(
         }
     }
 
-    // Check if using the slow path to add the block
+    // Check if using the slow path to add the compute block
     if (isSlowPath) {
         BGQDB::BlockDatabaseInfo::Ptr blockDBInfoPtr(new BlockDatabaseInfo());
         BGQDB::GenBlockParams genblock_params;
 
         try {
-            // Set common block fields
+            // Set common compute block fields
             // Use caller user id if owner not set.
             if (owner.empty()) {
                 try {
                     bgq::utility::UserId uid;
                     string user(uid.getUser());
-                    LOG_DEBUG_MSG("Set block owner to " << user);
+                    LOG_DEBUG_MSG("Set compute block owner to " << user);
                     genblock_params.setOwner(user);            // Set block owner
                 } catch (const runtime_error& e) {
                     LOG_ERROR_MSG(e.what());
@@ -796,17 +796,17 @@ Block::Impl::add(
                 }
 
             } else {
-                LOG_DEBUG_MSG("Set block owner to " << owner);
-                genblock_params.setOwner(owner);                // Set block owner
+                LOG_DEBUG_MSG("Set compute block owner to " << owner);
+                genblock_params.setOwner(owner);                // Set compute block owner
             }
-            genblock_params.setBlockId(_name);                  // Set block name
-            genblock_params.setDescription(_description);       // Set block description
-            genblock_params.setOptions(_options);               // Set block options
-            genblock_params.setBootOptions(_bootOptions);       // Set block boot options
-            genblock_params.setMicroloaderImage(_mImage);       // Set block microloader image
-            genblock_params.setNodeConfiguration(_nodeConfig);  // Set block node configuration
+            genblock_params.setBlockId(_name);                  // Set compute block name
+            genblock_params.setDescription(_description);       // Set compute block description
+            genblock_params.setOptions(_options);               // Set compute block options
+            genblock_params.setBootOptions(_bootOptions);       // Set compute block boot options
+            genblock_params.setMicroloaderImage(_mImage);       // Set compute block microloader image
+            genblock_params.setNodeConfiguration(_nodeConfig);  // Set compute block node configuration
 
-            if (isLarge()) { // Adding a large block
+            if (isLarge()) { // Adding a large compute block
                 // Set the pass-through and midplane locations - OK to have duplicate pass-through midplane locations
                 genblock_params.setMidplanes(_midplanes, _passthroughMidplanes);
 
@@ -822,25 +822,25 @@ Block::Impl::add(
                     }
                 }
                 genblock_params.setDimensionSpecs(dimSpecs);
-            } else { // Adding a small block
+            } else { // Adding a small compute block
                 // Set the node board locations
                 genblock_params.setNodeBoardLocations(_nodeBoards);
             }
 
-            // Check if adding block or only performing validation on block
+            // Check if adding compute block or only performing validation on compute block
             if (isValidateBlockOnly) {
                 blockDBInfoPtr->setId(_name);
                 BGQDB::genBlockParamsToBlockDatabaseInfoEx(genblock_params, *blockDBInfoPtr);
             } else {
-                // Add block to database, skip additional checking as we have a valid block already
+                // Add compute block to database, skip additional checking as we have a valid compute block already
                 BGQDB::genBlockEx(genblock_params, false);
-                LOG_DEBUG_MSG("Block " << _name << " was successfully added.");
+                LOG_DEBUG_MSG("Compute block " << _name << " was successfully added.");
             }
         } catch (const BGQDB::Exception& e) {
             THROW_EXCEPTION(
                     bgsched::InputException,
                     bgsched::InputErrors::BlockNotAdded,
-                    "Block not added, error is " << e.what()
+                    "Compute block not added, error is " << e.what()
             );
         }
 
@@ -857,14 +857,14 @@ Block::Impl::addFastPath(
 )
 {
     try {
-        // Refresh block fields which may be out of sync
+        // Refresh compute block fields which may be out of sync
         // Use caller user id if owner not set.
         if (owner.empty()) {
             try {
                 bgq::utility::UserId uid;
                 string user(uid.getUser());
-                LOG_DEBUG_MSG("Set block owner to " << user);
-                _blockDBInfoPtr->setOwner(user);             // Set block owner
+                LOG_DEBUG_MSG("Set compute block owner to " << user);
+                _blockDBInfoPtr->setOwner(user);             // Set compute block owner
             } catch (const runtime_error& e) {
                 LOG_ERROR_MSG(e.what());
                 THROW_EXCEPTION(
@@ -875,37 +875,37 @@ Block::Impl::addFastPath(
             }
 
         } else {
-            LOG_DEBUG_MSG("Set block owner to " << owner);
-            _blockDBInfoPtr->setOwner(owner);                // Set block owner
+            LOG_DEBUG_MSG("Set compute block owner to " << owner);
+            _blockDBInfoPtr->setOwner(owner);                // Set compute block owner
         }
 
-        _blockDBInfoPtr->setId(_name);                       // Set block name
-        _blockDBInfoPtr->setDescription(_description);       // Set block description
-        _blockDBInfoPtr->setOptions(_options);               // Set block options
-        _blockDBInfoPtr->setBootOptions(_bootOptions);       // Set block boot options
-        _blockDBInfoPtr->setMloaderImg(_mImage);             // Set block microloader image
-        _blockDBInfoPtr->setNodeConfig(_nodeConfig);         // Set block node configuration
+        _blockDBInfoPtr->setId(_name);                       // Set compute block name
+        _blockDBInfoPtr->setDescription(_description);       // Set compute block description
+        _blockDBInfoPtr->setOptions(_options);               // Set compute block options
+        _blockDBInfoPtr->setBootOptions(_bootOptions);       // Set compute block boot options
+        _blockDBInfoPtr->setMloaderImg(_mImage);             // Set compute block microloader image
+        _blockDBInfoPtr->setNodeConfig(_nodeConfig);         // Set compute block node configuration
 
-        // Add block to database
+        // Add compute block to database
         BGQDB::insertBlock(*_blockDBInfoPtr);
-        LOG_DEBUG_MSG("Block " << _name << " was successfully added.");
+        LOG_DEBUG_MSG("Compute block " << _name << " was successfully added.");
     } catch (const BGQDB::Exception& dbe) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotAdded,
-                "Block not added, error is " << dbe.what()
+                "Compute block not added, error is " << dbe.what()
         );
     } catch (const cxxdb::DatabaseException& cxxdbe) {
         THROW_EXCEPTION(
                 bgsched::DatabaseException,
                 bgsched::DatabaseErrors::OperationFailed,
-                "Block not added, error is " << cxxdbe.what()
+                "Compute block not added, error is " << cxxdbe.what()
         );
     }  catch (const std::exception& e) {
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotAdded,
-                "Block not added, error is " << e.what()
+                "Compute block not added, error is " << e.what()
         );
     }
     return _blockDBInfoPtr;
@@ -917,7 +917,7 @@ Block::Impl::setName(
 )
 {
     BGQDB::DBTBlock dbo;
-    // Verify block name was specified
+    // Verify compute block name was specified
     if (blockName.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -925,7 +925,7 @@ Block::Impl::setName(
                 No_Block_Name_Str
                 );
     }
-    // Validate the block name size
+    // Validate the compute block name size
     if (blockName.size() >= sizeof(dbo._blockid)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -942,7 +942,7 @@ Block::Impl::setDescription(
 )
 {
     BGQDB::DBTBlock dbo;
-    // Verify block description was specified
+    // Verify compute block description was specified
     if (description.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -950,7 +950,7 @@ Block::Impl::setDescription(
                 No_Block_Description_Str
                 );
     }
-    // Validate the block description string size
+    // Validate the compute block description string size
     if (description.size() >= sizeof(dbo._description)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -967,7 +967,7 @@ Block::Impl::setOptions(
 )
 {
     BGQDB::DBTBlock dbo;
-    // Verify block options were specified
+    // Verify compute block options were specified
     if (options.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -975,7 +975,7 @@ Block::Impl::setOptions(
                 No_Block_Options_Str
                 );
     }
-    // Validate the block options string size
+    // Validate the compute block options string size
     if (options.size() >= sizeof(dbo._options)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -992,7 +992,7 @@ Block::Impl::setBootOptions(
 )
 {
     BGQDB::DBTBlock dbo;
-    // Verify block boot options were specified
+    // Verify compute block boot options were specified
     if (bootOptions.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1000,7 +1000,7 @@ Block::Impl::setBootOptions(
                 No_Block_BootOptions_Str
                 );
     }
-    // Validate the block boot options string size
+    // Validate the compute block boot options string size
     if (bootOptions.size() >= sizeof(dbo._bootoptions)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1017,7 +1017,7 @@ Block::Impl::setMicroLoaderImage(
 )
 {
     BGQDB::DBTBlock dbo;
-    // Verify block micro-loader image was specified
+    // Verify compute block micro-loader image was specified
     if (image.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1025,7 +1025,7 @@ Block::Impl::setMicroLoaderImage(
                 No_Block_MicroLoaderImage_Str
                 );
     }
-    // Validate the block micro-loader image string size
+    // Validate the compute block micro-loader image string size
     if (image.size() >= sizeof(dbo._mloaderimg)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1042,7 +1042,7 @@ Block::Impl::setNodeConfiguration(
 )
 {
     BGQDB::DBTBlock dbo;
-    // Verify block Node configuration was specified
+    // Verify compute block Node configuration was specified
     if (nodeConfig.empty()) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1050,7 +1050,7 @@ Block::Impl::setNodeConfiguration(
                 No_Block_NodeConfiguration_Str
                 );
     }
-    // Validate the block Node configuration string size
+    // Validate the compute block Node configuration string size
     if (nodeConfig.size() >= sizeof(dbo._nodeconfig)) {
         THROW_EXCEPTION(
                 bgsched::InputException,
@@ -1132,11 +1132,11 @@ Block::Impl::getDimensionSize(
 ) const
 {
      if (isSmall()) {
-         // Must be a large block
+         // Must be a large compute block
          THROW_EXCEPTION(
                  bgsched::InputException,
                  bgsched::InputErrors::InvalidBlockSize,
-                 "Must be a large block to get midplane dimension size."
+                 "Must be a large compute block to get midplane dimension size."
          );
      }
      if (dimension <= Dimension::D) {
@@ -1161,11 +1161,11 @@ Block::Impl::getDimensionSize(
 ) const
 {
      if (isSmall()) {
-         // Must be a large block
+         // Must be a large compute block
          THROW_EXCEPTION(
                  bgsched::InputException,
                  bgsched::InputErrors::InvalidBlockSize,
-                 "Must be a large block to get midplane dimension size."
+                 "Must be a large compute block to get midplane dimension size."
          );
      }
      if (dimension <= bgq::util::Location::Dimension::D) {
@@ -1194,7 +1194,7 @@ Block::Impl::isTorus(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockSize,
-                "Must be a large block to get dimension connectivity."
+                "Must be a large compute block to get dimension connectivity."
         );
     }
     if (dimension <= Dimension::D) {
@@ -1219,11 +1219,11 @@ Block::Impl::isMesh(
 ) const
 {
     if (isSmall()) {
-        // Must be a large block
+        // Must be a large compute block
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::InvalidBlockSize,
-                "Must be a large block to get dimension connectivity."
+                "Must be a large compute block to get dimension connectivity."
         );
     }
     if (dimension <= Dimension::D) {

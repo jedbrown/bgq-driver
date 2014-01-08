@@ -27,9 +27,16 @@
 
 #include "AbstractOptions.hpp"
 
+#include "../../types.hpp"
+
 #include <db/include/api/cxxdb/cxxdb.h>
 
+#include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
+
+#include <boost/asio.hpp>
+
+#include <exception>
 
 #include <stdint.h>
 
@@ -43,6 +50,10 @@ class Query
 {
 public:
 
+
+    typedef boost::shared_ptr<Query> Ptr;
+
+
     Query(
             boost::shared_ptr<AbstractOptions> abstract_options_ptr
         );
@@ -53,14 +64,41 @@ public:
             cxxdb::ResultSetPtr* rs_ptr_out
         );
 
+
+    struct Result
+    {
+        std::exception_ptr exc_ptr;
+        uint64_t all_count;
+        cxxdb::ConnectionPtr connection_ptr;
+        cxxdb::ResultSetPtr rs_ptr;
+    };
+
+    typedef boost::function<void ( Result )> ExecuteCbFn;
+
+
+    void executeAsync(
+            BlockingOperationsThreadPool& blocking_operations_thread_pool,
+            ExecuteCbFn cb_fn
+        );
+
+    void cancel();
+
+
 private:
 
     boost::shared_ptr<AbstractOptions> _options_ptr;
+
+    cxxdb::QueryStatementPtr _stmt_ptr;
 
 
     uint64_t _queryRowCount( cxxdb::ConnectionPtr conn_ptr );
 
     cxxdb::ResultSetPtr _queryRows( cxxdb::ConnectionPtr conn_ptr );
+
+
+    void _executeAsyncImpl(
+            ExecuteCbFn cb_fn
+        );
 
 };
 

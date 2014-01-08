@@ -65,7 +65,7 @@ my $qual=undef;
 #
 #
 GetOptions(
-	\%options,'help','h','v','r','hist','env','event','diags','perf','security','all','properties=s' => \$dbprop, 'q=s' => \$qual,
+	\%options,'help','h','v','r','hist','env','event','diags','perf','security','teal','all','properties=s' => \$dbprop, 'q=s' => \$qual,
 	"months|m=i" => \$months) or usage();
 
 if (defined $options{"h"} || defined $options{"help"}) {
@@ -76,13 +76,14 @@ if ( defined $options{"all"} ) {
   $options{"hist"}=1;
   $options{"env"}=1;
   $options{"event"}=1;
+  $options{"teal"}=1;
   $options{"diags"}=1;
   $options{"perf"}=1;
   $options{"security"}=1;
 }
 
-if ( ! defined $options{"hist"} && ! defined $options{"env"}  && ! defined $options{"diags"} && ! defined $options{"event"} && ! defined $options{"perf"} && ! defined $options{"security"} ) {
-  print "\n\tERROR -  Specify --hist, --env, --event, --diags, --perf, --security, or -all\n";
+if ( ! defined $options{"hist"} && ! defined $options{"env"}  && ! defined $options{"diags"} && ! defined $options{"event"} && ! defined $options{"perf"} && ! defined $options{"security"} && !defined $options{"teal"} ) {
+  print "\n\tERROR -  Specify --hist, --env, --event, --teal, --diags, --perf, --security, or -all\n";
   usage();
 }
 
@@ -114,6 +115,10 @@ if (defined $options{"perf"}) {
 }
 if (defined $options{"event"}) {
   purgeTables("EVENTLOG","EVENT_TIME");
+  cleanupTealEvents();
+}
+elsif (defined $options{"teal"}) {
+  cleanupTealEvents();
 }
 if (defined $options{"security"}) {
   purgeTables("SECURITYLOG","ENTRYDATE");
@@ -240,6 +245,33 @@ sub parseProperties
 } # sub parseProperties
 
 
+sub cleanupTealEvents
+{
+
+# If events were purged from the TBGQEVENTLOG table then the corresponding event records from the TEAL tables
+# should also be deleted to maintain data consistency.
+#
+   my @stmts = (
+     "DELETE X_TEALALERT2EVENT WHERE \"t_event_recid\" NOT IN (SELECT RECID FROM TBGQEVENTLOG)",
+     "DELETE X_TEALCHECKPOINT  WHERE \"chkpt_id\" NOT IN (SELECT RECID FROM TBGQEVENTLOG)",
+     "DELETE X_TEALEVENTLOGEXT WHERE REC_ID NOT IN (SELECT RECID FROM TBGQEVENTLOG)"
+   );
+
+   foreach my $stmt (@stmts) {
+      
+       my $stmtHandle = getDbHandle()->prepare($stmt);
+
+       print "\n" . $stmt . "\n" if($debug);
+                
+       $stmtHandle->execute();
+
+       my $errno = $stmtHandle->err;  
+          
+       if  (($errno) &&  (($errno == -601) || ($errno == -803) || ($errno == -612) || ($errno == 605))) {
+            print "No TEAL records to delete \n" if($debug)
+       }
+   } 
+}
 
 
 sub purgeTables {

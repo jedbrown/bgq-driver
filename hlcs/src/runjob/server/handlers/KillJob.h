@@ -80,6 +80,8 @@ private:
             const std::string& message
             );
 
+    void lookupJob();
+
 private:
     runjob::commands::request::KillJob::Ptr _request;
     const runjob::commands::response::KillJob::Ptr _response;

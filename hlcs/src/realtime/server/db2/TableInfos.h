@@ -25,9 +25,12 @@
 #define REALTIME_SERVER_DB2_TABLE_INFOS_H_
 
 
+#include "AbstractTable.h"
+
 #include <sqlcli.h>
 
 #include <iosfwd>
+#include <map>
 
 
 namespace realtime {
@@ -52,51 +55,40 @@ struct TableInfo
     { /* Nothing to do */ }
 
     bool operator ==( const TableInfo& other ) const
-    {
-        return tablespace_id == other.tablespace_id && table_id == other.table_id;
-    }
+    { return tablespace_id == other.tablespace_id && table_id == other.table_id; }
+
+    bool operator<( const TableInfo& other ) const
+    { return tablespace_id < other.tablespace_id || (tablespace_id == other.tablespace_id && table_id < other.table_id); }
+
 };
 
+
 std::ostream& operator<<( std::ostream& os, const TableInfo& ti );
+
 
 struct TableInfos
 {
 public:
-    TableInfo block_table_info;
-    TableInfo job_table_info;
-    TableInfo midplane_table_info;
-    TableInfo switch_table_info;
-    TableInfo node_table_info;
-    TableInfo node_card_table_info;
-    TableInfo cable_table_info;
-    TableInfo event_log_table_info;
-
 
     TableInfos( const Configuration& configuration );
 
-    struct table {
-        enum Value {
-            BLOCK,
-            JOB,
-            MIDPLANE,
-            NODE_CARD,
-            NODE,
-            SWITCH,
-            CABLE,
-            EVENT_LOG,
-            UNKNOWN
-        };
-    };
+    AbstractTable::Ptr calcTable( const TableInfo& table_info ) const;
 
-    table::Value calcTable( const TableInfo& table_info ) const;
 
 private:
+
+    typedef std::map<TableInfo,AbstractTable::Ptr> _TableMap;
+
 
     static TableInfo _s_getTableInfo(
             SQLHANDLE hdbc,
             const std::string& table_name_uc,
             const std::string& db_schema_uc
         );
+
+
+    _TableMap _table_map;
+
 };
 
 

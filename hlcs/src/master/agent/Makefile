@@ -49,22 +49,21 @@ LDFLAGS += \
  -L$(BGQ_INSTALL_DIR)/xml/lib -lXML \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/xml/lib \
  -lboost_date_time-mt \
- -lboost_filesystem-mt
+ -lboost_filesystem-mt \
+ -lboost_program_options-mt
 
 
 parts := \
  bgagentd \
- Agent
+ Agent 
 
 objs := ${parts:%=%.o}
 
 common_parts := \
  AgentBase \
- ArgParse \
  BinaryController \
  Ids \
- Protocol \
- ThreadLog
+ Protocol
 
 common_objs := ${common_parts:%=../common/%.o}
 
@@ -83,7 +82,7 @@ clean_cmd := $(RM) *.o *.d
 
 default: all
 
-all: $(exe) $(call INSTALL_SBIN_TARGET, $(exe)) $(bg_links_targets) $(MODULE_INIT_DIR)/bgagent $(MODULE_INIT_DIR)/bgagent.v1r1m0 $(MODULE_INIT_DIR)/bgagent.v1r1m1
+all: $(exe) $(call INSTALL_SBIN_TARGET, $(exe)) $(bg_links_targets) $(MODULE_INIT_DIR)/bgagent $(MODULE_INIT_DIR)/bgagent.v1r1m0 $(MODULE_INIT_DIR)/bgagent.v1r1m1 $(MODULE_INIT_DIR)/bgagent.v1r1m2
 
 install: all
 

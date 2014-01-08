@@ -31,11 +31,10 @@ define(
     "../../dijit/Hideable",
     "../../dijit/OutputText",
     "dojo/dom-construct",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
-    "dijit/registry",
     "dojo/text!./templates/Hardware.html",
     "module",
 
@@ -56,11 +55,10 @@ function(
         b_dijit_Hideable,
         b_dijit_OutputText,
         d_construct,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
-        j_registry,
         template,
         module
     )
@@ -102,7 +100,6 @@ var _calcParent = function( location )
 
 
 var b_navigator_dijit_Hardware = d_declare(
-        "bluegene.navigator.dijit.Hardware",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -188,8 +185,6 @@ var b_navigator_dijit_Hardware = d_declare(
         this._jumpToForm.on( "submit", d_lang.hitch( this, this._onJumpToFormSubmit ) );
 
 
-        this._setupMachineIoRacksTable();
-
         this._setupRackMidplanesTable();
         this._setupRackIoDrawersTable();
         this._setupRackBpmsTable();
@@ -235,17 +230,6 @@ var b_navigator_dijit_Hardware = d_declare(
         if ( ! this._dirty )  return;
 
         this._setLocation( this._current_location );
-    },
-
-
-    _setupMachineIoRacksTable : function()
-    {
-        var layout = { columns: [
-                this._common_location_column_definition,
-                _common_status_column_definition
-            ] };
-
-        this._machineIoRacksTable.set( "layout", layout );
     },
 
 
@@ -624,7 +608,7 @@ var b_navigator_dijit_Hardware = d_declare(
         }
 
         if ( this._machine_req )  this._machine_req.cancel();
-        this._machine_req = d_Deferred.when(
+        this._machine_req = d_when(
                 this._fetch_data_fn( null ),
                 d_lang.hitch( this, this._gotMachine )
             );
@@ -651,14 +635,6 @@ var b_navigator_dijit_Hardware = d_declare(
         this._machineDescriptionHideable.set( "visibility", "description" in machine_data ? b_dijit_Hideable.Visibility.VISIBLE : b_dijit_Hideable.Visibility.HIDDEN );
 
 
-        if ( "ioRacks" in machine_data ) {
-
-            this._machineIoRacksTable.set( "data", { data: machine_data.ioRacks, idProperty: "location" } );
-
-            this._machineIoRacksContainer.set( "visibility", b_dijit_Hideable.Visibility.VISIBLE );
-        }
-
-
         this._hardware_highlighting = {};
 
         var problems = {};
@@ -666,7 +642,7 @@ var b_navigator_dijit_Hardware = d_declare(
         if ( "notAvailable" in machine_data ) {
             for ( loc in machine_data.notAvailable ) {
                 if ( loc.match( /^R..$/ ) ) {
-                    // It's a rack.
+                    // It's a compute rack.
 
                     var mp_0_loc = loc + "-M0";
                     var mp_1_loc = loc + "-M1";
@@ -688,6 +664,14 @@ var b_navigator_dijit_Hardware = d_declare(
                     if ( "powerModuleCount" in machine_data.notAvailable[loc] ) {
                         problems[loc].powerModuleCount = machine_data.notAvailable[loc].powerModuleCount;
                     }
+
+                } else if ( loc.match( /^Q..$/ ) ) {
+                    // It's an I/O rack.
+
+                    this._hardware_highlighting[loc] = { color: "red" };
+
+                    if ( ! (loc in problems) )  problems[loc] = {};
+                    problems[loc].notAvailable = true;
 
                 } else if ( loc.match( /^R..-M.$/ ) ) {
                     // it's a midplane.
@@ -748,26 +732,12 @@ var b_navigator_dijit_Hardware = d_declare(
                         problems[rack_loc].DCACount += machine_data.notAvailable[loc].DCACount;
                     }
 
-                } else if ( loc.match( /^R..-I.$/ ) ) {
-                    // It's an I/O drawer in a compute rack, highlight the rack (both midplanes).
+                } else if ( loc.match( /^[QR]..-I.$/ ) ) {
+                    // It's an I/O drawer, highlight the drawer.
+
+                    this._hardware_highlighting[loc] = { color: "red" };
 
                     var rack_loc = loc.substr( 0, 3 );
-
-                    var mp0 = rack_loc + "-M0";
-
-                    if ( mp0 in this._hardware_highlighting ) {
-                        this._hardware_highlighting[mp0].color = "red";
-                    } else {
-                        this._hardware_highlighting[mp0] = { color: "red", nodeBoards: {} };
-                    }
-
-                    var mp1 = rack_loc + "-M1";
-
-                    if ( mp1 in this._hardware_highlighting ) {
-                        this._hardware_highlighting[mp1].color = "red";
-                    } else {
-                        this._hardware_highlighting[mp1] = { color: "red", nodeBoards: {} };
-                    }
 
                     if ( "status" in machine_data.notAvailable[loc] ) {
                         if ( ! (rack_loc in problems) )  problems[rack_loc] = {};
@@ -932,14 +902,14 @@ var b_navigator_dijit_Hardware = d_declare(
         this._show( this._rackContainer );
 
         if ( this._cur_req )  this._cur_req.cancel();
-        this._cur_req = d_Deferred.when(
+        this._cur_req = d_when(
                 this._fetch_data_fn( this._current_location ),
                 d_lang.hitch( this, this._gotRack ),
                 d_lang.hitch( this, this._fetchFailed )
             );
 
         if ( ! this._machine_req ) {
-            this._machine_req = d_Deferred.when(
+            this._machine_req = d_when(
                     this._fetch_data_fn( null ),
                     d_lang.hitch( this, this._gotMachine )
                 );
@@ -1175,14 +1145,14 @@ var b_navigator_dijit_Hardware = d_declare(
         this._show( this._midplaneContainer );
 
         if ( this._cur_req )  this._cur_req.cancel();
-        this._cur_req = d_Deferred.when(
+        this._cur_req = d_when(
                 this._fetch_data_fn( this._current_location  ),
                 d_lang.hitch( this, this._gotMidplane ),
                 d_lang.hitch( this, this._fetchFailed )
             );
 
         if ( ! this._machine_req ) {
-            this._machine_req = d_Deferred.when(
+            this._machine_req = d_when(
                     this._fetch_data_fn( null ),
                     d_lang.hitch( this, this._gotMachine )
                 );
@@ -1279,14 +1249,14 @@ var b_navigator_dijit_Hardware = d_declare(
 
 
         if ( this._cur_req )  this._cur_req.cancel();
-        this._cur_req = d_Deferred.when(
+        this._cur_req = d_when(
                 this._fetch_data_fn( this._current_location  ),
                 d_lang.hitch( this, this._gotNodeBoard ),
                 d_lang.hitch( this, this._fetchFailed )
             );
 
         if ( ! this._machine_req ) {
-            this._machine_req = d_Deferred.when(
+            this._machine_req = d_when(
                     this._fetch_data_fn( null ),
                     d_lang.hitch( this, this._gotMachine )
                 );
@@ -1349,14 +1319,14 @@ var b_navigator_dijit_Hardware = d_declare(
         this._show( this._ioDrawerContainer );
 
         if ( this._cur_req )  this._cur_req.cancel();
-        this._cur_req = d_Deferred.when(
+        this._cur_req = d_when(
                 this._fetch_data_fn( this._current_location  ),
                 d_lang.hitch( this, this._gotIoDrawer ),
                 d_lang.hitch( this, this._fetchFailed )
             );
 
         if ( ! this._machine_req ) {
-            this._machine_req = d_Deferred.when(
+            this._machine_req = d_when(
                     this._fetch_data_fn( null ),
                     d_lang.hitch( this, this._gotMachine )
                 );
@@ -1409,14 +1379,14 @@ var b_navigator_dijit_Hardware = d_declare(
         this._show( this._ioRackContainer );
 
         if ( this._cur_req )  this._cur_req.cancel();
-        this._cur_req = d_Deferred.when(
+        this._cur_req = d_when(
                 this._fetch_data_fn( this._current_location  ),
                 d_lang.hitch( this, this._gotIoRack ),
                 d_lang.hitch( this, this._fetchFailed )
             );
 
         if ( ! this._machine_req ) {
-            this._machine_req = d_Deferred.when(
+            this._machine_req = d_when(
                     this._fetch_data_fn( null ),
                     d_lang.hitch( this, this._gotMachine )
                 );
@@ -1476,13 +1446,7 @@ var b_navigator_dijit_Hardware = d_declare(
     _setDisplayValues: function( values )
     {
         for ( elem_name in values ) {
-            var dij;
-
-            if ( elem_name in this ) {
-                dij = this[elem_name];
-            } else {
-                dij = j_registry.byId( this.id + "-" + elem_name );
-            }
+            var dij = this[elem_name];
 
             if ( "label" in dij ) {
                 dij.set( "label", values[elem_name] );
@@ -1495,7 +1459,10 @@ var b_navigator_dijit_Hardware = d_declare(
     _show: function( show_hideable )
     {
         this._detailsStack.selectChild( show_hideable );
-    }
+    },
+    
+    
+    _ll_format : ll_format
 
 } );
 

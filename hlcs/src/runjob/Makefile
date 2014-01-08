@@ -61,9 +61,6 @@ test.install: client.install mux.install server.install
 docs.install: common.install
 docs.all: common.all
 
-# we want to ignore errors in unit tests during installation
-docs.install test.install: export MAKEFLAGS += --ignore-errors
-
 $(TARGETS):
 	$(MAKE) --directory $(basename $@) $(subst .,,$(suffix $@))
 

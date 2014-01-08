@@ -45,6 +45,7 @@ LDFLAGS += -L $(BGQ_INSTALL_DIR)/db/lib -lbgdb
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/ras/lib -lras
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/ras/lib
+LDFLAGS += ../../../server/job/class_route/Coordinates.o
 LDFLAGS += ../../../server/job/class_route/Mapping.o
 LDFLAGS += ../../../server/job/class_route/Np.o
 LDFLAGS += ../../../server/job/class_route/Rectangle.o

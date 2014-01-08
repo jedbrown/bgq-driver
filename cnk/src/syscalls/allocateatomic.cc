@@ -25,7 +25,7 @@
 #include "Kernel.h"
 #include "spi/include/kernel/memory.h"
 
-//! \brief  Implement the sc_GETMEMORYREGION system call.
+//! \brief  Implement the sc_ALLOCATEL2ATOMIC system call.
 //! \param  r3,r4,...,r8 Syscall parameters.
 //! \return CNK_RC_SPI(0) or CNK_RC_SPI(errno).
 

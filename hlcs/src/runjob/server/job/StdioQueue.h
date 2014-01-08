@@ -75,6 +75,11 @@ public:
      */
     void clientDisconnected();
 
+    /*!
+     * \brief
+     */
+    bool isClientDisconnected() const { return _clientDisconnected; }
+
 private:
     friend class mux::Reconnect;
     bool _drained;                              //!<

@@ -91,6 +91,22 @@ void ServiceActions::close(
 }
 
 
+void ServiceActions::getAttentionMessagesSnapshot(
+        GetAttentionMessagesSnapshotCb cb
+    )
+{
+    _strand.post( boost::bind( &ServiceActions::_getAttentionMessagesSnapshotImpl, this, cb ) );
+}
+
+
+void ServiceActions::getAttentionMessages(
+        const std::string& service_action_id,
+        GetAttentionMessagesCb cb
+    )
+{
+    _strand.post( boost::bind( &ServiceActions::_getAttentionMessagesImpl, this, service_action_id, cb ) );
+}
+
 
 void ServiceActions::setConfiguration(
         const boost::filesystem::path& executable_path,
@@ -118,7 +134,11 @@ void ServiceActions::_startImpl(
             ) );
 
         service_action_ptr->start(
-                cb
+                cb,
+                _strand.wrap( boost::bind(  // Notify attention messages callback.
+                        &ServiceActions::_addAttentionMessages, this,
+                        _1, _2
+                    ) )
             );
 
     } catch ( std::exception& e ) {
@@ -194,6 +214,41 @@ void ServiceActions::_setConfigurationImpl(
 {
     _executable_path = executable_path;
     _properties_filename = properties_filename;
+}
+
+
+void ServiceActions::_addAttentionMessages(
+        const std::string& service_action_id,
+        const std::string& attention_messages
+    )
+{
+    LOG_DEBUG_MSG( "Notified of attention messages for " << service_action_id );
+
+    _attention_messages[service_action_id] = attention_messages;
+}
+
+
+void ServiceActions::_getAttentionMessagesSnapshotImpl(
+        GetAttentionMessagesSnapshotCb cb
+    )
+{
+    cb( _attention_messages );
+}
+
+
+void ServiceActions::_getAttentionMessagesImpl(
+        const std::string& service_action_id,
+        GetAttentionMessagesCb cb
+    )
+{
+    AttentionMessagesMap::const_iterator i(_attention_messages.find( service_action_id ) );
+
+    if ( i == _attention_messages.end() ) {
+        cb( std::string() );
+        return;
+    }
+
+    cb( i->second );
 }
 
 

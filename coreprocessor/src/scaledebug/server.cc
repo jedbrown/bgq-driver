@@ -152,38 +152,38 @@ int main(int argc, char** argv)
         if((strcmp(verb, "quit")==0) || (strcmp(verb, "exit")==0))
         {
             sendCommand("terminate");
-            CxxSockets::MsgMap msgs;
+            MsgMap msgs;
             receiveReply(msgs);
             break;
         }
         else if(strcmp(verb, "halt") == 0)
         {
             sendCommand("halt");
-            CxxSockets::MsgMap msgs;
+            MsgMap msgs;
             receiveReply(msgs);
         }
         else if(strcmp(verb, "run") == 0)
         {
             sendCommand("run");
-            CxxSockets::MsgMap msgs;
+            MsgMap msgs;
             receiveReply(msgs);
         }
         else if(strcmp(verb, "iar") == 0)
         {
             sendCommand("iar");
-            CxxSockets::MsgMap msgs;
+            MsgMap msgs;
             receiveReply(msgs);
         }
         else if(strcmp(verb, "stacks") == 0)
         {
             sendCommand("stacks");
-            CxxSockets::MsgMap msgs;
+            MsgMap msgs;
             receiveReply(msgs);
         }
         else if(strcmp(verb, "gprs") == 0)
         {
             sendCommand("gprs");
-            CxxSockets::MsgMap msgs;
+            MsgMap msgs;
             receiveReply(msgs);
         }
         else

@@ -27,6 +27,7 @@ define(
     "../AbstractTemplatedContainer",
     "../MonitorActiveMixin",
     "../../FilterOptions",
+    "../../xlate",
     "dojo/_base/declare",
     "dojo/_base/lang",
     "dojo/text!./templates/Locations.html",
@@ -38,7 +39,6 @@ define(
     "../MultiWildcardTextBox",
     "../TimeInterval",
     "../../format",
-    "../../xlate",
     "dijit/TooltipDialog",
     "dijit/form/Button",
     "dijit/form/DropDownButton",
@@ -52,6 +52,7 @@ function(
         ll_AbstractTemplatedContainer,
         ll_MonitorActiveMixin,
         b_navigator_FilterOptions,
+        b_navigator_xlate,
         d_declare,
         d_lang,
         template,
@@ -71,7 +72,6 @@ var _formToQuery = function( form_obj )
 
 
 var b_navigator_dijit_diagnostics_Locations = d_declare(
-        "bluegene.navigator.dijit.diagnostics.Locations",
         [ ll_AbstractTemplatedContainer, ll_MonitorActiveMixin ],
 
 {
@@ -164,7 +164,10 @@ var b_navigator_dijit_diagnostics_Locations = d_declare(
         console.log( module.id + ": selected location " + location );
 
         this.onLocationSelected( location );
-    }
+    },
+    
+    
+    _b_navigator_xlate : b_navigator_xlate
 
 } );
 

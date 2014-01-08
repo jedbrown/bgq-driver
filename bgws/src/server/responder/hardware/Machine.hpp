@@ -29,6 +29,10 @@
 
 #include "capena-http/http/uri/Path.hpp"
 
+#include "chiron-json/fwd.hpp"
+
+#include <exception>
+
 
 namespace bgws {
 namespace responder {
@@ -54,7 +58,8 @@ public:
     Machine(
             CtorArgs& args
         ) :
-            AbstractResponder( args )
+            AbstractResponder( args ),
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool)
     { /* Nothing to do */ }
 
 
@@ -65,7 +70,14 @@ public:
 
 private:
 
-    void _formatMachine();
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
+
+
+    void _queryComplete(
+            capena::server::ResponderPtr,
+            std::exception_ptr exc_ptr,
+            json::ObjectValuePtr obj_val_ptr
+        );
 
 };
 

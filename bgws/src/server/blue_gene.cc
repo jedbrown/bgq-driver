@@ -39,6 +39,14 @@ namespace bgws {
 namespace blue_gene {
 
 
+const std::vector<std::string> ALL_NB_POS = {
+        "N00", "N01", "N02", "N03",
+        "N04", "N05", "N06", "N07",
+        "N08", "N09", "N10", "N11",
+        "N12", "N13", "N14", "N15"
+    };
+
+
 namespace diagnostics {
 
 const std::string HARDWARE_BLOCK_PREFIX( "_DIAGS_" );

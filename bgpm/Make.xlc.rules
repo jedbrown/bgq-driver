@@ -28,7 +28,7 @@ LDFLAGS  = -qstaticlink
 LIB_DIRS = $(BGQ_INSTALL_DIR)/spi/lib
 LIBS = SPI SPI_cnk pthread rt stdc++
 
-XLBASE = /bgsys/xlcompilers/V1R1M0
+XLBASE = /opt/ibmcmp
 XLBIN  = $(XLBASE)/vacpp/bg/12.1/bin
 
 

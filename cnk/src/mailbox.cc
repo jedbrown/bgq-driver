@@ -36,6 +36,7 @@ extern "C"
 };
 
 char MailboxIn_Buffer[4096];
+extern uint64_t TraceConfigDefault;
 
 int mbox_init()
 {
@@ -112,7 +113,21 @@ void mbox_poll(int dopoll)
                         IPI_run_scheduler(hwt,0,0);
                     }
                 }
-
+                else if (strncmp((char*)&stdin->data[0], "settrace ", sizeof("settrace")-1)==0)
+                {
+                    TraceConfigDefault = NodeState.TraceConfig = strtoull_((char*)&stdin->data[sizeof("settrace ")-1], NULL, 16);
+                    printf("trace level now set to %lx  size=%ld\n", NodeState.TraceConfig, sizeof("settrace ") - 1);
+                    printf("string: %s\n", &stdin->data[sizeof("settrace ") - 1]);
+                }
+                else if (strncmp((char*)&stdin->data[0], "jobleader ", sizeof("jobleader")-1)==0)
+                {
+                    Personality_t *pers = GetPersonality();
+                    uint64_t origtraceconfig = NodeState.TraceConfig;
+                    NodeState.TraceConfig |= _BN(0); // flip on a bit in the trace word to enable printfs
+                    printf("Job leader:(%d %d %d %d %d)  Bridge:(%d %d %d %d %d)\n", NodeState.JobLeaderCoords[0], NodeState.JobLeaderCoords[1],NodeState.JobLeaderCoords[2],NodeState.JobLeaderCoords[3],NodeState.JobLeaderCoords[4],
+                           pers->Network_Config.cnBridge_A,pers->Network_Config.cnBridge_B,pers->Network_Config.cnBridge_C,pers->Network_Config.cnBridge_D,pers->Network_Config.cnBridge_E);
+                    NodeState.TraceConfig = origtraceconfig;
+                }
                 else if(strncmp((char*)&stdin->data[0], "halt\n", 5)==0)
                 {
                     Kernel_Halt();

@@ -37,6 +37,8 @@ SRC_FILES = hwsim_env.sh \
 	    gettwinstarsession.sh \
 	    run-helpers.sh \
 	    calibrate_watson_midplane \
+            check_opt_health.sh \
+            check_cable_spares.py \
 	    snapbug.pl \
 	    bgRA
 

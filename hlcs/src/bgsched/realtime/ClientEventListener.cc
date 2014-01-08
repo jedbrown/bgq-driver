@@ -604,7 +604,7 @@ std::string ClientEventListener::TorusCableStateChangedEventInfo::getFromMidplan
 Coordinates ClientEventListener::TorusCableStateChangedEventInfo::getFromMidplaneCoordinates() const  { return core::getMidplaneCoordinates( getFromMidplaneLocation() ); }
 const std::string& ClientEventListener::TorusCableStateChangedEventInfo::getToLocation() const  { return _impl_ptr->getToLocation(); }
 std::string ClientEventListener::TorusCableStateChangedEventInfo::getToMidplaneLocation() const  { return getToLocation().substr( 0, 6 ); }
-Coordinates ClientEventListener::TorusCableStateChangedEventInfo::getToMidplaneCoordinates() const  { return core::getMidplaneCoordinates( getToLocation() ); }
+Coordinates ClientEventListener::TorusCableStateChangedEventInfo::getToMidplaneCoordinates() const  { return core::getMidplaneCoordinates( getToMidplaneLocation() ); }
 Dimension::Value ClientEventListener::TorusCableStateChangedEventInfo::getDimension() const  { return calcDimension( getFromLocation() ); }
 Hardware::State ClientEventListener::TorusCableStateChangedEventInfo::getState() const  { return _impl_ptr->getState(); }
 SequenceId ClientEventListener::TorusCableStateChangedEventInfo::getSequenceId() const  { return _impl_ptr->getSequenceId(); }

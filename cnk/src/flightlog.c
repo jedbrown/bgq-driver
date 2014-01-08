@@ -179,14 +179,15 @@ void Flight_SchedDispatchDecoder(size_t bufsize, char* buffer, const BG_FlightRe
     uint64_t arg2 = log->data[1];
     uint64_t arg3 = log->data[2];
     uint64_t arg4 = log->data[3];
-    snprintf(buffer, bufsize, "Sched Disp  HWT=%ld TID=%ld SLOT=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld ORDER=0x%016lx", 
+    snprintf(buffer, bufsize, "Sched Disp  HWT=%ld TID=%ld SLOT=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld ORDER=0x%016lx PhysPID=%ld", 
              arg3 & 0xFF,                               // ProcessorID of the hardware thread 
              arg1 & 0xFFFF,                             // Thread ID of thread being dispatched
-             arg1>>16,                                  // Scheduler slot index being dispatched
+             (arg1>>16) & 0xFF,                         // Scheduler slot index being dispatched
              arg2,                                      // Instruction pointer of the location to begin execution
              (arg3>>SPRG_SPIinfo_NumThds)&0xFF,         // Number of software threads currently active on this hardware thread
              (arg3>>SPRG_SPIinfo_Runnable)&0xFF,        // Number of runnable software threads
-             arg4                                       // Dispatch ordering data
+             arg4,                                      // Dispatch ordering data
+             (arg1>>32) & 0xFFFF                        // physical pid 
              );
 }   
 
@@ -196,7 +197,7 @@ void Flight_SchedBlockRemoteDecoder(size_t bufsize, char* buffer, const BG_Fligh
     uint64_t arg2 = log->data[1];
     uint64_t arg3 = log->data[2];
     uint64_t arg4 = log->data[3];
-    snprintf(buffer, bufsize, "Sched Block-Remote  HWT=%ld TID from=%ld to=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld REASON=%s%s%s%s%s%s%s%s", 
+    snprintf(buffer, bufsize, "Sched Block-Remote  HWT=%ld TID from=%ld to=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld REASON=%s%s%s%s%s%s%s%s%s%s", 
              arg3 & 0xFF,                               // ProcessorID of the hardware thread
              arg1/1000,                                 // The TID of the requesting software thread
              arg1%1000,                                 // The TID of the target software thread
@@ -210,7 +211,9 @@ void Flight_SchedBlockRemoteDecoder(size_t bufsize, char* buffer, const BG_Fligh
              (arg4 & SCHED_STATE_RESET   ? "RESET " : ""),// Requestor thread is setting the RESET block code in the target thread
              (arg4 & SCHED_STATE_HOLD    ? "HOLD "  : ""),// Requestor thread is setting the HOLD block code in the target thread
              (arg4 & SCHED_STATE_SUSPEND ? "SUSP "  : ""),// Requestor thread is setting the SUSPEND block code in the target thread 
-             (arg4 & SCHED_STATE_POOF    ? "POOF  " : "") // Requestor thread is setting the POOF block code in the target thread
+             (arg4 & SCHED_STATE_POOF    ? "POOF  " : ""),// Requestor thread is setting the POOF block code in the target thread
+             (arg4 & SCHED_STATE_RESERVED ? "RESERVED" : ""),// Setting the RESERVED block code 
+             (arg4 & SCHED_STATE_APPEXIT ? "APPEXIT " : "") // Setting the APP EXIT block code 
              );
 }
 
@@ -220,20 +223,22 @@ void Flight_SchedBlockDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
     uint64_t arg2 = log->data[1];
     uint64_t arg3 = log->data[2];
     uint64_t arg4 = log->data[3];
-    snprintf(buffer, bufsize, "Sched Block  HWT=%ld TID=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld REASON=%s%s%s%s%s%s%s%s", 
+    snprintf(buffer, bufsize, "Sched Block  HWT=%ld TID=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld REASON=%s%s%s%s%s%s%s%s%s%s", 
              arg3 & 0xFF,                               // ProcessorID of the hardware thread
              arg1,                                      // The TID being blocked
              arg2,                                      // Instruction pointer of the thread being blocked
              (arg3>>SPRG_SPIinfo_NumThds)&0xFF,         // Number of software threads currently active on this hardware thread
              (arg3>>SPRG_SPIinfo_Runnable)&0xFF,        // Number of runnable software threads
-             (arg4 & SCHED_STATE_FREE    ? "FREE "  : ""),// Setting the FREE block code  
+             (arg4 & SCHED_STATE_FREE    ? "FREE  " : ""),// Setting the FREE block code  
              (arg4 & SCHED_STATE_SLEEP   ? "SLEEP " : ""),// Setting the SLEEP block code
              (arg4 & SCHED_STATE_FUTEX   ? "FUTEX " : ""),// Setting the FUTEX block code
              (arg4 & SCHED_STATE_FLOCK   ? "FLOCK " : ""),// Setting the FLOCK block code
              (arg4 & SCHED_STATE_RESET   ? "RESET " : ""),// Setting the RESET block code
-             (arg4 & SCHED_STATE_HOLD    ? "HOLD "  : ""),// Setting the HOLD block code 
-             (arg4 & SCHED_STATE_SUSPEND ? "SUSP "  : ""),// Setting the SUSPEND block code 
-             (arg4 & SCHED_STATE_POOF    ? "POOF  " : "") // Setting the POOF block code 
+             (arg4 & SCHED_STATE_HOLD    ? "HOLD  " : ""),// Setting the HOLD block code 
+             (arg4 & SCHED_STATE_SUSPEND ? "SUSP  " : ""),// Setting the SUSPEND block code 
+             (arg4 & SCHED_STATE_POOF    ? "POOF  " : ""),// Setting the POOF block code 
+             (arg4 & SCHED_STATE_RESERVED ? "RESERVED" : ""),// Setting the RESERVED block code 
+             (arg4 & SCHED_STATE_APPEXIT ? "APPEXIT " : "") // Setting the APP EXIT block code 
              );
 }
 
@@ -243,7 +248,7 @@ void Flight_SchedUnBlockRemoteDecoder(size_t bufsize, char* buffer, const BG_Fli
     uint64_t arg2 = log->data[1];
     uint64_t arg3 = log->data[2];
     uint64_t arg4 = log->data[3];
-    snprintf(buffer, bufsize, "Sched Unblock-Remote  HWT=%ld TID from=%ld to=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld REASON=%s%s%s%s%s%s%s%s", 
+    snprintf(buffer, bufsize, "Sched Unblock-Remote  HWT=%ld TID from=%ld to=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld REASON=%s%s%s%s%s%s%s%s%s%s", 
              arg3 & 0xFF,                               // ProcessorID of the hardware thread
              arg1/1000,                                 // The TID of the requesting software thread
              arg1%1000,                                 // The TID of the target software thread
@@ -257,7 +262,9 @@ void Flight_SchedUnBlockRemoteDecoder(size_t bufsize, char* buffer, const BG_Fli
              (arg4 & SCHED_STATE_RESET   ? "RESET " : ""),// Requestor thread is resetting the RESET block code in the target thread
              (arg4 & SCHED_STATE_HOLD    ? "HOLD "  : ""),// Requestor thread is resetting the HOLD block code in the target thread
              (arg4 & SCHED_STATE_SUSPEND ? "SUSP "  : ""),// Requestor thread is resetting the SUSPEND block code in the target thread 
-             (arg4 & SCHED_STATE_POOF    ? "POOF  " : "") // Requestor thread is resetting the POOF block code in the target thread
+             (arg4 & SCHED_STATE_POOF    ? "POOF  " : ""), // Requestor thread is resetting the POOF block code in the target thread
+             (arg4 & SCHED_STATE_RESERVED ? "RESERVED" : ""),// Requestor thread is resetting the RESERVED block code 
+             (arg4 & SCHED_STATE_APPEXIT ? "APPEXIT " : "") // Requestor thread is resetting the APP EXIT block code 
              );
 }
 
@@ -267,7 +274,7 @@ void Flight_SchedUnBlockDecoder(size_t bufsize, char* buffer, const BG_FlightRec
     uint64_t arg2 = log->data[1];
     uint64_t arg3 = log->data[2];
     uint64_t arg4 = log->data[3];
-    snprintf(buffer, bufsize, "Sched Unblock  HWT=%ld TID=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld REASON=%s%s%s%s%s%s%s%s", 
+    snprintf(buffer, bufsize, "Sched Unblock  HWT=%ld TID=%ld IP=0x%016lx THRDS=%ld RUNNABLE=%ld REASON=%s%s%s%s%s%s%s%s%s%s", 
              arg3 & 0xFF,                               // ProcessorID of the hardware thread
              arg1,                                      // The TID being blocked
              arg2,                                      // Instruction pointer of the thread being blocked
@@ -280,7 +287,9 @@ void Flight_SchedUnBlockDecoder(size_t bufsize, char* buffer, const BG_FlightRec
              (arg4 & SCHED_STATE_RESET   ? "RESET " : ""),// Resetting the RESET block code
              (arg4 & SCHED_STATE_HOLD    ? "HOLD "  : ""),// Resetting the HOLD block code 
              (arg4 & SCHED_STATE_SUSPEND ? "SUSP "  : ""),// Resetting the SUSPEND block code 
-             (arg4 & SCHED_STATE_POOF    ? "POOF  " : "") // Resetting the POOF block code 
+             (arg4 & SCHED_STATE_POOF    ? "POOF  " : ""),// Resetting the POOF block code 
+             (arg4 & SCHED_STATE_RESERVED ? "RESERVED" : ""),// Resetting the RESERVED block code 
+             (arg4 & SCHED_STATE_APPEXIT ? "APPEXIT " : "") // Resetting the APP EXIT block code 
              );
 }
 
@@ -332,7 +341,6 @@ void Flight_ToolMsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecorder
     uint64_t arg4 = (log->data[0]) >> 32; // upper part of first parm is sequence number
     uint64_t arg5 = (log->data[1]) >> 32; // upper part of second parm is message length  
     // Should use the constants for the Message Types, however its buried in a namespace of a C++ header file.
-    // TODO: call into a ToolControl wrapper routine to get the constants. For now just hardcode
     char *msgtext = "Msg";
     switch(arg1)
     {
@@ -396,8 +404,7 @@ void Flight_ToolCmdDecoder(size_t bufsize, char* buffer, const BG_FlightRecorder
     uint64_t arg2 = log->data[1];
     uint64_t arg3 = log->data[2];
     uint64_t arg4 = log->data[3];
-    // TODO: call into a ToolControl wrapper routine to get the cmd text. Its in a namespace therefore this C part can't access it.
-    // For now, hardcode the interesting ones.
+    // Should use the constants for the Message Types, however its buried in a namespace of a C++ header file.
     char* cmdtext = "Cmd";
     switch (arg1)
     {
@@ -443,7 +450,7 @@ void Flight_ToolNotifyDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
     uint64_t arg4 = log->data[3];
     uint64_t arg5 = (log->data[0]) >> 32;
     uint64_t arg6,arg7; 
-    // TODO: enumeration values are buried in a C++ namespace in ToolctlMessage.h. Should have a C wrapper to extract them
+    // Enumeration values are buried in a C++ namespace in ToolctlMessage.h. 
     switch (arg1)
     {
     case 0: // signal

@@ -76,6 +76,11 @@ usage () {
 
 }
 
+# Function to check for a file and remove it if it exists
+remove () {
+
+	if [ -e $1 ] ; then rm -rf $1 ; fi
+}
 
 # Check for required arguments and do validation.
 while getopts "h" flags ; do
@@ -110,20 +115,26 @@ for DRIVER in `ls -d /bgsys/drivers/*` ; do
 done
 
 if [ $KEEPDISTRO -eq 0 ] ; then
-	echo -en "\tNo other drivers are using $DISTRO.  Removing ..."
-	RC=$( rm -rf $DISTROFS_LOC 2>&1 )
-	if [ ! -z $RC ] ; then
-		echo -en "\n\tERROR: rm returned: $RC"
-		echo -en "\n\t$DISTROFS_LOC has not been fully removed from the system.\n\n"
-		exit 1
-	fi
+	# Make sure the leave distro chicken switch isn't set.
+	if [ ! -e /bgsys/linux/.leaveBGQLinuxDistro ] ; then
+		echo -en "\tNo other drivers are using $DISTRO.  Removing ..."
+		RC=$( rm -rf $DISTROFS_LOC 2>&1 )
+		if [ ! -z $RC ] ; then
+			echo -en "\n\tERROR: rm returned: $RC"
+			echo -en "\n\t$DISTROFS_LOC has not been fully removed from the system.\n\n"
+			exit 1
+		fi
 
-        # If /bgsys/linux/ionfloor is pointing to the distro we are removing, also remove it.
-        LINK=`readlink /bgsys/linux/ionfloor`
-        if [[ $LINK =~ $DISTRO ]] ; then
-                echo -en "\n\t/bgsys/linux/ionfloor matches the BG/Q Linux Distro being removed.  Removing ..."
-                rm /bgsys/linux/ionfloor
-        fi
+	        # If /bgsys/linux/ionfloor is pointing to the distro we are removing, also remove it.
+        	LINK=`readlink /bgsys/linux/ionfloor`
+	        if [[ $LINK =~ $DISTRO ]] ; then
+        	        echo -en "\n\t/bgsys/linux/ionfloor matches the BG/Q Linux Distro being removed.  Removing ..."
+                	rm /bgsys/linux/ionfloor
+	        fi
+	else
+		echo -en "\tFound chicken switch file /bgsys/linux/.leaveBGQLinuxDistro.\n"
+		echo -en "\tRemoval of $DISTRO skipped!\n\n"
+	fi
 else
 	echo -en "\n\t$DISTRO is still in use ... Skipping removal."
 fi
@@ -132,7 +143,21 @@ fi
 # Note that we only want to do this if it doesn't appear that we are installing an eFix.
 # If we are installing an eFix we should rebuild the ramdisk.
 if [ -e BGQ_INSTALL_DIR/ramdisk ] && [ $EFIX_MODE -eq 0 ] ; then
-        rm -rf BGQ_INSTALL_DIR/ramdisk
+        remove BGQ_INSTALL_DIR/ramdisk/bin/mlxFwUpdate
+	remove BGQ_INSTALL_DIR/ramdisk/bin/mlxFwUpdate.cpio.gz
+	remove BGQ_INSTALL_DIR/ramdisk/bin/ramdisk
+	remove BGQ_INSTALL_DIR/ramdisk/bin/ramdisk.gz
+	remove BGQ_INSTALL_DIR/ramdisk/bin/ramdisk.gz.cpio.gz
+	remove BGQ_INSTALL_DIR/ramdisk/distrofs/rpm
+	remove BGQ_INSTALL_DIR/ramdisk/distrofs/tar
+	remove BGQ_INSTALL_DIR/ramdisk/initramfs/bin
+        remove BGQ_INSTALL_DIR/ramdisk/initramfs/etc
+        remove BGQ_INSTALL_DIR/ramdisk/initramfs/lib64
+        remove BGQ_INSTALL_DIR/ramdisk/initramfs/sbin
+        remove BGQ_INSTALL_DIR/ramdisk/initramfs/usr
+        remove BGQ_INSTALL_DIR/ramdisk/initramfs/var
+        remove BGQ_INSTALL_DIR/ramdisk/rpms/bgq-distrofs_runtime*
+        remove BGQ_INSTALL_DIR/ramdisk/tools
 else
 
    echo -en "\n\n\tRunning in eFix mode:  Attempting rebuild of the ramdisk ...\n" 

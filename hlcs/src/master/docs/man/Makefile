@@ -58,3 +58,5 @@ endif
 
 clean:
 	$(RM) *.8 *~
+
+distclean: clean

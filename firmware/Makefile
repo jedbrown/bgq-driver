@@ -46,6 +46,13 @@ DIRS += tests
 endif
 
 
+ifeq ($(BGQ_CONTROL_SYSTEM_SIMULATION),yes)
+DIRS =
+DIRS += include
+DIRS += tools
+endif
+
+
 BEAM_RESULTS += --beam::ipa=all --beam::data=$(BGQ_INSTALL_DIR)/firmware/beam
 
 TARGETS_ALL		= $(addsuffix .all,$(DIRS))

@@ -28,39 +28,27 @@
 
 <title>bluegene/navigator/dijit/NumberCompareOption Browser Tests</title>
 
-<script src="../../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+<script src="../../../../dojo/dojo.js" data-dojo-config="async: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
 
 <script>
 
 
-g_b_navigator_dijit_NumberCompareOption = null;
-
-g_j_form_Form = null;
-
-
 require(
 [
-    "bluegene/navigator/dijit/NumberCompareOption",
     "dojo/parser",
     "dojo/ready",
     "dijit/_base/manager",
-    "dijit/form/Form",
-    "doh/runner"
+    "doh/runner",
+
+    "bluegene/navigator/dijit/NumberCompareOption"
 ],
 function(
-        b_navigator_dijit_NumberCompareOption,
         d_parser,
         d_ready,
         j_manager,
-        j_form_Form,
         doh
     )
 {
-
-    
-g_b_navigator_dijit_NumberCompareOption = b_navigator_dijit_NumberCompareOption;
-
-g_j_form_Form = j_form_Form;
 
 
 var tests = [
@@ -90,6 +78,7 @@ function get_value_initialized()
 
 
 var onLoad = function() {
+    d_parser.parse();
     doh.register( "bluegene/navigator/dijit/test/NumberCompareOptionHTML", tests );
     doh.run();
 };
@@ -108,9 +97,9 @@ d_ready( onLoad );
 <body>
 
 <ul>
-<li id="nco1" data-dojo-type="g_b_navigator_dijit_NumberCompareOption"></li>
-<li id="nco2" data-dojo-type="g_b_navigator_dijit_NumberCompareOption"></li>
-<li id="nco3" data-dojo-type="g_b_navigator_dijit_NumberCompareOption" data-dojo-props="value: 'le3'"></li>
+<li id="nco1" data-dojo-type="bluegene/navigator/dijit/NumberCompareOption"></li>
+<li id="nco2" data-dojo-type="bluegene/navigator/dijit/NumberCompareOption"></li>
+<li id="nco3" data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="value: 'le3'"></li>
 </ul>
 
 </body>

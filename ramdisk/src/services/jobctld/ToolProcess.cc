@@ -48,7 +48,7 @@ ToolProcess::~ToolProcess()
 }
 
 bgcios::MessageResult
-ToolProcess::start(UserIdentity& identity)
+ToolProcess::start(UserIdentity& identity, bool simulation)
 {
    bgcios::MessageResult result;
 
@@ -78,7 +78,7 @@ ToolProcess::start(UserIdentity& identity)
    }
 
    // Fork a new process for running the program.
-   pid_t child = fork();
+   const pid_t child = fork();
 
    // There was an error from fork().
    if (child == -1) {
@@ -90,6 +90,9 @@ ToolProcess::start(UserIdentity& identity)
 
    // Start the program in the child process.
    else if (child == 0) {
+
+      // change process group
+      setpgrp();
 
       // Setup array of pointers for argument strings.
       size_t numArguments = _arguments.size() + 2;
@@ -103,11 +106,13 @@ ToolProcess::start(UserIdentity& identity)
       prepareChild(args, envs);
 
       // Swap to the user's identity.
-      bgcios::MessageResult result = identity.swap();
-      if (result.returnCode() != bgcios::Success) {
-         LOG_ERROR_MSG("Job " << _jobId << ": failed to swap to user identity for user " << identity.getUserName() <<
-                       ": " << bgcios::errorString(result.errorCode()));
-         exit(1);
+      if ( !simulation ) {
+          bgcios::MessageResult result = identity.swap();
+          if (result.returnCode() != bgcios::Success) {
+              LOG_ERROR_MSG("Job " << _jobId << ": failed to swap to user identity for user " << identity.getUserName() <<
+                      ": " << bgcios::errorString(result.errorCode()));
+              exit(1);
+          }
       }
 
       // Exec the tool program.

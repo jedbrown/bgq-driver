@@ -286,7 +286,7 @@ int fw_ddr_legacyCorrectableHandler( fw_uint64_t details[] ) {
 
 	if ( ( ( mcfir & ~( MCFIR_MEMORY_CE | MCFIR_MAINTENANCE_CE ) ) != 0 ) && ( backgroundScrubbingEnabled != 0 ) ) {
 	    DCRWritePriv(_DDR_MC_MCMCC(unit), 0);	// If more than CE, then keep scrubbing disabled
-	    FW_Warning( "Stopping Background Scrubbing Permanently unit=%d MCFIR=%X", unit, mcfir);
+	    FW_Warning( "Stopping Background Scrubbing Permanently unit=%d MCFIR=%X.", unit, mcfir);
 	}
 	else if ( ( mcfir & ( MCFIR_MEMORY_CE | MCFIR_MAINTENANCE_CE ) ) != 0 ) {
 
@@ -326,7 +326,7 @@ int fw_ddr_legacyCorrectableHandler( fw_uint64_t details[] ) {
 		// NOTE: Changed to Warning because this could happen in some normal cases when one-time scrubbing (bit6==1) or any other maintenance command
 		//       is called by a test (e.g., ddr_bitfail, ddr_error_stress). This also could happen after background scrubbing is stopped permanently.
 
-	        FW_Warning( "Background Scrubbing Not Resumed unit=%d MCMCC=%X", unit, DCRReadPriv(_DDR_MC_MCMCC(unit)) );
+	        FW_Warning( "Background Scrubbing Not Resumed unit=%d MCMCC=%X.", unit, DCRReadPriv(_DDR_MC_MCMCC(unit)) );
 	    }
 
 	    if ( PERS_ENABLED( PERS_ENABLE_DDRDynamicRecal ) ) {

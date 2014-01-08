@@ -72,10 +72,11 @@ uint64_t sc_writev(SYSCALL_FCN_ARGS)
     }
 
     // Make sure the buffers in the io vector are valid.
-    for (int index = 0; index < iovcnt; ++index) {
+    for (int index = 0; index < iovcnt; ++index) 
+    {
         if((iov[index].iov_base == NULL) && (iov[index].iov_len == 0))
             continue;
-
+        
         if ( !VMM_IsAppAddress( iov[index].iov_base, iov[index].iov_len ) ) {
             return CNK_RC_FAILURE(EFAULT);
         }

@@ -21,22 +21,30 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#include "lite/Np.h"
+#include "Np.h"
 
-#include "lite/JobInfo.h"
+#include "JobInfo.h"
 
-#include "CNBlockController.h"
-#include "IOBlockController.h"
+#include "server/CNBlockController.h"
+#include "server/IOBlockController.h"
 
 #include <utility/include/Log.h>
 
-LOG_DECLARE_FILE( "mmcs" );
+#include <boost/lexical_cast.hpp>
 
+#include <stdexcept>
+
+
+LOG_DECLARE_FILE( "mmcs.lite" );
+
+
+namespace mmcs {
 namespace lite {
+
 
 Np::Np(
         const JobInfo& info,
-        const BlockPtr& block
+        const server::BlockPtr& block
       ) :
     _info( info ),
     _block( block ),
@@ -73,7 +81,7 @@ void
 Np::createWorldRectangle()
 {
     *CR_RECT_LL(&_world) = (CR_COORD_T) {{0,0,0,0,0}};
-    if ( boost::dynamic_pointer_cast<CNBlockController>(_block) ) {
+    if ( boost::dynamic_pointer_cast<server::CNBlockController>(_block) ) {
         *CR_RECT_UR(&_world) = (CR_COORD_T) {{
             _block->getBlockNodeConfig()->aNodeSize() - 1,
             _block->getBlockNodeConfig()->bNodeSize() - 1,
@@ -81,7 +89,7 @@ Np::createWorldRectangle()
             _block->getBlockNodeConfig()->dNodeSize() - 1,
             _block->getBlockNodeConfig()->eNodeSize() - 1
         }};
-    } else if ( boost::dynamic_pointer_cast<IOBlockController>(_block) ) {
+    } else if ( boost::dynamic_pointer_cast<server::IOBlockController>(_block) ) {
         *CR_RECT_UR(&_world) = (CR_COORD_T) {{
             _block->getBlockNodeConfig()->aIONodeSize() - 1,
             _block->getBlockNodeConfig()->bIONodeSize() - 1,
@@ -156,4 +164,4 @@ Np::createRectangle()
     LOG_TRACE_MSG( _size << " nodes excluded from circumscribing rectangle" );
 }
 
-} // lite
+} } // namespace mmcs::lite

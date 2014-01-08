@@ -47,20 +47,20 @@ help()
 void
 usage()
 {
-    std::cerr << "list_agents [ --properties filename ] [ --help ] [ --fancy ] [ --host host:port ] [ --verbose verbosity ]" << std::endl;
+    std::cerr << "list_agents [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]" << std::endl;
 }
 
 int main(int argc, const char** argv)
 {
     std::vector<std::string> validargs;
     std::vector<std::string> singles;
-    std::string fancyarg = "--fancy";
+    std::string fancyarg = "--fancy"; // hidden for backwards compatibility
     std::string uglyarg = "--normal";
     singles.push_back(fancyarg);
     singles.push_back(uglyarg);
     Args largs(argc, argv, &usage, &help, validargs, singles);
     pargs = &largs;
-    client.initProperties(pargs->_props);
+    client.initProperties(pargs->get_props());
 
     // assume fancy by default
     bool fancy = true;

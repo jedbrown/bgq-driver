@@ -132,7 +132,7 @@ int mudm_resetIOlink(void* mudm_context , uint32_t BlockID){
   uint64_t entry_num;
   struct my_context * mcontext = (struct my_context *)mudm_context; 
   uint64_t num_uninjected_descriptors = 0;
-  uint64_t cycles_per_msec = 1600;
+  uint64_t cycles_per_usec = 1600;
   uint64_t time_diff = 0;
   uint64_t timestamp_begin = GetTimeBase2(); 
   uint64_t timestamp_end = timestamp_begin;
@@ -272,9 +272,9 @@ int mudm_resetIOlink(void* mudm_context , uint32_t BlockID){
   }
   mcontext->StuckState = 0;  //Clear note of StuckState which dumped extra info on free
   timestamp_end = GetTimeBase2(); 
-  time_diff = (timestamp_end - timestamp_begin)/cycles_per_msec;
+  time_diff = (timestamp_end - timestamp_begin)/cycles_per_usec;
   MUDM_DM_USEC_DIFF(&mcontext->mudm_hi_wrap_flight_recorder,time_diff, __LINE__, timestamp_begin, timestamp_end);
-  //MPRINT("Link Reset Processing took %llu milliseconds \n",(LLUS)time_diff);
+
   return 0;
 };
 EXPORT_SYMBOL(mudm_resetIOlink);

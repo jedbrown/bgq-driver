@@ -165,9 +165,9 @@ if [ $BG_NODE_TYPE = "ION" ] && [ $BG_NODE_ENABLE_PCIE -eq 1 ] ; then
 		MATCHED=0
 		I=0		
 
-		PN=`lspci -vv -s 0000:01:00.0 | grep -e "\[PN\]" | tr -s '\t' ' '`
+		PNARR=(`lspci -vv -s 0000:01:00.0 | grep -e "\[PN\]" | tr -s '\t' ' ' | tr -s '\s' '\n'`)
 		while [ $I -lt ${#ADAPTERARR[@]} ] && [ $MATCHED -eq 0 ] ; do
-		      if [[ "$PN" =~ "${ADAPTERARR[$I]}" ]] ; then
+		      if [[ "${ADAPTERARR[$I]}" =~ "${PNARR[3]}" ]] ; then
 		      	 MATCHED=1
 		      else
 			 let I=$I+1
@@ -182,10 +182,10 @@ if [ $BG_NODE_TYPE = "ION" ] && [ $BG_NODE_ENABLE_PCIE -eq 1 ] ; then
 
 		if [ $MATCHED -eq 0 ] ; then
 		   #DETAILS=`echo -en $NAME - $PN - $EC - \n\t\t$FW - $PSID`
-		   MSG="Unsupported PCIe adapter detected: \n\t$NAME -\n\t\t$PN -$EC -\n\t\t $FW - $PSID."
+		   MSG="Unsupported PCIe adapter detected: \n\t$NAME -\n\t\t${PNARR[3]} -$EC -\n\t\t $FW - $PSID."
 		   bgras $BGRAS_ID_PCIE_UNSUPPORTED_ADAPTER "$MSG"	   
 		else
-		   echo -en "\nFound supported PCIe adapter: \n\t$NAME -\n\t\t$PN -$EC -\n\t\t $FW - $PSID.\n"
+		   echo -en "\nFound supported PCIe adapter: \n\t$NAME -\n\t\t${PNARR[3]} -$EC -\n\t\t $FW - $PSID.\n"
 		fi
 		   
 	elif ! [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 1 ] ; then

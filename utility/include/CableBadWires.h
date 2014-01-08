@@ -27,8 +27,8 @@
 #ifndef BGQ_UTILITY_CABLE_BAD_WIRES
 #define BGQ_UTILITY_CABLE_BAD_WIRES
 
+#include <vector>
 #include <string>
-
 #include <stdint.h>
 
 namespace bgq {
@@ -82,7 +82,7 @@ public:
 	 *
 	 * @param location		Transmitting port location on the node board or IO drawer
 	 *                 		(i.e., "Rxx-Mx-Nxx-Txx", "Rxx-Ix-Txx", or "Qxx-Ix-Txx").
-	 * @param badWireMask 	Aggregated bad wire mask for the cable from the database
+	 * @param badWireMask 	Aggregated bad wire mask for the cable from the database.
 	 */
 	void setTxPortAndBadWireMask(const std::string& location, uint64_t badWireMask);
 
@@ -145,22 +145,46 @@ public:
 	 */
 	std::string getErrorMessage() const;
 
+	/**
+	 * Translate the bad wire mask between two Torus/IO ports into pairs of optical module locations.
+	 * For example, if the bad wire mask is 0x1001 between R00-M0-N00-T08 and R01-M0-N00-T10,
+	 * a list containing "R01-M0-N00-O20:R00-M0-N00-O21" and "R01-M0-N00-O32:R00-M0-N00-O33" is
+	 * returned to indicate that there are bad wires between (1) R01-M0-N00-O20 and R00-M0-N00-O21
+	 * and (2) R01-M0-N00-O32 and R00-M0-N00-O33.
+	 *
+	 * @param fromPort		Port location on a node board or IO drawer on one end of a Torus/IO cable
+	 * 						("Rxx-Mx-Nxx-Txx", "Rxx-Ix-Txx", or "Qxx-Ix-Txx").
+	 * @param toPort		Port location on a node board or IO drawer on the other end of the cable.
+	 * @param badWireMask	Bad fiber mask (64 bits long: [63:0] where 0 is good and 1 is bad)
+	 * @returns A list of colon-separated optical module location pairs with bad wires.
+	 * @throws invalid_argument if an invalid Torus/IO port location was specified or if the
+	 * connection between two specified ports is not supported.
+	 */
+	static std::vector<std::string> getBadOpticalConnections(const std::string& fromPort, const std::string& toPort, long int badWireMask);
+
 private:
 	bool isNodeBoardLinkChipLocation(const std::string& location) const;
 	bool isIoDrawerLinkChipLocation(const std::string& location) const;
-	bool isNodeBoardPortLocation(const std::string& location) const;
-	bool isIoDrawerPortLocation(const std::string& location) const;
-	void processNodeBoardTorusCable(const std::string& location, int linkChipIndex);
-	void processNodeBoardIoCable(const std::string& location, int linkChipIndex);
-	void processIoDrawerIoCable(const std::string& location, int linkChipIndex);
+	bool processNodeBoardTorusCable(const std::string& location, int linkChipIndex);
+	bool processNodeBoardIoCable(const std::string& location, int linkChipIndex);
+	bool processIoDrawerIoCable(const std::string& location, int linkChipIndex);
 	int getFibersFromWiresForTorusCable(int linkChipIndex, uint64_t badWireMask) const;
 	int getFibersFromWiresForIoCable(int linkChipIndex, uint64_t badWireMask) const;
-	int charToInt(char number) const;
+	bool checkIoCable(uint64_t badWireMask) const;
+	int onBits(int mask) const;
+
+	static bool isNodeBoardPortLocation(const std::string& portLocation);
+	static bool isNodeBoardIoPort(const std::string& portLocation);
+	static bool isIoDrawerPortLocation(const std::string& portLocation);
+	static std::string getBoardLocation(const std::string& portLocation);
+	static int getPortPosition(const std::string& portLocation);
+	static bool isTorusSender(const std::string& portLocation);
+	static int charToInt(char number);
 
 	// INPUT TO CTOR:
 	std::string			_linkchip;		// Input: Receiver link chip location (Rxx-Mx-Nxx-U0x, Rxx/Qxx-Ix-U0x)
 	int					_register;		// Input: Receiver link chip register
-	int					_badfibers;		// Input: Receiver bad filer bits (12 bits[0:11] where 0=ok, 1=bad)
+	int					_badfibers;		// Input: Receiver bad fiber bits (12 bits[0:11] where 0=ok, 1=bad)
 
 	// INPUT TO setTxPortAndAggregatedBadWireMask():
 	std::string			_fromport;		// Input: From port location (Rxx-Mx-Nxx-Txx, Rxx/Qxx-Ix-Txx)

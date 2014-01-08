@@ -27,11 +27,11 @@ define(
     "./UserInfo",
     "dojo/io-query",
     "dojo/json",
+    "dojo/request",
     "dojo/topic",
+    "dojo/when",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
-    "dojo/_base/xhr",
     "dojox/encoding/base64",
     "dojox/rpc/Rest",
     "module"
@@ -41,11 +41,11 @@ function(
         b_UserInfo,
         d_io_query,
         d_json,
+        d_request,
         d_topic,
+        d_when,
         d_declare,
-        d_Deferred,
         d_lang,
-        d_xhr,
         x_base64,
         x_rpc_Rest,
         module
@@ -128,10 +128,8 @@ var _sessionEndedTopic = "/bg/Bgws/sessionEnded";
 
 /**
  *  Returns true iff the response status, etc, indicates the session is not valid.
- *  @name checkResponseSessionInvalid
- *  @methodOf bluegene^Bgws
  */
-var _checkResponseSessionInvalid = function( args )
+var _checkXhrSessionInvalid = function( args )
     {
         if ( args.status === _HTTP_STATUS_SERVICE_TEMPORARILY_UNAVAILABLE ) {
             // Apache returns "Service Temporarily Unavailable" if the BGWS server isn't running.
@@ -189,7 +187,7 @@ var _checkResponseSessionInvalid = function( args )
  *  @methodOf bluegene^Bgws
  *  @returns {string} error message
  */
-var _calculateErrorMessage = function( response, io_args )
+var _calculateXhrErrorMessage = function( response, io_args )
     {
         if ( response.dojoType === "cancel" ) {
             return response.message;
@@ -200,7 +198,7 @@ var _calculateErrorMessage = function( response, io_args )
         if ( content_type === _jsonMediaType ) {
             // It's a BGWS response.
 
-            var bgws_err = d_json.parse( response.responseText );
+            var bgws_err = d_json.parse( response.text );
 
             return bgws_err.text;
         }
@@ -209,7 +207,76 @@ var _calculateErrorMessage = function( response, io_args )
             return "The BGWS server is not available.";
         }
 
-        return response.responseText;
+        return response.text;
+    };
+
+
+var _calculateRequestErrorMessage = function( error_data )
+    {
+        var response = error_data.response;
+
+        var content_type = response.getHeader( "Content-Type" );
+
+        if ( content_type === _jsonMediaType ) {
+            // It's a BGWS response.
+
+            var bgws_err = response.data;
+
+            return bgws_err.text;
+        }
+
+        if ( response.status === _HTTP_STATUS_SERVICE_TEMPORARILY_UNAVAILABLE ) {
+            return "The BGWS server is not available.";
+        }
+
+        return response.text;
+    };
+
+
+var _checkRequestSessionInvalid = function( response )
+    {
+        if ( response.status === _HTTP_STATUS_SERVICE_TEMPORARILY_UNAVAILABLE ) {
+            // Apache returns "Service Temporarily Unavailable" if the BGWS server isn't running.
+            return _loginError.BGWS_NOT_AVAILABLE;
+        }
+
+        var content_type = response.getHeader( "Content-Type" );
+
+        if ( content_type ) {
+    
+            if ( content_type === _jsonMediaType ) {
+                // It's a BGWS response.
+    
+                if ( response.data.id === _ERROR_ID_INVALID_SESSION ) {
+                    return _loginError.INVALID_SESSION;
+                }
+
+                return;
+            }
+
+            return;
+
+        } else { // no contentType.
+
+            if ( response.status === _HTTP_STATUS_BAD_REQUEST ) { // BGWS returns 400 with object with id==="invalidSession" if the session ID presented is not valid.
+
+                var response_json = d_json.parse( response.text );
+                if ( response_json ) {
+                    if ( response_json.id === _ERROR_ID_INVALID_SESSION ) {
+                        return _loginError.INVALID_SESSION;
+                    }
+                    return;
+                }
+
+                // response wasn't JSON.
+                return;
+
+            }
+    
+            // Response wasn't "Bad Request", so wouldn't be invalidSession.
+            return;
+    
+        }
     };
 
 
@@ -334,7 +401,7 @@ var b_Bgws = d_declare( null,
     },
 
 
-    /** Creates a dojo/daa-style store (old style) */
+    /** Creates a dojo/data-style store (old style) */
     createDataStore : function( args )
     {
         return b_BgwsStore.createObjectStore( args, this );
@@ -381,7 +448,6 @@ var b_Bgws = d_declare( null,
 
         return this._hardware_replacements_data_store;
     },
-
 
 
     _jobs_data_store : null,
@@ -514,19 +580,22 @@ var b_Bgws = d_declare( null,
     {
         var userinfo_json_text = d_json.stringify( { auth: auth_b64 } );
 
-        var dfd = d_xhr.post( {
-                url: this.resourceUris.bgws.sessions,
-                headers: _postHeaders,
-                postData: userinfo_json_text,
-                handleAs: "json"
-            } );
-
-        var dfd2 = dfd.then(
-                d_lang.hitch( this, this._onLoginComplete, dfd.ioArgs ),
-                d_lang.hitch( this, this._onLoginFailure, dfd.ioArgs )
+        var req_promise = d_request(
+                this.resourceUris.bgws.sessions,
+                {
+                    method: "POST",
+                    headers: _postHeaders,
+                    data: userinfo_json_text,
+                    handleAs: "json"
+                }
             );
 
-        return dfd2;
+        var promise2 = req_promise.response.then(
+                d_lang.hitch( this, this._onLoginComplete ),
+                d_lang.hitch( this, this._onLoginFailure )
+            );
+
+        return promise2;
     },
 
     getUserInfo : function()
@@ -541,19 +610,22 @@ var b_Bgws = d_declare( null,
             return;
         }
 
-        var def = d_xhr.del( {
-                url: (this.resourceUris.bgws.sessions + "/current"),
-                headers:  d_lang.mixin( {},
-                        _acceptJsonHeader,
-                        this._session_header
-                    ),
-                handleAs: "json",
-                sync: true
-            } );
+        var req_promise = d_request(
+                (this.resourceUris.bgws.sessions + "/current"),
+                {
+                    method: "DELETE",
+                    headers:  d_lang.mixin( {},
+                            _acceptJsonHeader,
+                            this._session_header
+                        ),
+                    handleAs: "json",
+                    sync: true
+                }
+            );
 
         this._session_header = null;
 
-        return def;
+        return req_promise;
     },
 
 
@@ -567,25 +639,27 @@ var b_Bgws = d_declare( null,
 
         console.log( module.id + ": posting create block to " + this.resourceUris.blocks + ": " + block_json_text );
 
-        var def = d_xhr.post( {
-                url: this.resourceUris.blocks,
-                headers: d_lang.mixin( {},
-                        _postHeaders,
-                        this._session_header
-                    ),
-                postData: block_json_text,
-                handleAs: "json"
-            } );
+        var req_promise = d_request(
+                this.resourceUris.blocks,
+                {
+                    method: "POST",
+                    headers: d_lang.mixin( {},
+                            _postHeaders,
+                            this._session_header
+                        ),
+                    data: block_json_text,
+                    handleAs: "json"
+                }
+            );
 
-        var promise = d_Deferred.when(
-                def,
+        var promise = req_promise.then(
                 d_lang.hitch( this, function( response ) {
                     console.log( module.id + ": successfully created block '" + create_block_info.id + "'" );
                     return response;
                 } ),
-                d_lang.hitch( this, function( error ) {
-                    console.log( module.id + ": create block failed. error=", error );
-                    this._processErrorResponse( error, def );
+                d_lang.hitch( this, function( error_data ) {
+                    console.log( module.id + ": create block failed. error_data=", error_data );
+                    this._processRequestError( error_data );
                 } )
             );
 
@@ -596,7 +670,7 @@ var b_Bgws = d_declare( null,
     {
         var def = this._blocks_service['delete']( id );
 
-        d_Deferred.when( def,
+        d_when( def,
                 null,
                 d_lang.hitch( this, function( error ) {
                     console.log( module.id + ": delete block failed. error=", error );
@@ -611,7 +685,7 @@ var b_Bgws = d_declare( null,
     {
         var def = this._blocks_service( id );
 
-        d_Deferred.when( def,
+        d_when( def,
                 null,
                 d_lang.hitch( this, function( error ) {
                     console.log( module.id + ": fetch block details failed. error=", error );
@@ -626,7 +700,7 @@ var b_Bgws = d_declare( null,
     {
         var def = this._jobs_service( id );
 
-        d_Deferred.when( def,
+        d_when( def,
                 null,
                 d_lang.hitch( this, function( error ) {
                     console.log( module.id + ": fetch job details failed. error=", error );
@@ -640,27 +714,30 @@ var b_Bgws = d_declare( null,
 
     fetch: function( resource_path_part )
     {
+        console.log( module.id + ": fetching", resource_path_part );
+
         var resource_path = this.calcResourcePath( resource_path_part );
 
-        var def = d_xhr.get( {
-                url: resource_path,
-                headers: d_lang.mixin( {},
-                        _acceptJsonHeader,
-                        this._session_header
-                    ),
-                handleAs: "json"
-            } );
+        var req_promise = d_request(
+                resource_path,
+                {
+                    headers: d_lang.mixin( {},
+                            _acceptJsonHeader,
+                            this._session_header
+                        ),
+                    handleAs: "json"
+                }
+            );
 
-
-        d_Deferred.when( def,
-                null,
-                d_lang.hitch( this, function( error ) {
-                    console.log( module.id + ": fetch " + resource_path + " failed. error=", error );
-                    this._processErrorResponse( error, def );
+        req_promise.then(
+                null, // ignore success.
+                d_lang.hitch( this, function( error_data ) {
+                    console.log( module.id + ": fetch " + resource_path + " failed. error_data=", error_data );
+                    this._processRequestError( error_data );
                 } )
             );
 
-        return def;
+        return req_promise;
     },
 
 
@@ -675,26 +752,28 @@ var b_Bgws = d_declare( null,
             query_str += encodeURIComponent( n ) + "=" + encodeURIComponent( args.query[n] );
         }
 
-        console.log( module.id + ": fetchPerformanceData args=",args, " url=", (this.resourceUris.perf + query_str) );
+        console.log( module.id + ": fetchPerformanceData args=", args, " url=", (this.resourceUris.perf + query_str) );
 
-        var def = d_xhr.get( {
-                url: (this.resourceUris.perf + query_str),
-                headers: d_lang.mixin( args.headers,
-                        _acceptJsonHeader,
-                        this._session_header
-                    ),
-                handleAs: "json"
-            } );
+        var req_promise = d_request(
+                (this.resourceUris.perf + query_str),
+                {
+                    headers: d_lang.mixin( args.headers,
+                            _acceptJsonHeader,
+                            this._session_header
+                        ),
+                    handleAs: "json"
+                }
+            );
 
-        d_Deferred.when( def,
-                null,
-                d_lang.hitch( this, function( error ) {
-                    console.log( module.id + ": fetch perf data failed. error=", error );
-                    this._processErrorResponse( error, def );
+        req_promise.then(
+                null, // ignore success.
+                d_lang.hitch( this, function( error_data ) {
+                    console.log( module.id + ": fetch perf data failed. error_data=", error_data );
+                    this._processRequestError( error_data );
                 } )
             );
 
-        return def;
+        return req_promise;
     },
 
 
@@ -704,22 +783,24 @@ var b_Bgws = d_declare( null,
 
         console.log( module.id + ": posting submit diagnostics to " + this.resourceUris.diagnostics.runs + ": " + json_str );
 
-        var deferred = d_xhr.post( {
-                url: this.resourceUris.diagnostics.runs,
-                headers: d_lang.mixin( {},
-                        _postHeaders,
-                        this._session_header
-                    ),
-                postData: json_str,
-                handleAs: "json"
-            } );
+        var req_promise = d_request(
+                this.resourceUris.diagnostics.runs,
+                {
+                    method: "POST",
+                    headers: d_lang.mixin( {},
+                            _postHeaders,
+                            this._session_header
+                        ),
+                    data: json_str,
+                    handleAs: "json"
+                }
+            );
 
-        var promise = d_Deferred.when(
-                deferred,
+        var promise = req_promise.response.then(
 
                 // successful callback.
-                d_lang.hitch( this, function() {
-                    var location = deferred.ioArgs.xhr.getResponseHeader( "Location" );
+                d_lang.hitch( this, function( response ) {
+                    var location = response.getHeader( "Location" );
                     console.log( module.id + ": successfully started diagnostics", location );
 
                     var location_parts = location.split( "/" );
@@ -730,15 +811,17 @@ var b_Bgws = d_declare( null,
                 } ),
 
                 // Error callback.
-                d_lang.hitch( this, function( error ) {
-                    console.log( module.id + ": start diagnostics failed error=", error, "deferred=", deferred );
+                d_lang.hitch( this, function( error_data ) {
+                    console.log( module.id + ": start diagnostics failed error_data=", error_data );
 
-                    this._processErrorResponse( error, deferred );
+                    this._processRequestError( error_data );
                 } )
+
             );
 
         return promise;
     },
+
 
     cancelDiagnosticsRun: function( run_id )
     {
@@ -748,30 +831,32 @@ var b_Bgws = d_declare( null,
 
         var json_str = d_json.stringify( { "operation" : "cancel" } );
 
-        var deferred = d_xhr.post( {
-                url: run_uri,
-                headers: d_lang.mixin( {},
-                        _postHeaders,
-                        this._session_header
-                    ),
-                postData: json_str,
-                handleAs: "json"
-            } );
+        var req_promise = d_request(
+                run_uri,
+                {
+                    method: "POST",
+                    headers: d_lang.mixin( {},
+                            _postHeaders,
+                            this._session_header
+                        ),
+                    data: json_str,
+                    handleAs: "json"
+                }
+            );
 
-        var promise = d_Deferred.when(
-                deferred,
+        var promise = req_promise.then(
 
                 // successful callback.
                 d_lang.hitch( this, function() {
-                    console.log( module.id + ": cancel diagnostics run " + run_id + " successful.", arguments, deferred );
+                    console.log( module.id + ": cancel diagnostics run " + run_id + " successful.", arguments );
                     return { runId: run_id };
                 } ),
 
                 // Error callback.
-                d_lang.hitch( this, function( error ) {
-                    console.log( module.id + ": cancel diagnostics failed error=", error );
+                d_lang.hitch( this, function( error_data ) {
+                    console.log( module.id + ": cancel diagnostics failed error_data=", error_data );
 
-                    this._processErrorResponse( error, deferred );
+                    this._processRequestError( error_data );
                 } )
             );
 
@@ -787,22 +872,24 @@ var b_Bgws = d_declare( null,
 
         console.log( module.id + ": posting submit prepare for service to " + this.resourceUris.serviceActions + ": " + json_str );
 
-        var deferred = d_xhr.post( {
-                url: this.resourceUris.serviceActions,
-                headers: d_lang.mixin( {},
-                        _postHeaders,
-                        this._session_header
-                    ),
-                postData: json_str,
-                handleAs: "json"
-            } );
+        var req_promise = d_request(
+                this.resourceUris.serviceActions,
+                {
+                    method: "POST",
+                    headers: d_lang.mixin( {},
+                            _postHeaders,
+                            this._session_header
+                        ),
+                    data: json_str,
+                    handleAs: "json"
+                }
+            );
 
-        var promise = d_Deferred.when(
-                deferred,
+        var promise = req_promise.response.then(
 
                 // successful callback.
-                d_lang.hitch( this, function() {
-                    var location = deferred.ioArgs.xhr.getResponseHeader( "Location" );
+                d_lang.hitch( this, function( response ) {
+                    var location = response.getHeader( "Location" );
                     console.log( module.id + ": successfully started prepare service action", location );
 
                     var location_parts = location.split( "/" );
@@ -813,10 +900,10 @@ var b_Bgws = d_declare( null,
                 } ),
 
                 // Error callback.
-                d_lang.hitch( this, function( error ) {
-                    console.log( module.id + ": start service action failed error=", error, "deferred=", deferred );
+                d_lang.hitch( this, function( error_data ) {
+                    console.log( module.id + ": start service action failed error_data=", error_data );
 
-                    this._processErrorResponse( error, deferred );
+                    this._processRequestError( error_data );
                 } )
             );
 
@@ -844,19 +931,20 @@ var b_Bgws = d_declare( null,
 
         console.log( module.id + ": posting submit close alert to " + alert_uri + ": " + json_str );
 
-        var deferred = d_xhr.post( {
-                url: alert_uri,
-                headers: d_lang.mixin( {},
-                        _postHeaders,
-                        this._session_header
-                    ),
-                postData: json_str,
-                handleAs: "json"
-            } );
+        var req_promise = d_request(
+                alert_uri,
+                {
+                    method: "POST",
+                    headers: d_lang.mixin( {},
+                            _postHeaders,
+                            this._session_header
+                        ),
+                    data: json_str,
+                    handleAs: "json"
+                }
+            );
 
-        var promise = d_Deferred.when(
-                deferred,
-
+        var promise = req_promise.then(
                 // successful callback.
                 d_lang.hitch( this, function() {
                     console.log( module.id + ": successfully closed alert", id );
@@ -865,10 +953,10 @@ var b_Bgws = d_declare( null,
                 } ),
 
                 // Error callback.
-                d_lang.hitch( this, function( error ) {
-                    console.log( module.id + ": close alert failed error=", error, "deferred=", deferred );
+                d_lang.hitch( this, function( error_data ) {
+                    console.log( module.id + ": close alert failed error=", error_data );
 
-                    this._processErrorResponse( error, deferred );
+                    this._processRequestError( error_data );
                 } )
             );
 
@@ -882,17 +970,19 @@ var b_Bgws = d_declare( null,
 
         console.log( module.id + ": removing alert, DELETE " + alert_uri );
 
-        var deferred = d_xhr.del( {
-                url: alert_uri,
-                headers: d_lang.mixin( {},
-                        _acceptJsonHeader,
-                        this._session_header
-                    ),
-                handleAs: "json"
-            } );
+        var req_promise = d_request(
+                alert_uri,
+                {
+                    method: "DELETE",
+                    headers: d_lang.mixin( {},
+                            _acceptJsonHeader,
+                            this._session_header
+                        ),
+                    handleAs: "json"
+                }
+            );
 
-        var promise = d_Deferred.when(
-                deferred,
+        var promise = req_promise.then(
 
                 // successful callback.
                 d_lang.hitch( this, function() {
@@ -902,10 +992,10 @@ var b_Bgws = d_declare( null,
                 } ),
 
                 // Error callback.
-                d_lang.hitch( this, function( error ) {
-                    console.log( module.id + ": remove alert failed error=", error, "deferred=", deferred );
+                d_lang.hitch( this, function( error_data ) {
+                    console.log( module.id + ": remove alert failed error_data=", error_data );
 
-                    this._processErrorResponse( error, deferred );
+                    this._processRequestError( error_data );
                 } )
             );
 
@@ -955,10 +1045,10 @@ var b_Bgws = d_declare( null,
     },
 
 
-    _onLoginComplete: function( ioArgs, response )
+    _onLoginComplete: function( response )
     {
         // Extract the session ID from the Location header in the response.
-        var location = ioArgs.xhr.getResponseHeader( "Location" );
+        var location = response.getHeader( "Location" );
         var location_parts = location.split( "/" );
 
         var session_id = unescape( location_parts.pop() );
@@ -966,16 +1056,16 @@ var b_Bgws = d_declare( null,
         this._session_header = {};
         this._session_header[_sessionIdHeaderName] = session_id;
 
-        console.log( module.id + ": login successful, session ID: ", session_id, " response: ", response );
+        console.log( module.id + ": login successful, session ID:", session_id, "response:", response );
 
-        this._user_info = new b_UserInfo( response );
+        this._user_info = new b_UserInfo( response.data );
 
-        return { sessionId: session_id, ioArgs: ioArgs };
+        return { sessionId: session_id, response: response };
     },
 
-    _onLoginFailure: function( ioArgs, error )
+    _onLoginFailure: function( error_data )
     {
-        console.log( module.id + ": Login failed. ioArgs=", ioArgs, "error=", error );
+        console.log( module.id + ": Login failed. error_data=", error_data );
 
         this._session_header = null;
 
@@ -984,10 +1074,13 @@ var b_Bgws = d_declare( null,
 
         var error_type;
 
-        if ( (error.status === 400) && (ioArgs.xhr.getResponseHeader( "Content-Type" ) === _jsonMediaType) ) {
-            var bgws_err_obj = d_json.parse( error.responseText );
+        var response = error_data.response;
 
-            error_type = (bgws_err_obj.id === "invalidUserPass" ? _loginError.INVALID_AUTHORIZATION : _loginError.BGWS_NOT_AVAILABLE);
+        console.log( module.id + ": status=", response.status, "Content-Type=", response.getHeader( "Content-Type" ) );
+
+        if ( (response.status === 400) && (response.getHeader( "Content-Type" ) === _jsonMediaType) ) {
+
+            error_type = (response.data.id === "invalidUserPass" ? _loginError.INVALID_AUTHORIZATION : _loginError.BGWS_NOT_AVAILABLE);
 
         } else {
 
@@ -997,16 +1090,16 @@ var b_Bgws = d_declare( null,
 
         var new_e = new Error( "login failed" );
         new_e.errorType = error_type;
-        new_e.ioArgs = ioArgs;
+        new_e.response = response;
 
         throw new_e;
     },
 
 
-    /** Processes an error response from a request. Always throws. */
+    /** Processes an error response from a dojo/xhr request. Always throws. */
     _processErrorResponse: function( /**Error*/ error, /**Dojo.Deferred*/ deferred )
     {
-        var text = _calculateErrorMessage( error, deferred.ioArgs );
+        var text = _calculateXhrErrorMessage( error, deferred.ioArgs );
 
         var error_type_opt = this._checkDeferredErrorSessionInvalid( deferred );
         if ( error_type_opt ) {
@@ -1016,6 +1109,22 @@ var b_Bgws = d_declare( null,
         throw new Error( text );
     },
 
+    /** Processes an error response from a dojo/request request. Always throws. */
+    _processRequestError : function( error_data )
+    {
+        var text = _calculateRequestErrorMessage( error_data );
+
+        if ( "response" in error_data ) {
+            var error_type_opt = _checkRequestSessionInvalid( error_data.response );
+            if ( error_type_opt ) {
+                this._sessionEnded( error_type_opt );
+            }
+        }
+
+        throw new Error( text );
+    },
+
+
     /** Returns bluegene.Bgws.loginError if error indicates the session is no longer valid and should be ended, otherwise returns undefined. */
     _checkDeferredErrorSessionInvalid : function( deferred )
     {
@@ -1023,7 +1132,7 @@ var b_Bgws = d_declare( null,
 
         var content_type = xhr.getResponseHeader( "Content-Type" );
 
-        return _checkResponseSessionInvalid( {
+        return _checkXhrSessionInvalid( {
                 status: xhr.status,
                 contentType: content_type,
                 responseText: xhr.responseText
@@ -1033,7 +1142,7 @@ var b_Bgws = d_declare( null,
     /** Returns message if error indicates the session is no longer valid and should be ended, otherwise returns undefined. */
     _checkFetchErrorSessionInvalid : function( error )
     {
-        return _checkResponseSessionInvalid( {
+        return _checkXhrSessionInvalid( {
                 status: error.status,
                 responseText: error.responseText
             } );
@@ -1050,18 +1159,20 @@ var b_Bgws = d_declare( null,
 
         console.log( module.id + ": posting submit " + operation_name + " service action to " + service_action_uri + ": " + json_str );
 
-        var deferred = d_xhr.post( {
-                url: service_action_uri,
-                headers: d_lang.mixin( {},
-                        _postHeaders,
-                        this._session_header
-                    ),
-                postData: json_str,
-                handleAs: "json"
-            } );
+        var req_promise = d_request(
+                service_action_uri,
+                {
+                    method: "POST",
+                    headers: d_lang.mixin( {},
+                            _postHeaders,
+                            this._session_header
+                        ),
+                    data: json_str,
+                    handleAs: "json"
+                }
+            );
 
-        var promise = d_Deferred.when(
-                deferred,
+        var promise = req_promise.then(
 
                 // successful callback.
                 d_lang.hitch( this, function() {
@@ -1071,10 +1182,10 @@ var b_Bgws = d_declare( null,
                 } ),
 
                 // Error callback.
-                d_lang.hitch( this, function( error ) {
-                    console.log( module.id + ": end service action failed error=", error, "deferred=", deferred );
+                d_lang.hitch( this, function( error_data ) {
+                    console.log( module.id + ": end service action failed error_data=", error_data );
 
-                    this._processErrorResponse( error, deferred );
+                    this._processRequestError( error_data );
                 } )
             );
 
@@ -1103,10 +1214,7 @@ b_Bgws.HTTP_STATUS_SERVICE_TEMPORARILY_UNAVAILABLE = _HTTP_STATUS_SERVICE_TEMPOR
 b_Bgws.ERROR_ID_INVALID_SESSION = _ERROR_ID_INVALID_SESSION;
 
 
-b_Bgws.checkResponseSessionInvalid = _checkResponseSessionInvalid;
-
-
-b_Bgws.calculateErrorMessage = _calculateErrorMessage;
+b_Bgws.calculateErrorMessage = _calculateXhrErrorMessage;
 
 
 /**

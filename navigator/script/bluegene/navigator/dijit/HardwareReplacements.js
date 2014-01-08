@@ -74,7 +74,6 @@ var _formToQuery = function( form_obj )
 
 
 var b_navigator_dijit_HardwareReplacements = d_declare(
-        "bluegene.navigator.dijit.HardwareReplacements",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {

@@ -25,8 +25,8 @@
 #define MASTER_BGMASTER_CLIENT_API_H_
 
 
-#include "common/Ids.h"
-#include "common/types.h"
+#include "../common/Ids.h"
+#include "../common/types.h"
 
 #include <utility/include/Properties.h>
 
@@ -40,7 +40,7 @@
 //! \brief C++ client API for BGMaster.
 class BGMasterClient {
     ClientProtocolPtr _prot;
-    bgq::utility::Properties::Ptr _client_props;
+    bgq::utility::Properties::ConstPtr _client_props;
     bool _ending;
 public:
     BGMasterClient() : _ending(false) {}
@@ -50,7 +50,7 @@ public:
 
     //! \brief Set the properties for this client
     //! \param p Properties file pointer.
-    void initProperties(bgq::utility::Properties::Ptr p) { _client_props = p; }
+    void initProperties(const bgq::utility::Properties::ConstPtr& p) { _client_props = p; }
 
     //! \brief tell the event monitor to give up.
     //! \param tf Use 'false' if you're taking the process down.
@@ -121,7 +121,7 @@ public:
 
     //! \brief Force an agent to just die
     //! \param agent Id of agent to kill.  If success it will be returned
-    void end_agent(BGAgentId& agent);
+    void end_agent(const BGAgentId& agent);
 
     //! \brief Force multiple agents to die
     //! \param agents Ids of agents to kill.  All successful will be returned
@@ -147,11 +147,6 @@ public:
     //! \param aliases is an empty vector that is returned filled with the alias list.
     void idle_aliases(std::vector<std::string>& aliases);
 
-    //! \brief get exit status of last binary running on each agent
-    //! \param statuses Map.  Binary controller objects containing binary id and
-    //!        exit status will be added for each supplied agent id.
-    void exit_status(std::map<BGAgentId, BinaryControllerPtr, Id::Comp >& statuses);
-
     //! \brief Get a map of all bgagents and their binaries
     //! \param amap Map of all agents and their associated binary controllers will be returned here.
     void get_agents(std::map<BGAgentId, std::vector<BinaryControllerPtr>, Id::Comp >& amap);
@@ -165,7 +160,7 @@ public:
     //! \brief reload the config file
     //! \param config_file Full path to the new config file (optional)
     void reload_config(const std::string& config_file);
-    
+
     //! \brief monitor bgmaster_server for events for the life of the client process.
     void event_monitor();
 

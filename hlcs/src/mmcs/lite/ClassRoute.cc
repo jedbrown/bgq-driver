@@ -21,24 +21,27 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#include "lite/ClassRoute.h"
+#include "ClassRoute.h"
 
-#include "lite/JobInfo.h"
+#include "JobInfo.h"
 
-#include "CNBlockController.h"
-#include "IOBlockController.h"
+#include "server/CNBlockController.h"
+#include "server/IOBlockController.h"
 
 #include <utility/include/Log.h>
 
 #include <iostream>
 
-LOG_DECLARE_FILE( "mmcs" );
+LOG_DECLARE_FILE( "mmcs.lite" );
 
+
+namespace mmcs {
 namespace lite {
+
 
 ClassRoute::ClassRoute(
         const JobInfo& info,
-        const BlockPtr& block
+        const server::BlockPtr& block
         ) :
     _np( info, block ),
     _block( block ),
@@ -52,13 +55,13 @@ ClassRoute::ClassRoute(
     unsigned cSize = 0;
     unsigned dSize = 0;
     unsigned eSize = 0;
-    if ( boost::dynamic_pointer_cast<CNBlockController>(block) ) {
+    if ( boost::dynamic_pointer_cast<server::CNBlockController>(block) ) {
         aSize = _block->getBlockNodeConfig()->aNodeSize();
         bSize = _block->getBlockNodeConfig()->bNodeSize();
         cSize = _block->getBlockNodeConfig()->cNodeSize();
         dSize = _block->getBlockNodeConfig()->dNodeSize();
         eSize = _block->getBlockNodeConfig()->eNodeSize();
-    } else if ( boost::dynamic_pointer_cast<IOBlockController>(_block) ) {
+    } else if ( boost::dynamic_pointer_cast<server::IOBlockController>(_block) ) {
         aSize = _block->getBlockNodeConfig()->aIONodeSize();
         bSize = _block->getBlockNodeConfig()->bIONodeSize();
         cSize = _block->getBlockNodeConfig()->cIONodeSize();
@@ -232,4 +235,4 @@ ClassRoute::print(
     }
 }
 
-} // lite
+} } // namespace mmcs::lite

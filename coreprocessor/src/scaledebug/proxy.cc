@@ -327,7 +327,7 @@ bool doCommand(JobPtr job)
         }
         side_sock->Send(response);
     }
-    catch(CxxSockets::CxxError& e) // CxxSockets::SockCloseUnexpected & e)
+    catch(CxxSockets::Error& e) // CxxSockets::SockCloseUnexpected & e)
     {
         LOG_ERROR_MSG("Error connecting to tool data channel socket:  " << e.what());
         terminate = true; // an exception occurred, abort

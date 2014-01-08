@@ -69,6 +69,7 @@ extern const uint32_t  Nodes_Per_Node_Board;                 //!< Number of node
 extern const char* BLOCK_FREE;
 extern const char* BLOCK_ALLOCATED;
 extern const char* BLOCK_BOOTING;
+extern const char* BLOCK_BOOTING_NO_CHECK;
 extern const char* BLOCK_DEALLOCATING;
 extern const char* BLOCK_INITIALIZED;
 extern const char* BLOCK_TERMINATING;
@@ -121,7 +122,8 @@ enum BLOCK_STATUS {
 enum BLOCK_ACTION {
     NO_BLOCK_ACTION = 0,
     CONFIGURE_BLOCK,
-    DEALLOCATE_BLOCK
+    DEALLOCATE_BLOCK,
+    CONFIGURE_BLOCK_NO_CHECK // For I/O blocks only and indicates to skip I/O nodes in error when booting
 };
 
 /*!
@@ -560,6 +562,7 @@ STATUS postProcessRAS(
  *  \return
  *  - DB_ERROR if database error occurs retrieving data or block not found.
  *  - CONNECTION_ERROR if database connection error occurs retrieving data.
+ *  - NOT_FOUND if the block doesn't exist in the database.
  *  - OK if data was retrieved successfully.
  */
 STATUS queryMissing(
@@ -832,36 +835,6 @@ STATUS getBlockErrorText(
         );
 
 /*!
- *  \brief Set block error text.
- *
- *  \return
- *  - DB_ERROR if database error occurs retrieving data.
- *  - CONNECTION_ERROR if database connection error occurs retrieving data.
- *  - INVALID_ID if the block name is too long.
- *  - NOT_FOUND if the block doesn't exist in the database.
- *  - OK if block error text was set successful.
- */
-STATUS setBlockErrorText(
-        const std::string& id,              //!< [in] block ID
-        const std::string& text             //!< [in]
-        );
-
-/*!
- *  \brief Get block description.
- *
- *  \return
- *  - DB_ERROR if database error occurs retrieving data.
- *  - CONNECTION_ERROR if database connection error occurs retrieving data.
- *  - INVALID_ID if the block name is too long.
- *  - NOT_FOUND if the block doesn't exist in the database.
- *  - OK if data was retrieved successful.
- */
-STATUS getBlockDesc(
-        const std::string& id,              //!< [in] block ID
-        std::string& description            //!< [out]
-        );
-
-/*!
  *  \brief Set block description.
  *
  *  \return
@@ -886,6 +859,7 @@ STATUS setBlockDesc(
  *  - INVALID_ID if the block name is too long.
  *  - NOT_FOUND if the block doesn't exist in the database.
  *  - FAILED if not a valid action request or block is in unknown state.
+ *  - DUPLICATE if block has pending action.
  *  - OK if setting the block action was successful.
  */
 STATUS setBlockAction(

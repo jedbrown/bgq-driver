@@ -58,7 +58,9 @@ int mudm_bcast_reduce(void* mudm_context,
                           uint16_t payload_length,
                           MUHWI_Destination_t torus_destination,
                           uint8_t  class_route,
-                          uint8_t  reduce_choice)
+                          uint8_t  reduce_choice,
+                          void* result_vaddr
+    )
 {  
   uint64_t bytesLength         = payload_length;
   unsigned int numNonZeroBits = popcnt64 (bytesLength);
@@ -82,8 +84,15 @@ int mudm_bcast_reduce(void* mudm_context,
     MPRINT("reduce choice must be  MUHWI_COLLECTIVE_TYPE_ALLREDUCE or MUHWI_COLLECTIVE_TYPE_REDUCE \n");
     return -EINVAL;
   }
-
-
+  
+  if(result_vaddr)
+  {
+      mcontext->bcast_reduceall_data     = result_vaddr;
+      mcontext->bcast_reduceall_datasize = payload_length;
+      mcontext->bcast_reduceall_complete = 0;
+      ppc_msync();
+  }
+  
   desc_count = InjFifoInjectReduce (mcontext->system_bcast.IdToInjFifo,
                                          &mcontext->system_bcast.mu_iMemoryFifoDescriptor,
                                          type,
@@ -99,6 +108,15 @@ int mudm_bcast_reduce(void* mudm_context,
   while ( MUSPI_CheckDescComplete(mcontext->system_bcast.IdToInjFifo, desc_count) == 0)
   {
   }
+  
+  if(result_vaddr)
+  {
+      while(mcontext->bcast_reduceall_complete == 0)
+      {
+      }
+      ppc_msync();
+  }
+  
   EXIT;
   return 0;
 };
@@ -156,12 +174,12 @@ void count_CN_in_block(struct my_context * mcontext){
    MUHWI_Destination_t dest;
    dest.Destination.Destination = 0;
    mcontext->num_compute_nodes = 1;
-   mudm_bcast_reduce((void* )mcontext, MUDM_REDUCE_ALL,  
+   mudm_bcast_reduce((void* )mcontext, MUDM_REDUCE_ALL_INT,  
                           MUHWI_COLLECTIVE_OP_CODE_UNSIGNED_ADD /* op_code */, 
                           (void *)(mcontext->mudm_context_phys_addr + offsetof(struct my_context,num_compute_nodes)), sizeof(mcontext->num_compute_nodes) /*payload_length*/,
                           dest,
                           15 /*class_route*/,
-                          MUHWI_COLLECTIVE_TYPE_ALLREDUCE );
+                          MUHWI_COLLECTIVE_TYPE_ALLREDUCE, NULL );
 
 }
 
@@ -176,7 +194,7 @@ void largest_node_corner_in_block(struct my_context * mcontext){
                           (void *)(mcontext->mudm_context_phys_addr + offsetof(struct my_context,largest_node_corner)), sizeof(mcontext->largest_node_corner) /*payload_length*/,
                           dest,
                           15 /*class_route*/,
-                          MUHWI_COLLECTIVE_TYPE_ALLREDUCE );
+                          MUHWI_COLLECTIVE_TYPE_ALLREDUCE, NULL );
 
 }
 

@@ -93,13 +93,6 @@
      </Class>
 </Method>
 
-<Method name="end_agent" type="RequestReply" comment="Tell BGAgent to end and take its binaries with it.">
-     <Class name="End_agentRequest">
-     </Class>
-     <Class name="End_agentReply" parent="BGMasterAgentReply">
-     </Class>
-</Method>
-
 <Method name="complete" type="RequestReply" comment="Tell BGMaster that binary(ies) completed">
      <Class name="CompleteRequest">
         <Class name="BinaryStatus">

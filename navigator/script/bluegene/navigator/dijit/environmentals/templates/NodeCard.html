@@ -1,58 +1,58 @@
 <div>
 
-<div data-dojo-type="dijit.layout.BorderContainer" data-dojo-props="gutters: false">
+<div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="gutters: false">
 
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'top'">
-        <div data-dojo-type="dijit.form.DropDownButton" data-dojo-attach-point="_foDropDown">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'top'">
+        <div data-dojo-type="dijit/form/DropDownButton" data-dojo-attach-point="_foDropDown">
             <span>Filter Options</span>
-            <div style="width: 580px;" data-dojo-type="dijit.TooltipDialog">
-                <div class="bgFilterOptions bgFilterOptionsEnvNc" data-dojo-type="dijit.form.Form" data-dojo-props="'class': 'bgFilterOptions bgFilterOptionsEnvNc'" data-dojo-attach-point="_foForm">
+            <div style="width: 580px;" data-dojo-type="dijit/TooltipDialog">
+                <div class="bgFilterOptions bgFilterOptionsEnvNc" data-dojo-type="dijit/form/Form" data-dojo-props="'class': 'bgFilterOptions bgFilterOptionsEnvNc'" data-dojo-attach-point="_foForm">
                     <fieldset>
                         <ul>
-                            <li><input data-dojo-type="bluegene.navigator.dijit.TimeInterval" data-dojo-props="name: 'interval', label: 'Entries'" /></li>
+                            <li><input data-dojo-type="bluegene/navigator/dijit/TimeInterval" data-dojo-props="name: 'interval', label: 'Entries'" /></li>
                             <li>
                                 <label for="${id}-fo-location">Location</label>
-                                <input id="${id}-fo-location" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'location'" />
+                                <input id="${id}-fo-location" data-dojo-type="bluegene/navigator/dijit/MultiWildcardTextBox" data-dojo-props="name: 'location'" />
                             </li>
                         </ul>
                         <table>
                             <tr><td style="width: 50%;">
                                 <ul>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="integerOnly: true, label: 'Temp0', name: 'temp0'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev08', name: 'v08'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev25', name: 'v25'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev120p', name: 'v120p'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev09', name: 'v09'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev33p', name: 'v33p'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev12b', name: 'v12b'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev25p', name: 'v25p'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev18p', name: 'v18p'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="integerOnly: true, label: 'Temp0', name: 'temp0'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev08', name: 'v08'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev25', name: 'v25'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev120p', name: 'v120p'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev09', name: 'v09'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev33p', name: 'v33p'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev12b', name: 'v12b'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev25p', name: 'v25p'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev18p', name: 'v18p'"></li>
                                 </ul>
                             </td><td>
                                 <ul>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="integerOnly: true, label: 'Temp1', name: 'temp1'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev14', name: 'v14'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev33', name: 'v33'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev15', name: 'v15'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev10', name: 'v10'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev12a', name: 'v12a'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev18', name: 'v18'"></li>
-                                <li data-dojo-type="bluegene.navigator.dijit.NumberCompareOption" data-dojo-props="label: 'voltagev12p', name: 'v12p'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="integerOnly: true, label: 'Temp1', name: 'temp1'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev14', name: 'v14'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev33', name: 'v33'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev15', name: 'v15'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev10', name: 'v10'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev12a', name: 'v12a'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev18', name: 'v18'"></li>
+                                <li data-dojo-type="bluegene/navigator/dijit/NumberCompareOption" data-dojo-props="label: 'voltagev12p', name: 'v12p'"></li>
                                 </ul>
                             </td></tr>
                         </table>
                     </fieldset>
                     <fieldset class="submit">
-                        <button type="submit" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'submit'">Apply</button>
-                        <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_foResetButton">Reset</button>
+                        <button type="submit" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'submit'">Apply</button>
+                        <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_foResetButton">Reset</button>
                     </fieldset>
                 </div>
             </div>
         </div>
     </div>
 
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'center'">
-        <table style="height: 100%;" data-dojo-type="dojox.grid.EnhancedGrid"
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'center'">
+        <table style="height: 100%;" data-dojo-type="dojox/grid/EnhancedGrid"
                 data-dojo-props="rowsPerPage: 50, selectable: true, style: 'height: 100%;', noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No entries match the filter options.&lt;/span&gt;'"
                 data-dojo-attach-point="_grid"
                 >

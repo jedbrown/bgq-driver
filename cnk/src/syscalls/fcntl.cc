@@ -52,7 +52,7 @@ uint64_t sc_fcntl(SYSCALL_FCN_ARGS)
       case F_DUPFD:
       {
          int newfd = (int)parm3;
-         if ( (newfd < 0) || (newfd >= CNK_MAX_FDS) ) {
+         if ( (newfd < 0) || (newfd >= GetMyProcess()->App_Descriptors.maxfds) ) {
             return CNK_RC_FAILURE(EINVAL);   // NOTE: different error than dup2
          }
          break;

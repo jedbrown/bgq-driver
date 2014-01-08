@@ -66,7 +66,6 @@ var _UNITS_SYSTEM_DATA = {
 
 
 var b_navigator_dijit_environmentals_Coolant = d_declare(
-        "bluegene.navigator.dijit.environmentals.Coolant",
         [ l_AbstractQueryResultsDijit ],
 
 {

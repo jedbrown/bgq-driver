@@ -24,9 +24,12 @@
 #ifndef CXXDB_STATEMENT_H_
 #define CXXDB_STATEMENT_H_
 
+
 #include "AbstractStatement.h"
 
+
 namespace cxxdb {
+
 
 /*! \brief A database statement for DDL-type statements (ALTER, CREATE, DROP, GRANT, REVOKE, SET, etc.).
  *

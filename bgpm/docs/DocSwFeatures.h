@@ -342,6 +342,9 @@
  * and event set.
  *
  *
+ * \subsection Limitation: JUB
+ *       There is a limitation for setting period value for a counter which is configured with overflow.This depends mainly on the time it takes to execute the overflow handler. In BGPM, with few experimentation, the minimum acceptable period value to set for PEVT_CYCLES event is value > 2000. This value is denpendent on the event we are configuring for overflow. and with the basic overflow handler without any user profiling added to the handler. If the user set a value less than the minimum acceptable threshold value of the event, it will create a hang inside the handler and the test case will eventually fail.
+ *
  *
  * \section bgpm_swfeatures_multiplex Multiplexing Event Sets
  *

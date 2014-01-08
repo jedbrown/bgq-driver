@@ -26,9 +26,9 @@ define(
 [
     "./AbstractTemplatedContainer",
     "./MonitorActiveMixin",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dojo/data/ObjectStore",
     "dojo/store/Memory",
@@ -52,9 +52,9 @@ define(
 function(
         l_AbstractTemplatedContainer,
         l_MonitorActiveMixin,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         d_data_ObjectStore,
         d_store_Memory,
@@ -130,7 +130,6 @@ var _TYPE = {
 
 
 var b_navigator_dijit_PrepareServiceAction = d_declare(
-        "bluegene.navigator.dijit.PrepareServiceAction",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -609,7 +608,7 @@ var b_navigator_dijit_PrepareServiceAction = d_declare(
 
         this._promise = this._submit_prepare_for_service_fn( location );
 
-        d_Deferred.when(
+        d_when(
                 this._promise,
                 d_lang.hitch( this, this._submitComplete ),
                 d_lang.hitch( this, this._submitFailed )

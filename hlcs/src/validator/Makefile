@@ -43,7 +43,8 @@ DIR_TARGS += $(DIR_TARGS_INSTALL)
 #CXXFLAGS += -gstabs
 CXXFLAGS += -O2
 CXXFLAGS += -Wall
-CXXFLAGS += -MD
+CXXFLAGS += -MD -MP
+CXXFLAGS += -iquote ..
 CXXFLAGS += -I $(BGQ_BUILD_DIR)/hlcs/src/master
 CXXFLAGS += -I $(BGQ_INSTALL_DIR)
 CXXFLAGS += -I $(BGQ_INSTALL_DIR)/bgq_util/include
@@ -81,13 +82,12 @@ BGM_OBJS += ../master/common/Ids.o
 BGM_OBJS += ../master/server/MasterController.o
 BGM_OBJS += ../master/common/Protocol.o
 BGM_OBJS += ../master/server/Registrar.o
-BGM_OBJS += ../master/common/ThreadLog.o
 
 BGM_OBJS += ../master/protocol/BGMasterAgentProtocolSpec.o
 BGM_OBJS += ../master/protocol/BGMasterClientProtocolSpec.o
 
-MMCS_OBJS  = ../mmcs/MMCSProperties.o
-MMCS_OBJS += ../mmcs/MMCSSubnet.o
+MMCS_OBJS  = ../mmcs/common/Properties.o
+MMCS_OBJS += ../mmcs/common/Subnet.o
 
 INSTALL_LIST += $(call INSTALL_BIN_TARGET, properties_validate)
 
@@ -120,3 +120,5 @@ $(DIR_TARGS):
 
 properties_validate: properties_validate.o $(BGM_OBJS) $(MMCS_OBJS) | $(DIR_TARGS_ALL)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lpthread -lcxxsockets	
+
+-include *.d

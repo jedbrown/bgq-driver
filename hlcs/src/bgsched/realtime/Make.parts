@@ -27,7 +27,9 @@ realtime_parts=\
  ClientConfiguration \
  ClientConfigurationImpl \
  ClientEventListener \
+ ClientEventListenerV2 \
  ClientEventListenerImpl \
+ ClientEventListenerV2Impl \
  ClientImpl \
  ClientStateException \
  ConfigurationException \

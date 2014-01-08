@@ -35,11 +35,11 @@ bool
 AgentBase::find_binary(
         const BinaryId& id,
         BinaryControllerPtr& p
-        )
+        ) const
 {
     LOG_TRACE_MSG(__FUNCTION__);
     bool foundit = false;
-    BOOST_FOREACH(BinaryControllerPtr& bincont, _binaries) {
+    BOOST_FOREACH(const BinaryControllerPtr& bincont, _binaries) {
         if (id == bincont->get_binid()) {
             p = bincont;
             foundit = true;
@@ -59,4 +59,41 @@ AgentBase::runningAlias(
             return true;
     }
     return false;
+}
+
+void
+AgentBase::addController(
+        const BinaryControllerPtr& controller
+        )
+{
+    if ( controller->get_alias_name() == "mmcs_server" ) {
+        // mmcs_server goes first
+        _binaries.insert( _binaries.begin(), controller );
+    } else {
+        // insert the other binaries before mc_server
+        const Binaries::iterator mc_server = std::find_if(
+                _binaries.begin(),
+                _binaries.end(),
+                boost::bind(
+                    &BinaryController::get_alias_name,
+                    _1
+                    ) == "mc_server"
+                );
+        _binaries.insert( mc_server, controller );
+    }
+}
+
+void
+AgentBase::removeController(
+        const BinaryControllerPtr& controller
+        )
+{
+    _binaries.erase(
+            std::remove(
+                _binaries.begin(),
+                _binaries.end(),
+                controller
+                ),
+            _binaries.end()
+            );
 }

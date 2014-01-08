@@ -27,16 +27,18 @@
 #include "ClientManager.h"
 #include "MasterController.h"
 #include "Registrar.h"
-
-#include "../MasterRasMetadata.h"
+#include "ras.h"
 
 #include "../lib/exceptions.h"
 
 #include "common/AgentProtocol.h"
 #include "common/ClientProtocol.h"
 #include "common/Protocol.h"
-#include "common/ThreadLog.h"
 
+#include <utility/include/cxxsockets/error.h>
+#include <utility/include/cxxsockets/ListenerSet.h>
+#include <utility/include/cxxsockets/SecureTCPSocket.h>
+#include <utility/include/cxxsockets/SockAddrList.h>
 #include <utility/include/portConfiguration/ServerPortConfiguration.h>
 #include <utility/include/Properties.h>
 
@@ -52,8 +54,6 @@
 #include <pthread.h>
 #include <signal.h>
 
-using namespace CxxSockets;
-
 LOG_DECLARE_FILE( "master" );
 
 Registrar::Registrar() : _end(false), _failed(false), _my_tid(0)
@@ -68,21 +68,36 @@ Registrar::~Registrar()
 
 void
 Registrar::processNew(
-        SecureTCPSocketPtr sock
+        CxxSockets::TCPSocketPtr sock
         )
 {
-    ThreadLog tl("Registrar new connection");
+    bgq::utility::ServerPortConfiguration port_config(0, bgq::utility::ServerPortConfiguration::ConnectionType::AdministrativeCommand);
+    port_config.setProperties(MasterController::getProps(), "");
+    port_config.notifyComplete();
 
-    LOG_TRACE_MSG("From " << sock->getUserId().getUser());
+    CxxSockets::SecureTCPSocketPtr secure;
+    try {
+        secure.reset(
+                new CxxSockets::SecureTCPSocket(
+                    boost::static_pointer_cast<CxxSockets::TCPSocket>(sock),
+                    port_config
+                    )
+                );
+    } catch (const CxxSockets::Error& e) {
+        LOG_ERROR_MSG( e.what() );
+        return;
+    }
+
+    LOG_TRACE_MSG("From " << secure->getUserId().getUser());
     // Will need to read a message on the socket, determine if it is
     // a registration message, and if it is build a BGAgent object
     // and place it in the agent vector.
 
     // 1) Create a new Protocol object
-    ProtocolPtr prot(new Protocol(MasterController::getProps()));
+    const ProtocolPtr prot(new Protocol(MasterController::getProps()));
     try {
-        prot->initializeResponder(sock);
-    } catch(CxxSockets::SockHardError& err) {
+        prot->initializeResponder(secure);
+    } catch(const CxxSockets::HardError& err) {
         // Something bad happened on the reply or connecting back
         std::ostringstream msg;
         msg << "Agent join attempt failed initializing the responder. " << err.what();
@@ -92,13 +107,13 @@ Registrar::processNew(
     }
 
     // 2) Validate that we got a 'join' message
-    std::string requestName = "";
+    std::string requestName;
     BGMasterAgentProtocolSpec::JoinRequest requestObject;
     try {
         prot->getName(requestName);
         prot->getObject(&requestObject);
-    } catch(CxxSockets::CxxError& err) {
-       // Something bad happened on the reply or connecting back
+    } catch(const CxxSockets::Error& err) {
+        // Something bad happened on the reply or connecting back
         std::ostringstream msg;
         msg << "Join attempt failed getting the request. " << err.what();
         MasterController::handleErrorMessage(msg.str());
@@ -124,16 +139,16 @@ Registrar::processNew(
         joinreply._rc = exceptions::OK;
 
         try {
-            AgentRepPtr b(new AgentRep(pt, requestObject, joinreply));
+            const AgentRepPtr b(new AgentRep(pt, requestObject, joinreply));
             bgagent = b;
-        } catch(CxxSockets::SockHardError& err) {
+        } catch(const CxxSockets::HardError& err) {
             // Something bad happened on the reply or connecting back
             std::ostringstream msg;
             msg << "Agent join attempt failed. " << err.what();
             MasterController::handleErrorMessage(msg.str());
             // We aren't going to get in the list.  We'll just return
             return;
-        } catch(exceptions::APIUserError& e) {
+        } catch(const exceptions::APIUserError& e) {
             MasterController::handleErrorMessage(e.what());
             return;
         }
@@ -165,7 +180,7 @@ Registrar::processNew(
             // Initialize the requester. This will connect back to the agent's listener.
             try {
                 pt->initializeRequester(AF_UNSPEC, requestObject._ip_address, boost::lexical_cast<std::string>(requestObject._port));
-            } catch(CxxSockets::SockHardError& err) {
+            } catch(const CxxSockets::HardError& err) {
                 // Something bad happened on the reply or connecting back
                 std::ostringstream msg;
                 msg << "Agent join attempt failed. Unable to initialize requesting socket. " << err.what();
@@ -192,8 +207,8 @@ Registrar::processNew(
         ClientControllerPtr client;
 
         try {
-            client.reset(new ClientController(pt, requestObject._ip_address, requestObject._port, sock->getUserType()));
-        } catch(CxxSockets::SockHardError& err) {
+            client.reset(new ClientController(pt, requestObject._ip_address, requestObject._port, secure->getUserType()));
+        } catch(const CxxSockets::HardError& err) {
             // Something bad happended on the reply or connecting back
             std::ostringstream msg;
             msg << "Agent join attempt failed. " << err.what();
@@ -202,7 +217,10 @@ Registrar::processNew(
             return;
         }
 
-        LOG_DEBUG_MSG("Client connected at IP address " << requestObject._ip_address << " port " << requestObject._port << ".");
+        LOG_INFO_MSG(
+                "Client (" << secure->getUserId().getUser() << ") connected at IP address " <<
+                requestObject._ip_address << " port " << requestObject._port << "."
+                );
         MasterController::get_client_manager().addClient(client);
     } else {
         // Log it and go
@@ -218,23 +236,22 @@ Registrar::listenForNew(
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
-    ThreadLog tl("Registrar listener");
     _my_tid = pthread_self();
     _failed = false;
     _end = false;
     // Will listen on the registration listener then accept new
     // connections.  The new connections will be validated and
     // inserted into the agent vector in a separate thread.
-    SockAddrList masterlist; // One big list to rule them all!
+    CxxSockets::SockAddrList masterlist; // One big list to rule them all!
     BOOST_FOREACH(const bgq::utility::PortConfiguration::Pair& curr_pair, portpairs) {
         LOG_DEBUG_MSG("Listening on " << curr_pair.first << ":" << curr_pair.second);
         try {
-            SockAddrList salist(AF_UNSPEC, curr_pair.first, curr_pair.second);
-            BOOST_FOREACH(SockAddr& curr_sockaddr, salist) {
+            CxxSockets::SockAddrList salist(AF_UNSPEC, curr_pair.first, curr_pair.second);
+            BOOST_FOREACH(const CxxSockets::SockAddr& curr_sockaddr, salist) {
                 // Now copy every SockAddr in to the master list
                 masterlist.push_back(curr_sockaddr);
             }
-        } catch(CxxSockets::CxxError& e) {
+        } catch(const CxxSockets::Error& e) {
             std::ostringstream saerror;
             saerror << "Unable to get address info for " << curr_pair.first << ":" << curr_pair.second << " " << e.what();
             MasterController::handleErrorMessage(saerror.str());
@@ -257,9 +274,9 @@ Registrar::listenForNew(
     }
 
     try {
-        CxxSockets::PollingListenerSetPtr ln(new PollingListenerSet(masterlist, SOMAXCONN));
+        const CxxSockets::ListenerSetPtr ln(new CxxSockets::ListenerSet(masterlist, SOMAXCONN));
         _registrationListener = ln;
-    } catch (CxxSockets::CxxError& e) {
+    } catch(const CxxSockets::Error& e) {
         // If we can't create a registrar, we can't run.
         std::ostringstream msg;
         msg << "Unable to start a registrar, bgmaster_server is ending. Error is: " << e.what();
@@ -276,29 +293,19 @@ Registrar::listenForNew(
     while (!_end) {
         bool accepted = false;
         while (!accepted && !_end) {
-            SecureTCPSocketPtr sock(new SecureTCPSocket);
+            const CxxSockets::TCPSocketPtr sock(new CxxSockets::TCPSocket);
             accepted = false;
             try {
-                // Take either admin or command pc.
-                bgq::utility::ServerPortConfiguration port_config(0, bgq::utility::ServerPortConfiguration::ConnectionType::AdministrativeCommand);
-                port_config.setProperties(MasterController::getProps(), "");
-                port_config.notifyComplete();
-                accepted = _registrationListener->AcceptNew(sock, port_config);
-            } catch (CxxSockets::SockHardError& e) {
-                if(e.errcode != CxxSockets::SSL_ERROR) {
-                    std::ostringstream msg;
-                    msg << "Registrar listener failed, restarting. Error is: " << e.what();
-                    MasterController::handleErrorMessage(msg.str());
-                    _end = true;
-                    _failed = true;
-                    //! Need to figure out if the listener or new client socket failed and act accordingly.
-                    return;
-                } else {
-                    // An SSL_ERROR means the child handshake failed but the server is OK.
-                    LOG_WARN_MSG("Child connection failed SSL handshake. Error is: " << e.what());
-                    continue;
-                }
-            } catch (CxxSockets::SockSoftError& e) {
+                accepted = _registrationListener->AcceptNew(sock);
+            } catch (const CxxSockets::HardError& e) {
+                std::ostringstream msg;
+                msg << "Registrar listener failed, restarting. Error is: " << e.what();
+                MasterController::handleErrorMessage(msg.str());
+                _end = true;
+                _failed = true;
+                //! Need to figure out if the listener or new client socket failed and act accordingly.
+                return;
+            } catch (const CxxSockets::SoftError& e) {
                 LOG_DEBUG_MSG("Accept processing failed, retrying. Error is: " << e.what());
                 continue;  // Just try again
             }
@@ -347,7 +354,7 @@ Registrar::run(
         port_config.setProperties( MasterController::getProps(), "master.server");
         port_config.notifyComplete();
         portpairs = port_config.getPairs();
-    } catch(std::invalid_argument& e) {
+    } catch(const std::invalid_argument& e) {
         if (portpairs[0].first.length() == 0) {
             std::ostringstream failmsg;
             failmsg << "No port pairs or invalid port pairs specified. ";

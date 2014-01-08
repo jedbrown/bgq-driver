@@ -38,11 +38,26 @@
 #define FW_L1P_CORRECTABLE_MASK ( L1P_ESR_err_si_ecc | L1P_ESR_err_reload_ecc_x2 | L1P_ESR_err_sda_p )
 
 
-static          fw_uint16_t  _fw_l1p_correctable_threshold = 1;        // The threshold for correctable error reporting.
-static volatile fw_uint16_t  _fw_l1p_correctable_count = 0;            // The accumulated correctable error count.
+static          fw_uint64_t  _fw_l1p_correctable_threshold = 1;        // The threshold for correctable error reporting.
+static volatile fw_uint64_t  _fw_l1p_correctable_count = 0;            // The accumulated correctable error count.
 static volatile fw_uint32_t  _fw_l1p_correctable_cores = 0;            // The accumulated cores that encountered correctable errors.
 static volatile fw_uint64_t  _fw_l1p_correctable_error_bits = 0;       // The accumulated mask of correctable ESR bits.
 
+
+void fw_l1p_resetCEThresholds( void ) {
+  // Set correctable thresholds based on mode.
+  // @todo Expose the threshold via the personality.
+
+  if ( PERS_ENABLED( PERS_ENABLE_DiagnosticsMode ) ) {
+      _fw_l1p_correctable_threshold = 1;
+  }
+  else if ( PERS_ENABLED( PERS_ENABLE_MaskCorrectables ) ) {
+      _fw_l1p_correctable_threshold = 0;
+  }
+  else {
+      _fw_l1p_correctable_threshold = 10000;
+  }
+}
 
 uint64_t fw_l1p_readCrossCore( uint64_t address ) {
 
@@ -61,7 +76,7 @@ uint64_t fw_l1p_readCrossCore( uint64_t address ) {
 	out64_sync( (void*)L1P_ESR_DCR(ProcessorCoreID()),   L1P_ESR_err_lu_dcr_abort );
     }
 
-    FW_Error( "Could not perform cross-core L1P register read addr=%X esr=%X", address, esr );
+    FW_Error( "Could not perform cross-core L1P register read addr=%X esr=%X.", address, esr );
     return -1;
 }
 
@@ -82,11 +97,11 @@ void fw_l1p_writeCrossCore( uint64_t address, uint64_t value ) {
 	out64_sync( (void*)L1P_ESR_DCR(ProcessorCoreID()),   L1P_ESR_err_lu_dcr_abort );
     }
 
-    FW_Error( "Could not perform cross-core L1P register write addr=%X value=%X esr=%X", address, value, esr );    
+    FW_Error( "Could not perform cross-core L1P register write addr=%X value=%X esr=%X.", address, value, esr );    
 }
 
 
-void fw_l1p_flushCorrectables() {
+void fw_l1p_flushCorrectables(int endOfJob ) {
 
 
     fw_semaphore_down( BeDRAM_LOCKNUM_RAS_FLUSH_LOCK );
@@ -102,8 +117,15 @@ void fw_l1p_flushCorrectables() {
 
 	_fw_l1p_correctable_count = _fw_l1p_correctable_error_bits = _fw_l1p_correctable_cores = 0;
 
+	if ( endOfJob == 0 ) {
+	    _fw_l1p_correctable_threshold *= 10;
+	}
 
 	fw_writeRASEvent( FW_RAS_L1P_CORRECTABLE_SUMMARY, n, details );
+    }
+
+    if ( endOfJob != 0 ) {
+	fw_l1p_resetCEThresholds();
     }
 
     fw_semaphore_up( BeDRAM_LOCKNUM_RAS_FLUSH_LOCK );
@@ -136,7 +158,7 @@ void fw_l1p_handleCorrectable( uint64_t esr, uint64_t core ) {
 	_fw_l1p_correctable_error_bits |= esr;
 
 	if ( _fw_l1p_correctable_count >= _fw_l1p_correctable_threshold ) {
-	    fw_l1p_flushCorrectables();
+	    fw_l1p_flushCorrectables(0);
 	}
     }
 
@@ -273,15 +295,15 @@ int fw_l1p_init( void )  {
     /* UNUSED         | L1P_CFG_PF_USR_pf_list_enable        */
   
   uint64_t cfg_pf_sys = 
-               L1P_CFG_PF_SYS_msync_timer(7+3)            
-            |  L1P_CFG_PF_SYS_pfhint_enable             
-            |  L1P_CFG_PF_SYS_whint_evict_enable        
-            |  L1P_CFG_PF_SYS_whint_cracked_enable      
-            |  L1P_CFG_PF_SYS_lock_prefetch             
-            |  L1P_CFG_PF_SYS_dcbfl_discard             
-            |  L1P_CFG_PF_SYS_pf_adaptive_total_depth(24)
-            |  L1P_CFG_PF_SYS_pf_hit_enable              
-            |  L1P_CFG_PF_SYS_pf_stream_l2_op_immediate  ;
+      L1P_CFG_PF_SYS_msync_timer(7+3)            
+      |  L1P_CFG_PF_SYS_pfhint_enable             
+      |  L1P_CFG_PF_SYS_whint_evict_enable        
+      |  L1P_CFG_PF_SYS_whint_cracked_enable      
+      |  L1P_CFG_PF_SYS_lock_prefetch             
+      |  L1P_CFG_PF_SYS_dcbfl_discard             
+      |  L1P_CFG_PF_SYS_pf_adaptive_total_depth(24)
+      |  L1P_CFG_PF_SYS_pf_hit_enable              
+      |  L1P_CFG_PF_SYS_pf_stream_l2_op_immediate  ;
   
   if(!FW_DD1_WORKAROUNDS_ENABLED())
   {
@@ -289,15 +311,15 @@ int fw_l1p_init( void )  {
   }
   
   uint64_t cfg_wc    =  L1P_CFG_WC_wc_enable
-                      | L1P_CFG_WC_wc_suppress_if_all_be 
-                      | L1P_CFG_WC_wc_aging ;
+      | L1P_CFG_WC_wc_suppress_if_all_be 
+      | L1P_CFG_WC_wc_aging ;
 
   uint64_t cfg_to    =  L1P_CFG_TO_to_en 
-                      | L1P_CFG_TO_to_reload_en
-                      | L1P_CFG_TO_to_duration(0x3) ;
+      | L1P_CFG_TO_to_reload_en
+      | L1P_CFG_TO_to_duration(0x3) ;
 
   uint64_t cfg_upc   =  L1P_CFG_UPC_ENABLE
-                      | L1P_CFG_UPC_STREAM;
+      | L1P_CFG_UPC_STREAM;
 
   out64_sync((void *)L1P_CFG_SPEC,cfg_spec);
   
@@ -314,71 +336,86 @@ int fw_l1p_init( void )  {
 
   /* Enable L1p hardware error interrupts */
 
+  uint64_t esr_gea =
+      // [disabled] L1P_ESR_int_list_0 |
+      // [disabled] L1P_ESR_int_list_1 |
+      // [disabled] L1P_ESR_int_list_2 |
+      // [disabled] L1P_ESR_int_list_3 |
+      // [disabled] L1P_ESR_int_list_4	|
+      // [disabled] L1P_ESR_int_speculation_0 |
+      // [disabled] L1P_ESR_int_speculation_1 |
+      // [disabled] L1P_ESR_int_speculation_2 |
+      // [disabled] L1P_ESR_int_speculation_3 |
+      // [disabled] L1P_ESR_err_valid_timeout | [see bqcbugs #1612]
+      L1P_ESR_err_luq_ovfl |
+      L1P_ESR_err_sr_p |
+      L1P_ESR_err_sr_rd_valid_p |
+      L1P_ESR_err_sw_p |
+      L1P_ESR_err_si_ecc_ue |
+      L1P_ESR_err_si_p |
+      L1P_ESR_err_sda_p_ue |
+      L1P_ESR_err_rqra_p |
+      L1P_ESR_err_reload_ecc_ue_x2 |
+      L1P_ESR_err_rira_p |
+      L1P_ESR_err_gctr_p	|
+      L1P_ESR_err_lu_state_p |
+      L1P_ESR_err_lu_ttype |
+      // [5470] L1P_ESR_err_lu_dcr_abort |
+      L1P_ESR_err_mmio_async |
+      L1P_ESR_err_mmio_state_p |
+      L1P_ESR_err_mmio_timeout |
+      L1P_ESR_err_mmio_priv |
+      L1P_ESR_err_mmio_rdata_p |
+      L1P_ESR_err_mmio_wdata_p |
+      L1P_ESR_err_mmio_dcrs_timeout |
+      L1P_ESR_err_mmio_dcrs_priv |
+      L1P_ESR_err_mmio_dcrs_par |
+      L1P_ESR_err_dcrm_crit |
+      L1P_ESR_err_dcrm_noncrit |
+      // [5470] L1P_ESR_err_dcrm_mc |
+      L1P_ESR_err_tag_timeout |
+      L1P_ESR_err_hold_timeout |
+      L1P_ESR_err_ditc_req_x2 |
+      L1P_ESR_err_pfd_addr_p |
+      L1P_ESR_err_pfd_avalid_p |
+      L1P_ESR_err_pfd_fill_pnd_p |
+      L1P_ESR_err_pfd_hit_pnd_p |
+      L1P_ESR_err_pfd_stream_p |
+      L1P_ESR_err_pfd_depth_p |
+      L1P_ESR_err_pfd_clone_p |
+      L1P_ESR_err_hitq_p |
+      L1P_ESR_err_sd_p |
+      L1P_ESR_err_pf2dfc_p |
+      L1P_ESR_err_wccm_p_x2 |
+      L1P_ESR_err_wccm_wcd_p_x2 |
+      L1P_ESR_err_lu_wcd_p |
+      L1P_ESR_err_lu_current_p |
+      L1P_ESR_err_l2cmd |
+      L1P_ESR_err_lu_dcr_dbus_p |
+      L1P_ESR_err_luq_p |
+      L1P_ESR_err_sda_phase_p |
+      L1P_ESR_slice_sel_ctrl_perr |
+      L1P_ESR_redun_ctrl_perr
+      ;
+
+  // +------------------------------------------------------------------------------------------+
+  // | NOTE: For production environments, we mask L1P correctables during the early part of the |
+  // |       boot.  The TakeCPU hook is what allows us to unmask.                               |
+  // +------------------------------------------------------------------------------------------+
+
+  if ( ! PERS_ENABLED(PERS_ENABLE_TakeCPU) ) { 
+      esr_gea |=
+	  L1P_ESR_err_si_ecc |
+	  L1P_ESR_err_reload_ecc_x2 |
+	  L1P_ESR_err_sda_p
+	  ;
+
+  }
+
   out64_sync(
-	     (void *)L1P_ESR_GEA, 
-	     // [disabled] L1P_ESR_int_list_0 |
-	     // [disabled] L1P_ESR_int_list_1 |
-	     // [disabled] L1P_ESR_int_list_2 |
-	     // [disabled] L1P_ESR_int_list_3 |
-	     // [disabled] L1P_ESR_int_list_4	|
-	     // [disabled] L1P_ESR_int_speculation_0 |
-	     // [disabled] L1P_ESR_int_speculation_1 |
-	     // [disabled] L1P_ESR_int_speculation_2 |
-	     // [disabled] L1P_ESR_int_speculation_3 |
-	     // [disabled] L1P_ESR_err_valid_timeout | [see bqcbugs #1612]
-	     L1P_ESR_err_luq_ovfl |
-	     L1P_ESR_err_sr_p |
-	     L1P_ESR_err_sr_rd_valid_p |
-	     L1P_ESR_err_sw_p |
-	     L1P_ESR_err_si_ecc |
-	     L1P_ESR_err_si_ecc_ue |
-	     L1P_ESR_err_si_p |
-	     L1P_ESR_err_sda_p |
-	     L1P_ESR_err_sda_p_ue |
-	     L1P_ESR_err_rqra_p |
-	     L1P_ESR_err_reload_ecc_x2 |
-	     L1P_ESR_err_reload_ecc_ue_x2 |
-	     L1P_ESR_err_rira_p |
-	     L1P_ESR_err_gctr_p	|
-	     L1P_ESR_err_lu_state_p |
-	     L1P_ESR_err_lu_ttype |
-	     // [5470] L1P_ESR_err_lu_dcr_abort |
-	     L1P_ESR_err_mmio_async |
-	     L1P_ESR_err_mmio_state_p |
-	     L1P_ESR_err_mmio_timeout |
-	     L1P_ESR_err_mmio_priv |
-	     L1P_ESR_err_mmio_rdata_p |
-	     L1P_ESR_err_mmio_wdata_p |
-	     L1P_ESR_err_mmio_dcrs_timeout |
-	     L1P_ESR_err_mmio_dcrs_priv |
-	     L1P_ESR_err_mmio_dcrs_par |
-	     L1P_ESR_err_dcrm_crit |
-	     L1P_ESR_err_dcrm_noncrit |
-	     // [5470] L1P_ESR_err_dcrm_mc |
-	     L1P_ESR_err_tag_timeout |
-	     L1P_ESR_err_hold_timeout |
-	     L1P_ESR_err_ditc_req_x2 |
-	     L1P_ESR_err_pfd_addr_p |
-	     L1P_ESR_err_pfd_avalid_p |
-	     L1P_ESR_err_pfd_fill_pnd_p |
-	     L1P_ESR_err_pfd_hit_pnd_p |
-	     L1P_ESR_err_pfd_stream_p |
-	     L1P_ESR_err_pfd_depth_p |
-	     L1P_ESR_err_pfd_clone_p |
-	     L1P_ESR_err_hitq_p |
-	     L1P_ESR_err_sd_p |
-	     L1P_ESR_err_pf2dfc_p |
-	     L1P_ESR_err_wccm_p_x2 |
-	     L1P_ESR_err_wccm_wcd_p_x2 |
-	     L1P_ESR_err_lu_wcd_p |
-	     L1P_ESR_err_lu_current_p |
-	     L1P_ESR_err_l2cmd |
-	     L1P_ESR_err_lu_dcr_dbus_p |
-	     L1P_ESR_err_luq_p |
-	     L1P_ESR_err_sda_phase_p |
-	     L1P_ESR_slice_sel_ctrl_perr |
-	     L1P_ESR_redun_ctrl_perr
-	     );
+      (void *)L1P_ESR_GEA, 
+      esr_gea
+      );
 
 
 #ifndef FW_PREINSTALLED_GEA_HANDLERS 
@@ -404,35 +441,61 @@ int fw_l1p_init( void )  {
 		0 );
 
   if(A2_isDD1())
-    {
+  {
       *(volatile uint64_t*)L1P_CFG_CLK_GATE = _B1(61,1);
-    }
+  }
   else
-    {
+  {
       *(volatile uint64_t*)L1P_CFG_CLK_GATE = L1P_CFG_CLK_GATE_clk_on_sw_req;
-    }
+  }
 
   if(!FW_DD1_WORKAROUNDS_ENABLED()) 
   {
-    *(volatile uint64_t*)L1P_CFG_CHICKEN |= L1P_CFG_CHICKEN_DD2;
+      *(volatile uint64_t*)L1P_CFG_CHICKEN |= L1P_CFG_CHICKEN_DD2;
   }
   
 
-  // Set correctable thresholds based on mode.
-  // @todo Expose the threshold via the personality.
+  fw_l1p_resetCEThresholds();
 
-  if ( PERS_ENABLED( PERS_ENABLE_DiagnosticsMode ) ) {
-      _fw_l1p_correctable_threshold = 1;
+
+#if 0
+
+  if ( ProcessorCoreID() == 2 ) {
+  // DO NOT INTEGRATE THIS CODE!!!!!!!!!!!
+  uint64_t inject = 
+      L1P_ESR_err_reload_ecc_x2 |
+      //L1P_ESR_err_si_ecc |
+      //L1P_ESR_err_reload_ecc_ue_x2 |
+      0  ;
+	
+  out64_sync((void *)L1P_ESR_INJ_DCR(ProcessorCoreID()), inject );
+  ppc_msync();
+  out64_sync((void *)L1P_ESR_INJ_DCR(ProcessorCoreID()), 0 );
+  ppc_msync();
   }
-  else if ( PERS_ENABLED( PERS_ENABLE_MaskCorrectables ) ) {
-      _fw_l1p_correctable_threshold = 0;
-  }
-  else {
-      _fw_l1p_correctable_threshold = 10000;
-  }
+
+#endif
+
 
   TRACE_EXIT(TRACE_L1P);
 
   return( 0 );
 }
 
+
+void fw_l1p_unmaskCorrectableErrors() {
+
+    if ( PERS_ENABLED(PERS_ENABLE_TakeCPU) ) {
+
+	uint64_t esr_gea = in64( (void *)L1P_ESR_GEA );
+	
+	esr_gea |=
+	  L1P_ESR_err_si_ecc |
+	  L1P_ESR_err_reload_ecc_x2 |
+	  L1P_ESR_err_sda_p
+	  ;
+
+	out64_sync(  (void *)L1P_ESR_GEA,  esr_gea );
+
+    }
+}

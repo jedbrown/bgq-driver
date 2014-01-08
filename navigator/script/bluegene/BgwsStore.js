@@ -24,8 +24,8 @@
 define(
 [
     "dojo/json",
+    "dojo/when",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dojo/_base/xhr",
     "dojo/data/ObjectStore",
@@ -35,8 +35,8 @@ define(
 ],
 function(
         d_json,
+        d_when,
         d_declare,
-        d_Deferred,
         d_lang,
         d_xhr,
         d_data_ObjectStore,
@@ -176,12 +176,31 @@ var b_BgwsStore = d_declare( [ d_store_JsonRest ],
 
         results.total = results.then(
                 function() {
+
+                    // We noticed a problem where if the BGWS server sends back a large total,
+                    // the EnhancedGrid just displays nothing.
+                    // To work aroun this, I'm going to set the max range size to 500,000,
+                    // which appears to generally work.
+                    // If EnhancedGrid is fixed, or switch to another type of grid,
+                    // may want to revisit this.
+
                     var range = results.ioArgs.xhr.getResponseHeader( "Content-Range" );
-                    return (range && (range = range.match( /\/(.*)/ )) && +range[1]);
+                    if ( ! range )  return;
+                    range = range.match( /\/(.*)/ );
+                    if ( ! range ) return;
+                    range = +range[1];
+
+                    var MAX_SIZE = 500000;
+
+                    if ( range > MAX_SIZE ) {
+                        console.log( module.id + ": Hit max size for result total, truncating" );
+                        return MAX_SIZE;
+                    }
+                    return range;
                 }
             );
 
-        d_Deferred.when(
+        d_when(
                 results,
                 null, // Don't care about success.
                 d_lang.hitch( this, function( error ) {

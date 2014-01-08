@@ -47,7 +47,6 @@ function(
 {
 
 var b_navigator_dijit_Header = d_declare(
-        "bluegene.navigator.dijit.Header",
         [ l_AbstractTemplatedContainer ],
 
 {
@@ -67,19 +66,48 @@ var b_navigator_dijit_Header = d_declare(
     },
 
 
-    setSystemName : function( new_name )
+    onEndSession : function()  {},
+
+
+    _setSystemNameAttr : function( new_name )
     {
         this._systemNameText.set( "value", new_name );
     },
 
-    setUserName : function( new_name )
-    {
-        console.log( module.id + ": [" + this.id + "] Setting user name to '" + new_name + "'" );
-        this._userNameText.set( "value", new_name );
-    },
 
-    setUserAuthDesc : function( auth_desc )
+    _setUserInfoAttr : function( args )
     {
+        console.log( module.id + ": [" + this.id + "] Setting user name to '" + args.userName + "'" );
+
+        this._userNameText.set( "value", args.userName );
+
+
+        var user_tooltip_text = "";
+
+
+        if ( args.userInfo.isAdministrator() ) {
+
+            user_tooltip_text = "User is Blue Gene Administrator";
+
+        } else {
+
+            var authorities = [];
+
+            if ( args.userInfo.hasHardwareRead() ) {
+                authorities.push( "hardware read" );
+            }
+            if ( args.userInfo.hasBlockCreate() ) {
+                authorities.push( "block create" );
+            }
+
+            if ( authorities.length > 0 ) {
+                user_tooltip_text = "User has " + authorities.join( ", " );
+            } else {
+                user_tooltip_text = "User has no special authorities";
+            }
+
+        }
+
         if ( this._username_tooltip ) {
             this._username_tooltip.destroyRecursive();
             this._username_tooltip = null;
@@ -87,13 +115,11 @@ var b_navigator_dijit_Header = d_declare(
 
         this._username_tooltip = new j_Tooltip( {
                 connectId: [ this._userNameText.id ],
-                label: auth_desc,
+                label: user_tooltip_text,
                 position: [ "below" ]
             } );
+
     },
-
-
-    onEndSession : function()  {},
 
 
     _endSessionClicked : function()

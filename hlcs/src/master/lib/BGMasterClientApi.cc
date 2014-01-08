@@ -31,7 +31,7 @@
 
 #include <utility/include/Log.h>
 
-#include <utility/include/cxxsockets/SocketTypes.h>
+#include <utility/include/cxxsockets/SockAddr.h>
 
 #include <utility/include/portConfiguration/PortConfiguration.h>
 
@@ -57,14 +57,13 @@ BGMasterClient::connectMaster(
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
-    ClientProtocolPtr p(new ClientProtocol(_client_props));
-    _prot = p;
-    std::string connected_host = "";
-    std::string connected_port = "";
+    _prot.reset( new ClientProtocol(_client_props) );
+    std::string connected_host;
+    std::string connected_port;
     bool failed = true;
     std::ostringstream portstrings;
 
-    BOOST_FOREACH(bgq::utility::PortConfiguration::Pair portpair, portpairs) {
+    BOOST_FOREACH(const bgq::utility::PortConfiguration::Pair& portpair, portpairs) {
         portstrings << portpair.first << ":" << portpair.second;
         try {
             _prot->initializeRequester(AF_UNSPEC, portpair.first, portpair.second, 2);
@@ -73,10 +72,10 @@ BGMasterClient::connectMaster(
             LOG_DEBUG_MSG("Connected to " << portpair.first << ":" << portpair.second);
             failed = false;
             break;
-        } catch (CxxSockets::SockSoftError& err) {
+        } catch (const CxxSockets::Error& err) {
             LOG_WARN_MSG("Connection to bgmaster_server failed.");
-        } catch (CxxSockets::CxxError& err) {
-            LOG_WARN_MSG("Connection to bgmaster_server failed.");
+        } catch (const std::exception& e) {
+            LOG_FATAL_MSG(e.what());
         }
         portstrings << " ";
     }
@@ -90,7 +89,7 @@ BGMasterClient::connectMaster(
 
     CxxSockets::SockAddr la;
     _prot->getRequester()->getSockName(la);
-    int local_port = la.getServicePort();
+    const int local_port = la.getServicePort();
     BGMasterClientProtocolSpec::JoinRequest joinreq(la.getHostAddr(), local_port, "client", connected_host);
     BGMasterClientProtocolSpec::JoinReply joinrep;
     joinrep._rc = exceptions::OK;
@@ -98,16 +97,16 @@ BGMasterClient::connectMaster(
     LOG_DEBUG_MSG("Sending join to " << connected_host << ":" << connected_port);
     try {
         _prot->join(joinreq, joinrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (const CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (const CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
     LOG_DEBUG_MSG("Group joined");
     CxxSockets::SockAddr sa;
     _prot->getRequester()->getSockName(sa);
-    ClientId id(sa.getServicePort(), sa.getHostName());
+    const ClientId id(sa.getServicePort(), sa.getHostName());
     return id;
 }
 
@@ -130,9 +129,9 @@ BGMasterClient::start(
     LOG_DEBUG_MSG("Sending start request " << alias << " " << location.str());
     try {
         _prot->start(startreq, startrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
@@ -158,9 +157,9 @@ BGMasterClient::wait_for_terminate(
     LOG_DEBUG_MSG("Sending wait request " << bid.str());
     try {
         _prot->wait(waitreq, waitrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
@@ -203,7 +202,8 @@ void
 BGMasterClient::stop(
         const std::vector<std::string>& aliases,
         const int signal,
-        std::string& errormsg)
+        std::string& errormsg
+        )
 {
     LOG_TRACE_MSG(__FUNCTION__);
     std::vector<BinaryId> bv;
@@ -243,9 +243,9 @@ BGMasterClient::stop(
     BGMasterClientProtocolSpec::StopReply stoprep(exceptions::OK, "success");
     try {
         _prot->stop(stopreq, stoprep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
@@ -266,9 +266,9 @@ BGMasterClient::get_errors(
     BGMasterClientProtocolSpec::Get_errorsReply error_rep(exceptions::OK, "success");
     try {
         _prot->get_errors(error_req, error_rep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
     for(std::vector<std::string>::iterator it = error_rep._errors.begin();
@@ -288,9 +288,9 @@ BGMasterClient::get_history(
     BGMasterClientProtocolSpec::Get_historyReply history_rep(exceptions::OK, "success");
     try {
         _prot->get_history(history_req, history_rep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
     for (std::vector<std::string>::iterator it = history_rep._history.begin();
@@ -313,9 +313,9 @@ BGMasterClient::master_status(
 
     try {
         _prot->masterstat(statreq, statrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
@@ -346,9 +346,9 @@ BGMasterClient::status(
     BGMasterClientProtocolSpec::StatusReply statrep(exceptions::OK, "success");
     try {
         _prot->status(statreq, statrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
@@ -373,61 +373,6 @@ BGMasterClient::status(
 }
 
 void
-BGMasterClient::exit_status(
-        std::map<BGAgentId,
-        BinaryControllerPtr,
-        Id::Comp >& statuses
-        )
-{
-    LOG_TRACE_MSG(__FUNCTION__);
-    BGMasterClientProtocolSpec::ExitStatusRequest exitreq;
-    BGMasterClientProtocolSpec::ExitStatusReply exitrep(exceptions::OK, "success");
-
-    // If some agent ids are passed in, we need to send them
-    if (!statuses.empty()) {
-        typedef std::pair<const BGAgentId, BinaryControllerPtr>& agent_pair;
-        BOOST_FOREACH(agent_pair mypair, statuses) {
-            BGAgentId id = mypair.first;
-            exitreq._agent_id.push_back( id );
-        }
-    }
-
-    statuses.clear();  // Get rid of anything currently in the map
-
-    // Send the request
-    try {
-        _prot->exit_status(exitreq, exitrep);
-    } catch (CxxSockets::SockSoftError& err) {
-        throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
-        throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
-    }
-
-    // Pull out the agents and statuses and put them in the map
-    typedef BGMasterClientProtocolSpec::ExitStatusReply::Agent ReplyAgent;
-    for (std::vector<ReplyAgent>::iterator agent_it = exitrep._agent.begin();
-        agent_it != exitrep._agent.end(); ++agent_it) {
-        ReplyAgent agent = (*agent_it);
-        BGAgentId id = agent._agent_id;
-
-        typedef BGMasterClientProtocolSpec::ExitStatusReply::Agent::Binary ReplyBinary;
-        ReplyBinary rep_bin = agent._binary;
-        BinaryController::Status stat = BinaryController::string_to_status(rep_bin._status);
-
-        BinaryId bid(rep_bin._binary_id);
-
-        BinaryControllerPtr
-            binary(new BinaryController(bid,
-                                        rep_bin._name,
-                                        rep_bin._alias,
-                                        rep_bin._user,
-                                        rep_bin._exit_status,
-                                        stat));
-        statuses[id] = binary;
-    }
-}
-
-void
 BGMasterClient::idle_aliases(
         std::vector<std::string>& aliases
         )
@@ -437,9 +382,9 @@ BGMasterClient::idle_aliases(
     BGMasterClientProtocolSpec::GetidleReply idlerep(exceptions::OK, "success");
     try {
         _prot->getidle(idlereq, idlerep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
     BOOST_FOREACH(std::string al, idlerep._aliases) {
@@ -459,9 +404,9 @@ BGMasterClient::get_agents(
     BGMasterClientProtocolSpec::AgentlistReply agentrep(exceptions::OK, "success");
     try {
         _prot->agentlist(agentreq, agentrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
@@ -506,9 +451,9 @@ BGMasterClient::get_clients(
     BGMasterClientProtocolSpec::ClientsReply clientrep(exceptions::OK, "success");
     try {
         _prot->clients(clientreq, clientrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
@@ -522,7 +467,7 @@ BGMasterClient::get_clients(
 
 void
 BGMasterClient::end_agent(
-        BGAgentId& agent
+        const BGAgentId& agent
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
@@ -546,9 +491,9 @@ BGMasterClient::end_agent(
 
     try {
         _prot->end_agent(diereq, dierep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
@@ -577,10 +522,14 @@ BGMasterClient::end_master(
     BGMasterClientProtocolSpec::TerminateReply termrep(exceptions::OK, "success");
     try {
         _prot->terminate(termreq, termrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
+    }
+
+    if (termrep._rc != exceptions::OK) {
+        throw exceptions::APICommandError(exceptions::Severity(termrep._rc), termrep._rt);
     }
 }
 
@@ -600,9 +549,9 @@ BGMasterClient::fail_over(
 
     try {
         _prot->failover(failreq, failrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
@@ -634,9 +583,9 @@ BGMasterClient::reload_config(
 
     try {
         _prot->reload(relreq, relrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::FATAL, "Connection to bgmaster_server ended.");
     }
 
@@ -667,9 +616,9 @@ BGMasterClient::alias_wait(
 
     try {
         _prot->alias_wait(waitreq, waitrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
@@ -688,9 +637,9 @@ BGMasterClient::event_monitor()
     BGMasterClientProtocolSpec::MonitorReply monrep;
     try {
         _prot->monitor(monreq, monrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::WARN, "Connection to bgmaster_server failed.");
     }
 
@@ -753,11 +702,11 @@ BGMasterClient::event_monitor()
             std::string message_name = "";
             try {
                 _prot->getName(message_name);
-            } catch(CxxSockets::SockSoftError& err) {
+            } catch(CxxSockets::SoftError& err) {
                 // For soft errors, we just back out and let it try again
                 LOG_INFO_MSG("Connection ended by server, will retry connection to bgmaster_server.");
                 throw exceptions::BGMasterError(exceptions::FATAL, "bgmaster_server ended connection.");
-            } catch(CxxSockets::CxxError& err) {
+            } catch(CxxSockets::Error& err) {
                 // Server aborted with an incomplete transmission
                 if (err.errcode != 0) {
                     LOG_WARN_MSG("Connection ended by bgmaster_server.");
@@ -772,10 +721,10 @@ BGMasterClient::event_monitor()
                 BGMasterClientProtocolSpec::EventMessage eventmsg;
                 try {
                     _prot->getObject(&eventmsg);
-                } catch(CxxSockets::SockSoftError& err) {
+                } catch(CxxSockets::SoftError& err) {
                     // For soft errors, we just back out and let it try again
                     LOG_INFO_MSG("Connection ended by server, will retry connection to bgmaster_server.");
-                } catch(CxxSockets::CxxError& err) {
+                } catch(CxxSockets::Error& err) {
                     // Server aborted with an incomplete transmission
                     LOG_WARN_MSG("Connection ended by bgmaster_server.");
                 }
@@ -784,10 +733,10 @@ BGMasterClient::event_monitor()
                 BGMasterClientProtocolSpec::ErrorMessage errormsg;
                 try {
                     _prot->getObject(&errormsg);
-                } catch(CxxSockets::SockSoftError& err) {
+                } catch(CxxSockets::SoftError& err) {
                     // For soft errors, we just back out and let it try again
                     LOG_INFO_MSG("Connection ended by server, will retry connection to bgmaster_server.");
-                } catch(CxxSockets::CxxError& err) {
+                } catch(CxxSockets::Error& err) {
                     // Server aborted with an incomplete transmission
                     LOG_WARN_MSG("Connection ended by bgmaster_server.");
                 }
@@ -807,9 +756,9 @@ BGMasterClient::end_monitor()
     BGMasterClientProtocolSpec::EndmonitorReply endmonrep;
     try {
         _prot->endmonitor(endmonreq, endmonrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
     }
 
@@ -836,9 +785,9 @@ BGMasterClient::log_level(
     }
     try {
         _prot->loglevel(loglevreq, loglevrep);
-    } catch (CxxSockets::SockSoftError& err) {
+    } catch (CxxSockets::SoftError& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
-    } catch (CxxSockets::CxxError& err) {
+    } catch (CxxSockets::Error& err) {
         throw exceptions::CommunicationError(exceptions::INFO, "Connection to bgmaster_server failed.");
     }
     loglevels.clear(); // Clear out the ones they sent us so we can return the new ones.

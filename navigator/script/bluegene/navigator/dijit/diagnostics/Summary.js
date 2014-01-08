@@ -31,9 +31,9 @@ define(
     "../../../dijit/ActionLink",
     "../../../dijit/OutputText",
     "../../../utility/Requests",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dijit/form/Button",
     "dojo/text!./templates/Summary.html",
@@ -52,9 +52,9 @@ function(
         b_dijit_ActionLink,
         b_dijit_OutputText,
         b_utility_Requests,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         j_form_Button,
         template,
@@ -64,7 +64,6 @@ function(
 
 
 var b_navigator_dijit_diagnostics_Summary = d_declare(
-        "bluegene.navigator.dijit.diagnostics.Summary",
         [ ll_AbstractTemplatedContainer, ll_MonitorActiveMixin ],
 
 {
@@ -235,7 +234,7 @@ var b_navigator_dijit_diagnostics_Summary = d_declare(
         this._runningLoading.set( "visibility", "visible" );
 
         this._requests.monitor(
-                d_Deferred.when(
+                d_when(
                         this._fetch_diagnostics_data_fn( "runs?end=null&sort=start" ),
                         d_lang.hitch( this, this._gotCurrentDiagnosticsRuns )
                     )
@@ -245,7 +244,7 @@ var b_navigator_dijit_diagnostics_Summary = d_declare(
         this._midplanesLoading.set( "visibility", "visible" );
 
         this._requests.monitor(
-                d_Deferred.when(
+                d_when(
                         this._fetch_diagnostics_data_fn( "blocks?type=midplane" ),
                         d_lang.hitch( this, this._gotMiplanes )
                     )
@@ -255,7 +254,7 @@ var b_navigator_dijit_diagnostics_Summary = d_declare(
         this._ioDrawersLoading.set( "visibility", "visible" );
 
         this._requests.monitor(
-                d_Deferred.when(
+                d_when(
                         this._fetch_diagnostics_data_fn( "blocks?type=ioDrawer" ),
                         d_lang.hitch( this, this._gotIoDrawers )
                     )
@@ -264,7 +263,7 @@ var b_navigator_dijit_diagnostics_Summary = d_declare(
         this._userLoading.set( "visibility", "visible" );
 
         this._requests.monitor(
-                d_Deferred.when(
+                d_when(
                         this._fetch_diagnostics_data_fn( "blocks?type=user" ),
                         d_lang.hitch( this, this._gotUserBlocks )
                     )

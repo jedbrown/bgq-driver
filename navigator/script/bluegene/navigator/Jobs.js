@@ -29,8 +29,7 @@ define(
     "./topic",
     "../Bgws",
     "dojo/_base/declare",
-    "dojo/_base/lang",
-    "dijit/registry"
+    "dojo/_base/lang"
 ],
 function(
         l_AbstractTab,
@@ -38,8 +37,7 @@ function(
         l_topic,
         b_Bgws,
         d_declare,
-        d_lang,
-        j_registry
+        d_lang
     )
 {
 
@@ -59,15 +57,22 @@ var b_navigator_Jobs = d_declare( [ l_AbstractTab ],
      *  @class Stuff for the Jobs tab.
      *  @constructs
      */
-    constructor: function( /**bluegene^Bgws*/ bgws )
+    constructor: function(
+            /**bluegene^Bgws*/ bgws,
+            jobs_dij,
+            current_job_details_dij
+        )
     {
         this._bgws = bgws;
-        this._jobs_dijit = j_registry.byId( "navigator" ).getJobsTabDij();
+        this._jobs_dijit = jobs_dij;
 
         this._jobs_dijit.on( "jobSelected", d_lang.hitch( this, this._jobSelected ) );
 
 
-        new l_JobDetails( this._bgws );
+        new l_JobDetails(
+                this._bgws,
+                current_job_details_dij
+            );
     },
 
 

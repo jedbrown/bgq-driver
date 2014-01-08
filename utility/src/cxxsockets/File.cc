@@ -20,13 +20,27 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#include "cxxsockets/SocketTypes.h"
 
-using namespace CxxSockets;
+#include "cxxsockets/File.h"
+#include "cxxsockets/FileLocker.h"
+#include "cxxsockets/exception.h"
+#include "cxxsockets/SocketReceiveSide.h"
+#include "cxxsockets/SocketSendSide.h"
+
+#include "Log.h"
+
+#include <fcntl.h>
+
 
 LOG_DECLARE_FILE( "utility.cxxsockets" );
 
-int CxxSockets::File::LockFile(CxxSockets::FileLocker& locker) {
+namespace CxxSockets {
+
+int
+File::LockFile(
+        FileLocker& locker
+        )
+{
     // Get the whole socket lock first to ensure that 
     // neither the sender nor the receiver gets invalidated
     // between the existence check and the lock() call.
@@ -44,26 +58,36 @@ int CxxSockets::File::LockFile(CxxSockets::FileLocker& locker) {
     return rc;
 }
 
-CxxSockets::File::File(int descriptor) : _fcntlFlags(0) {
-    _fileDescriptor = descriptor;
-    Initialize();
+File::File(
+        const int descriptor
+        ) :
+    _fileDescriptor(descriptor),
+    _fileLock(),
+    _receiver( new SocketReceiveSide ),
+    _sender( new SocketSendSide )
+{
+
 }
 
-CxxSockets::File::File() : _fcntlFlags(0) {
-    _fileDescriptor = -1;
-    Initialize();
+File::File() :
+    _fileDescriptor(-1),
+    _fileLock(),
+    _receiver( new SocketReceiveSide ),
+    _sender( new SocketSendSide )
+{
+
 }
 
-void CxxSockets::File::Initialize() {
-    // initialize the sender and the receiver
-    CxxSockets::SocketSendSidePtr ssp(new CxxSockets::SocketSendSide);
-    _sender = ssp;
+File::~File()
+{
 
-    CxxSockets::SocketReceiveSidePtr rsp(new CxxSockets::SocketReceiveSide);
-    _receiver = rsp;
 }
 
-int CxxSockets::File::LockSend(PthreadMutexHolder& smutex) { 
+int
+File::LockSend(
+        PthreadMutexHolder& smutex
+        )
+{ 
     int rc = 0;
     if(_sender) {
         rc = smutex.Lock(&_sender->getLock());
@@ -72,11 +96,23 @@ int CxxSockets::File::LockSend(PthreadMutexHolder& smutex) {
     return rc; 
 }
 
-int CxxSockets::File::LockReceive(PthreadMutexHolder& rmutex) { 
+int
+File::LockReceive(
+        PthreadMutexHolder& rmutex
+        )
+{ 
     int rc = 0;
     if(_receiver) {
         rc = rmutex.Lock(&_receiver->getLock());
     }
     else rc = -1;
     return rc;
+}
+
+int
+File::Close()
+{
+    return ::close(_fileDescriptor);
+}
+
 }

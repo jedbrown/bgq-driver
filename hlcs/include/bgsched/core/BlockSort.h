@@ -39,9 +39,9 @@ namespace bgsched {
 namespace core {
 
 /*!
- * \brief Block sort options.
+ * \brief Compute block sort options.
  *
- * This class is used as a parameter to getBlocks() to specify the order that blocks should be returned in.
+ * This class is used as a parameter to bgsched::core::getBlocks() to specify the order that compute blocks should be returned in.
  *
  */
 class BlockSort
@@ -49,11 +49,11 @@ class BlockSort
 public:
 
     /*!
-     * \brief Block fields that can be sorted on.
+     * \brief Compute block fields that can be sorted on.
      */
     struct Field {
         /*!
-         * \brief Enumeration for the Block fields.
+         * \brief Enumeration for the compute block fields.
          */
         enum Value {
             ComputeNodeCount,
@@ -67,7 +67,7 @@ public:
     };
 
     /*!
-     * \brief Return blocks in any order
+     * \brief Return compute blocks in any order
      */
     static const BlockSort AnyOrder;
 
@@ -85,7 +85,7 @@ public:
         );
 
     /*!
-     * \brief Returns true if the blocks should be sorted.
+     * \brief Returns true if the compute blocks should be sorted.
      */
     bool isSorted() const;
 

@@ -38,14 +38,10 @@ FLOOR            = /bgsys/drivers/ppcfloor
     PAMI_CONFIG           = --with-target=${PLATFORMlc}   --with-installdir=${INSTALL_DIR}/sys      --with-bgfloor=${FLOOR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task
     PAMI_CONFIG_FAST      = --with-target=${PLATFORMlc}   --with-installdir=${INSTALL_DIR}/sys-fast --with-bgfloor=${FLOOR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task --without-shared-lib --with-assert-level=0 --without-error-checks
     PAMI_CONFIG_XLFAST    = --with-target=${PLATFORMlc}xl --with-installdir=${INSTALL_DIR}/sys-xlfast --with-bgfloor=${FLOOR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task --without-shared-lib --with-assert-level=0 --without-error-checks --with-optimization-level=3
-#   PAMI_CONFIG_FAST      = --with-target=${PLATFORMlc}xl --with-installdir=${INSTALL_DIR}/sys-fast --with-bgfloor=${FLOOR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task --without-shared-lib --with-assert-level=0 --without-error-checks
 
     # ---------------- default compilation targets -----------------------------
     HOST_AR              =${FLOOR}/gnu-linux/bin/${PREFIX_CROSS_GNU}ar
     HOST_LD              =${FLOOR}/gnu-linux/bin/${PREFIX_CROSS_GNU}ld
-    HOST_NM              =${FLOOR}/gnu-linux/bin/${PREFIX_CROSS_GNU}nm
-    HOST_OBJCOPY         =${FLOOR}/gnu-linux/bin/${PREFIX_CROSS_GNU}objcopy
-
     HOST_CC              =${FLOOR}/gnu-linux/bin/${PREFIX_CROSS_GNU}gcc
     HOST_CXX             =${FLOOR}/gnu-linux/bin/${PREFIX_CROSS_GNU}g++
     HOST_F77             =${FLOOR}/gnu-linux/bin/${PREFIX_CROSS_GNU}gfortran -fno-underscoring
@@ -63,7 +59,5 @@ else
     FAST_F90             =/gsa/rchgsa/projects/x/xlcmpbld/run/xlf/dev_lite/bgq/daily/latest/bin/bgxlf90_r
 endif
 
-    HOST_INCLUDE         =-I${INSTALL_DIR}/sys/include -I${FLOOR} -I${FLOOR}/spi/include -I${FLOOR}/spi/include/kernel/cnk
-    HOST_LIB             =-L${INSTALL_DIR}/sys/lib      -lpami -L${FLOOR}/spi/lib -lSPI -lSPI_cnk -lpthread -lrt -lstdc++
-    HOST_LIB_FAST        =-L${INSTALL_DIR}/sys-fast/lib -lpami -L${FLOOR}/spi/lib -lSPI -lSPI_cnk -lpthread -lrt -lstdc++
-    HOST_LIB_XLFAST      =-L${INSTALL_DIR}/sys-xlfast/lib -lpami -L${FLOOR}/spi/lib -lSPI -lSPI_cnk -lpthread -lrt -lstdc++
+    CONFIGURE_WITH_PAMI  ="--with-pami=${INSTALL_DIR}/sys-fast"
+    CONFIGURE_WITH_PAMI_XL =--with-pami=${INSTALL_DIR}/sys-xlfast

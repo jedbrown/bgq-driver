@@ -52,12 +52,6 @@ master_status [ alias ] | [ bgmaster ] [ OPTIONS ]
             </listitem>
         </varlistentry>
         <varlistentry>
-            <term><option>--fancy</option></term>
-            <listitem>
-            <para>Labeled and formatted output for human readers. </para>
-            </listitem>
-        </varlistentry>
-        <varlistentry>
             <term><option>--host host:port</option></term>
             <listitem>
             <para>TCP host and port pair to use to connect to bgmaster_server </para>

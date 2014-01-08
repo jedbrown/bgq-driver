@@ -127,10 +127,12 @@ PrepareServiceAction::PrepareServiceAction(
 
 
 void PrepareServiceAction::start(
-        StartCb start_cb
+        StartCb start_cb,
+        NotifyAttentionMessagesCb notify_attention_messages_cb
     )
 {
     _start_cb = start_cb;
+    _notify_attention_messages_cb = notify_attention_messages_cb;
 
     LOG_INFO_MSG( "Starting service action on " << _location );
 
@@ -145,7 +147,12 @@ void PrepareServiceAction::_handleProcessEnded(
         const bgq::utility::ExitStatus& //exit_status
     )
 {
-    // Nothing to do.
+
+    if ( _notify_attention_messages_cb && (! _id.empty()) && (! _attention_text.empty()) ) {
+        _notify_attention_messages_cb( _id, _attention_text );
+        _notify_attention_messages_cb = NotifyAttentionMessagesCb();
+    }
+
 }
 
 
@@ -181,42 +188,9 @@ void PrepareServiceAction::_handleLine(
             return;
         }
 
-        // Already got the service action ID, so ignore any further program output.
-        if ( ! _start_cb )  return;
+        _checkLineStartup( line );
 
-        static const sregex ID_REGEX = as_xpr( ":   Service Action" ) >> +_s >> (s1=+~_s);
-        static const sregex FAIL_START_REGEX = as_xpr( ": !" ) >> +_s >> (s1=*_);
-
-        smatch what;
-
-        if ( regex_search( line, what, ID_REGEX ) ) {
-            // Found the service action ID.
-
-            string service_action_id(what[1]);
-
-            LOG_INFO_MSG( _process_ptr << " service action ID is '" << service_action_id << "'" );
-
-            _start_cb( std::exception_ptr(), service_action_id );
-            _start_cb = StartCb();
-
-            return;
-        }
-
-        if ( regex_search( line, what, FAIL_START_REGEX ) ) {
-
-            string err_msg(what[1]);
-
-            LOG_WARN_MSG( _process_ptr << " Error starting service_action, " << err_msg );
-
-            // If output contains "return code -203" then indicates a ServiceActionConflict.
-            if ( err_msg.find( "return code -203" ) != string::npos ) {
-                BOOST_THROW_EXCEPTION( ConflictError() );
-            }
-
-            if ( _error_text == string() )  _error_text = err_msg;
-
-            return;
-        }
+        _checkLineAttention( line );
 
     } catch ( std::exception &e ) {
 
@@ -229,5 +203,67 @@ void PrepareServiceAction::_handleLine(
 
     }
 }
+
+
+void PrepareServiceAction::_checkLineStartup(
+        const std::string& line
+    )
+{
+    // Already got the service action ID, so ignore any further program output.
+    if ( ! _start_cb )  return;
+
+    static const sregex ID_REGEX = as_xpr( ":   Service Action" ) >> +_s >> (s1=+~_s);
+    static const sregex FAIL_START_REGEX = as_xpr( ": !" ) >> +_s >> (s1=*_);
+
+    smatch what;
+
+    if ( regex_search( line, what, ID_REGEX ) ) {
+        // Found the service action ID.
+
+        _id = what[1];
+
+        LOG_INFO_MSG( _process_ptr << " service action ID is '" << _id << "'" );
+
+        _start_cb( std::exception_ptr(), _id );
+        _start_cb = StartCb();
+
+        return;
+    }
+
+    if ( regex_search( line, what, FAIL_START_REGEX ) ) {
+
+        string err_msg(what[1]);
+
+        LOG_WARN_MSG( _process_ptr << " Error starting service_action, " << err_msg );
+
+        // If output contains "return code -203" then indicates a ServiceActionConflict.
+        if ( err_msg.find( "return code -203" ) != string::npos ) {
+            BOOST_THROW_EXCEPTION( ConflictError() );
+        }
+
+        if ( _error_text == string() )  _error_text = err_msg;
+
+        return;
+    }
+}
+
+
+void PrepareServiceAction::_checkLineAttention(
+        const std::string& line
+    )
+{
+    // Look for lines that contain ATTENTION, ignore those that don't.
+
+    static const sregex ATTENTION_REGEX = as_xpr( "ATTENTION" ) >> *_s >> (s1=*_);
+
+    smatch what;
+
+    if ( ! regex_search( line, what, ATTENTION_REGEX ) ) {
+        return;
+    }
+
+    _attention_text += what[1] + "\n";
+}
+
 
 } } } // namespace bgws::blue_gene::service_actions

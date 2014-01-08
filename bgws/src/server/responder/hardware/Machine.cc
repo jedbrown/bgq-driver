@@ -104,8 +104,9 @@ HTTP status: 403 Forbidden
 
 #include "Machine.hpp"
 
-#include "../../dbConnectionPool.hpp"
 #include "../../Error.hpp"
+
+#include "../../query/Machine.hpp"
 
 #include "capena-http/http/http.hpp"
 
@@ -116,13 +117,7 @@ HTTP status: 403 Forbidden
 
 #include <utility/include/Log.h>
 
-#include <boost/foreach.hpp>
 #include <boost/throw_exception.hpp>
-
-#include <string>
-
-
-using std::string;
 
 
 LOG_DECLARE_FILE( "bgws" );
@@ -150,296 +145,42 @@ void Machine::_doGet()
 
     }
 
-    _formatMachine();
+
+    query::Machine::Ptr query_ptr(query::Machine::create(
+            _blocking_operations_thread_pool
+        ));
+
+    query_ptr->start( _getStrand().wrap( boost::bind(
+            &Machine::_queryComplete, this,
+            capena::server::AbstractResponder::shared_from_this(),
+            _1, _2
+        ) ) );
 }
 
 
-void Machine::_formatMachine()
+void Machine::_queryComplete(
+        capena::server::ResponderPtr,
+        std::exception_ptr exc_ptr,
+        json::ObjectValuePtr obj_val_ptr
+    )
 {
-    capena::server::Response &response(_getResponse());
+    try {
 
-    response.setContentTypeJson();
-    response.headersComplete();
+        if ( exc_ptr != 0 )  std::rethrow_exception( exc_ptr );
 
-    json::ObjectValue obj_val;
-    json::Object &obj(obj_val.get());
 
-    auto conn_ptr(dbConnectionPool::getConnection());
+        capena::server::Response &response(_getResponse());
 
-    { // machine details, from the bgqMachine table.
-        static const string SQL( "SELECT * FROM bgqMachine" );
+        response.setContentTypeJson();
+        response.headersComplete();
 
-        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( SQL ));
+        json::Formatter()( *obj_val_ptr, response.out() );
 
-        rs_ptr->fetch();
+    } catch ( std::exception& e ) {
 
-        obj.set( "serialNumber", rs_ptr->columns()["serialNumber"].getString() );
-        obj.set( "productId", rs_ptr->columns()["productId"].getString() );
-        if ( ! rs_ptr->columns()["description"].isNull() )  obj.set( "description", rs_ptr->columns()["description"].getString() );
-        obj.set( "status", rs_ptr->columns()["status"].getString() );
-        obj.set( "hasEthernetGateway", rs_ptr->columns()["hasEthernetGateway"].getString() );
-        obj.set( "mtu", rs_ptr->columns()["mtu"].as<int64_t>() );
-        obj.set( "clockHz", rs_ptr->columns()["clockHz"].as<int64_t>() );
-        if ( ! rs_ptr->columns()["bringupOptions"].isNull() )  obj.set( "bringupOptions", rs_ptr->columns()["bringupOptions"].getString() );
+        _handleError( e );
+
     }
-
-    { // compute racks
-        json::Array &racks_arr(obj.createArray( "racks" ));
-
-        static const string SQL( "SELECT DISTINCT LEFT( location, 3 ) AS location FROM bgqMidplane ORDER BY location" );
-
-        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( SQL ));
-
-        while ( rs_ptr->fetch() ) {
-            json::Object& rack_obj(racks_arr.addObject());
-
-            string location(rs_ptr->columns()["location"].getString());
-
-            rack_obj.set( "location", location );
-            rack_obj.set( "URI", string() + "/bg/machine/" + location );
-        }
-    }
-
-    { // I/O racks
-        static const string SQL( "SELECT location, status FROM bgqIoRack ORDER BY location" );
-
-        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( SQL ));
-
-        json::Array *io_racks_arr_p(NULL);
-
-        while ( rs_ptr->fetch() ) {
-            if ( ! io_racks_arr_p )  io_racks_arr_p = &(obj.createArray( "ioRacks" ));
-
-            json::Object& io_rack_obj(io_racks_arr_p->addObject());
-
-            string location(rs_ptr->columns()["location"].getString());
-
-            io_rack_obj.set( "location", location );
-            io_rack_obj.set( "URI", string() + "/bg/machine/" + location );
-
-            io_rack_obj.set( "status", rs_ptr->columns()["status"].getString() );
-        }
-    }
-
-
-    json::Object *not_available_obj_p(NULL);
-
-
-    { // Not available hardware
-
-        static const string SQL(
-
- "SELECT location, status FROM bgqMidplane WHERE status <> 'A'"
-" UNION ALL"
-" SELECT location, status FROM bgqNodeCard WHERE status <> 'A'"
-" UNION ALL"
-" SELECT location, status FROM bgqIoRack WHERE status <> 'A'"
-" UNION ALL"
-" SELECT location, status FROM bgqIoDrawer WHERE status <> 'A'"
-
-            );
-
-        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( SQL ));
-
-        while ( rs_ptr->fetch() ) {
-            if ( ! not_available_obj_p )  not_available_obj_p = &(obj.createObject( "notAvailable" ));
-
-            json::Object &na_obj(not_available_obj_p->createObject( rs_ptr->columns()["location"].getString() ));
-
-            na_obj.set( "status", rs_ptr->columns()["status"].getString() );
-        }
-    }
-
-    { // Not available service card
-
-        static const string SQL(
-
- "SELECT midplanePos, status FROM bgqServiceCard WHERE status <> 'A'"
-
-            );
-
-        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( SQL ));
-
-        while ( rs_ptr->fetch() ) {
-            string midplane_pos(rs_ptr->columns()["midplanePos"].getString());
-
-            if ( ! not_available_obj_p )  not_available_obj_p = &(obj.createObject( "notAvailable" ));
-
-            json::Object *na_obj_p;
-
-            json::Object::iterator i(not_available_obj_p->find( midplane_pos ));
-
-            if ( i == not_available_obj_p->end() ) {
-                na_obj_p = &(not_available_obj_p->createObject( midplane_pos ));
-            } else {
-                na_obj_p = &(i->second.get()->getObject());
-            }
-
-            na_obj_p->set( "serviceCardStatus", rs_ptr->columns()["status"].getString() );
-        }
-    }
-
-    { // Not available switches
-
-        static const string SQL(
-
- "SELECT midplanePos, COUNT(*) AS c FROM bgqSwitch WHERE status <> 'A' GROUP BY midplanePos"
-
-            );
-
-        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( SQL ));
-
-        while ( rs_ptr->fetch() ) {
-            string midplane_pos(rs_ptr->columns()["midplanePos"].getString());
-
-            if ( ! not_available_obj_p )  not_available_obj_p = &(obj.createObject( "notAvailable" ));
-
-            json::Object *na_obj_p;
-
-            json::Object::iterator i(not_available_obj_p->find( midplane_pos ));
-
-            if ( i == not_available_obj_p->end() ) {
-                na_obj_p = &(not_available_obj_p->createObject( midplane_pos ));
-            } else {
-                na_obj_p = &(i->second.get()->getObject());
-            }
-
-            na_obj_p->set( "switchCount", rs_ptr->columns()["c"].as<int64_t>() );
-        }
-    }
-
-    { // Not available nodes
-
-        static const string SQL(
-
- "SELECT midplanePos || '-' || nodeCardPos AS location, c"
-  " FROM ( SELECT midplanePos, nodeCardPos, COUNT(*) AS c FROM bgqComputeNode"
-           " WHERE status <> 'A'"
-           " GROUP BY midplanePos, nodeCardPos"
-       " ) AS t"
-
-            );
-
-        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( SQL ));
-
-        while ( rs_ptr->fetch() ) {
-            if ( ! not_available_obj_p )  not_available_obj_p = &(obj.createObject( "notAvailable" ));
-
-            const string nodecard_pos(rs_ptr->columns()["location"].getString());
-
-            json::Object *na_obj_p;
-
-            json::Object::iterator i(not_available_obj_p->find( nodecard_pos ));
-
-            if ( i == not_available_obj_p->end() ) {
-                na_obj_p = &(not_available_obj_p->createObject( nodecard_pos ));
-            } else {
-                na_obj_p = &(i->second.get()->getObject());
-            }
-
-            na_obj_p->set( "nodeCount", rs_ptr->columns()["c"].as<uint64_t>() );
-        }
-    }
-
-    { // Not available I/O nodes
-
-        static const string SQL(
-
- "SELECT ioPos AS location, COUNT(*) AS c FROM bgqIoNode"
-  " WHERE status <> 'A'"
-  " GROUP BY ioPos"
-
-            );
-
-        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( SQL ));
-
-        while ( rs_ptr->fetch() ) {
-            if ( ! not_available_obj_p )  not_available_obj_p = &(obj.createObject( "notAvailable" ));
-
-            const string io_drawer_pos(rs_ptr->columns()["location"].getString());
-
-            json::Object *na_obj_p;
-
-            json::Object::iterator i(not_available_obj_p->find( io_drawer_pos ));
-
-            if ( i == not_available_obj_p->end() ) {
-                na_obj_p = &(not_available_obj_p->createObject( io_drawer_pos ));
-            } else {
-                na_obj_p = &(i->second.get()->getObject());
-            }
-
-            na_obj_p->set( "ioNodeCount", rs_ptr->columns()["c"].as<uint64_t>() );
-        }
-    }
-
-    { // Not available DCAs
-
-        static const string SQL(
-
- "SELECT midplanePos || '-' || nodeCardPos AS location, c"
-  " FROM ( SELECT midplanePos, nodeCardPos, COUNT(*) AS c FROM bgqNodeCardDCA"
-           " WHERE status <> 'A'"
-           " GROUP BY midplanePos, nodeCardPos"
-       " ) AS t"
-
-            );
-
-        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( SQL ));
-
-        while ( rs_ptr->fetch() ) {
-            if ( ! not_available_obj_p )  not_available_obj_p = &(obj.createObject( "notAvailable" ));
-
-            const string nodecard_pos(rs_ptr->columns()["location"].getString());
-
-            json::Object *na_obj_p;
-
-            json::Object::iterator i(not_available_obj_p->find( nodecard_pos ));
-
-            if ( i == not_available_obj_p->end() ) {
-                na_obj_p = &(not_available_obj_p->createObject( nodecard_pos ));
-            } else {
-                na_obj_p = &(i->second.get()->getObject());
-            }
-
-            na_obj_p->set( "DCACount", rs_ptr->columns()["c"].as<uint64_t>() );
-        }
-    }
-
-    { // Not available power modules in each compute rack.
-
-        static const string SQL(
-
- "SELECT rackLoc, COUNT(*) AS c"
-  " FROM ( SELECT LEFT(location,3) AS rackLoc"
-           " FROM bgqBulkPowerSupply"
-           " WHERE status <> 'A' AND location LIKE 'R%'"
-       " ) AS t"
-  " GROUP BY rackLoc"
-
-            );
-
-        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( SQL ));
-
-        while ( rs_ptr->fetch() ) {
-            if ( ! not_available_obj_p )  not_available_obj_p = &(obj.createObject( "notAvailable" ));
-
-            const string rack_loc(rs_ptr->columns()["rackLoc"].getString());
-
-            json::Object *na_obj_p;
-
-            json::Object::iterator i(not_available_obj_p->find( rack_loc ));
-
-            if ( i == not_available_obj_p->end() ) {
-                na_obj_p = &(not_available_obj_p->createObject( rack_loc ));
-            } else {
-                na_obj_p = &(i->second.get()->getObject());
-            }
-
-            na_obj_p->set( "powerModuleCount", rs_ptr->columns()["c"].as<uint64_t>() );
-        }
-    }
-
-    json::Formatter()( obj_val, response.out() );
 }
 
 

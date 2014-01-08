@@ -235,10 +235,10 @@ int shmFS::defineMemorySpace(ShmMgrEntry_t* ptr, size_t space)
 
 bool shmFS::compactMemorySpace()
 {
-    bool didWork = false;
+    size_t bytesMoved = 0;
     uint64_t maxva = getShmManager()->VStart + getShmManager()->Size;
     ShmMgrEntry_t* previous;
-    Kernel_WriteFlightLog(FLIGHTLOG, FL_SHMCMPSPC, 0,0,0,0);
+    Kernel_WriteFlightLog(FLIGHTLOG, FL_SHMCMPSPB, 0,0,0,0);
     
     while(1)
     {
@@ -250,11 +250,18 @@ bool shmFS::compactMemorySpace()
         if(previous->AllocatedAddr != maxva - previous->AllocatedSize)
         {
             memmove_up((void*)(maxva - previous->AllocatedSize), (void*)(previous->AllocatedAddr), previous->AllocatedSize);
+            bytesMoved += maxva - previous->AllocatedSize - previous->AllocatedAddr;
             maxva = previous->AllocatedAddr = maxva - previous->AllocatedSize;
-            didWork = true;
+        }
+        else
+        {
+            maxva = previous->AllocatedAddr;
         }
     }
-    return didWork;
+    Kernel_WriteFlightLog(FLIGHTLOG, FL_SHMCMPSPF, bytesMoved, maxva - getShmManager()->VStart,0,0);
+    if(bytesMoved > 0)
+        return true;
+    return false;
 }
 
 uint64_t shmFS::access(const char *pathname, int mode)

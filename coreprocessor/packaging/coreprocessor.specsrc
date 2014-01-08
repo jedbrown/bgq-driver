@@ -14,10 +14,11 @@ The coreprocessor component contains the coreprocessor JTAG debugger.  It uses t
 %{_base_dir}/coreprocessor/bin/checktk.pl
 
 %files coreprocessor
-%defattr(-,root,root,755)
-
+%defattr(755,root,root)
 %dir %{_parent_dir}
 %dir %{_base_dir}
+%dir %{_base_dir}/coreprocessor
+%dir %{_base_dir}/coreprocessor/bin
 
-%{_base_dir}/coreprocessor
-
+%defattr(-,root,root,-)
+%{_base_dir}/coreprocessor/bin/*

@@ -129,9 +129,10 @@ public:
 
    //! \brief  Start a tool for the job and add it to the list of active tools.
    //! \param  msg Input StartTool message for the job.
+   //! \param  simulation flag indication if we are in simulation mode
    //! \return Result of operation.
 
-   bgcios::MessageResult startTool(StartToolMessage *msg);
+   bgcios::MessageResult startTool(StartToolMessage *msg, bool simulation = false);
 
    //! \brief  Get the pointer to the tool process object for the specified tool identifier.
    //! \param  toolId Tool identifier.
@@ -246,6 +247,10 @@ public:
 
    //! Accumulate ExitJob messages.
    ExitJobAccumulator exitJobAccumulator;
+
+   //! Accumulate SignalJobAck messages.
+   bgcios::MessageAccumulator signalJobAckAccumulator;
+
 
    //! \brief  Set the pointer to the monitor object for the job.
    //! \param  monitor Pointer to SimJobMonitor object.

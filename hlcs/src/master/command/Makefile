@@ -137,3 +137,5 @@ distclean:
 	$(clean_cmd)
 
 .PHONY: default all install clean distclean
+
+-include *.d

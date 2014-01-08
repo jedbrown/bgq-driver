@@ -59,6 +59,7 @@ private:
     std::string _user;
     std::string _start_time;
     std::string _end_time;
+    std::string _client;
 
     bool _exit_status_set;
     int _exit_status;

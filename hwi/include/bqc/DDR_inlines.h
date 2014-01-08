@@ -130,7 +130,7 @@ int MEM_Alter_addr_ECC_sel(char mc, unsigned rank, unsigned bank, unsigned row, 
 		if(i++>MCMCC_TimeOut)
 		{
 		    if ( --MEM_RAS_InfoTokens >= 0 ) {
-				FW_RAS_printf(FW_RAS_INFO, "Timeout %s MCMCC=%X", __func__, DCRReadPriv(_DDR_MC_MCMCC(mc)));
+			FW_RAS_printf(FW_RAS_INFO, "Timeout %s MCMCC=%X", __func__, DCRReadPriv(_DDR_MC_MCMCC(mc)));
 		    }
 		    MC_DEBUG(("Timeout: MCMCC2 = 0x%lx\n", temp));
 		    return(1);

@@ -24,6 +24,7 @@
 #include "Protocol.h"
 
 #include <utility/include/Log.h>
+#include <utility/include/cxxsockets/SockAddrList.h>
 
 #include <boost/foreach.hpp>
 
@@ -53,11 +54,11 @@ Protocol::sendOnly(
     LOG_TRACE_MSG(__FUNCTION__);
     boost::mutex::scoped_lock scoped_lock(_sr_lock);
     if (!_requester) {
-        throw CxxSockets::CxxError(-1, "No requester socket.");
+        throw CxxSockets::Error(-1, "No requester socket.");
     }
 
     // Send the request
-    CxxSockets::Message requestNameMessage(requestName);
+    const CxxSockets::Message requestNameMessage(requestName);
     CxxSockets::Message requestMessage;
     requestObject.write(requestMessage);
     LOG_TRACE_MSG("Sending request name.");
@@ -78,11 +79,11 @@ Protocol::sendReceive(
     LOG_TRACE_MSG(__FUNCTION__);
     boost::mutex::scoped_lock scoped_lock(_sr_lock);
     if (!_requester) {
-        throw CxxSockets::CxxError(-1, "No requester socket.");
+        throw CxxSockets::Error(-1, "No requester socket.");
     }
 
     // Send the request
-    CxxSockets::Message requestNameMessage(requestName);
+    const CxxSockets::Message requestNameMessage(requestName);
     CxxSockets::Message requestMessage;
     requestObject.write(requestMessage);
     LOG_TRACE_MSG("Sending request name.");
@@ -112,29 +113,26 @@ Protocol::sendReceive(
 
 void
 Protocol::initializeRequester(
-        int ipv,
+        const int ipv,
         const std::string& host,
         const std::string& port,
-        int attempts
+        const int attempts
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
-    // Zero attempts means try 'forever'
-    CxxSockets::SockAddrList remote_list(static_cast<unsigned short>(ipv), host, port);
+    const CxxSockets::SockAddrList remote_list(static_cast<unsigned short>(ipv), host, port);
 
     // Connect to the server.
     // Let the caller decide the exception handling policy
     int retries = 0;
-    bool forever = false;
+    const bool forever = (attempts == 0); // Zero attempts means try 'forever'
     int timeout = 500;
     const int timeout_max = 3000000;
-
-    (attempts == 0)?forever=true:forever=false;
 
     // Normally, we pass socket exceptions back to the client.
     // Here, however, we make use of them.
     bool connected = false;
-    BOOST_FOREACH(CxxSockets::SockAddr& remote, remote_list) {
+    BOOST_FOREACH(const CxxSockets::SockAddr& remote, remote_list) {
         if (connected) {
             break;
         }
@@ -146,21 +144,21 @@ Protocol::initializeRequester(
                 port_config.setProperties(_props, "");
                 port_config.notifyComplete();
                 sock->Connect(remote, port_config);
-            } catch(CxxSockets::SockHardError& e) {
+            } catch(const CxxSockets::HardError& e) {
                 LOG_DEBUG_MSG("Server not available, will retry.");
                 if (timeout < timeout_max)
                     timeout *= 10;
                 usleep(timeout);
                 ++retries;
                 continue;
-            } catch(CxxSockets::SockSoftError& e) {
+            } catch(const CxxSockets::SoftError& e) {
                 LOG_DEBUG_MSG("Caught exception, will retry. Exception is: " << e.what());
                 if (timeout < timeout_max)
                     timeout *= 10;
                 usleep(timeout);
                 ++retries;
                 continue;
-            } catch(CxxSockets::CxxError& e) {
+            } catch(const CxxSockets::Error& e) {
                 LOG_ERROR_MSG("Unexpected error on connecting socket: " << e.what());
                 ++retries;
                 continue;
@@ -175,7 +173,7 @@ Protocol::initializeRequester(
         std::ostringstream msg;
         msg << "Retries timed out attempting to connect to " << host << ":" << port;
         LOG_DEBUG_MSG(msg.str());
-        throw CxxSockets::SockHardError(EAGAIN, msg.str());
+        throw CxxSockets::HardError(EAGAIN, msg.str());
     }
 
     // Keepalive.  Going to fire 'em off pretty quick because LNs may go away without warning.
@@ -228,14 +226,14 @@ Protocol::sendReply(
         return;
     LOG_DEBUG_MSG("Sending " << requestName << " reply.");
     // First send the class name
-    CxxSockets::Message replyClassName(requestName);
+    const CxxSockets::Message replyClassName(requestName);
     if (_responder) {
         _responder->Send(replyClassName);
     } else {
         std::ostringstream msg;
         msg << "Responder not yet initialized.";
         LOG_ERROR_MSG(msg.str());
-        throw CxxSockets::SockSoftError(EAGAIN, msg.str());
+        throw CxxSockets::SoftError(EAGAIN, msg.str());
     }
 
     // Then send the message

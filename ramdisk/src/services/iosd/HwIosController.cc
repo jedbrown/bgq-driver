@@ -142,11 +142,17 @@ HwIosController::startNodeServices(std::string dest)
    std::ostringstream serviceIdArg;
    serviceIdArg << "--service_id=" << inMsg->serviceId;
    
+   //Add on info as to compute node being served
+   std::ostringstream CNtorusArg;
+   CNtorusArg << "--CNtorus=("<< ((inMsg->CNtorus>>24) & 0x3F)<< ","<< ((inMsg->CNtorus>>18) & 0x3F)<< ","<< ((inMsg->CNtorus>>12) & 0x3F)<< "," << ((inMsg->CNtorus>>6) & 0x3F)<< ","<<(inMsg->CNtorus & 0x3F)<<")";
+   
    // Start a sysiod.
    std::ostringstream sysiodCmdChannelPath;
    sysiodCmdChannelPath << _workDirectory << bgcios::SysioCommandChannelName << "." << inMsg->serviceId;
    _sysiodArguments.push_back(serviceIdArg.str());
+   _sysiodArguments.push_back(CNtorusArg.str());
    _serviceManager->start(_sysiodPath, _sysiodArguments, sysiodCmdChannelPath.str(), _serviceManager->maxServiceRestarts());
+   _sysiodArguments.pop_back();
    _sysiodArguments.pop_back();
    LOG_CIOS_TRACE_MSG("started '" << _sysiodPath << "' with service id " << inMsg->serviceId);
 
@@ -154,7 +160,9 @@ HwIosController::startNodeServices(std::string dest)
    std::ostringstream toolctldCmdChannelPath;
    toolctldCmdChannelPath << _workDirectory << bgcios::ToolctlCommandChannelName << "." << inMsg->serviceId;
    _toolctldArguments.push_back(serviceIdArg.str());
+   _toolctldArguments.push_back(CNtorusArg.str());
    _serviceManager->start(_toolctldPath, _toolctldArguments, toolctldCmdChannelPath.str(), _serviceManager->maxServiceRestarts());
+   _toolctldArguments.pop_back();
    _toolctldArguments.pop_back();
    LOG_CIOS_TRACE_MSG("started '" << _toolctldPath << "' with service id " << inMsg->serviceId);
 

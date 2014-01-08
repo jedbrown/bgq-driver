@@ -36,7 +36,6 @@ function(
 {
 
 var b_navigator_dijit_environmentals_Node = d_declare(
-        "bluegene.navigator.dijit.environmentals.Node",
         [ l_AbstractQueryResultsDijit ],
 
 {

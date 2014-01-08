@@ -53,12 +53,9 @@ namespace runjob {
  *
  *  - exit status
  *  - kill timeout
- *  - nodes that are no longer available
  *
- *  If a job terminates due to a kill timeout, every node used by the job is unavailble
- *  for future jobs until the block in use has been rebooted. If a job has terminated
- *  without a kill timeout, any nodes that encountered a RAS event with a control action
- *  of SOFTWARE_IN_ERROR will be included in the Nodes container.
+ *  If a job terminates due to a kill timeout, every node used by the job is unavailable
+ *  for future jobs until the block in use has been rebooted. 
  *
  *  The exit status is encoded and can be queried with the usual WIFEXITED, EXITSTATUS,
  *  WIFSIGNALED, and WTERMSIG macros to gather more information. The message parameter
@@ -76,7 +73,27 @@ public:
     pid_t pid() const;
     Job::Id job() const;
     int status() const;
+
+    /*!
+     * \brief Check if delivering a KILL signal timed out.
+     *
+     * \ingroup V1R2
+     *
+     * When delivering a KILL signal to a job times out, the kill_timeout() method
+     * will return true. For sub-block jobs, this changes the status of every node
+     * participating in the job to a Software Failure status. For regular jobs on
+     * blocks larger than a midplane, the midplanes in use by the job will change 
+     * to a Software Failure status. For regular jobs on blocks smaller than a 
+     * midplane, all of the nodes participating in the job will change to a Software
+     * Failure status. In every scenario, freeing the encompassing compute block
+     * will change the node or midplane's status back to Available.
+     */
     bool kill_timeout() const;
+
+    /*!
+     * \deprecated This method has been deprecated since V1R1M0
+     * \ingroup V1R2
+     */
     const Nodes& software_error_nodes() const;
     const std::string& message() const;
 

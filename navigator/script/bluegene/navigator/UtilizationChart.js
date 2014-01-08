@@ -26,15 +26,13 @@ define(
     "./topic",
     "../Bgws",
     "dojo/_base/declare",
-    "dojo/_base/lang",
-    "dijit/registry"
+    "dojo/_base/lang"
 ],
 function(
         l_topic,
         b_Bgws,
         d_declare,
-        d_lang,
-        j_registry
+        d_lang
     )
 {
 
@@ -49,11 +47,13 @@ var b_navigator_UtilizationChart = d_declare( null,
 
 
     /** @constructs */
-    constructor: function( bgws )
+    constructor: function(
+            bgws,
+            utilization_chart_dij
+        )
     {
         this._bgws = bgws;
-
-        this._utilization_chart_dij = j_registry.byId( "navigator" ).footer.charts.utilization;
+        this._utilization_chart_dij = utilization_chart_dij;
 
         l_topic.subscribe( l_topic.loggedIn, d_lang.hitch( this, this._loggedIn ) );
         l_topic.subscribe( l_topic.refreshCharts, d_lang.hitch( this, this._refresh ) );

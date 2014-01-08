@@ -37,7 +37,9 @@ function(
 {
 
 
-var ret = d_declare( "bluegene.utility.Optional", null,
+var b_utility_Optional = d_declare(
+        "bluegene.utility.Optional",
+        null,
 
 /** @lends bluegene^utility^Optional# */
 {
@@ -68,19 +70,19 @@ var ret = d_declare( "bluegene.utility.Optional", null,
 } );
 
 
-bluegene.utility.Optional._HIDDEN_CLASS_NAME = "dijitHidden";
+b_utility_Optional._HIDDEN_CLASS_NAME = "dijitHidden";
 
-bluegene.utility.Optional.HIDDEN = "hidden";
-bluegene.utility.Optional.VISIBLE = "visible";
+b_utility_Optional.HIDDEN = "hidden";
+b_utility_Optional.VISIBLE = "visible";
 
 
-bluegene.utility.Optional.setVisibility = function( obj )
+b_utility_Optional.setVisibility = function( obj )
     {
         d_array.forEach( obj.hide, function( o ) { o.hide(); } );
         d_array.forEach( obj.show, function( o ) { o.show(); } );
     };
 
 
-return ret;
+return b_utility_Optional;
 
 } );

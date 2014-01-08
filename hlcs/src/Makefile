@@ -27,6 +27,7 @@ include ../Make.hlcs.rules
 DIRS  = docs
 DIRS += master
 DIRS += log_merge
+DIRS += libmmcs_client
 ifeq ($(BGQDB),yes)
 DIRS += mmcs
 DIRS += security
@@ -63,11 +64,11 @@ uninstall:              $(TARGETS_UNINSTALL)
 
 # dependencies
 ifeq ($(BGQDB),yes)
-    mmcs.install: master.install security.install
+    mmcs.install: master.install security.install libmmcs_client.install
 else
-    mmcs.install: master.install
+    mmcs.install: master.install libmmcs_client.install
 endif
-bgsched.install: security.install
+bgsched.install: security.install libmmcs_client.install
 runjob.install: bgsched.install security.install
 realtime.install: bgsched.install
 validator.install: master.install mmcs.install

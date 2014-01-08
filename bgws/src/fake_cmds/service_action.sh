@@ -84,6 +84,21 @@ cat <<EOF
 2011-04-07 07:10:32.102:   Service Action $id entry for BulkPowerModule R00-B2-P0 has been updated to 'PREPARE' state with status 'P' in the database.
 2011-04-07 07:10:32.103:   Service Action $id on BulkPowerModule R00-B2-P0 is ready to be serviced. Proceed with the service action.
 2011-04-07 07:10:32.191:
+EOF
+
+if [ "$location" == "R00-K" ]; then
+cat <<EOF
+2012-09-19 03:49:46.439:   ATTENTION *********************************************************************************************
+2012-09-19 03:49:46.439:   ATTENTION 
+2012-09-19 03:49:46.439:   ATTENTION Turn off all BPEs in the rack, power off the rack by terminating power at the building power
+2012-09-19 03:49:46.439:   ATTENTION circuit breakers, repair the hardware, turn the facility breakers back on, turn on the BPEs,
+2012-09-19 03:49:46.439:   ATTENTION and then end the service action on ClockCards $location.
+2012-09-19 03:49:46.440:   ATTENTION 
+2012-09-19 03:49:46.440:   ATTENTION *********************************************************************************************
+EOF
+fi
+
+cat <<EOF
 2011-04-07 07:10:32.191:   ServiceBulkPowerModule ended with return code 0, Service Action $id on BulkPowerModule R00-B2-P0 is ready to be serviced. Proceed with the service action.
 2011-04-07-07:10:32
 2011-04-07-07:10:32  End ServiceBulkPowerModule R00-B2-P0 prepare    --logfile /bgsys/logs/BGQ/ServiceBulkPowerModule-R00-B2-P0-2011-0407-07:10:29.log

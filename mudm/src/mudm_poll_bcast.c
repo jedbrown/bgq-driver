@@ -105,6 +105,23 @@ int clear_rdma_bcast_receive_atomic(struct my_context * mcontext, MUHWI_PacketHe
   return 0;
 }
 
+int clear_rdma_bcast_receive_reduce_all(struct my_context * mcontext, MUHWI_PacketHeader_t * hdr, uint32_t bytes) 
+{
+    uint64_t* value = (uint64_t *)(((char *)hdr)+32);
+    memcpy(mcontext->bcast_reduceall_data, value, mcontext->bcast_reduceall_datasize);
+    struct mudm_bcast *mb = &mcontext->system_bcast;
+    struct bcast_rdma_object * bro = &mb->RDMA_bcast_control;
+    struct rdma_bcast_set_counter * rbsc = &bro->bcast_counter_info;
+    
+    ENTER;
+    rbsc->mrb.requestID = NULL;
+    bro->state=BCAST_INACTIVE;
+    HERE;
+    mcontext->bcast_reduceall_complete = 1;
+    EXIT;
+    return 0;
+}
+
 int clear_rdma_bcast_receive_reduce(struct my_context * mcontext, MUHWI_PacketHeader_t * hdr, uint32_t bytes) 
 {
   struct mudm_bcast *mb = &mcontext->system_bcast;
@@ -157,7 +174,8 @@ int ready_rdma_bcast_receive_reduce(struct my_context * mcontext, MUHWI_PacketHe
                           sizeof(mcontext->system_bcast.RDMA_bcast_control.num_compute_nodes_in_class_route) /*payload_length*/,
                           mcontext->system_bcast.RDMA_bcast_control.origin_bcast_node,
                           mcontext->system_bcast.RDMA_bcast_control.class_route4bcast ,
-                          MUHWI_COLLECTIVE_TYPE_REDUCE );
+                          MUHWI_COLLECTIVE_TYPE_REDUCE, 
+                          NULL );
   }
   bro->state=BCAST_RECEIVER;
   EXIT;
@@ -190,6 +208,9 @@ int mudm_recv_bcast (struct my_context * mcontext, MUHWI_PacketHeader_t * hdr, u
      case MUDM_CLR_RDMA_BCAST:
          clear_rdma_bcast_receive_atomic(mcontext, hdr, bytes);  
      break;
+      case MUDM_REDUCE_ALL:
+          clear_rdma_bcast_receive_reduce_all(mcontext, hdr, bytes);
+          break;
      case MUDM_REDUCE_BCAST_ORIGIN:
        //start broadcasts
         HERE;
@@ -241,7 +262,8 @@ int rdma_bcast_poll_reduce(struct my_context * mcontext){
                           sizeof(mcontext->system_bcast.RDMA_bcast_control.num_compute_nodes_in_class_route) /*payload_length*/,
                           mcontext->system_bcast.RDMA_bcast_control.origin_bcast_node,
                           mcontext->system_bcast.RDMA_bcast_control.class_route4bcast ,
-                          MUHWI_COLLECTIVE_TYPE_ALLREDUCE );
+                          MUHWI_COLLECTIVE_TYPE_ALLREDUCE, 
+                          NULL );
     mcontext->system_bcast.RDMA_bcast_control.state = BCAST_WAIT4CLEAR;
     EXIT;
     return 0;

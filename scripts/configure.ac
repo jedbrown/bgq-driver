@@ -687,10 +687,10 @@ fi
 INSTALL_SUBDIR=`/bin/echo $BGQ_INSTALL_DIR | awk 'BEGIN{FS="/"} ; {print $NF}'`
 if [[[ $INSTALL_SUBDIR == "work" ]]] ; then
 	USER_DISTRO=`whoami`_`date +%y%m%d`
-	bgq_linux_os_default=/bgsys/linux/RHEL6.2_$USER_DISTRO
+	bgq_linux_os_default=/bgsys/linux/RHEL6.3_$USER_DISTRO
 else
 	DRIVER=`/bin/echo $BGQ_INSTALL_DIR | awk 'BEGIN{FS="/"} ; {print $(NF-1)}'`
-	bgq_linux_os_default=/bgsys/linux/RHEL6.2_$DRIVER
+	bgq_linux_os_default=/bgsys/linux/RHEL6.3_$DRIVER
 fi
 AC_ARG_WITH(linux-os,
   AS_HELP_STRING([--with-linux-os=<path>], [path to linux OS root directory]),
@@ -700,7 +700,7 @@ AC_SUBST(BGQ_LINUX_OS_PATH)
 AC_MSG_RESULT([  BGQ_LINUX_OS_PATH=$BGQ_LINUX_OS_PATH])
 
 # BGQ_LINUX_OS_PATH set-up
-bgq_base_distro_default=/bgsys/linux/RHEL6.2_base
+bgq_base_distro_default=/bgsys/linux/RHEL6.3_base
 AC_ARG_WITH(base-distro,
   AS_HELP_STRING([--with-base-distro=<path>], [path to base ION distribution]),
   [ BGQ_DISTROFS_BASE_PATH="$withval"; ],
@@ -727,9 +727,9 @@ AC_SUBST(BGQ_LINUX_HEADERS_PATH)
 AC_MSG_RESULT([  BGQ_LINUX_HEADERS_PATH=$BGQ_LINUX_HEADERS_PATH])
 
 # BGQ_LINUX_KERNEL_VERSION set-up
-bgq_linux_kernel_version_default=2.6.32-220.23.3.bgq.el6_V1R1M2_0.ppc64
+bgq_linux_kernel_version_default=2.6.32-279.14.1.bgq.el6.ppc64
 AC_ARG_WITH(linux-kernel-version,
-  AS_HELP_STRING([--with-linux-kernel-version=<version>], [Linux kernel version (e.g. 2.6.32-220.23.3.bgq.el6.ppc64)]),
+  AS_HELP_STRING([--with-linux-kernel-version=<version>], [Linux kernel version (e.g. 2.6.32-279.14.1.bgq.el6.ppc64)]),
   [ BGQ_LINUX_KERNEL_VERSION="$withval"; ],
   [ BGQ_LINUX_KERNEL_VERSION="$bgq_linux_kernel_version_default"])
 AC_SUBST(BGQ_LINUX_KERNEL_VERSION)
@@ -1032,6 +1032,16 @@ AC_ARG_WITH(docbook-path,
   [ DOCBOOK="/usr/share/apps/ksgmltools2/docbook/xsl/manpages/docbook.xsl" ])
 AC_SUBST(DOCBOOK)
 
+
+#---------------------------
+# Configure build of control system simulator on x86_64
+AC_ARG_WITH(control-system-simulation,
+  AS_HELP_STRING([--with-control-system-simulation],[Configure build of control system simulator on x86_64]),
+  [ BGQ_CONTROL_SYSTEM_SIMULATION="yes" ],
+  [ BGQ_CONTROL_SYSTEM_SIMULATION="no" ])
+AC_SUBST(BGQ_CONTROL_SYSTEM_SIMULATION)
+
+
 #----------------------------
 # Setup RPMs
 #	
@@ -1139,7 +1149,7 @@ AC_SUBST(BGQ_REVISION)
 # If this is set then the open source tarball will be created where specified.
 # If this is not specified then the open source tarball will not be created.
 AC_ARG_WITH(open-source-install,
-  AS_HELP_STRING([--with-open-source-install=<filename>],[Open-source output file]),
+  AS_HELP_STRING([--with-open-source-install=<filename>],[Open-source output directory]),
   [ BGQ_OPEN_SOURCE_INSTALL="$withval" ],
   [ BGQ_OPEN_SOURCE_INSTALL="no" ])
 AC_SUBST(BGQ_OPEN_SOURCE_INSTALL)

@@ -89,7 +89,7 @@ public:
     /*!
      * \brief Get the "in use" compute block name.
      *
-     * \return "In use" compute block name.
+     * \return "In use" compute block name. Returns empty string if node board is not is use.
      */
     const std::string& getComputeBlockName() const;
 

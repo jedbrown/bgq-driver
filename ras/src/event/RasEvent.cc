@@ -59,7 +59,7 @@ ostream& operator<< (ostream& o, const RasEvent& event)
 
   o << "<RasEvent time=\""
     << time_buf   << "\" "
-    << "id =\"0x" << hex << setfill('0') << setw(8) << event.msgId() << dec << "\" "
+    << "id=\"0x" << hex << setfill('0') << setw(8) << event.msgId() << dec << "\" "
     << "handled=\"" << event.handled() << "\" ";
   LOG_DEBUG_MSG("<RasEvent time=\"" << time_buf  << "\" " << "handled=\"" << event.handled() << "\" ");
   

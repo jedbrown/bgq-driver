@@ -260,14 +260,18 @@ uint64_t Kernel_L1pSetPatternAddress(void* readptr, void* writeptr, size_t size)
 
 
 /*!
- * \brief Gets the current virtual address for L1p operations
+ * \brief Gets the current list read/write pointer's current working address.  
+ 
+ This indicates how far the L1p perfect prefetcher has progressed in memory.  
  *
  */
 __INLINE__
 uint64_t Kernel_L1pGetCurrentPatternAddress(void** readptr, void** writeptr);
 
 /*!
- * \brief Sets the current virtual address for L1p operations
+ * \brief Sets the current list's read/write pointers to the specified address
+ 
+ This allows the prefetcher to resume list operations at a specific point.
  *
  */
 __INLINE__
@@ -348,13 +352,20 @@ enum KERNEL_MEMSIZETYPE
 __INLINE__ 
 int Kernel_GetMemorySize(enum KERNEL_MEMSIZETYPE type, uint64_t* size);
 
+/*! \brief Defines a region in user memory that the kernel can use for an arbitrarily sized local file system.
 
+  \note On CNK, this file system is mounted at /dev/local
+ 
+  \param[in] fs_size Size of the region in bytes
+  \param[in] fs_baseaddr The pointer to the memory region
+ */
 __INLINE__
 int Kernel_SetLocalFSWindow(size_t fs_size, void* fs_baseaddr);
 
 
 /**
  * \brief Include implementations of the above functions.
+ 
  */
 #include "memory_impl.h"
 

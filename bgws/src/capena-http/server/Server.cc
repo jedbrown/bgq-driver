@@ -28,9 +28,17 @@
 #include <utility/include/Log.h>
 
 #include <boost/bind.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp>
 
+#include <string>
+#include <vector>
+
+
+using boost::lexical_cast;
 
 using std::string;
+using std::vector;
 
 
 LOG_DECLARE_FILE( "capena-http" );
@@ -70,11 +78,23 @@ Server::Server(
 }
 
 
+void Server::setListeningCallback( ListeningCallbackFn callback_fn )
+{
+    _listening_fn = callback_fn;
+}
+
+
 void Server::start()
 {
     _acceptor_ptr->start(
             boost::bind( &Server::_acceptorCallback, this, _1 )
         );
+}
+
+
+void Server::stop()
+{
+    _acceptor_ptr->stop();
 }
 
 
@@ -85,7 +105,20 @@ void Server::_acceptorCallback(
     // We don't get the User ID because configured the handshaker to not transmit it, instead an application could send the User ID info in a header
 
     if ( args.status == bgq::utility::Acceptor::Status::NowAccepting ) {
-        LOG_INFO_MSG( "Now accepting HTTP connections" );
+
+        vector<string> acceptor_strings;
+
+        for ( bgq::utility::Acceptor::AcceptArguments::Endpoints::const_iterator i(args.endpoints.begin()) ; i != args.endpoints.end() ; ++i ) {
+            acceptor_strings.push_back( lexical_cast<string>(*i) );
+        }
+
+        LOG_INFO_MSG( "Now accepting HTTP connections on " << boost::algorithm::join( acceptor_strings, "," ) );
+
+        if ( _listening_fn ) {
+            _listening_fn( args.endpoints );
+            _listening_fn = ListeningCallbackFn();
+        }
+
         return;
     }
     if ( args.status != bgq::utility::Acceptor::Status::OK ) {
@@ -93,7 +126,7 @@ void Server::_acceptorCallback(
         return;
     }
 
-    LOG_INFO_MSG( "Got new connection. user_type=" << args.user_type << " clientCN=" << (args.client_cn.empty() ? "None" : string() + "'" + args.client_cn + "'") );
+    LOG_INFO_MSG( "Got new connection from " << args.socket_ptr->lowest_layer().remote_endpoint() << " user_type=" << args.user_type << " clientCN=" << (args.client_cn.empty() ? "None" : string() + "'" + args.client_cn + "'") );
 
     ConnectionPtr connection_ptr(Connection::create(
             args.socket_ptr,

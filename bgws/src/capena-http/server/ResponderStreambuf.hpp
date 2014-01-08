@@ -48,7 +48,7 @@ public:
 
 
     ResponderStreambuf(
-            ConnectionPtr connection_ptr
+            NotifyDataFn notify_data_fn
         );
 
 
@@ -68,7 +68,7 @@ protected:
 
 private:
 
-    ConnectionPtr _connection_ptr;
+    NotifyDataFn _notify_data_fn;
 };
 
 

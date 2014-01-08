@@ -119,3 +119,5 @@ distclean: clean
 
 print:
 	@echo INSTALL_LIST=${INSTALL_LIST}
+
+-include */*.d

@@ -26,15 +26,13 @@ define(
     "./topic",
     "../Bgws",
     "dojo/_base/declare",
-    "dojo/_base/lang",
-    "dijit/registry"
+    "dojo/_base/lang"
 ],
 function(
         l_topic,
         b_Bgws,
         d_declare,
-        d_lang,
-        j_registry
+        d_lang
     )
 {
 
@@ -49,11 +47,13 @@ var b_navigator_RasChart = d_declare( null,
 
 
     /** @constructs */
-    constructor: function( bgws )
+    constructor: function(
+            bgws,
+            ras_chart_dij
+        )
     {
         this._bgws = bgws;
-
-        this._ras_chart_dij = j_registry.byId( "navigator" ).footer.charts.ras;
+        this._ras_chart_dij = ras_chart_dij;
 
         this._ras_chart_dij.on( "selected", d_lang.hitch( this, this._selected ) );
 

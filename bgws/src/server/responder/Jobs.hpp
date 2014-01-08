@@ -27,6 +27,8 @@
 
 #include "../AbstractResponder.hpp"
 
+#include "../RequestRange.hpp"
+
 #include "capena-http/http/uri/Path.hpp"
 
 #include <db/include/api/filtering/JobFilter.h>
@@ -60,6 +62,7 @@ public:
             CtorArgs& args
         ) :
             AbstractResponder( args ),
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool),
             _properties_ptr(args.dynamic_configuration_ptr->getPropertiesPtr())
     { /* Nothing to do */ }
 
@@ -72,6 +75,7 @@ public:
 
 private:
 
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
     const bgq::utility::Properties::ConstPtr _properties_ptr;
 
 
@@ -83,6 +87,34 @@ private:
         ) const;
 
     void _getServiceJobs( const std::string& location );
+
+
+    void _doQuery(
+            capena::server::ResponderPtr,
+            const BGQDB::filtering::JobFilter& job_filter,
+            const BGQDB::filtering::JobSort& job_sort,
+            const RequestRange& req_range
+        );
+
+    void _queryComplete(
+            capena::server::ResponderPtr,
+            cxxdb::ConnectionPtr,
+            uint64_t all_count,
+            cxxdb::ResultSetPtr rs_ptr,
+            const RequestRange& req_range
+        );
+
+
+    void _doServiceQuery(
+            capena::server::ResponderPtr,
+            const std::string& location
+        );
+
+    void _serviceQueryComplete(
+            capena::server::ResponderPtr,
+            cxxdb::ConnectionPtr,
+            cxxdb::ResultSetPtr rs_ptr
+        );
 };
 
 }} // namespace bgws::responder

@@ -47,7 +47,6 @@ function(
 {
 
 var b_navigator_dijit_Charts = d_declare(
-        "bluegene.navigator.dijit.Charts",
         [ j__WidgetBase, j__TemplatedMixin, j__WidgetsInTemplateMixin, l_HideableMixin ],
 
 {

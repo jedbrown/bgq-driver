@@ -43,9 +43,9 @@ IOS_LIBRARY_DIR=$(BGQ_DISTROFS_PATH)/cios/lib64
 LDFLAGS  += -pthread -dynamic
 LDFLAGS  += -Wl,-rpath,$(IOS_LIBRARY_DIR)
 LDFLAGS  += -L $(IOS_LIBRARY_DIR) -lbgcios
-LDFLAGS  += -Wl,-rpath,/bgsys/drivers/ppcfloor/utility/lib
+LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
 LDFLAGS  += -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -lcxxsockets
-LDFLAGS  += -Wl,-rpath,/bgsys/drivers/ppcfloor/extlib/lib -L $(BGQ_INSTALL_DIR)/extlib//lib/
+LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/extlib/lib -L $(BGQ_INSTALL_DIR)/extlib//lib/
 LDFLAGS  += -lboost_system-mt
 LDFLAGS  += -lboost_filesystem-mt
 

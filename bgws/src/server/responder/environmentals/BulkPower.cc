@@ -83,7 +83,6 @@ HTTP status: 403 Forbidden
 
 #include "BulkPower.hpp"
 
-#include "../../dbConnectionPool.hpp"
 #include "../../Error.hpp"
 #include "../../RequestRange.hpp"
 
@@ -137,48 +136,80 @@ void BulkPower::_doGet()
     static const unsigned DefaultRangeSize(50), MaxRangeSize(100);
     RequestRange req_range( request, DefaultRangeSize, MaxRangeSize );
 
-    auto conn_ptr(dbConnectionPool::getConnection());
-    uint64_t all_count(0);
-    cxxdb::ResultSetPtr rs_ptr;
-
     boost::shared_ptr<query::env::BulkPowerOptions> options_ptr( new query::env::BulkPowerOptions() );
 
     options_ptr->setArgs( request.getUrl().getQuery().calcArguments(), req_range );
 
-    query::env::Query query( options_ptr );
+    _query_ptr.reset( new query::env::Query( options_ptr ) );
 
-    query.execute(
-            conn_ptr,
-            &all_count,
-            &rs_ptr
+    _query_ptr->executeAsync(
+            _blocking_operations_thread_pool,
+            _getStrand().wrap( boost::bind( &BulkPower::_queryComplete, this,
+                    capena::server::AbstractResponder::shared_from_this(),
+                    req_range,
+                    _1
+                ) )
         );
 
-    json::ArrayValue arr_val;
-    json::Array &arr(arr_val.get());
+}
 
-    if ( all_count != 0 ) {
-        while ( rs_ptr->fetch() ) {
-            const cxxdb::Columns &cols(rs_ptr->columns());
 
-            json::Object &obj(arr.addObject());
-            obj.set( "location", cols[BGQDB::DBTBulkpowerenvironment::LOCATION_COL].getString() );
-            obj.set( "time", cols[BGQDB::DBTBulkpowerenvironment::TIME_COL].getTimestamp() );
-            obj.set( "inputVoltage", cols[BGQDB::DBTBulkpowerenvironment::INPUTVOLTAGE_COL].as<double>() );
-            obj.set( "inputCurrent", cols[BGQDB::DBTBulkpowerenvironment::INPUTCURRENT_COL].as<double>() );
-            obj.set( "outputVoltage", cols[BGQDB::DBTBulkpowerenvironment::OUTPUTVOLTAGE_COL].as<double>() );
-            obj.set( "outputCurrent", cols[BGQDB::DBTBulkpowerenvironment::OUTPUTCURRENT_COL].as<double>() );
+void BulkPower::notifyDisconnect()
+{
+    LOG_DEBUG_MSG( "Notified client disconnected" );
+
+    query::env::Query::Ptr query_ptr(_query_ptr);
+
+    if ( ! _query_ptr )  return;
+
+    _query_ptr->cancel();
+}
+
+
+void BulkPower::_queryComplete(
+        capena::server::ResponderPtr,
+        RequestRange req_range,
+        query::env::Query::Result res
+    )
+{
+    try {
+
+        if ( res.exc_ptr != 0 ) {
+            std::rethrow_exception( res.exc_ptr );
         }
+
+        json::ArrayValue arr_val;
+        json::Array &arr(arr_val.get());
+
+        if ( res.all_count != 0 ) {
+            while ( res.rs_ptr->fetch() ) {
+                const cxxdb::Columns &cols(res.rs_ptr->columns());
+
+                json::Object &obj(arr.addObject());
+                obj.set( "location", cols[BGQDB::DBTBulkpowerenvironment::LOCATION_COL].getString() );
+                obj.set( "time", cols[BGQDB::DBTBulkpowerenvironment::TIME_COL].getTimestamp() );
+                obj.set( "inputVoltage", cols[BGQDB::DBTBulkpowerenvironment::INPUTVOLTAGE_COL].as<double>() );
+                obj.set( "inputCurrent", cols[BGQDB::DBTBulkpowerenvironment::INPUTCURRENT_COL].as<double>() );
+                obj.set( "outputVoltage", cols[BGQDB::DBTBulkpowerenvironment::OUTPUTVOLTAGE_COL].as<double>() );
+                obj.set( "outputCurrent", cols[BGQDB::DBTBulkpowerenvironment::OUTPUTCURRENT_COL].as<double>() );
+            }
+        }
+
+
+        capena::server::Response &response(_getResponse());
+
+        req_range.updateResponse( response, arr.size(), res.all_count );
+
+        response.setContentTypeJson();
+        response.headersComplete();
+
+        json::Formatter()( arr_val, response.out() );
+
+    } catch ( std::exception& e ) {
+
+        _handleError( e );
+
     }
-
-
-    capena::server::Response &response(_getResponse());
-
-    req_range.updateResponse( response, arr.size(), all_count );
-
-    response.setContentTypeJson();
-    response.headersComplete();
-
-    json::Formatter()( arr_val, response.out() );
 }
 
 

@@ -24,7 +24,6 @@
 #include "Kernel.h"
 #include "tool.h"
 
-
 // Modify the policy and priority of a KThread. 
 
 int KThread_ChangePolicy(KThread_t*pKThread, int newPolicy, int newPriority)
@@ -182,8 +181,6 @@ void KThread_MoveToHwThread(KThread_t  *targetKThread)
     // Target hardware thread info
     int new_hwthread = targetKThread->MigrationData.b.targetCPU;
     int new_slot = targetKThread->MigrationData.b.slot;
-    // We have consumed the migration data. Reset the data.
-    targetKThread->MigrationData.word = 0;
 
     HWThreadState_t *pTargetHwThdState = GetHWThreadStateByProcessorID(new_hwthread);
     // Current hardware thread info
@@ -196,6 +193,7 @@ void KThread_MoveToHwThread(KThread_t  *targetKThread)
     //   just verifying now that we are running on the kthread that is the target of the move. 
     if (new_hwthread == myProcessorID)
     {
+        targetKThread->MigrationData.dword = 0; // We are done with the migration data.
         Kernel_WriteFlightLog(FLIGHTLOG, FL_MIGRATETH, (uint64_t)pKThr, (uint64_t)myProcessorID, (uint64_t)new_hwthread,(uint64_t)migrateStatus);
         return;
     }
@@ -257,6 +255,7 @@ void KThread_MoveToHwThread(KThread_t  *targetKThread)
     pKThr->SlotIndex    = pNewKThread->SlotIndex;  
     pKThr->pHWThread    = pNewKThread->pHWThread;  
     pKThr->pCoreState   = pNewKThread->pCoreState;
+    //note: we are purposely NOT setting the pAppProc field in this kthread since the process is staying the same.
     pKThr->Reg_State.sprg[SPRG_Index_SPIinfo] = (pKThr->Reg_State.sprg[SPRG_Index_SPIinfo] & ~0xfful) | new_hwthread;
     
     // Set fields within the kthread that we are replacing from the target hwthread
@@ -265,6 +264,8 @@ void KThread_MoveToHwThread(KThread_t  *targetKThread)
     pNewKThread->pHWThread    = tmppHwtThread;
     pNewKThread->pCoreState   = tmppCoreState;
     pNewKThread->Reg_State.sprg[SPRG_Index_SPIinfo] = (pNewKThread->Reg_State.sprg[SPRG_Index_SPIinfo] & ~0xfful) | myProcessorID;
+    // We are taking over this kthread to now be part of the process associated the hardware thread we are running on. It will be in our slot list
+    pNewKThread->pAppProc     = GetProcessByProcessorID(ProcessorID()); 
 
 
     // If we are moving a COMM thread to a new hardware thread, clear the cached pointer in our hardware thread object
@@ -303,10 +304,11 @@ void KThread_MoveToHwThread(KThread_t  *targetKThread)
     }
     else
     {
-	    // Cause a reschedule on the target hwthread, because the new thread may be the highest priority thread.
-	    // This will also awaken the target thread if it happens to be sleeping and also bump the the thread count
+	// Cause a reschedule on the target hwthread, because the new thread may be the highest priority thread.
+	// This will also awaken the target thread if it happens to be sleeping and also bump the the thread count
         // in the SPR that contains the kernel SPI information.
-	    IPI_complete_migration(pKThr);
+
+        IPI_complete_migration(pKThr);
     }
 
     Kernel_WriteFlightLog(FLIGHTLOG, FL_MIGRATETH, (uint64_t)GetTID(pKThr), (uint64_t)myProcessorID, (uint64_t)new_hwthread,(uint64_t)migrateStatus);
@@ -425,6 +427,7 @@ int KThread_LaunchAppSibling( KThread_t *pKThr_Parent,   // thread calling pthre
 
 
     // fill in the child's KThread and Launch Context
+    pKThr_Child->pAppProc       = pAppProc;
     pKThr_Child->Clone_Flags    = cl_flags;
     pKThr_Child->pTLS_Area      = cl_tls;
     pKThr_Child->pParent_TID    = cl_parent_tid;
@@ -441,8 +444,8 @@ int KThread_LaunchAppSibling( KThread_t *pKThr_Parent,   // thread calling pthre
     pKThr_Child->MaskedSignals  = pKThr_Parent->MaskedSignals; // inherit sigmask
     pKThr_Child->PendingSignals = 0;
     pKThr_Child->pUserStack_Bot = cl_child_stack;
-    pKThr_Child->
-	AlignmentExceptionCount = 0;
+    pKThr_Child->AlignmentExceptionCount = 0;
+    pKThr_Child->physical_pid = pAppProc->PhysicalPID; // clone always selects a "home" hwthread first so we should use the hardware pid from the process.
 
     pRegs_Child->gpr[ 1]        = (size_t)cl_child_stack;
     pRegs_Child->gpr[2]         = pKThr_Parent->Reg_State.gpr[2];
@@ -454,6 +457,7 @@ int KThread_LaunchAppSibling( KThread_t *pKThr_Parent,   // thread calling pthre
     pRegs_Child->lr             = pKThr_Parent->Reg_State.lr;
     pRegs_Child->xer            = pKThr_Parent->Reg_State.xer;
     pRegs_Child->ctr            = pKThr_Parent->Reg_State.ctr;
+    pRegs_Child->pid            = pKThr_Child->physical_pid; 
     pRegs_Child->sprg[SPRG_Index_SPIinfo] = (uint64_t)((pAppState->Active_Processes << 8) | // byte7: number of processes  
                                                        (child_thread_processorid));         // byte8: hw processor id
 
@@ -544,7 +548,7 @@ void KThread_InitHwThread()
 
 int KThread_SetMigrationTarget(KThread_t *kthread, uint32_t hwthread_index, int reserved_slot)
 {
-    volatile uint32_t *lockword = &kthread->MigrationData.word;
+    volatile uint32_t *lockword = &kthread->MigrationData.dword;
     uint32_t oldVal = 0;
     uint32_t newValue = 0x80000000;
     if (Compare_and_Swap32( lockword, &oldVal, newValue ))
@@ -635,8 +639,10 @@ failure:
 
 void KThread_CompleteMigration(KThread_t *newKThread)
 {
+    //printf("complete migration started on hwt %d. Current tid:%d\n", ProcessorID(), GetTID(GetMyKThread()));
     HWThreadState_t *hwt = GetMyHWThreadState();
     Kernel_Lock(&hwt->migrationLock);
+    int remoteThreadMigration = (newKThread->pAppProc == GetProcessByProcessorID(ProcessorID())) ? 0 : 1;
 
     // Save the previous kthread in the slot pointed to by the passed in kthread.
     KThread_t *originalKThread = hwt->SchedSlot[newKThread->SlotIndex];
@@ -654,6 +660,7 @@ void KThread_CompleteMigration(KThread_t *newKThread)
     int originalProcessorID = originalKThread->ProcessorID;
 
     // Free the original kthread. This kthread is currently in the slot array of the hardware thread that was the source of the migration
+    uint64_t appExitMask = remoteThreadMigration ? SCHED_STATE_APPEXIT : 0; // if this is a remote migration, we may have picked up a kthread with the exit status set.
     uint32_t *pState = &(originalKThread->State);
     uint32_t oldState, newState;
     // state should be FREE and RESERVED.  Remove the RESERVED bit
@@ -662,7 +669,7 @@ void KThread_CompleteMigration(KThread_t *newKThread)
     {
 	oldState = LoadReserved32(pState);
 	assert(oldState & SCHED_STATE_RESERVED);
-	newState = oldState & ~SCHED_STATE_RESERVED;
+	newState = oldState & ~(SCHED_STATE_RESERVED | appExitMask);
     } while (!StoreConditional32(pState, newState));
 
     ppc_msync();
@@ -672,6 +679,12 @@ void KThread_CompleteMigration(KThread_t *newKThread)
     // Put an entry on the HWThread Recycle list indicating that there is an additional slot available
     Process_MakeHwThreadAvail(originalKThread->pAppProc, originalProcessorID);
 
+    // If this is the extended thread affinity migration, make sure the APPEXIT state is turned off.  We need to let these threads run.
+    if (remoteThreadMigration)
+    {
+        Sched_Unblock(newKThread, SCHED_STATE_APPEXIT);
+    }
+    // Put this thread into a runnable state
     Sched_Unblock( newKThread, SCHED_STATE_RESET );
 
     // Regenerate the priority data in this hwthread since the new kthread likely has a different priority than 
@@ -687,5 +700,34 @@ void KThread_CompleteMigration(KThread_t *newKThread)
     {
         myKThread->Pending |= KTHR_PENDING_YIELD;
     }
+
+    // If this was a migration of a remote thread, call the static mapper to add the process TLBs to this core and modify the physical pid.
+    if (remoteThreadMigration)
+    {
+        //printf("In complete migration. new pid %d existing pid in kthread: %d\n", newKThread->MigrationData.b.physical_pid, newKThread->physical_pid);
+        newKThread->physical_pid = newKThread->MigrationData.b.physical_pid; // update the pid
+        // Apply the new TLBs required for the process
+        Kernel_Lock(&NodeState.CoreState[ProcessorCoreID()].coreLock);
+        //printf("Calling vmm_installStaticTLBMapPartial. Installing tlbs for pid:%d current pid:%ld current tid:%d\n", newKThread->physical_pid, mfspr(SPRN_PID), GetTID(GetMyKThread()));
+        vmm_installStaticTLBMapPartial(GetProcessByProcessorID(ProcessorID())->Tcoord, (int)newKThread->physical_pid);
+        Kernel_Unlock(&NodeState.CoreState[ProcessorCoreID()].coreLock);
+        //printf("Returned from calling vmm_installStaticTLBMapPartial\n");
+        // Update the mask of remote thread targets. This is used in the process exit flow.
+        uint64_t old_val, tmp_val;
+        ppc_msync();
+        do
+        {
+            old_val = LoadReserved(&(newKThread->pAppProc->HwthreadMask_Remote));
+            tmp_val = old_val | _BN(newKThread->ProcessorID);
+        }
+        while ( !StoreConditional( &(newKThread->pAppProc->HwthreadMask_Remote), tmp_val ) );
+    }
+    else
+    {
+        // We may  be moving from a remote thread to a local thread. Refresh the physical_pid to match the process physical_pid
+        newKThread->physical_pid = newKThread->pAppProc->PhysicalPID;
+    }
+    // We have consumed the migration data. Reset the data.
+    newKThread->MigrationData.dword = 0;
 }
 

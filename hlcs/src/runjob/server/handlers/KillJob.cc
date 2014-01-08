@@ -69,6 +69,64 @@ KillJob::~KillJob()
 }
 
 void
+KillJob::lookupJob()
+{
+    if ( !_request->_pid ) {
+        _response->setMessage( "empty pid in request" );
+        _response->setError( runjob::commands::error::job_not_found );
+        return;
+    }
+
+    if ( _request->_hostname.empty() ) {
+        _request->_hostname = _connection->hostname();
+        LOG_DEBUG_MSG( "using hostname '" << _request->_hostname << "' for pid " << _request->_pid );
+    }
+
+    const cxxdb::ConnectionPtr db(
+            BGQDB::DBConnectionPool::Instance().getConnection()
+            );
+    if ( !db ) {
+        _response->setError( runjob::commands::error::database_error );
+        _response->setMessage ("could not get database connection" );
+        return;
+    }
+
+    const BGQDB::job::Id job = this->getJob(
+            db,
+            _request->_pid,
+            _request->_hostname
+            );
+
+    if ( !job ) {
+        _response->setError( runjob::commands::error::job_not_found );
+        _response->setMessage(
+                "could not find job associated with runjob pid " +
+                boost::lexical_cast<std::string>( _request->_pid ) + 
+                " on host '" +
+                _request->_hostname +
+                "'"
+                );
+        return;
+    }
+
+    LOG_INFO_MSG( "associated " << job << " with pid " << _request->_pid );
+    _request->_job = job;
+
+    const Server::Ptr server( _server.lock() );
+    if ( !server ) return;
+
+    // get job object
+    server->getJobs()->find(
+            job,
+            boost::bind(
+                &KillJob::findJobCallback,
+                shared_from_this(),
+                _1
+                )
+            );
+}
+
+void
 KillJob::handle(
         const runjob::commands::Request::Ptr& request,
         const CommandConnection::Ptr& connection
@@ -81,19 +139,24 @@ KillJob::handle(
     const Server::Ptr server( _server.lock() );
     if ( !server ) return;
 
-    // get job object
-    server->getJobs()->find(
-            _request->_job,
-            boost::bind(
-                &KillJob::findJobCallback,
-                shared_from_this(),
-                _1
-                )
-            );
+    if ( _request->_job ) {
+        server->getJobs()->find(
+                _request->_job,
+                boost::bind(
+                    &KillJob::findJobCallback,
+                    shared_from_this(),
+                    _1
+                    )
+                );
+
+        return;
+    }
+    
+    this->lookupJob();
 }
 
-void
-KillJob::findJobCallback(
+    void
+        KillJob::findJobCallback(
         const Job::Ptr& job
         )
 {

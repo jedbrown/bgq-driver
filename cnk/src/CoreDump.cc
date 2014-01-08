@@ -42,6 +42,9 @@
 
 #define max(a,b) (((a)>(b))?(a):(b))
 
+// Buffer for core dump
+CoreBuffer buff;
+
 static const char *TSIZE[] = {
     "?????", // [0]
     "4KB ",  // [1]
@@ -77,6 +80,7 @@ static uint64_t TSIZE_MASK[] = {
     0,
     0x4000000000ul,
 };
+
 
 static char* format_sched_state(int state, char *buffer, int length)
 {
@@ -271,7 +275,6 @@ static int coredump_open(CoreBuffer *buffer, AppProcess_t *process)
     SETREGISTER("BG_COREDUMPSPR",      dumpSPR,               1);
 #undef SETREGISTER
 
-    //! \todo Remove the following when we no longer need to support multi-mambo.
     if (Personality_IsMambo()) // Force core files to the mailbox when running on mambo
     {
         buffer->flags.dumpToMailbox = 1;
@@ -297,7 +300,12 @@ static int coredump_open(CoreBuffer *buffer, AppProcess_t *process)
         char filename[550];
         snprintf(filename, sizeof(filename), "%s/%s.%u", corepath, coreprefix, process->Rank);
 
-        //! \todo Might make sense to close STDIN_FILENO first to make sure there is an available descriptor.
+        // Have we detected error on a previous attempt to write a core file from this node?
+        if (GetMyAppState()->disableCorefileWrite)
+        {
+            return -1;
+        }
+
         // Open the core file.
         uint64_t rc = internal_open(filename, O_CREAT | O_TRUNC | O_WRONLY | O_LARGEFILE, 0666);
 
@@ -316,6 +324,7 @@ static int coredump_open(CoreBuffer *buffer, AppProcess_t *process)
         {
             //printf("(E) Error opening core file %s: %s\n", filename, CNK_RC_STRING(rc));
             result = -1;
+            GetMyAppState()->disableCorefileWrite = 1; // Shut down all subsequent attempts to write core files from this node.
         }
 
         // For a binary core files, the following segments are always dumped.
@@ -346,7 +355,7 @@ int coredump_binary_for_rank(AppProcess_t *pProc)
         // All ranks?
         if (binaryCoreRanks[0] == '*')
         {
-            return 1;
+            return 2;
         }
         // check to see if this rank was in the list
         tmpPtr = binaryCoreRanks;
@@ -410,47 +419,59 @@ int coredump_binary_for_rank(AppProcess_t *pProc)
     return 0;
 }
 
-
+uint64_t coredump_internal_write(int fd, const void* buffer, size_t cnt)
+{
+    uint64_t rc = CNK_RC_FAILURE(EINTR);
+    AppState_t *app = GetMyAppState();
+    if (!app->disableCorefileWrite)
+    {
+        rc = internal_write(fd, buffer, cnt);
+        if (CNK_RC_IS_FAILURE(rc))
+        {
+            app->disableCorefileWrite = 1;
+        }
+    }
+    return rc;
+}
 
 static void coredump_flush(CoreBuffer *buffer)
 {
     if (buffer->flags.dumpToMailbox)
     {
-        NodeState.FW_Interface.putn(buffer->buffer, strlen(buffer->buffer));
+        NodeState.FW_Interface.putn(buffer->buffer, buffer->length);
     } else
     {
-        uint64_t rc = internal_write(buffer->fileFd, buffer->buffer, strlen(buffer->buffer));
-        if (CNK_RC_IS_FAILURE(rc))
-        {
-            //! \todo What should we do if there is an error from the write?  Give up?
-            printf("(E) %s: error flushing core dump buffer to file, %u\n", __func__, CNK_RC_ERRNO(rc));
-        }
+        coredump_internal_write(buffer->fileFd, buffer->buffer, buffer->length);
     }
 
     buffer->buffer[0] = 0; // clear the buffer
+    buffer->length = 0;
     return;
 }
 
 void coredump_printf(CoreBuffer *buffer, const char *fmt, ...)
 {
-    char line[CONFIG_CORE_BUFFER_SIZE / 4];
+    char line[256];
     va_list args;
 
     va_start(args, fmt);
-    int length = vsnprintf(line, sizeof(line), fmt, args);
+    int length = vsnprintf(line, sizeof(line), fmt, args); // returns the number of desired bytes in formatted string assuming no limit
+    if (length > (int)sizeof(line)) // would the formatted string have exceed the size of our line buffer?
+    {
+        // Yes, we have an overflow. Truncate the line. This will be a serious problem in a binary file.
+        length = (int)sizeof(line);
+        printf("(E) coredump_printf: Formatted line exceeds allocated buffer size of 256 bytes\n");
+    }
     va_end(args);
 
-    if ((buffer->flags.disableBuffering == 0) && (strlen(buffer->buffer) + length + 2 >= CONFIG_CORE_BUFFER_SIZE))
+    if ((buffer->flags.disableBuffering == 0) && (buffer->length + length + 2 >= CONFIG_CORE_BUFFER_SIZE))
     {
         coredump_flush(buffer);
     }
-    if (length >= CONFIG_CORE_BUFFER_SIZE)
-    {
-        printf("(I) %s: core dump buffer overflow, string length %d > buffer size=%d\n", __func__, length, CONFIG_CORE_BUFFER_SIZE);
-    } else
-    {
-        strncat(buffer->buffer, line, sizeof(buffer->buffer));
-    }
+    int lsize = sizeof(buffer->buffer);
+    buffer->length += length;
+    strncat(buffer->buffer, line, lsize);
+
     if (buffer->flags.disableBuffering)
     {
         coredump_flush(buffer);
@@ -468,7 +489,6 @@ static void coredump_close(CoreBuffer *buffer)
             coredump_flush(buffer);
         }
         internal_close(buffer->fileFd);
-        //! \todo What should we do if there is an error from the close?
     }
 
     return;
@@ -551,12 +571,6 @@ static void coredump_guard(CoreBuffer *buff, AppProcess_t *process, KThread_t *k
 
 static void coredump_memory(CoreBuffer *buff, AppProcess_t *process, KThread_t *kthread, bool includeProcessData)
 {
-#ifdef TODO
-    int slot;
-    uint64_t tlb0, tlb1, tlb2;
-    char tlbbuffer[512];
-#endif
-
     coredump_printf(buff, "Memory:\n");
     if (includeProcessData)
     {
@@ -728,8 +742,6 @@ static void coredump_registers(CoreBuffer *buff, Regs_t *regs)
         coredump_printf(buff, "  srr0=%016lx srr1=%016lx csrr0=%016lx csrr1=%016lx  mcsrr0=%016lx mcsrr1=%016lx\n",
                         mfspr(SPRN_SRR0_IP), mfspr(SPRN_SRR1_MSR), mfspr(SPRN_CSRR0_IP), mfspr(SPRN_CSRR1_MSR),
                         mfspr(SPRN_MCSRR0_IP), mfspr(SPRN_MCSRR1_MSR));
-
-        //! \todo This is garbage data.
         coredump_printf(buff, "  dbcr0=%016lx dbcr1=%016lx dbcr2=%016lx dbcr3=%016lx dbsr=%016lx\n",
                         regs->dbcr0, regs->dbcr1, regs->dbcr2, regs->dbcr3, regs->dbsr);
     }
@@ -837,18 +849,18 @@ static void coredump_thread(CoreBuffer *buffer, AppProcess_t *process, KThread_t
     return;
 }
 
-static int coredump_binary_write(CoreBuffer *buffer, void *data, uint64_t length)
+static uint64_t coredump_binary_write(CoreBuffer *buffer, void *data, uint64_t length)
 {
     uint64_t rc;
     uint64_t bytesLeft = length;
     char *datap = (char *)data;
     do
     {
-        rc = internal_write(buffer->fileFd, datap, bytesLeft);
+        rc = coredump_internal_write(buffer->fileFd, datap, bytesLeft);
         if (CNK_RC_IS_FAILURE(rc))
         {
             TRACE(TRACE_CoreDump, ("%s: write failed for %lu bytes, %d\n", __func__, length, CNK_RC_ERRNO(rc)));
-            return -1;
+            return rc;
         }
 
         uint64_t nbytes = CNK_RC_VALUE(rc);
@@ -857,13 +869,14 @@ static int coredump_binary_write(CoreBuffer *buffer, void *data, uint64_t length
     }
     while (bytesLeft > 0);
 
-    return (int)length;
+    return length;
 }
 
 static int coredump_binary_pad_zeroes(CoreBuffer *buffer, int length)
 {
     int bytesWritten = length;
     int bytesToWrite = 0;
+    uint64_t rc;
 
     memset(buffer->buffer, 0, CONFIG_CORE_BUFFER_SIZE);
 
@@ -876,8 +889,11 @@ static int coredump_binary_pad_zeroes(CoreBuffer *buffer, int length)
         {
             bytesToWrite = length;
         }
-        internal_write(buffer->fileFd, buffer->buffer, bytesToWrite);
-        length -= bytesToWrite;
+        rc = coredump_internal_write(buffer->fileFd, buffer->buffer, bytesToWrite);
+        if (CNK_RC_IS_SUCCESS(rc))
+        {
+            length -= CNK_RC_VALUE(rc);
+        }
     }
 
     TRACE(TRACE_CoreDump, ("(I) %s: wrote 0x%x bytes for zero pad\n", __func__, bytesWritten));
@@ -955,7 +971,7 @@ static int coredump_binary_elf_phdr(CoreBuffer *buffer, Elf64_Word type, Elf64_W
 
     // Write the program header for the section to the core file.
     int bytesWritten = 0;
-    uint64_t rc = internal_write(buffer->fileFd, buffer->buffer, sizeof(Elf64_Phdr));
+    uint64_t rc = coredump_internal_write(buffer->fileFd, buffer->buffer, sizeof(Elf64_Phdr));
     if (CNK_RC_IS_SUCCESS(rc))
     {
         bytesWritten += CNK_RC_VALUE(rc);
@@ -967,6 +983,7 @@ static int coredump_binary_elf_phdr(CoreBuffer *buffer, Elf64_Word type, Elf64_W
 
 static int coredump_binary_elf_headers(CoreBuffer *buffer, AppProcess_t *process)
 {
+    uint64_t rc;
     uint64_t vaddr;
     uint64_t paddr;
     uint64_t vsize;
@@ -1032,8 +1049,13 @@ static int coredump_binary_elf_headers(CoreBuffer *buffer, AppProcess_t *process
     ehdr->e_shstrndx = 0;
 
     // Write the elf header to the core file.
-    bytesWritten = internal_write(buffer->fileFd, buffer->buffer, sizeof(Elf64_Ehdr));
-    TRACE(TRACE_CoreDump, ("(I) %s: wrote 0x%lx bytes for elf header\n", __func__, sizeof(Elf64_Ehdr)));
+    rc = coredump_internal_write(buffer->fileFd, buffer->buffer, sizeof(Elf64_Ehdr));
+    if (CNK_RC_IS_SUCCESS(rc))
+    {
+        bytesWritten = CNK_RC_VALUE(rc);
+    }
+
+    TRACE(TRACE_CoreDump, ("(I) %s: wrote 0x%lx bytes for elf header\n", __func__, CNK_RC_VALUE(rc)));
 
     // PT_NOTE data is placed after the program headers.
     elfOffset = ROUND_UP_512B(sizeof(Elf64_Ehdr) + (ehdr->e_phnum * sizeof(Elf64_Phdr)));
@@ -1171,7 +1193,7 @@ static int coredump_binary_prstatus(CoreBuffer *buffer, KThread_t *kthread, int 
     // Write the PRSTATUS note to the core file.
     TRACE(TRACE_CoreDump, ("(I) %s: adding prstatus note for thread %d, signal %d\n", __func__, prstatus->pr_pid, prstatus->pr_cursig));
     int bytesWritten = 0;
-    uint64_t rc = internal_write(buffer->fileFd, buffer->buffer, (sizeof(Elf64_Nhdr) + sizeof(prstatus_t) + nameLength));
+    uint64_t rc = coredump_internal_write(buffer->fileFd, buffer->buffer, (sizeof(Elf64_Nhdr) + sizeof(prstatus_t) + nameLength));
     if (CNK_RC_IS_SUCCESS(rc))
     {
         bytesWritten += CNK_RC_VALUE(rc);
@@ -1244,7 +1266,7 @@ static int coredump_binary_prpsinfo(CoreBuffer *buffer, AppProcess_t *process)
     // Write the PRPSINFO note to the core file.
     TRACE(TRACE_CoreDump, ("(I) %s: adding prpsinfo note for program %s\n", __func__, prpsinfo->pr_psargs));
     int bytesWritten = 0;
-    uint64_t rc = internal_write(buffer->fileFd, buffer->buffer, (sizeof(Elf64_Nhdr) + nameLength + nhdr->n_descsz));
+    uint64_t rc = coredump_internal_write(buffer->fileFd, buffer->buffer, (sizeof(Elf64_Nhdr) + nameLength + nhdr->n_descsz));
     if (CNK_RC_IS_SUCCESS(rc))
     {
         bytesWritten += CNK_RC_VALUE(rc);
@@ -1277,7 +1299,7 @@ static int coredump_binary_auxv(CoreBuffer *buffer, AppProcess_t *process)
     // Write the AUXV note to the core file.
     TRACE(TRACE_CoreDump, ("(I) %s: adding auxv note with %d bytes of auxv data\n", __func__, nhdr->n_descsz));
     int bytesWritten = 0;
-    uint64_t rc = internal_write(buffer->fileFd, buffer->buffer, (sizeof(Elf64_Nhdr) + nameLength + nhdr->n_descsz));
+    uint64_t rc = coredump_internal_write(buffer->fileFd, buffer->buffer, (sizeof(Elf64_Nhdr) + nameLength + nhdr->n_descsz));
     if (CNK_RC_IS_SUCCESS(rc))
     {
         bytesWritten += CNK_RC_VALUE(rc);
@@ -1286,8 +1308,6 @@ static int coredump_binary_auxv(CoreBuffer *buffer, AppProcess_t *process)
 
     return bytesWritten;
 }
-
-//! \todo This function needs to be updated for QPX registers.
 
 static int coredump_binary_prfpregs(CoreBuffer *buffer, KThread_t *kthread, int tid)
 {
@@ -1330,7 +1350,7 @@ static int coredump_binary_prfpregs(CoreBuffer *buffer, KThread_t *kthread, int 
         }
         if (!(i % 8)) // break up the writing of the registers so we do not exceed the buffer size
         {
-            rc = internal_write(buffer->fileFd, buffer->buffer, bytesProcessed);
+            rc = coredump_internal_write(buffer->fileFd, buffer->buffer, bytesProcessed);
             if (CNK_RC_IS_SUCCESS(rc))
             {
                 bytesWritten += CNK_RC_VALUE(rc);
@@ -1345,7 +1365,7 @@ static int coredump_binary_prfpregs(CoreBuffer *buffer, KThread_t *kthread, int 
     bytesProcessed += sizeof(elf_fpreg_t);
 
     // Write out the remaing floats and the fpscr
-    rc = internal_write(buffer->fileFd, buffer->buffer, bytesProcessed);
+    rc = coredump_internal_write(buffer->fileFd, buffer->buffer, bytesProcessed);
     if (CNK_RC_IS_SUCCESS(rc))
     {
         bytesWritten += CNK_RC_VALUE(rc);
@@ -1525,8 +1545,7 @@ static void coredump_binary(CoreBuffer *buffer)
 
 void DumpCore(void)
 {
-    CoreBuffer buff;
-
+    Kernel_Lock(&NodeState.coredumpLock); // Protect the signal coredump buffer
     AppProcess_t *process = GetMyProcess();
     KThread_t *kthread;
 
@@ -1540,23 +1559,19 @@ void DumpCore(void)
     if (coredump_open(&buff, process) == 0)
     {
 
-        // If we are dumping output to the mailbox, grab a lock to prevent the intermingled
-        // console output of multiple processes dumping at the same time
-        if (buff.flags.dumpToMailbox == 1)
-        {
-            Kernel_Lock(&NodeState.coredumpLock);
-        }
-
-        buff.flags.dumpBinary = process->binaryCoredump;
+        // Set the dumpBinary flag. Note that the binaryCoredump field in the process can have a value of 0:no binary, 1:explicit rank, 2:all ranks binary.
+        buff.flags.dumpBinary = process->binaryCoredump ? 1 : 0;
         if (buff.flags.dumpBinary)
         {
             if (!Personality_CiosEnabled())
             {
                 printf("(E) Binary core files are only supported when CIOS is enabled\n");
+                Kernel_Unlock(&NodeState.coredumpLock);
                 return;
             }
             coredump_binary(&buff);
             coredump_close(&buff);
+            Kernel_Unlock(&NodeState.coredumpLock);
             return;
         }
 
@@ -1616,17 +1631,12 @@ void DumpCore(void)
         // Write the trailer and close the core dump.
         coredump_printf(&buff, "---LCB\n");
         coredump_close(&buff);
-
-        // If we are dumping output to the mailbox, unlock the coredumpLock
-        if (buff.flags.dumpToMailbox == 1)
-        {
-            Kernel_Unlock(&NodeState.coredumpLock);
-        }
     }
     else
     {
         //printf("DumpCore open failed for rank:%d\n", GetMyProcess()->Rank);
     }
+    Kernel_Unlock(&NodeState.coredumpLock);
 }
 void DumpInterruptCounters(void)
 {
@@ -1645,3 +1655,66 @@ void DumpInterruptCounters(void)
     return;
 }
 
+int coredump_for_rank(AppProcess_t *pProc)
+{
+    const char *ranks;
+    const char *tmpPtr;
+    char value[25];
+    int badParmFound = 0;
+    uint32_t rank = pProc->Rank;
+
+    // User wants a dump of a specific rank?
+    if (App_GetEnvString("BG_COREDUMPRANK", &ranks))
+    {
+        // check to see if this rank was in the list
+        tmpPtr = ranks;
+        while (*tmpPtr)
+        {
+            for (; *tmpPtr; tmpPtr++)
+            {
+                if ((*tmpPtr == ','))
+                {
+                    break;
+                }
+            }  // End loop looking for a delimiter
+            int badValue_local = 0;
+            uint32_t str_size = tmpPtr - ranks;
+            // limit damage of bogus length rank value and leave space for null terminator
+            if (sizeof(value) <= str_size)
+            {
+                str_size = (sizeof(value) - 1);
+                badValue_local = 1;
+                badParmFound++;
+            }
+            // the above check should seldom fail so just fall through
+            // as we have already marked the value as an error
+            strncpy(value, ranks, str_size);
+            *(value + str_size) = 0; // null terminate the string to prep for atoi conversion
+
+            // do we have a match and was the conversion valid
+            uint32_t rank_from_string = (uint32_t)atoi_(value);
+            // the supplied string may have been bogus
+            uint32_t i;
+            for (i = 0; i < str_size; i++)
+            {
+                if ((value[i] < 0x30) || (value[i] > 0x39))
+                {
+                    badValue_local = 1;
+                    badParmFound++;
+                }
+            }
+            if ((rank == (uint32_t)rank_from_string) && !badValue_local)
+            {
+                return 1;
+            }
+            if (!*tmpPtr)
+            {
+                break;
+            }
+            // Move base pointer and try next value
+            tmpPtr++;
+            ranks = tmpPtr;
+        }  // End loop looking for rank in env vars
+    }
+    return 0;
+}

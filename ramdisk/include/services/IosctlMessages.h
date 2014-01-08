@@ -98,7 +98,7 @@ struct StartNodeServicesMessage
 {
    struct MessageHeader header;        //!< Message header.
    uint32_t serviceId;                 //!< Unique id given to services.
-   uint32_t reserved0;                 //!< Reserved to pad to message size.
+   uint32_t CNtorus;                 //!< Reserved to pad to message size.
 };
 
 
@@ -142,7 +142,7 @@ struct InterruptMessage
 {
    struct MessageHeader header;        //!< Message header.
    int signo;                          //!< Signal number that interrupted operation.
-   uint32_t scratchPad;                //!< Used as a .
+   uint32_t reserved0;                 //!< Reserved to pad to message size.
 };
 
 

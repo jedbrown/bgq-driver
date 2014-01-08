@@ -74,9 +74,9 @@ public:
      */
     struct BlockType {
         enum Value {
-            Any, //!< Either compute or I/O blocks.
+            Any,     //!< Either compute or I/O blocks.
             Compute, //!< Compute blocks only.
-            Io //!< I/O blocks only.
+            Io       //!< I/O blocks only.
         };
     };
 
@@ -87,41 +87,49 @@ public:
     BlockFilter();
 
     /*!
-     * \brief Set compute block owner filter.
+     * \brief Set block owner filter.
      */
     void setOwner(
-            const std::string& owner          //!< [in] Compute block owner to filter on
+            const std::string& owner          //!< [in] Block owner to filter on
     );
 
     /*!
-     * \brief Set compute block user filter. This is the user that booted the block and only applies
-     * to booted blocks.
+     * \brief Set block user filter. This is the user that booted the block and only applies to booted blocks.
      */
     void setUser(
-            const std::string& user           //!< [in] Compute block user to filter on
+            const std::string& user           //!< [in] Block user to filter on
     );
 
     /*!
-     * \brief Set compute block status filter.
+     * \brief Set block status filter.
      */
     void setStatuses(
             const BGQDB::filtering::BlockFilter::Statuses* statusesPtr //!< [in] Pointer to Statuses set to filter on
     );
 
     /*!
-     * \brief Set compute block name filter.
+     * \brief Set block name filter.
      */
     void setName(
-            const std::string& name           //!< [in] Compute block name to filter on
+            const std::string& name           //!< [in] Block name to filter on
     );
 
     /*!
-     * \brief Set the level of compute block details option.
+     * \brief Set the level of block details option.
+     *
+     * For compute blocks:
      *
      * If this filter option is true, then information about midplanes, switches and node boards will be included
      * for compute block objects.
      *
      * If this is filter option is false, then only basic block information will be set for compute block objects.
+     *
+     * For I/O blocks:
+     *
+     * If this filter option is true, then information about I/O node locations will be included for I/O block objects.
+     *
+     * If this filter option is false, then only basic I/O block information will be set for I/O block objects.
+     *
      */
     void setExtendedInfo(
             bool extendedInfo  //!< [in] true=provide extended block details, false=provide basic block details
@@ -145,46 +153,56 @@ public:
             BlockSize::Value blockSize  //!< [in] Compute block size to filter on
     );
 
+    /*!
+     * \brief Set the block type (I/O, compute or All) to filter on.
+     */
     void setBlockType( BlockType::Value blockType )  { _blockType = blockType; }
 
     /*!
-     * \brief Get compute block owner filter.
+     * \brief Get block owner filter.
      *
-     * \return Compute block owner filter.
+     * \return Block owner filter.
      */
     const std::string& getOwner() const;
 
     /*!
-     * \brief Get compute block user filter. This is the user that booted the block and only applies
-     * to booted blocks.
+     * \brief Get block user filter. This is the user that booted the block and only applies to booted blocks.
      *
-     * \return Compute block user filter.
+     * \return Block user filter.
      */
     const std::string& getUser() const;
 
     /*!
-     * \brief Get compute block status filter.
+     * \brief Get block status filter.
      *
-     * \return Compute block status filter.
+     * \return Block status filter.
      */
     const BGQDB::filtering::BlockFilter::Statuses getStatuses() const;
 
     /*!
-     * \brief Get compute block name filter.
+     * \brief Get block name filter.
      *
-     * \return Compute block name filter.
+     * \return Block name filter.
      */
     const std::string& getName() const;
 
     /*!
-     * \brief Get the level of compute block details option.
+     * \brief Get the level of block details option.
+     *
+     * For compute blocks:
      *
      * If this filter option is true, then information about midplanes, switches and node boards will be included
      * for compute block objects.
      *
      * If this is filter option is false, then only basic block information will be set for block objects.
      *
-     * \return Level of compute block details option.
+     * For compute blocks:
+     *
+     * If this filter option is true, then information about I/O node locations will be included for I/O block objects.
+     *
+     * If this filter option is false, then only basic I/O block information will be set for I/O block objects.
+     *
+     * \return Level of block details option.
      */
     bool getExtendedInfo() const;
 
@@ -206,7 +224,12 @@ public:
      */
     BlockSize::Value getSize() const;
 
-    BlockType::Value getBlockType() const  { return _blockType; }
+    /*!
+     * \brief Get the block type (I/O, compute or All).
+     *
+     * \return Blcok type filter option.
+     */
+    BlockType::Value getBlockType() const;
 
 protected:
     bool _extendedInfo;

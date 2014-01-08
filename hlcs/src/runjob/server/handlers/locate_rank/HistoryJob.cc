@@ -44,13 +44,14 @@ namespace locate_rank {
 
 HistoryJob::HistoryJob(
         const cxxdb::ConnectionPtr& connection,
-        BGQDB::job::Id job
+        const BGQDB::job::Id job
         ) :
     Job( job )
 {
     const cxxdb::QueryStatementPtr statement = connection->prepareQuery(
             std::string("SELECT ") + 
             BGQDB::DBTJob_history::BLOCKID_COL + ", " +
+            BGQDB::DBTJob_history::USERNAME_COL + ", " +
             BGQDB::DBTJob_history::STARTTIME_COL + ", " +
             BGQDB::DBTJob_history::ENTRYDATE_COL + ", " +
             BGQDB::DBTJob_history::MAPPING_COL + ", " +
@@ -92,6 +93,8 @@ HistoryJob::HistoryJob(
 
     _blockId = columns[ BGQDB::DBTJob_history::BLOCKID_COL ].getString();
     LOG_DEBUG_MSG( "used block " << _blockId );
+    _owner = columns[ BGQDB::DBTJob_history::USERNAME_COL ].getString();
+    LOG_DEBUG_MSG( "owned by " << _owner );
     _startTime = columns[ BGQDB::DBTJob_history::STARTTIME_COL ].getTimestamp();
     LOG_DEBUG_MSG( "started at " << _startTime );
     LOG_DEBUG_MSG( "ended at " << columns[ BGQDB::DBTJob_history::ENTRYDATE_COL ].getTimestamp() );
@@ -109,7 +112,11 @@ HistoryJob::HistoryJob(
             columns[ BGQDB::DBTJob_history::SHAPEE_COL ].getInt32()
             );
 
-    _mapping = boost::lexical_cast<Mapping>( columns[ BGQDB::DBTJob_history::MAPPING_COL ].getString() );
+    _mapping = Mapping(
+            Mapping::getType( columns[BGQDB::DBTJob_history::MAPPING_COL].getString() ),
+            columns[ BGQDB::DBTJob_history::MAPPING_COL ].getString(),
+            false // skip mapping file validation
+            );
     LOG_DEBUG_MSG( "with mapping " << _mapping );
 
     LOG_DEBUG_MSG( 

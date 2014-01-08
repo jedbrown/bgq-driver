@@ -21,22 +21,32 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#include "lite/MMCSCommand_waitjob.h"
+#include "MMCSCommand_waitjob.h"
 
-#include "lite/Job.h"
-
+#include "Job.h"
 #include "MMCSCommand_lite.h"
+
+#include "ConsoleController.h"
 
 #include <utility/include/Log.h>
 
-LOG_DECLARE_FILE( "mmcs" );
+
+LOG_DECLARE_FILE( "mmcs.lite" );
+
+
+using namespace std;
+
+
+namespace mmcs {
+namespace lite {
+
 
 MMCSCommand_waitjob::MMCSCommand_waitjob(
         const char* name,
         const char* description,
-        const MMCSCommandAttributes& attributes
+        const Attributes& attributes
         ) :
-    MMCSCommand(name, description, attributes)
+    common::AbstractCommand(name, description, attributes)
 {
     // nothing to do
 }
@@ -44,7 +54,7 @@ MMCSCommand_waitjob::MMCSCommand_waitjob(
 MMCSCommand_waitjob*
 MMCSCommand_waitjob::build()
 {
-    MMCSCommandAttributes commandAttributes;
+    Attributes commandAttributes;
     commandAttributes.requiresBlock( true );
     commandAttributes.requiresConnection( true );
     commandAttributes.requiresTarget( false );
@@ -55,13 +65,12 @@ MMCSCommand_waitjob::build()
 void
 MMCSCommand_waitjob::execute(
         deque<string> args,
-        MMCSCommandReply& reply,
-        ConsoleController* pController,
-        BlockControllerTarget* pTarget
+        mmcs_client::CommandReply& reply,
+        common::ConsoleController* pController,
+        server::BlockControllerTarget* pTarget
         )
 {
-    // cast console controller to LiteConsoleController
-    LiteConsoleController* console = dynamic_cast<LiteConsoleController*>( pController );
+    ConsoleController* console = dynamic_cast<ConsoleController*>( pController );
     BOOST_ASSERT( console );
 
     // parse args
@@ -70,36 +79,36 @@ MMCSCommand_waitjob::execute(
         try {
             seconds = boost::lexical_cast<unsigned>( args[0] );
             if ( seconds == 0 ) {
-                reply << FAIL << "seconds must be > 0" << DONE;
+                reply << mmcs_client::FAIL << "seconds must be > 0" << mmcs_client::DONE;
                 return;
             }
         } catch ( const boost::bad_lexical_cast& e ) {
-            reply << FAIL << "seconds " << args[0] << " is not a number" << DONE;
+            reply << mmcs_client::FAIL << "seconds " << args[0] << " is not a number" << mmcs_client::DONE;
             return;
         }
     } else if ( args.size() > 1 ) {
-        reply << FAIL << _description << DONE;
+        reply << mmcs_client::FAIL << _description << mmcs_client::DONE;
         return;
     }
 
     // ensure job is running
     if ( console->getJob().expired() ) {
-        reply << FAIL << "Job not running;" << this->description() << DONE;
+        reply << mmcs_client::FAIL << "Job not running;" << this->description() << mmcs_client::DONE;
         return;
     }
 
     // wait for job to complete
     while ( 1 ) {
-        lite::Job::Ptr job = console->getJob().lock();
+        Job::Ptr job = console->getJob().lock();
         if ( !job ) {
-            reply << OK << DONE;
+            reply << mmcs_client::OK << mmcs_client::DONE;
             return;
         } else {
             // job still active, sleep a bit
             sleep(1);
 
             if ( args.size() == 1 && --seconds == 0 ) {
-                reply << FAIL << "timed out before job completed" << DONE;
+                reply << mmcs_client::FAIL << "timed out before job completed" << mmcs_client::DONE;
                 return;
             }
         }
@@ -109,11 +118,14 @@ MMCSCommand_waitjob::execute(
 void
 MMCSCommand_waitjob::help(
         deque<string> args,
-        MMCSCommandReply& reply
+        mmcs_client::CommandReply& reply
         )
 {
-    reply << OK << description();
+    reply << mmcs_client::OK << description();
     reply << ";waits for the running job to complete.";
     reply << ";If seconds are specified, that is the maximum time it will wait. Otherwise it will wait until the job completes.";
-    reply << DONE;
+    reply << mmcs_client::DONE;
 }
+
+
+} } // namespace mmcs::lite

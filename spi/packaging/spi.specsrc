@@ -40,12 +40,10 @@ The spi component is a collection of header files and libraries that provide sys
 %dir %{_base_dir}/spi
 %dir %{_base_dir}/spi/include
 %dir %{_base_dir}/spi/lib
-%dir %{_base_dir}/spi/packaging
 %dir %{_base_dir}/spi/ras
 %dir %{_base_dir}/spi/examples
 
 %{_base_dir}/spi/include/*
 %{_base_dir}/spi/lib/*
-%{_base_dir}/spi/packaging/*
 %{_base_dir}/spi/ras/*
 %{_base_dir}/spi/examples/*

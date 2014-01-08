@@ -28,6 +28,7 @@
 #include <boost/function.hpp>
 
 #include <exception>
+#include <map>
 #include <string>
 
 
@@ -47,6 +48,10 @@ typedef boost::function<void ( std::exception_ptr ex_ptr, const std::string& ser
 typedef boost::function<void ( const std::string& error_message )> EndCb;
 
 typedef boost::function<void ( std::exception_ptr ex_ptr )> CloseCb;
+
+
+    // Map of service action ID to attention messages.
+typedef std::map<std::string,std::string> AttentionMessagesMap;
 
 
 } } } // namespace bgws::blue_gene::service_actions

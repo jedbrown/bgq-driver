@@ -212,9 +212,9 @@ uint64_t poll_pkt_message(struct my_context * mcontext,struct pkt_controls * pkt
         unfreed_req_id ++;
       } 
 //96000000000ull is about 1 minute on a 1.6hz machine
-#define TOO_MANY_CYCLES 182000000000ull
+#define TOO_MANY_CYCLES 192000000000ull
       if ( likely(pktd->timestamp) ){
-         if ( unlikely( (timestamp - pktd->timestamp)> (TOO_MANY_CYCLES) ) ){
+         if ( unlikely( ( (timestamp - pktd->timestamp)> (TOO_MANY_CYCLES) ) && (timestamp > pktd->timestamp) ) ){
             
               if (mcontext->StuckState==0){
                 uint64_t cycles_per_sec = microsec2cycles(mcontext->personality,1000000); 

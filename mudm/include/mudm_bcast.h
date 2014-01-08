@@ -25,6 +25,7 @@
 #include <hwi/include/common/compiler_support.h>
 #include <hwi/include/bqc/MU_PacketCommon.h> 
 
+#define MUDM_REDUCE_ALL      0xF50F //Reduce result to all participants                                                            
 /**
  * 
  * \brief  Broadcast a memFIFO packet.
@@ -87,7 +88,8 @@ int mudm_bcast_reduce(void* mudm_context,
                           uint16_t payload_length,
                           MUHWI_Destination_t torus_destination,
                           uint8_t  class_route,
-                          uint8_t  reduce_choice);
+                          uint8_t  reduce_choice,
+                          void* result_vaddr);
 
 /**
  * 

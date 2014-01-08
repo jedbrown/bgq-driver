@@ -100,6 +100,10 @@ Status::handle(
         _response->_jobctlProtocol = bgcios::jobctl::ProtocolVersion;
         _response->_stdioProtocol = bgcios::stdio::ProtocolVersion;
         _response->_realtime = server->getRealtimeConnection()->status();
+        _response->_connectionPoolSize = BGQDB::DBConnectionPool::instance().size();
+        _response->_connectionPoolAvailable = BGQDB::DBConnectionPool::instance().availableCount();
+        _response->_connectionPoolUsed = BGQDB::DBConnectionPool::instance().usedCount();
+        _response->_connectionPoolMax = BGQDB::DBConnectionPool::instance().maxCount();
     } catch ( const boost::bad_lexical_cast& e ) {
         LOG_WARN_MSG( e.what() );
     }

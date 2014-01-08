@@ -140,6 +140,11 @@ int vmm_TranslateAddress(const void* va, uint64_t* base_va, uint64_t* base_pa, s
 
 int VMM_IsAppAddress(const void* va, size_t size)
 {
+    return VMM_IsAppAddressForProcess(va, size, GetMyProcess());
+}
+
+int VMM_IsAppAddressForProcess(const void* va, size_t size, AppProcess_t* p)
+{
 // Note that startp is unused by provided for consistency with the above INRANGE macro.
 #define INRANGE(start, end, startp) if(((uint64_t)va>=(uint64_t)(start)) && ((uint64_t)va+size<=(uint64_t)(end+1))) { return 1; }
    // Test for NULL. 
@@ -156,7 +161,6 @@ int VMM_IsAppAddress(const void* va, size_t size)
    {
        INRANGE(&__KERNEL_TEXT_START, &__KERNEL_END, &__KERNEL_TEXT_START);
    }
-   AppProcess_t* p = GetMyProcess();
    if (!p) 
    {
        return 0;
@@ -344,6 +348,10 @@ void VMM_Init()
     // invalidate the 1G erat entries
     //printf("invalidate the 1G ERATS\n");
     eratilx(0, MMUCR0_TLBSEL_DERAT);   /*operating on NULL*/
+
+    // Turn on the MMCR1[DTTID] and MMCR1[ITTID] bits so that the erats support a tid field of 2:13. (this adds 2:5 to the default 6:13)
+    mtspr(SPRN_MMUCR1, mfspr(SPRN_MMUCR1) | _BN(47) | _BN(45) ); // do not isync() until after the invalidation of the ierat
+
     eratilx(0, MMUCR0_TLBSEL_IERAT);   /*operating on NULL*/
 
     // Next instruction fetch will cause an i-erat miss, followed by a tlb hit, bringing in the correctly sized erat for the new tlb
@@ -448,6 +456,7 @@ void IntHandler_MemoryScrub(int status_reg, int bitnum)
     if(backgroundScrubVA != 0)
     {
         Kernel_WriteFlightLog(FLIGHTLOG, FL_SCRUBSTRT, backgroundScrubPA, (backgroundScrubSize>>5), 0, 0);
+        vmm_tlb_touch_tlbs();
         vmm_tlbwe_slot( 3 - (backgroundScrubSlot%4),
                         MAS1_V(1) | MAS1_TID(0) | MAS1_TS(0) | MAS1_TSIZE_1GB,
                         MAS2_EPN(((uint64_t)backgroundScrubVA)>>12)   | MAS2_W(0) | MAS2_M(1) | MAS2_E(0) | MAS2_I(1) | MAS2_G(1),

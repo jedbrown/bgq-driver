@@ -34,6 +34,8 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <iostream>
+
 #include <unistd.h>
 
 #include <sys/prctl.h>
@@ -129,7 +131,8 @@ Pipe::SdPtr ChildProcess::start(
             msg = string() + "failed to execute " + _exe.file_string() + ", unexpected exception from pwauth child process";
         }
 
-        write( STDERR_FILENO, msg.c_str(), msg.size() );
+        std::cerr << msg << std::endl;
+
         _exit( exit_status );
     }
 

@@ -24,16 +24,16 @@
 
 define(
 [
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "module"
 ],
 function(
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         module
     )
@@ -58,7 +58,7 @@ var b_utility_Requests = d_declare( [],
 
         // console.log( module.id + ": monitoring request, now have ", this._requests.length, "request=", request );
 
-        d_Deferred.when(
+        d_when(
                 request,
                 d_lang.hitch( this, this.complete, request ),
                 d_lang.hitch( this, this.complete, request )

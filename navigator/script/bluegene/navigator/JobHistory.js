@@ -29,7 +29,6 @@ define(
     "../Bgws",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -39,7 +38,6 @@ function(
         b_Bgws,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -50,6 +48,7 @@ var b_navigator_JobHistory = d_declare( [ l_AbstractTab ],
 /** @lends bluegene^navigator^JobHistory# */
 {
     _bgws: null,
+    _navigator : null,
     _job_history_dij : null,
 
 
@@ -57,14 +56,23 @@ var b_navigator_JobHistory = d_declare( [ l_AbstractTab ],
      *  @class Job History tab.
      *  @constructs
      */
-    constructor: function( /**bluegene^Bgws*/ bgws )
+    constructor: function(
+            /**bluegene^Bgws*/ bgws,
+            navigator,
+            job_history_dij,
+            history_job_details_dij
+        )
     {
         this._bgws = bgws;
-        this._job_history_dij = j_registry.byId( "navigator" ).getJobHistoryTabDij();
+        this._navigator = navigator;
+        this._job_history_dij = job_history_dij;
 
         this._job_history_dij.on( "jobSelected", d_lang.hitch( this, this._jobSelected ) );
 
-        new l_JobHistoryDetails( this._bgws );
+        new l_JobHistoryDetails(
+                this._bgws,
+                history_job_details_dij
+            );
 
         l_topic.subscribe( l_topic.jobHistorySelected, d_lang.hitch( this, this._selected ) );
     },
@@ -98,6 +106,7 @@ var b_navigator_JobHistory = d_declare( [ l_AbstractTab ],
         console.log( module.id + ": selected with args=", args );
 
         this._job_history_dij.setFilter( args );
+        this._navigator.switchTo( "job-history" );
     }
 
 } );

@@ -219,20 +219,26 @@ uint64_t  sc_mmap( SYSCALL_FCN_ARGS)
     }
     else if ( mm_flags & MAP_FIXED )
     {
-        mm_rc = (uint64_t)MMap_Malloc_Addr( mm_len, mm_addr );  // mm_addr
+        mm_rc = (uint64_t)MMap_Malloc_Addr( mm_len, mm_addr);  // mm_addr
     }  // End map fixed
     else
     {
-        mm_rc = (uint64_t)MMap_Malloc( mm_len );
+        mm_rc = (uint64_t)MMap_Malloc( mm_len);
 
     }  // End not MAP_FIXED case
 
     if ( mm_rc  &&
          (Guard_Adjust(mm_rc+ROUND_UP_PAGESIZE( mm_len ),MoveGuardUp,0)== 0))
     {
-        //BGQ: all memory kept in heap is zero. bzero_Inline( (void *)mm_rc, ROUND_UP_PAGESIZE( mm_len ) );
+        if (((mm_flags & MAP_UNINITIALIZED) == 0) && (mm_flags & MAP_ANONYMOUS) &&
+            ((mm_flags & MAP_FIXED) || (pAppProc->MmapMgr.low_unmap < (mm_rc+mm_len))))
+        {
+            //printf("Clearing %016lx for %ld bytes. flags=%08x fd=%d\n", mm_rc, mm_len, mm_flags, mm_fd);
+            // Initialize the memory that is being returned to zero.
+            memset( (void *)mm_rc, 0, ROUND_UP_PAGESIZE( mm_len ) );
+        }
         // File descriptor passed in?
-        if ( (mm_fd != -1) && 
+        if ( ((mm_flags & MAP_ANONYMOUS) == 0) &&(mm_fd != -1) && 
            ( (File_GetFDType( mm_fd ) == FD_FILE )
            ||(File_GetFDType( mm_fd ) == FD_MEMFILE )))
         {
@@ -242,26 +248,6 @@ uint64_t  sc_mmap( SYSCALL_FCN_ARGS)
                 return rc;
             }
         }
-        else if(mm_flags & MAP_FIXED)
-        {
-            memset( (void *)mm_rc, 0, ROUND_UP_PAGESIZE( mm_len ) );
-        }
-        
-#if 0
-        printf("MMAP returning 0x%016lx for len=0x%016lx.\n", mm_rc, mm_len );
-        uint64_t addr = 0;
-        MMapChunk_t *ch = pAppProc->MmapMgr.ByAddr_anchor;
-
-        printf("MMap_allocation table\n \n");
-        int i;
-        for ( i = 0 ; ch ; ch = ch->byaddr_next, i++ )
-        {
-            printf("[%3d]: 0x%08lx@0x%08lx %s %s\n", i, ch->size, ch->addr,
-                   ((ch->addr > addr) ? "Ok" : "ERROR"),
-                   ((ch->addr & MMAPCHUNK_ADDR_FREE) ? "Free" : "Busy") );
-            addr = ch->addr;
-        }
-#endif
 
         TRACESYSCALL(("(I) %s[%d]: Returning 0x%08x for len=0x%08x.\n", __func__, ProcessorID(), mm_rc, mm_len ));
         return CNK_RC_SUCCESS(mm_rc);

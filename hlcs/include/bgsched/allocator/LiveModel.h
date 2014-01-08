@@ -152,8 +152,10 @@ public:
      * \throws bgsched::DatabaseException with values:
      * - bgsched::DatabaseErrors::DatabaseError - if error occurs accessing the database
      * - bgsched:DatabaseErrors::ConnectionError - if error occurs connecting to the database
+     *
      * \throws bgsched::InputException with value:
      * - bgsched::InputErrors::BlockNotFound - if block name was not found
+     *
      * \throws bgsched::InternalException with value:
      * - bgsched::InternalErrors::UnexpectedError - if any type of unexpected error occurs
      *
@@ -170,8 +172,11 @@ public:
      * - bgsched::DatabaseErrors::DatabaseError - if error occurs accessing the database
      * - bgsched::DatabaseErrors::ConnectionError - if error occurs connecting to the database
      * - bgsched::DatabaseErrors::UnexpectedError - if unexpected database error
+     *
      * \throws bgsched::InputException with value:
+     * - bgsched::InputErrors::InvalidBlockName - if the block name is not valid
      * - bgsched::InputErrors::BlockNotFound - if block name was not found
+     *
      * \throws bgsched::RuntimeException with value:
      * - bgsched::RuntimeErrors::InvalidBlockState - if unknown block status
      *
@@ -188,7 +193,7 @@ public:
      * - bgsched::DatabaseErrors::DatabaseError - if error occurs accessing the database
      * - bgsched:DatabaseErrors::ConnectionError - if error occurs connecting to the database
      *
-     * \throws bgsched::InternalException with value:
+     * \throws bgsched::InternalException with value:     *
      * - bgsched::InternalErrors::UnexpectedError - if any type of unexpected error occurs
      *
      * \return Compute block(s) from database matching filter criteria.

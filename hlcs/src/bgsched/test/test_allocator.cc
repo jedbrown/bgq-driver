@@ -519,7 +519,7 @@ main(int argc, char *argv[])
             //model.addDrainedMidplane("R00-M0");
             //model.addDrainedMidplane("R00-M1");
             //model.addDrainedMidplane("R01-M0");
-
+/*
             LOG_INFO_MSG( "=== findBlockResources() for 32,64,128,256 cnodes on LiveModel ===" );
             LOG_INFO_MSG( "=== 32 cnodes on LiveModel: should complete OK ===" );
             Block::Ptr block32;
@@ -538,6 +538,7 @@ main(int argc, char *argv[])
             findAndAllocateSmallBlock(my_alloc, model, false, 256, true, block256);
             model.syncState();
         //}
+*/
 
 /*
         // Cleanup (free and remove) any LiveModel blocks from previous runs
@@ -624,7 +625,7 @@ main(int argc, char *argv[])
         }
 */
 
-/*
+
         LOG_INFO_MSG( "=== findBlockResources() for full block on LiveModel ===" );
         Block::Ptr block_full;
         findAndAllocateLargeBlock(
@@ -643,7 +644,6 @@ main(int argc, char *argv[])
                 false, // No pass-through midplanes
                 true,  // Allocate
                 block_full);
-*/
 
 /*
         LOG_INFO_MSG( "=== findBlockResources() for 1x4x1x2 shape with rotation on LiveModel ===" );

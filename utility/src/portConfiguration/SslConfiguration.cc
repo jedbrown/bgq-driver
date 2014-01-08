@@ -64,28 +64,28 @@ SslConfiguration::SslConfiguration(
         _ca_certificate_filename(),
         _use_default_paths( false )
 {
-    string admin_cert_file_name(
+    const string admin_cert_file_name(
             properties_ptr->getValue(
                     AdministratorCertificateSectionName,
                     "certificate"
                 )
         );
 
-    string admin_key_file_name(
+    const string admin_key_file_name(
             properties_ptr->getValue(
                     AdministratorCertificateSectionName,
                     "key_file"
                 )
         );
 
-    string command_cert_file_name(
+    const string command_cert_file_name(
             properties_ptr->getValue(
                     CommandCertificateSectionName,
                     "certificate"
                 )
         );
 
-    string command_key_file_name(
+    const string command_key_file_name(
             properties_ptr->getValue(
                     CommandCertificateSectionName,
                     "key_file"

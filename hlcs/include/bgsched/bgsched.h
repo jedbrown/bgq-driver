@@ -24,6 +24,10 @@
 /*!
  * \file bgsched/bgsched.h
  * \brief initialization method.
+ *
+ * \defgroup V1R1M1 New content in V1R1M1
+ *
+ * \defgroup V1R2 New content in V1R2
  */
 
 #ifndef BGSCHED_H_

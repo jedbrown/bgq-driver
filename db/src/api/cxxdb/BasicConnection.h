@@ -80,6 +80,8 @@ public:
             const ParameterNames& parameter_names
         );
 
+    QueryStatementPtr createQuery();
+
     void startTransaction();
     void commit();
     void rollback();

@@ -44,8 +44,7 @@ parts := \
  ArgParse \
  BinaryController \
  Ids \
- Protocol \
- ThreadLog
+ Protocol
 
 objs := ${parts:%=%.o}
 

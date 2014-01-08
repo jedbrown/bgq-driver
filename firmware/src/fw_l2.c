@@ -34,11 +34,12 @@
 typedef struct _FW_L2_Correctables {
     fw_uint64_t mask;
     fw_uint64_t error_bits;
-    fw_uint16_t threshold;
-    fw_uint16_t count;
+    fw_uint64_t threshold;
+    fw_uint64_t count;
     fw_uint16_t slices;
     fw_uint32_t ras_id;
 } FW_L2_Correctables;
+
 
 #define FW_L2_CORR_ARRAY_MASK ( L2_DCR__L2_INTERRUPT_STATE__EDR_CE_set(1) | L2_DCR__L2_INTERRUPT_STATE__EDR_OCE_set(1) | L2_DCR__L2_INTERRUPT_STATE__RQ_CE_set(1) )
 #define FW_L2_CORR_DIR_MASK   (	L2_DCR__L2_INTERRUPT_STATE__COH_CE_set(1) | L2_DCR__L2_INTERRUPT_STATE__DIRB_CE_set(1) | L2_DCR__L2_INTERRUPT_STATE__LRU_CE_set(1) | L2_DCR__L2_INTERRUPT_STATE__SPR_CE_set(1) )
@@ -48,8 +49,20 @@ static volatile FW_L2_Correctables _fw_l2_correctables[2] = {
     { FW_L2_CORR_ARRAY_MASK, 0, 1, 0, 0, FW_RAS_L2_CORRECTABLE_ARRAY_SUMMARY },
     { FW_L2_CORR_DIR_MASK,   0, 1, 0, 0, FW_RAS_L2_CORRECTABLE_DIRECTORY_SUMMARY }
 };
+
+void fw_l2_resetCEThresholds() {
+  if ( PERS_ENABLED( PERS_ENABLE_DiagnosticsMode ) ) {
+      _fw_l2_correctables[0].threshold = _fw_l2_correctables[1].threshold = 1;
+  }
+  else if ( PERS_ENABLED( PERS_ENABLE_MaskCorrectables ) ) {
+      _fw_l2_correctables[0].threshold = _fw_l2_correctables[1].threshold = 0;
+  }
+  else {
+      _fw_l2_correctables[0].threshold = _fw_l2_correctables[1].threshold = 100;
+  }
+}
   
-void fw_l2_flushCorrectables() {
+void fw_l2_flushCorrectables( int endOfJob ) {
 
     int i;
 
@@ -66,6 +79,11 @@ void fw_l2_flushCorrectables() {
 	    details[n++] = _fw_l2_correctables[i].error_bits;
 	    details[n++] = _fw_l2_correctables[i].slices;
 	    
+	    if ( endOfJob == 0 ) {
+		_fw_l2_correctables[i].threshold *= 10;
+	    }
+
+
 	    _fw_l2_correctables[i].count = _fw_l2_correctables[i].error_bits = _fw_l2_correctables[i].slices = 0;
 
 	    fw_writeRASEvent( _fw_l2_correctables[i].ras_id, n, details );
@@ -73,6 +91,11 @@ void fw_l2_flushCorrectables() {
 
 	fw_semaphore_up( BeDRAM_LOCKNUM_RAS_FLUSH_LOCK );
     }
+
+    if ( endOfJob != 0 ) {
+	fw_l2_resetCEThresholds();
+    }
+    
 }  
 
 int fw_l2_reportAndMaskCorrectableErrorHandler( fw_uint64_t details[] ) {
@@ -188,7 +211,7 @@ int fw_l2_accumulateCorrectablesHandler( void ) {
     }
 
     if ( flush ) {
-	fw_l2_flushCorrectables();
+	fw_l2_flushCorrectables( 0 );
     }
 
     return rc;
@@ -266,30 +289,44 @@ int fw_l2_init( void ) {
 
   for ( slice = 0; slice < FW_NUM_L2_SLICES; slice++ ) {
 
-    DCRWritePriv( L2_DCR( slice, L2_INTERRUPT_STATE_CONTROL_HIGH ), 
-	        L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__LOCAL_RING_set(1)       | // DCR ring parity error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__RQ_ERR_set(1)           | // Request queue error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__CTRL_ERR_set(1)         | // Controller error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__RDB_ERR_set(1)          | // Read buffer error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__COH_CE_set(1)           | // Coherence array correctable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__COH_UE_set(1)           | // Coherence array uncorrectable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__DIRB_CE_set(1)          | // Directory array correctable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__DIRB_UE_set(1)          | // Directory array uncorrectable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__EDR_CE_set(1)           | // Coherence array correctable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__EDR_OCE_set(1)          | // Coherence array correctable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__EDR_OUE_set(1)          | // Coherence array correctable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__EDR_UE_set(1)           | // Coherence array ucorrectable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__LRU_CE_set(1)           | // LRU correctable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__LRU_UE_set(1)           | // LRU uncorrectable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__SPR_CE_set(1)           | // SPR correctable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__SPR_UE_set(1)           | // SPR uncorrectable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__RQ_CE_set(1)            | // Read queue correctable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__RQ_UE_set(1)            | // Read queue uncorrectable error
-		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__OVERLOCK_set(1)         | // Tried to lock more than overlock_thresh ways down
-		  // [disabled]  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__UPC_COUNTER_OVF_set(1)  | // UPC counter overflow
-		0 );
 
-    DCRWritePriv( L2_DCR( slice, INTERRUPT_INTERNAL_ERROR_CONTROL_HIGH), 
+      uint64_t control =
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__LOCAL_RING_set(1)       | // DCR ring parity error
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__RQ_ERR_set(1)           | // Request queue error
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__CTRL_ERR_set(1)         | // Controller error
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__RDB_ERR_set(1)          | // Read buffer error
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__COH_UE_set(1)           | // Coherence array uncorrectable error
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__DIRB_UE_set(1)          | // Directory array uncorrectable error
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__EDR_OUE_set(1)          | // Coherence array correctable error
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__EDR_UE_set(1)           | // Coherence array ucorrectable error
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__LRU_UE_set(1)           | // LRU uncorrectable error
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__SPR_UE_set(1)           | // SPR uncorrectable error
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__RQ_UE_set(1)            | // Read queue uncorrectable error
+	  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__OVERLOCK_set(1)         | // Tried to lock more than overlock_thresh ways down
+	  // [disabled]  L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__UPC_COUNTER_OVF_set(1)  | // UPC counter overflow
+	  0;
+
+      // +------------------------------------------------------------------------------------------+
+      // | NOTE: For production environments, we mask DDR correctables during the early part of the |
+      // |       boot.  The TakeCPU hook is what allows us to unmask.                               |
+      // +------------------------------------------------------------------------------------------+
+ 
+      if ( ! PERS_ENABLED(PERS_ENABLE_TakeCPU) ) {
+	  control |=
+	      L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__COH_CE_set(1)           | // Coherence array correctable error
+	      L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__DIRB_CE_set(1)          | // Directory array correctable error
+	      L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__EDR_CE_set(1)           | // Coherence array correctable error
+	      L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__EDR_OCE_set(1)          | // Coherence array correctable error
+	      L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__LRU_CE_set(1)           | // LRU correctable error
+	      L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__SPR_CE_set(1)           | // SPR correctable error
+	      L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__RQ_CE_set(1)            | // Read queue correctable error
+	      0;
+
+      }
+
+      DCRWritePriv( L2_DCR( slice, L2_INTERRUPT_STATE_CONTROL_HIGH ), control );
+
+      DCRWritePriv( L2_DCR( slice, INTERRUPT_INTERNAL_ERROR_CONTROL_HIGH), 
 		  // [5470] L2_DCR__INTERRUPT_INTERNAL_ERROR_CONTROL_HIGH__BAD_ADDRESS_set(1)        | 
 		  // [5470] L2_DCR__INTERRUPT_INTERNAL_ERROR_CONTROL_HIGH__BAD_PRIV_set(1)           | 
 		  L2_DCR__INTERRUPT_INTERNAL_ERROR_CONTROL_HIGH__BAD_DATA_PARITY_set(1)    | 
@@ -326,15 +363,7 @@ int fw_l2_init( void ) {
   // Set correctable thresholds based on mode.
   // @todo Expose the threshold via the personality.
 
-  if ( PERS_ENABLED( PERS_ENABLE_DiagnosticsMode ) ) {
-      _fw_l2_correctables[0].threshold = _fw_l2_correctables[1].threshold = 1;
-  }
-  else if ( PERS_ENABLED( PERS_ENABLE_MaskCorrectables ) ) {
-      _fw_l2_correctables[0].threshold = _fw_l2_correctables[1].threshold = 0;
-  }
-  else {
-      _fw_l2_correctables[0].threshold = _fw_l2_correctables[1].threshold = 100;
-  }
+  fw_l2_resetCEThresholds();
 
   if (FW_DD1_WORKAROUNDS_ENABLED() && PERS_ENABLED(PERS_ENABLE_DDR) && ( ( DCRReadPriv(TESTINT_DCR(SLICE_SEL_CTRL)) & 0xFFFF000000000000ull ) == 0 ) )
   {
@@ -363,6 +392,25 @@ int fw_l2_init( void ) {
     write_derat(4, 0, 0);
     isync();
   }
+
+  // See BQCBUGS 1620.  Disable L2 line locking.
+  if ( ! PERS_ENABLED( PERS_ENABLE_DiagnosticsMode ) )
+  {
+      l2_set_overlock_threshold(0);
+      l2_set_spec_threshold(0);
+  }
+  // --
+  
+#if 0
+  
+  if ( ProcessorID() == 0 ) {
+      //uint64_t inject = L2_DCR__L2_INTERRUPT_STATE__DIRB_CE_set(1);
+      uint64_t inject = L2_DCR__L2_INTERRUPT_STATE__EDR_CE_set(1);
+      DCRWritePriv( L2_DCR( 7, L2_INTERRUPT_STATE__FORCE ), inject );
+      ppc_msync();
+  }
+
+#endif 
 
   TRACE_EXIT(TRACE_L2);
 
@@ -565,4 +613,29 @@ int fw_l2_preload()
     write_derat(5, 0, 0);
 
     return 0;
+}
+
+void fw_l2_unmaskCorrectableErrors() {
+
+    if ( PERS_ENABLED(PERS_ENABLE_TakeCPU) ) {
+	
+	int slice = 0;
+
+	for ( slice = 0; slice < FW_NUM_L2_SLICES; slice++ ) {
+
+	    uint64_t control = DCRReadPriv( L2_DCR( slice, L2_INTERRUPT_STATE_CONTROL_HIGH ) );
+
+	    control |=
+		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__COH_CE_set(1)           | // Coherence array correctable error
+		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__DIRB_CE_set(1)          | // Directory array correctable error
+		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__EDR_CE_set(1)           | // Coherence array correctable error
+		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__EDR_OCE_set(1)          | // Coherence array correctable error
+		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__LRU_CE_set(1)           | // LRU correctable error
+		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__SPR_CE_set(1)           | // SPR correctable error
+		L2_DCR__L2_INTERRUPT_STATE_CONTROL_HIGH__RQ_CE_set(1)            | // Read queue correctable error
+		0;
+
+	    DCRWritePriv( L2_DCR( slice, L2_INTERRUPT_STATE_CONTROL_HIGH ), control );
+	}
+    }
 }

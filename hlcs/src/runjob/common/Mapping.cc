@@ -42,7 +42,8 @@ namespace runjob {
 
 Mapping::Mapping(
         const Mapping::Type t,
-        const std::string& value
+        const std::string& value,
+        const bool performValidation
         ) :
     _type( t ),
     _value( value ),
@@ -66,7 +67,9 @@ Mapping::Mapping(
                 6,
                 std::make_pair( 0,0 )
                 );
-        this->validateFile();
+        if ( performValidation ) {
+            this->validateFile();
+        }
     }
 }
 
@@ -145,8 +148,10 @@ Mapping::analyzeLine(
     const std::size_t comment = line.find_first_of('#');
     if ( comment != std::string::npos ) {
         line.erase( comment );
-        if ( line.empty() ) return;
     }
+
+    // skip empty lines
+    if ( line.empty() ) return;
 
     LOG_TRACE_MSG( "line: " << line );
 
@@ -239,11 +244,28 @@ operator>>(
     std::string value;
     stream >> value;
 
-    Mapping::Type t = Mapping::Type::None;
+    const Mapping::Type t = Mapping::getType( value );
 
-    // if value is not 6 characters in length, consider it a 
+    try {
+        mapping = Mapping( t, value );
+    } catch ( const std::exception& e ) {
+        std::cerr << e.what() << std::endl;
+        stream.setstate( std::ios::failbit );
+    }
+
+    return stream;
+}
+
+Mapping::Type
+Mapping::getType(
+        const std::string& value
+        )
+{
+    Mapping::Type result;
+
+    // if value is 6 characters in length, assume permutation
     if ( value.size() == 6 ) {
-        t = Mapping::Type::Permutation;
+        result = Mapping::Type::Permutation;
         BOOST_FOREACH( const char c, value ) {
             size_t count(0);
             switch ( c ) {
@@ -265,32 +287,25 @@ operator>>(
                             );
                     break;
                 default:
-                    t = Mapping::Type::File;
+                    result = Mapping::Type::File;
                     break;
             }
 
             if ( count > 1 ) {
-                t = Mapping::Type::File;
+                result = Mapping::Type::File;
                 break;
             }
 
-            if ( t == Mapping::Type::File ) {
+            if ( result == Mapping::Type::File ) {
                 break;
             }
         }
     } else {
         // assume file
-        t = Mapping::Type::File;
+        result = Mapping::Type::File;
     }
 
-    try {
-        mapping = Mapping( t, value );
-    } catch ( const std::exception& e ) {
-        std::cerr << e.what() << std::endl;
-        stream.setstate( std::ios::failbit );
-    }
-
-    return stream;
+    return result;
 }
 
 } // runjob

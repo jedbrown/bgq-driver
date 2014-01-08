@@ -179,6 +179,18 @@ Transition::loaded() const
             _job
             );
 
+    if ( _job->queue().isClientDisconnected() ) {
+        // end the job since the client will never start it
+        _job->setError( 
+                "client disconnected",
+                error_code::job_failed_to_start
+                );
+
+        Transition( _job ).end();
+
+        return;
+    }
+
     const mux::Connection::Ptr mux = _job->mux().lock();
     if ( !mux ) return;
 

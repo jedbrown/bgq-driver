@@ -180,6 +180,10 @@ int test_main( void ) {
 	      BIC_InsertInterruptMap( 0, BIC_MAP_L1P_LANE(3), BIC_MACHINE_CHECK );
 #endif
 
+	      int64_t NN ;
+
+	      printf("INJECTING!\n");
+	      for ( NN = 0; NN < 10000000ull; NN++ ) {
 	      uint64_t inject = 
 		  L1P_ESR_err_reload_ecc_x2 |
 		  //L1P_ESR_err_si_ecc |
@@ -190,7 +194,10 @@ int test_main( void ) {
 	      ppc_msync();
 	      out64_sync((void *)L1P_ESR_INJ_DCR(ProcessorCoreID()), 0 );
 	      ppc_msync();
-	
+	      }
+
+	      printf( "*********************************** Injected %ld CEs into L1P ***********************************************\n", NN);
+
 	      //printf("L1P_ESR --> %lx\n", in64( (uint64_t*)L1P_ESR));
 	  }
 
@@ -227,11 +234,20 @@ int test_main( void ) {
 	  }
 
 	  if ( fwext_strcmp("L2_Correctable",testId) == 0 )  {
-	      //uint64_t inject = L2_DCR__L2_INTERRUPT_STATE__DIRB_CE_set(1);
-	      uint64_t inject = L2_DCR__L2_INTERRUPT_STATE__EDR_CE_set(1);
-	      unsigned slice = fwext_strtoul( l2Slice, 0, 0 );
-	      DCRWritePriv( L2_DCR( slice, L2_INTERRUPT_STATE__FORCE ), inject );
-	      ppc_msync();
+
+	      int II;
+
+	      for ( II=0; II < 111101; II++ ) {
+		  //uint64_t inject = L2_DCR__L2_INTERRUPT_STATE__DIRB_CE_set(1);
+		  uint64_t inject = L2_DCR__L2_INTERRUPT_STATE__EDR_CE_set(1);
+		  unsigned slice = fwext_strtoul( l2Slice, 0, 0 );
+		  DCRWritePriv( L2_DCR( slice, L2_INTERRUPT_STATE__FORCE ), inject );
+		  ppc_msync();
+		  DCRWritePriv( L2_DCR( slice, L2_INTERRUPT_STATE__FORCE ), 0 );
+		  ppc_msync();
+	      }
+
+	      printf("Issued %d L2 CEs!\n", II);
 	  }
 
 

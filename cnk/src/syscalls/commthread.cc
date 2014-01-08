@@ -93,7 +93,6 @@ void IntHandler_MU(int puea_intrp_index)
     // it had installed handlers.
     if ( !tcb ) 
     {
-        // !!!!!!!!! This probably should be a RAS event !!!!!!!!
         printf("(E) Unexpected MU interrupt condition. No Comm thread to deliver interrupt\n");
         return;
     }

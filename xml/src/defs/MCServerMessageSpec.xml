@@ -372,8 +372,8 @@
       <DataMember type="int32"  name="returnFlowRate"         comment="return coolant flow rate (register 0x0201) - in units of 0.01, so a value of 1536 would be 15.36 gallons." />
       <DataMember type="int32"  name="supplyCoolantTemp"      comment="supply coolant temperature (register 0x0202) - in units of 0.01." />
       <DataMember type="int32"  name="returnCoolantTemp"      comment="return coolant temperature (register 0x0203) - in units of 0.01." />
-      <DataMember type="int32"  name="supplyPresure"          comment="supply coolant pressure (register 0x0204) - in units of 0.01." />
-      <DataMember type="int32"  name="diffPresure"            comment="differential coolant pressure (register 0x0205) - in units of 0.01." />
+      <DataMember type="int32"  name="supplyPressure"         comment="supply coolant pressure (register 0x0204) - in units of 0.01." />
+      <DataMember type="int32"  name="diffPressure"           comment="differential coolant pressure (register 0x0205) - in units of 0.01." />
       <DataMember type="int32"  name="ambientTemp"            comment="ambient-air temperature (register 0x0206) - in units of 0.01." />
       <DataMember type="int32"  name="ambientHumidity"        comment="ambient-air relative humidity (register 0x0207) - in units of 0.01." />
       <DataMember type="int32"  name="ambientDewPoint"        comment="ambient-air dew-point temperature (register 0x0208) - in units of 0.01." />
@@ -1345,26 +1345,26 @@
       <DataMember type="uint32" name="statusDca" comment="state of DCA" />
       <DataMember type="uint32" name="statusVtmDomains123" comment="state of VTMs / Vicor Module" />
       <DataMember type="uint32" name="statusVtmDomains468" comment="state of VTMs / Vicor Module" />
-      <DataMember type="text" name="powerRailV08Voltage" comment="voltage on D0A1 power rail, 0.8V" />
-      <DataMember type="text" name="powerRailV14Voltage" comment="voltage on D0A2 power rail, 1.4V" />
-      <DataMember type="text" name="powerRailV25Voltage" comment="voltage on D0B1 power rail, 2.5V" />
-      <DataMember type="text" name="powerRailV33Voltage" comment="voltage on D0B2 power rail, 3.3V" />
-      <DataMember type="text" name="powerRailV120PVoltage" comment="voltage on D1A1 power rail, 12.0V Persistent" />
-      <DataMember type="text" name="powerRailV15Voltage" comment="voltage on D1A2 power rail, 1.5V" />
-      <DataMember type="text" name="powerRailV09Voltage" comment="voltage on D1B1 power rail, 0.9V" />
-      <DataMember type="text" name="powerRailV10Voltage" comment="voltage on D1B2 power rail, 1.0V" />
-      <DataMember type="text" name="powerRailV33PVoltage" comment="voltage on D2A1 power rail, 3.3V Persistent" />
-      <DataMember type="text" name="powerRailV12AVoltage" comment="voltage on D2A1 power rail, V12A" />
-      <DataMember type="text" name="powerRailV12BVoltage" comment="voltage on D2B1 power rail, V12B" />
-      <DataMember type="text" name="powerRailV18Voltage" comment="voltage on D2B2 power rail, 1.8V" />
-      <DataMember type="text" name="powerRailV25PVoltage" comment="voltage on D3A1 power rail, 2.5V Persistent" />
-      <DataMember type="text" name="powerRailV12PVoltage" comment="voltage on D3A2 power rail, 1.2V Persistent" />
-      <DataMember type="text" name="powerRailV18PVoltage" comment="voltage on D3B1 power rail, 1.8V Persistent" />
-      <DataMember type="text" name="powerRailV09VoltageQ0" comment="voltage on D4A1 power rail, .9V Quadrant 0" />
-      <DataMember type="text" name="powerRailV09VoltageQ1" comment="voltage on D4A2 power rail, .9V Quadrant 1" />
-      <DataMember type="text" name="powerRailV09VoltageQ2" comment="voltage on D4B1 power rail, .9V Quadrant 2" />
-      <DataMember type="text" name="powerRailV09VoltageQ3" comment="voltage on D4B2 power rail, .9V Quadrant 3" />
-      <DataMember type="text" name="powerVTM112Temperature" comment="VTM temperature in degrees C" />
+      <DataMember type="float" name="powerRailV08Voltage" comment="voltage on D0A1 power rail, 0.8V" />
+      <DataMember type="float" name="powerRailV14Voltage" comment="voltage on D0A2 power rail, 1.4V" />
+      <DataMember type="float" name="powerRailV25Voltage" comment="voltage on D0B1 power rail, 2.5V" />
+      <DataMember type="float" name="powerRailV33Voltage" comment="voltage on D0B2 power rail, 3.3V" />
+      <DataMember type="float" name="powerRailV120PVoltage" comment="voltage on D1A1 power rail, 12.0V Persistent" />
+      <DataMember type="float" name="powerRailV15Voltage" comment="voltage on D1A2 power rail, 1.5V" />
+      <DataMember type="float" name="powerRailV09Voltage" comment="voltage on D1B1 power rail, 0.9V" />
+      <DataMember type="float" name="powerRailV10Voltage" comment="voltage on D1B2 power rail, 1.0V" />
+      <DataMember type="float" name="powerRailV33PVoltage" comment="voltage on D2A1 power rail, 3.3V Persistent" />
+      <DataMember type="float" name="powerRailV12AVoltage" comment="voltage on D2A1 power rail, V12A" />
+      <DataMember type="float" name="powerRailV12BVoltage" comment="voltage on D2B1 power rail, V12B" />
+      <DataMember type="float" name="powerRailV18Voltage" comment="voltage on D2B2 power rail, 1.8V" />
+      <DataMember type="float" name="powerRailV25PVoltage" comment="voltage on D3A1 power rail, 2.5V Persistent" />
+      <DataMember type="float" name="powerRailV12PVoltage" comment="voltage on D3A2 power rail, 1.2V Persistent" />
+      <DataMember type="float" name="powerRailV18PVoltage" comment="voltage on D3B1 power rail, 1.8V Persistent" />
+      <DataMember type="float" name="powerRailV09VoltageQ0" comment="voltage on D4A1 power rail, .9V Quadrant 0" />
+      <DataMember type="float" name="powerRailV09VoltageQ1" comment="voltage on D4A2 power rail, .9V Quadrant 1" />
+      <DataMember type="float" name="powerRailV09VoltageQ2" comment="voltage on D4B1 power rail, .9V Quadrant 2" />
+      <DataMember type="float" name="powerRailV09VoltageQ3" comment="voltage on D4B2 power rail, .9V Quadrant 3" />
+      <DataMember type="float" name="powerVTM112Temperature" comment="VTM temperature in degrees C" />
       <DataMember type="uint32" name="coreVoltageFromComputes" comment="voltage specified in computes' vpd for Vdd/Core/Domain 1   voltage (in units of 1 mv)." />
       <DataMember type="uint32" name="dramVoltageFromComputes" comment="voltage specified in computes' vpd for Vddr3/DRAM/Domain 2 voltage (in units of 1 mv)." />
       <DataMember type="uint32" name="onboardTemp0" comment="external incoming coolant temp in degrees C" />
@@ -1390,25 +1390,25 @@
       <DataMember type="uint32"    name="statusDca"                                  comment="state of DCA" />
       <DataMember type="uint32"    name="statusVtmDomains123"                        comment="state of VTMs / Vicor Modules for Domains 1, 2, &amp; 3 (VTM aka Voltage Transformation Module)" />
       <DataMember type="uint32"    name="statusVtmDomains468"                        comment="state of VTMs / Vicor Modules for Domains 4, 6, &amp; 8 (VTM aka Voltage Transformation Module)" />
-      <DataMember type="text"      name="powerRailV08Voltage"                        comment="voltage on D0A1 power rail,  0.8v." />
-      <DataMember type="text"      name="powerRailV14Voltage"                        comment="voltage on D0A2 power rail,  1.4v." />
-      <DataMember type="text"      name="powerRailV25Voltage"                        comment="voltage on D0B1 power rail,  2.5v." />
-      <DataMember type="text"      name="powerRailV33Voltage"                        comment="voltage on D0B2 power rail,  3.3v." />
-      <DataMember type="text"      name="powerRailV120PVoltage"                      comment="voltage on D1A1 power rail, 12.0v PERSISTENT." />
-      <DataMember type="text"      name="powerRailV15Voltage"                        comment="voltage on D1A2 power rail,  1.5v." />
-      <DataMember type="text"      name="powerRailV09Voltage"                        comment="voltage on D1B1 power rail, DEPRECATED on pass3 and later node boards - for pass2 boards this is 0.9v." />
-      <DataMember type="text"      name="powerRailV10Voltage"                        comment="voltage on D1B2 power rail,  1.0v." />
-      <DataMember type="text"      name="powerRailV33PVoltage"                       comment="voltage on D2A1 power rail,  3.3v PERSISTENT." />
-      <DataMember type="text"      name="powerRailV12AVoltage"                       comment="voltage on D2A2 power rail,  V12A" />
-      <DataMember type="text"      name="powerRailV12BVoltage"                       comment="voltage on D2B1 power rail,  V12B" />
-      <DataMember type="text"      name="powerRailV18Voltage"                        comment="voltage on D2B2 power rail,  1.8v." />
-      <DataMember type="text"      name="powerRailV25PVoltage"                       comment="voltage on D3A1 power rail,  2.5v PERSISTENT." />
-      <DataMember type="text"      name="powerRailV12PVoltage"                       comment="voltage on D3A2 power rail,  1.2v PERSISTENT." />
-      <DataMember type="text"      name="powerRailV18PVoltage"                       comment="voltage on D3B1 power rail,  1.8v PERSISTENT." />
-      <DataMember type="text"      name="powerRailV09VoltageQ0"                      comment="voltage on D4A1 power rail,  0.9v quadrant 0 (pass 3 node boards)." />
-      <DataMember type="text"      name="powerRailV09VoltageQ1"                      comment="voltage on D4A2 power rail,  0.9v quadrant 1 (pass 3 node boards)." />
-      <DataMember type="text"      name="powerRailV09VoltageQ2"                      comment="voltage on D4B1 power rail,  0.9v quadrant 2 (pass 3 node boards)." />
-      <DataMember type="text"      name="powerRailV09VoltageQ3"                      comment="voltage on D4B2 power rail,  0.9v quadrant 3 (pass 3 node boards)." />
+      <DataMember type="float"      name="powerRailV08Voltage"                        comment="voltage on D0A1 power rail,  0.8v." />
+      <DataMember type="float"      name="powerRailV14Voltage"                        comment="voltage on D0A2 power rail,  1.4v." />
+      <DataMember type="float"      name="powerRailV25Voltage"                        comment="voltage on D0B1 power rail,  2.5v." />
+      <DataMember type="float"      name="powerRailV33Voltage"                        comment="voltage on D0B2 power rail,  3.3v." />
+      <DataMember type="float"      name="powerRailV120PVoltage"                      comment="voltage on D1A1 power rail, 12.0v PERSISTENT." />
+      <DataMember type="float"      name="powerRailV15Voltage"                        comment="voltage on D1A2 power rail,  1.5v." />
+      <DataMember type="float"      name="powerRailV09Voltage"                        comment="voltage on D1B1 power rail, DEPRECATED on pass3 and later node boards - for pass2 boards this is 0.9v." />
+      <DataMember type="float"      name="powerRailV10Voltage"                        comment="voltage on D1B2 power rail,  1.0v." />
+      <DataMember type="float"      name="powerRailV33PVoltage"                       comment="voltage on D2A1 power rail,  3.3v PERSISTENT." />
+      <DataMember type="float"      name="powerRailV12AVoltage"                       comment="voltage on D2A2 power rail,  V12A" />
+      <DataMember type="float"      name="powerRailV12BVoltage"                       comment="voltage on D2B1 power rail,  V12B" />
+      <DataMember type="float"      name="powerRailV18Voltage"                        comment="voltage on D2B2 power rail,  1.8v." />
+      <DataMember type="float"      name="powerRailV25PVoltage"                       comment="voltage on D3A1 power rail,  2.5v PERSISTENT." />
+      <DataMember type="float"      name="powerRailV12PVoltage"                       comment="voltage on D3A2 power rail,  1.2v PERSISTENT." />
+      <DataMember type="float"      name="powerRailV18PVoltage"                       comment="voltage on D3B1 power rail,  1.8v PERSISTENT." />
+      <DataMember type="float"      name="powerRailV09VoltageQ0"                      comment="voltage on D4A1 power rail,  0.9v quadrant 0 (pass 3 node boards)." />
+      <DataMember type="float"      name="powerRailV09VoltageQ1"                      comment="voltage on D4A2 power rail,  0.9v quadrant 1 (pass 3 node boards)." />
+      <DataMember type="float"      name="powerRailV09VoltageQ2"                      comment="voltage on D4B1 power rail,  0.9v quadrant 2 (pass 3 node boards)." />
+      <DataMember type="float"      name="powerRailV09VoltageQ3"                      comment="voltage on D4B2 power rail,  0.9v quadrant 3 (pass 3 node boards)." />
       <DataMember type="uint32"    name="coreVoltageFromComputes"                    comment="voltage specified in computes' vpd for Vdd/Core/Domain 1   voltage (in units of 1 mv)." />
       <DataMember type="uint32"    name="dramVoltageFromComputes"                    comment="voltage specified in computes' vpd for Vddr3/DRAM/Domain 2 voltage (in units of 1 mv)." />
       <DataMember type="uint32"    name="onboardTemp0"                               comment="incoming coolant temperature in degrees C - TempMonitorSDA_0." />
@@ -1436,22 +1436,22 @@
       <DataMember type="RpmsFan" occurrences="many" name="fanRpms" comment="fan RPMs" />
       <DataMember type="uint32" name="statusDca" comment="state of DCA" />
       <DataMember type="uint32" name="statusVtmDomains" comment="state of VTMs / Vicor Module" />
-      <DataMember type="text" name="powerRailV08Voltage" comment="voltage on D0A1 power rail,  0.8v." />
-      <DataMember type="text" name="powerRailV14Voltage" comment="voltage on D0A2 power rail,  1.4v" />
-      <DataMember type="text" name="powerRailV25Voltage" comment="voltage on D0B1 power rail,  2.5v." />
-      <DataMember type="text" name="powerRailV33Voltage" comment="voltage on D0B2 power rail,  3.3v." />
-      <DataMember type="text" name="powerRailV120Voltage" comment="voltage on D1A1 power rail, 12.0v." />
-      <DataMember type="text" name="powerRailV15Voltage" comment="voltage on D1A2 power rail,  1.5v." />
-      <DataMember type="text" name="powerRailV09Voltage" comment="voltage on D1B1 power rail,  0.9v." />
-      <DataMember type="text" name="powerRailV10Voltage" comment="voltage on D1B2 power rail,  1.0v." />
-      <DataMember type="text" name="powerRailV120PVoltage" comment="voltage on D2A1 power rail, 12.0v PERSISTENT." />
-      <DataMember type="text" name="powerRailV33PVoltage" comment="voltage on D2A2 power rail,  3.3v PERSISTENT" />
-      <DataMember type="text" name="powerRailV12Voltage" comment="voltage on D2B1 power rail,  1.2v." />
-      <DataMember type="text" name="powerRailV18Voltage" comment="voltage on D2B2 power rail,  1.8v." />
-      <DataMember type="text" name="powerRailV12PVoltage" comment="voltage on D3B2 power rail, 1.2v PERSISTENT" />
-      <DataMember type="text" name="powerRailV15PVoltage" comment="voltage on D3B1 power rail, 1.5v PERSISTENT" />
-      <DataMember type="text" name="powerRailV18PVoltage" comment="voltage on D3A2 power rail, 1.8v PERSISTENT" />
-      <DataMember type="text" name="powerRailV25PVoltage" comment="voltage on D3A1 power rail, 2.5v PERSISTENT" />
+      <DataMember type="float" name="powerRailV08Voltage" comment="voltage on D0A1 power rail,  0.8v." />
+      <DataMember type="float" name="powerRailV14Voltage" comment="voltage on D0A2 power rail,  1.4v" />
+      <DataMember type="float" name="powerRailV25Voltage" comment="voltage on D0B1 power rail,  2.5v." />
+      <DataMember type="float" name="powerRailV33Voltage" comment="voltage on D0B2 power rail,  3.3v." />
+      <DataMember type="float" name="powerRailV120Voltage" comment="voltage on D1A1 power rail, 12.0v." />
+      <DataMember type="float" name="powerRailV15Voltage" comment="voltage on D1A2 power rail,  1.5v." />
+      <DataMember type="float" name="powerRailV09Voltage" comment="voltage on D1B1 power rail,  0.9v." />
+      <DataMember type="float" name="powerRailV10Voltage" comment="voltage on D1B2 power rail,  1.0v." />
+      <DataMember type="float" name="powerRailV120PVoltage" comment="voltage on D2A1 power rail, 12.0v PERSISTENT." />
+      <DataMember type="float" name="powerRailV33PVoltage" comment="voltage on D2A2 power rail,  3.3v PERSISTENT" />
+      <DataMember type="float" name="powerRailV12Voltage" comment="voltage on D2B1 power rail,  1.2v." />
+      <DataMember type="float" name="powerRailV18Voltage" comment="voltage on D2B2 power rail,  1.8v." />
+      <DataMember type="float" name="powerRailV12PVoltage" comment="voltage on D3B2 power rail, 1.2v PERSISTENT" />
+      <DataMember type="float" name="powerRailV15PVoltage" comment="voltage on D3B1 power rail, 1.5v PERSISTENT" />
+      <DataMember type="float" name="powerRailV18PVoltage" comment="voltage on D3A2 power rail, 1.8v PERSISTENT" />
+      <DataMember type="float" name="powerRailV25PVoltage" comment="voltage on D3A1 power rail, 2.5v PERSISTENT" />
       <DataMember type="uint32" name="coreVoltageFromComputes" comment="voltage specified in computes' vpd for Vdd/Core/Domain 1   voltage (in units of 1 mv)." />
       <DataMember type="uint32" name="dramVoltageFromComputes" comment="voltage specified in computes' vpd for Vddr3/DRAM/Domain 2 voltage (in units of 1 mv)." />
       <DataMember type="uint32" name="onboardTemp" comment="external on board temperature in degrees C" />
@@ -1476,22 +1476,22 @@
       <DataMember type="uint32"    name="rpmsFans"                occurrences="many" comment="fan RPMs." />
       <DataMember type="uint32"    name="statusDca"                                  comment="state of DCA" />
       <DataMember type="uint32"    name="statusVtmDomains"                           comment="state of VTMs / Vicor Modules (VTM aka Voltage Transformation Module)" />
-      <DataMember type="text"      name="powerRailV08Voltage"                        comment="voltage on D0A1 power rail,  0.8v." />
-      <DataMember type="text"      name="powerRailV14Voltage"                        comment="voltage on D0A2 power rail,  1.4v." />
-      <DataMember type="text"      name="powerRailV25Voltage"                        comment="voltage on D0B1 power rail,  2.5v." />
-      <DataMember type="text"      name="powerRailV33Voltage"                        comment="voltage on D0B2 power rail,  3.3v." />
-      <DataMember type="text"      name="powerRailV120Voltage"                       comment="voltage on D1A1 power rail, 12.0v." />
-      <DataMember type="text"      name="powerRailV15Voltage"                        comment="voltage on D1A2 power rail,  1.5v." />
-      <DataMember type="text"      name="powerRailV09Voltage"                        comment="voltage on D1B1 power rail,  0.9v." />
-      <DataMember type="text"      name="powerRailV10Voltage"                        comment="voltage on D1B2 power rail,  1.0v." />
-      <DataMember type="text"      name="powerRailV120PVoltage"                      comment="voltage on D2A1 power rail, 12.0v PERSISTENT." />
-      <DataMember type="text"      name="powerRailV33PVoltage"                       comment="voltage on D2A2 power rail,  3.3v PERSISTENT." />
-      <DataMember type="text"      name="powerRailV12Voltage"                        comment="voltage on D2B1 power rail,  1.2v." />
-      <DataMember type="text"      name="powerRailV18Voltage"                        comment="voltage on D2B2 power rail,  1.8v." />
-      <DataMember type="text"      name="powerRailV12PVoltage"                       comment="voltage on D3B2 power rail,  1.2v PERSISTENT." />
-      <DataMember type="text"      name="powerRailV15PVoltage"                       comment="voltage on D3B1 power rail,  1.5v PERSISTENT." />
-      <DataMember type="text"      name="powerRailV18PVoltage"                       comment="voltage on D3A2 power rail,  1.8v PERSISTENT." />
-      <DataMember type="text"      name="powerRailV25PVoltage"                       comment="voltage on D3A1 power rail,  2.5v PERSISTENT." />
+      <DataMember type="float"      name="powerRailV08Voltage"                        comment="voltage on D0A1 power rail,  0.8v." />
+      <DataMember type="float"      name="powerRailV14Voltage"                        comment="voltage on D0A2 power rail,  1.4v." />
+      <DataMember type="float"      name="powerRailV25Voltage"                        comment="voltage on D0B1 power rail,  2.5v." />
+      <DataMember type="float"      name="powerRailV33Voltage"                        comment="voltage on D0B2 power rail,  3.3v." />
+      <DataMember type="float"      name="powerRailV120Voltage"                       comment="voltage on D1A1 power rail, 12.0v." />
+      <DataMember type="float"      name="powerRailV15Voltage"                        comment="voltage on D1A2 power rail,  1.5v." />
+      <DataMember type="float"      name="powerRailV09Voltage"                        comment="voltage on D1B1 power rail,  0.9v." />
+      <DataMember type="float"      name="powerRailV10Voltage"                        comment="voltage on D1B2 power rail,  1.0v." />
+      <DataMember type="float"      name="powerRailV120PVoltage"                      comment="voltage on D2A1 power rail, 12.0v PERSISTENT." />
+      <DataMember type="float"      name="powerRailV33PVoltage"                       comment="voltage on D2A2 power rail,  3.3v PERSISTENT." />
+      <DataMember type="float"      name="powerRailV12Voltage"                        comment="voltage on D2B1 power rail,  1.2v." />
+      <DataMember type="float"      name="powerRailV18Voltage"                        comment="voltage on D2B2 power rail,  1.8v." />
+      <DataMember type="float"      name="powerRailV12PVoltage"                       comment="voltage on D3B2 power rail,  1.2v PERSISTENT." />
+      <DataMember type="float"      name="powerRailV15PVoltage"                       comment="voltage on D3B1 power rail,  1.5v PERSISTENT." />
+      <DataMember type="float"      name="powerRailV18PVoltage"                       comment="voltage on D3A2 power rail,  1.8v PERSISTENT." />
+      <DataMember type="float"      name="powerRailV25PVoltage"                       comment="voltage on D3A1 power rail,  2.5v PERSISTENT." />
       <DataMember type="uint32"    name="coreVoltageFromComputes"                    comment="voltage specified in computes' vpd for Vdd/Core/Domain 1   voltage (in units of 1 mv)." />
       <DataMember type="uint32"    name="dramVoltageFromComputes"                    comment="voltage specified in computes' vpd for Vddr3/DRAM/Domain 2 voltage (in units of 1 mv)." />
       <DataMember type="uint32"    name="onboardTemp"                                comment="on board temperature in degrees C." />
@@ -1505,12 +1505,12 @@
     </Class>
     <Class name = "ServiceCardEnv" comment="Service card environmental data">
       <DataMember type="uint32" name="clockFreq" comment="this card's system clock frequency in MHZ" />
-      <DataMember type="text" name="powerRailV12PVoltage" comment="voltage on V12P  power rail, 1.2v  PERSISTENT." />
-      <DataMember type="text" name="powerRailV12R5Voltage" comment="voltage on V12R5 power rail, 1.25v PERSISTENT." />
-      <DataMember type="text" name="powerRailV15PVoltage" comment="voltage on V15P  power rail, 1.5v  PERSISTENT." />
-      <DataMember type="text" name="powerRailV25PVoltage" comment="voltage on V25P  power rail, 2.5v  PERSISTENT." />
-      <DataMember type="text" name="powerRailV33PVoltage" comment="voltage on V33P  power rail, 3.3v  PERSISTENT." />
-      <DataMember type="text" name="powerRailV50PVoltage" comment="voltage on V50P  power rail, 5.0v  PERSISTENT." />
+      <DataMember type="float" name="powerRailV12PVoltage" comment="voltage on V12P  power rail, 1.2v  PERSISTENT." />
+      <DataMember type="float" name="powerRailV12R5Voltage" comment="voltage on V12R5 power rail, 1.25v PERSISTENT." />
+      <DataMember type="float" name="powerRailV15PVoltage" comment="voltage on V15P  power rail, 1.5v  PERSISTENT." />
+      <DataMember type="float" name="powerRailV25PVoltage" comment="voltage on V25P  power rail, 2.5v  PERSISTENT." />
+      <DataMember type="float" name="powerRailV33PVoltage" comment="voltage on V33P  power rail, 3.3v  PERSISTENT." />
+      <DataMember type="float" name="powerRailV50PVoltage" comment="voltage on V50P  power rail, 5.0v  PERSISTENT." />
       <DataMember type="bool" name="leakDetectorFaultBpe0" comment="boolean indicating if the Leak Detector's power from BPE 0 has faulted." />
       <DataMember type="bool" name="leakDetectorFaultBpe1" comment="boolean indicating if the Leak Detector's power from BPE 1 has faulted." />
       <DataMember type="uint32" name="onboardTemp1" comment="external temp of on board temperature sensor on i2c port  5 in degrees C." />
@@ -1544,17 +1544,17 @@
       <DataMember type="uchar" name="statusCml" comment="specifics for Communications, Logic, and Memory faults/warnings" />
       <DataMember type="uchar" name="status5V" comment="specifics for 5 volt output - faults/warnings" />
       <DataMember type="uchar" name="statusFans" comment="fan status" />
-      <DataMember type="text" name="inputVoltage" comment="input voltage in volts" />
-      <DataMember type="text" name="inputCurrent" comment="input current in amps" />
-      <DataMember type="text" name="outputVoltage51V" comment="51 volt output voltage in volts" />
-      <DataMember type="text" name="outputCurrent51V" comment="51 volt output current in amps" />
-      <DataMember type="text" name="outputVoltage5V" comment="5 volt output voltage in volts" />
-      <DataMember type="text" name="outputCurrent5V" comment=" 5 volt output current in amps" />
-      <DataMember type="text" name="temp1" comment="temperature 1 in degrees C" />
-      <DataMember type="text" name="temp2" comment="temperature 2 in degrees C" />
-      <DataMember type="text" name="temp3" comment="temperature 3 in degrees C" />
-      <DataMember type="text" name="rpmsFan1" comment="fan 1's speed" />
-      <DataMember type="text" name="rpmsFan2" comment="fan 2's speed" />
+      <DataMember type="float" name="inputVoltage" comment="input voltage in volts" />
+      <DataMember type="float" name="inputCurrent" comment="input current in amps" />
+      <DataMember type="float" name="outputVoltage51V" comment="51 volt output voltage in volts" />
+      <DataMember type="float" name="outputCurrent51V" comment="51 volt output current in amps" />
+      <DataMember type="float" name="outputVoltage5V" comment="5 volt output voltage in volts" />
+      <DataMember type="float" name="outputCurrent5V" comment=" 5 volt output current in amps" />
+      <DataMember type="float" name="temp1" comment="temperature 1 in degrees C" />
+      <DataMember type="float" name="temp2" comment="temperature 2 in degrees C" />
+      <DataMember type="float" name="temp3" comment="temperature 3 in degrees C" />
+      <DataMember type="float" name="rpmsFan1" comment="fan 1's speed" />
+      <DataMember type="float" name="rpmsFan2" comment="fan 2's speed" />
 
     </Class>
     <Class name="BpmsEnv" comment="Bulk power environmental data for all bulk power modules on a service card">

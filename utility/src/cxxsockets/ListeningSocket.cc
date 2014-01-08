@@ -20,26 +20,43 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#include <utility/include/portConfiguration/SslConfiguration.h>
-#include "cxxsockets/SocketTypes.h"
+
+#include "cxxsockets/ListeningSocket.h"
+
+#include "cxxsockets/error.h"
+#include "cxxsockets/exception.h"
+#include "cxxsockets/FileLocker.h"
+#include "cxxsockets/SockAddr.h"
+#include "cxxsockets/TCPSocket.h"
+
+#include "Log.h"
+       
+#include <netinet/tcp.h>
 
 LOG_DECLARE_FILE( "utility.cxxsockets" );
 
-using namespace CxxSockets;
+namespace CxxSockets {
 
-ListeningSocket::ListeningSocket(SockAddr& addr, int backlog) {
-    LOGGING_DECLARE_FD_MDC;
+ListeningSocket::ListeningSocket(
+        const SockAddr& addr, 
+        int backlog
+        )
+{
+    CXXSOCKET_LOGGING_DECLARE_FD_MDC;
     FileLocker locker;
     LockFile(locker);
-    _fileDescriptor = socket(addr.family(), SOCK_STREAM, 0);
+    #ifdef SOCK_CLOEXEC
+    _fileDescriptor = socket(addr.family(), SOCK_STREAM | SOCK_CLOEXEC, 0);
+    #else
+    _fileDescriptor = socket(addr.family(), SOCK_STREAM , 0);
+    #endif
     if(_fileDescriptor < 0) {
         std::ostringstream errmsg;
         errmsg << "socket() error: " << strerror(errno);
         LOG_ERROR_MSG(errmsg.str());
-        throw CxxSockets::SockHardError(errno, errmsg.str());
+        throw HardError(errno, errmsg.str());
     }
 
-    CloseOnExec();
     LOG_DEBUG_MSG("constructing listener");
         
     pBind(addr);
@@ -47,40 +64,44 @@ ListeningSocket::ListeningSocket(SockAddr& addr, int backlog) {
         std::ostringstream msg;
         msg << "listen error: " << strerror(errno);
         LOG_ERROR_MSG(msg.str());
-        throw CxxSockets::SockHardError(errno, msg.str());
+        throw HardError(errno, msg.str());
     }
-    _nonagle = true;
 }
 
-int ListeningSocket::Accept() {
-    LOGGING_DECLARE_FD_MDC;
+int
+ListeningSocket::Accept()
+{
+    CXXSOCKET_LOGGING_DECLARE_FD_MDC;
     SockAddr addr;
     socklen_t addrlen = sizeof(sockaddr_storage);
-    int newFd = accept(_fileDescriptor, (sockaddr*)(&addr), &addrlen);
+    #ifdef SOCK_CLOEXEC
+    const int newFd = accept4(_fileDescriptor, (sockaddr*)(&addr), &addrlen, SOCK_CLOEXEC);
+    #else
+    const int newFd = accept(_fileDescriptor, (sockaddr*)(&addr), &addrlen);
+    #endif
     if(newFd < 0) {
         std::ostringstream msg;
         msg << "accept error: " << strerror(errno);
         LOG_ERROR_MSG(msg.str());
         if(errno == EINTR || errno == EWOULDBLOCK 
            || errno == EAGAIN || errno == ERESTART)
-            throw CxxSockets::SockSoftError(errno, msg.str());
+            throw SoftError(errno, msg.str());
         else
-            throw CxxSockets::SockHardError(errno, msg.str());
+            throw HardError(errno, msg.str());
     }
 
-    if(_nonagle) {
-        int flag = 1;
-        LOG_DEBUG_MSG("Disabling nagle");
-        int ret = setsockopt( newFd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag) );
-        if(ret < 0) {
-            throw CxxSockets::SockHardError(errno, "Disabling nagle algorithm (TCP_NODELAY) failed");
-        }
+    const int flag = 1;
+    LOG_DEBUG_MSG("Disabling nagle");
+    const int ret = setsockopt( newFd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag) );
+    if(ret < 0) {
+        throw HardError(errno, "Disabling nagle algorithm (TCP_NODELAY) failed");
     }
+
     SockAddr my_addr;
-    std::string my_host = "";
-    std::string my_sport = "";
-    std::string peer_addr = "";
-    std::string peer_port = "";
+    std::string my_host;
+    std::string my_sport;
+    std::string peer_addr;
+    std::string peer_port;
 
     socklen_t sasz = sizeof(sockaddr_storage);
 
@@ -92,7 +113,7 @@ int ListeningSocket::Accept() {
         my_sport = boost::lexical_cast<std::string>(my_addr.getServicePort());
         peer_addr = addr.getHostAddr();
         peer_port = boost::lexical_cast<std::string>(addr.getServicePort());
-    } catch (CxxSockets::CxxError& e) {
+    } catch (const Error& e) {
         LOG_DEBUG_MSG(e.what());
     }
 
@@ -103,61 +124,20 @@ int ListeningSocket::Accept() {
     return newFd;
 }
 
-bool ListeningSocket::AcceptNew(TCPSocketPtr& sock) {
-    LOGGING_DECLARE_FD_MDC;
+bool
+ListeningSocket::AcceptNew(
+        const TCPSocketPtr& sock
+        )
+{
+    BOOST_ASSERT( sock );
+    CXXSOCKET_LOGGING_DECLARE_FD_MDC;
     FileLocker locker;
     LockFile(locker);
-    int fd = Accept();
-    if(sock) {
-        sock->replaceFd(fd);
-    } else {
-        throw CxxSockets::SockHardError(-1, "Invalid socket passed to accept");
-    }
+    const int fd = Accept();
+    sock->replaceFd(fd);
 
     LOG_INFO_MSG("Accepted socket file descriptor " << fd);
     return true;
 }
 
-bool ListeningSocket::AcceptNew(SecureTCPSocketPtr& sock, const bgq::utility::ServerPortConfiguration& port_config) {
-    LOGGING_DECLARE_FD_MDC;
-    FileLocker locker;
-    LockFile(locker);
-    TCPSocketPtr tp;
-
-    LOG_INFO_MSG("Accepting secure socket");
-
-    int fd = Accept();
-
-    sock->replaceFd(fd);
-    try {
-        bgq::utility::SslConfiguration sslconf = port_config.createSslConfiguration();
-        sock->SetupContext(sslconf);
-        int rc = SSL_accept(sock->_ssl);
-        if(rc != 1) {
-            std::string errormsg = "SSL accept failed: " + SecureTCPSocket::printSSLError(sock->_ssl, rc);
-            LOG_ERROR_MSG(errormsg);
-            throw CxxSockets::SockHardError(SSL_ERROR, errormsg);
-        }
-        LOG_DEBUG_MSG("ssl accept successful");
-        sock->ServerHandshake(port_config);
-        LOG_INFO_MSG("Accepted secure socket file descriptor " << fd);
-    } catch (std::runtime_error& e) {
-        std::string original_error = e.what();
-        std::ostringstream msg;
-        CxxSockets::SockAddr sa;
-        try {
-            sock->getPeerName(sa);
-            msg << "SSL handshake failed accepting new connection on file descriptor "
-                << fd << " from  " << sa.getHostAddr() << ":" << sa.getServicePort() 
-                << ". " <<  e.what();
-        } catch(...) {
-            // getPeerName() failed.  Socket is just plain bad so we can't log info about it.
-            msg << "SSL handshake failed accepting new connection on file descriptor "
-                << fd << ". " << original_error;
-        }            
-        LOG_ERROR_MSG(msg.str());
-        throw CxxSockets::SockHardError(SSL_ERROR, msg.str());
-    }
-
-    return true;
 }

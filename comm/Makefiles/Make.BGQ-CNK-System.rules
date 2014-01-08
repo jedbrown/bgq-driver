@@ -16,14 +16,13 @@
 # end_generated_IBM_copyright_prolog                               
 
 include ${ROOTDIR}/../Make.rules
-FLOOR            = ${BGQ_INSTALL_DIR}
 
     # ----------------- basic definitions --------------------------------------
     PLATFORM             = BGQ
     PLATFORMlc           = bgq
     OS                   = CNK
     ENV                  = System
-    INSTALL_DIR          = ${FLOOR}/comm
+    INSTALL_DIR          = ${BGQ_INSTALL_DIR}/comm
 
 
 
@@ -35,17 +34,13 @@ FLOOR            = ${BGQ_INSTALL_DIR}
 
 
     # ---------------- PAMI Information -----------------------------------------
-    PAMI_CONFIG           = --with-target=${PLATFORMlc}   --with-installdir=${INSTALL_DIR}/sys      --with-bgfloor=${FLOOR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task
-    PAMI_CONFIG_FAST      = --with-target=${PLATFORMlc}   --with-installdir=${INSTALL_DIR}/sys-fast --with-bgfloor=${FLOOR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task --without-shared-lib --with-assert-level=0 --without-error-checks
-    PAMI_CONFIG_XLFAST    = --with-target=${PLATFORMlc}xl   --with-installdir=${INSTALL_DIR}/sys-xlfast --with-bgfloor=${FLOOR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task --without-shared-lib --with-assert-level=0 --without-error-checks --with-optimization-level=3 --with-libname=pami --without-debug --without-silence
-#   PAMI_CONFIG_FAST      = --with-target=${PLATFORMlc}xl --with-installdir=${INSTALL_DIR}/sys-fast --with-bgfloor=${FLOOR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task --without-shared-lib --with-assert-level=0 --without-error-checks
+    PAMI_CONFIG           = --with-target=${PLATFORMlc}   --with-installdir=${INSTALL_DIR}/sys      --with-bgfloor=${BGQ_INSTALL_DIR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task
+    PAMI_CONFIG_FAST      = --with-target=${PLATFORMlc}   --with-installdir=${INSTALL_DIR}/sys-fast --with-bgfloor=${BGQ_INSTALL_DIR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task --without-shared-lib --with-assert-level=0 --without-error-checks
+    PAMI_CONFIG_XLFAST    = --with-target=${PLATFORMlc}xl   --with-installdir=${INSTALL_DIR}/sys-xlfast --with-bgfloor=${BGQ_INSTALL_DIR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task --without-shared-lib --with-assert-level=0 --without-error-checks --with-optimization-level=3 --with-libname=pami --without-debug --without-silence
 
     # ---------------- default compilation targets -----------------------------
     HOST_AR              =${BGQ_CROSS_AR}
     HOST_LD              =${BGQ_CROSS_LD}
-    HOST_NM              =$(BGQ_CROSS_TOOLS_DIR)/bin/$(BGQ_CROSS_TARGET_ARCH)-nm
-    HOST_OBJCOPY         =${BGQ_CROSS_OBJCOPY}
-
     HOST_CC              =${BGQ_CROSS_CC}
     HOST_CXX             =${BGQ_CROSS_CXX}
     HOST_F77             =${BGQ_CROSS_FC} -fno-underscoring
@@ -63,7 +58,5 @@ else
     FAST_F90             =/gsa/rchgsa/projects/x/xlcmpbld/run/xlf/dev_lite/bgq/daily/latest/bin/bgxlf90_r
 endif
 
-    HOST_INCLUDE         =-I${INSTALL_DIR}/sys/include -I${FLOOR} -I${FLOOR}/spi/include -I${FLOOR}/spi/include/kernel/cnk
-    HOST_LIB             =-L${INSTALL_DIR}/sys/lib      -lpami -L${FLOOR}/spi/lib -lSPI -lSPI_cnk -lpthread -lrt -lstdc++
-    HOST_LIB_FAST        =-L${INSTALL_DIR}/sys-fast/lib -lpami -L${FLOOR}/spi/lib -lSPI -lSPI_cnk -lpthread -lrt -lstdc++
-    HOST_LIB_XLFAST      =-L${INSTALL_DIR}/sys-xlfast/lib -lpami -L${FLOOR}/spi/lib -lSPI -lSPI_cnk -lpthread -lrt -lstdc++
+    CONFIGURE_WITH_PAMI  =--with-pami=${INSTALL_DIR}/sys-fast
+    CONFIGURE_WITH_PAMI_XL =--with-pami=${INSTALL_DIR}/sys-xlfast

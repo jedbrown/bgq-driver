@@ -8,7 +8,7 @@
 /*                                                                  */
 /* Blue Gene/Q                                                      */
 /*                                                                  */
-/* (C) Copyright IBM Corp.  2010, 2011                              */
+/* (C) Copyright IBM Corp.  2010, 2012                              */
 /*                                                                  */
 /* US Government Users Restricted Rights -                          */
 /* Use, duplication or disclosure restricted                        */
@@ -44,15 +44,24 @@ The user must be authenticated.
   "alertCount" : <i>number</i>, // optional
   "jobCount": <i>number</i>, // number of jobs running on the system
   "jobCpuCount": <i>number</i>, // number of CPUs taken up by jobs running on the system
-  "mps": [ // optional
-    &quot;<i>location</i>&quot;: {
-      "status": &quot;<i>string</i>&quot;, // optional
+  "mps": { // optional
+    &quot;<i>midplane-location</i>&quot;: {
+      "status": &quot;<i>status-value</i>&quot;, // optional
 
       "nodeBoards": { // optional
-        &quot;<i>node-board-position</i>&quot;: &quot;<i>string</i>&quot;
-      }
+        &quot;<i>node-board-position</i>&quot;: &quot;<i>status-value</i>&quot;
+      }, ...
     }
-  ],
+  },
+  "racks": { // optional -- New in V1R2M0
+    &quot;<i>rack-location</i>&quot;: {
+      "status":  &quot;<i>status-value</i>&quot;, // optional, default status is AVAILABLE
+
+      "drawers": { // optional
+        &quot;<i>io-drawer-position</i>&quot;: &quot;<i>status-value</i>&quot; // default status is BLOCK_READY
+      }, ...
+    }, ...
+  },
   "hardwareNotifications": [  // optional
     {
       "location": &quot;<i>location</i>&quot;,
@@ -77,7 +86,7 @@ The user must be authenticated.
 }
 </pre>
 
-- status is one of
+- <i>status-value</i> is one of
   - AVAILABLE: The hardware is available.
   - BLOCK_BUSY: A block on the hardware is in the process of booting or freeing.
   - BLOCK_READY: A block on the hardware is ready to run a job.
@@ -97,22 +106,16 @@ HTTP status: 403 Forbidden
 
 #include "System.hpp"
 
-#include "../../blue_gene.hpp"
-#include "../../dbConnectionPool.hpp"
+#include "../../BlockingOperationsThreadPool.hpp"
 #include "../../Error.hpp"
-#include "../../sqlStrings.gen.hpp"
 
-#include "capena-http/server/exception.hpp"
+#include "../../query/SystemSummary.hpp"
+
 #include "capena-http/server/Response.hpp"
 
+#include "chiron-json/json.hpp"
+
 #include <utility/include/Log.h>
-
-#include <boost/algorithm/string.hpp>
-
-#include <string>
-
-
-using std::string;
 
 
 LOG_DECLARE_FILE( "bgws" );
@@ -153,247 +156,47 @@ void System::_doGet()
     }
 
 
-    capena::server::Response &response(_getResponse());
+    query::SystemSummary::Ptr query_ptr(
+            query::SystemSummary::create(
+                    _blocking_operations_thread_pool
+                )
+        );
 
-    auto conn_ptr(dbConnectionPool::getConnection());
+    query_ptr->start(
+            boost::bind(
+                    &System::_queryComplete, this,
+                    capena::server::AbstractResponder::shared_from_this(),
+                    _1, _2
+                )
+        );
 
-    response.setContentTypeJson();
-    response.headersComplete();
-
-    json::ObjectValue obj_val;
-    json::Object &obj(obj_val.get());
-
-    uint64_t job_count, job_cpus;
-
-    _calcJobSummary( *conn_ptr, job_count, job_cpus );
-
-    obj.set( "jobCount", job_count ); // Number of jobs running on the system.
-    obj.set( "jobCpuCount", job_cpus ); // Number of CPUs taken up by jobs running on the system.
-
-    _addAlertSummary( *conn_ptr, obj );
-
-    _addMidplaneStatus( *conn_ptr, obj );
-
-    _addHardwareNotifications( *conn_ptr, obj );
-
-    _addDiagnostics( *conn_ptr, obj );
-    _addServiceActions( *conn_ptr, obj );
-
-    json::Formatter()( obj_val, response.out() );
 }
 
 
-void System::_calcJobSummary(
-        cxxdb::Connection &db_conn,
-        uint64_t &job_count_out,
-        uint64_t &job_cpus_out
-    ) const
-{
-    job_count_out = 0;
-    job_cpus_out = 0;
-
-    cxxdb::ResultSetPtr rs_ptr(db_conn.query(
-
- "SELECT rj.job_count, rj.job_cpus + snj.job_cpus AS job_cpus"
-  " FROM ( SELECT COUNT(*) AS job_count,"
-                " COALESCE( SUM( nodesUsed ), 0 ) AS job_cpus"
-           " FROM bgqJob"
-       " ) AS rj,"
-       " ( SELECT COUNT(*) AS job_cpus"
-           " FROM ( SELECT DISTINCT LEFT( corner, 14 ) AS n_loc"
-                    " FROM bgqjob"
-                    " WHERE nodesUsed = 0"
-                " ) AS a"
-       " ) AS snj"
-
-        ));
-
-    if ( ! rs_ptr->fetch() ) {
-        job_count_out = 0;
-        job_cpus_out = 0;
-        return;
-    }
-
-    job_count_out = rs_ptr->columns()["job_count"].as<uint64_t>();
-    job_cpus_out = rs_ptr->columns()["job_cpus"].as<uint64_t>();
-}
-
-
-void System::_addAlertSummary(
-        cxxdb::Connection& db_conn,
-        json::Object& obj_in_out
+void System::_queryComplete(
+        capena::server::ResponderPtr,
+        std::exception_ptr exc_ptr,
+        json::ObjectValuePtr val_ptr
     )
 {
-    cxxdb::ResultSetPtr rs_ptr(db_conn.query(
+    try {
 
- "WITH open_alerts AS ("
-
-" SELECT \"rec_id\""
-  " FROM x_tealalertlog"
-  " WHERE \"state\" <> 2 OR \"state\" IS NULL"
-
-" )"
-
-" SELECT COUNT(*) AS c"
-  " FROM open_alerts AS o"
-       " LEFT OUTER JOIN"
-       " x_tealalert2alert AS r"
-       " ON o.\"rec_id\" = r.\"t_alert_recid\" AND r.\"assoc_type\" = 'D'"
-  " WHERE r.\"assoc_type\" IS NULL"
-
-        ));
-
-    if ( ! rs_ptr->fetch() ) {
-        return;
-    }
-
-    uint64_t alert_count(rs_ptr->columns()["c"].as<uint64_t>());
-
-    if ( alert_count == 0 )  return;
-
-    obj_in_out.set( "alertCount", alert_count );
-}
-
-
-void System::_addMidplaneStatus(
-        cxxdb::Connection &db_conn,
-        json::Object& obj_in_out
-    )
-{
-    cxxdb::ResultSetPtr rs_ptr(db_conn.query(
-            sql::SUMMARY_MACHINE_USAGE // queries/summaryMachineUsage.txt
-        ));
-
-    json::Object *mps_obj_p(NULL);
-
-    while ( rs_ptr->fetch() ) {
-
-        const cxxdb::Columns &cols(rs_ptr->columns());
-
-        if ( ! mps_obj_p )  mps_obj_p = &(obj_in_out.createObject( "mps" ));
-
-        int row_status(cols["state"].as<int>());
-
-        string status_str(
-                row_status == 0 ? "AVAILABLE" :
-                row_status == 1 ? "BLOCK_BUSY" :
-                row_status == 2 ? "BLOCK_READY" :
-                row_status == 3 ? "JOB_RUNNING" :
-                row_status == 4 ? "DIAGNOSTICS" :
-                row_status == 5 ? "SERVICE_ACTION" :
-                row_status == 6 ? "NOT_AVAILABLE" :
-                "UNKNOWN"
-            );
-
-        string mp_location(cols["mp_location"].getString());
-
-        json::Object *mp_obj_p;
-
-        if ( mps_obj_p->contains( mp_location ) ) {
-            mp_obj_p = &((*mps_obj_p)[mp_location]->getObject());
-        } else {
-            mp_obj_p = &(mps_obj_p->createObject( mp_location ));
+        if ( exc_ptr != 0 ) {
+            std::rethrow_exception( exc_ptr );
         }
 
-        if ( cols["nodeCardPos"].isNull() ) {
-            // No node board pos, so set the status for the midplane.
 
-            mp_obj_p->set( "status", status_str );
+        capena::server::Response &response(_getResponse());
 
-        } else {
-            // Node board pos, so set the status for the node board.
+        response.setContentTypeJson();
+        response.headersComplete();
 
-            string nb_pos(cols["nodeCardPos"].getString());
+        json::Formatter()( *val_ptr, response.out() );
 
-            json::Object *nbs_obj_p;
-            if ( mp_obj_p->contains( "nodeBoards" ) ) {
-                nbs_obj_p = &(mp_obj_p->getObject( "nodeBoards" ));
-            } else {
-                nbs_obj_p = &(mp_obj_p->createObject( "nodeBoards" ));
-            }
+    } catch ( std::exception& e ) {
 
-            nbs_obj_p->set( nb_pos, status_str );
-        }
-    }
-}
+        _handleError( e );
 
-
-void System::_addHardwareNotifications(
-        cxxdb::Connection& db_conn,
-        json::Object& obj_in_out
-    )
-{
-    cxxdb::ResultSetPtr rs_ptr(db_conn.query(
-            sql::SUMMARY_HARDWARE_PROBLEMS // queries/summaryHardwareProblems.txt
-        ));
-
-    json::Array *nots_arr_p(NULL);
-
-    while ( rs_ptr->fetch() ) {
-        if ( ! nots_arr_p )  nots_arr_p = &(obj_in_out.createArray( "hardwareNotifications" ));
-
-        const cxxdb::Columns &cols(rs_ptr->columns());
-
-        json::Object &hw_obj(nots_arr_p->addObject());
-        hw_obj.set( "location", boost::algorithm::trim_copy( cols["location"].getString() ) );
-        if ( cols["status"] )  hw_obj.set( "status", cols["status"].getString() );
-        if ( cols["nodeCount"] ) hw_obj.set( "nodeCount", cols["nodeCount"].as<uint64_t>() );
-    }
-}
-
-
-void System::_addDiagnostics(
-        cxxdb::Connection& db_conn,
-        json::Object& obj_in_out
-    )
-{
-    cxxdb::ResultSetPtr rs_ptr(db_conn.query(
-            sql::SUMMARY_DIAGNOSTICS // queries/summaryDiagnostics.txt
-        ));
-
-    json::Array *diags_arr_p(NULL);
-
-    while ( rs_ptr->fetch() ) {
-        if ( ! diags_arr_p )  diags_arr_p = &(obj_in_out.createArray( "diagnostics" ));
-
-        const cxxdb::Columns &cols(rs_ptr->columns());
-
-        json::Object &diag_obj(diags_arr_p->addObject());
-
-        string block_id(cols["blockId"].getString());
-
-        diag_obj.set( "block", block_id );
-        if ( boost::algorithm::starts_with( block_id, blue_gene::diagnostics::HARDWARE_BLOCK_PREFIX ) ) {
-            diag_obj.set( "location", block_id.substr( blue_gene::diagnostics::HARDWARE_BLOCK_PREFIX.size() ) );
-        }
-        diag_obj.set( "runId", cols["runId"].as<uint64_t>() );
-    }
-}
-
-
-void System::_addServiceActions(
-        cxxdb::Connection& db_conn,
-        json::Object& obj_in_out
-    )
-{
-    cxxdb::ResultSetPtr rs_ptr(db_conn.query(
-            sql::SUMMARY_SERVICE_ACTIONS // queries/summaryServiceActions.txt
-        ));
-
-    json::Array *sas_arr_p(NULL);
-
-    while ( rs_ptr->fetch() ) {
-        if ( ! sas_arr_p )  sas_arr_p = &(obj_in_out.createArray( "serviceActions" ));
-
-        const cxxdb::Columns &cols(rs_ptr->columns());
-
-        json::Object &sa_obj(sas_arr_p->addObject());
-
-        sa_obj.set( "id", cols["id"].as<uint64_t>() );
-        sa_obj.set( "location", cols["location"].getString() );
-        sa_obj.set( "action", cols["serviceAction"].getString() );
-        sa_obj.set( "prepareUser", cols["usernamePrepareForService"].getString() );
-        if ( cols["usernameEndServiceAction"] )  sa_obj.set( "endUser", cols["usernameEndServiceAction"].getString() );
     }
 }
 

@@ -23,8 +23,6 @@
 
 #include "DBUpdater.h"
 
-#include "common/ThreadLog.h"
-
 #include <db/include/api/tableapi/DBConnectionPool.h>
 #include <db/include/api/tableapi/TxObject.h>
 
@@ -36,8 +34,8 @@ LOG_DECLARE_FILE("master");
 
 DBUpdater::DBUpdater(
         ) :
-            _ending(false),
-            _ended(false)
+    _ending(false),
+    _ended(false)
 {
     // Nothing to do
 }
@@ -57,10 +55,9 @@ void
 DBUpdater::runThread()
 {
     LOG_TRACE_MSG(__FUNCTION__);
-    ThreadLog tl("DB update thread");
     while (!_ending) {
         std::string rasMessage;
-        if (_doq.pickUp(rasMessage) == true) {
+        if (_doq.pickUp(rasMessage)) {
             LOG_DEBUG_MSG("Sending RAS message to database: " << rasMessage);
             BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
             if (!tx.getConnection()) {

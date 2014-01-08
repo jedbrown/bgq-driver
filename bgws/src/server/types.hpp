@@ -37,6 +37,7 @@ namespace bgws {
 
     class BgwsServer;
     class BlueGene;
+    class BlockingOperationsThreadPool;
     class CheckUserAdminExecutor;
     class PwauthExecutor;
     class ResponderFactory;

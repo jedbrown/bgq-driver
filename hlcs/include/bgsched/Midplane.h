@@ -137,7 +137,7 @@ public:
     /*!
      * \brief Get the "in use" compute block name.
      *
-     * \return "In use" compute block name.
+     * \return "In use" compute block name. Returns empty string if midplane is not is use.
      */
     const std::string& getComputeBlockName() const;
 

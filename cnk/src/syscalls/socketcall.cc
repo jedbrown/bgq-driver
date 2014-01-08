@@ -65,7 +65,16 @@ uint64_t sc_socketcall(SYSCALL_FCN_ARGS)
       }
 
       // Make sure the descriptor is a socket.
-      if (File_GetFDType(sockfd) != FD_SOCKET)
+      if (File_GetFDType(sockfd) == FD_RDMA){
+        switch(operation)
+        {
+          case SOCKETCALL_RECV:
+          case SOCKETCALL_SEND:
+          break;
+          default: return CNK_RC_FAILURE(ENOTSOCK);
+        }
+      }
+      else if (File_GetFDType(sockfd) != FD_SOCKET)
       {
           return CNK_RC_FAILURE(ENOTSOCK);
       }

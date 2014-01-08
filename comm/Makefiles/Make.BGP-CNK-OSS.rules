@@ -56,5 +56,3 @@ PREFIX_CROSS_GNU = $(BUILD_TARGET)-
     FAST_F90             =/opt/ibmcmp/xlf/bg/11.1/bin/bgxlf90_r
 
     HOST_INCLUDE         =-I${INSTALL_DIR}/sys/include -I${BGP_ARCH_PATH}/include
-    HOST_LIB             =-L${INSTALL_DIR}/sys/lib      -lpami -L${BGP_RUNTIME_PATH}/SPI -lSPI.cna      -lrt -lpthread
-    HOST_LIB_FAST        =-L${INSTALL_DIR}/sys-fast/lib -lpami -L${BGP_RUNTIME_PATH}/SPI -lSPI-fast.cna -lrt -lpthread

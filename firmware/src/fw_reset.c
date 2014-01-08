@@ -114,7 +114,7 @@ int fw_resetSyncMultiNode()
             rc = MUSPI_GIBarrierEnterAndWaitWithTimeout(&GIBarrier, (tbend-tbstart)/2);
             if(rc)
             {
-                FW_Error("Repro reset barrier timeout!  rc=0x%X\n", rc);
+                FW_Error("Repro reset barrier timeout!  rc=0x%X.", rc);
                 crash(-1);
             }
         }

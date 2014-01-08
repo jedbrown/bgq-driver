@@ -12,8 +12,11 @@
 #                                                                  #
 # end_generated_IBM_copyright_prolog                               #
 
-ROOTDIR = $(shell readlink -f $$(pwd)/..)
-include ${ROOTDIR}/Make.rules
+ifeq ("${_MPICH_TOOLS_BIN_}", "")
+	ROOTDIR = $(shell readlink -f $$(pwd)/..)
+	include ${ROOTDIR}/Make.rules
+endif
+
 SUBDIRS=mpich2
 GITBRANCH = $(shell git branch --contains `git log -n 1 --pretty=format:%H` | sed -e s/\*// | grep -v "no branch" | sed -e s/[\ ]*// | head -n1)
 .PHONY: ${SUBDIRS} dev-rule

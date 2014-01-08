@@ -13,10 +13,8 @@
 include ../../../../Make.rules
 include ../../../Make.hlcs.rules
 
-.NOTPARALLEL:
-
 DIRS = man
-#DIRS += html
+DIRS += html
 
 TARGETS_ALL		= $(addsuffix .all,$(DIRS))
 TARGETS_INSTALL		= $(addsuffix .install,$(DIRS))

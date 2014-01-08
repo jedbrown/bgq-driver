@@ -54,6 +54,7 @@
 
 #include <inttypes.h>
 #include <sys/socket.h>
+#include "spi/include/kernel/rdma.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -239,6 +240,7 @@ struct cnv_wc
 //! special value to characterize completion queue operation synchronization on sequence ID
 //! Requires MessageHeader.h and tracking into data for sequence field for immediate packets
 //! and requires sequence field be in immediate data for remote packets.
+#define CNVERBS_WC_LINKEDLIST_CQ_CHAR 2
 #define CNVERBS_SEQUENCEID_CQ_CHAR 1
 #define CNVERBS_DEFAULT_CQ_CHAR    0  
 
@@ -322,6 +324,13 @@ int cnv_create_qp(struct cnv_qp *qp, struct cnv_pd *pd, struct cnv_qp_init_attr 
 
 int cnv_destroy_qp(struct cnv_qp *qp);
 
+//! \brief  Recyle a queue pair back to initial state including its 
+//!         send, receive, and completion queues
+//! \param  qp Pointer to queue pair structure.
+//! \return 0 when successful, errno when unsuccessful.
+
+int cnv_recycle_qp(struct cnv_qp *qp);
+
 //! \brief  Establish a connection to a remote queue pair.
 //! \param  qp Pointer to local queue pair structure.
 //! \param  remote_addr Address of remote queue pair.
@@ -361,6 +370,13 @@ int cnv_post_send_seqID(struct cnv_qp *qp, struct cnv_send_wr *wr_list, struct c
 int cnv_post_recv(struct cnv_qp *qp, struct cnv_recv_wr *wr, struct cnv_recv_wr **bad_wr);
 int cnv_post_recv_proc(struct cnv_qp *qp, struct cnv_recv_wr *wr, struct cnv_recv_wr **bad_wr, uint32_t proc_id);
 int cnv_post_recv_seqID(struct cnv_qp *qp, struct cnv_recv_wr *wr_list, struct cnv_recv_wr **bad_wr, uint32_t seq_ID);
+int cnv_post_recv_linked_list(struct cnv_qp *qp, struct cnv_recv_wr *wr_list);
+
+int cnv_post_send_no_comp(struct cnv_qp *qp, struct cnv_send_wr *wr_list);
+int cnv_post_send_linked_list(struct cnv_qp *qp, struct cnv_send_wr *wr_list);
+
+int cnv_poll_cq_for_single_recv(struct cnv_cq *cq, uint32_t proc_id);
+int cnv_get_completions_linked_list(struct cnv_qp *qp, unsigned long int num_entries, Kernel_RDMAWorkCompletion_t* WorkCompletionList);
 
 
 //! \brief  Poll a completion queue.

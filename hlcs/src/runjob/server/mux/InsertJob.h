@@ -104,10 +104,12 @@ public:
      * \brief
      */
     InsertJob* hostname(
-            const std::string& hostname                         //!< [in]
+            const std::string& hostname,                         //!< [in]
+            const std::string& shortHostname                     //!< [in]
             )
     {
         _hostname = hostname;
+        _shortHostname = shortHostname;
         return this;
     }
 
@@ -147,6 +149,7 @@ private:
     boost::shared_ptr<message::InsertJob> _message;
     boost::shared_ptr<ClientContainer> _clients;
     std::string _hostname;
+    std::string _shortHostname;
 };
 
 } // mux

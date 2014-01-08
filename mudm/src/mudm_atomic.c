@@ -41,7 +41,12 @@ int mudm_remoteget_load_atomic(void* mudm_context,  struct  remoteget_atomic_con
                                                );
   DUMPHEXSTR("scratch area after initPt2PtDirectPutDescriptor", atc->scratch_area,sizeof(struct  remoteget_atomic_controls) );
   PRINT("atc->scratch_area=%p atc->paddr_here=%p \n",atc->scratch_area,(void *)atc->paddr_here);
-  mudm_send_msg(mudm_context, NULL, atc->torus_destination.Destination.Destination, MUDM_DPUT, MUDM_NO_IOLINK, (void *)(atc->paddr_here), 64);
+  if (atc->torus_destination.Destination.Destination != mcontext->myTorusAddress.Destination.Destination){
+    mudm_send_msg(mudm_context, NULL, atc->torus_destination.Destination.Destination, MUDM_DPUT, MUDM_NO_IOLINK, (void *)(atc->paddr_here), 64);
+  }
+  else{
+    InjFifoInject_rget_emulation (&mcontext->injfifo_ctls[0],(MUHWI_Descriptor_t *)atc->scratch_area, &mcontext->mudm_hi_wrap_flight_recorder);
+  }
   EXIT;
   return 0;
 }

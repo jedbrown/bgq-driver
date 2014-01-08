@@ -29,7 +29,6 @@ define(
     "../Bgws",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -39,7 +38,6 @@ function(
         b_Bgws,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {

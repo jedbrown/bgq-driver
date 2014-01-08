@@ -69,6 +69,9 @@ var _colorsForTemp = function( t )
 };
 
 
+var _service_action_status_xlator = b_utility_xlate.xlator( b_xlate.serviceActionStatus );
+
+
 /** @name bluegene^navigator^format
  *  @namespace
  */
@@ -114,7 +117,7 @@ var b_navigator_format =
         calcRunLogFile : function( log_directory )
         {
             if ( ! log_directory )  return null;
-            return log_directory + "diags.log";
+            return (log_directory + b_BlueGene.diagnostics.LOG_FILE_NAME);
         },
 
         hardwareStatus: b_utility_xlate.xlator( b_xlate.diagnostics.hardwareStatus )
@@ -165,7 +168,16 @@ var b_navigator_format =
     },
 
 
-    serviceActionStatus: b_utility_xlate.xlator( b_xlate.serviceActionStatus ),
+    serviceActionStatus: _service_action_status_xlator,
+
+    serviceActionStatusAttention : function( vals )
+    {
+        var ret = _service_action_status_xlator( vals[0] );
+        if ( vals[1] ) {
+            ret += " <img src='resources/script/bg_navigator/dojo/resources/blank.gif' title='" + vals[1] + "' style='width: 18px; height: 18px; background: url(resources/script/bg_navigator/dojox/image/resources/images/warning.png) -141px -141px;'></img>";
+        }
+        return ret;
+    },
 
 
     /** Format a BGWS timestamp. */

@@ -33,7 +33,6 @@ define(
     "dojo/_base/lang",
     "dojo/data/ObjectStore",
     "dojo/store/Memory",
-    "dijit/registry",
     "dojo/text!./templates/RasResults.html",
     "module",
 
@@ -64,7 +63,6 @@ function(
         d_lang,
         d_data_ObjectStore,
         d_store_Memory,
-        j_registry,
         template,
         module
     )
@@ -101,7 +99,6 @@ var _formToQuery = function( form_obj )
 
 
 var b_navigator_dijit_RasResults = d_declare(
-        "bluegene.navigator.dijit.RasResults",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -147,8 +144,6 @@ var b_navigator_dijit_RasResults = d_declare(
             this._filter_options.apply();
         } else {
             this._dirty = true;
-
-            j_registry.byId( "navigator" ).switchTo( "ras" );
         }
     },
 

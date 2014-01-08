@@ -74,14 +74,14 @@ help()
 {
     std::cerr << "Returns the status of one or all binaries currently" << std::endl;
     std::cerr << "under control of bgmaster_server.  By default it returns" << std::endl;
-    std::cerr << "the status of all binaries  and their associated agent ids." << std::endl;
+    std::cerr << "the binary id (IP:PID), status, alias name and start time of all binaries." << std::endl;
     std::cerr << "If a binary id is specified, it returns the status of that binary." << std::endl;
 }
 
 void
 usage()
 {
-    std::cerr << "binary_status [binary id] [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]" << std::endl;
+    std::cerr << "binary_status [binary id] [ --properties filename ] [ --help ] [ --host host:port ]" << std::endl;
 }
 
 int main(int argc, const char** argv)
@@ -91,7 +91,7 @@ int main(int argc, const char** argv)
     validargs.push_back("*"); // One argument without a "--" is allowed
     Args largs(argc, argv, &usage, &help, validargs, singles);
     pargs = &largs;
-    client.initProperties(pargs->_props);
+    client.initProperties(pargs->get_props());
 
     try {
         client.connectMaster(pargs->get_portpairs());

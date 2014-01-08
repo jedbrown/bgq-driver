@@ -50,7 +50,8 @@ public:
     Jobs(
             CtorArgs& args
         ) :
-            AbstractResponder( args )
+            AbstractResponder( args ),
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool)
     { /* Nothing to do */ }
 
 
@@ -61,6 +62,18 @@ public:
 
 private:
 
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
+
+
+    void _doQuery(
+            capena::server::ResponderPtr
+        );
+
+    void _queryComplete(
+            capena::server::ResponderPtr,
+            cxxdb::ConnectionPtr,
+            cxxdb::ResultSetPtr rs_ptr
+        );
 };
 
 

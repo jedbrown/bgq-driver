@@ -29,9 +29,7 @@
 
 <refsynopsisdiv id="bgagentd.synopsis">
     <title>Synopsis</title>
-    <cmdsynopsis><command> 
-	bgagentd [ OPTIONS ]
-      </command>
+    <cmdsynopsis><command>bgagentd</command>
     </cmdsynopsis>
 </refsynopsisdiv>
 
@@ -71,6 +69,13 @@
 	      disallow user ID switching.  This parameter is usually set in the bgagent init script.  
 	      The requested user ID is set in bg.properties under the [agent] section as agentuid=
 	    </para>
+            </listitem>
+        </varlistentry>
+        <varlistentry>
+            <term><option>--workingdir</option></term>
+            <listitem>
+            <para>Fully qualified working directory for bgagentd and child processes
+            </para>
             </listitem>
         </varlistentry>
         <varlistentry>

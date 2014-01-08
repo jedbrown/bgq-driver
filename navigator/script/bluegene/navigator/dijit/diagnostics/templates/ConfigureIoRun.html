@@ -1,12 +1,13 @@
 <div>
 
-<div style="overflow-y: scroll;" data-dojo-type="dijit.layout.ContentPane" data-dojo-props="style: 'overflow-y: scroll;'">
+<div style="overflow-y: scroll;" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="style: 'overflow-y: scroll;'">
 
-    <div data-dojo-type="dijit.form.Form" data-dojo-attach-point="_form">
-        Select I/O drawers to run diagnostics on: <br/>
-
-        <select name="ioDrawers" size="4" data-dojo-attach-point="_drawersSelect">
-        </select>
+    <div data-dojo-type="dijit/form/Form" data-dojo-attach-point="_form">
+        <div>
+            &lt;-- Select I/O drawers to run diagnostics on.
+            <span style="color: red;" data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_drawersErrorInd">*</span>
+            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-attach-point="_resetButton">Clear Selection</button>
+        </div>
 
         <p>
         Select the test buckets that you want to run from the following list.
@@ -15,15 +16,15 @@
         </p>
 
         <ul style="list-style-type: none;" data-dojo-attach-point="_bucketsElem">
-            <!-- Created dynamically in bluegene.navigator.Diagnostics -->
+            <!-- Created dynamically -->
         </ul>
-        
+
         <p>
         Next, select specific testcases to run by checking or unchecking the testcase from the table below.
         When finished, press "Start Diagnostics Run" to start the run.
         </p>
-        <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_testsTable" data-dojo-props="
-                footerDijitType: bluegene.dijit.OutputFormat,
+        <table data-dojo-type="bluegene/navigator/dijit/Table" data-dojo-attach-point="_testsTable" data-dojo-props="
+                footerDijitType: this._b_dijit_OutputText,
                 footerProperties: { format: 'Expected run time: approximately ${_d}{runTime} minutes' },
                 name: 'tests',
                 selection: 'indirect'">
@@ -35,31 +36,31 @@
             <legend style="font-weight: bold;">Run Options</legend>
             <ul style="list-style-type: square;">
                 <li>
-                    <input type="checkbox" name="runOptions" value="stopOnError" data-dojo-type="dijit.form.CheckBox" data-dojo-attach-point="_optionsStopOnError" />
+                    <input type="checkbox" name="runOptions" value="stopOnError" data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="_optionsStopOnError" />
                     <label>Stop on the first error encountered. (--stoponerror)</label>
                 </li>
                 <li>
-                    <input type="checkbox" name="runOptions" value="saveAllOutput" data-dojo-type="dijit.form.CheckBox" data-dojo-attach-point="_optionsSaveAllOutput" />
+                    <input type="checkbox" name="runOptions" value="saveAllOutput" data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="_optionsSaveAllOutput" />
                     <label>Save all the output from diagnostics. (--savealloutput)</label>
                 </li>
                 <li>
-                    <input type="checkbox" name="runOptions" value="killJobs" data-dojo-type="dijit.form.CheckBox" data-dojo-attach-point="_optionsKillJobs" />
+                    <input type="checkbox" name="runOptions" value="killJobs" data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="_optionsKillJobs" />
                     <label>Cancel jobs using the I/O drawer. (--killjobs)</label>
                 </li>
                 <li>
-                    <input type="checkbox" name="runOptions" value="deleteBlock" data-dojo-type="dijit.form.CheckBox" data-dojo-attach-point="_optionsDeleteBlock" />
+                    <input type="checkbox" name="runOptions" value="deleteBlock" data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="_optionsDeleteBlock" />
                     <label>Delete the temporary block created by diagnostics at the end of the run. (--deleteblock)</label>
                 </li>
                 <li>
-                    <input type="checkbox" name="runOptions" value="disruptMasterClock" data-dojo-type="dijit.form.CheckBox" data-dojo-attach-point="_optionsDisruptMasterClock" />
+                    <input type="checkbox" name="runOptions" value="disruptMasterClock" data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="_optionsDisruptMasterClock" />
                     <label for="diags-configure-io-options-disrupt-master-clock">Allow disruption of the master clock. (--disruptmasterclock)</label>
                 </li>
                 <li>
-                    <input type="checkbox" name="runOptions" value="disruptIoRack" data-dojo-type="dijit.form.CheckBox" data-dojo-attach-point="_optionsDisruptIoRack" />
+                    <input type="checkbox" name="runOptions" value="disruptIoRack" data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="_optionsDisruptIoRack" />
                     <label for="diags-configure-io-options-disrupt-io-rack">Allow disruption of the I/O rack. (--disruptiorack)</label>
                 </li>
                 <li>
-                    <input type="checkbox" name="runOptions" value="insertRas" data-dojo-type="dijit.form.CheckBox" data-dojo-attach-point="_optionsInsertRas" />
+                    <input type="checkbox" name="runOptions" value="insertRas" data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="_optionsInsertRas" />
                     <label for="diags-configure-io-options-insert-ras">Save diagnostics RAS events in the diagnostics event log table. (--insertras)</label>
                 </li>
             </ul>
@@ -67,23 +68,23 @@
         </fieldset>
 
         <div>
-            <button disabled type="button" data-dojo-type="dijit.form.Button" data-dojo-props="disabled: true, type: 'button'" data-dojo-attach-point="_submitButton">Start Diagnostics Run</button>
+            <button disabled type="button" data-dojo-type="dijit/form/Button" data-dojo-props="disabled: true, type: 'button'" data-dojo-attach-point="_submitButton">Start Diagnostics Run</button>
 
-            <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_submittingHideable">Starting diagnostics run...</span>
+            <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_submittingHideable">Starting diagnostics run...</span>
 
-            <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_resultHideable">
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_startedHideable">
-                   Diagnostics run started, the new run ID is <span data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_startedRunIdText"></span>.
+            <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_resultHideable">
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_startedHideable">
+                   Diagnostics run started, the new run ID is <span data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_startedRunIdText"></span>.
                 </span>
-                <span style="color: red;" data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_failedHideable">
-                   Diagnostics failed to start, the error is '<span data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_failedText"></span>'.
+                <span style="color: red;" data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_failedHideable">
+                   Diagnostics failed to start, the error is '<span data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_failedText"></span>'.
                 </span>
-                <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_dismissButton">Dismiss</button>
+                <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_dismissButton">Dismiss</button>
             </span>
         </div>
 
         <div style="padding-top: 10px;">
-            Command: <span style="font-family: monospace;" data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_commandText">*Invalid*</span>
+            Command: <span style="font-family: monospace;" data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_commandText">*Invalid*</span>
         </div>
 
     </div>

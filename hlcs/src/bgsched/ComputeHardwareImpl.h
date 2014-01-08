@@ -55,7 +55,7 @@ public:
     typedef boost::multi_array<Midplane::Pimpl, Dimension::MidplaneDims> MidplaneArray;
 
     /*!
-     * \brief Initialize the hardware structure for this machine.
+     * \brief Initialize the compute hardware structure for this machine.
      *
      * \throws bgsched::DatabaseException with values:
      * - bgsched::DatabaseErrors::DatabaseError - if error occurs accessing the database

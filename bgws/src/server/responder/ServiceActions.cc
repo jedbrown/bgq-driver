@@ -96,7 +96,8 @@ The user must have hardware READ authority.
     "prepareTime": &quot;<i>\ref timestampFormat "timestamp"</i>&quot;,
     "endTime": &quot;<i>\ref timestampFormat "timestamp"</i>&quot;,  // optional
     "prepareLog": &quot;<i>string</i>&quot;,  // optional
-    "endLog": &quot;<i>string</i>&quot;  // optional
+    "endLog": &quot;<i>string</i>&quot;,  // optional
+    "attentionMessages": &quot;<i>string</i>&quot;  // optional -- new for V1R2M0
   },
   ...
 ]
@@ -247,59 +248,16 @@ void ServiceActions::_doGet()
 
     }
 
-    // Query to get the service actions...
 
-    static const unsigned DefaultRangeSize(50), MaxRangeSize(100);
-    RequestRange req_range( _getRequest(), DefaultRangeSize, MaxRangeSize );
-
-
-    auto conn_ptr(dbConnectionPool::getConnection());
-
-    uint64_t row_count(0);
-    cxxdb::ResultSetPtr rs_ptr;
-
-    _query(
-            *conn_ptr,
-            req_range,
-            &row_count,
-            &rs_ptr
+    // Request a snapshot of all the attention messages.
+    _service_actions.getAttentionMessagesSnapshot(
+            _getStrand().wrap( boost::bind(
+                    &ServiceActions::_gotAttentionMessagesSnapshot, this,
+                    capena::server::AbstractResponder::shared_from_this(),
+                    _1
+                ) )
         );
 
-    if ( row_count == 0 ) {
-        // No matches for the filter options, return empty array.
-
-        auto &response(_getResponse());
-
-        response.setContentTypeJson();
-        response.headersComplete();
-
-        json::Formatter()( json::ArrayValue(), response.out() );
-        return;
-    }
-
-
-    json::ArrayValue arr_val;
-    json::Array &arr(arr_val.get());
-
-    while ( rs_ptr->fetch() ) {
-        const cxxdb::Columns& cols(rs_ptr->columns());
-
-        json::Object &obj(arr.addObject());
-
-        setCommonFields( obj, cols );
-
-        uint64_t id(cols[DBTServiceaction::ID_COL].as<uint64_t>());
-        obj.set( "URI", ServiceAction::calcPath( _getDynamicConfiguration().getPathBase(), id ).toString() );
-    }
-
-    auto &response(_getResponse());
-
-    req_range.updateResponse( response, arr.size(), row_count );
-
-    response.setContentTypeJson();
-    response.headersComplete();
-
-    json::Formatter()( arr_val, response.out() );
 }
 
 
@@ -594,6 +552,84 @@ void ServiceActions::_started(
             return;
 
         }
+
+    } catch ( std::exception& e ) {
+
+        _handleError( e );
+
+    }
+}
+
+
+void ServiceActions::_gotAttentionMessagesSnapshot(
+        capena::server::ResponderPtr /*responder_ptr*/,
+        const blue_gene::service_actions::AttentionMessagesMap& attention_messages
+    )
+{
+
+    try {
+        // Query to get the service actions...
+
+        static const unsigned DefaultRangeSize(50), MaxRangeSize(100);
+        RequestRange req_range( _getRequest(), DefaultRangeSize, MaxRangeSize );
+
+
+        auto conn_ptr(dbConnectionPool::getConnection());
+
+        uint64_t row_count(0);
+        cxxdb::ResultSetPtr rs_ptr;
+
+        _query(
+                *conn_ptr,
+                req_range,
+                &row_count,
+                &rs_ptr
+            );
+
+        if ( row_count == 0 ) {
+            // No matches for the filter options, return empty array.
+
+            auto &response(_getResponse());
+
+            response.setContentTypeJson();
+            response.headersComplete();
+
+            json::Formatter()( json::ArrayValue(), response.out() );
+            return;
+        }
+
+
+        json::ArrayValue arr_val;
+        json::Array &arr(arr_val.get());
+
+        while ( rs_ptr->fetch() ) {
+            // FIXME: check attention messages!
+
+            const cxxdb::Columns& cols(rs_ptr->columns());
+
+            json::Object &obj(arr.addObject());
+
+            setCommonFields( obj, cols );
+
+            uint64_t id(cols[DBTServiceaction::ID_COL].as<uint64_t>());
+            obj.set( "URI", ServiceAction::calcPath( _getDynamicConfiguration().getPathBase(), id ).toString() );
+
+
+            auto i(attention_messages.find( lexical_cast<string>( id ) ));
+            if ( i != attention_messages.end() ) {
+                obj.set( "attentionMessages", i->second );
+            }
+
+        }
+
+        auto &response(_getResponse());
+
+        req_range.updateResponse( response, arr.size(), row_count );
+
+        response.setContentTypeJson();
+        response.headersComplete();
+
+        json::Formatter()( arr_val, response.out() );
 
     } catch ( std::exception& e ) {
 

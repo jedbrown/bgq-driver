@@ -97,34 +97,3 @@ CiosConfig::getLargeRegionSize(void) const
    return regionSize;
 }
 
-uint16_t
-CiosConfig::getNumLargeRegions(void) const
-{
-   // First, check for command line argument.
-   uint16_t numRegions = _variableMap["num_large_regions"].as<uint16_t>();
-   if (!_variableMap["num_large_regions"].defaulted()) {
-      LOG_CIOS_DEBUG_MSG("set num_large_regions to " << numRegions << " from command line argument");
-   }
-
-   // Second, check for key in properties file.
-   else {
-      try {
-         numRegions = boost::lexical_cast<uint16_t>( _properties->getValue("cios", "num_large_regions") );
-         LOG_CIOS_DEBUG_MSG("set num_large_regions to " << numRegions << " from properties file " << _properties->getFilename());
-      }
-      catch (const std::invalid_argument& e) {
-         // This isn't fatal so we'll use the default value.
-         LOG_CIOS_DEBUG_MSG("num_large_regions not found in properties file '" << _properties->getFilename() << "' so using default value " << DefaultNumLargeRegions);
-      } 
-      catch (const boost::bad_lexical_cast& e) {
-         // Value is invalid.
-         LOG_CIOS_WARN_MSG("num_large_regions property from properties file '" << _properties->getFilename() << "' is invalid so using default value " <<
-                      DefaultNumLargeRegions << " (" << e.what() << ")");
-      }
-   }
-   
-   return numRegions;
-}
-
-
-

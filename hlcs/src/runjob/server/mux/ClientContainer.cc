@@ -212,6 +212,7 @@ ClientContainer::eofImpl()
     // deliver signals to jobs that have we know about
     BOOST_FOREACH( const Container::value_type& i, _clients ) {
         if ( const Job::Ptr job = i.second.lock() ) {
+            job->queue().clientDisconnected();
             job::Signal::create( job, SIGKILL );
         }
     }

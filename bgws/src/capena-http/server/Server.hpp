@@ -69,8 +69,19 @@ public:
         );
 
 
-    /*! The application must call start to get this thing going. */
+    typedef std::vector<boost::asio::ip::tcp::endpoint> Endpoints;
+
+    typedef boost::function<void (const Endpoints& endpoints)> ListeningCallbackFn;
+
+    /*! The callback_fn will be called when the server is listening and can accept connections. */
+    void setListeningCallback( ListeningCallbackFn callback_fn );
+
+
+    /*! Call to start running as a server. */
     void start();
+
+    /*! Call to stop running the server. */
+    void stop();
 
 
 private:
@@ -80,6 +91,8 @@ private:
     ResponderCreatorFn _responder_creator_fn;
 
     boost::shared_ptr<bgq::utility::Acceptor> _acceptor_ptr;
+
+    ListeningCallbackFn _listening_fn;
 
 
     Server(

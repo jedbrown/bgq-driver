@@ -44,6 +44,7 @@
 #define GEA_NOCFG  1     // Source unit not configured. Should not see interrupts on this lane
 #define GEA_MU     2     // Messaging unit 
 #define GEA_ND     3     // ND software errors 
+#define GEA_UPC    4     // UPC errors
 #define GEA_SCRUB  6     // Background scrub
 #define GEA_DCRV   7     // DCR violation
 #define GEA_MBOX   8     // Mailbox input
@@ -115,6 +116,7 @@ void puea_set_mc_handler_thread(int hwthreadid);              // Set the thread 
 void IntHandler_DCRUserViolation(int status_Reg, int bitnum); // Handler for DCR access errors
 void IntHandler_MemoryScrub(int status_Reg, int bitnum);
 void IntHandler_GEATimerEvent(int status_Reg, int bitnum);
+void IntHandler_GEA_UPC(int status_reg, int bitnum);          // Second level default handler for UPC parity error
 
 
 #ifdef __cplusplus

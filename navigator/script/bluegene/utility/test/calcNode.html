@@ -28,7 +28,7 @@
 
 <title>calcNode Browser Tests</title>
 
-<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
 
 <script>
 
@@ -100,6 +100,7 @@ function calcNodesMultiple() {
 
 
 var onLoad = function() {
+    d_parser.parse();
     doh.register( "bluegene/utility/test/calcNodeHTML", tests );
     doh.run();
 };
@@ -117,7 +118,7 @@ d_ready( onLoad );
 
 <body>
     <span id="span1">Sample</span>
-    <button id="button1" data-dojo-type="dijit.form.Button">Button</button>
+    <button id="button1" data-dojo-type="dijit/form/Button">Button</button>
 </body>
 
 </html>

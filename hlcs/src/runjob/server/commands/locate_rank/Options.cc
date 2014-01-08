@@ -36,6 +36,9 @@
  * --np, --corner, and --shape parameters to runjob to output the location string of the compute node
  * with the requested rank.
  *
+ * \note For jobs using a mapping file (see runjob) this file must be readable by the runjob_server (typically
+ * the bgqadmin uid) to correctly calculate location to rank mappings.
+ *
  * This documentation was generated for driver DRIVER_NAME with revision VERSION_NUMBER on DOCUMENTATION_DATE.
  *
  * \section OPTIONS

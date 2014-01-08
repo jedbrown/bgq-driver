@@ -48,10 +48,6 @@
 #include "shm.h"
 #include "CrcExchange.h"
 
-#define NUM_KTHREADS ( CONFIG_SCHED_SLOTS_PER_HWTHREAD * CONFIG_HWTHREADS_PER_CORE * CONFIG_MAX_CORES )
-// Should never need more futex table entries than the number of kthreads.
-#define NUM_FUTEX (NUM_KTHREADS)
-
 #define SHARED_WORKAREA_SIZE 0x60000
 
 typedef struct NodeState_t
@@ -180,6 +176,9 @@ typedef struct NodeState_t
 
     // Value for release field of struct utsname.
     char Release[CONFIG_MAX_UTSNAME_SIZE];
+
+    // Last job leader coordinates
+    uint8_t JobLeaderCoords[5];
 }
 ALIGN_L2_CACHE NodeState_t;
 
@@ -385,7 +384,7 @@ __INLINE__ AppProcess_t *GetFirstProcess(AppState_t *app)
 
 // Returns indicator of whether a process is currently active on the current kthread. A 
 // process in the ExitPending state or Rank Inactive state is not considered active.
-__INLINE__ int IsProcessActive()
+__INLINE__ int IsMyProcessActive()
 {
     AppProcess_t *proc = GetMyProcess();
     if (proc && (proc->State >= ProcessState_Active))
@@ -394,6 +393,19 @@ __INLINE__ int IsProcessActive()
     }
     return 0;
 }
+
+// Returns indicator of whether a process associated with the specified kthread is active. A 
+// process in the ExitPending state or Rank Inactive state is not considered active.
+__INLINE__ int IsProcessActive(KThread_t *kthread)
+{
+    AppProcess_t *proc = kthread->pAppProc;
+    if (proc && (proc->State >= ProcessState_Active))
+    {
+        return 1;
+    }
+    return 0;
+}
+
 
 __INLINE__ int IsSubNodeJob()
 {

@@ -35,110 +35,90 @@
 LOG_DECLARE_FILE( "master" );
 
 BGMasterClient client;
-Args* pargs;
 
 enum TypeToStop { BGMASTER_ONLY, BINARY, BGMASTER, BGAGENT, ALIAS, BINARIES };
 
-void
+int
 doStop(
-        std::string& target,
-        TypeToStop stoptype = ALIAS,
-        int signal = 15
+        const std::string& target,
+        const TypeToStop stoptype = ALIAS,
+        const int signal = 15
         )
 {
     BinaryId id(target);
     std::string errormsg;
     switch(stoptype) {
     case BGMASTER_ONLY:
-        { // scope braces for variables local to this case.
-            // Kill and restart bgmaster_server without affecting the agents or managed binaries.
-            // Connect to bgmaster_server.  Use the master_only flag.  Wait a bit,
-            // THEN send the SIGKILL if it doesn't respond.
-            std::string start_time;
-            std::string version;
-            int pid_of_master = client.master_status(start_time, version);
+        try {
             client.end_master(true);
-            int timeout = 4; // seconds to wait for it to die
-            bool alive = true;
-            while (timeout > 0 && alive) {
-                int rc = kill(pid_of_master, 0); // check for existence
-                if (rc < 0) {
-                    alive = false; // process is done
-                }
-            }
-
-            if (alive) {
-                int rc = kill(pid_of_master, SIGKILL);
-                if (rc != 0) {
-                    std::cerr << "Could not stop bgmaster (bgmaster_server)." << std::endl;
-                }
-            }
-            break;
+            errormsg = "Stopped " + target;
+        } catch(const exceptions::BGMasterError& e) {
+            std::cerr << "end master failed, error is: " << e.what() << std::endl;
+            return EXIT_FAILURE;
         }
+        break;
     case ALIAS:
         try {
             client.stop(target, signal, errormsg);
-        } catch(exceptions::BGMasterError& e) {
+        } catch(const exceptions::BGMasterError& e) {
             std::cerr << "Stop alias failed, error is: " << e.what() << std::endl;
-            return;
+            return EXIT_FAILURE;
         }
         break;
     case BINARY:
         try {
             client.stop(id, signal, errormsg);
-        } catch(exceptions::BGMasterError& e) {
+        } catch(const exceptions::BGMasterError& e) {
             std::cerr << "Stop binary failed, error is: " << e.what() << std::endl;
-            return;
+            return EXIT_FAILURE;
         }
         break;
     case BGAGENT:
-        try {
-            std::cout << "Stopping agent " << target << std::endl;
-            BGAgentId agent_to_die(target);
-            client.end_agent(agent_to_die);
-        } catch(exceptions::BGMasterError& e) {
-            std::cerr << "Agent stop failed, error is: " << e.what() << std::endl;
-            return;
-        }
+        std::cerr << "\n\nStopping bgagent via master_stop is no longer supported. " << std::endl;
+	std::cerr << "\tUse '/etc/init.d/bgagent stop' to stop bgagentd. \n" << std::endl; 
+        return EXIT_FAILURE;
         if (stoptype == BGAGENT)
             break;  // If it's just the agent, then break.  Otherwise, fall through.
     default:
         // Default behavior is BGMASTER and BINARIES
     case BGMASTER:
         try {
-            std::cout << "Stopping bgmaster (bgmaster_server)" << std::endl;
+	    errormsg = "Stopping bgmaster (bgmaster_server)";
             client.end_master(false, signal);
-        } catch(exceptions::BGMasterError& e) {
+        } catch(const exceptions::BGMasterError& e) {
             std::cerr << "Stopping bgmaster (bgmaster_server) failed, error is: " << e.what() << std::endl;
-            return;
+            return EXIT_FAILURE;
         }
         break;
         // We don't bother to fall through to BINARIES because
         // BGMASTER already takes care of them anyway.
     case BINARIES:
-        BinaryId emptyid;
-        // An empty id says kill 'em all.
-        client.stop(emptyid, signal, errormsg);
+        try {
+            const BinaryId emptyid;
+            // An empty id says kill 'em all.
+            client.stop(emptyid, signal, errormsg);
+        } catch(const exceptions::BGMasterError& e) {
+            std::cerr << "Stopping binaries failed, error is: " << e.what() << std::endl;
+            return EXIT_FAILURE;
+        }
+
         break;
     }
-    if (stoptype == BGMASTER) {
-        // bgmaster is asynchronous shutdown so don't send a message
-    } else {
-        std::cout << "Stopped " << target << std::endl;
-    }
+
+    std::cout << errormsg << std::endl;
+
+    return 0;
 }
 
 void
 help()
 {
-    std::cerr << "Stop any or all controlled processes, bgmaster_server, " << std::endl;
-    std::cerr << "any or all bgagentd processes, or everything. By default, it" << std::endl;
-    std::cerr << "stops bgmaster_server and all managed binaries." << std::endl;
-    std::cerr << "Processes are allowed an orderly completion with a timeout" << std::endl;
-    std::cerr << "before they are forced to end. bgmaster_server is only forced "<< std::endl;
-    std::cerr << "with bgmaster_only option." << std::endl;
-    std::cerr << "The signal number argument provides an initial signal to send." << std::endl;
-    std::cerr << "By default the initial signal is SIGTERM." << std::endl;
+    std::cerr << "Stop any or all controlled processes and bgmaster_server. " << std::endl;
+    std::cerr << "By default, it stops bgmaster_server and all managed binaries." << std::endl;
+    std::cerr << "Processes are allowed an orderly completion" << std::endl;
+    std::cerr << "with a timeout before they are forced to end."<< std::endl;
+    std::cerr << "The signal number argument provides an initial signal" << std::endl;
+    std::cerr << "to send. By default the initial signal is SIGTERM." << std::endl;
     std::cerr << "Administrative authority required." << std::endl;
 }
 
@@ -146,13 +126,14 @@ void
 usage()
 {
     std::cerr << "master_stop [ alias ] | [ \"bgmaster\" ] | [ \"binaries\" ] | [ \"bgmaster_only\" ] "
-              << "[ --binary binary id ] | [ --agent agent id ] [ --signal signal number ] [ --properties filename ] "
+              << "[ --binary binary id ] | [ --signal signal number ] [ --properties filename ] "
               << "[ --help ] [ --host host:port ] [ --verbose verbosity ]" << std::endl;
 }
 
 int
 stringSigToIntSig(
-std::string& strsig)
+        const std::string& strsig
+        )
 {
     int intsig = 0;
     if(strsig == "SIGHUP")
@@ -228,7 +209,7 @@ std::string& strsig)
     else {
         try {
             intsig = boost::lexical_cast<int>(strsig);
-        } catch(boost::bad_lexical_cast& e) {
+        } catch(const boost::bad_lexical_cast& e) {
             std::cerr << "Invalid signal \"" << strsig << "\" specified." << std::endl;
             exit(EXIT_FAILURE);
         }
@@ -236,7 +217,8 @@ std::string& strsig)
     return intsig;
 }
 
-int main(int argc, const char** argv)
+int
+main(int argc, const char** argv)
 {
     std::vector<std::string> validargs;
     std::vector<std::string> singles;
@@ -249,15 +231,14 @@ int main(int argc, const char** argv)
     validargs.push_back(agarg);
     validargs.push_back(sigarg);
 
-    Args largs(argc, argv, &usage, &help, validargs, singles);
-    pargs = &largs;
-    client.initProperties(pargs->_props);
+    const Args largs(argc, argv, &usage, &help, validargs, singles);
+    client.initProperties(largs.get_props());
 
-    std::string binary = (*pargs)[binarg];
-    std::string agent = (*pargs)[agarg];
-    std::string sig = (*pargs)[sigarg];
+    const std::string binary = largs[binarg];
+    const std::string agent = largs[agarg];
+    const std::string sig = largs[sigarg];
     int signal = 0;
-    std::string target = "";
+    std::string target;
     TypeToStop stoptype;
 
     if (!sig.empty())
@@ -265,13 +246,12 @@ int main(int argc, const char** argv)
     if (!agent.empty()) {
         target = agent;
         stoptype = BGAGENT;
-    }
-    else if (!binary.empty()) {
+    } else if (!binary.empty()) {
         target = binary;
         stoptype = BINARY;
     } else {
-        if (pargs->size() != 0) {
-            target = *(pargs->begin());
+        if (largs.size() != 0) {
+            target = *(largs.begin());
         } else {
             // No arguments, no valid command.
             usage();
@@ -280,7 +260,7 @@ int main(int argc, const char** argv)
         if (target == "bgmaster")
             stoptype = BGMASTER;
         else if (target == "binaries") {
-            target = "";
+            target.clear();
             stoptype = BINARY;
         }
         else if(target == "bgmaster_only")
@@ -290,12 +270,12 @@ int main(int argc, const char** argv)
     }
 
     try {
-        client.connectMaster(pargs->get_portpairs());
-    }
-    catch(exceptions::BGMasterError& e) {
+        client.connectMaster(largs.get_portpairs());
+    } catch(const exceptions::BGMasterError& e) {
         std::cerr << "Unable to contact bgmaster_server, server may be down." << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    doStop(target, stoptype, signal);
+    const int rc = doStop(target, stoptype, signal);
+    exit( rc );
 }

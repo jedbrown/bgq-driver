@@ -57,7 +57,8 @@ public:
             ServerStats& server_stats,
             blue_gene::service_actions::ServiceActions& service_actions,
             Sessions& sessions,
-            teal::Teal& teal
+            teal::Teal& teal,
+            BlockingOperationsThreadPool& blocking_operations_thread_pool
         );
 
 
@@ -84,6 +85,7 @@ private:
     blue_gene::service_actions::ServiceActions &_service_actions;
     Sessions &_sessions;
     teal::Teal &_teal;
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
 
 
     void _calcRequestedResource(

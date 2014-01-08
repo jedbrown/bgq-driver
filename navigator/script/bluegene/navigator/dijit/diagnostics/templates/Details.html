@@ -1,116 +1,116 @@
 <div>
 
-<div data-dojo-type="dijit.layout.StackContainer" data-dojo-attach-point="_stackContainer">
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_noneContainer">
+<div data-dojo-type="dijit/layout/StackContainer" data-dojo-attach-point="_stackContainer">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_noneContainer">
         <p>Select a midplane, I/O drawer, or user-defined block from the Summary tab, a location from the Locations tab, or a diagnostics run from the Completed Runs tab.
            Details for the item will be displayed here.
         </p>
     </div>
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_blockContainer">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_blockContainer">
         <div>
             <span style="font-size: 12pt; font-weight: bold;"
-                    data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_blockTitleFmt">
+                    data-dojo-type="bluegene/dijit/OutputFormat" data-dojo-attach-point="_blockTitleFmt">
                 Diagnostics Results for ${_d}{blockType} ${_d}{blockOrLocation}
             </span>
         </div>
         <div>
-            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_blockBackBtn">Back</button>
-            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_blockForwardBtn">Forward</button>
+            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_blockBackBtn">Back</button>
+            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_blockForwardBtn">Forward</button>
         </div>
         <table>
             <tr><td style="vertical-align: top;">
 
-                <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_blockRunsTable" data-dojo-props="title: 'Run History'"></table>
+                <table data-dojo-type="bluegene/navigator/dijit/Table" data-dojo-attach-point="_blockRunsTable" data-dojo-props="title: 'Run History'"></table>
 
             </td><td style="vertical-align: top;">
                 <h3 style="margin-top: 0px;">
-                    <span data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_blockSchedTxt">Run at</span>
-                    <span data-dojo-type="bluegene.dijit.OutputText" data-dojo-props="formatter: bluegene.navigator.format.timestamp" data-dojo-attach-point="_blockTimeTxt">Loading...</span>
+                    <span data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_blockSchedTxt">Run at</span>
+                    <span data-dojo-type="bluegene/dijit/OutputText" data-dojo-props="formatter: this._b_navigator_format.timestamp" data-dojo-attach-point="_blockTimeTxt">Loading...</span>
                 </h3>
                 <table>
                     <tr><th>Result:</th>
-                        <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_blockResultTxt" data-dojo-props="formatter: bluegene.navigator.format.diagnostics.hardwareStatus">Loading...</td>
+                        <td data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_blockResultTxt" data-dojo-props="formatter: this._b_navigator_format.diagnostics.hardwareStatus">Loading...</td>
                     </tr>
-                    <tr><th>Run Result:</th><td data-dojo-type="bluegene.dijit.ActionLink" data-dojo-props="disabled: true" data-dojo-attach-point="_blockRunResultTxt">Loading...</td></tr>
+                    <tr><th>Run Result:</th><td data-dojo-type="bluegene/dijit/ActionLink" data-dojo-props="disabled: true" data-dojo-attach-point="_blockRunResultTxt">Loading...</td></tr>
                 </table>
 
-                <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_blockTestsTable" data-dojo-props="title: 'Testcase Results Summary'"></table>
+                <table data-dojo-type="bluegene/navigator/dijit/Table" data-dojo-attach-point="_blockTestsTable" data-dojo-props="title: 'Testcase Results Summary'"></table>
 
             </td></tr>
         </table>
     </div>
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_testsContainer">
-        <div> <span style="font-size: 12pt; font-weight: bold;" data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_testsTitleFmt">
-            ${_d}{hardwareStatus:bluegene.navigator.format.diagnostics.hardwareStatus} Diagnostic Results for Testcase ${_d}{testcase} Run on ${_d}{blockType} ${_d}{blockOrLocation} at ${_d}{runTime:bluegene.navigator.format.timestamp}
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_testsContainer">
+        <div> <span style="font-size: 12pt; font-weight: bold;" data-dojo-type="bluegene/dijit/OutputFormat" data-dojo-props="thisObject: this" data-dojo-attach-point="_testsTitleFmt">
+            ${_d}{hardwareStatus:_b_navigator_format.diagnostics.hardwareStatus} Diagnostic Results for Testcase ${_d}{testcase} Run on ${_d}{blockType} ${_d}{blockOrLocation} at ${_d}{runTime:_b_navigator_format.timestamp}
         </span> </div>
         <div> 
-            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_testsBackBtn">Back</button>
-            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_testsForwardBtn">Forward</button>
+            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_testsBackBtn">Back</button>
+            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_testsForwardBtn">Forward</button>
         </div>
 
-        <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_testsTable"></table>
+        <table data-dojo-type="bluegene/navigator/dijit/Table" data-dojo-attach-point="_testsTable"></table>
     </div>
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_runContainer">
-        <div> <span style="font-size: 12pt; font-weight: bold;" data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_runTitleFmt">
-            Details for Diagnostics Run Started at ${_d}{runTime:bluegene.navigator.format.timestamp}
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_runContainer">
+        <div> <span style="font-size: 12pt; font-weight: bold;" data-dojo-type="bluegene/dijit/OutputFormat" data-dojo-props="thisObject: this" data-dojo-attach-point="_runTitleFmt">
+            Details for Diagnostics Run Started at ${_d}{runTime:_b_navigator_format.timestamp}
         </span> </div>
         <div> 
-            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_runBackBtn">Back</button>
-            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_runForwardBtn">Forward</button>
+            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_runBackBtn">Back</button>
+            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_runForwardBtn">Forward</button>
         </div>
         <table>
-            <tr><th>Run Status:</th> <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_runStatusTxt">Loading...</td></tr>
-            <tr><th>Start Time:</th> <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_runStartTxt">Loading...</td></tr>
-            <tr data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_runEndContainer">
+            <tr><th>Run Status:</th> <td data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_runStatusTxt">Loading...</td></tr>
+            <tr><th>Start Time:</th> <td data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_runStartTxt">Loading...</td></tr>
+            <tr data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_runEndContainer">
                 <th>End Time:</th>
-                <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_runEndTxt">Loading...</td>
+                <td data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_runEndTxt">Loading...</td>
             </tr>
-            <tr><th>Log File:</th> <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_runLogfileTxt">Loading...</td></tr>
-            <tr data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_runUserContainer">
+            <tr><th>Log File:</th> <td data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_runLogfileTxt">Loading...</td></tr>
+            <tr data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_runUserContainer">
                 <th>User:</th>
-                <td data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_runUserTxt">Loading...</td>
+                <td data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_runUserTxt">Loading...</td>
             </tr>
         </table>
 
-        <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_runMidplanesContainer">
+        <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_runMidplanesContainer">
             <h3>Midplanes</h3>
-            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_runMidplanesTable"></table>
+            <table data-dojo-type="bluegene/navigator/dijit/Table" data-dojo-attach-point="_runMidplanesTable"></table>
         </div>
 
-        <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_runIoDrawersContainer">
+        <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_runIoDrawersContainer">
             <h3>I/O Drawers</h3>
-            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_runIoDrawersTable"></table>
+            <table data-dojo-type="bluegene/navigator/dijit/Table" data-dojo-attach-point="_runIoDrawersTable"></table>
         </div>
 
-        <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_runBlocksContainer">
+        <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_runBlocksContainer">
             <h3>Blocks</h3>
-            <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_runBlocksTable"></table>
+            <table data-dojo-type="bluegene/navigator/dijit/Table" data-dojo-attach-point="_runBlocksTable"></table>
         </div>
 
     </div>
 
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_locationContainer">
-        <div> <span style="font-size: 12pt; font-weight: bold;" data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_locationTitleFmt">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_locationContainer">
+        <div> <span style="font-size: 12pt; font-weight: bold;" data-dojo-type="bluegene/dijit/OutputFormat" data-dojo-attach-point="_locationTitleFmt">
             Diagnostics Results for ${_d}{location}
         </span> </div>
         <div> 
-            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_locationBackBtn">Back</button>
-            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_locationForwardBtn">Forward</button>
+            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_locationBackBtn">Back</button>
+            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_locationForwardBtn">Forward</button>
         </div>
 
-        <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_locationTable"></table>
+        <table data-dojo-type="bluegene/navigator/dijit/Table" data-dojo-attach-point="_locationTable"></table>
     </div>
 
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_tcLocContainer">
-        <div> <span style="font-size: 12pt; font-weight: bold;" data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_tcLocTitleFmt">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_tcLocContainer">
+        <div> <span style="font-size: 12pt; font-weight: bold;" data-dojo-type="bluegene/dijit/OutputFormat" data-dojo-attach-point="_tcLocTitleFmt">
             History of Diagnostics Test ${_d}{testcase} Run on ${_d}{location}
         </span> </div>
         <div> 
-            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_tcLocBackBtn">Back</button>
-            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_tcLocForwardBtn">Forward</button>
+            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_tcLocBackBtn">Back</button>
+            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_tcLocForwardBtn">Forward</button>
         </div>
 
-        <table data-dojo-type="bluegene.navigator.dijit.Table" data-dojo-attach-point="_tcLocTable"></table>
+        <table data-dojo-type="bluegene/navigator/dijit/Table" data-dojo-attach-point="_tcLocTable"></table>
     </div>
 
 </div>

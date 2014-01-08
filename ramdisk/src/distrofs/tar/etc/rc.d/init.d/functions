@@ -1,23 +1,23 @@
 # -*-Shell-script-*-
-# begin_generated_IBM_copyright_prolog                             
-#                                                                  
-# This is an automatically generated copyright prolog.             
-# After initializing,  DO NOT MODIFY OR MOVE                       
-# ================================================================ 
-#                                                                  
-# Licensed Materials - Property of IBM                             
-# Blue Gene/Q                                                      
-# (C) Copyright IBM Corp. 2012 All Rights Reserved                 
-# US Government Users Restricted Rights - Use,                     
-# duplication or disclosure restricted by GSA ADP                  
-# Schedule contract with IBM Corp.                                 
-#                                                                  
-# This software is available to you under the                      
-# GNU General Public License (GPL).                                
-#                                                                  
-# ================================================================ 
-#                                                                  
-# end_generated_IBM_copyright_prolog                               
+# begin_generated_IBM_copyright_prolog                                                          
+#                                                                                               
+# This is an automatically generated copyright prolog.                                          
+# After initializing,  DO NOT MODIFY OR MOVE                                                    
+# ================================================================                              
+#                                                                                               
+# Licensed Materials - Property of IBM                                                          
+# Blue Gene/Q                                                                                   
+# (C) Copyright IBM Corp. 2012 All Rights Reserved                                              
+# US Government Users Restricted Rights - Use,                                                  
+# duplication or disclosure restricted by GSA ADP                                               
+# Schedule contract with IBM Corp.                                                              
+#                                                                                               
+# This software is available to you under the                                                   
+# GNU General Public License (GPL).                                                             
+#                                                                                               
+# ================================================================                              
+#                                                                                               
+# end_generated_IBM_copyright_prolog
 #
 # functions	This file contains functions to be used by most or all
 #		shell scripts in the /etc/init.d directory.
@@ -29,28 +29,28 @@ TEXTDOMAIN=initscripts
 umask 022
 
 # Set up a default search path.
-PATH="/bgfs/sbin:/bgfs/bin:/bgfs/usr/bin:/bgfs/usr/sbin:/sbin:/usr/sbin:/bin:/usr/bin"
+PATH="/bgfs/sbin:/bgfs/bin:/bgfs/usr/bin:/bgfs/usr/sbin:/sbin:/usr/sbin:/bin:/usr/bin
 export PATH
 
-##################################################
-# Source BlueGene Specific data and functions:
-# ################################################
-if [ -e /dev/bgpers ] ; then . /dev/bgpers ; fi
-if [ -e /dev/bgras ] ; then . /dev/bgras ; fi
-
-# Overload bgras with this function that sends output to the console and
-# to /bgfs/bin/bgras automatically.
-bgras() {
-
-	if [ -e /bgfs/bin/bgras ] ; then BGRAS=/bgfs/bin/bgras ; else BGRAS=/bin/bgras ; fi
-
-        echo -en "$2" | tee /dev/console | $BGRAS $1
-	# New line to flush output to the console
-        echo -en "\n" > /dev/console
-
-}
-
-##################################################
+##################################################                                              
+# Source BlueGene Specific data and functions:                                                  
+# ################################################                                              
+if [ -e /dev/bgpers ] ; then . /dev/bgpers ; fi                                                 
+if [ -e /dev/bgras ] ; then . /dev/bgras ; fi                                                   
+                                                                                                
+# Overload bgras with this function that sends output to the console and                        
+# to /bgfs/bin/bgras automatically.                                                             
+bgras() {                                                                                       
+                                                                                                 
+        if [ -e /bgfs/bin/bgras ] ; then BGRAS=/bgfs/bin/bgras ; else BGRAS=/bin/bgras ; fi       
+                                                                                                 
+        echo -en "$2" | tee /dev/console | $BGRAS $1                                            
+	# New line to flush output to the console                                                 
+	echo -en "\n" > /dev/console                                                            
+                                                                                                 
+}                                                                                               
+                                                                                                 
+################################################## 
 
 # Get a sane screen width
 [ -z "${COLUMNS:-}" ] && COLUMNS=80
@@ -94,7 +94,7 @@ fstab_decode_str() {
 	fstab-decode echo "$1"
 }
 
-# Check if $pid (could be plural) are running
+# Check if any of $pid (could be plural) are running
 checkpid() {
 	local i
 
@@ -120,7 +120,7 @@ __fgrep() {
     return 1
 }
 
-# __umount_loop awk_program fstab_file first_msg retry_msg umount_args
+# __umount_loop awk_program fstab_file first_msg retry_msg retry_umount_args
 # awk_program should process fstab_file and return a list of fstab-encoded
 # paths; it doesn't have to handle comments in fstab_file.
 __umount_loop() {
@@ -130,7 +130,7 @@ __umount_loop() {
 	remaining=$(LC_ALL=C awk "/^#/ {next} $1" "$2" | sort -r)
 	while [ -n "$remaining" -a "$retry" -gt 0 ]; do
 		if [ "$retry" -eq 3 ]; then
-			action "$3" fstab-decode umount $5 $remaining
+			action "$3" fstab-decode umount $remaining
 		else
 			action "$4" fstab-decode umount $5 $remaining
 		fi
@@ -192,6 +192,7 @@ __pids_var_run() {
 	if [ -f "$pid_file" ] ; then
 	        local line p
 
+		[ ! -r "$pid_file" ] && return 4 # "user had insufficient privilege"
 		while : ; do
 			read line
 			[ -z "$line" ] && break
@@ -299,7 +300,7 @@ daemon() {
 	if [ -z "$user" ]; then
 	   $cgroup $nice /bin/bash -c "$corelimit >/dev/null 2>&1 ; $*"
 	else
-	   $cgroup $nice runuser -s /bin/bash - $user -c "$corelimit >/dev/null 2>&1 ; $*"
+	   $cgroup $nice runuser -s /bin/bash $user -c "$corelimit >/dev/null 2>&1 ; $*"
 	fi
 
 	[ "$?" -eq 0 ] && success $"$base startup" || failure $"$base startup"
@@ -333,8 +334,13 @@ killproc() {
 
         # Find pid.
 	__pids_var_run "$1" "$pid_file"
-	if [ -z "$pid_file" -a -z "$pid" ]; then
-		pid="$(__pids_pidof "$1")"
+	RC=$?
+	if [ -z "$pid" ]; then
+		if [ -z "$pid_file" ]; then
+			pid="$(__pids_pidof "$1")"
+		else
+			[ "$RC" = "4" ] && { failure $"$base shutdown" ; return $RC ;}
+		fi
 	fi
 
         # Kill it.
@@ -425,7 +431,7 @@ pidofproc() {
 }
 
 status() {
-	local base pid pid_file=
+	local base pid lock_file= pid_file=
 
 	# Test syntax.
 	if [ "$#" = 0 ] ; then
@@ -434,6 +440,10 @@ status() {
 	fi
 	if [ "$1" = "-p" ]; then
 		pid_file=$2
+		shift 2
+	fi
+	if [ "$1" = "-l" ]; then
+		lock_file=$2
 		shift 2
 	fi
 	base=${1##*/}
@@ -458,9 +468,16 @@ status() {
 	                echo $"${base} dead but pid file exists"
 	                return 1
 			;;
+		4)
+			echo $"${base} status unknown due to insufficient privileges."
+			return 4
+			;;
 	esac
-	# See if /var/lock/subsys/${base} exists
-	if [ -f /var/lock/subsys/${base} ]; then
+	if [ -z "${lock_file}" ]; then
+		lock_file=${base}
+	fi
+	# See if /var/lock/subsys/${lock_file} exists
+	if [ -f /var/lock/subsys/${lock_file} ]; then
 		echo $"${base} dead but subsys locked"
 		return 2
 	fi
@@ -473,17 +490,6 @@ echo_success() {
   echo -n "["
   [ "$BOOTUP" = "color" ] && $SETCOLOR_SUCCESS
   echo -n $"  OK  "
-  [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
-  echo -n "]"
-  echo -ne "\r"
-  return 0
-}
-
-echo_skipped() {
-  [ "$BOOTUP" = "color" ] && $MOVE_TO_COL
-  echo -n "["
-  [ "$BOOTUP" = "color" ] && $SETCOLOR_SUCCESS
-  echo -n $"  SKIPPED  "
   [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
   echo -n "]"
   echo -ne "\r"
@@ -523,10 +529,21 @@ echo_warning() {
   return 1
 }
 
+echo_skipped() {                                                                                
+  [ "$BOOTUP" = "color" ] && $MOVE_TO_COL                                                       
+  echo -n "["                                                                                   
+  [ "$BOOTUP" = "color" ] && $SETCOLOR_SUCCESS                                                  
+  echo -n $"  SKIPPED  "                                                                        
+  [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL                                                   
+  echo -n "]"                                                                                   
+  echo -ne "\r"                                                                                 
+  return 0                                                                                      
+}
+
 # Inform the graphical boot of our current state
 update_boot_stage() {
-  if [ -x /usr/bin/plymouth ]; then
-      /usr/bin/plymouth --update="$1"
+  if [ -x /bin/plymouth ]; then
+      /bin/plymouth --update="$1"
   fi
   return 0
 }
@@ -537,17 +554,11 @@ success() {
   return 0
 }
 
-# Log that something was skipped
-skipped() {
-  [ "$BOOTUP" != "verbose" -a -z "${LSB:-}" ] && echo_skipped
-  return 0
-}
-
 # Log that something failed
 failure() {
   local rc=$?
   [ "$BOOTUP" != "verbose" -a -z "${LSB:-}" ] && echo_failure
-  [ -x /usr/bin/plymouth ] && /usr/bin/plymouth --details
+  [ -x /bin/plymouth ] && /bin/plymouth --details
   return $rc
 }
 
@@ -564,6 +575,12 @@ warning() {
   [ "$BOOTUP" != "verbose" -a -z "${LSB:-}" ] && echo_warning
   return $rc
 }  
+
+# Log that something was skipped                                                                
+skipped() {                                                                                     
+  [ "$BOOTUP" != "verbose" -a -z "${LSB:-}" ] && echo_skipped                                   
+  return 0                                                                                      
+} 
 
 # Run some action. Log its output.
 action() {
@@ -586,7 +603,7 @@ strstr() {
 
 # Confirm whether we really want to run this service
 confirm() {
-  [ -x /usr/bin/plymouth ] && /usr/bin/plymouth --hide-splash
+  [ -x /bin/plymouth ] && /bin/plymouth --hide-splash
   while : ; do 
       echo -n $"Start service $1 (Y)es/(N)o/(C)ontinue? [Y] "
       read answer
@@ -594,7 +611,7 @@ confirm() {
          return 0
       elif strstr $"cC" "$answer" ; then
 	 rm -f /var/run/confirm
-	 [ -x /usr/bin/plymouth ] && /usr/bin/plymouth --show-splash
+	 [ -x /bin/plymouth ] && /bin/plymouth --show-splash
          return 2
       elif strstr $"nN" "$answer" ; then
          return 1
@@ -622,5 +639,195 @@ is_ignored_file() {
     esac
     return 1
 }
+
+# Evaluate shvar-style booleans
+is_true() {
+    case "$1" in
+	[tT] | [yY] | [yY][eE][sS] | [tT][rR][uU][eE])
+	return 0
+	;;
+    esac
+    return 1
+}
+
+# Evaluate shvar-style booleans
+is_false() {
+    case "$1" in
+	[fF] | [nN] | [nN][oO] | [fF][aA][lL][sS][eE])
+	return 0
+	;;
+    esac
+    return 1
+}
+
+# Apply sysctl settings, including files in /etc/sysctl.d
+apply_sysctl() {
+    sysctl -e -p /etc/sysctl.conf >/dev/null 2>&1
+    for file in /etc/sysctl.d/* ; do
+        is_ignored_file "$file" && continue
+        test -f "$file" && sysctl -e -p "$file" >/dev/null 2>&1
+    done
+}
+
+key_is_random() {
+    [ "$1" = "/dev/urandom" -o "$1" = "/dev/hw_random" \
+	-o "$1" = "/dev/random" ]
+}
+
+find_crypto_mount_point() {
+    local fs_spec fs_file fs_vfstype remaining_fields
+    local fs
+    while read fs_spec fs_file remaining_fields; do
+	if [ "$fs_spec" = "/dev/mapper/$1" ]; then
+	    echo $fs_file
+	    break;
+	fi
+    done < /etc/fstab
+}
+
+# Because of a chicken/egg problem, init_crypto must be run twice.  /var may be
+# encrypted but /var/lib/random-seed is needed to initialize swap.
+init_crypto() {
+    local have_random dst src key opt mode owner params makeswap skip arg opt
+    local param value rc ret mke2fs mdir prompt mount_point
+
+    ret=0
+    have_random=$1
+    while read dst src key opt; do
+	[ -z "$dst" -o "${dst#\#}" != "$dst" ] && continue
+        [ -b "/dev/mapper/$dst" ] && continue;
+	if [ "$have_random" = 0 ] && key_is_random "$key"; then
+	    continue
+	fi
+	if [ -n "$key" -a "x$key" != "xnone" ]; then
+	    if test -e "$key" ; then
+		owner=$(ls -l $key | (read a b owner rest; echo $owner))
+		if ! key_is_random "$key"; then
+		    mode=$(ls -l "$key" | cut -c 5-10)
+		    if [ "$mode" != "------" ]; then
+		       echo $"INSECURE MODE FOR $key"
+		    fi
+		fi
+		if [ "$owner" != root ]; then
+		    echo $"INSECURE OWNER FOR $key"
+		fi
+	    else
+		echo $"Key file for $dst not found, skipping"
+		ret=1
+		continue
+	    fi
+	else
+	    key=""
+	fi
+	params=""
+	makeswap=""
+	mke2fs=""
+	skip=""
+	# Parse the src field for UUID= and convert to real device names
+	if [ "${src%%=*}" == "UUID" ]; then
+		src=$(/sbin/blkid -t "$src" -l -o device)
+	elif [ "${src/^\/dev\/disk\/by-uuid\/}" != "$src" ]; then
+		src=$(__readlink $src)
+	fi
+	# Is it a block device?
+	[ -b "$src" ] || continue
+	# Is it already a device mapper slave? (this is gross)
+	devesc=${src##/dev/}
+	devesc=${devesc//\//!}
+	for d in /sys/block/dm-*/slaves ; do
+	    [ -e $d/$devesc ] && continue 2
+	done
+	# Parse the options field, convert to cryptsetup parameters and
+	# contruct the command line
+	while [ -n "$opt" ]; do
+	    arg=${opt%%,*}
+	    opt=${opt##$arg}
+	    opt=${opt##,}
+	    param=${arg%%=*}
+	    value=${arg##$param=}
+
+	    case "$param" in
+	    cipher)
+		params="$params -c $value"
+		if [ -z "$value" ]; then
+		    echo $"$dst: no value for cipher option, skipping"
+		    skip="yes"
+		fi
+	    ;;
+	    size)
+		params="$params -s $value"
+		if [ -z "$value" ]; then
+		    echo $"$dst: no value for size option, skipping"
+		    skip="yes"
+		fi
+	    ;;
+	    hash)
+		params="$params -h $value"
+		if [ -z "$value" ]; then
+		    echo $"$dst: no value for hash option, skipping"
+		    skip="yes"
+		fi
+	    ;;
+	    verify)
+	        params="$params -y"
+	    ;;
+	    swap)
+		makeswap=yes
+		;;
+	    tmp)
+		mke2fs=yes
+	    esac
+	done
+	if [ "$skip" = "yes" ]; then
+	    ret=1
+	    continue
+	fi
+	if [ -z "$makeswap" ] && cryptsetup isLuks "$src" 2>/dev/null ; then
+	    if key_is_random "$key"; then
+		echo $"$dst: LUKS requires non-random key, skipping"
+		ret=1
+		continue
+	    fi
+	    if [ -n "$params" ]; then
+		echo "$dst: options are invalid for LUKS partitions," \
+		    "ignoring them"
+	    fi
+	    if [ -n "$key" ]; then
+		/sbin/cryptsetup -d $key luksOpen "$src" "$dst" <&1 2>/dev/null && success || failure
+		rc=$?
+	    else
+		mount_point="$(find_crypto_mount_point $dst)"
+		[ -n "$mount_point" ] || mount_point=${src##*/}
+		prompt=$(printf $"%s is password protected" "$mount_point")
+		plymouth ask-for-password --prompt "$prompt" --command="/sbin/cryptsetup luksOpen -T1 $src $dst" <&1
+		rc=$?
+	    fi
+	else
+	    [ -z "$key" ] && plymouth --hide-splash
+	    /sbin/cryptsetup $params ${key:+-d $key} create "$dst" "$src" <&1 2>/dev/null && success || failure
+	    rc=$?
+	    [ -z "$key" ] && plymouth --show-splash
+	fi
+	if [ $rc -ne 0 ]; then
+	    ret=1
+	    continue
+	fi
+	if [ -b "/dev/mapper/$dst" ]; then
+	    if [ "$makeswap" = "yes" ]; then
+		mkswap "/dev/mapper/$dst" 2>/dev/null >/dev/null
+	    fi
+	    if [ "$mke2fs" = "yes" ]; then
+		if mke2fs "/dev/mapper/$dst" 2>/dev/null >/dev/null \
+		    && mdir=$(mktemp -d /tmp/mountXXXXXX); then
+		    mount "/dev/mapper/$dst" "$mdir" && chmod 1777 "$mdir"
+		    umount "$mdir"
+		    rmdir "$mdir"
+		fi
+	    fi
+	fi
+    done < /etc/crypttab
+    return $ret
+}
+
 # A sed expression to filter out the files that is_ignored_file recognizes
 __sed_discard_ignored_files='/\(~\|\.bak\|\.orig\|\.rpmnew\|\.rpmorig\|\.rpmsave\)$/d'

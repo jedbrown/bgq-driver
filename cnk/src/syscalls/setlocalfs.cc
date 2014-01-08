@@ -41,8 +41,7 @@ uint64_t  sc_SETLOCALFSWINDOW(SYSCALL_FCN_ARGS)
     }
     
     // Get current core and process object
-    int processorID = ProcessorID();
-    AppProcess_t* pProc = GetProcessByProcessorID(processorID);
+    AppProcess_t* pProc = GetMyProcess();
     pProc->LocalDisk.VStart = (uint64_t)buffer;
     pProc->LocalDisk.Size   = size;
     

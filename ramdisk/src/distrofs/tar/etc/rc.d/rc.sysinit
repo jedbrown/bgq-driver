@@ -52,6 +52,13 @@ if [ -e /bgfs/etc/sysconfig/sysinit ] ; then
 	. /etc/sysconfig/sysinit
 fi
 
+if [ -e /bgfs/RHEL6/lib ] ; then
+	mount --bind /bgfs/RHEL6/lib /lib
+fi
+if [ -e /bgfs/RHEL6/lib64 ] ; then
+	mount --bind /bgfs/RHEL6/lib64 /lib64
+fi
+
 # Set the appropriate root mount point at the head of /etc/mtab.
 mv /etc/mtab /etc/mtab.orig
 if [ $BG_BGSYS_IPV4 != "0.0.0.0" ] ; then
@@ -79,7 +86,29 @@ if [ -e /var/var.tar.gz ] ; then
 	tar -xzvf /var/var.tar.gz &> /dev/null
 	cd /
 else
-	cp -a /var/* /var.mirror
+	# Need to slim down the data pulled into /var, so we do some additional processing here:
+	cd /var	
+	for DIR in `ls` ; do
+		if [ $DIR = "lib" ] ; then
+			if [ ! -d /var.mirror/lib ] ; then mkdir /var.mirror/lib ; fi
+			cd /var/lib
+			for LIBDIR in `ls` ; do
+				if [ ! $LIBDIR = "rpm" ] ; then
+					cp -a ./$LIBDIR /var.mirror/lib/
+				else
+					mkdir /var.mirror/lib/rpm
+				fi
+			done
+			cd /var
+		elif [ $DIR = "mmfs" ] ; then
+			if [ ! -e /var.mirror/mmfs ] ; then mkdir /var.mirror/mmfs ; fi
+		elif [ $DIR = "www" ] ; then
+			if [ ! -e /var.mirror/www ] ; then mkdir /var.mirror/www ; fi
+		else
+			cp -a ./$DIR /var.mirror/
+		fi	
+	done
+	cd /	
 fi
 mount --bind /var.mirror /var
 
@@ -129,6 +158,12 @@ fi
 # before more is started.
 /etc/rc.d/init.d/bgsys start
 /etc/rc.d/init.d/nodefs start
+
+# Finish configuring var if necessary now that bgsys is mounted
+if [ ! -e $BG_OSDIR/var/var.tar.gz ] ; then
+	mount --bind $BG_OSDIR/var/lib/rpm /var/lib/rpm
+	mount --bind $BG_OSDIR/var/www /var/www
+fi
 
 # Steps to prep for ssh startup.
 chmod 711 /var/empty/sshd

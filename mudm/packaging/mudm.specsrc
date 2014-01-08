@@ -11,10 +11,22 @@ Release: 0
 The mudm component contains the library for the MU data mover (MUDM).  MUDM is a shared message transport library used on the Linux-based ionodes and the lightweight CNK kernel.  It transports messages between the ionode and compute nodes via the torus.  
 
 %files mudm
-%defattr(-,root,root,755)
-
+%defattr(755,root,root)
 %dir %{_parent_dir}
 %dir %{_base_dir}
+%dir %{_base_dir}/mudm/include
+%dir %{_base_dir}/mudm/src
+%dir %{_base_dir}/mudm/ras
+%dir %{_base_dir}/mudm/ras/metadata
+%dir %{_base_dir}/mudm/lib
+%dir %{_base_dir}/mudm/lib/cnk
+%dir %{_base_dir}/mudm/docs
+%dir %{_base_dir}/mudm/docs/external
+%dir %{_base_dir}/mudm/docs/external/html
 
-%{_base_dir}/mudm
-
+%defattr(-,root,root,-)
+%{_base_dir}/mudm/include/*
+%{_base_dir}/mudm/src/*
+%{_base_dir}/mudm/ras/metadata/*xml
+%{_base_dir}/mudm/lib/cnk/*
+%{_base_dir}/mudm/docs/external/html/*

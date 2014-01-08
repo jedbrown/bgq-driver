@@ -107,20 +107,17 @@ Futex_State_t* Futex_findTableEntry(Futex_t* futexAddress, int isShared, int all
     int i;
 
     Futex_State_t *futex_table;
-    uint32_t futex_table_size;
     if (isShared)
     {
         futex_table = NodeState.Futex_Table_Shared;
-        futex_table_size = NUM_FUTEX;
     }
     else
     {
         futex_table = GetMyProcess()->Futex_Table_Private;
-        futex_table_size = GetMyProcess()->futexTableSize;
     }
     // Find the entry in the futex table corresponding to the futex's
     // virtual (user) address:
-    for ( i = 0 ; (i < futex_table_size) && !result ; i++ )
+    for ( i = 0 ; (i < NUM_FUTEX) && !result ; i++ )
     {
         if ( futex_table[i].futex_vaddr == futexAddress )
         {
@@ -131,7 +128,7 @@ Futex_State_t* Futex_findTableEntry(Futex_t* futexAddress, int isShared, int all
     // If it isnt there, then allocate one:
     if ( !result && allocateIfNecessary)
     {
-        for (i = 0; (i < futex_table_size) && !result; i++)
+        for (i = 0; (i < NUM_FUTEX) && !result; i++)
         {
             if (futex_table[i].futex_vaddr == 0)
             {
@@ -571,7 +568,7 @@ uint64_t Futex_Wake( uint32_t op_and_flags, Futex_t* futex_vaddr, int max_to_wak
         {
             TRACE( TRACE_Futex, ("(E) Futex_Wake[%d]: SYSTEM ERROR: not futex table entries available.", thd_index));
             Lock_AtomicRelease(isShared, my_turn);
-            return CNK_RC_FAILURE(EAGAIN); /// \todo what to return here?
+            return CNK_RC_FAILURE(EAGAIN); 
         }
     }
 

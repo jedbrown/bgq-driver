@@ -52,6 +52,49 @@ void Kernel_Lock(Lock_Atomic_t *pLock)
     }
     isync();
 }
+
+
+int Kernel_Lock_WithTimeout(Lock_Atomic_t *pLock, uint64_t microseconds) 
+{
+    uint64_t my_unique_index = ProcessorID() + 1;
+    uint64_t cyclesPerMicro = GetPersonality()->Kernel_Config.FreqMHz;
+    uint64_t timeout_cycles = microseconds * cyclesPerMicro;
+    uint64_t check_frequency = 1000;
+    uint32_t freeValue = 0;
+    uint64_t startTime = GetTimeBase();
+    // try to obtain the lock
+    while (1)
+    {
+        if (compare_and_swap(pLock,             // lockword
+                             &freeValue,        // value is zero when lock is not held
+                             my_unique_index )) // store our thread_index+1 to indicate we own the lock
+        {
+            break; // break out of the the while loop. We now own the lock
+        }
+        else
+        {
+            // Spin at a low priority until lock is released or timeout occurs
+            ThreadPriority_Low();
+            while (pLock->atom) {
+                if (!check_frequency--)
+                {
+                    // Did we exceed the timeout value?
+                    if ((GetTimeBase() - startTime) > timeout_cycles)
+                    {
+                        ThreadPriority_High(); // Use high priority while we are holding the kernel lock
+                        return -1;
+                    }
+                    check_frequency = 1000; // Reload the check frequency
+                }
+            }
+            ThreadPriority_High(); // Use high priority while we are holding the kernel lock
+            freeValue = 0;
+        }
+    }
+    isync();
+    return 0;
+}
+
 void Kernel_Unlock(Lock_Atomic_t *pLock) 
 {
     ppc_msync();
@@ -122,7 +165,7 @@ void Kernel_Barrier(BarrierScope_t scope)
           break;
        case Barrier_HwthreadsInProcess:
           // select dword and number to rendezvous
-          pProc = GetMyProcess();
+          pProc = GetProcessByProcessorID(ProcessorID());
           pLock = &pProc->processBarrier; 
           num = pProc->HWThread_Count;
           break;

@@ -56,8 +56,10 @@ void File_InitFS(void)
     FSMAKE(FD_PERSIST_MEM, persistmemFS);
     FSMAKE(FD_LOCAL, localFS);
     FSMAKE(FD_MEMFILE, memFS);
-    FSMAKE(FD_CONSOLE, sastdioFS);    
-
+    FSMAKE(FD_CONSOLE, sastdioFS);
+    FSMAKE(FD_PROC_MEM, procFS);
+    
+    
     if (Personality_IsJTagConsole())
     {
         FSDEFINE(FD_STDOUT, FD_CONSOLE);
@@ -71,6 +73,7 @@ void File_InitFS(void)
         FSMAKE(FD_STDIN, stdioFS);
         FSDEFINE(FD_STDOUT, FD_STDIN);
         FSDEFINE(FD_STDERR, FD_STDIN);
+        FSMAKE(FD_RDMA, rdmaFS);
     }
     else 
     {
@@ -80,6 +83,20 @@ void File_InitFS(void)
         }
     }
 
+#if CONFIG_PRINTFSSIZE
+#define PRINTSIZE(name) printf("sizeof(%s) = %ld\n", #name, sizeof(name));
+    PRINTSIZE(virtFS);
+    PRINTSIZE(sysioFS);
+    PRINTSIZE(sastdioFS);
+    PRINTSIZE(stdioFS);
+    PRINTSIZE(sharedmemFS);
+    PRINTSIZE(mamboFS);
+    PRINTSIZE(memFS);
+    PRINTSIZE(persistmemFS);
+    PRINTSIZE(localFS);
+    PRINTSIZE(procFS);
+    PRINTSIZE(rdmaFS);
+#endif
     return;
 }
 
@@ -137,7 +154,7 @@ int File_JobCleanup(void)
 /*
  * Function to return the file system pointer associated with a path name.
  */
-virtFS*  File_GetFSPtrFromPath( char* pathname )
+virtFS*  File_GetFSPtrFromPath( const char* pathname )
 {
     AppProcess_t *app = GetMyProcess();
     CNK_Descriptors_t *pFD = &(app->App_Descriptors);

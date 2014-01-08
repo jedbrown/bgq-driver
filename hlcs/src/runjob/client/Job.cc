@@ -59,7 +59,6 @@ Job::Job(
     _stdin(),
     _stdout(),
     _stderr(),
-    _proctablePrompt(),
     _exitStatus( exitStatus ),
     _id( getpid() ), // id is our PID until job starts
     _debugger( Debugger::create(io_service) )
@@ -330,10 +329,16 @@ Job::debug(
         mux->write( start );
     } else {
         // wait for user to start job
-        _proctablePrompt = ProctablePrompt::create( _io_service, _mux, _id, _status );
-        _proctablePrompt->start(
-                Message::get<message::Proctable>( msg )
+        const ProctablePrompt::Ptr prompt(
+                ProctablePrompt::create( _io_service, _mux, _id, _status )
                 );
+        if ( prompt ) {
+            prompt->start(
+                    Message::get<message::Proctable>( msg )
+                    );
+        } else {
+            LOG_DEBUG_MSG( "did not create proctable prompt" );
+        }
     }
 }
 

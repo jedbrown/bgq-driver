@@ -52,7 +52,8 @@ The user must have hardware READ authority.
   "prepareTime": &quot;<i>\ref timestampFormat "timestamp"</i>&quot;,
   "endTime": &quot;<i>\ref timestampFormat "timestamp"</i>&quot;,  // optional
   "prepareLog": &quot;<i>string</i>&quot;,  // optional
-  "endLog": &quot;<i>string</i>&quot;  // optional
+  "endLog": &quot;<i>string</i>&quot;,  // optional
+  "attentionMessages": &quot;<i>string</i>&quot;  // optional -- new for V1R2M0
 }
 </pre>
 
@@ -217,39 +218,17 @@ void ServiceAction::_doGet()
 
     }
 
-    auto conn_ptr(dbConnectionPool::getConnection());
 
-    string sql = string() + "SELECT * FROM " + DBTServiceaction().getTableName() + " WHERE " + DBTServiceaction::ID_COL + " = ?";
+    _service_actions.getAttentionMessages(
+            id_str,
+            _getStrand().wrap( boost::bind(
+                    &ServiceAction::_gotAttentionMessages, this,
+                    capena::server::AbstractResponder::shared_from_this(),
+                    id,
+                    _1
+                ) )
+        );
 
-    cxxdb::QueryStatementPtr stmt_ptr(conn_ptr->prepareQuery( sql, list_of( "id" ) ));
-
-    stmt_ptr->parameters()["id"].cast( id );
-
-    cxxdb::ResultSetPtr rs_ptr(stmt_ptr->execute());
-
-    if ( ! rs_ptr->fetch() ) {
-        BOOST_THROW_EXCEPTION( Error(
-                boost::str( boost::format( "Could not get details for service action %1% because the service action does not exist." ) % id_str ),
-                "getServiceActionDetails", "notFound", error_data,
-                capena::http::Status::NotFound
-            ) );
-    }
-
-
-    const cxxdb::Columns& cols(rs_ptr->columns());
-
-    json::ObjectValue obj_val;
-    json::Object &obj(obj_val.get());
-
-    ServiceActions::setCommonFields( obj, cols );
-    // Turns out there are no extra fields for service action details.
-
-    auto &response(_getResponse());
-
-    response.setContentTypeJson();
-    response.headersComplete();
-
-    json::Formatter()( obj_val, response.out() );
 }
 
 
@@ -379,6 +358,61 @@ void ServiceAction::_doPost( json::ConstValuePtr val_ptr )
 
     }
 
+}
+
+
+void ServiceAction::_gotAttentionMessages(
+        capena::server::ResponderPtr /*responder_ptr*/,
+        uint64_t id,
+        const std::string& attention_messages
+    )
+{
+    try {
+
+        Error::Data error_data;
+        error_data["id"] = lexical_cast<string>( id );
+
+
+        auto conn_ptr(dbConnectionPool::getConnection());
+
+        string sql = string() + "SELECT * FROM " + DBTServiceaction().getTableName() + " WHERE " + DBTServiceaction::ID_COL + " = ?";
+
+        cxxdb::QueryStatementPtr stmt_ptr(conn_ptr->prepareQuery( sql, list_of( "id" ) ));
+
+        stmt_ptr->parameters()["id"].cast( id );
+
+        cxxdb::ResultSetPtr rs_ptr(stmt_ptr->execute());
+
+        if ( ! rs_ptr->fetch() ) {
+            BOOST_THROW_EXCEPTION( Error(
+                    boost::str( boost::format( "Could not get details for service action %1% because the service action does not exist." ) % id ),
+                    "getServiceActionDetails", "notFound", error_data,
+                    capena::http::Status::NotFound
+                ) );
+        }
+
+
+        const cxxdb::Columns& cols(rs_ptr->columns());
+
+        json::ObjectValue obj_val;
+        json::Object &obj(obj_val.get());
+
+        ServiceActions::setCommonFields( obj, cols );
+
+        if ( ! attention_messages.empty() ) {
+            obj.set( "attentionMessages", attention_messages );
+        }
+
+        auto &response(_getResponse());
+
+        response.setContentTypeJson();
+        response.headersComplete();
+
+        json::Formatter()( obj_val, response.out() );
+
+    } catch ( std::exception& e ) {
+        _handleError( e );
+    }
 }
 
 

@@ -29,6 +29,7 @@
  */
 
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -36,6 +37,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <errno.h>
 #include <hwi/include/bqc/MU_Addressing.h>
 #include <hwi/include/bqc/MU_Fifo.h>
 #include <hwi/include/bqc/MU_Macros.h>
@@ -142,11 +144,20 @@ uint8_t _batId;
 uint16_t _globalBatId;
 
 int _subRemoteGetSize;
+int _subRemoteGetSizeBase;
+int _subRemoteGetSizeThreshold1, _subRemoteGetSizeThreshold2, _subRemoteGetSizeThresholdRangeSize;
+int _subRemoteGetSizeMultiplyingFactor1, _subRemoteGetSizeMultiplyingFactor2, _subRemoteGetSizeMultiplyingFactorRangeSize;
 int _maxBytesInNetwork;
+int _maxBytesInNetworkBase;
+int _maxBytesInNetworkThreshold1, _maxBytesInNetworkThreshold2, _maxBytesInNetworkThresholdRangeSize;
+int _maxBytesInNetworkMultiplyingFactor1, _maxBytesInNetworkMultiplyingFactor2, _maxBytesInNetworkMultiplyingFactorRangeSize;
 int _numSubMessageCounters;
 int _numCounters;
 int _paceRgets;
 int _useWakeup;
+int _randomZone;
+int _randomThreshold;
+int _doSubRegionCalculations;
 
 /* There are entries in the following arrays for various block sizes as follows:
  * [0]:       Racks <  2
@@ -163,26 +174,106 @@ int _useWakeup;
  * NOTE:  If you change the values in these arrays, please update 
  *        agents/doc/comm/README
  */
-static int _subRemoteGetSizeDefaults[10]=  { 16384, /* Less than 2 racks */
-                                             16384, /* Less than 4 racks */
-                                             8192,  /* Less than 8 racks */
-                                             8192,  /* Less than 16 racks */
-                                             8192,  /* Less than 32 racks */
-                                             8192,  /* Less than 48 racks */
-                                             8192,  /* Less than 64 racks */
-                                             8192,  /* Less than 80 racks */
-                                             8192,  /* Less than 96 racks */
-                                             8192 };/* 96 racks and above */
-static int _maxBytesInNetworkDefaults[10]= { 65536,  /* Less than 2 racks */
-                                             65536,  /* Less than 4 racks */
-                                             32768,  /* Less than 8 racks */
-                                             24576,  /* Less than 16 racks */
-                                             24576,  /* Less than 32 racks */
-                                             24576,  /* Less than 48 racks */
-                                             24576,  /* Less than 64 racks */
-                                             24576,  /* Less than 80 racks */
-                                             24576,  /* Less than 96 racks */
-                                             24576 };/* 96 racks and above */
+static int _subRemoteGetSizeBaseDefaults[10]=  { 16384, /* Less than 2 racks */
+                                                 16384, /* Less than 4 racks */
+                                                 8192,  /* Less than 8 racks */
+                                                 8192,  /* Less than 16 racks */
+                                                 8192,  /* Less than 32 racks */
+                                                 8192,  /* Less than 48 racks */
+                                                 8192,  /* Less than 64 racks */
+                                                 8192,  /* Less than 80 racks */
+                                                 8192,  /* Less than 96 racks */
+                                                 8192 };/* 96 racks and above */
+static int _subRemoteGetSizeThreshold1Defaults[10]= { 101,  /* Less than 2 racks */
+                                                      101,  /* Less than 4 racks */
+                                                      101,  /* Less than 8 racks */
+                                                      101,  /* Less than 16 racks */
+                                                      101,  /* Less than 32 racks */
+                                                      101,  /* Less than 48 racks */
+                                                      101,  /* Less than 64 racks */
+                                                      101,  /* Less than 80 racks */
+                                                      101,  /* Less than 96 racks */
+                                                      101 };/* 96 racks and above */
+static int _subRemoteGetSizeThreshold2Defaults[10]= { 101,  /* Less than 2 racks */
+                                                      101,  /* Less than 4 racks */
+                                                      101,  /* Less than 8 racks */
+                                                      101,  /* Less than 16 racks */
+                                                      101,  /* Less than 32 racks */
+                                                      101,  /* Less than 48 racks */
+                                                      101,  /* Less than 64 racks */
+                                                      101,  /* Less than 80 racks */
+                                                      101,  /* Less than 96 racks */
+                                                      101 };/* 96 racks and above */
+static int _subRemoteGetSizeMultiplyingFactor1Defaults[10]= { 1,  /* Less than 2 racks */
+                                                              1,  /* Less than 4 racks */
+                                                              1,  /* Less than 8 racks */
+                                                              1,  /* Less than 16 racks */
+                                                              1,  /* Less than 32 racks */
+                                                              1,  /* Less than 48 racks */
+                                                              1,  /* Less than 64 racks */
+                                                              1,  /* Less than 80 racks */
+                                                              1,  /* Less than 96 racks */
+                                                              1 };/* 96 racks and above */
+static int _subRemoteGetSizeMultiplyingFactor2Defaults[10]= { 1,  /* Less than 2 racks */
+                                                              1,  /* Less than 4 racks */
+                                                              1,  /* Less than 8 racks */
+                                                              1,  /* Less than 16 racks */
+                                                              1,  /* Less than 32 racks */
+                                                              1,  /* Less than 48 racks */
+                                                              1,  /* Less than 64 racks */
+                                                              1,  /* Less than 80 racks */
+                                                              1,  /* Less than 96 racks */
+                                                              1 };/* 96 racks and above */
+static int _maxBytesInNetworkBaseDefaults[10]= { 65536,  /* Less than 2 racks */
+                                                 65536,  /* Less than 4 racks */
+                                                 32768,  /* Less than 8 racks */
+                                                 24576,  /* Less than 16 racks */
+                                                 24576,  /* Less than 32 racks */
+                                                 24576,  /* Less than 48 racks */
+                                                 24576,  /* Less than 64 racks */
+                                                 24576,  /* Less than 80 racks */
+                                                 24576,  /* Less than 96 racks */
+                                                 24576 };/* 96 racks and above */
+static int _maxBytesInNetworkThreshold1Defaults[10]= { 101,  /* Less than 2 racks */
+                                                       101,  /* Less than 4 racks */
+                                                       101,  /* Less than 8 racks */
+                                                       101,  /* Less than 16 racks */
+                                                       101,  /* Less than 32 racks */
+                                                       101,  /* Less than 48 racks */
+                                                       101,  /* Less than 64 racks */
+                                                       101,  /* Less than 80 racks */
+                                                       101,  /* Less than 96 racks */
+                                                       101 };/* 96 racks and above */
+static int _maxBytesInNetworkThreshold2Defaults[10]= { 101,  /* Less than 2 racks */
+                                                       101,  /* Less than 4 racks */
+                                                       101,  /* Less than 8 racks */
+                                                       101,  /* Less than 16 racks */
+                                                       101,  /* Less than 32 racks */
+                                                       101,  /* Less than 48 racks */
+                                                       101,  /* Less than 64 racks */
+                                                       101,  /* Less than 80 racks */
+                                                       101,  /* Less than 96 racks */
+                                                       101 };/* 96 racks and above */
+static int _maxBytesInNetworkMultiplyingFactor1Defaults[10]= { 1,  /* Less than 2 racks */
+                                                               1,  /* Less than 4 racks */
+                                                               1,  /* Less than 8 racks */
+                                                               1,  /* Less than 16 racks */
+                                                               1,  /* Less than 32 racks */
+                                                               1,  /* Less than 48 racks */
+                                                               1,  /* Less than 64 racks */
+                                                               1,  /* Less than 80 racks */
+                                                               1,  /* Less than 96 racks */
+                                                               1 };/* 96 racks and above */
+static int _maxBytesInNetworkMultiplyingFactor2Defaults[10]= { 1,  /* Less than 2 racks */
+                                                               1,  /* Less than 4 racks */
+                                                               1,  /* Less than 8 racks */
+                                                               1,  /* Less than 16 racks */
+                                                               1,  /* Less than 32 racks */
+                                                               1,  /* Less than 48 racks */
+                                                               1,  /* Less than 64 racks */
+                                                               1,  /* Less than 80 racks */
+                                                               1,  /* Less than 96 racks */
+                                                               1 };/* 96 racks and above */
 
 uint64_t _WACrangePA;
 uint64_t _WACrangeMask;
@@ -284,11 +375,24 @@ int setDefaultConfig()
   if ( systemSize <  4*1024 ) index = 1;
   if ( systemSize <  2*1024 ) index = 0;
 
-  /* Use the index to default the sub message size, max, and message size for pacing */
-  _subRemoteGetSize  = _subRemoteGetSizeDefaults[index];
-  _maxBytesInNetwork = _maxBytesInNetworkDefaults[index];
+  /* Use the index to default the sub message size and max defaults */
+  _subRemoteGetSize = _subRemoteGetSizeBase  = _subRemoteGetSizeBaseDefaults[index];
+  _subRemoteGetSizeThreshold1 = _subRemoteGetSizeThreshold1Defaults[index];
+  _subRemoteGetSizeThreshold2 = _subRemoteGetSizeThreshold2Defaults[index];
+  _subRemoteGetSizeThresholdRangeSize = _subRemoteGetSizeThreshold2 - _subRemoteGetSizeThreshold1 + 1;
+  _subRemoteGetSizeMultiplyingFactor1 = _subRemoteGetSizeMultiplyingFactor1Defaults[index];
+  _subRemoteGetSizeMultiplyingFactor2 = _subRemoteGetSizeMultiplyingFactor2Defaults[index];
+  _subRemoteGetSizeMultiplyingFactorRangeSize = _subRemoteGetSizeMultiplyingFactor2 - _subRemoteGetSizeMultiplyingFactor1 + 1;
 
-  TRACE((stderr,"%s() [%s:%d]: SystemSize=%zu, index=%zu, Default _subRemoteGetSize=%d, _maxBytesInNetwork=%d\n",__FUNCTION__,__FILE__,__LINE__, systemSize, index, _subRemoteGetSize, _maxBytesInNetwork));
+  _maxBytesInNetwork = _maxBytesInNetworkBase = _maxBytesInNetworkBaseDefaults[index];
+  _maxBytesInNetworkThreshold1 = _maxBytesInNetworkThreshold1Defaults[index];
+  _maxBytesInNetworkThreshold2 = _maxBytesInNetworkThreshold2Defaults[index];
+  _maxBytesInNetworkThresholdRangeSize = _maxBytesInNetworkThreshold2 - _maxBytesInNetworkThreshold1 + 1;
+  _maxBytesInNetworkMultiplyingFactor1 = _maxBytesInNetworkMultiplyingFactor1Defaults[index];
+  _maxBytesInNetworkMultiplyingFactor2 = _maxBytesInNetworkMultiplyingFactor2Defaults[index];
+  _maxBytesInNetworkMultiplyingFactorRangeSize = _maxBytesInNetworkMultiplyingFactor2 - _maxBytesInNetworkMultiplyingFactor1 + 1;
+
+  TRACE((stderr,"%s() [%s:%d]: SystemSize=%zu, index=%zu, Default _subRemoteGetSize=%d,%d:%d,%d:%d, _maxBytesInNetworkBase=%d,%d:%d,%d:%d\n",__FUNCTION__,__FILE__,__LINE__, systemSize, index, _subRemoteGetSizeBase, _subRemoteGetSizeThreshold1,  _subRemoteGetSizeThreshold2,  _subRemoteGetSizeMultiplyingFactor1,  _subRemoteGetSizeMultiplyingFactor2, _maxBytesInNetworkBase, _maxBytesInNetworkThreshold1, _maxBytesInNetworkThreshold2, _maxBytesInNetworkMultiplyingFactor1, _maxBytesInNetworkMultiplyingFactor2));
 
   _requestQueueSize = COMM_AGENT_REQUEST_QUEUE_SIZE;
   _injFifoSize = COMM_AGENT_INJ_FIFO_SIZE;
@@ -296,10 +400,409 @@ int setDefaultConfig()
   _paceRgets = 1;
   _numCounters = COMM_AGENT_REMOTE_GET_PACING_NUM_COUNTERS;
   _useWakeup = 1;
+  _randomZone = 0;
+  _randomThreshold = 101;
 
   return 0;
 }
 
+
+/*
+ * \brief Get RGETPACINGRANDOMZONE env var
+ *
+ * This function parses the env var and returns the values.  The env var syntax is:
+ *
+ * string threshold,zone
+ *
+ * If the env var is specified, the output parameters are set.
+ * Otherwise, the output parameters are unchanged.
+ *
+ * \param[in]   string  Env var name
+ * \param[out]  threshold  Pointer to threshold
+ * \param[out]  zone       Pointer to zone
+ */
+static
+void getRandomZoneEnvVar ( const char *string,
+                           int *threshold,
+                           int *zone )
+{
+  int rc;
+
+  // Get the env var.
+  char *envVar;
+  envVar = getenv ( string );
+
+  // If the env var is not specified, return with values unchanged.
+  if ( envVar == NULL ) 
+  {
+    return;
+  }
+
+  // Find out how long the env var string is, so we can make a copy of it
+  unsigned int envVarLen = 0;
+  while ( envVar[envVarLen++] != '\0' );
+
+  // Allocate space for a copy of the colon and comma-delimited list of values
+  char *envVarCopy;
+  rc = posix_memalign ((void **)&envVarCopy, 8, envVarLen);
+  if ( rc )
+  {
+    fprintf(stderr,"Remote Get Pacing: Failed to allocate heap for env var\n");
+    assert ( rc == 0 );
+  }
+
+  // Copy the env var string into our writeable copy
+  unsigned int i;
+  for ( i=0; i<envVarLen; i++ )
+    envVarCopy[i] = envVar[i];
+
+  char *currentChar = envVarCopy;
+
+  // Parse the env var:  int T,int Z
+
+  // First, handle the "threshold" parameter.
+  char *v;           // "v" for "value"
+  unsigned int vLen; // Length of value
+
+  v = currentChar;   // Point to first character of the "base" value.
+  vLen = 0;
+  while ( ( *currentChar != ','  ) &&
+          ( *currentChar != '\0' ) )
+  {
+    currentChar++;
+    vLen++;
+  }
+
+  // If there is no "threshold" value...
+  if ( vLen == 0 )
+  {
+    // If remainder of env var is empty, return.
+    if ( *currentChar == '\0' )
+    {
+      return;
+    }
+
+    // "threshold" value is empty and we hit a comma.  Don't change caller's "threshold" value.
+    currentChar++;
+  }
+  else
+  {
+    // "base" value is not empty.  Extract it.
+    *currentChar = '\0';      // Null terminate the value string.
+    errno=0;
+    *threshold = strtol( v, NULL, 10 );
+    if ( (errno) || (*threshold < 0) || (*threshold > 101) )
+    {
+      fprintf(stderr,"Remote Get Pacing: %s env var has incorrect threshold value\n",string);
+      assert ( 0 );
+    }
+
+    TRACE((stderr,"%s threshold overridden to %d\n",string,*threshold));
+
+    currentChar++;
+  }
+
+  // Next, process the zone value.
+  v = currentChar;   // Point to first character of the "zone" value.
+  vLen = 0;
+  while ( *currentChar != '\0' )
+  {
+    currentChar++;
+    vLen++;
+  }
+
+  // If there is no "zone" value...
+  if ( vLen == 0 )
+  {
+      return;
+  }
+  else
+  {
+    // "zone" value is not empty.  Extract it.
+    *currentChar = '\0';      // Null terminate the value string.
+    errno=0;
+    *zone = strtol( v, NULL, 10 );
+    if ( (errno) || (*zone < 0) || (*zone > 3) )
+    {
+      fprintf(stderr,"Remote Get Pacing: %s env var has incorrect zone value\n",string);
+      assert ( 0 );
+    }
+
+    TRACE((stderr,"%s zone overridden to %d\n",string,*zone));
+
+    currentChar++;
+  }
+}
+
+/*
+ * \brief Get RGETPACINGSUBSIZE or RGETPACINGMAX env vars
+ *
+ * These two env vars have the same syntax.  This function parses
+ * the env var and returns the values.  The env var syntax is:
+ *
+ * string base,threshold1:threshold2,multiplyingFactor1:multiplyingFactor2
+ *
+ * If the env var is specified, the output parameters are set.
+ * Otherwise, the output parameters are unchanged.
+ *
+ * \param[in]   string  Env var name
+ * \param[out]  base    Pointer to the base value
+ * \param[out]  threshold1  Pointer to threshold1
+ * \param[out]  threshold1  Pointer to threshold1
+ * \param[out]  threshold2  Pointer to threshold2
+ * \param[out]  thresholdRangeSize  Pointer to the size of the threshold range
+ * \param[out]  multiplyingFactor1  Pointer to multiplyingFactor1
+ * \param[out]  multiplyingFactor2  Pointer to multiplyingFactor2
+ * \param[out]  multiplyingFactorRangeSize  Pointer to the size of the multiplying factor range
+ */
+static
+void getRgetPacingSubSizeOrMaxEnvVar ( const char *string,
+                                       int *base,
+                                       int *threshold1, 
+                                       int *threshold2, 
+                                       int *thresholdRangeSize,
+                                       int *multiplyingFactor1,
+                                       int *multiplyingFactor2,
+                                       int *multiplyingFactorRangeSize )
+{
+  int rc;
+
+  // Get the env var.
+  char *envVar;
+  envVar = getenv ( string );
+
+  // If the env var is not specified, return with values unchanged.
+  if ( envVar == NULL ) 
+  {
+    return;
+  }
+
+  // Find out how long the env var string is, so we can make a copy of it
+  unsigned int envVarLen = 0;
+  while ( envVar[envVarLen++] != '\0' );
+
+  // Allocate space for a copy of the colon and comma-delimited list of values
+  char *envVarCopy;
+  rc = posix_memalign ((void **)&envVarCopy, 8, envVarLen);
+  if ( rc )
+  {
+    fprintf(stderr,"Remote Get Pacing: Failed to allocate heap for env var\n");
+    assert ( rc == 0 );
+  }
+
+  // Copy the env var string into our writeable copy
+  unsigned int i;
+  for ( i=0; i<envVarLen; i++ )
+    envVarCopy[i] = envVar[i];
+
+  char *currentChar = envVarCopy;
+
+  // Parse the env var:  int B,int T1:int T2,int M1:int M2
+
+  // First, handle the "base" parameter.
+  char *v;           // "v" for "value"
+  unsigned int vLen; // Length of value
+  v = currentChar;   // Point to first character of the "base" value.
+  vLen = 0;
+  while ( ( *currentChar != ','  ) &&
+          ( *currentChar != '\0' ) )
+  {
+    currentChar++;
+    vLen++;
+  }
+
+  // If there is no "base" value...
+  if ( vLen == 0 )
+  {
+    // If remainder of env var is empty, return.
+    if ( *currentChar == '\0' )
+    {
+      return;
+    }
+
+    // "base" value is empty and we hit a comma.  Don't change caller's "base" value.
+    currentChar++;
+  }
+  else
+  {
+    // "base" value is not empty.  Extract it.
+    *currentChar = '\0';      // Null terminate the value string.
+    errno=0;
+    *base = strtol( v, NULL, 10 );
+    if ( (errno) || (*base < 0) )
+    {
+      fprintf(stderr,"Remote Get Pacing: %s env var has incorrect base value\n",string);
+      assert ( 0 );
+    }
+
+    TRACE((stderr,"%s base overridden to %d\n",string,*base));
+
+    currentChar++;
+  }
+
+  //
+  // Next, handle the Threshold range in this format: int:int
+  v = currentChar;   // Point to first character of the range
+  vLen = 0;
+  while ( ( *currentChar != ','  ) &&
+          ( *currentChar != ':'  ) &&
+          ( *currentChar != '\0' ) )
+  {
+    currentChar++;
+    vLen++;
+  }
+
+  // If there is no range value...
+  if ( vLen == 0 )
+  {
+    // If entire env var is empty, return.
+    if ( *currentChar == '\0' )
+    {
+      return;
+    }
+
+    // If start of range is empty, report error.
+    if ( *currentChar == ':' )
+    {
+      fprintf(stderr,"Remote Get Pacing: %s env var has incorrect threshold value\n",string);
+      assert ( 0 );
+    }
+
+    // Range is empty and we hit a comma.  Use defaults for range.
+    currentChar++;
+  }
+  else
+  {
+    // Range is not empty.  Extract the start of the range.
+    *currentChar = '\0';      // Null terminate the value string.
+    errno=0;
+    *threshold1 = strtol( v, NULL, 10 );
+
+    if ( (errno) || (*threshold1 < 0) || (*threshold1 > 101) )
+    {
+      fprintf(stderr,"Remote Get Pacing: %s env var has incorrect threshold1 value\n",string);
+      assert ( 0 );
+    }
+
+    TRACE((stderr,"%s threshold1 overridden to %d\n",string,*threshold1));
+
+    // Get the value that ends the range.
+    currentChar++;
+    v = currentChar;   // Point to first character of the second range value
+    vLen = 0;
+    while ( ( *currentChar != ','  ) &&
+            ( *currentChar != '\0' ) )
+    {
+      currentChar++;
+      vLen++;
+    }
+
+    if ( vLen == 0 )
+    {
+      fprintf(stderr,"Remote Get Pacing: %s env var has incorrect threshold2 value\n",string);
+      assert ( 0 );
+    }
+      
+    // 2nd half of Range is not empty.  Extract the end of the range.
+    *currentChar = '\0';      // Null terminate the value string.
+    errno=0;
+    *threshold2 = strtol( v, NULL, 10 );
+
+    if ( (errno) || (*threshold2 < 0) || (*threshold2 < *threshold1) ||
+         ( ( *threshold1 != 101 ) && ( *threshold2 > 100 ) ) )
+    {
+      fprintf(stderr,"Remote Get Pacing: %s env var has incorrect threshold2 value\n",string);
+      assert ( 0 );
+    }
+
+    TRACE((stderr,"%s threshold2 overridden to %d\n",string,*threshold2));
+
+    currentChar++;
+
+    *thresholdRangeSize = *threshold2 - *threshold1 + 1;
+  }
+
+  //
+  // Next, handle the Multiplying Factor range in this format: int:int
+  v = currentChar;   // Point to first character of the range
+  vLen = 0;
+  while ( ( *currentChar != ','  ) &&
+          ( *currentChar != ':'  ) &&
+          ( *currentChar != '\0' ) )
+  {
+    currentChar++;
+    vLen++;
+  }
+
+  // If there is no range value...
+  if ( vLen == 0 )
+  {
+    // If entire env var is empty, return.
+    if ( *currentChar == '\0' )
+    {
+      return;
+    }
+
+    // If start of range is empty, report error.
+    if ( *currentChar == ':' )
+    {
+      fprintf(stderr,"Remote Get Pacing: %s env var has incorrect multiplying factor value\n",string);
+      assert ( 0 );
+    }
+
+    // Range is empty and we hit a comma.  Use defaults for range.
+    currentChar++;
+  }
+  else
+  {
+    // Range is not empty.  Extract the start of the range.
+    *currentChar = '\0';      // Null terminate the value string.
+    errno=0;
+    *multiplyingFactor1 = strtol( v, NULL, 10 );
+
+    if ( (errno) || (*multiplyingFactor1 < 0) )
+    {
+      fprintf(stderr,"Remote Get Pacing: %s env var has incorrect multiplyingFactor1 value\n",string);
+      assert ( 0 );
+    }
+
+    TRACE((stderr,"%s multiplyingFactor1 overridden to %d\n",string,*multiplyingFactor1));
+
+    // Get the value that ends the range.
+    currentChar++;
+    v = currentChar;   // Point to first character of the second range value
+    vLen = 0;
+    while ( ( *currentChar != ','  ) &&
+            ( *currentChar != '\0' ) )
+    {
+      currentChar++;
+      vLen++;
+    }
+
+    if ( vLen == 0 )
+    {
+      fprintf(stderr,"Remote Get Pacing: %s env var has incorrect multiplyingFactor2 value\n",string);
+      assert ( 0 );
+    }
+      
+    // 2nd half of Range is not empty.  Extract the end of the range.
+    *currentChar = '\0';      // Null terminate the value string.
+    errno=0;
+    *multiplyingFactor2 = strtol( v, NULL, 10 );
+
+    if ( (errno) || (*multiplyingFactor2 < 0) || (*multiplyingFactor2 < *multiplyingFactor1) )
+    {
+      fprintf(stderr,"Remote Get Pacing: %s env var has incorrect multiplyingFactor2 value\n",string);
+      assert ( 0 );
+    }
+
+    TRACE((stderr,"%s multiplyingFactor2 overridden to %d\n",string,*multiplyingFactor2));
+
+    currentChar++;
+
+    *multiplyingFactorRangeSize = *multiplyingFactor2 - *multiplyingFactor1 + 1;
+  }
+}
 
 /**
  * \brief Get Environment Variables
@@ -335,22 +838,35 @@ void getEnvVars ()
   if ( _recFifoSize < BGQ_MU_MIN_RECFIFO_SIZE_IN_BYTES )
     _recFifoSize = BGQ_MU_MIN_RECFIFO_SIZE_IN_BYTES;
   _recFifoSize = (_recFifoSize + 31) & ~(31); /* Round to 32B boundary */
-
+  
   TRACE((stderr,"%s() [%s:%d]: RecFifo size is %d\n",__FUNCTION__,__FILE__,__LINE__,_recFifoSize));
-
+  
   /* Override _subRemoteGetSize */
-  ENV_Int( getenv("COMMAGENT_RGETPACINGSUBSIZE"), &_subRemoteGetSize );
-  if ( _subRemoteGetSize < 1 )
-    _subRemoteGetSize = 1;
-
-  TRACE((stderr,"%s() [%s:%d]: Sub-remote-get-size is %d\n",__FUNCTION__,__FILE__,__LINE__,_subRemoteGetSize));
+  getRgetPacingSubSizeOrMaxEnvVar ( "COMMAGENT_RGETPACINGSUBSIZE",
+                                    &_subRemoteGetSizeBase,
+                                    &_subRemoteGetSizeThreshold1, 
+                                    &_subRemoteGetSizeThreshold2, 
+                                    &_subRemoteGetSizeThresholdRangeSize,
+                                    &_subRemoteGetSizeMultiplyingFactor1,
+                                    &_subRemoteGetSizeMultiplyingFactor2,
+                                    &_subRemoteGetSizeMultiplyingFactorRangeSize );
 
   /* Override _maxBytesInNetwork */
-  ENV_Int( getenv("COMMAGENT_RGETPACINGMAX"), &_maxBytesInNetwork );
-  if ( _maxBytesInNetwork < 1 )
-    _maxBytesInNetwork = 1;
-  if ( _maxBytesInNetwork < _subRemoteGetSize ) _maxBytesInNetwork = _subRemoteGetSize;
+  getRgetPacingSubSizeOrMaxEnvVar ( "COMMAGENT_RGETPACINGMAX",
+                                    &_maxBytesInNetworkBase,
+                                    &_maxBytesInNetworkThreshold1, 
+                                    &_maxBytesInNetworkThreshold2, 
+                                    &_maxBytesInNetworkThresholdRangeSize,
+                                    &_maxBytesInNetworkMultiplyingFactor1,
+                                    &_maxBytesInNetworkMultiplyingFactor2,
+                                    &_maxBytesInNetworkMultiplyingFactorRangeSize );
 
+  if ( _maxBytesInNetworkBase < _subRemoteGetSizeBase ) _maxBytesInNetworkBase = _subRemoteGetSizeBase;
+
+  _maxBytesInNetwork = _maxBytesInNetworkBase;
+  _subRemoteGetSize = _subRemoteGetSizeBase;
+  
+  TRACE((stderr,"%s() [%s:%d]: Sub-remote-get-size is %d\n",__FUNCTION__,__FILE__,__LINE__,_subRemoteGetSize));
   TRACE((stderr,"%s() [%s:%d]: Max bytes in network is %d\n",__FUNCTION__,__FILE__,__LINE__,_maxBytesInNetwork));
 
   /* Override _paceRgets */
@@ -359,14 +875,21 @@ void getEnvVars ()
   TRACE((stderr,"%s() [%s:%d]: Pace remote gets is %d\n",__FUNCTION__,__FILE__,__LINE__,_paceRgets));
 
   /* Calculate the number of sub-message reception counters used for pacing. */
-  _numSubMessageCounters = _maxBytesInNetwork / _subRemoteGetSize;
+  _numSubMessageCounters = _maxBytesInNetworkBase / _subRemoteGetSizeBase;
 
-  TRACE((stderr,"%s() [%s:%d]: Num sub-message counters is %d\n",__FUNCTION__,__FILE__,__LINE__,_numSubMessageCounters));
+  /* Calculate the max possible number of sub-message reception counters used for pacing */
+  int maxNumSubMessageCounters = (_maxBytesInNetworkBase * _maxBytesInNetworkMultiplyingFactor2) / _subRemoteGetSizeBase;  
+  
+  /* Calculate the size of the subMessageSize and maxBytesInNetwork threshold ranges */
+  _subRemoteGetSizeThresholdRangeSize = (_subRemoteGetSizeThreshold2 - _subRemoteGetSizeThreshold1 + 1);
+  _maxBytesInNetworkThresholdRangeSize = (_maxBytesInNetworkThreshold2 - _maxBytesInNetworkThreshold1 + 1);
+
+  TRACE((stderr,"%s() [%s:%d]: Num sub-message counters is actual: %d, max: %d.\n",__FUNCTION__,__FILE__,__LINE__,_numSubMessageCounters,maxNumSubMessageCounters));
 
   /* Override _numCounters */
   ENV_Int( getenv("COMMAGENT_NUMRGETS"), &_numCounters );
-  if ( _numCounters < _numSubMessageCounters )
-    _numCounters = _numSubMessageCounters;
+  if ( _numCounters < maxNumSubMessageCounters )
+    _numCounters = maxNumSubMessageCounters;
 
   TRACE((stderr,"%s() [%s:%d]: Number of rgets (counters) is %d\n",__FUNCTION__,__FILE__,__LINE__,_numCounters));
 
@@ -374,6 +897,29 @@ void getEnvVars ()
   ENV_Int( getenv("COMMAGENT_WAKEUP"), &_useWakeup );
 
   TRACE((stderr,"%s() [%s:%d]: Use Wakeup Unit is %d\n",__FUNCTION__,__FILE__,__LINE__,_useWakeup));
+
+  /* Override _randomThreshold and _randomZone */
+  getRandomZoneEnvVar ( "COMMAGENT_RGETPACINGRANDOMZONE",
+                        &_randomThreshold,
+                        &_randomZone ); 
+
+  switch (_randomZone)
+  {
+    case 0:  { _randomZone = MUHWI_PACKET_ZONE_ROUTING_0; break; }
+    case 1:  { _randomZone = MUHWI_PACKET_ZONE_ROUTING_1; break; }
+    case 2:  { _randomZone = MUHWI_PACKET_ZONE_ROUTING_2; break; }
+    case 3:  { _randomZone = MUHWI_PACKET_ZONE_ROUTING_3; break; }
+    default: { _randomZone = MUHWI_PACKET_ZONE_ROUTING_0; break; }
+  }
+
+  if ( (_randomThreshold > 100) &&
+       (_subRemoteGetSizeThreshold1 > 100) &&
+       (_maxBytesInNetworkThreshold1 > 100) )
+    _doSubRegionCalculations = 0;
+  else
+    _doSubRegionCalculations = 1;
+
+  TRACE((stderr,"%s() [%s:%d]: doSubRegionCalculations is %d\n",__FUNCTION__,__FILE__,__LINE__,_doSubRegionCalculations));
 }
 
 

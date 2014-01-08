@@ -28,10 +28,14 @@
 #include "virtFS.h"
 #include <ramdisk/include/services/MessageHeader.h>
 #include <ramdisk/include/services/SysioMessages.h>
+#include <ramdisk/include/services/UserMessages.h>
 #include <cnk/include/Verbs.h>
 #include <inttypes.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <spi/include/kernel/sendx.h>
+
+      
 
 class sysioFS : public virtFS
 {
@@ -107,6 +111,7 @@ public:
    uint64_t pread64(int fd, void *buffer, size_t length, off64_t position);
    uint64_t pwrite64(int fd, const void *buffer, size_t length, off64_t position);
    uint64_t read(int fd, void *buffer, size_t length);
+   uint64_t readv(int fd, const struct iovec *iov, int iovcnt);
    uint64_t recv(int fd, void *buffer, size_t length, int flags);
    uint64_t recvfrom(int sockfd, void *buffer, size_t length, int flags, struct sockaddr *addr, socklen_t *addrlen);
    uint64_t readlink(const char *pathname, void *buffer, size_t length);
@@ -130,14 +135,73 @@ public:
    uint64_t writev(int fd, const struct iovec *iov, int iovcnt);
    uint64_t writeRdmaVirt(int fd, const void *buffer, size_t length);
 
+  //! \brief Send User Message to sysiod with expected User message back 
+  //! \param mInput is a char * alias for struct MsgInputs *
+  //! \return Return code.
+  int sendx(char * mInput);
 private:
+
+   //! \brief Initialize send message subregions in _outMessage 
+   void initSendHeaders()
+{
+   
+   for (int index=0;index< CONFIG_MAX_HWTHREADS  ;index++){
+     bgcios::MessageHeader *header = (bgcios::MessageHeader *)((uint64_t)_outMessageRegion.addr + (index *  bgcios::ImmediateMessageSize));
+     header->service = bgcios::SysioService;
+     header->version = bgcios::sysio::ProtocolVersion;
+     header->type = 0;
+     header->rank = 0;
+     header->sequenceId = 0;
+     header->returnCode = 0;
+     header->errorCode = 0;
+     header->length = sizeof(bgcios::MessageHeader);
+     header->jobId = 0;
+   }
+   return;
+}
+
+  //! \brief Send User Message to sysiod with expected User message back 
+  //! \param mInput is a char * alias for struct MsgInputs *
+  //! \return Return code.
+int sendxDataOnly(struct MsgInputs * mInput);
+int sendxDataPlus(struct MsgInputs * mInput);
+
+  //! \brief Update user message to sysiod protocol needs 
+  //! \param sendMessage is the user message needing update to the header to fulfill protocol considerations 
+  //! \param Protocol version number.
+  //! \param Type of message.
+  //! \param Service to process message.
+void fillUserHeader(bgcios::UserMessage * sendMessage, uint8_t  version=0, uint16_t type=0, uint8_t  service=bgcios::SysioUserService)
+{
+   sendMessage->header.service = service;
+   sendMessage->header.version = version;
+   sendMessage->header.type = type;
+   sendMessage->header.rank = GetMyProcess()->Rank;
+   uint32_t proc_ID = ProcessorID();    
+   sendMessage->header.sequenceId = (proc_ID << 24)|(0x00FFFFFF&_procSequenceId[proc_ID]++);
+   sendMessage->header.jobId = GetMyAppState()->JobID;
+
+   return;
+}
+
 
    //! \brief  Fill a message header with valid values.
    //! \param  header Pointer to message header.
    //! \param  type Message type value.
    //! \return Nothing.
 
-   void fillHeader(bgcios::MessageHeader *header, uint16_t type, size_t length);
+void fillHeader(bgcios::MessageHeader *header, uint16_t type, size_t length)
+{
+   header->service = bgcios::SysioService;
+   header->version = bgcios::sysio::ProtocolVersion;
+   header->type = type;
+   header->rank = GetMyProcess()->Rank;
+   uint32_t proc_ID = ProcessorID();    
+   header->sequenceId = (proc_ID << 24)|(0x00FFFFFF&_procSequenceId[proc_ID]++);
+   header->length = (uint32_t)length;
+   header->jobId = GetMyAppState()->JobID;
+   return;
+}
 
    //! \brief  Simple exchange of request and reply messages.
    //! \param  outMsg Pointer to outbound request message.
@@ -177,19 +241,16 @@ private:
    //! \return Address of receive buffer.
    //! \note   Each hardware thread is given its own area in the memory region for inbound messages.
 
-   uint64_t getMyFirstRecvBuffer(void)
+   uint64_t getRecvBuffer(int index)
    {
-      return (uint64_t)_inMessageRegion.addr + (ProcessorID() * 1024);
+      return (uint64_t)_inMessageRegion.addr + (index *  bgcios::ImmediateMessageSize);
    }
 
-   //! \brief  Get the address of the second receive buffer for this hardware thread.
-   //! \return Address of receive buffer.
-   //! \note   Each hardware thread is given its own area in the memory region for inbound messages.
-
-   uint64_t getMySecondRecvBuffer(void)
+     uint64_t getSendBuffer(int index)
    {
-      return (uint64_t)_inMessageRegion.addr + (ProcessorID() * 1024) + bgcios::ImmediateMessageSize;
+      return (uint64_t)_outMessageRegion.addr + (index *  bgcios::ImmediateMessageSize);
    }
+
 
    //! \brief  Post a receive to the queue pair.
    //! \param  addr Address of memory region.
@@ -206,13 +267,6 @@ private:
 
    int postSend(cnv_sge *sendList, int listSize, uint32_t sequenceID);
 
-   //! \brief  Get work completions from the completion queue.
-   //! \param  totalCompletions Number of work completions to get from completion queue.
-   //! \param  inMsg Pointer to address of inbound reply message (only set for receive work completion).
-   //! \return 0 when successful, errno when unsuccessful.
-
-   int getCompletions(int totalCompletions, void **inMsg);
-
    //! \brief Post an RDMA write to cn verbs
    //! \param  sgeList List of scatter/gather elements for data in request message.
    //! \param  listSize Number of elements in send sge list.
@@ -224,7 +278,8 @@ private:
    int postRdmaWrite(struct cnv_sge *sgeList, int listSize, uint32_t sequenceID,uint64_t remoteAddr,uint32_t remoteKey);
 
    //! Sequence id for tracking message exchanges.
-   uint32_t _sequenceId;
+
+   uint32_t _procSequenceId[CONFIG_MAX_HWTHREADS];
 
    //! Job usage counter which is incremented each time setupJob() is run and decremented each time cleanupJob() is run.
    //! \note Required since this file system is used for multiple descriptor types.
@@ -254,12 +309,6 @@ private:
 
    //! Memory region for inbound messages.
    struct cnv_mr _inMessageRegion;
-
-   //! Storage for outbound messages.
-   char _outMessage[bgcios::SmallMessageRegionSize] ALIGN_L1D_CACHE;
-
-   //! Storage for inbound messages.
-   char _inMessage[bgcios::SmallMessageRegionSize] ALIGN_L1D_CACHE;
 
    uint64_t _rdmaBufferVirtAddr;  //!< RDMA buffer virtual address from last Setup message
    uint64_t _rdmaBufferLength;    //!< length of said buffer from last Setup message

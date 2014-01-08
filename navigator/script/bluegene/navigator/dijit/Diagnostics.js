@@ -45,7 +45,6 @@ function(
 {
 
 var b_navigator_dijit_Diagnostics = d_declare(
-        "bluegene.navigator.dijit.Diagnostics",
         [ l_AbstractTemplatedContainer ],
 
 {

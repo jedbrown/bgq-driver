@@ -33,6 +33,12 @@
 
 using namespace bgcios::stdio;
 
+   //! Storage for outbound messages.
+static char _outMessage[bgcios::SmallMessageRegionSize] ALIGN_L1D_CACHE;
+
+   //! Storage for inbound messages.
+static char _inMessage[bgcios::SmallMessageRegionSize] ALIGN_L1D_CACHE;
+
 int stdioFS::init(void)
 {
    // Start sequence ids from 1.
@@ -115,6 +121,11 @@ int stdioFS::term(void)
 {
    int rc = 0;
 
+   if (_isTerminated == true) {
+       return 0;
+   }
+
+   Kernel_Lock(&_lock);
    // Just return if the method has already completed successfully.
    if (_isTerminated == true) {
       return 0;
@@ -446,7 +457,7 @@ uint64_t stdioFS::write(int fd, const void *buffer, size_t length)
    }
 
    // Truncate to the maximum length.
-   if (length > bgcios::SmallMessageDataSize) {
+   if (length > bgcios::SmallMessageDataSize) {//65472 in MessageHeader.h in bgq/ramdisk/include/services
       length = bgcios::SmallMessageDataSize;
    }
 

@@ -42,7 +42,7 @@ uint64_t sc_open(SYSCALL_FCN_ARGS)
 	return pathlen;
     }
 
-    TRACESYSCALL(("(I) %s%s: pathname=\"%s\", flags=0x%08x\n", __func__, whoami(), pathname, oflags));
+    TRACESYSCALL(("(I) %s%s: pathname=\"%s\", flags=0x%08x mode=\0x%08xn", __func__, whoami(), pathname, oflags,mode));
 
     //! \todo Nobody remembers why we have this code but don't want to break something that is working ...
     if ( !Personality_CiosEnabled() )

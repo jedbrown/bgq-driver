@@ -38,13 +38,14 @@
 
 Lock_Atomic_t mudm_atomic_lock;
 
+
+Lock_Atomic_t pacing_lock;
+
 // MUDM interface for performing broadcast of the count of abnormally exited processes 
 struct mudm_rdma_bcast rdma_exit_bcast;
 
-	      
-void  __NORETURN App_ThreadExit( int status )
+void  __NORETURN App_ThreadExit( int status, KThread_t *kthread )
 {
-    KThread_t *kthread = GetMyKThread();
 
     // Make sure the Upci Swap Config is inactive
     kthread->pUpci_Cfg = NULL;
@@ -60,15 +61,28 @@ void  __NORETURN App_ThreadExit( int status )
     // Now free the kthread, preserving only the SUSPEND bit
     // We can free it with a simple assignment, but after that we can't touch it.
     kthread->State = (kthread->State & SCHED_STATE_SUSPEND) | SCHED_STATE_FREE;
+
+    // Is this kthread running on a hardware thread which is owned by some other process?
+    AppProcess_t *hwtProc = GetProcessByProcessorID(ProcessorID());
+    if (hwtProc != kthread->pAppProc )
+    {
+        // Set this kthread to be owned by the process associated with its current hardware thread
+        kthread->pAppProc = hwtProc;
+        // Restore the Physical PID so that the process exit flow uses the correct pid
+        kthread->physical_pid = hwtProc->PhysicalPID;
+        mtspr(SPRN_PID, hwtProc->PhysicalPID);
+    }
     // Put the hwthread on the recycle list, making it a candidate to be searched
-    Process_MakeHwThreadAvail(kthread->pAppProc, ProcessorID());
+    // We put this on the list of the process that owns this hardware thread, 
+    // which is not necessarily the process that is associated with this thread.
+    Process_MakeHwThreadAvail(hwtProc, ProcessorID());
 
     // Enter the scheduler
     Scheduler(); 
     // This call does not return
 }
 
-void __NORETURN  App_ProcessExit( uint32_t status)
+void  App_ProcessExit( uint32_t status)
 {
     // Run special processing for an app agent.
     if (IsAppAgent())
@@ -78,9 +92,9 @@ void __NORETURN  App_ProcessExit( uint32_t status)
         App_AgentExit(AppExit_Phase1); // This call does not return
     }
 
-    // Send IPI requests to all hardware threads in this Process to initiate the exit flow
+    // Send IPI requests to all hardware threads in the Process associated with the exiting kthread
     int my_processorID = ProcessorID();
-    AppProcess_t *pAppProcess = GetProcessByProcessorID(my_processorID);
+    AppProcess_t *pAppProcess = GetMyProcess();
     uint64_t hwthread_map = pAppProcess->HwthreadMask;
     int i;
 
@@ -122,15 +136,37 @@ void __NORETURN  App_ProcessExit( uint32_t status)
                 IPI_process_exit(i, AppExit_Phase1);
             }
         }
+        // We must force an exit of any pthread that may be running on remote hardware threads.
+        if (pAppProcess->ThreadModel == CONFIG_THREAD_MODEL_ETA)
+        {
+            uint64_t thdmask = pAppProcess->HwthreadMask_Remote;
+            for (i=0; i<64; i++)
+            {
+                if (thdmask & _BN(i))
+                {
+                    // We found an index that may contain a remote pthread. We must send an IPI.
+                    IPI_remote_thread_exit(i, pAppProcess);
+                }
+            }
+        }
     }
-
-    // Enter App_Exit. If we also have an IPI sent to us from another exit occurring on another
-    // thread, this pending IPI condition will be cleaned up in the App_Exit processing.
-    App_Exit(AppExit_Phase1);
+    // If this is a remote thread initiating the process termination, we just want to exit 
+    // the thread. The App_Exit termination flow can only be entered on the hardware threads
+    // that are owned by the process that is terminating.
+    if (GetProcessByProcessorID(ProcessorID()) != GetMyProcess())
+    {
+        App_ThreadExit(0, GetMyKThread());
+    }
+    else
+    {
+        // Enter App_Exit. If we also have an IPI sent to us from another exit occurring on another
+        // thread, this pending IPI condition will be cleaned up in the App_Exit processing.
+        App_Exit(AppExit_Phase1, 1);
+    }
 }
 
 // Called by App_ProcessExit and by the target of the Process Exit IPI operation initiated by App_Exit
-void __NORETURN   App_Exit(int phase)
+void App_Exit(int phase, int noReturn)
 {
     int processorID = ProcessorID();
     AppState_t *pAppState = GetMyAppState();
@@ -160,11 +196,10 @@ void __NORETURN   App_Exit(int phase)
         // entered the scheduler in phase 1 of application exit. This can happen if more than one
         // thread is requesting that the process be terminated at approximately the same time.
         // If so, throw this request away.
-        if (GetMyHWThreadState()->appExitPhase == AppExit_Phase1) 
+        if (hwt->appExitPhase == AppExit_Phase1) 
         {
             Scheduler(); // Re-enter the scheduler
         }
-
         // Wait for all hardware threads in this process to begin termination
         Kernel_Barrier(Barrier_HwthreadsInProcess);
 
@@ -187,17 +222,22 @@ void __NORETURN   App_Exit(int phase)
             App_GetEnvValue("BG_COREDUMPDISABLED", &coredumpdisabled);
             App_GetEnvValue("BG_COREDUMPMAXNODES", &coredumpmaxnodes);
 
-            if (((pProc->coreDumpOnExit) && (coredumpdisabled == 0) && (pAppState->AbnormalTerminationSequenceNum <= coredumpmaxnodes)) || 
-                ((coredumponerror != 0) && ((EXITSTATUS_RCODE(pProc->ExitStatus)) != 0) && (pAppState->AbnormalTerminationSequenceNum <= coredumpmaxnodes)) || 
-                (coredumponexit != 0))
+            if (((pProc->coreDumpOnExit) && (coredumpdisabled == 0) && ((pAppState->AbnormalTerminationSequenceNum <= coredumpmaxnodes) || (pProc->binaryCoredump == 1))) || 
+                ((coredumponerror != 0) && ((EXITSTATUS_RCODE(pProc->ExitStatus)) != 0) && ((pAppState->AbnormalTerminationSequenceNum <= coredumpmaxnodes) || (pProc->binaryCoredump == 1))) || 
+                (coredumponexit != 0) ||
+                (pProc->coreDumpRank != 0)
+               )
             {
                 // If we have a failing kthread, we will call DumpCore from its hardware thread
                 // so that we can capture the desired hardware state (TLBs). If no failing 
                 // kthread is identified, the process leader hardware thread will be used.
                 if ((!pProc->coredump_kthread && isProcessLeader) ||
+                    (pProc->coredump_kthread && (pProc->coredump_kthread->pAppProc != GetProcessByProcessorID(processorID)) && isProcessLeader) || // remote thread failed?
                     (pProc->coredump_kthread && (pProc->coredump_kthread->ProcessorID == processorID)))
                 {
-                    int pacingResult = App_DumpCorePacingBegin(pAppState->jobControlSIGKILLstart);
+                    // Obtain lock to reduce pounding the mudm job leader with the pacing requests from all procesess on this node
+                    Kernel_Lock(&pacing_lock);
+                    int pacingResult = App_DumpCorePacingBegin();
                     if (pacingResult >= 0)
                     {
                         DumpCore();
@@ -206,6 +246,8 @@ void __NORETURN   App_Exit(int phase)
                             App_DumpCorePacingEnd();
                         }
                     }
+                    Kernel_Unlock(&pacing_lock);
+
                 }
             }
         }
@@ -214,11 +256,21 @@ void __NORETURN   App_Exit(int phase)
         if (isProcessLeader)
         {
             // Close any open file descriptors in this process.
+
+            KThread_t *currentThread_original = hwt->pCurrentThread; 
+
+            // Temporarily set current thread to the kernel thread. This will ensure that the File_ProcessCleanup() actions
+            // are performed against the correct process. If we have interrupted a remote thread for another process, we 
+            // do not want to be closing the file descriptors for that process.
+            hwt->pCurrentThread = hwt->SchedSlot[CONFIG_SCHED_KERNEL_SLOT_INDEX]; 
+            // Run the virtual close methods on open file descriptors.
             File_ProcessCleanup();
+            // Restore the original current thread so as to not confuse the scheduler.
+            hwt->pCurrentThread = currentThread_original;
 
             // Cleanup the private futex table for this process
             int i;
-            for (i=0; i< pProc->futexTableSize; i++)
+            for (i=0; i< NUM_FUTEX; i++)
             {
                 pProc->Futex_Table_Private[i].futex_vaddr = NULL;
                 pProc->Futex_Table_Private[i].pKThr_Waiter_Next = NULL;
@@ -246,8 +298,19 @@ void __NORETURN   App_Exit(int phase)
             // initiated a process exit around the same time that another thread initiated a process exit.
             hwt->appExitPhase = AppExit_Phase1;
 
-            // First we must ensure that all kthreads in this hardware thread are blocked from running
+            // First we must ensure that all kthreads belonging to the process that owns this hardware thread 
+            // are blocked from running. We do not block any remote kthreads that may be running in another process.
             Sched_BlockForExit();
+
+            // If the caller is allowing a return from this function to be done and if we
+            // arrived here from within an application thread, force a save of the non-volatile state of the interrupted 
+            // kthread before we enter the scheduler. This is needed for interrupted remote threads that may have been
+            // running at the time of the IPI interrupt. 
+            if (!noReturn && (GetMyKThread()->SlotIndex <  CONFIG_SCHED_KERNEL_SLOT_INDEX))
+            {
+                GetMyKThread()->Pending |= KTHR_PENDING_YIELD;
+                return; // Note: caller expects that this AppExit() call may return in order to be redriven into the scheduler.
+            }
             // Enter the scheduler
             Scheduler();
             // Will not reach here 
@@ -370,11 +433,52 @@ void __NORETURN   App_Exit(int phase)
     
     if(isAppLeader)
     {
-        // Broadcast the count of abnormally exited processes within the entire job into all nodes and also 
-        // determine if this node needs to send a message to the control system indicating that the job exited. 
-        int pendingExitJobMessage = App_ReportJobExit();
-        int pendingMessageJobID = pAppState->JobID;
-        int pendingMessageExitStatus = pAppState->jobLeaderData.JobExitStatus;
+        // Wait for all other nodes to reach this point before sending abnormal exit count.
+	if ( ( NodeState.Personality.Kernel_Config.NodeConfig & PERS_ENABLE_MU) != 0 ) 
+	{
+	    MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+	}
+        
+        if (App_IsJobLeaderNode())
+        {
+            // Broadcast the abnormal exit info. Each node needs to know about any abnormal process termination.
+            if (pAppState->jobLeaderData.NodesInJob > 1)
+            {
+                // Setup to perform the RDMA broadcast
+                rdma_exit_bcast.status_mem = (uint64_t)(&pAppState->jobLeaderData.AbnormalExitCountBroadcastStatus);
+                rdma_exit_bcast.status_val = 1;
+                // Replicate the this object's data on all nodes so that they can continue processing. 
+                rdma_exit_bcast.source_payload_paddr = (void*)&pAppState->jobLeaderData.AbnormalProcessExitCount;
+                rdma_exit_bcast.payload_length =  sizeof(pAppState->jobLeaderData.AbnormalProcessExitCount); 
+                rdma_exit_bcast.class_route = 14; // job-wide system class route.
+                rdma_exit_bcast.dest_payload_paddr = (void*)&pAppState->jobLeaderData.AbnormalProcessExitCount;
+                rdma_exit_bcast.num_in_class_route = pAppState->jobLeaderData.NodesInJob;
+                rdma_exit_bcast.requestID = NULL;
+                //Kernel_WriteFlightLog();
+                int internalrc;
+                do
+                {
+                    internalrc = mudm_bcast_RDMA_write(NodeState.MUDM,  &rdma_exit_bcast);
+                } while(internalrc == -EBUSY);
+                if (internalrc != -EINPROGRESS)
+                {
+                    printf("(E) mudm_bcast_RDMA_write in App_ReportJobExit() returned status %d\n", internalrc);
+                }
+                assert(internalrc == -EINPROGRESS);
+
+                //printf("Broadcast abnormal process exit count %ld to all nodes\n",appState->jobLeaderData.AbnormalProcessExitCount );
+            }
+            else
+            {
+                // No broadcast is being done since this is the only node in the job.
+                pAppState->jobLeaderData.AbnormalExitCountBroadcastStatus = 1; // Turn this on in our node since our count is valid.
+            }
+        }
+        // Spin waiting for the mudm broadcast to complete. The status indicator will be set in all nodes when complete. 
+        while (pAppState->jobLeaderData.AbnormalExitCountBroadcastStatus == 0)
+        {
+            ppc_msync();
+        }
 
         uint32_t doCrcExchange = true;
         App_GetEnvValue("BG_CRC_EXCHANGE", &doCrcExchange);
@@ -393,10 +497,9 @@ void __NORETURN   App_Exit(int phase)
 
             if ( ( rc = crcx_exchange_crcs(&systemJobGIBarrier) ) != 0 ) {
                 //printf("(E) CRC Exchange failed. rc=%d\n",rc);
-                pProc->app->ExitStatus |= bgcios::jobctl::ExitStatus_CrcError;
+                pProc->ExitStatus = SIGJOBINTEGRITY;
             }
         }
-
         uint32_t doTermCheck = true;
         App_GetEnvValue("BG_TERMCHECK", &doTermCheck);
 
@@ -410,11 +513,11 @@ void __NORETURN   App_Exit(int phase)
 
         if(doTermCheck != 0)
         {
-            int rc = MUSPI_ND_TermCheck( &systemJobGIBarrier, 0 ); // @todo pass job exit code (?)
+            int rc = MUSPI_ND_TermCheck( &systemJobGIBarrier, 0 ); 
 
             if ( rc != 0 ) {
                 //printf("(E) termination checks failed. rc=%d\n",rc);
-                pProc->app->ExitStatus |= bgcios::jobctl::ExitStatus_TermCheck;
+                pProc->ExitStatus = SIGJOBINTEGRITY;
             }
         }
         uint32_t doMUReset = true;
@@ -439,6 +542,25 @@ void __NORETURN   App_Exit(int phase)
             while(rc == EAGAIN);
             assert(rc == 0);
         }
+
+        // If we did not pass the CRC exchange or the termination checks, we must send a process exit message
+        if (pProc->ExitStatus == (uint32_t)SIGJOBINTEGRITY)
+        {
+            uint64_t prev_val = App_RegisterAbnormalProcessExit();
+            if (prev_val == 0) // if zero, then we were the first process to encounter an abnormal termination
+            {
+                // Are we running in stand-alone mode
+                if (!Personality_ApplicationPreLoaded())
+                {
+                    // We are the first to report this category of error
+                    jobControl.exitProcess(pProc->app->JobID, pProc->Rank, pProc->ExitStatus, 0);
+                }
+            }
+        }
+        // Indicate that this node is ready for its final cleanup. Also determine if this node must send an ExitJob message. 
+        int pendingExitJobMessage = App_ReportJobExit();
+        int pendingMessageJobID = pAppState->JobID;
+        int pendingMessageExitStatus = pAppState->jobLeaderData.JobExitStatus;
 
         // Initialize AppState and NodeState data areas controlled by this AppState.
         App_Reset();
@@ -690,13 +812,13 @@ void __NORETURN   App_AgentExit(int phase)
         if ((ProcessorThreadID() == 0) ||
             (popcnt64(NodeState.AppAgents) == 1))
         {
-            // Clear background scrub TLB location
-            vmm_clearScrubSlot();
-
             // Invalidate the icache. This must be done since the text segment was previously cleared. 
             ici();
             isync();
-
+            
+            // Clear background scrub TLB location
+            vmm_clearScrubSlot();
+            
             // uninstall the TLBs for the agent
             vmm_uninstallStaticTLBMap(pProc->Tcoord);
         }
@@ -853,38 +975,6 @@ int App_ReportJobExit()
         }
         else
         {
-            // Broadcast the exit status information to all of the nodes in the job.
-            if (appState->jobLeaderData.NodesInJob > 1)
-            {
-                // Setup to perform the RDMA broadcast
-                rdma_exit_bcast.status_mem = (uint64_t)(&appState->jobLeaderData.AbnormalExitCountBroadcastStatus);
-                rdma_exit_bcast.status_val = 1;
-                // Replicate the this object's data on all nodes so that they can continue processing. 
-                rdma_exit_bcast.source_payload_paddr = (void*)&appState->jobLeaderData.AbnormalProcessExitCount;
-                rdma_exit_bcast.payload_length =  sizeof(appState->jobLeaderData.AbnormalProcessExitCount); 
-                rdma_exit_bcast.class_route = 14; // job-wide system class route.
-                rdma_exit_bcast.dest_payload_paddr = (void*)&appState->jobLeaderData.AbnormalProcessExitCount;
-                rdma_exit_bcast.num_in_class_route = appState->jobLeaderData.NodesInJob;
-                rdma_exit_bcast.requestID = NULL;
-                //Kernel_WriteFlightLog();
-                int internalrc;
-                do
-                {
-                    internalrc = mudm_bcast_RDMA_write(NodeState.MUDM,  &rdma_exit_bcast);
-                } while(internalrc == -EBUSY);
-                if (internalrc != -EINPROGRESS)
-                {
-                    printf("(E) mudm_bcast_RDMA_write in App_ReportJobExit() returned status %d\n", internalrc);
-                }
-                assert(internalrc == -EINPROGRESS);
-
-                //printf("Broadcast abnormal process exit count %ld to all nodes\n",appState->jobLeaderData.AbnormalProcessExitCount );
-            }
-            else
-            {
-                // No broadcast is being done since this is the only node in the job.
-                appState->jobLeaderData.AbnormalExitCountBroadcastStatus = 1; // Turn this on in our node since our count is valid.
-            }
             if (appState->LoadState == AppState_StartIssued)
             {
                 rc = 1; // Return indication that indicates that an exitJob message is to be sent to the control system by this node.
@@ -896,11 +986,6 @@ int App_ReportJobExit()
                 // cleanupJob message to get us here.
             }
         }
-    }
-    // Spin waiting for the mudm broadcast to complete. The status indicator will be set in all nodes when complete. 
-    while (appState->jobLeaderData.AbnormalExitCountBroadcastStatus == 0)
-    {
-        ppc_msync();
     }
     return rc;
 }
@@ -919,6 +1004,12 @@ int App_IsJobLeaderNode()
         return 1;
     }
     return 0;  
+}
+
+int App_IsLoadLeaderNode()
+{
+    AppState_t *app = GetParentAppState();
+    return app->IsLoadLeader;
 }
 
 uint64_t App_RegisterAbnormalProcessExit()
@@ -1000,13 +1091,15 @@ int App_CleanupJob(bgcios::jobctl::CleanupJobMessage *inMsg)
     return 0;
 }
 
-int App_DumpCorePacingBegin(uint64_t basetime)
+int App_DumpCorePacingBegin()
 {
     AppState_t *app = GetParentAppState();
     uint64_t previous_value = 0x8000000000000000;
     uint64_t cyclesPerMicro = GetPersonality()->Kernel_Config.FreqMHz;
     uint64_t maxCoredumpTime = cyclesPerMicro * CONFIG_COREDUMP_WINDOW * 1000000ULL;
-    uint64_t delaytime = cyclesPerMicro * 100;  // 100 microseconds in processor cycles
+    uint64_t numNodesInJob = app->jobLeaderData.NodesInJob;
+    uint64_t delaytime = cyclesPerMicro * (1000 + numNodesInJob/128);  // scaled milliseconds in processor cycles
+    //uint64_t delaytime = cyclesPerMicro * 1000;  // 1 milliseconds in processor cycles
 
     // Is pacing enabled
     if ((app->jobLeaderData.corepacesem[1] == 0) || (app->jobLeaderData.NodesInJob <= 1))
@@ -1015,6 +1108,7 @@ int App_DumpCorePacingBegin(uint64_t basetime)
     }
     do
     {
+        uint64_t basetime = app->jobControlSIGKILLstart;
         if (basetime && ((GetTimeBase() - basetime) > maxCoredumpTime))
         {
             //printf("Timeout after %d seconds on rank %d\n", CONFIG_COREDUMP_WINDOW, GetMyProcess()->Rank);
@@ -1027,10 +1121,16 @@ int App_DumpCorePacingBegin(uint64_t basetime)
         NodeState.remoteget.remote_paddr = (uint64_t)(&app->jobLeaderData.corepacesem[1]); // address of the counter
         NodeState.remoteget.returned_val = 0; // initialize the return value
         NodeState.remoteget.local_counter = 8; // this is an 8 byte operation
+        uint64_t timeit = GetTimeBase();
         mudm_remoteget_load_atomic(NodeState.MUDM,  &NodeState.remoteget);        
         while (NodeState.remoteget.local_counter)
         {
             ppc_msync();
+        }
+        if ((GetTimeBase() - timeit) > delaytime)
+        {
+            // Response time for our mu atomic operation was very slow. Do not pound the interface as hard.
+            delaytime = delaytime * 2;
         }
         previous_value = NodeState.remoteget.returned_val;
         Kernel_Unlock(&mudm_atomic_lock);
@@ -1062,5 +1162,27 @@ int App_DumpCorePacingEnd()
     return 0;
 }
 
+// Called when the process is exiting and the Extended Thread Affinity facility is enabled. 
+void App_RemoteThreadExit(AppProcess_t *proc)
+{
+    // Loop through all of the kthreads on this hardware thread and if a matching process is found,
+    // force this kthread into exit.
 
+    // This should only be called when the passed in process is not the home process for this hardware thread
+    assert(proc != GetProcessByProcessorID(ProcessorID()));
+    // Suspend the threads on our hardware thread
+    HWThreadState_t *hwt = GetMyHWThreadState();
+   // Exit threads on our hardware thread that match the passed in proc.
+    for (int i = 0; i< CONFIG_AFFIN_SLOTS_PER_HWTHREAD; i++)
+    {
+        KThread_t *kthread = hwt->SchedSlot[i];
+        if (kthread->pAppProc == proc)
+        {
+            // Force exit the remote thread.
+            //printf("Forcing exit of remote tid:%d. Current kthread state:%d\n", GetTID(kthread), kthread->State);
+            App_ThreadExit(0, kthread);
+        }
+    }
+}
+	      
 

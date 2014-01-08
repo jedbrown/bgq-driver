@@ -44,10 +44,9 @@
 
 // SCHEDULER 
 #define CONFIG_AFFIN_SLOTS_PER_HWTHREAD  (5)  // Number of affinitiy slots per hardware thread
-#define CONFIG_SCHED_SLOTS_PER_HWTHREAD ( CONFIG_AFFIN_SLOTS_PER_HWTHREAD + 2 ) // affinity slots plus remote slot and kernel thread
+#define CONFIG_SCHED_SLOTS_PER_HWTHREAD ( CONFIG_AFFIN_SLOTS_PER_HWTHREAD + 1 ) // affinity slots plus kernel thread
 #define CONFIG_SCHED_SLOT_FIRST          (0)  // Slot index of first AFFIN slot (process leader or pthread_create)
-#define CONFIG_SCHED_REMOTE_SLOT_INDEX ( CONFIG_AFFIN_SLOTS_PER_HWTHREAD ) // First slot after affinity slots reservd for remote threads
-#define CONFIG_SCHED_KERNEL_SLOT_INDEX  ( CONFIG_SCHED_REMOTE_SLOT_INDEX + 1 ) // Last slot is reserved for Kernel thread
+#define CONFIG_SCHED_KERNEL_SLOT_INDEX  ( CONFIG_AFFIN_SLOTS_PER_HWTHREAD) // Last slot is reserved for Kernel thread
 #define CONFIG_SCHED_BREADTH_LAYOUT      (1)  // indicate a BREADTH layoutof harware threads in the process (core0thread0, core1thread0, ...)
 #define CONFIG_SCHED_DEPTH_LAYOUT        (2)  // indicate a DEPTH layout of hardware threads in the process (core0thread0, core0thread1, ...)
 #define CONFIG_SCHED_MAX_FIFO_PRIORITY   (98) // this is the "most favored" priority. Higher numbers are higher importance threads
@@ -91,7 +90,7 @@
 
 // Core Dump control
 #define CONFIG_CORE_MAX_STKTRC_DEPTH (32)
-#define CONFIG_CORE_BUFFER_SIZE  0x400 /* 1024 byte buffer */
+#define CONFIG_CORE_BUFFER_SIZE  0x10000 /* 64K byte buffer */
 // Control the scope of a core dump to either the entire process or to just the failing thread
 #define CONFIG_CORE_SCOPE_PROCESS 0
 #define CONFIG_CORE_SCOPE_THREAD  1
@@ -147,9 +146,9 @@
 
 #define MMAP_MAX_ALLOCS      (1096)
 
-// Define the number of shm_opens of different file handles.  Currently capped at 2 per process
+// Define the number of shm_opens of different file handles.  Currently capped at 16 per process
 // NOTE: A file handle is a different named file in the shm_open() invocation
-#define SHM_MAX_OPENS (CONFIG_MAX_PROCESSES*2)
+#define SHM_MAX_OPENS (CONFIG_MAX_PROCESSES*16 + 16)
 
 #define NUM_COMMTHREAD_GPRS   4    // Number of parameters that will be passed to CommThread
 
@@ -214,21 +213,43 @@
 #define CONFIG_COREDUMP_WINDOW  50
 
 // Default number of concurrently writing coredumps with the job
-#define CONFIG_COREDUMP_CONCURRENT 100
+#define CONFIG_COREDUMP_CONCURRENT 256
+
+// Maximum number of mmap'd files with tracked filenames per process
+#define CONFIG_NUM_MAPPED_FILENAMES 64
+
+// Avoid readlink for mmap filename tracking
+#define CONFIG_AVOID_READLINK 1
+
+// Maximum size of procFS storage
+#define CONFIG_PROCFS_SIZE  512*1024   // 512kB
+
+// Print size of the file system classes to the mailbox upon boot
+#define CONFIG_PRINTFSSIZE 0
+
+// Total number of kthreads supported
+#define NUM_KTHREADS ( CONFIG_SCHED_SLOTS_PER_HWTHREAD * CONFIG_HWTHREADS_PER_CORE * CONFIG_MAX_CORES )
+
+// Should never need more futex table entries than the number of kthreads.
+#define NUM_FUTEX (NUM_KTHREADS)
 
 // Enable for using a distributed MPI mapfile
 #define CONFIG_DISTRO_MAPFILE 1
 
 // Default size of the MPI mapfile chunk storage on each node
-#define CONFIG_MAPFILECHUNKSIZE (64*1024)
+#define CONFIG_MAPFILECHUNKSIZE (128*1024)
 
 // Number of simultaneous mapping file reads
 #define CONFIG_MAPFILETRACKS  4
 
 // Size of the mapfile buffer used for processing
-#define CONFIG_MAPFILESTORAGE 65536
+#define CONFIG_MAPFILESTORAGE (CONFIG_MAPFILECHUNKSIZE * CONFIG_MAPFILETRACKS * 2)
 
 // Number of concurrent readers of a chunk
 #define CONFIG_MAPFILEREMOTEPACING 2
+
+// Always allow printf to console
+#define CONFIG_ALLOWPRINTF 0
+
 
 #endif // Add nothing below this line.

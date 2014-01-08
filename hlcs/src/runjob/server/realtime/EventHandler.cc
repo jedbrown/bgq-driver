@@ -75,6 +75,7 @@ EventHandler::EventHandler(
     _polling( Polling::create(server, sequence) ),
     _pollingSequence( sequence ),
     _sequence( sequence ),
+    _strand( server->getIoService() ),
     _queue( )
 {
 
@@ -115,14 +116,16 @@ EventHandler::handleRealtimeStartedRealtimeEvent(
         const RealtimeStartedEventInfo& /* info */
         )
 {
-    LOG_DEBUG_MSG( "Handling real-time started event" );
+    LOG_INFO_MSG( "real-time started" );
 
     if ( Polling::Ptr polling = _polling.lock() ) {
         polling->stop(
-                boost::bind(
-                    &EventHandler::handlePollingEnded,
-                    this,
-                    _1
+                _strand.wrap(
+                    boost::bind(
+                        &EventHandler::handlePollingEnded,
+                        this,
+                        _1
+                        )
                     )
                 );
     } else {
@@ -141,6 +144,19 @@ EventHandler::handleRealtimeEndedRealtimeEvent(
 }
 
 void
+EventHandler::add(
+        const BlockStateChangedEventInfo& event
+        )
+{
+    _queue.push( event );
+    LOG_DEBUG_MSG(
+            "delaying block status change from " <<
+            event.getPreviousStatus() << " to " << event.getStatus() <<
+            " while polling is active"
+            );
+}
+
+void
 EventHandler::handleBlockStateChangedRealtimeEvent(
         const BlockStateChangedEventInfo& event
         )
@@ -149,11 +165,12 @@ EventHandler::handleBlockStateChangedRealtimeEvent(
     LOGGING_DECLARE_LOCATION_MDC( event.getSequenceId() );
 
     if ( _polling.lock() ) {
-        _queue.push( event );
-        LOG_DEBUG_MSG(
-                "delaying block status change from " <<
-                event.getPreviousStatus() << " to " << event.getStatus() <<
-                " while polling is active"
+        _strand.post(
+                boost::bind(
+                    &EventHandler::add,
+                    this,
+                    event
+                    )
                 );
         return;
     }
@@ -242,7 +259,6 @@ EventHandler::blockCallback(
         const std::string& message
         )
 {
-    LOGGING_DECLARE_BLOCK_MDC( event.getBlockName() );
     LOGGING_DECLARE_LOCATION_MDC( event.getSequenceId() );
     if ( error ) {
         LOG_WARN_MSG( event.getStatus() << ": " << message );

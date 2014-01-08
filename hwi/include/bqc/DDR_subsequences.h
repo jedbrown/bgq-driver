@@ -1546,7 +1546,7 @@ unsigned DDR_Init_Write_Cal(unsigned num_ranks, struct DDRINIT_metrics *ddr, int
 		//	printf("All found at 0x%X(%dd)\n",offset,offset);
 #if 0
 			if(offset==0x200)
-				FW_Warning("MC%d Rank%d Dir%d Vref=%d: Initial Write Calibration couldn't find the edge",mc,rank,direction,Vref_DQ);
+				FW_Warning("MC%d Rank%d Dir%d Vref=%d: Initial Write Calibration could not find the edge.",mc,rank,direction,Vref_DQ);
 #endif
 		}
 
@@ -1859,7 +1859,8 @@ void DDR_PHY_Recal(int mc, unsigned recal_window)
 	DCRWritePriv(TESTINT_DCR(THREAD_ACTIVE0)+2, threadx0);
 	DCRWritePriv(TESTINT_DCR(THREAD_ACTIVE1)+2, threadx1);
 
-	for(i=0; i<2; i++)  ppc_msync();
+	if(mcfgp != 0)
+		for(i=0; i<2; i++)  ppc_msync();
 
 	DelayTimeBase(WAIT_MCMODE);
 
@@ -1898,7 +1899,7 @@ void DDR_PHY_Recal(int mc, unsigned recal_window)
 	uint64_t time1 = GetTimeBase();
 
 	if(recal_window > 0)
-		FW_RAS_printf( FW_RAS_INFO, "DDR%d PHY was recalibrated(%d): time taken = %ld usec. Previous cal was %ld.%ld seconds ago",
+		FW_RAS_printf( FW_RAS_INFO, "DDR%d PHY was recalibrated(%d): time taken = %ld usec. Previous cal was %ld.%ld seconds ago.",
 		mc,caltry,(time1-time0)/1600,(long)previous_time/256000/num_ranks,(long)(previous_time/25600/num_ranks)%10);
 
 	DCRWritePriv(_DDR_MC_MCAPERFMONC0(0), _BN(32) | _B8(63,0xFF));
@@ -2091,8 +2092,8 @@ void DDR_UE_Diagnose(int mc)
 			    FW_RAS_printf(FW_RAS_INFO,"READ[%d] result: UE", i);
 			else
 			    FW_RAS_printf(FW_RAS_INFO,"READ[%d] result: No Error", i);
-			if(i==7)
-				DDR_PHY_Recal(mc, 0);
+		//	if(i==7)
+		//		DDR_PHY_Recal(mc, 0);
 		}
 	}
 
@@ -2202,11 +2203,11 @@ void DDR_Refresh_Speedup(int mc)
 	DCRWritePriv(_DDR_MC_MCZMRINT(mc), (mczmrint & ~_B10(43,0x3FF)) | _B10(43,ref_rate - 1));
 	int tREFI = ref_rate*2000*32*num_ranks/dram_speed;
 
-	FW_RAS_printf(FW_RAS_INFO,"DDR%d Refresh interval was adjusted to %d (%d.%d%d usec). Previous ReCal was %ld usec ago, and previous RefSU was %ld sec ago",
+	FW_RAS_printf(FW_RAS_INFO,"DDR%d Refresh interval was adjusted to %d (%d.%d%d usec). Previous ReCal was %ld usec ago, and previous RefSU was %ld sec ago.",
 		mc,ref_rate,tREFI/1000,(tREFI/100)%10,(tREFI/10)%10,(long)previous_ReCal*1000/256/num_ranks,(long)previous_RefSU/256000/num_ranks);
 
 	if(ref_rate <= ref_min)
-	    FW_RAS_printf(FW_RAS_INFO,"DDR%d Refresh interval hit the minimum %d (%d.%d%d usec)", mc, ref_rate, tREFI/1000, (tREFI/100)%10, (tREFI/10)%10);
+	    FW_RAS_printf(FW_RAS_INFO,"DDR%d Refresh interval hit the minimum %d (%d.%d%d usec).", mc, ref_rate, tREFI/1000, (tREFI/100)%10, (tREFI/10)%10);
 
 	DCRWritePriv(_DDR_MC_MCAPERFMONC0(1), _BN(32) | _B8(63,0xFF));
 }

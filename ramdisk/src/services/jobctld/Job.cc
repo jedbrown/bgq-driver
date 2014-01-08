@@ -254,7 +254,7 @@ Job::cleanup(void)
 }
 
 bgcios::MessageResult
-Job::startTool(StartToolMessage *msg)
+Job::startTool(StartToolMessage *msg, bool simulation)
 {
    bgcios::MessageResult result;
 
@@ -291,7 +291,7 @@ Job::startTool(StartToolMessage *msg)
    }
 
    // Start the tool.
-   result = tool->start(_identity);
+   result = tool->start(_identity, simulation);
    if (result.isError()) {
       LOG_ERROR_MSG("Job " << _jobId << ": error starting tool '" << tool->getName() << "': " << bgcios::errorString(result.errorCode()));
       tool.reset();
@@ -302,31 +302,33 @@ Job::startTool(StartToolMessage *msg)
    _tools.add(tool->getToolId(), tool);
    LOG_CIOS_INFO_MSG("Job " << _jobId << ": started tool '" << tool->getName() << "' (" << tool->getToolId() << ") in process " << tool->getProcessId());
 
-   // Add the tool to the tools subdirectory.
-   std::ostringstream toolPath;
-   toolPath << bgcios::JobsDirectory << _jobId << bgcios::ToolsDirectory << tool->getToolId();
-   try {
-      bgcios::SymbolicLink link(tool->getName(), toolPath.str());
-      link.setOwner(_identity.getUserId(), _identity.getGroupId());
-   }
-   catch (bgcios::LinkError& e) {
-      result.set(bgcios::JobsObjectError, e.errcode());
-      LOG_ERROR_MSG("Job " << _jobId << ": error creating tools link for '" << tool->getName() << "' (" << tool->getToolId() << "): " << bgcios::errorString(result.errorCode()));
-      return result;
-   }
+   if ( !simulation ) {
+       // Add the tool to the tools subdirectory.
+       std::ostringstream toolPath;
+       toolPath << bgcios::JobsDirectory << _jobId << bgcios::ToolsDirectory << tool->getToolId();
+       try {
+           bgcios::SymbolicLink link(tool->getName(), toolPath.str());
+           link.setOwner(_identity.getUserId(), _identity.getGroupId());
+       }
+       catch (bgcios::LinkError& e) {
+           result.set(bgcios::JobsObjectError, e.errcode());
+           LOG_ERROR_MSG("Job " << _jobId << ": error creating tools link for '" << tool->getName() << "' (" << tool->getToolId() << "): " << bgcios::errorString(result.errorCode()));
+           return result;
+       }
 
-   // Add the tool to the tools_status subdirectory.
-   std::ostringstream toolStatusPath;
-   toolStatusPath << bgcios::JobsDirectory << _jobId << bgcios::ToolsStatusDirectory << tool->getToolId();
-   try {
-      bgcios::TextFile statusFile(toolStatusPath.str(), S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-      statusFile.setOwner(_identity.getUserId(), _identity.getGroupId());
-      statusFile.close();
-   }
-   catch (bgcios::LinkError& e) {
-      result.set(bgcios::JobsObjectError, e.errcode());
-      LOG_ERROR_MSG("Job " << _jobId << ": error creating tool status file for '" << tool->getName() << "' (" << tool->getToolId() << "): " << bgcios::errorString(result.errorCode()));
-      return result;
+       // Add the tool to the tools_status subdirectory.
+       std::ostringstream toolStatusPath;
+       toolStatusPath << bgcios::JobsDirectory << _jobId << bgcios::ToolsStatusDirectory << tool->getToolId();
+       try {
+           bgcios::TextFile statusFile(toolStatusPath.str(), S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+           statusFile.setOwner(_identity.getUserId(), _identity.getGroupId());
+           statusFile.close();
+       }
+       catch (bgcios::LinkError& e) {
+           result.set(bgcios::JobsObjectError, e.errcode());
+           LOG_ERROR_MSG("Job " << _jobId << ": error creating tool status file for '" << tool->getName() << "' (" << tool->getToolId() << "): " << bgcios::errorString(result.errorCode()));
+           return result;
+       }
    }
 
    return result;

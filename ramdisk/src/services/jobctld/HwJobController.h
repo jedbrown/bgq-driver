@@ -186,6 +186,12 @@ private:
 
    int signalJob(void);
 
+   //! \brief  Handle a SignalJobAck message received from completion channel.
+   //! \param  mh     Message pointer
+   //! \return Nothing.
+
+   void signalJobAck(bgcios::MessageHeader * mh);
+
    //! \brief  Handle a CleanupJob message received from data channel.
    //! \return 0 when successful, errno when unsuccessful.
 

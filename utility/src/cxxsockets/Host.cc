@@ -23,8 +23,8 @@
 
 
 #include "cxxsockets/Host.h"
-
-#include "cxxsockets/SocketTypes.h"
+#include "cxxsockets/exception.h"
+#include "cxxsockets/SockAddr.h"
 
 #include "Log.h"
 
@@ -51,16 +51,16 @@ Host::build(
             LOG_DEBUG_MSG( "unresolved IP: " << _ip );
             _name = _ip;
         }
-    } catch(SockSoftError& e) {
+    } catch(const SoftError& e) {
         LOG_WARN_MSG(e.what() << " Will use IP address instead of name.");
-    } catch(CxxError& e) {
+    } catch(const Error& e) {
         std::ostringstream errormsg;
         errormsg << "Invalid host specification " << identifier
                  << ".  Not resolvable on local network. "
                  << "Check DNS, hostname and local network settings."
                  << e.what();
         LOG_WARN_MSG( errormsg.str() );
-        throw CxxError( e.errcode, errormsg.str() );
+        throw Error( e.errcode, errormsg.str() );
     }
 }
 

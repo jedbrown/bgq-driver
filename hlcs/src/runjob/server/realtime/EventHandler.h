@@ -83,12 +83,17 @@ private:
             error_code::rc error,
             const std::string& message
         );
+            
+    void add(
+            const BlockStateChangedEventInfo& event
+            );
 
 private:
     const boost::weak_ptr<Server> _server;
     boost::weak_ptr<Polling> _polling;
     bgsched::SequenceId _pollingSequence;
     bgsched::SequenceId _sequence;
+    boost::asio::io_service::strand _strand;
     std::queue<BlockStateChangedEventInfo> _queue;
 };
 

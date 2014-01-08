@@ -31,7 +31,10 @@
 
 #include <string>
 
+
+namespace mmcs {
 namespace lite {
+
 
 /*!
  * \brief Parse command line program Options.
@@ -78,6 +81,6 @@ private:
     std::string _host_port;
 };
 
-} // lite
+} } // namespace mmcs::lite
 
 #endif

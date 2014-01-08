@@ -27,7 +27,8 @@
 
 #include <utility/include/Properties.h>
 
-#include <utility/include/cxxsockets/SocketTypes.h>
+#include <utility/include/cxxsockets/SecureTCPSocket.h>
+#include <utility/include/cxxsockets/SockAddr.h>
 
 #include <xml/include/library/XML.h>
 
@@ -40,7 +41,7 @@
 //!        and object serialization/deserialization.
 class Protocol {
 public:
-    Protocol(bgq::utility::Properties::Ptr p) : _props(p) {}
+    Protocol(const bgq::utility::Properties::ConstPtr& p) : _props(p) {}
     virtual ~Protocol();
     /*!
      * Connect to the remote host specified
@@ -81,10 +82,9 @@ protected:
      * remote host
      */
     CxxSockets::SockAddr _remote;
-    CxxSockets::PollingListenerSetPtr _listener;
     CxxSockets::SecureTCPSocketPtr _requester;
     CxxSockets::SecureTCPSocketPtr _responder;
-    bgq::utility::Properties::Ptr _props;
+    const bgq::utility::Properties::ConstPtr _props;
     boost::mutex _sr_lock;
 };
 

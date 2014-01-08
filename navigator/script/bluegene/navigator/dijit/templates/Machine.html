@@ -1,17 +1,20 @@
 <div>
 
-<div style="overflow: auto;" data-dojo-type="dijit.layout.ContentPane">
+<div style="overflow: auto;" data-dojo-type="dijit/layout/ContentPane">
     <div style="position: absolute; left: -1px; top: -1px;" data-dojo-attach-point="_loadingContainer">
         <img src="resources/image/ajax-loader.gif" style="height: 20px; width: 20px;" />
     </div>
+    <div style="position: absolute; right: 1px; top: 0px; z-index: 90;" data-dojo-attach-point="_toggleIoContainer">
+        <span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_toggleIoButton">I/O</span>
+    </div>
     <div style="position: absolute; right: 1px; bottom: 0px; z-index: 90;">
         <button type="button"
-                data-dojo-type="dijit.form.Button"
+                data-dojo-type="dijit/form/Button"
                 data-dojo-props="iconClass: 'bgToggleVisibilityIcon bgToggleVisibilityIconLeft', showLabel: false"
                 data-dojo-attach-point="_toggleVisibilityButton"
             >Toggle Visibility</button>
     </div>
-    <table style="background-color: black; border-spacing: 1px; font-size: 7pt; margin-right: 10px;" class="" data-dojo-attach-point="_tableElem">
+    <table style="background-color: black; border-spacing: 1px; font-size: 7pt; margin-right: 10px; margin-top: 10px;" class="" data-dojo-attach-point="_tableElem">
         <tbody data-dojo-attach-point="_tBodyElem"> </tbody>
     </table>
 </div>

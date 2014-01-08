@@ -161,10 +161,10 @@ bool ClientEventListener::BlockStateChangedEventInfo::Impl::merge( const Abstrac
         return false;
     }
 
-    LOG_DEBUG_MSG( "Merging block update to block update" );
-
     _status = chg_p->getStatus();
     _seq_id = chg_p->getSequenceId();
+
+    LOG_DEBUG_MSG( "Merging block update to block update. status=" << _status );
 
     return true;
 }

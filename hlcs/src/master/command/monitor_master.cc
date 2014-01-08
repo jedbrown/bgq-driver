@@ -86,7 +86,7 @@ int main(int argc, const char** argv)
     std::vector<std::string> singles;
     Args largs(argc, argv, &usage, &help, validargs, singles);
     pargs = &largs;
-    client.initProperties(pargs->_props);
+    client.initProperties(pargs->get_props());
 
     // Signal handlers
     for (int i = 0; i < num_signals; i++) {

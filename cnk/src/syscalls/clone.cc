@@ -62,15 +62,15 @@ __C_LINKAGE uint64_t sc_clone( SYSCALL_FCN_ARGS)
                             CLONE_SIGHAND        |\
                             CLONE_THREAD         |\
                             CLONE_SYSVSEM        |\
-                            CLONE_SETTLS         |\
                             CLONE_PARENT_SETTID  |\
                             CLONE_CHILD_CLEARTID |\
+                            CLONE_SETTLS         |\
                             CLONE_DETACHED)
 
     // pthread_create or fork etc?
-    if ( cl_flags != __CLONE_NEED_FLAGS )
+    if((cl_flags | CLONE_SETTLS) != __CLONE_NEED_FLAGS)
     {
-        printf("(W) _bgp_sc_clone: BAD Flags: %s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s.\n",
+        printf("(W) sc_clone: BAD Flags: %s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s.\n",
                (cl_flags & CLONE_VM             ? " VM"             : ""),
                (cl_flags & CLONE_FS             ? " FS"             : ""),
                (cl_flags & CLONE_FILES          ? " FILES"          : ""),
@@ -88,13 +88,18 @@ __C_LINKAGE uint64_t sc_clone( SYSCALL_FCN_ARGS)
                (cl_flags & CLONE_UNTRACED       ? " UNTRACED"       : ""),
                (cl_flags & CLONE_CHILD_SETTID   ? " CHILD_SETTID"   : "")  );
 
-        return CNK_RC_FAILURE(ENOMEM);
+        return CNK_RC_FAILURE(EINVAL);
     }
-
+    
+    // Only verify the cl_tls value if the CLONE_TLS flag is set
+    if((cl_flags & CLONE_SETTLS) && !VMM_IsAppAddress( (void *)cl_tls, sizeof(uint64_t)))
+    {
+        return CNK_RC_FAILURE(EINVAL);
+    }
+    
     if ( !VMM_IsAppAddress( (void *)cl_child_stack, (4 * 1024 * 1024) ) ||
          !VMM_IsAppAddress( (void *)cl_parent_tid,  sizeof(uint32_t)  ) ||
-         !VMM_IsAppAddress( (void *)cl_child_tid,   sizeof(uint32_t)  ) ||
-         !VMM_IsAppAddress( (void *)cl_tls,         sizeof(uint32_t)  )    )
+         !VMM_IsAppAddress( (void *)cl_child_tid,   sizeof(uint32_t)  ))
     {
         return CNK_RC_FAILURE(EINVAL);
     }

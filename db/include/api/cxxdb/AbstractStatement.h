@@ -21,8 +21,10 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
+
 #ifndef CXXDB_ABSTRACT_STATEMENT_H_
 #define CXXDB_ABSTRACT_STATEMENT_H_
+
 
 #include "fwd.h"
 #include "Parameters.h"
@@ -33,18 +35,30 @@
 
 #include <string>
 
+
 namespace cxxdb {
+
 
 class ConnectionHandle;
 class StatementHandle;
+
 
 /*! \brief Base class for Statements. */
 class AbstractStatement : boost::noncopyable
 {
 public:
 
+    /* Prepare the SQL statement. */
+    void prepare(
+            const std::string& sql,
+            const ParameterNames& parameter_names = ParameterNames()
+        );
+
     /*! \brief Access the Parameters for the Statement. */
     Parameters& parameters();
+
+    /*! \brief Cancel the statement. */
+    void cancel();
 
     /*! \brief Test validity.
      *
@@ -72,6 +86,12 @@ protected:
             ConnectionHandle& connection_handle,
             const std::string& sql,
             const ParameterNames& parameter_names
+        );
+
+
+    AbstractStatement(
+            BasicConnectionPtr connection_ptr,
+            ConnectionHandle& connection_handle
         );
 
 

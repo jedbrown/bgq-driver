@@ -29,7 +29,6 @@ define(
     "../Bgws",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -39,7 +38,6 @@ function(
         b_Bgws,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -143,7 +141,7 @@ var b_navigator_PrepareServiceAction = d_declare( [ l_AbstractTab ],
 
         }
 
-        j_registry.byId( "navigator" ).switchTo( TAB_NAME );
+        this._navigator.switchTo( TAB_NAME );
     },
 
 
@@ -152,7 +150,7 @@ var b_navigator_PrepareServiceAction = d_declare( [ l_AbstractTab ],
         // Notify Navigator that no tab anymore.
         l_topic.publish( l_topic.tabControllerChange, { id: this._prepare_service_action_dij.id } );
 
-        j_registry.byId( "navigator" ).switchTo( "service-actions" /*tab_name*/);
+        this._navigator.switchTo( "service-actions" /*tab_name*/);
 
         this._prepare_service_action_dij = null;
     }

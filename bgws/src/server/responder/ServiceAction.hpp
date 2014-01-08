@@ -79,6 +79,13 @@ private:
     blue_gene::service_actions::ServiceActions &_service_actions;
 
 
+    void _gotAttentionMessages(
+            capena::server::ResponderPtr /*responder_ptr*/,
+            uint64_t id,
+            const std::string& attention_messages
+        );
+
+
     void _end(
             uint64_t id,
             const std::string& location,

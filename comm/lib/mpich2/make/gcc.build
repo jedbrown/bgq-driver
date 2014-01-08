@@ -12,20 +12,22 @@
 #                                                                  #
 # end_generated_IBM_copyright_prolog                               #
 
-gcc-install: pre-install gcc
-	${MAKE} -C ${MPICH2BUILD}-gcc install
+#
+# '--enabled-debuginfo' is somehow related to bgq xl compilers and
+# totalview support.
+#
 
 gcc: autoconf
-	mkdir -p ${MPICH2BUILD}-gcc
-	cd ${MPICH2BUILD}-gcc &&					\
+	mkdir -p ${MPICH2BUILD}-$@
+	cd ${MPICH2BUILD}-$@ &&						\
 	if [ ! -f Makefile ] ; then					\
-	  GCC="${HOST_CC}"						\
 	  CC="${HOST_CC}"						\
 	  CXX="${HOST_CXX}"						\
 	  F77="${HOST_F77}"						\
 	  FC="${HOST_F90}"						\
 	  AR="${HOST_AR}"						\
 	  LD="${HOST_LD}"						\
+	  RANLIB="${HOST_RANLIB}"					\
 	  F77_OTHER_LIBS="${HOST_F77_OTHER_LIBS}"			\
 	  MPICH2LIB_CFLAGS="${HOST_CFLAGS}"				\
 	  MPICH2LIB_CXXFLAGS="${HOST_CXXFLAGS}"				\
@@ -37,20 +39,19 @@ gcc: autoconf
 	  FFLAGS="${MPI_FFLAGS}"					\
 	  FCFLAGS="${MPI_FFLAGS}"					\
 	  LDFLAGS="${MPI_LDFLAGS}"					\
-	  MPILIBNAME="mpich"						\
 	  MPICXXLIBNAME="cxxmpich"					\
-	  MSGLAYER_INCLUDE="${HOST_INCLUDE}"				\
-	  MSGLAYER_LIB="${HOST_LIB}"					\
 	  ${MPICH2DIR}/configure					\
+	  --enable-static						\
+	  --enable-shared						\
 	  --enable-cache						\
-	  --prefix=${INSTALL_DIR}/gcc					\
-	  --mandir=${INSTALL_DIR}/gcc/man				\
-	  --htmldir=${INSTALL_DIR}/gcc/www				\
+	  --prefix=${INSTALL_DIR}/$@					\
+	  --mandir=${INSTALL_DIR}/$@/man				\
+	  --htmldir=${INSTALL_DIR}/$@/www				\
 	  --host=${BUILD_HOST}						\
 	  --target=${BUILD_TARGET}					\
 	  --build=${BUILD_BUILD}					\
 	  --enable-dependencies						\
-	  --enable-g=none						\
+	  --enable-g=debug						\
 	  --with-device=pamid:${PLATFORM}				\
 	  --enable-romio=yes						\
 	  --enable-f77=yes						\
@@ -60,6 +61,7 @@ gcc: autoconf
 	  --enable-threads=${THREAD_LEVEL}				\
 	  --with-fwrapname=fmpich					\
 	  --with-cross=${MPICH2DIR}/src/mpid/pamid/cross/${PLATFORMlc}8	\
+	  --with-pm=none						\
 	  --with-mpe=no							\
 	  --enable-timing=no						\
 	  --disable-collchk						\
@@ -68,18 +70,19 @@ gcc: autoconf
 	  --disable-sample						\
 	  --disable-rpath						\
 	  --with-aint-size=8						\
+									\
 	  --with-assert-level=2						\
-	  --enable-shared						\
-	  --enable-sharedlibs=gcc					\
-	  --enable-dynamiclibs						\
-	  --enable-debuginfo						\
 	  --enable-fast=O3						\
+	  --enable-error-messages					\
+	  --disable-debuginfo						\
+									\
 	  --with-atomic-primitives					\
 	  --enable-thread-cs=per-object					\
 	  --enable-handle-allocation=tls				\
 	  --enable-refcount=lock-free					\
 	  --disable-predefined-refcount					\
+									\
+	  ${HOST_OTHER_CONFIGURE}					\
 	; fi
 
-	${MAKE} -j1 -C ${MPICH2BUILD}-gcc dependencies
-	${MAKE} -j1 -C ${MPICH2BUILD}-gcc
+	${MAKE} -C ${MPICH2BUILD}-$@

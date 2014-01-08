@@ -239,7 +239,6 @@ Container::eof(
         const block::Compute::Ptr& block
         )
 {
-
     _strand.post(
             boost::bind(
                 &Container::blockEofImpl,
@@ -295,7 +294,7 @@ Container::blockEofImpl(
 
             // leave an informative message
             job->setError(
-                    "Aborted due block " + block->name() + " removal",
+                    "Aborted due to block " + block->name() + " removal",
                     error_code::block_invalid
                     );
             ++count;

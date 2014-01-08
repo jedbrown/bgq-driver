@@ -106,6 +106,16 @@ ifeq ($(OS),AIX)
   AR := $(AR)
 endif
 
+# If building control system simulation (on x86_64),
+# only build the native libraries (not bg).
+ifeq ($(BGQ_CONTROL_SYSTEM_SIMULATION),yes)
+  TARGET_LIST=$(TARGET_LIB)
+  TARGET_LIST+=$(SHARED_LIB_64_SHORT)
+  TARGET_LIST+=$(SHARED_LIB_64_VERS)
+  TARGET_LIST+=$(SHARED_LIB_64_FULL)
+endif
+
+
 CXXFLAGS += -Wall
 CXXFLAGS += -g
 CXXFLAGS += -O3

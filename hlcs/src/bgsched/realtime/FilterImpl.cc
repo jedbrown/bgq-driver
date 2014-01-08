@@ -62,6 +62,8 @@ Filter::Impl Filter::Impl::_createAll()
     ret._switches = true;
     ret._torus_cables = true;
     ret._io_cables = true;
+    ret._io_drawers = true;
+    ret._io_nodes = true;
     ret._ras_events = true;
 
     return ret;
@@ -82,6 +84,8 @@ Filter::Impl Filter::Impl::_createDefault()
     ret._switches = true;
     ret._torus_cables = true;
     ret._io_cables = false;
+    ret._io_drawers = false;
+    ret._io_nodes = false;
     ret._ras_events = false;
 
     return ret;
@@ -103,6 +107,7 @@ Filter::Impl::RePtr Filter::Impl::compilePattern( const std::string& pattern )
     } catch ( boost::xpressive::regex_error& e ) {
         throw std::invalid_argument( e.what() );
     }
+    return RePtr();
 }
 
 
@@ -141,6 +146,8 @@ Filter::Impl::Impl()
       _switches(false),
       _torus_cables(false),
       _io_cables(false),
+      _io_drawers(false),
+      _io_nodes(false),
       _ras_events(false)
 {
     // Nothing to do.
@@ -165,6 +172,7 @@ ostream& operator<<( ostream& os, const Filter::Impl& filter )
     if ( filter.getMidplanes() )  os << " midplanes";
     if ( filter.getNodeBoards() )  os << " nodeBoards";
     if ( filter.getNodes() )  os << " nodes";
+    if ( filter.getIoNodes() )  os << " ioNodes";
     if ( filter.getSwitches() )  os << " switches";
     if ( filter.getTorusCables() )  os << " torusCables";
     if ( filter.getIoCables() )  os << " ioCables";

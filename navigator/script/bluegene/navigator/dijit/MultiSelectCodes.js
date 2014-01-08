@@ -45,7 +45,6 @@ function(
 
 
 var b_navigator_dijit_MultiSelectCodes = d_declare(
-        "bluegene.navigator.dijit.MultiSelectCodes",
         [ j__Widget, j__TemplatedMixin ],
 
 /** @lends bluegene^navigator^dijit^MultiSelectCodes# */

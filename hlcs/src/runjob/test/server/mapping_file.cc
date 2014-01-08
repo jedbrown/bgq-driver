@@ -257,27 +257,3 @@ BOOST_FIXTURE_TEST_CASE( small_block_32_nodes, MyFixture )
             job::ValidateMappingFile(_id, _info, _size)
             );
 }
-
-BOOST_FIXTURE_TEST_CASE( np_greater_than_mapping, MyFixture )
-{
-    _size.shape.a = 1;
-    _size.shape.b = 1;
-    _size.shape.c = 1;
-    _size.shape.d = 1;
-    _size.shape.e = 1;
-    _info.setNp( 2 );
-    _mapping << "0 0 0 0 0 0\n";
-    _mapping.flush();
-
-    _info.setMapping(
-            runjob::Mapping(
-                runjob::Mapping::Type::File,
-                "my_mapping_file"
-                )
-            );
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _size),
-            runjob::Exception
-            );
-}

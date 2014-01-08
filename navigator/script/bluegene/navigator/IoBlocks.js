@@ -28,8 +28,7 @@ define(
     "./topic",
     "../Bgws",
     "dojo/_base/declare",
-    "dojo/_base/lang",
-    "dijit/registry"
+    "dojo/_base/lang"
 ],
 function(
         l_AbstractTab,
@@ -37,8 +36,7 @@ function(
         l_topic,
         b_Bgws,
         d_declare,
-        d_lang,
-        j_registry
+        d_lang
     )
 {
 
@@ -51,15 +49,25 @@ var b_navigator_IoBlocks = d_declare( [ l_AbstractTab ],
 
     _io_blocks_dij : null,
 
+    _io_block_details : null,
+
+
 
     /** @constructs */
-    constructor: function( bgws )
+    constructor: function(
+            bgws,
+            io_blocks_tab_dij,
+            io_block_details_dij
+        )
     {
         this._bgws = bgws;
+        this._io_blocks_dij = io_blocks_tab_dij;
 
-        new l_IoBlockDetails( this._bgws );
-
-        this._io_blocks_dij = j_registry.byId( "navigator" ).getIoBlocksTabDij();
+        this._io_block_details = new l_IoBlockDetails(
+                this._bgws,
+                d_lang.hitch( this, this._updateMachineHighlighting ), // from AbstractTab
+                io_block_details_dij
+            );
 
         this._io_blocks_dij.on( "blockSelected", d_lang.hitch( this, this._blockSelected ) );
     },
@@ -80,6 +88,12 @@ var b_navigator_IoBlocks = d_declare( [ l_AbstractTab ],
         this._io_blocks_dij.setStore(
                 this._bgws.getBlocksDataStore()
             );
+    },
+
+    // override AbstractTab
+    _getMachineHighlightData: function()
+    {
+        return this._io_block_details.getMachineHighlightData();
     },
 
 

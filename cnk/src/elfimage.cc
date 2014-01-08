@@ -74,9 +74,6 @@ ElfImage::init(void)
     _errorReason = bgcios::Success;
     memset(&_fileInfo, '\0', sizeof(_fileInfo));
 
-#if 0  // \todo fixme
-    _variables.clear();
-#endif
     return;
 }
 
@@ -88,11 +85,6 @@ ElfImage::~ElfImage()
     if (_fd != -1) {
         (void) internal_close(_fd);
     }
-
-#if 0  // \todo fixme
-    // Cleanup the environment variable vector.
-    _variables.clear();
-#endif
 }
 
 //! \brief  Open and load the sections of the ELF-format executable file.
@@ -114,12 +106,12 @@ ElfImage::loadProgram()
 
         // Determine the generation count value that we will be expecting with the return code.
         uint32_t iteration = app->jobLeaderData.collectiveLoadStatus.word.iteration + 1;
-        if (App_IsJobLeaderNode())
+        if (App_IsLoadLeaderNode())
         {
 	    rc = openExecutable();
 
             // Wait until all nodes reach this point
-            internalrc = MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+            internalrc = MUSPI_GIBarrierEnterAndWait( &systemLoadJobGIBarrier );
             assert(internalrc == 0);
 
             // Setup to perform the RDMA broadcast
@@ -131,9 +123,9 @@ ElfImage::loadProgram()
             // Replicate the this object's data on all nodes so that they can continue processing.
             rdma_load_bcast.source_payload_paddr = this;
             rdma_load_bcast.payload_length =  sizeof(ElfImage);
-            rdma_load_bcast.class_route = 14; // job-wide system class route.
+            rdma_load_bcast.class_route = 13; // job-wide system class route.
             rdma_load_bcast.dest_payload_paddr = this;
-            rdma_load_bcast.num_in_class_route = app->jobLeaderData.NodesInJob;
+            rdma_load_bcast.num_in_class_route = app->LoadNodeCount;
             rdma_load_bcast.requestID = NULL;
             Kernel_WriteFlightLog(FLIGHTLOG, FL_APPBCASTO, (uint64_t)rdma_load_bcast.source_payload_paddr,rdma_load_bcast.payload_length,newLoadStatus.dword,0);
             //printf("Broadcast ElfImage object data. addr %016lx len %016lx, status %016lx\n", (uint64_t)this,sizeof(ElfImage),newLoadStatus.dword );
@@ -149,7 +141,7 @@ ElfImage::loadProgram()
         else
         {
             // Enter the barrier so that the job leader knows that we are ready.
-            internalrc = MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+            internalrc = MUSPI_GIBarrierEnterAndWait( &systemLoadJobGIBarrier );
             assert(internalrc == 0);
 
         }
@@ -525,12 +517,12 @@ ElfImage::placeSegment(Elf64_Phdr *phdr, uint64_t poffset)
 	uint32_t iteration = app->jobLeaderData.collectiveLoadStatus.word.iteration + 1;
 
 	// Collective job load is active.
-	if (App_IsJobLeaderNode())
+	if (App_IsLoadLeaderNode())
 	{
 	    rc = readRegion((void*)vaddr, phdr->p_offset, phdr->p_filesz);
 
 	    // Wait until all nodes reach this point
-	    internalrc = MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+	    internalrc = MUSPI_GIBarrierEnterAndWait( &systemLoadJobGIBarrier );
 	    assert(internalrc == 0);
 
 	    // Setup status information for the operation
@@ -540,8 +532,8 @@ ElfImage::placeSegment(Elf64_Phdr *phdr, uint64_t poffset)
 	    rdma_load_bcast.status_mem = (uint64_t)(&(app->jobLeaderData.collectiveLoadStatus.dword));
 	    rdma_load_bcast.status_val = newLoadStatus.dword;
 	    // Setup to perform the rdma broadcast
-	    rdma_load_bcast.class_route = 14; // job-wide system class route.
-	    rdma_load_bcast.num_in_class_route = app->jobLeaderData.NodesInJob;
+	    rdma_load_bcast.class_route = 13; // job-wide system class route.
+	    rdma_load_bcast.num_in_class_route = app->LoadNodeCount;
 	    rdma_load_bcast.requestID = NULL;
 	    // Broadcast the region data to all the nodes.
 	    rdma_load_bcast.source_payload_paddr = (rc == 0) ? (void*)p->Text_PStart : (void*)&_errorReason;
@@ -563,7 +555,7 @@ ElfImage::placeSegment(Elf64_Phdr *phdr, uint64_t poffset)
 	else
 	{
 	    // Enter the barrier so that the job leader knows that we are ready.
-	    internalrc = MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+	    internalrc = MUSPI_GIBarrierEnterAndWait( &systemLoadJobGIBarrier );
 	    assert(internalrc == 0);
 	}
 	// SPIN until we see a matching iteration count. Once we have a match,

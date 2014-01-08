@@ -168,11 +168,14 @@ BOOST_AUTO_TEST_CASE( bogus_numeric_signal_special_arg )
 {
     _argv = make_argv("-123 --id 15", _argc);
     boost::scoped_ptr<kill_job::Options> options;
-    BOOST_REQUIRE_THROW(
+    BOOST_REQUIRE_NO_THROW(
             options.reset(
                 new kill_job::Options(_argc, _argv)
-                ),
-            boost::program_options::unknown_option
+                )
+            );
+    BOOST_REQUIRE_EQUAL(
+            options->getSignal(),
+            "123"
             );
 }
 
@@ -316,6 +319,16 @@ BOOST_AUTO_TEST_CASE( zero_timeout )
     BOOST_REQUIRE_THROW(
             kill_job::Options( _argc, _argv ),
             boost::program_options::invalid_option_value 
+            );
+}
+
+BOOST_AUTO_TEST_CASE( negative_signal_number )
+{
+    _argv = make_argv("-s -10 --id 15", _argc);
+    kill_job::Options options( _argc, _argv );
+    BOOST_REQUIRE_THROW(
+            options.validate(),
+            boost::program_options::invalid_option_value
             );
 }
 

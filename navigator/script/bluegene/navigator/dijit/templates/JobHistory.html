@@ -1,13 +1,13 @@
 <div>
 
-<div data-dojo-type="dijit.layout.BorderContainer">
-    <div data-dojo-type="dijit.layout.BorderContainer" data-dojo-props="gutters: false, region: 'center'">
-        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'top'">
-            <div data-dojo-type="dijit.form.DropDownButton" data-dojo-attach-point="_filterOptionsDropDownButton">
+<div data-dojo-type="dijit/layout/BorderContainer">
+    <div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="gutters: false, region: 'center'">
+        <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'top'">
+            <div data-dojo-type="dijit/form/DropDownButton" data-dojo-attach-point="_filterOptionsDropDownButton">
                 <span>Filter options</span>
-                <div style="width: 500px;" data-dojo-type="dijit.TooltipDialog" data-dojo-props="style: 'width: 500px;'">
+                <div style="width: 500px;" data-dojo-type="dijit/TooltipDialog" data-dojo-props="style: 'width: 500px;'">
                     <div class="bgFilterOptions bgFilterOptionsJobHistory"
-                         data-dojo-type="dijit.form.Form"
+                         data-dojo-type="dijit/form/Form"
                          data-dojo-props="'class': 'bgFilterOptions bgFilterOptionsJobHistory'"
                          data-dojo-attach-point="_filterOptionsForm"
                          >
@@ -15,50 +15,50 @@
                             <ul>
                                 <li>
                                     <label for="${id}-fo-status">Status</label>
-                                    <input id="${id}-fo-status" data-dojo-type="bluegene.navigator.dijit.MultiSelectCodes" data-dojo-props="name: 'status', values: bluegene.navigator.xlate.jobsHistoryOrder, map: bluegene.navigator.xlate.jobStatus" />
+                                    <input id="${id}-fo-status" data-dojo-type="bluegene/navigator/dijit/MultiSelectCodes" data-dojo-props="name: 'status', values: this._ll_xlate.jobsHistoryOrder, map: this._ll_xlate.jobStatus" />
                                 </li>
                                 <li>
                                     <label for="${id}-fo-id">ID</label>
-                                    <input name="id" id="${id}-fo-id" data-dojo-type="dijit.form.ValidationTextBox"
+                                    <input name="id" id="${id}-fo-id" data-dojo-type="dijit/form/ValidationTextBox"
                                             data-dojo-props="name: 'id', placeHolder: '1', invalidMessage: 'The value must be a number.', regExp: '\\d+'" />
                                 </li>
                                 <li>
                                     <label for="${id}-fo-user">User</label>
-                                    <input name="user" id="${id}-fo-user" data-dojo-type="dijit.form.TextBox" data-dojo-props="name: 'user'" />
+                                    <input name="user" id="${id}-fo-user" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'user'" />
                                 </li>
                                 <li>
                                     <label for="${id}-fo-block">Block</label>
-                                    <input name="block" id="${id}-fo-block" data-dojo-type="dijit.form.TextBox" data-dojo-props="name: 'block'" />
+                                    <input name="block" id="${id}-fo-block" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'block'" />
                                 </li>
                                 <li>
                                     <label for="${id}-fo-executable">Executable</label>
-                                    <input name="executable" id="${id}-fo-executable" data-dojo-type="dijit.form.TextBox" data-dojo-props="name: 'executable'" />
+                                    <input name="executable" id="${id}-fo-executable" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'executable'" />
                                 </li>
                                 <li>
                                     <label for="${id}-fo-exit-status">Exit status</label>
                                     <input name="exitStatus" id="${id}-fo-exit-status"
                                            placeHolder="0"
-                                           data-dojo-type="dijit.form.NumberTextBox"
+                                           data-dojo-type="dijit/form/NumberTextBox"
                                            data-dojo-props="constraints: {min:0,max:65535,places:0}, name: 'exitStatus', placeHolder: '0', promptMessage: 'Integer between 0 and 65535'"
                                      />
                                 </li>
 
-                                <li><input data-dojo-type="bluegene.navigator.dijit.TimeInterval" data-dojo-props="name: 'startTime', label: 'Started'" /></li>
-                                <li><input data-dojo-type="bluegene.navigator.dijit.TimeInterval" data-dojo-props="name: 'endTime', label: 'Ended'" data-dojo-attach-point="_filterOptionsEndTime" /></li>
+                                <li><input data-dojo-type="bluegene/navigator/dijit/TimeInterval" data-dojo-props="name: 'startTime', label: 'Started'" /></li>
+                                <li><input data-dojo-type="bluegene/navigator/dijit/TimeInterval" data-dojo-props="name: 'endTime', label: 'Ended'" data-dojo-attach-point="_filterOptionsEndTime" /></li>
                             </ul>
                         </fieldset>
                         <fieldset class="submit">
-                            <button type="submit" data-dojo-type="dijit.form.Button">Apply</button>
-                            <button type="button" data-dojo-type="dijit.form.Button" data-dojo-attach-point="_filterOptionsResetButton">Reset</button>
+                            <button type="submit" data-dojo-type="dijit/form/Button">Apply</button>
+                            <button type="button" data-dojo-type="dijit/form/Button" data-dojo-attach-point="_filterOptionsResetButton">Reset</button>
                         </fieldset>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'center'">
+        <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'center'">
             <table style="height: 100%;"
-                   data-dojo-type="dojox.grid.EnhancedGrid"
+                   data-dojo-type="dojox/grid/EnhancedGrid"
                    data-dojo-props="rowsPerPage: 50, selectable: true, selectionMode: 'single', style: 'height: 100%;', noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No jobs match the filter options.&lt;/span&gt;'"
                    data-dojo-attach-point="_grid"
                    >
@@ -77,7 +77,7 @@
             </table>
         </div>
     </div>
-    <div style="height: 320px;" data-dojo-type="bluegene.navigator.dijit.JobDetails" data-dojo-props="region: 'bottom', splitter: true" data-dojo-attach-point="_details"></div>
+    <div style="height: 320px;" data-dojo-type="bluegene/navigator/dijit/JobDetails" data-dojo-props="region: 'bottom', splitter: true" data-dojo-attach-point="_details"></div>
 </div>
 
 </div>

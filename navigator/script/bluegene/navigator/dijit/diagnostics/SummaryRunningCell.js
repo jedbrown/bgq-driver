@@ -24,10 +24,11 @@
 
 define(
 [
+    "../../format",
     "../../../dijit/ActionLink",
     "../../../dijit/OutputFormat",
+    "dojo/when",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dijit/_WidgetBase",
     "dijit/_TemplatedMixin",
@@ -37,15 +38,15 @@ define(
 
     // Used in template
     "../Table",
-    "../../format",
     "../../../dijit/Hideable",
     "dijit/form/Button"
 ],
 function(
+        b_navigator_format,
         b_dijit_ActionLink,
         b_dijit_OutputFormat,
+        d_when,
         d_declare,
-        d_Deferred,
         d_lang,
         j__WidgetBase,
         j__TemplatedMixin,
@@ -66,7 +67,6 @@ var calcBlockIdProperties = function( o )
 
 
 var b_navigator_dijit_diagnostics_SummaryRunningCell = d_declare(
-        "bluegene.navigator.dijit.diagnostics.SummaryRunningCell",
         [ j__WidgetBase, j__TemplatedMixin, j__WidgetsInTemplateMixin ],
 
 {
@@ -174,7 +174,7 @@ var b_navigator_dijit_diagnostics_SummaryRunningCell = d_declare(
             return;
         }
 
-        d_Deferred.when(
+        d_when(
                 this._cancel_diagnostics_run_fn( this._run_id ),
                 d_lang.hitch( this, this._cancelledRun ),
                 d_lang.hitch( this, this._cancelRunFailed )
@@ -199,7 +199,10 @@ var b_navigator_dijit_diagnostics_SummaryRunningCell = d_declare(
         this._errorText.set( "value", "Error canceling the run, " + error.message );
         this._errorHideable.show();
         this._cancelButton.set( "disabled", false );
-    }
+    },
+    
+    
+    _b_navigator_format : b_navigator_format
 
 } );
 

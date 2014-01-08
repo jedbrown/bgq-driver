@@ -121,6 +121,14 @@ __C_LINKAGE void __NORETURN Scheduler( void )
                 mtmsr(MSR_CNK);
                 isync();
 
+                // Setup the physical pid for the new kthread. Avoid the mtspr and isync if the extended thread affinity facility is not enabled.
+                if (pKThr_Run->pAppProc->ThreadModel == CONFIG_THREAD_MODEL_ETA)
+                {
+                    //printf("Dispatching tid=%d. Changing pid from %ld to %d\n", GetTID(pKThr_Run), mfspr(SPRN_PID), pKThr_Run->physical_pid);
+                    mtspr(SPRN_PID, pKThr_Run->physical_pid); // Modify the PID for the current kthread
+
+                    isync(); // ensure the instruction has completed before issuing any additional storage operations
+                }
                 // We are on a path to dispatch a thread. Raise our priority back to normal
                 // !! note: this should be changed to preserve the previous hardware thread priority 
                 ThreadPriority_Medium(); 
@@ -153,7 +161,7 @@ __C_LINKAGE void __NORETURN Scheduler( void )
                 StoreConditional( pHWT->dummyStwcx.data, 0);
                 // Load the context. Note that the return never occurs, the rfi at the end of the 
                 // context load will transition this hardware thread to begin executing in the new context.
-                Kernel_WriteFlightLog(FLIGHTLOG, FL_SCHEDDISP,  GetTID(pKThr_Run) | (slotIndex<<16), // TID and slot index 
+                Kernel_WriteFlightLog(FLIGHTLOG, FL_SCHEDDISP,  GetTID(pKThr_Run) | (slotIndex<<16) | (((uint64_t)pKThr_Run->physical_pid) << 32), // TID and slot index 
                                                 pKThr_Run->Reg_State.ip,   // instruction pointer
                                                 mfspr(SPRG_SPIinfo),       // spi info spr
                                                 temp.SchedOrder);          // ordering data
@@ -195,7 +203,6 @@ __C_LINKAGE void __NORETURN Scheduler( void )
                 {
                     Upci_SwapIn(pKThr_Run->pUpci_Cfg);
                 }
-
                 LC_ContextLaunch(&(pKThr_Run->Reg_State));
             }
             else
@@ -284,7 +291,7 @@ __C_LINKAGE void Sched_Unblock( KThread_t *pKThr, uint32_t unblock_state )
                     {
                         // This rank is not active. allow it to prematurely enter the exit flow
                         proc->State = ProcessState_ExitPending;
-                            App_Exit(AppExit_Phase1); 
+                        App_Exit(AppExit_Phase1, 1); 
                         // Previous call does not return
                     }
                     else if (proc->State==ProcessState_AgentInactive)
@@ -415,14 +422,15 @@ void Sched_BlockForExit()
     int hwtid = ProcessorThreadID();
     CoreState_t *pCS = &(NodeState.CoreState[core]);
     HWThreadState_t *pHWT = &(pCS->HWThreads[hwtid]);
+    AppProcess_t *hwtproc = GetProcessByProcessorID(ProcessorID());
 
     uint32_t slot;
     for ( slot = 0 ; slot < CONFIG_SCHED_KERNEL_SLOT_INDEX ; slot++)
     {
         KThread_t *kthread = pHWT->SchedSlot[slot];
-        if (kthread)
+        if (kthread && (kthread->pAppProc == hwtproc))
         {
-            // Set the blocking code, but do not destroy the exisitng blocking codes since these 
+            // Set the blocking code, but do not destroy the existing blocking codes since these 
             // are tested by the coredump code to determine if a kthread should be dumped.
             kthread->State |= SCHED_STATE_APPEXIT;
         }

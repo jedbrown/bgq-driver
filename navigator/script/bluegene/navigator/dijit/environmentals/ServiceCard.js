@@ -36,7 +36,6 @@ function(
 {
 
 var b_navigator_dijit_environmentals_ServiceCard = d_declare(
-        "bluegene.navigator.dijit.environmentals.ServiceCard",
         [ l_AbstractQueryResultsDijit ],
 
 {

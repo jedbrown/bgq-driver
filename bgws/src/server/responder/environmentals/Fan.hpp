@@ -27,6 +27,8 @@
 
 #include "../../AbstractResponder.hpp"
 
+#include "../../query/env/Query.hpp"
+
 #include "capena-http/http/uri/Path.hpp"
 
 
@@ -48,7 +50,8 @@ public:
     Fan(
             CtorArgs& args
         ) :
-            AbstractResponder( args )
+            AbstractResponder( args ),
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool)
     { /* Nothing to do */ }
 
     // override
@@ -56,6 +59,24 @@ public:
 
     // override
     void _doGet();
+
+
+    // override
+    void notifyDisconnect();
+
+
+private:
+
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
+
+    query::env::Query::Ptr _query_ptr;
+
+
+    void _queryComplete(
+            capena::server::ResponderPtr,
+            RequestRange req_range,
+            query::env::Query::Result res
+        );
 
 };
 

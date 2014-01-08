@@ -216,12 +216,13 @@ Job::remove()
         LOG_WARN_MSG( e.what() );
     }
 
-    if ( mux::Connection::Ptr mux =  _mux.lock() ) {
-        // we have a mux connection, remove entry from container
+    if ( mux::Connection::Ptr mux = _mux.lock() ) {
+        server->getJobs()->remove( _id );
+    } else if ( _queue.isClientDisconnected() ) {
         server->getJobs()->remove( _id );
     } else {
-        // no mux connection, likely means this job ended during a
-        // failover event.
+        // no mux connection and the client has not been disconnected,
+        // means this job ended during a failover event.
         _status.set( job::Status::Terminating, shared_from_this() );
     }
 

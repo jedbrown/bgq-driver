@@ -32,7 +32,7 @@ IOSD_BIN=/sbin/${prog}
 IOSD_CONFIG=/etc/sysconfig/${prog}
 PIDFILE=/var/run/cios.pid
 LOCKFILE=/var/lock/subsys/cios
-CIOS_RPM_ARR=(`rpm -qa | grep cio_services_runtime | tr "-" "\n"`)
+#CIOS_RPM_ARR=(`rpm -qa | grep cio_services_runtime | tr "-" "\n"`)
 
 # Bind mount files from NFS root into /bgfs when using NFS root
 # Additional daemons may be added her by adding to the list.  It is
@@ -61,7 +61,7 @@ function start
         fi
 
         # Start the I/O Services daemon which starts the other daemons.
-        echo -n $"Starting Common I/O Services (Revision ${CIOS_RPM_ARR[2]}-${CIOS_RPM_ARR[3]}): "
+        echo -n $"Starting Common I/O Services: "
         daemon --pidfile=${PIDFILE} ${IOSD_BIN} ${IOSD_OPTIONS}
         RETVAL=$?
         echo
@@ -69,7 +69,7 @@ function start
         return ${RETVAL}
 
     else
-	echo -n $"Starting Common I/O Services (Revision ${CIOS_RPM_ARR[2]}-${CIOS_RPM_ARR[3]}): "
+	echo -n $"Starting Common I/O Services: "
 	skipped
 	echo -en "\n"
 	return 0

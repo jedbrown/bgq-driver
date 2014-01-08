@@ -43,7 +43,7 @@ uint64_t sc_dup2(SYSCALL_FCN_ARGS)
    }
 
    // Make sure the target descriptor is valid.
-   if ( (targetFD < 0) || (targetFD >= CNK_MAX_FDS) ) {
+   if ( (targetFD < 0) || (targetFD >= GetMyProcess()->App_Descriptors.maxfds) ) {
       return CNK_RC_FAILURE(EBADF);  // NOTE: different error than fcntl F_DUPFD
    }
 

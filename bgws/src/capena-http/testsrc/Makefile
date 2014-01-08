@@ -26,7 +26,8 @@ include ../../../../Make.rules
 
 
 CXXFLAGS +=\
- -DBOOST_TEST_DYN_LINK -isystem $(BGQ_INSTALL_DIR)/extlib/include
+ -DBOOST_TEST_DYN_LINK -isystem $(BGQ_INSTALL_DIR)/extlib/include \
+ -isystem $(BGQ_INSTALL_DIR)
 
 
 LDFLAGS += \
@@ -58,26 +59,39 @@ test_%.run: test_%
 	mv $@.tmp $@
 
 
+clean_cmds := $(RM) *.o *.d $(exes) *.run *.tmp
+
+
 default: all
 
 
-all: $(exes)
+all: $(exes) server.all
 
 
 ${exes:%=%.o}:
 
 
-test: $(run_targets)
+test: $(run_targets) server.test
+
+
+server.all:
+	${MAKE} -C server all
+
+server.test:
+	${MAKE} -C server test
 
 
 install:
 
 
 clean:
-	$(RM) *.o *.d $(exes) *.run *.tmp
+	$(clean_cmds)
+	${MAKE} -C server $@
 
 
-distclean: clean
+distclean:
+	$(clean_cmds)
+	${MAKE} -C server $@
 
 
 .PHONY: default all test install clean distclean

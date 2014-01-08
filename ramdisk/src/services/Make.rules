@@ -26,6 +26,8 @@ ifndef $(OS_ARCH)
 OS_ARCH := $(shell uname -m)
 endif
 
+RHEL6_2 := $(shell if [[ $(BGQ_LINUX_OS_PATH) =~ RHEL6.2 ]] ; then echo TRUE ; else echo FALSE ; fi)
+
 # Figure out if 64-bit or 32-bit architecture
 ifndef $(BITS)
 BITS=32
@@ -74,10 +76,18 @@ CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)/extlib/include
 
 # Set linker flags
 LDFLAGS  += -pthread
-LDFLAGS  += -Wl,-rpath,/usr/lib64
-LDFLAGS  += -WL,-rpath,/usr/lib
-LDFLAGS  += -Wl,-rpath,/lib64
-LDFLAGS  += -Wl,-rpath,/lib
+ifeq ($(RHEL6_2),FALSE)
+LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.3_base/usr/lib64
+LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.3_base/usr/lib
+LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.3_base/lib64
+LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.3_base/lib
+endif
+ifeq ($(RHEL6_2),TRUE)
+LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.2_base/usr/lib64
+LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.2_base/usr/lib
+LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.2_base/lib64
+LDFLAGS  += -Wl,-rpath,/bgsys/linux/RHEL6.2_base/lib
+endif
 LDFLAGS  += -Wl,-rpath,$(IOS_LIBRARY_DIR)
 LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
 LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/extlib/lib

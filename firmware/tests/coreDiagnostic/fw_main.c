@@ -229,9 +229,9 @@ int fw_sim_writeRASString(uint32_t message_id, char* msg ) { return -1; }
 int fw_sim_putn(const char* a, unsigned b) { return -1; }
 int fw_mmu_remap(void) { return -1; }
 void sim_exit(int status) { while(1);};
-void fw_l1p_flushCorrectables(void) {}
-void fw_l2_flushCorrectables(void) {}
-void fw_ddr_flushCorrectables(void) {}
+void fw_l1p_flushCorrectables(int x) {}
+void fw_l2_flushCorrectables(int x) {}
+void fw_ddr_flushCorrectables(int x) {}
 void fw_nd_flushCorrectables(void) {}
 void fw_mu_flushCorrectables(void) {}
 void fw_pcie_shutdown(void) {}

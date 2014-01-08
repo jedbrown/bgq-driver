@@ -41,7 +41,7 @@ uint64_t sc__newselect(SYSCALL_FCN_ARGS)
                  __func__, whoami(), nfds, readfds, writefds, errorfds, timeout ));
 
    // Check for error conditions.
-   if ( (nfds < 0) || (nfds > CNK_MAX_FDS) )
+   if ( (nfds < 0) || (nfds > GetMyProcess()->App_Descriptors.maxfds) )
    {
       CNK_RC_FAILURE(EINVAL);
    }

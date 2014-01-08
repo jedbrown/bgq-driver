@@ -80,26 +80,6 @@ public:
     void start();
 
 
-    /*!
-     *  When the application has determined the headers for its response to the current request, this function is called.
-     *
-     *  This will be called once for the request+response, and will be called before postResponseBodyData().
-     */
-    void postResponseStatusHeaders(
-            http::Status status,
-            const Headers& headers,
-            Response::BodyPresense::Value expect_body /*!< Need to know if HTTP headers indicate no body content */
-        );
-
-    /*!
-     *  When the application
-     */
-    void postResponseBodyData(
-            const std::string& data,
-            DataContinuesIndicator data_continues
-        );
-
-
     boost::asio::io_service& ioService()  { return _socket_ptr->io_service(); }
 
 
@@ -145,6 +125,7 @@ private:
 
     RequestPtr _request_ptr;
     ResponderPtr _responder_ptr;
+    boost::weak_ptr<AbstractResponder> _responder_wk_ptr;
 
 
     Connection(
@@ -236,13 +217,13 @@ private:
         );
 
 
-    void _postResponseStatusHeadersImpl(
+    void _notifyResponseStatusHeaders(
             http::Status status,
             const Headers& headers,
-            Response::BodyPresense::Value expect_body
+            BodyPresense expect_body
         );
 
-    void _postResponseBodyDataImpl(
+    void _notifyResponseBodyData(
             const std::string& data,
             DataContinuesIndicator data_continues
         );

@@ -1,21 +1,21 @@
 <div>
 
-<div title="Login" class="bgLoginDialog" data-dojo-type="dijit.Dialog" data-dojo-attach-point="_loginDialog">
+<div title="Login" class="bgLoginDialog" data-dojo-type="dijit/Dialog" data-dojo-attach-point="_loginDialog">
     <ul>
         <li>
             <label for="${id}-user">Username</label>
-            <input name="username" id="${id}-user" style="width: 200px;" data-dojo-type="dijit.form.TextBox" data-dojo-attach-point="_usernameInput" />
+            <input name="username" id="${id}-user" style="width: 200px;" data-dojo-type="dijit/form/TextBox" data-dojo-attach-point="_usernameInput" />
         </li>
         <li>
             <label for="${id}-password">Password</label>
-            <input type="password" name="password" id="${id}-password" style="width: 200px;" data-dojo-type="dijit.form.TextBox" data-dojo-attach-point="_passwordInput" />
+            <input type="password" name="password" id="${id}-password" style="width: 200px;" data-dojo-type="dijit/form/TextBox" data-dojo-attach-point="_passwordInput" />
         </li>
     </ul>
-    <div><button type="submit" style="float: right;" data-dojo-type="dijit.form.Button" data-dojo-attach-point="_loginButton">Login</button></div>
-    <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_authenticatingText">Authenticating ... </div>
-    <div style="color: red;" data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_invalidUserPassText">Invalid user name or password.</div>
-    <div style="color: red;" data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_notAvailableText">Blue Gene Web Services is not available.</div>
-    <div style="color: red;" data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_invalidSessionText">Blue Gene Web Services session ended.</div>
+    <div><button type="submit" style="float: right;" data-dojo-type="dijit/form/Button" data-dojo-attach-point="_loginButton">Login</button></div>
+    <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_authenticatingText">Authenticating ... </div>
+    <div style="color: red;" data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_invalidUserPassText">Invalid user name or password.</div>
+    <div style="color: red;" data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_notAvailableText">Blue Gene Web Services is not available.</div>
+    <div style="color: red;" data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_invalidSessionText">Blue Gene Web Services session ended.</div>
 </div>
 
 </div>

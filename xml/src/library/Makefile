@@ -136,6 +136,7 @@ $(MODULE_LIB_DIR)/$(SOLIB_DEV): $(SOLIB_DEV)
 
 $(MODULE_LIB_DIR)/$(SOLIB_VERS): $(SOLIB_VERS)
 	$(RM) $@
+	$(MKDIR) -p $(dir $@)
 	ln -s $(SOLIB_FULL) $@
 
 $(LIB): $(OBJS)

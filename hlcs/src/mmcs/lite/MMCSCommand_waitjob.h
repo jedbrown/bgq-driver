@@ -24,14 +24,18 @@
 #ifndef MMCS_COMMAND_WAITJOB_H
 #define MMCS_COMMAND_WAITJOB_H
 
-#include "MMCSCommand.h"
 
-class ConsoleController;
+#include "common/AbstractCommand.h"
+
+
+namespace mmcs {
+namespace lite {
+
 
 /*!
  * \brief
  */
-class MMCSCommand_waitjob: public MMCSCommand
+class MMCSCommand_waitjob: public common::AbstractCommand
 {
 public:
     /*!
@@ -40,7 +44,7 @@ public:
     MMCSCommand_waitjob(
             const char* name,
             const char* description,
-            const MMCSCommandAttributes& attributes
+            const Attributes& attributes
             );
 
     /*!
@@ -48,9 +52,9 @@ public:
      */
     void execute(
             std::deque<std::string> args,
-            MMCSCommandReply& reply,
-            ConsoleController* pController,
-            BlockControllerTarget* pTarget=NULL
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            server::BlockControllerTarget* pTarget=NULL
             );
 
     /*!
@@ -58,7 +62,7 @@ public:
      */
     void help(
             std::deque<std::string> args,
-            MMCSCommandReply& reply
+            mmcs_client::CommandReply& reply
             );
 
     /*!
@@ -73,5 +77,8 @@ public:
 private:
     static int selectJobCallback(void*, int argc, char** argv, char**);
 };
+
+
+} } // namespace mmcs::lite
 
 #endif

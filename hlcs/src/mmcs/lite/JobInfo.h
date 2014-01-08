@@ -29,7 +29,10 @@
 
 #include <stdint.h>
 
+
+namespace mmcs {
 namespace lite {
+
 
 /*!
  * \brief describes a job
@@ -104,7 +107,7 @@ private:
     bool _inline;                       //!<
 };
 
-} // lite
+} } // namespace mmcs::lite
 
 #endif
 

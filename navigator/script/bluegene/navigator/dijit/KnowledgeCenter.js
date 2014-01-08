@@ -38,7 +38,6 @@ function(
 {
 
 var b_navigator_dijit_KnowledgeCenter = d_declare(
-        "bluegene.navigator.dijit.KnowledgeCenter",
         [ j__WidgetBase, j__TemplatedMixin ],
 
 {

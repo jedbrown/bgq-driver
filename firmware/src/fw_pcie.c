@@ -738,7 +738,7 @@ int fw_pcie_custom(int i) {
     }
 
     default : {
-	FW_Error("Unsupported operation (step=%d modifer=%d) [%s:%d]", i, PCIE_INIT[i].modifier, __func__, __LINE__);
+	FW_Error("Unsupported operation (step=%d modifer=%d) [%s:%d].", i, PCIE_INIT[i].modifier, __func__, __LINE__);
 	return -1;
     }
 
@@ -822,7 +822,7 @@ int fw_pcie_poll_dcr( int i ) {
 #endif
 
   if (countdown < 0) {
-      FW_Error("PCIe timeout.  Step:%d  Register:%X Bits:%lX\n", i, PCIE_INIT[i].address, PCIE_INIT[i].data);
+      FW_Error("PCIe timeout.  Step:%d  Register:%X Bits:%lX", i, PCIE_INIT[i].address, PCIE_INIT[i].data);
       rc = FW_TIMEOUT;
   }
 
@@ -940,7 +940,7 @@ int fw_pcie_set_cfg_spc_root( int i ) {
     }
   }
   else {
-      FW_Error("Unsupported Set Configuration Space Root option (step %d)\n", i);
+      FW_Error("Unsupported Set Configuration Space Root option (step %d).", i);
       return -1;
   }
 
@@ -1066,7 +1066,7 @@ int fw_pcie_init( void ) {
     }
 
     default : {
-	FW_Error("Unsupported operation %d step=%d [%s:%d]\n", PCIE_INIT[i].operation, i, __func__, __LINE__ );
+	FW_Error("Unsupported operation %d step=%d [%s:%d]", PCIE_INIT[i].operation, i, __func__, __LINE__ );
       rc = 0 - __LINE__;
     }
 

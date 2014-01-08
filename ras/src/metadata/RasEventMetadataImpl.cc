@@ -88,7 +88,7 @@ string RasEventMetadataImpl::format(const string& var_name) const
 RasEventMetadataImpl::
 RasEventMetadataImpl(const string& msgId) 
   : _msgId(msgId), _category("UNKNOWN"),  _component("UNKNOWN"),
-    _severity("UNKNOWN"),  _message("UNKNOWN"), _decoder(""), _controlAction(""), _vars()
+    _severity("UNKNOWN"),  _message("UNKNOWN"), _decoder(""), _controlAction(""), _vars(), _formats(NULL)
 {
 }
 

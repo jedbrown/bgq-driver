@@ -55,6 +55,7 @@ LDFLAGS  += -lboost_filesystem-mt
 LDFLAGS  += -lboost_program_options-mt
 LDFLAGS  += -lboost_serialization-mt
 LDFLAGS  += -lboost_system-mt
+LDFLAGS  += -rdynamic
 
 
 INSTALL_LIST          += $(call INSTALL_SBIN_TARGET, $(MUX))

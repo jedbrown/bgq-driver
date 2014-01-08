@@ -28,7 +28,6 @@ define(
     "../Bgws",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -37,7 +36,6 @@ function(
         b_Bgws,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -57,11 +55,12 @@ var b_navigator_JobHistoryDetails = d_declare( [ l_EventsMonitorMixin ],
      *  @constructs
      */
     constructor: function(
-            /** bluegene^Bgws */ bgws
+            /** bluegene^Bgws */ bgws,
+            history_job_details_dij
         )
     {
         this._bgws = bgws;
-        this._details_dij = j_registry.byId( "navigator" ).getHistoryJobDetailsDij();
+        this._details_dij = history_job_details_dij;
 
         l_topic.subscribe( l_topic.historyJobSelected, d_lang.hitch( this, this._jobSelected ) );
     },

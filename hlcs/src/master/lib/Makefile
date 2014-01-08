@@ -85,10 +85,10 @@ $(lib): $(objs) $(common_objs) $(protocol_objs)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $^
 
 $(lib_soname): $(lib)
-	ln -s $(lib) $@
+	ln -sf $(lib) $@
 
 $(lib_dev): $(lib_soname)
-	ln -s $(lib_soname) $@
+	ln -sf $(lib_soname) $@
 
 
 

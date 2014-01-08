@@ -42,7 +42,6 @@ function(
 {
 
 var b_navigator_dijit_Ras = d_declare(
-        "bluegene.navigator.dijit.Ras",
         [ l_AbstractTemplatedContainer ],
 
 {

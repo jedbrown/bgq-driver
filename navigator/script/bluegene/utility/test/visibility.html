@@ -28,7 +28,7 @@
 
 <title>visibility Browser Tests</title>
 
-<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
 
 <script>
 
@@ -131,6 +131,7 @@ function isVisible_dijit() {
 
 
 var onLoad = function() {
+    d_parser.parse();
     doh.register( "bluegene/utility/test/calcNodeHTML", tests );
     doh.run();
 };

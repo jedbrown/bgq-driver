@@ -173,6 +173,7 @@ HTTP status: 403 Forbidden
 
 #include "Block.hpp"
 
+#include "../BlockingOperationsThreadPool.hpp"
 #include "../dbConnectionPool.hpp"
 #include "../Error.hpp"
 #include "../SortSpec.hpp"
@@ -188,6 +189,8 @@ HTTP status: 403 Forbidden
 
 #include <db/include/api/genblock.h>
 #include <db/include/api/Exception.h>
+
+#include <db/include/api/cxxdb/cxxdb.h>
 
 #include <db/include/api/filtering/getBlocks.h>
 
@@ -205,6 +208,7 @@ HTTP status: 403 Forbidden
 #include <boost/throw_exception.hpp>
 
 #include <stdexcept>
+#include <string>
 
 
 using BGQDB::DBTBlock;
@@ -224,11 +228,9 @@ namespace bgws {
 namespace responder {
 
 
-const capena::http::uri::Path &Blocks::RESOURCE_PATH(::bgws::common::resource_path::BLOCKS);
-const capena::http::uri::Path Blocks::RESOURCE_PATH_EMPTY_CHILD(RESOURCE_PATH / "");
+namespace statics {
 
-
-void Blocks::_statusNotifier( BGQDB::filtering::BlockFilter& block_filter_in_out, const std::string& status_str )
+void statusNotifier( BGQDB::filtering::BlockFilter& block_filter_in_out, const std::string& status_str )
 {
     BGQDB::filtering::BlockFilter::Statuses statuses;
 
@@ -251,7 +253,7 @@ void Blocks::_statusNotifier( BGQDB::filtering::BlockFilter& block_filter_in_out
 }
 
 
-void Blocks::_sortNotifier( BGQDB::filtering::BlockSort& block_sort_in_out, const std::string& sort_str )
+void sortNotifier( BGQDB::filtering::BlockSort& block_sort_in_out, const std::string& sort_str )
 {
     SortSpec sort_spec( sort_str );
 
@@ -276,6 +278,12 @@ void Blocks::_sortNotifier( BGQDB::filtering::BlockSort& block_sort_in_out, cons
 
     block_sort_in_out = BGQDB::filtering::BlockSort( field, sort_order );
 }
+
+} // namespace statics
+
+
+const capena::http::uri::Path &Blocks::RESOURCE_PATH(::bgws::common::resource_path::BLOCKS);
+const capena::http::uri::Path Blocks::RESOURCE_PATH_EMPTY_CHILD(RESOURCE_PATH / "");
 
 
 bool Blocks::matchesUrl(
@@ -318,8 +326,8 @@ void Blocks::_doGet()
     std::string block_type_str;
 
     desc.add_options()
-            ( ::bgws::common::blocks_query::STATUS_OPTION_NAME.c_str(), po::value<string>()->notifier( bind( &Blocks::_statusNotifier, boost::ref( block_filter ), _1 ) ) )
-            ( "sort", po::value<string>()->notifier( bind( &Blocks::_sortNotifier, boost::ref( block_sort ), _1 ) ) )
+            ( ::bgws::common::blocks_query::STATUS_OPTION_NAME.c_str(), po::value<string>()->notifier( bind( &statics::statusNotifier, boost::ref( block_filter ), _1 ) ) )
+            ( "sort", po::value<string>()->notifier( bind( &statics::sortNotifier, boost::ref( block_sort ), _1 ) ) )
             ( ::bgws::common::blocks_query::TYPE_OPTION_NAME.c_str(), po::value( &block_type_str ) )
         ;
 
@@ -335,84 +343,13 @@ void Blocks::_doGet()
     }
 
 
-    auto conn_ptr(dbConnectionPool::getConnection());
-
-    cxxdb::ResultSetPtr rs_ptr(BGQDB::filtering::getBlocks(
+    _blocking_operations_thread_pool.post( bind(
+            &Blocks::_doQuery, this,
+            capena::server::AbstractResponder::shared_from_this(),
             block_filter,
-            block_sort,
-            *conn_ptr
-        ));
+            block_sort
+        ) );
 
-    json::ArrayValue arr_val;
-    json::Array &arr(arr_val.get());
-
-    while ( rs_ptr->fetch() ) {
-        const cxxdb::Columns &cols(rs_ptr->columns());
-
-        string block_id(cols[DBTBlock::BLOCKID_COL].getString());
-
-        // Make sure the user has READ authority to the block.
-        if ( ! (_isUserAdministrator() ||
-                _getEnforcer().validate(
-                 hlcs::security::Object(
-                        hlcs::security::Object::Block,
-                        block_id
-                 ),
-                 hlcs::security::Action::Read,
-                 _getRequestUserId()
-             )) )
-        {
-            // don't send this block because the user doesn't have authority.
-            LOG_DEBUG_MSG( "Not sending block '" << block_id << "' because " << _getRequestUserInfo() << " doesn't have authority." );
-            continue;
-        }
-
-        json::Object &block_obj(arr.addObject());
-
-        block_obj.set( "id", block_id );
-        block_obj.set( "status", cols[DBTBlock::STATUS_COL].getString() );
-        block_obj.set( "statusSequenceId", cols[DBTBlock::SEQID_COL].as<int64_t>() );
-        block_obj.set( "statusChanged", cols[DBTBlock::STATUSLASTMODIFIED_COL].getTimestamp() );
-
-        if ( cols[DBTBlock::USERNAME_COL] ) {
-            string user(cols[DBTBlock::USERNAME_COL].getString());
-
-            if ( ! user.empty() ) {
-                if ( ! cols[DBTBlock::USERNAME_COL].isNull() )  block_obj.set( "user", cols[DBTBlock::USERNAME_COL].getString() );
-            }
-        }
-
-        int64_t numcnodes(cols[DBTBlock::NUMCNODES_COL].as<int64_t>());
-        if ( numcnodes != 0 )  block_obj.set( "computeNodeCount", numcnodes );
-
-        int64_t numionodes(cols[DBTBlock::NUMIONODES_COL].as<int64_t>());
-        if ( numionodes != 0 )  block_obj.set( "ioNodeCount", numionodes );
-
-        if ( ! cols[DBTBlock::DESCRIPTION_COL].isNull() )  block_obj.set( "description", cols[DBTBlock::DESCRIPTION_COL].getString() );
-
-        if ( ! cols[DBTBlock::ISTORUS_COL].isNull() ) {
-            string torus_inds(cols[DBTBlock::ISTORUS_COL].getString());
-
-            string torus_str;
-            if ( torus_inds[0] == '1' )  torus_str += 'A';
-            if ( torus_inds[1] == '1' )  torus_str += 'B';
-            if ( torus_inds[2] == '1' )  torus_str += 'C';
-            if ( torus_inds[3] == '1' )  torus_str += 'D';
-            if ( torus_inds[4] == '1' )  torus_str += 'E';
-
-            block_obj.set( "torus", torus_str );
-        }
-
-        block_obj.set( "URI", Block::calcPath( _getDynamicConfiguration().getPathBase(), block_id ).toString() );
-    }
-
-
-    capena::server::Response &response(_getResponse());
-
-    response.setContentTypeJson();
-    response.headersComplete();
-
-    json::Formatter()( arr_val, response.out() );
 }
 
 
@@ -477,6 +414,125 @@ void Blocks::_checkCreateBlockAuthority()
             data,
             capena::http::Status::Forbidden
         ) );
+}
+
+
+void Blocks::_doQuery(
+        capena::server::ResponderPtr,
+        const BGQDB::filtering::BlockFilter& block_filter,
+        const BGQDB::filtering::BlockSort& block_sort
+    )
+{
+    try {
+
+        auto conn_ptr(dbConnectionPool::getConnection());
+
+        cxxdb::ResultSetPtr rs_ptr(BGQDB::filtering::getBlocks(
+                block_filter,
+                block_sort,
+                *conn_ptr
+            ));
+
+        _getStrand().post( bind(
+                &Blocks::_queryComplete, this,
+                capena::server::AbstractResponder::shared_from_this(),
+                conn_ptr,
+                rs_ptr
+            ) );
+
+    } catch ( std::exception& e ) {
+
+        _inCatchPostCurrentExceptionToHandlerFn();
+
+    }
+}
+
+
+void Blocks::_queryComplete(
+        capena::server::ResponderPtr,
+        cxxdb::ConnectionPtr,
+        cxxdb::ResultSetPtr rs_ptr
+    )
+{
+    try {
+
+        json::ArrayValue arr_val;
+        json::Array &arr(arr_val.get());
+
+        while ( rs_ptr->fetch() ) {
+            const cxxdb::Columns &cols(rs_ptr->columns());
+
+            string block_id(cols[DBTBlock::BLOCKID_COL].getString());
+
+            // Make sure the user has READ authority to the block.
+            if ( ! (_isUserAdministrator() ||
+                    _getEnforcer().validate(
+                     hlcs::security::Object(
+                            hlcs::security::Object::Block,
+                            block_id
+                     ),
+                     hlcs::security::Action::Read,
+                     _getRequestUserId()
+                 )) )
+            {
+                // don't send this block because the user doesn't have authority.
+                LOG_DEBUG_MSG( "Not sending block '" << block_id << "' because " << _getRequestUserInfo() << " doesn't have authority." );
+                continue;
+            }
+
+            json::Object &block_obj(arr.addObject());
+
+            block_obj.set( "id", block_id );
+            block_obj.set( "status", cols[DBTBlock::STATUS_COL].getString() );
+            block_obj.set( "statusSequenceId", cols[DBTBlock::SEQID_COL].as<int64_t>() );
+            block_obj.set( "statusChanged", cols[DBTBlock::STATUSLASTMODIFIED_COL].getTimestamp() );
+
+            if ( cols[DBTBlock::USERNAME_COL] ) {
+                string user(cols[DBTBlock::USERNAME_COL].getString());
+
+                if ( ! user.empty() ) {
+                    if ( ! cols[DBTBlock::USERNAME_COL].isNull() )  block_obj.set( "user", cols[DBTBlock::USERNAME_COL].getString() );
+                }
+            }
+
+            int64_t numcnodes(cols[DBTBlock::NUMCNODES_COL].as<int64_t>());
+            if ( numcnodes != 0 )  block_obj.set( "computeNodeCount", numcnodes );
+
+            int64_t numionodes(cols[DBTBlock::NUMIONODES_COL].as<int64_t>());
+            if ( numionodes != 0 )  block_obj.set( "ioNodeCount", numionodes );
+
+            if ( ! cols[DBTBlock::DESCRIPTION_COL].isNull() )  block_obj.set( "description", cols[DBTBlock::DESCRIPTION_COL].getString() );
+
+            if ( ! cols[DBTBlock::ISTORUS_COL].isNull() ) {
+                string torus_inds(cols[DBTBlock::ISTORUS_COL].getString());
+
+                string torus_str;
+                if ( torus_inds[0] == '1' )  torus_str += 'A';
+                if ( torus_inds[1] == '1' )  torus_str += 'B';
+                if ( torus_inds[2] == '1' )  torus_str += 'C';
+                if ( torus_inds[3] == '1' )  torus_str += 'D';
+                if ( torus_inds[4] == '1' )  torus_str += 'E';
+
+                block_obj.set( "torus", torus_str );
+            }
+
+            block_obj.set( "URI", Block::calcPath( _getDynamicConfiguration().getPathBase(), block_id ).toString() );
+        }
+
+
+        capena::server::Response &response(_getResponse());
+
+        response.setContentTypeJson();
+        response.headersComplete();
+
+        json::Formatter()( arr_val, response.out() );
+
+    } catch ( std::exception& e ) {
+
+        _handleError( e );
+
+    }
+
 }
 
 

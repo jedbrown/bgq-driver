@@ -40,7 +40,7 @@ uint64_t sc_poll(SYSCALL_FCN_ARGS)
    TRACESYSCALL(("(I) %s%s: nfds=%lu, timeout=%d\n", __func__, whoami(), nfds, timeout ));
 
    // Check for error conditions.
-   if ( nfds > CNK_MAX_FDS ) {
+   if ( nfds > (uint32_t)GetMyProcess()->App_Descriptors.maxfds ) {
       return CNK_RC_FAILURE(EINVAL);
    }
 

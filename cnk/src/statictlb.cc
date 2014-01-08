@@ -89,9 +89,9 @@ extern "C"
 
 #define APPAGENT_COREID                16
 
-const unsigned TLBsizes[NUMTLBSIZES] = {1024, 16, 1};
-const char typexlate[14][32]          = {"NULL", "TEXT", "DATA", "HEAP", "SHARED", "PROCWIN", "DYNAM", "ATOMIC", 
-                                         "KERNEL", "MMIO", "SPEC", "RAMDISK", "SCRUB", "USERMMIO"};
+const unsigned TLBsizes[NUMTLBSIZES]          = {1024, 16, 1};
+const char typexlate[IS_SEGMENTTYPECOUNT][32] = {"NULL", "TEXT", "DATA", "HEAP", "SHARED", "PROCWIN", "DYNAM", "ATOMIC",
+                                                 "KERNEL", "MMIO", "SPEC", "RAMDISK", "SCRUB", "USERMMIO", "COMMON"};
 
 #if USE_EXCLUSION
 #define NUMTLBSIZES_EXCL               11
@@ -280,7 +280,7 @@ class TLBstate
         {
             int bucket;
             int hitcount;
-            const uint32_t score[] = { 1, 10, 20, 30 };
+            const uint32_t score[] = { 1, 10, 20, 80, 200 };
             for(bucket=0, hitcount=0; bucket<MAX_TLBSLOTS / MMU_ASSOCIATIVITY; bucket++)
             {
                 if(GetActive(bucket) != original.GetActive(bucket))
@@ -667,10 +667,11 @@ struct TLBMapperSharedData {
         int getSegmentRoundoff(Segment* ptr, uint32_t roundoff_allocation);
         int allocateAppTLBs();
         int mapPinnedSegments();
-
-        uint32_t allocateHeapTLBs(Process* p, bool& madeprogress);
+        
+        uint32_t allocateHeapTLBs(Process* p, int startP, int endP, bool& madeprogress);
         int partition_without_hole(uint32_t* heap);
         int partition_with_hole(uint32_t* heap);
+        
         int copySegment(uint32_t src, uint32_t dst);
         int eraseSegment(uint32_t src);
         int exchangeSegment(uint32_t src, uint32_t dst);
@@ -1723,7 +1724,7 @@ void TLBMapper::CalculatePID()
     int seg;
     int rc;
     int bestpid = -1;
-    const uint32_t score[] = { 1, 10, 20, 30 };
+    const uint32_t score[] = { 1, 10, 20, 80, 200 };
     uint32_t besthit = (MAX_TLBSLOTS / MMU_ASSOCIATIVITY) * score[3];
     uint32_t hitcount;
     int contention = 1;
@@ -1746,7 +1747,7 @@ void TLBMapper::CalculatePID()
             MapRange(&segs[seg], segs[seg].vaddr, segs[seg].vaddr, segs[seg].size);
         }
     }
-    for(x=0; x<numproc; x++)
+    for(x=0; x<orignumproc + numagentproc; x++)
     {
         int pid;
         bestpid = -1;
@@ -1832,6 +1833,18 @@ int TLBMapper::initializeProcesses()
         }
         extraprocessMemory += 32;
     }
+    uint32_t minSegmentStart[IS_SEGMENTTYPECOUNT] = {0,};
+    uint32_t maxSegmentSize[IS_SEGMENTTYPECOUNT] = {0,};
+    memset(minSegmentStart, 0, sizeof(minSegmentStart));
+    memset(maxSegmentSize,  0, sizeof(maxSegmentSize));
+    for(x=0; x<numsegs; x++)
+    {
+        if(segs[x].coremask != VMM_SEGMENTCOREMASK_16)
+        {
+            minSegmentStart[segs[x].type] = segs[x].vaddr;
+            maxSegmentSize[segs[x].type] = MAX(maxSegmentSize[segs[x].type], segs[x].size);
+        }
+    }
     
     for(x=0; x<numproc; x++)
     {
@@ -1853,8 +1866,25 @@ int TLBMapper::initializeProcesses()
         {
             proc[x].paddr_min = proc[x-1].paddr_max;
         }
-        proc[x].paddr_max = (x+1) * (totalmem - extraprocessMemory) / numproc;
-        proc[x].paddr_max &= ~0xf; // always end on 16MB alignment
+        
+        if(mapperFlags[MAPPERFLAGS_COMMONHEAP])
+        {
+            // process 0 has room to include text segment + padding for 16MB alignment.
+            // processes 1-n just include data segment + padding for 16MB alignment.
+            proc[x].paddr_max = proc[x].paddr_min + maxSegmentSize[IS_DATA];
+            
+            if((proc[x].paddr_min & (~0xf)) != (proc[x].paddr_max & (~0xf)))
+            {
+                proc[x].paddr_min += (16 + (minSegmentStart[IS_DATA] & 0x0f) - (proc[x].paddr_min & 0x0f)) & 0x0f;
+                proc[x].paddr_max = proc[x].paddr_min + maxSegmentSize[IS_DATA];
+                proc[x].paddr_max = (15 + proc[x].paddr_max) & (~0x0f);
+            }
+        }
+        else
+        {
+            proc[x].paddr_max = (x+1) * (totalmem - extraprocessMemory) / numproc;
+            proc[x].paddr_max &= ~0xf; // always end on 16MB alignment
+        }
         proc[x].paddr_cur = proc[x].paddr_min;
         proc[x].mmu->ClearMMU();
         proc[x].maxva     = maxva;
@@ -1862,6 +1892,23 @@ int TLBMapper::initializeProcesses()
         
         if(proc[x].paddr_min >= proc[x].paddr_max)
             return -1;
+    }
+
+    for(int xx=0; xx<numagentproc; xx++)
+    {
+        proc[numproc].mmu = &activemmu[APPAGENT_COREID];
+        proc[numproc].paddr_min = totalmem;         // no memory allocation
+        proc[numproc].paddr_cur = totalmem;         // no memory allocation
+        proc[numproc].paddr_max = totalmem;         // no memory allocation
+        proc[numproc].mmu->ClearMMU();
+        proc[numproc].maxva     = maxva;
+        proc[numproc].isAgent   = true;
+#if MMU_FORCEPID0
+        proc[numproc].PID       = 0;
+#else
+        proc[numproc].PID       = 1 + numproc;
+#endif
+        numproc++;
     }
 
 #if MAP_PROCESSWINDOWS
@@ -1880,24 +1927,7 @@ int TLBMapper::initializeProcesses()
     MapRange(&procwin, 7*64*1024 + kernelsize, kernelsize, totalmem - kernelsize);
 #endif    
     
-    for(int xx=0; xx<numagentproc; xx++)
-    {
-        proc[numproc].mmu = &activemmu[APPAGENT_COREID];
-        proc[numproc].paddr_min = totalmem;         // no memory allocation
-        proc[numproc].paddr_cur = totalmem;         // no memory allocation
-        proc[numproc].paddr_max = totalmem;         // no memory allocation
-        proc[numproc].mmu->ClearMMU();
-        proc[numproc].maxva     = maxva;
-        proc[numproc].isAgent   = true;
-#if MMU_FORCEPID0
-        proc[numproc].PID       = 0;
-#else
-        proc[numproc].PID       = 1 + numproc;
-#endif
-        numproc++;
-    }
-    
-    if(extraprocessMemory)
+    if(extraprocessMemory || mapperFlags[MAPPERFLAGS_COMMONHEAP])
     {
         proc[numproc].mmu = &activemmu[MAX_CORE_COUNT];
         proc[numproc].paddr_min = (proc[orignumproc-1].paddr_max + 31) & (~0x1f);
@@ -1905,11 +1935,7 @@ int TLBMapper::initializeProcesses()
         proc[numproc].paddr_max = totalmem;
         proc[numproc].mmu->ClearMMU();
         proc[numproc].maxva     = maxva;
-#if MMU_FORCEPID0
-        proc[numproc].PID       = 0;
-#else
         proc[numproc].PID       = 1 + numproc;
-#endif
         numproc++;
     }
     return 0;
@@ -1988,7 +2014,7 @@ int TLBMapper::mapPinnedSegments()
     uint32_t roundup;
     uint32_t skewup;
     
-    if(mapperFlags[MAPPERFLAGS_ALIGN16])
+    if((mapperFlags[MAPPERFLAGS_ALIGN16]) || (mapperFlags[MAPPERFLAGS_COMMONHEAP]))
     {
         if(orignumproc + numagentproc != numproc)
         {
@@ -2075,7 +2101,6 @@ int TLBMapper::mapPinnedSegments()
                 proc[segs[x].process].paddr_cur += skewup;
                 curWaste += roundup + skewup;
             }
-
             rc |= mapSegment(&segs[x], 2, segs[x].process % orignumproc);
         }
     }
@@ -2255,10 +2280,12 @@ int TLBMapper::allocateAppTLBs()
 
 /*! \brief Allocates the heap using the remaining physical memory and TLBs
  */
-uint32_t TLBMapper::allocateHeapTLBs(Process* p, bool& madeprogress)
+uint32_t TLBMapper::allocateHeapTLBs(Process* p, int startProc, int endProc, bool& madeprogress)
 {
     int slot = -1;
     int x;
+    int pid;
+    bool localProgress = true;
 #if USE_EXCLUSION   
     unsigned exclsize;    
 #endif
@@ -2274,14 +2301,35 @@ uint32_t TLBMapper::allocateHeapTLBs(Process* p, bool& madeprogress)
             continue;
         if((p->paddr_max - p->paddr_cur >= TLBsizes[x]) && (p->heapvaddr >= p->heapvaddr_min + TLBsizes[x]))
         {
-            slot = p->mmu->AcquireSlot(p->PID, p->heapvaddr - TLBsizes[x], x);
-            if(slot != -1)
+            localProgress = false;
+            for(pid=startProc; pid < endProc; pid++)
             {
-                p->mmu->tlbarray[slot].vaddr = p->heapvaddr - TLBsizes[x];
-                p->mmu->tlbarray[slot].paddr = p->paddr_max - TLBsizes[x];
-                p->mmu->tlbarray[slot].size  = TLBsizes[x];
-                p->mmu->tlbarray[slot].exclsize = 0;
-                p->mmu->tlbarray[slot].setSegment(NULL);
+                slot = proc[pid].mmu->AcquireSlot(proc[pid].PID, p->heapvaddr - TLBsizes[x], x);
+                if(slot != -1)
+                {
+                    proc[pid].mmu->tlbarray[slot].vaddr = p->heapvaddr - TLBsizes[x];
+                    proc[pid].mmu->tlbarray[slot].paddr = p->paddr_max - TLBsizes[x];
+                    proc[pid].mmu->tlbarray[slot].size  = TLBsizes[x];
+                    proc[pid].mmu->tlbarray[slot].exclsize = 0;
+                    proc[pid].mmu->tlbarray[slot].setSegment(NULL);
+                    localProgress = true;
+                }
+                else
+                {
+                    if(localProgress)
+                    {
+                        for(pid=startProc; pid < endProc; pid++)
+                        {
+                            proc[pid].mmu->RestoreState(tmp_mmustate[pid]);
+                        }
+                    }
+                    localProgress = false;
+                    
+                    break;
+                }
+            }
+            if(localProgress)
+            {
                 p->heapvaddr -= TLBsizes[x];
                 p->paddr_max -= TLBsizes[x];
                 madeprogress = true;
@@ -2295,17 +2343,38 @@ uint32_t TLBMapper::allocateHeapTLBs(Process* p, bool& madeprogress)
         {
             if(hsize >= TLBsizes[x] - exclsize)
             {
-                slot = p->mmu->AcquireSlot(p->PID, p->heapvaddr - (TLBsizes[x] - exclsize), x);
-                if(slot != -1)
-                {                     
-                    p->mmu->tlbarray[slot].vaddr = p->heapvaddr - TLBsizes[x];
-                    p->mmu->tlbarray[slot].paddr = p->paddr_max - TLBsizes[x];
-                    p->mmu->tlbarray[slot].size  = TLBsizes[x];
-                    p->mmu->tlbarray[slot].exclsize = exclsize;
-                    p->mmu->tlbarray[slot].setSegment(NULL);
-                    
+                localProgress = false;
+                for(pid=startProc; pid < endProc; pid++)
+                {
+                    slot = proc[pid].mmu->AcquireSlot(proc[pid].PID, p->heapvaddr - (TLBsizes[x] - exclsize), x);
+                    if(slot != -1)
+                    {                        
+                        proc[pid].mmu->tlbarray[slot].vaddr = p->heapvaddr - TLBsizes[x];
+                        proc[pid].mmu->tlbarray[slot].paddr = p->paddr_max - TLBsizes[x];
+                        proc[pid].mmu->tlbarray[slot].size  = TLBsizes[x];
+                        proc[pid].mmu->tlbarray[slot].exclsize = exclsize;
+                        proc[pid].mmu->tlbarray[slot].setSegment(NULL);
+                        localProgress = true;
+                    }
+                    else
+                    {
+                        if(localProgress)
+                        {
+                            for(pid=startProc; pid < endProc; pid++)
+                            {
+                                proc[pid].mmu->RestoreState(tmp_mmustate[pid]);
+                            }
+                        }
+                        localProgress = false;
+                        break;
+                    }
+                }
+
+                if(localProgress)
+                {
                     p->heapvaddr -= TLBsizes[x] - exclsize;
                     p->paddr_max -= TLBsizes[x] - exclsize;
+                    
                     madeprogress = true;
                     return TLBsizes[x] - exclsize;
                 }
@@ -2319,7 +2388,9 @@ uint32_t TLBMapper::allocateHeapTLBs(Process* p, bool& madeprogress)
 
 int TLBMapper::createSpeculativeAliases(int x)
 {
-#if MAP_SPECULATIVEALIASES
+    if(mapperFlags[MAPPERFLAGS_NOALIASES])
+        return 0;
+
     unsigned pid;
     unsigned set;
     unsigned way;
@@ -2374,7 +2445,6 @@ int TLBMapper::createSpeculativeAliases(int x)
             }
         }
     }
-#endif
     return 0;
 }
 
@@ -2534,7 +2604,15 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
         heap[x] = 0;
         proc[x].mmu->SnapshotState(tmp_mmustate[x]);
     }
-    for(x=0; x<orignumproc; x++)
+    
+    int startProc = 0;
+    int endProc   = orignumproc;
+    if(mapperFlags[MAPPERFLAGS_COMMONHEAP])
+    {
+        startProc = numproc - 1;
+        endProc   = numproc;
+    }
+    for(x=startProc; x<endProc; x++)
     {
         tlbsize = 0;
         for(y=0; y<NUMTLBSIZES; y++)
@@ -2572,12 +2650,19 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
             origpcur[x] = proc[x].paddr_cur;
             origheap[x] = heap[x];
         }
-        for(x=0; x<numproc; x++)
+        for(x=startProc; x<endProc; x++)
         {
-            heap[x] += allocateHeapTLBs(&proc[x], madeprogress);
+            if(mapperFlags[MAPPERFLAGS_COMMONHEAP])
+            {
+                heap[x] += allocateHeapTLBs(&proc[x], 0, orignumproc, madeprogress);
+            }
+            else
+            {
+                heap[x] += allocateHeapTLBs(&proc[x], x, x+1, madeprogress);
+            }
 #if MAP_CATOMICS
             if((heap[x]-origheap[x] >1) && (heap[x]-origheap[x] <= 16))
-                heap[x] += allocateHeapTLBs(&proc[x], madeprogress);
+                heap[x] += allocateHeapTLBs(&proc[x], startProc, endProc, madeprogress);
 #endif
         }
         for(x=0; x<numproc; x++)
@@ -2591,26 +2676,45 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
             if(MapAtomics(x, IS_HEAP) == -1)
             {
                 mapfailure = true;
-                for(p=0; p<numproc; p++)
+
+                if(mapperFlags[MAPPERFLAGS_COMMONHEAP])
                 {
-                    if(proc[x].mmu == proc[p].mmu)
+                    proc[numproc-1].paddr_cur = (origpmax[numproc-1] + origpcur[numproc-1]+1)/2;
+                    if(proc[numproc-1].paddr_cur == origpmax[numproc-1])
+                        madeprogress = false;
+                }
+                else
+                {
+                    for(p=startProc; p<endProc; p++)
                     {
-                        proc[p].paddr_cur = (origpmax[p] + origpcur[p]+1)/2;
-                        if(proc[p].paddr_cur == origpmax[p])
-                            madeprogress = false;
+                        if(proc[x].mmu == proc[p].mmu)
+                        {
+                            proc[p].paddr_cur = (origpmax[p] + origpcur[p]+1)/2;
+                            if(proc[p].paddr_cur == origpmax[p])
+                                madeprogress = false;
+                        }
                     }
                 }
             }
             else if(createSpeculativeAliases(x) == -1)
             {
                 mapfailure = true;
-                for(p=0; p<numproc; p++)
+                if(mapperFlags[MAPPERFLAGS_COMMONHEAP])
                 {
-                    if(proc[x].mmu == proc[p].mmu)
+                    proc[numproc-1].paddr_cur = (origpmax[numproc-1] + origpcur[numproc-1]+1)/2;
+                    if(proc[numproc-1].paddr_cur == origpmax[numproc-1])
+                        madeprogress = false;
+                }
+                else
+                {
+                    for(p=startProc; p<endProc; p++)
                     {
-                        proc[p].paddr_cur = (origpmax[p] + origpcur[p]+1)/2;
-                        if(proc[p].paddr_cur == origpmax[p])
-                            madeprogress = false;
+                        if(proc[x].mmu == proc[p].mmu)
+                        {
+                            proc[p].paddr_cur = (origpmax[p] + origpcur[p]+1)/2;
+                            if(proc[p].paddr_cur == origpmax[p])
+                                madeprogress = false;
+                        }
                     }
                 }
             }
@@ -2643,7 +2747,7 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
             return -1;
     }
     
-    for(x=0, *totalheap=0; x<orignumproc; x++)
+    for(x=startProc, *totalheap=0; x<endProc; x++)
     {
         if((heap[x] == 0) && (!proc[x].isAgent))
         {
@@ -3621,6 +3725,13 @@ int TLBMapper::getSegment(uint32_t pindex, enum SegmentType type, uint64_t* vadd
         *vaddr = min_vaddr * segsize;
         *paddr = ((unsigned long long)min_paddr * segsize);
         *vsize = (max_vaddr - min_vaddr) * segsize;
+        
+        if((mapperFlags[MAPPERFLAGS_COMMONHEAP]) && (pindex < (uint32_t)orignumproc) && (type == IS_HEAP))
+        {
+            *vaddr += pindex * (*vsize) / orignumproc;
+            *paddr += pindex * (*vsize) / orignumproc;
+            *vsize  = (*vsize) / orignumproc;
+        }
     }
 #if 0
     TRACE(TRACE_StaticMap, ("MAPPER%8p segment: pid=%d  type=%d  vaddr=%lx  paddr=%lx  size=%ld\n", this, pid, type, *vaddr, *paddr, *vsize));
@@ -4243,6 +4354,9 @@ int main(int argc, char** argv)
         else if(KEYWORD("-kernelsize=")) { sscanf(argv[x], "-kernelsize=%ld", &SA_KERNEL_END); SA_KERNEL_END = ROUND_UP_1M(SA_KERNEL_END); }
         
         else if(KEYWORD("-loop")) { loopForProfiler = true; }
+        else if(KEYWORD("-mapalign16")) { vmm_setFlags(MAPPERFLAGS_ALIGN16, 1); }
+        else if(KEYWORD("-commonheap")) { vmm_setFlags(MAPPERFLAGS_COMMONHEAP, 1); }
+        else if(KEYWORD("-noaliases")) { vmm_setFlags(MAPPERFLAGS_NOALIASES, 1); }
         
         else if(KEYWORD("-h"))
         {

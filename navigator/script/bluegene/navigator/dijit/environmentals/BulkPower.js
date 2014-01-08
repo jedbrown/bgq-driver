@@ -36,7 +36,6 @@ function(
 {
 
 var b_navigator_dijit_environmentals_BulkPower = d_declare(
-        "bluegene.navigator.dijit.environmentals.BulkPower",
         [ l_AbstractQueryResultsDijit ],
 
 {

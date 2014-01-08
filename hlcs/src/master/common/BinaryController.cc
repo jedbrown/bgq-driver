@@ -48,8 +48,6 @@ LOG_DECLARE_FILE("master");
 #define LOGGING_DECLARE_ID_MDC(value) \
     log4cxx::MDC _location_mdc( "ID", std::string("{") + boost::lexical_cast<std::string>(value) + "} " );
 
-extern volatile int signal_number;
-
 void
 switchBackUID(
         uid_t my_euid,
@@ -86,17 +84,17 @@ switchBackUID(
 
 BinaryId
 BinaryController::startBinary(
-        const std::string& user_list
+        const std::string& user_list,
+        const std::string& properties
         )
 {
-    //LOGGING_DECLARE_ID_MDC(_binid.str());
     LOG_TRACE_MSG(__FUNCTION__);
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
     // Pull out the full path and see if it exists
-    boost::char_separator<char> sep(" ");
-    tokenizer nametok(_binary_bin_path, sep);
-    tokenizer::iterator b = nametok.begin();
-    std::string path = (*b);
+    const boost::char_separator<char> sep(" ");
+    const tokenizer nametok(_binary_bin_path, sep);
+    const tokenizer::iterator b = nametok.begin();
+    const std::string path = (*b);
 
     if (_user.length() == 0) {
         LOG_WARN_MSG("No user id defined for alias " << _alias_name << " running under default user.");
@@ -111,28 +109,34 @@ BinaryController::startBinary(
         }
     }
 
-    pid_t pid = 0;
-    if (boost::filesystem::exists(path)) {
-        std::string error;
-        int pipefd = 0;
-        pid = Exec::fexec(pipefd, _binary_bin_path, error, true, _logfile.c_str(), "", _user);
-        LOG_DEBUG_MSG("Returned from fexec for " << _alias_name << " pid=" << pid);
-        if (pid < 0) {
-            LOG_DEBUG_MSG("Error from exec: " << error);
-            _exec_error = error;
-            BinaryId badid(pid,"");
-            return badid;
-        }
-    } else {
+    if (!boost::filesystem::exists(path)) {
         std::ostringstream msg;
         msg << "Command or path " << path << " does not exist.";
         LOG_ERROR_MSG(msg.str());
+        _exec_error = msg.str();
         throw exceptions::FileError(exceptions::WARN, msg.str());
+    }
+    std::string error;
+    int pipefd = 0;
+    const pid_t pid = Exec::fexec(
+            pipefd, 
+            _binary_bin_path, 
+            error, 
+            true, 
+            _logfile.c_str(),
+            properties,
+            _user
+            );
+    LOG_DEBUG_MSG("Returned from fexec for " << _alias_name << " pid=" << pid);
+    if (pid < 0) {
+        LOG_DEBUG_MSG("Error from exec: " << error);
+        _exec_error = error;
+        BinaryId badid(pid,"");
+        return badid;
     }
 
     // If we get this far, we're successful.
-    BinaryId child(pid, _host.ip());
-    _binid = child;
+    _binid = BinaryId(pid, _host.ip());
     if (_user.length() == 0) {
         LOG_INFO_MSG("Started binary id " << _binid.str() << " alias " << _alias_name);
     } else {
@@ -143,13 +147,13 @@ BinaryController::startBinary(
 
 bool
 isRunning(
-        pid_t pid
+        const pid_t pid
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
     bool retval = false;
     if (pid != 0) {
-        int rc = kill(pid, 0);	// send a 0 signal just to test the pid
+        const int rc = kill(pid, 0);	// send a 0 signal just to test the pid
         if (rc == 0) {			// normal return implies process is running
             retval = true;
         } else {
@@ -170,18 +174,16 @@ BinaryController::stopBinary(
 {
     LOG_TRACE_MSG(__FUNCTION__);
     // This is how this works:
-    // signal_number is a process global variable that may be set when we catch a signal and want to propagate it
-    // to the child processes. So, we check that first and if it is set, we send it to the child processes.  If it
-    // ISN'T set, then we use the signal passed to us as the initial signal... unless it is unspecified (zero).
+    // We use the signal passed to us as the initial signal... unless it is unspecified (zero).
     // In that case, we default to SIGTERM. After we try our initial signal, we wait a bit and start sending
     // SIGKILLs to REALLY kill it.
     LOGGING_DECLARE_ID_MDC(_binid.str());
     LOG_DEBUG_MSG("Stopping binary " << _binid.str());
 
     stopping(true);
-    int pid = _binid.get_pid();
-    uid_t my_euid = geteuid();
-    gid_t my_egid = getegid();
+    const int pid = _binid.get_pid();
+    const uid_t my_euid = geteuid();
+    const gid_t my_egid = getegid();
 
     bool isroot = false;
 
@@ -199,8 +201,7 @@ BinaryController::stopBinary(
         }
 
         if (_user.length() != 0 && isroot) {
-            struct passwd* my_entry;
-            my_entry = getpwnam(_user.c_str());
+            const struct passwd* my_entry = getpwnam(_user.c_str());
             if (my_entry == NULL) {
                 LOG_ERROR_MSG("Could not get password entry for " << _user << ". Check that " << _user << " is a valid user on this system.");
             } else {
@@ -228,34 +229,24 @@ BinaryController::stopBinary(
         unsigned timeout = 25000;
         bool signalSent = false;
         while (isRunning(pid)) {
-            if (signal_number == 0) {
-                if (signalSent == false) {
-                    if (signal == 0) {
-                        signal = SIGTERM;
-                        LOG_DEBUG_MSG("Killing " << pid << " with a SIGTERM");
-                        int killrc = ::kill(pid, SIGTERM);
-                        if (killrc < 0) {
-                            LOG_WARN_MSG("Failed to kill " << pid << " with SIGTERM.");
-                        }
-                        signalSent = true;
-                    } else {
-                        LOG_DEBUG_MSG("Killing " << pid << " with signal " << signal);
-                        int killrc = ::kill(pid, signal);
-                        if (killrc < 0) {
-                            LOG_WARN_MSG("Failed to kill " << pid << " with signal " << signal);
-                        }
-                        signalSent = true;
-                    }
-                }
-            } else {
-                LOG_DEBUG_MSG("Killing " << pid << " with signal " << signal_number);
-                signal = signal_number;
-                int killrc = ::kill(pid, signal_number);
-                if (killrc < 0) {
-                    LOG_WARN_MSG("Failed to kill " << pid << " with signal " << signal);
-                }
-                signalSent = true;
-            }
+	    if (signalSent == false) {
+	        if (signal == 0) {
+	            signal = SIGTERM;
+		    LOG_DEBUG_MSG("Killing " << pid << " with a SIGTERM");
+		    int killrc = ::kill(pid, SIGTERM);
+		    if (killrc < 0) {
+		        LOG_WARN_MSG("Failed to kill " << pid << " with SIGTERM.");
+		    }
+		    signalSent = true;
+		} else {
+		    LOG_DEBUG_MSG("Killing " << pid << " with signal " << signal);
+		    int killrc = ::kill(pid, signal);
+		    if (killrc < 0) {
+		        LOG_WARN_MSG("Failed to kill " << pid << " with signal " << signal);
+		    }
+		    signalSent = true;
+		}
+	    }
 
             const boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
             const boost::posix_time::time_duration td = now - kill_sent_time;

@@ -123,7 +123,6 @@ HTTP status: 403 Forbidden
 
 #include "NodeCard.hpp"
 
-#include "../../dbConnectionPool.hpp"
 #include "../../Error.hpp"
 #include "../../RequestRange.hpp"
 
@@ -177,61 +176,93 @@ void NodeCard::_doGet()
     static const unsigned DefaultRangeSize(50), MaxRangeSize(100);
     RequestRange req_range( request, DefaultRangeSize, MaxRangeSize );
 
-    auto conn_ptr(dbConnectionPool::getConnection());
-    uint64_t all_count(0);
-    cxxdb::ResultSetPtr rs_ptr;
-
     boost::shared_ptr<query::env::NodeCardOptions> options_ptr( new query::env::NodeCardOptions() );
 
     options_ptr->setArgs( request.getUrl().getQuery().calcArguments(), req_range );
 
-    query::env::Query query( options_ptr );
+    _query_ptr.reset( new query::env::Query( options_ptr ) );
 
-    query.execute(
-            conn_ptr,
-            &all_count,
-            &rs_ptr
+    _query_ptr->executeAsync(
+            _blocking_operations_thread_pool,
+            _getStrand().wrap( boost::bind( &NodeCard::_queryComplete, this,
+                    capena::server::AbstractResponder::shared_from_this(),
+                    req_range,
+                    _1
+                ) )
         );
+}
 
-    json::ArrayValue arr_val;
-    json::Array &arr(arr_val.get());
 
-    if ( all_count != 0 ) {
-        while ( rs_ptr->fetch() ) {
-            const cxxdb::Columns &cols(rs_ptr->columns());
+void NodeCard::notifyDisconnect()
+{
+    LOG_DEBUG_MSG( "Notified client disconnected" );
 
-            json::Object &obj(arr.addObject());
-            obj.set( "location", cols[BGQDB::DBTNodecardenvironment::LOCATION_COL].getString() );
-            obj.set( "time", cols[BGQDB::DBTNodecardenvironment::TIME_COL].getTimestamp() );
-            obj.set( "v08", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV08_COL].as<double>() );
-            obj.set( "v14", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV14_COL].as<double>() );
-            obj.set( "v25", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV25_COL].as<double>() );
-            obj.set( "v33", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV33_COL].as<double>() );
-            obj.set( "v120p", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV120P_COL].as<double>() );
-            obj.set( "v15", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV15_COL].as<double>() );
-            obj.set( "v09", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV09_COL].as<double>() );
-            obj.set( "v10", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV10_COL].as<double>() );
-            obj.set( "v33p", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV33P_COL].as<double>() );
-            obj.set( "v12a", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV12A_COL].as<double>() );
-            obj.set( "v12b", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV12B_COL].as<double>() );
-            obj.set( "v18", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV18_COL].as<double>() );
-            obj.set( "v25p", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV25P_COL].as<double>() );
-            obj.set( "v12p", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV12P_COL].as<double>() );
-            obj.set( "v18p", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV18P_COL].as<double>() );
-            obj.set( "temp0", cols[BGQDB::DBTNodecardenvironment::TEMPMONITOR0_COL].as<int32_t>() );
-            obj.set( "temp1", cols[BGQDB::DBTNodecardenvironment::TEMPMONITOR1_COL].as<int32_t>() );
+    query::env::Query::Ptr query_ptr(_query_ptr);
+
+    if ( ! _query_ptr )  return;
+
+    _query_ptr->cancel();
+}
+
+
+void NodeCard::_queryComplete(
+        capena::server::ResponderPtr,
+        RequestRange req_range,
+        query::env::Query::Result res
+    )
+{
+    try {
+
+        if ( res.exc_ptr != 0 ) {
+            std::rethrow_exception( res.exc_ptr );
         }
+
+
+        json::ArrayValue arr_val;
+        json::Array &arr(arr_val.get());
+
+        if ( res.all_count != 0 ) {
+            while ( res.rs_ptr->fetch() ) {
+                const cxxdb::Columns &cols(res.rs_ptr->columns());
+
+                json::Object &obj(arr.addObject());
+                obj.set( "location", cols[BGQDB::DBTNodecardenvironment::LOCATION_COL].getString() );
+                obj.set( "time", cols[BGQDB::DBTNodecardenvironment::TIME_COL].getTimestamp() );
+                obj.set( "v08", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV08_COL].as<double>() );
+                obj.set( "v14", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV14_COL].as<double>() );
+                obj.set( "v25", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV25_COL].as<double>() );
+                obj.set( "v33", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV33_COL].as<double>() );
+                obj.set( "v120p", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV120P_COL].as<double>() );
+                obj.set( "v15", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV15_COL].as<double>() );
+                obj.set( "v09", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV09_COL].as<double>() );
+                obj.set( "v10", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV10_COL].as<double>() );
+                obj.set( "v33p", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV33P_COL].as<double>() );
+                obj.set( "v12a", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV12A_COL].as<double>() );
+                obj.set( "v12b", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV12B_COL].as<double>() );
+                obj.set( "v18", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV18_COL].as<double>() );
+                obj.set( "v25p", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV25P_COL].as<double>() );
+                obj.set( "v12p", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV12P_COL].as<double>() );
+                obj.set( "v18p", cols[BGQDB::DBTNodecardenvironment::VOLTAGEV18P_COL].as<double>() );
+                obj.set( "temp0", cols[BGQDB::DBTNodecardenvironment::TEMPMONITOR0_COL].as<int32_t>() );
+                obj.set( "temp1", cols[BGQDB::DBTNodecardenvironment::TEMPMONITOR1_COL].as<int32_t>() );
+            }
+        }
+
+
+        capena::server::Response &response(_getResponse());
+
+        req_range.updateResponse( response, arr.size(), res.all_count );
+
+        response.setContentTypeJson();
+        response.headersComplete();
+
+        json::Formatter()( arr_val, response.out() );
+
+    } catch ( std::exception& e ) {
+
+        _handleError( e );
+
     }
-
-
-    capena::server::Response &response(_getResponse());
-
-    req_range.updateResponse( response, arr.size(), all_count );
-
-    response.setContentTypeJson();
-    response.headersComplete();
-
-    json::Formatter()( arr_val, response.out() );
 }
 
 

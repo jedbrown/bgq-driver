@@ -64,7 +64,6 @@ var _states = {
 
 
 var b_navigator_dijit_Login = d_declare(
-        "bluegene.navigator.dijit.Login",
         [ j__WidgetBase, j__TemplatedMixin, j___WidgetsInTemplateMixin ],
 
 {

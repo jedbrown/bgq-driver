@@ -24,6 +24,7 @@
 #include "BgwsServer.hpp"
 
 #include "AbstractResponder.hpp"
+#include "BlockingOperationsThreadPool.hpp"
 #include "CheckUserAdminExecutor.hpp"
 #include "PwauthExecutor.hpp"
 #include "ResponderFactory.hpp"
@@ -114,6 +115,45 @@ BgwsServer::BgwsServer(
             _dynamic_configuration_ptr->getTealRemoveAlertExecutable()
         ) );
 
+    _blocking_operations_thread_pool_ptr.reset( new BlockingOperationsThreadPool() );
+
+
+    bool calculate_blocking_operations_thread_pool_size(true);
+
+    string blocking_operations_thread_pool_size_str;
+    unsigned blocking_operations_thread_pool_size;
+
+    try {
+
+        blocking_operations_thread_pool_size_str = bg_properties_ptr->getValue( "bgws", "blocking_operations_thread_pool_size" );
+        LOG_INFO_MSG( "Blocking operations thread pool size in configuration file is '" << blocking_operations_thread_pool_size_str << "'" );
+
+        if ( blocking_operations_thread_pool_size_str == "auto" ) {
+            calculate_blocking_operations_thread_pool_size = true;
+        } else {
+            blocking_operations_thread_pool_size = boost::lexical_cast<unsigned>( blocking_operations_thread_pool_size_str );
+
+            if ( blocking_operations_thread_pool_size == 0 ) {
+                calculate_blocking_operations_thread_pool_size = true;
+            } else {
+                calculate_blocking_operations_thread_pool_size = false;
+            }
+        }
+
+    } catch ( boost::bad_lexical_cast& e ) {
+        LOG_INFO_MSG( "Faled to get blocking_operations_thread_pool_size configuration from Blue Gene configuration file, the value is not valid. The value must be 'auto' or an integer greater than 0. Will use the default." );
+        calculate_blocking_operations_thread_pool_size = true;
+    } catch ( std::exception& e ) {
+        LOG_INFO_MSG( "Faled to get blocking_operations_thread_pool_size configuration from Blue Gene configuration file, will use default. The error is " << e.what() );
+        calculate_blocking_operations_thread_pool_size = true;
+    }
+
+    if ( calculate_blocking_operations_thread_pool_size ) {
+        blocking_operations_thread_pool_size = (boost::thread::hardware_concurrency() / 2) + 1;
+        LOG_INFO_MSG( "Calculated size for blocking operations thread pool is " << blocking_operations_thread_pool_size );
+    }
+
+    _blocking_operations_thread_pool_ptr->start( blocking_operations_thread_pool_size );
 
     LOG_DEBUG_MSG( "Creating BlueGene..." );
 
@@ -131,7 +171,8 @@ BgwsServer::BgwsServer(
             _server_stats,
             *_service_actions_ptr,
             *_sessions_ptr,
-            *_teal_ptr
+            *_teal_ptr,
+            *_blocking_operations_thread_pool_ptr
         ) );
 
     _server_ptr = capena::server::Server::create(

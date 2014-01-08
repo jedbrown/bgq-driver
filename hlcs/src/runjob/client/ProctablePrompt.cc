@@ -32,6 +32,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/throw_exception.hpp>
 
 #include <iostream>
 
@@ -54,13 +55,19 @@ ProctablePrompt::create(
             new ProctablePrompt( io_service, mux, id, status )
             );
 
-    // stdin has to be duplicated here because a stream_descriptor assumes ownership, and we
-    // need to read it later after the job starts for forwarding stdin to the job
-    const int input = dup( STDIN_FILENO );
-    bgq::utility::ScopeGuard closeGuard( boost::bind(&close, input) );
+    try {
+        // stdin has to be duplicated here because a stream_descriptor assumes ownership, and we
+        // need to read it later after the job starts for forwarding stdin to the job
+        const int input = dup( STDIN_FILENO );
+        bgq::utility::ScopeGuard closeGuard( boost::bind(&close, input) );
 
-    result->_input.assign( input );
-    closeGuard.dismiss();
+        result->_input.assign( input );
+        closeGuard.dismiss();
+    } catch( const boost::system::system_error& e ) {
+        // assume stdin is not a tty
+        LOG_WARN_MSG( "standard input is not a tty, ignoring proctable query" );
+        return ProctablePrompt::Ptr();
+    }
 
     return result;
 }
@@ -68,7 +75,7 @@ ProctablePrompt::create(
 ProctablePrompt::ProctablePrompt(
         boost::asio::io_service& io_service,
         const boost::weak_ptr<MuxConnection>& mux,
-        BGQDB::job::Id id,
+        const BGQDB::job::Id id,
         Job::Status& status
         ) :
     _input( io_service ),
@@ -83,7 +90,15 @@ ProctablePrompt::ProctablePrompt(
 
 ProctablePrompt::~ProctablePrompt()
 {
-    LOG_TRACE_MSG( "terminating" );
+    LOG_TRACE_MSG( __FUNCTION__ );
+
+    const boost::shared_ptr<MuxConnection> mux( _mux.lock() );
+    if ( !mux ) return;
+
+    _status = Job::Starting;
+    const message::StartJob::Ptr start( new message::StartJob() );
+    start->setJobId( _id );
+    mux->write( start );
 }
 
 void
@@ -140,7 +155,7 @@ ProctablePrompt::read()
 void
 ProctablePrompt::readHandler(
         const boost::system::error_code& error,
-        size_t length
+        const size_t length
         )
 {
     if ( error == boost::asio::error::operation_aborted ) {
@@ -152,21 +167,13 @@ ProctablePrompt::readHandler(
         LOG_TRACE_MSG( "read " << length << " bytes" );
     }
 
-    const boost::shared_ptr<MuxConnection> mux( _mux.lock() );
-    if ( !mux ) return;
-
     std::istream is( &_buffer );
     std::string line;
     std::getline( is, line );
     LOG_TRACE_MSG( "line: " << line );
 
     if ( line.empty() ) {
-        // done reading, start the job
-        _status = Job::Starting;
-        const message::StartJob::Ptr start( new message::StartJob() );
-        start->setJobId( _id );
-        mux->write( start );
-
+        // done reading
         return;
     }
 

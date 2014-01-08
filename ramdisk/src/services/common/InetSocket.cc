@@ -183,7 +183,7 @@ InetSocket::connect(std::string addrString, std::string portString)
    // Convert port from string to number.
    in_port_t port;
    try {
-      port = boost::lexical_cast<in_port_t>(portString);
+      port = htons(boost::lexical_cast<in_port_t>(portString));
    }
    catch (const std::invalid_argument& e) {
       SocketError se(EINVAL, "port cast is invalid");
@@ -248,7 +248,7 @@ InetSocket::addrToString(sockaddr *addr)
    char buffer[INET6_ADDRSTRLEN];
    inet_ntop(addr->sa_family, sourceAddr, buffer, INET6_ADDRSTRLEN);
    std::ostringstream name;
-   name << buffer << ":" << port;
+   name << buffer << ":" << ntohs(port);
    return name.str();
 }
 

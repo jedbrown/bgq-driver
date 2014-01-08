@@ -54,14 +54,14 @@ public:
   virtual const std::string& name() { return _name; }
   MailboxHandler();
   virtual ~MailboxHandler();
-  void handleMailbox(RasEvent& event, std::string mboxPayload, const RasEventMetadata& metadata);
+  void handleMailbox(RasEvent& event, const std::string& mboxPayload, const RasEventMetadata& metadata);
   void handleNonMailbox(RasEvent& event, const RasEventMetadata& metadata);
 
 private:
   const std::string _name;
 
-  void defaultAscii(RasEvent& event, MailBoxPayload_Common_RAS_t mbox, const RasEventMetadata& metadata);
-  void defaultBinary(RasEvent& event, MailBoxPayload_Common_RAS_t mbox, const RasEventMetadata& metadata);
+  void defaultAscii(RasEvent& event, const MailBoxPayload_Common_RAS_t& mbox, const RasEventMetadata& metadata);
+  void defaultBinary(RasEvent& event, const MailBoxPayload_Common_RAS_t& mbox, const RasEventMetadata& metadata);
   void defaultNonMailbox(RasEvent& event, const RasEventMetadata& metadata);
   std::vector<std::string> tokenize(const std::string &rStr, const std::string &szDelimiters);
 };

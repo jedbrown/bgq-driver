@@ -27,8 +27,9 @@ define(
     "./AbstractTemplatedContainer",
     "./MonitorActiveMixin",
     "../FilterOptions",
+    "../xlate",
+    "dojo/when",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dojo/text!./templates/ServiceActions.html",
     "module",
@@ -38,7 +39,6 @@ define(
     "./MultiWildcardTextBox",
     "./TimeInterval",
     "../format",
-    "../xlate",
     "../../dijit/Hideable",
     "../../dijit/OutputText",
     "dijit/TooltipDialog",
@@ -54,8 +54,9 @@ function(
         l_AbstractTemplatedContainer,
         l_MonitorActiveMixin,
         ll_FilterOptions,
+        ll_xlate,
+        d_when,
         d_declare,
-        d_Deferred,
         d_lang,
         template,
         module
@@ -72,7 +73,6 @@ var _formToQuery = function( form_obj )
 
 
 var b_navigator_dijit_ServiceActions = d_declare(
-        "bluegene.navigator.dijit.ServiceActions",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -242,7 +242,7 @@ var b_navigator_dijit_ServiceActions = d_declare(
 
         this._checkUpdateButtonStates();
 
-        d_Deferred.when(
+        d_when(
                 this._operation_promise,
                 d_lang.hitch( this, this._submitEndComplete, id, location ),
                 d_lang.hitch( this, this._endFailed, id, location )
@@ -310,7 +310,7 @@ var b_navigator_dijit_ServiceActions = d_declare(
 
         this._checkUpdateButtonStates();
 
-        d_Deferred.when(
+        d_when(
                 this._operation_promise,
                 d_lang.hitch( this, this._submitCloseComplete, id, location ),
                 d_lang.hitch( this, this._closeFailed, id, location )
@@ -414,7 +414,10 @@ var b_navigator_dijit_ServiceActions = d_declare(
         }
 
         this._closeButton.set( "disabled", false );
-    }
+    },
+
+
+    _ll_xlate : ll_xlate
 
 } );
 

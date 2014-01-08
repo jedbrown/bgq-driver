@@ -73,7 +73,8 @@ RankMapping::RankMapping(
             sizeof(buf),
             buf,
             output.get(),
-            NULL // rank
+            NULL, // rank
+            NULL  // mpmdFound
             );
 
     if ( rc ) {

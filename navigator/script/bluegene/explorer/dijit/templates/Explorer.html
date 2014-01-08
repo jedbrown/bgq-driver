@@ -1,35 +1,35 @@
 <div>
 
-<div id="explorer2" data-dojo-type="dijit.layout.BorderContainer">
+<div id="explorer2" data-dojo-type="dijit/layout/BorderContainer">
 
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'top'">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'top'">
         <span style="font-weight: bold;">Blue Gene Web Services Explorer</span>
     </div>
 
-    <div id="content-div" data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'center'">
-        <div id="start-session-form" data-dojo-type="dijit.form.Form">
+    <div id="content-div" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'center'">
+        <div id="start-session-form" data-dojo-type="dijit/form/Form">
             <div>
                 <span style="float: left; width: 105px;">Username</span>
                 Password
             </div>
             <div>
-                <input name="username" id="start-session-username-input" style="width: 100px;" data-dojo-type="dijit.form.TextBox" data-dojo-props="name: 'username', style: 'width: 100px;'" />
-                <input type="password" name="password" style="width: 100px;" data-dojo-type="dijit.form.TextBox" data-dojo-props="name: 'password', style: 'width: 100px;', type: 'password'" />
-                <button type="submit" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'submit'">Start Session</button>
+                <input name="username" id="start-session-username-input" style="width: 100px;" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'username', style: 'width: 100px;'" />
+                <input type="password" name="password" style="width: 100px;" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'password', style: 'width: 100px;', type: 'password'" />
+                <button type="submit" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'submit'">Start Session</button>
             </div>
         </div>
 
-        <div id="request-form" data-dojo-type="dijit.form.Form">
+        <div id="request-form" data-dojo-type="dijit/form/Form">
             <h2>Request</h2>
             
             <div>
-              <button id="request-restore-button" data-dojo-type="dijit.form.Button">Restore</button>
-              <select id="request-restore-select" data-dojo-type="dijit.form.Select">
+              <button id="request-restore-button" data-dojo-type="dijit/form/Button">Restore</button>
+              <select id="request-restore-select" data-dojo-type="dijit/form/Select">
               </select>
             </div>
 
             <div>
-                <select name="operation" id="request-operation-select" style="width: 70px;" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'operation', style: 'width: 70px;'">
+                <select name="operation" id="request-operation-select" style="width: 70px;" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'operation', style: 'width: 70px;'">
                     <option value="GET">GET</option>
                     <option value="DELETE">DELETE</option>
                     <option value="POST">POST</option>
@@ -40,7 +40,7 @@
 
             <div>
                 <h3>Headers</h3>
-                <table id="request-headers-grid" style="height: 150px;" data-dojo-type="dojox.grid.EnhancedGrid"
+                <table id="request-headers-grid" style="height: 150px;" data-dojo-type="dojox/grid/EnhancedGrid"
                         data-dojo-props="plugins: {indirectSelection: true }, style: 'height: 150px;'"
                         >
                     <thead><tr>
@@ -49,15 +49,15 @@
                     </tr></thead>
                 </table>
 
-                <div id="new-header-form" style="padding-top: 10px;" data-dojo-type="dijit.form.Form" data-dojo-props="style: 'padding-top: 10px;'">
+                <div id="new-header-form" style="padding-top: 10px;" data-dojo-type="dijit/form/Form" data-dojo-props="style: 'padding-top: 10px;'">
                     <div>
                         <span style="float: left; width: 205px;">Name</span>
                         <span>Value</span>
                     </div>
                     <div>
                         <input id="new-header-name" />
-                        <input name="newHeaderValue" id="new-header-value-input" style="width: 300px;" data-dojo-type="dijit.form.TextBox" data-dojo-props="name: 'newHeaderValue', style: 'width: 300px;'" />
-                        <button type="submit" id="new-header-add-button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'submit'">Set</button>
+                        <input name="newHeaderValue" id="new-header-value-input" style="width: 300px;" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'newHeaderValue', style: 'width: 300px;'" />
+                        <button type="submit" id="new-header-add-button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'submit'">Set</button>
                     </div>
                 </div>
 
@@ -66,18 +66,18 @@
             <div>
                 <h3>Body</h3>
                 <textarea name="body" id="request-body-text" style="width: 100%;"
-                   data-dojo-type="dijit.form.Textarea"
+                   data-dojo-type="dijit/form/Textarea"
                    data-dojo-props="intermediateChanges: true, name: 'body', style: 'width: 100%'"></textarea>
-                <div id="request-body-invalid-hideable" style="color: red;" data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'">
+                <div id="request-body-invalid-hideable" style="color: red;" data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'">
                    * Body is not valid JSON *
                 </div>
             </div>
 
             <div style="margin-top: 5px;">
-                <button type="submit" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'submit'">Send</button>
-                <button type="reset" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'reset'">Reset</button>
-                <button id="request-save-button" data-dojo-type="dijit.form.Button">Save</button>
-                <input name="requestName" id="request-name" data-dojo-type="dijit.form.TextBox" data-dojo-props="name: 'requestName', placeHolder: 'Name'" />
+                <button type="submit" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'submit'">Send</button>
+                <button type="reset" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'reset'">Reset</button>
+                <button id="request-save-button" data-dojo-type="dijit/form/Button">Save</button>
+                <input name="requestName" id="request-name" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'requestName', placeHolder: 'Name'" />
             </div>
         </div>
 

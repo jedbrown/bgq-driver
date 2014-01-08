@@ -47,8 +47,23 @@ sub new
   };
   
   $self->{"jobid"} = $$options{"-j"}  if(exists $$options{"-j"});
+  $self->{"pid"} = $$options{"-pid"}  if(exists $$options{"-pid"});
   $self->{"options"}{"debugionode"}=0;
   $self->{"options"}{"debugcomputenode"}=1;
+  
+  if(!exists $self->{"jobid"})
+  {
+      if(exists $self->{"pid"})
+      {
+	  $self->{"jobid"} = getJobIDFromPID($self->{"pid"});
+	  printf("jobid: %d\n", $self->{"jobid"});
+      }
+  }
+  
+  if($self->{"jobid"} == 0)
+  {
+      die "Invalid PID or JobID was specified";
+  }
   
   $driver = `cat $ENV{CODEPATH}/driver_path`;
   chomp($driver);
@@ -75,6 +90,38 @@ sub new
   
   bless  ($self,$class);
   return ($self);
+}
+
+sub getJobIDFromPID
+{
+    my($pid) = @_;
+    $hosts = `hostname -IA`;
+    %validhosts = map { $_ => 1 } split(/\s+/, $hosts);
+    
+    $validhosts{"localhost"} = 1;
+    foreach $line (split("\n", `/sbin/ifconfig 2>&1`))
+    {
+	next if($line !~ /inet addr:/);
+	($ipaddr) = $line =~ /inet addr:(\S+)/;
+	$validhosts{$ipaddr} = 1;
+    }
+    
+    open(TMP, "/bgsys/drivers/ppcfloor/bin/list_jobs -a |");
+    while($line = <TMP>)
+    {
+	next if($line =~ /\d+ job/);
+	next if($line =~ /ID Status/);
+	($id) = $line =~ /(\d+)/;
+	$data = `/bgsys/drivers/ppcfloor/bin/list_jobs $id`;
+	($jobhost,$jobpid) = $data =~ /Client:\s+(\S+):(\d+)/;
+	if(($pid == $jobpid) && (exists $validhosts{$jobhost}))
+	{
+	    close(TMP);
+	    return $id;
+	}
+    }
+    close(TMP);
+    return 0;
 }
 
 sub sendCommand
@@ -154,7 +201,7 @@ sub touchstackdata
 	if($line =~ /Command:/i) { $done = 1; last; }
 	chomp($line);
 	($node, @stack) = split(/\s+/, $line);
-	next if(!defined $node);
+	next if((! defined $node) || ($node !~ /^rank/));
 	unshift(@{$CORE->{$node}{"stacktrace"}}, reverse(@stack));
 	$CORE->{$node}{"corerawdata"} .= "STK:  $line\n";
     }
@@ -182,6 +229,8 @@ sub touchregisters
 	if($line =~ /Command:/i) { $done = 1; last; }
 	chomp($line);
 	($node, @values) = split(/\s+/, $line);
+        next if($node !~ /^rank/);
+
 	foreach $reg (0..31)
 	{
 	    my $regn = sprintf("GPR%02d", $reg);
@@ -209,6 +258,7 @@ sub touchspr
 	if($line =~ /Command:/i) { $done = 1; last; }
 	chomp($line);
 	($node, $value) = split(/\s+/, $line);
+	next if($node !~ /^rank/);
 	$CORE->{$node}{"coreregs"}{$spr} = $value;
 	$CORE->{$node}{"corerawdata"} .= "$spr:  $value\n";
     }

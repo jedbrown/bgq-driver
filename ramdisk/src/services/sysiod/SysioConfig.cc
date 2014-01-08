@@ -30,6 +30,7 @@
 #include <ramdisk/include/services/common/logging.h>
 #include <iostream>
 #include <iterator>
+#include <dlfcn.h>
 
 using namespace bgcios::sysio;
 
@@ -41,6 +42,8 @@ const uint32_t DefaultServiceId = 0;
 //! Default path to short circuit file.
 const std::string DefaultShortCircuitPath = "";
 
+const uint64_t DefaultSlowSyscallTimeout = 300ull; // 5 minutes
+const uint64_t DefaultHungSyscallTimeout = 900ull; // 15 minutes
 
 SysioConfig::SysioConfig(int argc, char **argv) : bgcios::CiosConfig()
 {
@@ -54,8 +57,11 @@ SysioConfig::SysioConfig(int argc, char **argv) : bgcios::CiosConfig()
       ("short_circuit_path", po::value<std::string>()->default_value(DefaultShortCircuitPath), "path to short circuit file")
       ("posix_mode", po::bool_switch(), "run I/O operations using posix rules")
       ("log_function_ship_errors", po::bool_switch(), "log errors from function shipped operations")
+      ("slow_syscall_timeout", po::value<uint64_t>()->default_value(DefaultSlowSyscallTimeout), "timeout in seconds that defines a slow system call")      
+      ("hung_syscall_timeout", po::value<uint64_t>()->default_value(DefaultHungSyscallTimeout), "timeout in seconds that defines a hung system call")      
       ("log_level", po::value<std::string>(), "logging level")
       ("properties", po::value<std::string>(), "path to properties file")
+      ("CNtorus",po::value<std::string>(), "torus coordinates")
       ;
    
    // Parse the command line options.
@@ -279,5 +285,125 @@ SysioConfig::getLogFunctionShipErrors(void) const
 
    return value;
 }
+
+const std::string 
+SysioConfig::getDynamicLoadLibrary(void) const
+{
+
+   //  check for key in properties file.
+
+      try {
+         const std::string valueString = _properties->getValue("cios.sysiod", "sysiod_plugin");
+         return valueString;
+      }
+      catch (const std::invalid_argument& e) {
+          //LOG_CIOS_WARN_MSG("dynamic_library property from properties file '" << _properties->getFilename() << " invalid_argument=" << e.what() );
+      } 
+      catch (const boost::bad_lexical_cast& e) {
+         LOG_CIOS_WARN_MSG("dynamic_library property from properties file '" << _properties->getFilename() << " bad_lexical_cast=" << e.what() );
+      }
+              
+      const std::string valueString("");
+      return valueString;   
+}
+
+int
+SysioConfig::getFlags() const
+{
+    // default flags if none are found in bg.properties
+    int result = RTLD_LAZY;
+
+    const std::string key = "sysiod_plugin_flags";
+    try {
+        std::string value = _properties->getValue("cios.sysiod", key);
+        if ( value.empty() ) {
+            return result;
+        }
+
+        // strip off leading 0x if present
+        if ( value.size() > 2 && value.substr(0,2) == "0x" ) {
+            value.erase(0,2);
+        }
+
+        std::istringstream is( value );
+        is >> std::hex >> result;
+        if ( is.fail() || !is.eof() ) {
+            LOG_WARN_MSG(
+                    "garbage value for " << key << " key in [cios.sysiod] section: " <<
+                    _properties->getValue( "cios.sysiod", key )
+                    );
+
+            result = RTLD_LAZY;
+        }
+    } catch ( const std::invalid_argument& e ) {
+        //LOG_WARN_MSG( e.what() );
+    }catch ( const std::exception& e ) {
+        LOG_WARN_MSG( e.what() );
+    }
+
+    return result;
+}
+
+
+
+uint64_t SysioConfig::getSlowSyscallTimeout(void) const
+{
+   // First, check for command line argument.
+   uint64_t slowSyscallTimeout = _variableMap["slow_syscall_timeout"].as<uint64_t>();
+   if (!_variableMap["slow_syscall_timeout"].defaulted()) {
+      LOG_CIOS_DEBUG_MSG("set slow_syscall_timeout to " << slowSyscallTimeout << " from command line argument");
+   }
+
+   // Second, check for key in properties file.
+   else {
+      try {
+         slowSyscallTimeout = boost::lexical_cast<uint64_t>( _properties->getValue("cios.sysiod", "slow_syscall_timeout") );
+         LOG_CIOS_DEBUG_MSG("set slow_syscall_timeout to " << slowSyscallTimeout << " from properties file " << _properties->getFilename());
+      }
+      catch (const std::invalid_argument& e) {
+         // This isn't fatal so we'll use the default value.
+         LOG_CIOS_DEBUG_MSG("slow_syscall_timeout not found in properties file '" << _properties->getFilename() << "' so using default value " << DefaultSlowSyscallTimeout);
+      } 
+      catch (const boost::bad_lexical_cast& e) {
+         // Value is invalid.
+         LOG_CIOS_WARN_MSG("slow_syscall_timeout property from properties file '" << _properties->getFilename() << "' is invalid so using default value " <<
+                      DefaultSlowSyscallTimeout << " (" << e.what() << ")");
+      }
+   }
+   
+   return slowSyscallTimeout;
+}
+
+
+uint64_t SysioConfig::getHungSyscallTimeout(void) const
+{
+   // First, check for command line argument.
+   uint64_t hungSyscallTimeout = _variableMap["hung_syscall_timeout"].as<uint64_t>();
+   if (!_variableMap["hung_syscall_timeout"].defaulted()) {
+      LOG_CIOS_DEBUG_MSG("set hung_syscall_timeout to " << hungSyscallTimeout << " from command line argument");
+   }
+
+   // Second, check for key in properties file.
+   else {
+      try {
+         hungSyscallTimeout = boost::lexical_cast<uint64_t>( _properties->getValue("cios.sysiod", "hung_syscall_timeout") );
+         LOG_CIOS_DEBUG_MSG("set hung_syscall_timeout to " << hungSyscallTimeout << " from properties file " << _properties->getFilename());
+      }
+      catch (const std::invalid_argument& e) {
+         // This isn't fatal so we'll use the default value.
+	  LOG_CIOS_DEBUG_MSG("hung_syscall_timeout not found in properties file '" << _properties->getFilename() << "' so using default value " << DefaultHungSyscallTimeout );
+      } 
+      catch (const boost::bad_lexical_cast& e) {
+         // Value is invalid.
+         LOG_CIOS_WARN_MSG("hung_syscall_timeout property from properties file '" << _properties->getFilename() << "' is invalid so using default value " <<
+                      DefaultHungSyscallTimeout << " (" << e.what() << ")");
+      }
+   }
+   
+   return hungSyscallTimeout;
+}
+
+
+
 
 

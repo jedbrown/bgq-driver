@@ -78,37 +78,37 @@ __BEGIN_DECLS
 #endif
 
 
+/*!
+  \brief Posts an arbitrary binary RAS message to the control system / bgqeventlog
+  
+  \note Firmware may compress the RAS messages to avoid a flood of RAS messages to the control system.
+  \param[in] message_id Unique 32-bit msg_id.  
+  \param[in] raslength Length of the rasdata field, in bytes
+  \param[in] rasdata Array of 64-bit values that are sent in the RAS message
+
+  \return Error indication
+  \retval  0 success
+*/
+
 int Kernel_InjectRAWRAS(uint32_t message_id, size_t raslength, const uint64_t* rasdata);
 
+
+/*!
+  \brief Posts an arbitrary ASCII RAS message to the control system / bgqeventlog
+  
+  \note Firmware may compress the RAS messages to avoid a flood of RAS messages to the control system.
+  \param[in] message_id Unique 32-bit msg_id.  
+  \param[in] text 
+  
+  \return Error indication
+  \retval  0 success
+*/
 __INLINE__
 int Kernel_InjectASCIIRAS(uint32_t message_id, const uint8_t* text);
 
 /*!
-  \brief Set or get the value of an A2 debug register
- *
- *  THESE INTERFACES ARE EXPERIMENTAL AND UNSUPPORTED.
- *  THEY CANNOT BE USED IN CONJUNCTION WITH ANY DEBUGGER/TOOL.
- *  THEY CANNOT BE USED IN A PROCESS THAT RUNS ON LESS THAN A FULL CORE.
- *
- *  The CNK syscalls underlying Kernel_{Get,Set}DebugReg() are disabled by
- *  default.  Before they can be used, BG_DEBUGREGSYSCALLSENABLED must be set
- *  to a non-zero value in the calling program's initial environment.
- *
- * \param[in] debug_reg - selector for register to set or get
- * \param[in] value_ptr (for GetDebugReg) - location for value to be returned
- * \param[in] value (for SetDebugReg) - value to be set in register
- *
- *
- * \return Error indication
- * \retval  0 success
- * \retval  ENOSYS if not supported or disabled
- * \retval  EPERM if a CDTI-based debugger tool is in use or if the calling
- *                    process is running on less than a full core
- * \retval  EFAULT if value_ptr is invalid
- * \retval  EINVAL if debug_reg is invalid
- *
- */
-
+  \brief Register identification enums that may be passed to Kernel_SetDebugReg and Kernel_GetDebugReg
+*/
 enum Kernel_Debug_Register {
     Kernel_Debug_DBCR0,
     Kernel_Debug_DBCR1,
@@ -128,8 +128,56 @@ enum Kernel_Debug_Register {
     Kernel_Debug_DBSR
 };
 
+/*!
+  \brief Get the value of an A2 debug register
+ *
+ *  \warning THESE INTERFACES ARE EXPERIMENTAL AND UNSUPPORTED.  
+ *  \warning THEY CANNOT BE USED IN CONJUNCTION WITH ANY DEBUGGER/TOOL.
+ *  \warning THEY CANNOT BE USED IN A PROCESS THAT RUNS ON LESS THAN A FULL CORE.
+ *
+ *  The CNK syscalls underlying Kernel_{Get,Set}DebugReg() are disabled by
+ *  default.  Before they can be used, BG_DEBUGREGSYSCALLSENABLED must be set
+ *  to a non-zero value in the calling program's initial environment.
+ *
+ * \param[in] debug_reg selector for register to set or get
+ * \param[in] value_ptr location for value to be returned
+ *
+ *
+ * \return Error indication
+ * \retval  0 success
+ * \retval  ENOSYS if not supported or disabled
+ * \retval  EPERM if a CDTI-based debugger tool is in use or if the calling
+ *                    process is running on less than a full core
+ * \retval  EFAULT if value_ptr is invalid
+ * \retval  EINVAL if debug_reg is invalid
+ *
+ */
+
 __INLINE__
 int32_t Kernel_GetDebugReg(enum Kernel_Debug_Register debug_reg, uint64_t *value_ptr);
+
+/*!
+  \brief Set the value of an A2 debug register
+ *
+ *  \warning THESE INTERFACES ARE EXPERIMENTAL AND UNSUPPORTED.  
+ *  \warning THEY CANNOT BE USED IN CONJUNCTION WITH ANY DEBUGGER/TOOL.
+ *  \warning THEY CANNOT BE USED IN A PROCESS THAT RUNS ON LESS THAN A FULL CORE.
+ *
+ *  The CNK syscalls underlying Kernel_{Get,Set}DebugReg() are disabled by
+ *  default.  Before they can be used, BG_DEBUGREGSYSCALLSENABLED must be set
+ *  to a non-zero value in the calling program's initial environment.
+ *
+ * \param[in] debug_reg selector for register to set or get
+ * \param[in] value value to be set in register
+ *
+ * \return Error indication
+ * \retval  0 success
+ * \retval  ENOSYS if not supported or disabled
+ * \retval  EPERM if a CDTI-based debugger tool is in use or if the calling
+ *                    process is running on less than a full core
+ * \retval  EINVAL if debug_reg is invalid
+ *
+ */
 
 __INLINE__
 int32_t Kernel_SetDebugReg(enum Kernel_Debug_Register debug_reg, uint64_t value);

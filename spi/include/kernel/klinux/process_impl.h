@@ -79,4 +79,16 @@ uint64_t Kernel_SetAXUCR0(uint64_t value)
    return ENOSYS;
 }
 
+__INLINE__
+bool Kernel_IsGuestThread()
+{
+    return 0;
+}
+
+__INLINE__
+uint64_t Kernel_IsGuestThread()
+{
+    return 0;
+}
+
 #endif /* _KERNEL_KLINUX_PROCESS_IMPL_H_ */

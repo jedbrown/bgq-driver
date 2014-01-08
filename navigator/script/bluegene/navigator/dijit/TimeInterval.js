@@ -87,7 +87,8 @@ var _UNITS_OPTIONS = [
     ];
 
 
-var b_navigator_dijit_TimeInterval = d_declare( "bluegene.navigator.dijit.TimeInterval", [ j__Widget, j__TemplatedMixin, j__WidgetsInTemplateMixin ],
+var b_navigator_dijit_TimeInterval = d_declare(
+        [ j__Widget, j__TemplatedMixin, j__WidgetsInTemplateMixin ],
 
 /** @lends bluegene^navigator^dijit^TimeInterval# */
 {

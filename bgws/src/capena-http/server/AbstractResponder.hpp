@@ -65,7 +65,9 @@ public:
         );
 
     void initialize(
-            ConnectionPtr connection_ptr, //!< [copy]
+            boost::asio::io_service& io_service, //!< [ref]
+            NotifyStatusHeadersFn notify_status_headers_fn, //!< [copy]
+            NotifyDataFn notify_data_fn, //!< [copy]
             ResponseComplete *response_complete_out //!< [out] if COMPLETE, response is complete.
         );
 
@@ -73,6 +75,10 @@ public:
             const std::string& data, //!< [copy]
             DataContinuesIndicator data_continues
         );
+
+
+    /* \brief Called if the client disconnects. */
+    virtual void notifyDisconnect();
 
 
     virtual ~AbstractResponder();
@@ -123,7 +129,6 @@ protected:
 
 private:
 
-    ConnectionPtr _connection_ptr;
     RequestPtr _request_ptr;
     ResponsePtr _response_ptr;
 

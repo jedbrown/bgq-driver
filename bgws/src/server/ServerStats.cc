@@ -45,17 +45,26 @@ ServerStats::ServerStats(
 }
 
 
-void ServerStats::notifyNewRequest()
+void ServerStats::notifyNewRequest(
+        void* id,
+        RequestData::Ptr request_data_ptr
+    )
 {
-    _strand.post( bind( &ServerStats::_notifyNewRequestImpl, this ) );
+    _strand.post( bind( &ServerStats::_notifyNewRequestImpl, this,
+            id, request_data_ptr
+        ) );
 }
 
 
 void ServerStats::notifyRequestComplete(
+        void* id,
         const boost::posix_time::time_duration& time_to_process_request
     )
 {
-    _strand.post( bind( &ServerStats::_notifyRequestCompleteImpl, this, time_to_process_request ) );
+    _strand.post( bind( &ServerStats::_notifyRequestCompleteImpl, this,
+            id,
+            time_to_process_request
+        ) );
 }
 
 
@@ -65,13 +74,19 @@ void ServerStats::getSnapshot( SnapshotCbFn cb_fn )
 }
 
 
-void ServerStats::_notifyNewRequestImpl()
+void ServerStats::_notifyNewRequestImpl(
+        void* id,
+        RequestData::Ptr request_data_ptr
+    )
 {
     ++_snapshot.total_requests;
+
+    _snapshot.requests[id] = request_data_ptr;
 }
 
 
 void ServerStats::_notifyRequestCompleteImpl(
+        void* id,
         const boost::posix_time::time_duration& time_to_process_request
     )
 {
@@ -84,6 +99,8 @@ void ServerStats::_notifyRequestCompleteImpl(
     if ( time_to_process_request_microseconds > _snapshot.max_time_to_process_request_microseconds ) {
         _snapshot.max_time_to_process_request_microseconds = time_to_process_request_microseconds;
     }
+
+    _snapshot.requests.erase( id );
 }
 
 

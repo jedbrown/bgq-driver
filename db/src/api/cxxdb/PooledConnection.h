@@ -79,6 +79,9 @@ public:
         )
     {  return _conn_ptr->prepareQuery( sql, parameter_names ); }
 
+    QueryStatementPtr createQuery()
+    { return _conn_ptr->createQuery(); }
+
     void startTransaction()  { _conn_ptr->startTransaction(); }
     void commit()  { _conn_ptr->commit(); }
     void rollback()  { _conn_ptr->rollback(); }

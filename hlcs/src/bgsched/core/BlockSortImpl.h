@@ -37,9 +37,9 @@ namespace bgsched {
 namespace core {
 
 /*!
- * \brief Block sort options implementation class.
+ * \brief Compute block sort options implementation class.
  *
- * This class is used as a parameter to getBlocks() to specify the order that blocks should be returned in.
+ * This class is used as a parameter to getBlocks() to specify the order that compute blocks should be returned in.
  *
  */
 class BlockSort::Impl

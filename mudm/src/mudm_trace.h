@@ -232,7 +232,7 @@ uint64_t entrynum_WriteFlightLogx4(uint32_t ID,BG_FlightRecorderRegistry_t* logr
 #define MUDM_CONN_ERROR(logregistry,data0,data1,data2,data3)  WriteFlightLogx4(CN_START_ERR,logregistry,data0,data1,data2,data3)
 #define MUDM_DISC_ERROR(logregistry,data0,data1,data2,data3)  WriteFlightLogx4(CN_DISC__ERR,logregistry,data0,data1,data2,data3)
 #define MUDM_FREED_CONNECTION(logregistry,pointer) WriteFlightLog64x4(CN_FREED_CTX,logregistry,(uint64_t *)pointer)
-#define MUDM_DISC_INDICATION(logregistry,pointer) DB_WriteFlightLog64x4(CN_DISC_INDI,logregistry,(uint64_t *)pointer)
+#define MUDM_DISC_INDICATION(logregistry,pointer) WriteFlightLog64x4(CN_DISC_INDI,logregistry,(uint64_t *)pointer)
 
 #define MUDM_BAD_RECV_CONN_CALLBACK(logregistry,d0,d1,d2,d3) WriteFlightLogx4(CN_BDCALLBAK,logregistry,(uint64_t)d0,(uint64_t)d1,(uint64_t)d2,(uint64_t)d3)
 #define MUDM_CONN_LIST(logregistry,d0,d1,d2,d3) WriteFlightLogx4(CN_CONNLISTS,logregistry,(uint64_t)d0,(uint64_t)d1,(uint64_t)d2,(uint64_t)d3)

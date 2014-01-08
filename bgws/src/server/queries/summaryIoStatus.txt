@@ -1,0 +1,115 @@
+-- SUMMARY_IO_STATUS
+
+WITH allRackLocsCodes AS
+(
+
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIORack WHERE status <> 'A'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqBulkPowerSupply WHERE status <> 'A' AND location LIKE 'Q%'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqClockCard WHERE status <> 'A' AND location LIKE 'Q%'
+
+),
+  rackStatusCode AS
+(
+
+SELECT SUBSTR( location, 1, 3 ) AS location, MAX( statusCode ) AS statusCode
+  FROM allRackLocsCodes
+  GROUP BY SUBSTR( location, 1, 3 )
+
+),
+
+
+  drawerPartsHwStatusCode AS
+(
+
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIoDrawer WHERE status <> 'A'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIoLinkChip WHERE status <> 'A'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIoNode WHERE status <> 'A'
+
+),
+
+
+  diagBlocks AS
+(
+
+SELECT db.blockId
+  FROM bgqDiagBlocks AS db
+       JOIN
+       bgqDiagRuns AS dr
+       ON db.runId = dr.runId
+  WHERE dr.endTime IS NULL AND dr.diagStatus <> 'completed' AND db.endTime IS NULL
+
+),
+
+  usedBlocks AS
+(
+
+SELECT b.blockId,
+       CASE WHEN db.blockID IS NOT NULL THEN 4 WHEN b.status = 'I' THEN 1 ELSE 2 END AS statusCode
+  FROM bgqIoBlock AS b
+       LEFT OUTER JOIN
+       diagBlocks AS db
+       ON b.blockId = db.blockId
+  WHERE b.status <> 'F'
+
+),
+
+  bootedIoNodes AS
+(
+
+SELECT COALESCE( ion.location, bm.location ) AS location, b.statusCode
+  FROM usedBlocks AS b
+       JOIN
+       bgqIoBlockMap AS bm
+       ON b.blockId = bm.blockId
+       LEFT OUTER JOIN
+       bgqIoNode AS ion
+       ON bm.location = ion.ioPos
+
+),
+
+  notBootedIoNodes AS (
+
+SELECT location FROM bgqIoNode
+EXCEPT
+SELECT location FROM bootedIoNodes
+
+),
+
+  ioNodeBlockStatusCode AS (
+
+SELECT location, statusCode
+  FROM bootedIoNodes
+  WHERE statusCode <> 1
+UNION ALL
+SELECT location, 3 AS statusCode
+  FROM notBootedIoNodes
+
+),
+
+  allDrawerCodes AS
+(
+
+SELECT location, statusCode FROM drawerPartsHwStatusCode
+UNION ALL
+SELECT location, statusCode FROM ioNodeBlockStatusCode
+
+),
+
+  drawerStatusCode AS
+(
+
+SELECT SUBSTR( location, 1, 6 ) AS location, MAX( statusCode ) AS statusCode
+  FROM allDrawerCodes
+  GROUP BY SUBSTR( location, 1, 6 )
+
+)
+
+SELECT location, statusCode
+  FROM rackStatusCode
+UNION ALL
+SELECT location, statusCode
+  FROM drawerStatusCode

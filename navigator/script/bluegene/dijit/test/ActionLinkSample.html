@@ -32,50 +32,41 @@
 <title>ActionLink Sample</title>
 
 <style>
-    @import "../../../../dojo/resources/dojo.css";
-    @import "../../../../dijit/themes/claro/claro.css";
-    @import "../../../../dijit/themes/claro/document.css";
+    @import "../../../dojo/resources/dojo.css";
+    @import "../../../dijit/themes/claro/claro.css";
+    @import "../../../dijit/themes/claro/document.css";
 
     @import "../../../../../style/bluegene.css";
 
     html, body, #main-div { width: 100%; height: 100%; border: 0; margin: 0; padding: 0; }
 </style>
 
-<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, isDebug: 1"></script>
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, isDebug: 1"></script>
 
 <script>
 
-g_b_layer = null;
-
-g_b_dijit_ActionLink = null;
-
-
 require(
 [
-    "bluegene/layer",
-    "bluegene/dijit/ActionLink",
+    "dojo/parser",
     "dojo/ready",
-    "dijit/registry"
+    "dijit/registry",
+
+    "bluegene/layer",
+    "bluegene/dijit/ActionLink"
 ],
 
 function(
-        b_layer,
-        b_dijit_ActionLink,
+        d_parser,
         d_ready,
         j_registry
     )
 {
-    // Put symbols used in navigator.html into global space.
-
-    g_b_layer = b_layer; // Note: keep this around since might be useful when using debugger.
-
-    g_b_dijit_ActionLink = b_dijit_ActionLink;
-
-    
     var ready_fn = function() 
         {
             console.log( "Ready!" );
-            
+
+            d_parser.parse();
+
             j_registry.byId( "al1" ).on( "click", function() { alert( "al1 Clicked!" ); } );
             j_registry.byId( "al2" ).on( "click", function() { alert( "al2 clicked" ); } );
             j_registry.byId( "al3" ).on( "click", function() {
@@ -118,21 +109,21 @@ function(
 
 <h1>ActionLink Samples</h1>
 
-<span id="al1" data-dojo-type="g_b_dijit_ActionLink">Click Me for Alert</span>
+<span id="al1" data-dojo-type="bluegene/dijit/ActionLink">Click Me for Alert</span>
 <br>
-<span id="al2" data-dojo-type="g_b_dijit_ActionLink" data-dojo-props="disabled: true">I'm#2</span>
+<span id="al2" data-dojo-type="bluegene/dijit/ActionLink" data-dojo-props="disabled: true">I'm#2</span>
 <br>
-<span id="al3" data-dojo-type="g_b_dijit_ActionLink">Toggle2</span>
+<span id="al3" data-dojo-type="bluegene/dijit/ActionLink">Toggle2</span>
 
 <ul>
-<li id="al4" data-dojo-type="g_b_dijit_ActionLink">Click Me</li>
-<li id="al5" data-dojo-type="g_b_dijit_ActionLink">Click Me (al5)</li>
-<li id="al7" data-dojo-type="g_b_dijit_ActionLink">Destroy al5!</li>
+<li id="al4" data-dojo-type="bluegene/dijit/ActionLink">Click Me</li>
+<li id="al5" data-dojo-type="bluegene/dijit/ActionLink">Click Me (al5)</li>
+<li id="al7" data-dojo-type="bluegene/dijit/ActionLink">Destroy al5!</li>
 </ul>
 
 
 <table>
-<tr><td id="al6" data-dojo-type="g_b_dijit_ActionLink">Toggle bgHardwareNotAvailable class</td></tr>
+<tr><td id="al6" data-dojo-type="bluegene/dijit/ActionLink">Toggle bgHardwareNotAvailable class</td></tr>
 </table>
 
 

@@ -110,12 +110,6 @@ const int32_t DisableStrace = -1;
 //! Special signal number to indicate hardware failure.
 const int SIGHARDWAREFAILURE = 35;
 
-//! Special exit status indicator for CRC Error
-const int ExitStatus_CrcError = 0x00010000;
-
-//! Special exit status indicator for Termination Check
-const int ExitStatus_TermCheck = 0x00020000;
-
 //! \brief  Convert torus coordinates of node to a 32-bit node identifier.
 //! \param  aCoord  A coordinate of node.
 //! \param  bCoord  B coordinate of node.

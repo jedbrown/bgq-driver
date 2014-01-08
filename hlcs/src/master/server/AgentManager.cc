@@ -58,7 +58,7 @@ AgentManager::addNew(
     boost::mutex::scoped_lock scoped_lock(_agent_manager_mutex);
     LOG_DEBUG_MSG("Adding agent " << agent->get_agent_id().str() << " from list.");
     unsigned agent_count = 0;
-    BOOST_FOREACH(AgentRepPtr& ptr, _agents) {
+    BOOST_FOREACH(const AgentRepPtr& ptr, _agents) {
         if (ptr->get_host().ip() == agent->get_host().ip()) {
             // We've got one
             ++agent_count;
@@ -89,14 +89,14 @@ AgentManager::removeAgent(
     _agent_manager_mutex.unlock();
 
     // For each binary, run through the policy checks and restart.
-    BOOST_FOREACH(BinaryControllerPtr& binptr, binlist) {
+    BOOST_FOREACH(const BinaryControllerPtr& binptr, binlist) {
         // Mark the binary done!  If the agent is gone, so is the binary.
         binptr->set_status(BinaryController::COMPLETED);
         LOG_DEBUG_MSG("Checking for policy for " << binptr->get_alias_name());
         BinaryId reqbid = binptr->get_binid();
         if (binptr->stopping() != true) {
             // We haven't explicitly stopped, so we have to check our policy
-            BOOST_FOREACH(AliasPtr& al, MasterController::_aliases) {
+            BOOST_FOREACH(const AliasPtr& al, MasterController::_aliases) {
                 if (al->find_binary(reqbid)) {
                     // This alias has my binary id, so remove my id and execute the policy
                     LOG_TRACE_MSG("Found alias " << al->get_name());
@@ -124,7 +124,7 @@ AgentManager::removeAgent(
                                 al->add_binary(b);
                             }
                         }
-                    } catch (exceptions::InternalError& e) {
+                    } catch (const exceptions::InternalError& e) {
                         std::ostringstream msg;
                         msg << "Unable to execute policy for " << reqbid.str() << "|" << al->get_name() << " " << e.what();
                         MasterController::handleErrorMessage(msg.str());
@@ -143,7 +143,7 @@ AgentManager::findAgentRep(
     LOG_TRACE_MSG(__FUNCTION__);
     boost::mutex::scoped_lock scoped_lock(_agent_manager_mutex);
     AgentRepPtr p;
-    BOOST_FOREACH(AgentRepPtr& agent, _agents) {
+    BOOST_FOREACH(const AgentRepPtr& agent, _agents) {
         if (agent->get_agent_id() == aid) {
             p = agent;
         }
@@ -161,7 +161,7 @@ AgentManager::findAgentId(
     BGAgentId p;
 
     // Find and return the =first= active agent on this host
-    BOOST_FOREACH(AgentRepPtr& agent, _agents) {
+    BOOST_FOREACH(const AgentRepPtr& agent, _agents) {
         if (agent->get_host() == host) {
             p = agent->get_agent_id();
             break;
@@ -178,7 +178,7 @@ AgentManager::findAgentRep(
     LOG_TRACE_MSG(__FUNCTION__);
     boost::mutex::scoped_lock scoped_lock(_agent_manager_mutex);
     AgentRepPtr p;
-    BOOST_FOREACH(AgentRepPtr& agent, _agents) {
+    BOOST_FOREACH(const AgentRepPtr& agent, _agents) {
         CxxSockets::Host lname = agent->get_host();
         if (lname == host) {
             p = agent;
@@ -221,10 +221,10 @@ AgentManager::findBinary(
     bool found = false;
 
     // Loop through agents
-    BOOST_FOREACH(AgentRepPtr& agent, _agents) {
+    BOOST_FOREACH(const AgentRepPtr& agent, _agents) {
         // Now loop through the binaries it controls
-        std::vector<BinaryControllerPtr> binaries = agent->get_binaries();
-        BOOST_FOREACH(BinaryControllerPtr& binary, binaries) {
+        const std::vector<BinaryControllerPtr> binaries = agent->get_binaries();
+        BOOST_FOREACH(const BinaryControllerPtr& binary, binaries) {
             if (binary->get_binid() == id) {
                 // This is the one
                 ptr = binary;
@@ -247,10 +247,10 @@ AgentManager::findBinary(
     boost::mutex::scoped_lock scoped_lock(_agent_manager_mutex);
     bool found = false;
 
-    BOOST_FOREACH(AgentRepPtr& agent, _agents) {
+    BOOST_FOREACH(const AgentRepPtr& agent, _agents) {
         // Now loop through the binaries it controls
         std::vector<BinaryControllerPtr> binaries = agent->get_binaries();
-        BOOST_FOREACH(BinaryControllerPtr& binary, binaries) {
+        BOOST_FOREACH(const BinaryControllerPtr& binary, binaries) {
             if (binary->get_alias_name() == alias) {
                 // Got one
                 BinaryLocation foundling(binary, agent);
@@ -264,7 +264,6 @@ AgentManager::findBinary(
 
 void
 AgentManager::cancel(
-        const bool end_agents,
         const bool end_binaries,
         const unsigned signal
         )
@@ -275,12 +274,12 @@ AgentManager::cancel(
     std::vector<AgentRepPtr> agents;
     {
       boost::mutex::scoped_lock lock(_agent_manager_mutex);
-      BOOST_FOREACH(AgentRepPtr& agent, _agents) {
+      BOOST_FOREACH(const AgentRepPtr& agent, _agents) {
          agents.push_back(agent);
       }
     }
 
     for (unsigned i = 0; i < agents.size(); ++i) {
-        agents[i]->cancel(end_agents, end_binaries, signal);
+        agents[i]->cancel(end_binaries, signal);
     }
 }

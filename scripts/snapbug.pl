@@ -1229,7 +1229,7 @@ sub resumeCores
 
 sub gatherKnowledge
 {    
-    foreach $STEP ("LOGIN", "QUERY", "SEED", "FIND", "SNAPSHOT", "RAS", "COREPROCESSOR",  "FLIGHTLOG", "DUMPALL", "RESUMECORES", "JOBHISTORY", "SETACLS", "LOGOUT")
+    foreach $STEP ("LOGIN", "QUERY", "SEED", "FIND", "SNAPSHOT", "RAS", "COREPROCESSOR",  "FLIGHTLOG", "DUMPALL", "TDUMP", "RESUMECORES", "JOBHISTORY", "SETACLS", "LOGOUT")
     {
 	print "\n";
 	message "Performing step '$STEP'\n";

@@ -58,6 +58,16 @@ TEST_BLOCK_SRCS =  test_block.cc
 
 TESTBLOCK = test_block
 
+# test_block2 sources
+TEST_BLOCK2_SRCS =  test_block2.cc 
+
+TESTBLOCK2 = test_block2
+
+# test_I/O block sources
+TEST_IOBLOCK_SRCS =  test_ioblock.cc 
+
+TESTIOBLOCK = test_ioblock
+
 # test_realtime_client sources
 TEST_REALTIME_CLIENT_SRCS =  test_realtime_client.cc 
 
@@ -128,6 +138,14 @@ $(TESTALLOCATOR): $(TEST_ALLOCATOR_SRCS:%.cc=%.o) Makefile
 $(TESTBLOCK): $(TEST_BLOCK_SRCS:%.cc=%.o) Makefile
 	@echo "link $@"
 	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS)
+	
+$(TESTBLOCK2): $(TEST_BLOCK2_SRCS:%.cc=%.o) Makefile
+	@echo "link $@"
+	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS)
+
+$(TESTIOBLOCK): $(TEST_IOBLOCK_SRCS:%.cc=%.o) Makefile
+	@echo "link $@"
+	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS)	
 
 $(TESTREALTIMECLIENT): $(TEST_REALTIME_CLIENT_SRCS:%.cc=%.o) Makefile
 	@echo "link $@"
@@ -157,7 +175,7 @@ clean:
 	$(RM) $(DRIVER) $(UNIT_TESTS) $(REGRESSION_TESTS)
 	$(RM) *.o
 	$(RM) *.d
-	$(RM) test_allocator test_schedutil test_resourcespec test_block test_realtime_client test_dimension asyncRealtime disconnectRealtime create_jobs
+	$(RM) test_allocator test_schedutil test_resourcespec test_block test_ioblock test_realtime_client test_dimension asyncRealtime disconnectRealtime create_jobs
 
 distclean: clean
 

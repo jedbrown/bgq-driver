@@ -29,16 +29,16 @@ define(
     "../../BlockBuilder",
     "../../dijit/Hideable",
     "dojo/dom-prop",
+    "dojo/number",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dojo/text!./templates/BlockBuilder.html",
     "module",
 
     // Used only in template.
     "../../dijit/OutputText",
-    "dojo/number",
     "dijit/form/Button",
     "dijit/form/Form",
     "dijit/form/ValidationTextBox",
@@ -50,9 +50,10 @@ function(
         b_BlockBuilder,
         b_dijit_Hideable,
         d_prop,
+        d_number,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         template,
         module
@@ -61,7 +62,6 @@ function(
 
 
 var b_navigator_dijit_BlockBuilder = d_declare(
-        "bluegene.navigator.dijit.BlockBuilder",
         [ l_AbstractTemplatedContainer ],
 
 {
@@ -290,7 +290,7 @@ var b_navigator_dijit_BlockBuilder = d_declare(
         this._processingContainer.show();
         this._checkState();
 
-        d_Deferred.when(
+        d_when(
                 this._deferred,
                 d_lang.hitch( this, this._blockCreated ),
                 d_lang.hitch( this, this._createBlockFailed )
@@ -335,15 +335,16 @@ var b_navigator_dijit_BlockBuilder = d_declare(
     _dismissResult: function()
     {
         this._resultContainer.hide();
+    },
+    
+    _d_number : d_number,
+
+    _formatShape : function( shape )
+    {
+        return ("" + shape[0] + " x " + shape[1] + " x " + shape[2] + " x " + shape[3] + " x " + shape[4]);
     }
 
 } );
-
-
-b_navigator_dijit_BlockBuilder.formatShape = function( shape )
-{
-    return ("" + shape[0] + " x " + shape[1] + " x " + shape[2] + " x " + shape[3] + " x " + shape[4]);
-};
 
 
 return b_navigator_dijit_BlockBuilder;

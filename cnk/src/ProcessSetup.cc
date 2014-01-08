@@ -30,6 +30,7 @@
 
 using namespace bgcios::jobctl;
 
+uint64_t TraceConfigDefault = 0;
 
 #define MAX(a,b) ((a>b)?a:b)
 
@@ -376,7 +377,6 @@ int Process_SetupJob(struct SetupJobMessage *setupJobMsg)
         // Setup a default mapping
         strncpy(appState->mapOrder, "ABCDET", 6);
     }
-    //  TODO MAP FILE SUPPORT
     if (strlen(setupJobMsg->mapFilePath) != 0)
     {
         strncpy(appState->mapFilePath, setupJobMsg->mapFilePath, sizeof(appState->mapFilePath) ); 
@@ -386,11 +386,11 @@ int Process_SetupJob(struct SetupJobMessage *setupJobMsg)
     appState->JobID = setupJobMsg->header.jobId;
 
     // Setup the job leader location
-    appState->jobLeaderCoord.aCoord = setupJobMsg->jobLeader.aCoord;
-    appState->jobLeaderCoord.bCoord = setupJobMsg->jobLeader.bCoord;
-    appState->jobLeaderCoord.cCoord = setupJobMsg->jobLeader.cCoord;
-    appState->jobLeaderCoord.dCoord = setupJobMsg->jobLeader.dCoord;
-    appState->jobLeaderCoord.eCoord = setupJobMsg->jobLeader.eCoord;
+    appState->jobLeaderCoord.aCoord = NodeState.JobLeaderCoords[0] = setupJobMsg->jobLeader.aCoord;
+    appState->jobLeaderCoord.bCoord = NodeState.JobLeaderCoords[1] = setupJobMsg->jobLeader.bCoord;
+    appState->jobLeaderCoord.cCoord = NodeState.JobLeaderCoords[2] = setupJobMsg->jobLeader.cCoord;
+    appState->jobLeaderCoord.dCoord = NodeState.JobLeaderCoords[3] = setupJobMsg->jobLeader.dCoord;
+    appState->jobLeaderCoord.eCoord = NodeState.JobLeaderCoords[4] = setupJobMsg->jobLeader.eCoord;
 
     // Initialize Node scoped job leader counters. We do this in all the nodes but it is only necessary in the job leader node
     if (appState->shape.core == NodeState.NumCoresEnabled-1) // Does this job contain all application cores enabled in the node?
@@ -469,7 +469,7 @@ int Process_SetupMap(struct LoadJobMessage *loadMsg, AppState_t **ppAppState)
     int appLeaderCoreID = pAppState->corner.core;
     int numCores = MIN( (uint32_t)(pAppState->shape.core), (uint32_t)NodeState.NumCoresEnabled-1 ); 
 
-    NodeState.TraceConfig = 0;
+    NodeState.TraceConfig = TraceConfigDefault;
     GetEnvValue64(loadMsg, "BG_TRACE", &NodeState.TraceConfig);
     if ((NodeState.TraceConfig) && ((GetPersonality()->Kernel_Config.NodeConfig & (PERS_ENABLE_NodeRepro | PERS_ENABLE_PartitionRepro)) == 0))
     {
@@ -603,8 +603,6 @@ int Process_SetupMap(struct LoadJobMessage *loadMsg, AppState_t **ppAppState)
             pAppProcess->ThreadModel = thread_model; 
             pAppProcess->State = ProcessState_Active;
             pAppProcess->ProcessLeader_ProcessorID = processorID;
-            pAppProcess->Futex_Table_Private = &(NodeState.Futex_Table_Private[processorID * CONFIG_SCHED_SLOTS_PER_HWTHREAD]);
-            pAppProcess->futexTableSize = CONFIG_SCHED_SLOTS_PER_HWTHREAD; // Initialize. Will get bumped when additional threads are encountered.
             pAppState->Active_Processes++; // bump the count of active processes within the current AppState object
             pAppProcess->HwthreadMask = _BN( processorID ); // set this field with the first hwthread in the process
             pAppProcess->CurrentUmask = loadMsg->umask;
@@ -616,8 +614,6 @@ int Process_SetupMap(struct LoadJobMessage *loadMsg, AppState_t **ppAppState)
         {
             // Update the hwthread count field and affinity slot count fields in the process object.
             pAppProcess->HWThread_Count++;
-            // Bump the size of the futex table that is allocated to this process. One entry for each kthread
-            pAppProcess->futexTableSize += CONFIG_SCHED_SLOTS_PER_HWTHREAD;
 
             // Update the hwthread mask to indicate that this hardware thread is a part of the process
             pAppProcess->HwthreadMask |= _BN( processorID );

@@ -68,9 +68,8 @@ SimJobMonitor::run(void)
    jobctlPath << "/tmp/cios" << _sim->getSimulationId() << "/" << bgcios::JobctlCommandChannelName << "." << getppid();
 
    // Create array of poll structures.
-   size_t pollSize = 2;
-   struct pollfd *pollInfo = new pollfd[pollSize];
-   bzero(pollInfo, sizeof(pollInfo) * pollSize);
+   const size_t pollSize = 2;
+   struct pollfd pollInfo[pollSize];
 
    // Initialize poll structures.
    pollInfo[0].fd = _simProc->getStdoutFd();
@@ -166,7 +165,6 @@ SimJobMonitor::run(void)
             pollInfo[1].events = 0;
             ++closed;
          }
-
       }
    }
 

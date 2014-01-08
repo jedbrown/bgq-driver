@@ -48,10 +48,7 @@ extern NodeState_t NodeState;
 #define CRCX_ERROR(s) printf s ;
 
 // wait this many seconds while waiting for user traffic to stop
-const uint64_t crx_quiese_timout_secs = 300;
-
-
-// @todo : Use flight recorder to capture failures
+const uint64_t crx_quiese_timout_secs = 30;
 
 
 int crcx_barrier( MUSPI_GIBarrier_t* barrier, int barrierId ) {
@@ -582,23 +579,20 @@ void crcx_dump() {
 
 int  crcx_quiesce_user_traffic( ) 
 {
-  
   //  wait until all user traffic has completed
   int i;
 
   Personality_t* p = &NodeState.Personality;
   //  CrcExchange_Data_t* s = &NodeState.crcExchange;
   Personality_Networks_t* netcfg = &(p->Network_Config);
-
-
+  
+  uint64_t t_trace   =  GetTimeBase() + crx_quiese_timout_secs *  p->Kernel_Config.FreqMHz * 1000000ull / 2;
   uint64_t t_timeout =  GetTimeBase() + crx_quiese_timout_secs *  p->Kernel_Config.FreqMHz * 1000000ull ;
   uint64_t expected_tokens[10];
   uint64_t token_mask[10];
   int vc4_user[10];
   
   // for each link, figure out the expected tokens
-
-  
   for ( i = 0; i < 10; i++ ) { 
      expected_tokens[i] = 0;
      Kernel_GetNDExpectedTokensDCR(i,&expected_tokens[i]); // it's ok if link is in reset
@@ -629,15 +623,21 @@ int  crcx_quiesce_user_traffic( )
   
   int done=1;
   int done1,done2,done3,done4,done5,done6;
+  uint64_t trace_oneshot = 0;
   done1=done2=done3=done4=done5=done6=1;
   while (  GetTimeBase() < t_timeout)
   {
     done=1;
     uint64_t tokens;
     uint64_t re_vc_state;
-
+    
     done1=done2=done3=done4=done5=done6=1;
 
+#define FLTRACE(id, d1, d2, d3, d4) if(trace_oneshot == 1) { Kernel_WriteFlightLog(FLIGHTLOG, id, d1, d2, d3, d4); }
+    if(GetTimeBase() > t_trace)
+    {
+        trace_oneshot++;
+    }
     // check all the links (could be optimized to only check the links that are not yet done )
     for ( i = 0; i < 10; i++ ) {
 
@@ -648,28 +648,34 @@ int  crcx_quiesce_user_traffic( )
 	      //  read the sender tokens and check to expected
 	      tokens =  DCRReadPriv( ND_RESE_DCR(i,SE_TOKENS) );
 	      tokens &= token_mask[i];
+              FLTRACE(FL_CRCEXCHD1, i, tokens, expected_tokens[i],0);
 	      if ( tokens != expected_tokens[i]) done1 =0;  // multiple dones for debugging
 	      
 	      
 	      // now check that there are no packets in any of the receiver vc queues
 	      re_vc_state = DCRReadPriv( ND_RESE_DCR(i,RE_VC0_PKT_CNT) ); // should be 0
+              FLTRACE(FL_CRCEXCHD2, i, re_vc_state,0,0);
 	      if (  re_vc_state ) done2 = 0;
 
 	      // the slot valids are non-zero if any packets are in the receiver
 	      re_vc_state = DCRReadPriv( ND_RESE_DCR(i,RE_VC1_STATE) );
+              FLTRACE(FL_CRCEXCHD3, i, re_vc_state,ND_RESE_DCR__RE_VC1_STATE__CTRL_SLOT_VALID_get(re_vc_state),0);
 	      if ( ND_RESE_DCR__RE_VC1_STATE__CTRL_SLOT_VALID_get(re_vc_state)) done3 = 0;
 
 	      re_vc_state = DCRReadPriv( ND_RESE_DCR(i,RE_VC2_STATE) );
+              FLTRACE(FL_CRCEXCHD4, i, re_vc_state,ND_RESE_DCR__RE_VC2_STATE__CTRL_SLOT_VALID_get(re_vc_state),0);
 	      if ( ND_RESE_DCR__RE_VC2_STATE__CTRL_SLOT_VALID_get(re_vc_state)) done4 = 0;
 
 	      //  if  physical vc 4 is used for user commworld, must wait for this to be empty too
 	      if ( vc4_user[i] == 1) 
 	      {
 		re_vc_state = DCRReadPriv( ND_RESE_DCR(i,RE_VC4_STATE) );
+                FLTRACE(FL_CRCEXCHD5, i, re_vc_state,ND_RESE_DCR__RE_VC4_STATE__CTRL_SLOT_VALID_get(re_vc_state),0);
 		if ( ND_RESE_DCR__RE_VC4_STATE__CTRL_SLOT_VALID_get(re_vc_state)) done5 = 0;
 	      }
   
 	      re_vc_state = DCRReadPriv( ND_RESE_DCR(i,RE_VC5_STATE) );
+              FLTRACE(FL_CRCEXCHD6, i, re_vc_state, ND_RESE_DCR__RE_VC5_STATE__CTRL_SLOT_VALID_get(re_vc_state), 0);
 	      if ( ND_RESE_DCR__RE_VC5_STATE__CTRL_SLOT_VALID_get(re_vc_state)) done6 = 0;
 
 	    }

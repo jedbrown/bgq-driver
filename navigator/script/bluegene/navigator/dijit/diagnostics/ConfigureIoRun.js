@@ -26,14 +26,14 @@ define(
 [
     "../AbstractTemplatedContainer",
     "../../../BlueGene",
+    "../../../dijit/OutputFormat",
     "../../../dijit/OutputText",
     "dojo/dom-construct",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dijit/form/CheckBox",
-    "dijit/form/MultiSelect",
     "dojo/text!./templates/ConfigureIoRun.html",
     "module",
 
@@ -48,14 +48,14 @@ define(
 function(
         l_AbstractTemplatedContainer,
         b_BlueGene,
+        b_dijit_OutputFormat,
         b_dijit_OutputText,
         d_construct,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         j_form_CheckBox,
-        j_form_MultiSelect,
         template,
         module
     )
@@ -63,55 +63,33 @@ function(
 
 
 var b_navigator_dijit_diagnostics_ConfigureIoRun = d_declare(
-        "bluegene.navigator.dijit.diagnostics.ConfigureIoRun",
         [ l_AbstractTemplatedContainer ],
 
 {
 
     templateString : template,
 
-
     _submit_diagnostics_run_fn : null,
 
     _buckets : null,
     _tests : null,
 
-    _submit_promise: null,
+    _selected_locations : null, // { "<location>" : { "color": "lightblue }, ... } (a set of locations)
+
+    _submit_promise : null,
 
 
     constructor : function()
     {
         this._buckets = {};
         this._tests = {};
+        this._selected_locations = {};
     },
 
 
     setSubmitDiagnosticsRunFn : function( fn )
     {
         this._submit_diagnostics_run_fn = fn;
-    },
-
-
-    setIoDrawers : function( io_drawers )
-    {
-        console.log( module.id + ": [" + this.id + "] setIoDrawers io_drawers=", io_drawers );
-
-        // Build the drawers data for the new diagnostics run dialog.
-        var all_drawers = [];
-
-        d_array.forEach( io_drawers, function( io_drawer_location ) {
-            all_drawers.push( io_drawer_location );
-        } );
-
-        all_drawers = all_drawers.sort();
-
-        d_array.forEach( all_drawers, d_lang.hitch( this, function( io_drawer_location ) {
-            d_construct.create( "option", { innerHTML: io_drawer_location, value: io_drawer_location }, this._drawersSelect );
-        } ) );
-
-        var iods_ms = new j_form_MultiSelect( { name: 'drawers', size: 4 }, this._drawersSelect );
-
-        iods_ms.on( "change", d_lang.hitch( this, this._checkSubmitButtonStatus ) );
     },
 
 
@@ -208,10 +186,43 @@ var b_navigator_dijit_diagnostics_ConfigureIoRun = d_declare(
     },
 
 
+    getMachineHighlightData : function()
+    {
+        var ret = {
+                loading: false,
+                highlighting: this._selected_locations
+            };
+        return ret;
+    },
+
+
+    notifyMachineClicked : function( loc )
+    {
+        if ( loc.search( /^[QR]..-I.$/ ) === -1 ) {
+            console.log( module.id + ": [" + this.id + "]  clicked on not an I/O drawer loc:", loc );
+            return;
+        }
+
+        if ( loc in this._selected_locations )  delete this._selected_locations[loc];
+        else this._selected_locations[loc] = { color: "lightblue" };
+
+        console.log( module.id + ": [" + this.id + "]  clicked on", loc, "selected=", this._selected_locations );
+
+        this._checkSubmitButtonStatus();
+        this.onMachineHighlightingChanged();
+    },
+
+
+    onMachineHighlightingChanged : function() {},
+
+
     // override
     startup : function()
     {
         this.inherited( arguments );
+
+
+        this._resetButton.on( "click", d_lang.hitch( this, this._resetDrawers ) );
 
 
         var layout = { columns: [
@@ -237,7 +248,6 @@ var b_navigator_dijit_diagnostics_ConfigureIoRun = d_declare(
             ];
 
         d_array.forEach( monitor_update_command_dijs, d_lang.hitch( this, function( j ) { j.on( "change", d_lang.hitch( this, this._updateCommandText ) ); } ) );
-
     },
 
 
@@ -254,9 +264,18 @@ var b_navigator_dijit_diagnostics_ConfigureIoRun = d_declare(
     },
 
 
+    _resetDrawers : function()
+    {
+        this._selected_locations = {};
+
+        this._checkSubmitButtonStatus();
+        this.onMachineHighlightingChanged();
+    },
+
+
     _bucketsChanged : function()
     {
-        // console.log( module.id + ": buckets changed",  j_registry.byId( "diags-configure-io-form" ).get( "value" ).buckets );
+        // console.log( module.id + ": buckets changed",  this._form.get( "value" ).buckets );
 
         var form_obj = this._form.get( "value" );
 
@@ -317,14 +336,29 @@ var b_navigator_dijit_diagnostics_ConfigureIoRun = d_declare(
 
     _checkCanSubmit : function()
     {
+        var any_selected = false;
+        for ( loc in this._selected_locations ) {
+            any_selected = true;
+            break;
+        }
+
+        if ( any_selected ) {
+
+            this._drawersErrorInd.hide();
+
+        } else {
+
+            this._drawersErrorInd.show();
+            return false;
+
+        }
+
+
         if ( this._submit_promise != null )  return false; // can't submit if already submitted a diagnostics run.
+
 
         var form_obj = this._form.get( "value" );
 
-        // console.log( module.id + ": _checkCanSubmit, form_obj=", form_obj );
-
-        if ( ! ("drawers" in form_obj ) )  return false;
-        if ( form_obj.drawers.length === 0 )  return false;
         if ( ! ("tests" in form_obj) )  return false;
         if ( form_obj.tests.length === 0 )  return false;
 
@@ -354,7 +388,7 @@ var b_navigator_dijit_diagnostics_ConfigureIoRun = d_declare(
         this._resultHideable.set( "visiblity", "hidden" );
         this._submittingHideable.set( "visibility", "visible" );
 
-        d_Deferred.when(
+        d_when(
                 this._submit_promise,
                 d_lang.hitch( this, this._diagnosticsSubmitComplete ),
                 d_lang.hitch( this, this._diagnosticsSubmitFailed )
@@ -368,7 +402,13 @@ var b_navigator_dijit_diagnostics_ConfigureIoRun = d_declare(
 
         var new_diags_run_post_obj = {};
 
-        new_diags_run_post_obj.io = form_obj.drawers;
+        new_diags_run_post_obj.io = [];
+
+        for ( loc in this._selected_locations ) {
+            new_diags_run_post_obj.io.push( loc );
+        }
+        new_diags_run_post_obj.io.sort();
+
         new_diags_run_post_obj.tests = form_obj.tests;
 
         d_array.forEach( form_obj.runOptions, function( run_option ) { new_diags_run_post_obj[run_option] = true; } );
@@ -444,7 +484,10 @@ var b_navigator_dijit_diagnostics_ConfigureIoRun = d_declare(
         var new_command_text = this._calcCommandText();
 
         this._commandText.set( "value", new_command_text );
-    }
+    },
+    
+
+    _b_dijit_OutputText : b_dijit_OutputText
 
 } );
 

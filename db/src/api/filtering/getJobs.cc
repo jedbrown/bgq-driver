@@ -205,6 +205,16 @@ getJobs(
         conjunction = " AND ";
     }
 
+    if ( ! filter.getHostname().empty() ) {
+        job_where_clause_sql << conjunction << "hostname = '" << filter.getHostname() << "'";
+        conjunction = " AND ";
+    }
+
+    if ( filter.getPid() != -1 ) {
+        job_where_clause_sql << conjunction << "pid = " << filter.getPid();
+        conjunction = " AND ";
+    }
+
     // All previous Where clause are common between job and job history
     job_history_where_clause_sql << job_where_clause_sql.str();
     history_conjunction = conjunction;

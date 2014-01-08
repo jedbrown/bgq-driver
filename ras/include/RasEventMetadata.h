@@ -109,7 +109,8 @@ public:
   static void setMetadata(const std::string& msgId, RasEventMetadata* ptr);
   static void clearMetadata();
 protected: 
-  RasEventMetadata() {};	// implementations should be constructed by the factory
+  RasEventMetadata() {}	// implementations should be constructed by the factory
+private:
   static pthread_mutex_t _mdLock; // sync access to msgId to metadata map
   static void findMetadataFiles(std::string& dir, std::map<std::string,std::string>& files);
   static std::string installPath;

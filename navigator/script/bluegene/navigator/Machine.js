@@ -27,14 +27,12 @@ define(
     "./topic",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
         l_topic,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -48,8 +46,12 @@ var b_navigator_Machine = d_declare( null,
 
 
     /** @constructs */
-    constructor : function()
+    constructor : function(
+            machine_dij
+        )
     {
+        this._machine_dij = machine_dij;
+
         l_topic.subscribe( l_topic.gotMachineInfo, d_lang.hitch( this, this._gotMachineInfo ) );
         l_topic.subscribe( l_topic.highlightHardware, d_lang.hitch( this, this._highlightHardware ) );
     },
@@ -57,7 +59,6 @@ var b_navigator_Machine = d_declare( null,
 
     _gotMachineInfo : function( /* Object */ args )
     {
-        this._machine_dij = j_registry.byId( "navigator" ).getMachine();
         this._machine_dij.setLayout( args.machineInfo );
     },
 

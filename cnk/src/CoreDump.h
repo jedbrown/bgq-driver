@@ -28,7 +28,8 @@
 
 typedef struct _CoreBuffer 
 {
-    char buffer[CONFIG_CORE_BUFFER_SIZE]; //! \todo We use this buffer for Elf structures in binary core dumps.  Is it big enough?
+    char buffer[CONFIG_CORE_BUFFER_SIZE]; //! We also use this buffer for Elf structures in binary core dumps.  Is it big enough?
+    int length; // length of the dat 
     struct 
     {
         unsigned int dumpToMailbox : 1;
@@ -53,5 +54,6 @@ void DumpInterruptCounters(void);
 int  coredump_binary_for_rank(AppProcess_t* pProc);
 void coredump_printf(CoreBuffer* buffer, const char *fmt, ...);
 void coredump_ND(CoreBuffer*);
+int  coredump_for_rank(AppProcess_t* pProc);
 
 #endif // COREDUMP_H

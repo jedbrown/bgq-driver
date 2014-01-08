@@ -37,6 +37,8 @@
 #include <iomanip>
 #include <sstream>
 #include <queue>
+#include <ramdisk/include/services/common/Cioslog.h>
+#include <ramdisk/include/services/common/SignalHandler.h>
 
 using namespace bgcios::stdio;
 
@@ -164,7 +166,8 @@ HwStdioController::eventMonitor(void)
    const int compChannel  = 2;
    const int eventChannel = 3;
    const int dataListener = 4;
-   const int numFds       = 5;
+   const int pipeForSig   = 5;
+   const int numFds       = 6;
 
    pollfd pollInfo[numFds];
    int timeout = -1; // 10000 == 10 sec
@@ -194,6 +197,14 @@ HwStdioController::eventMonitor(void)
    pollInfo[dataListener].events = POLLIN;
    pollInfo[dataListener].revents = 0;
    LOG_CIOS_TRACE_MSG("added data channel listener using fd " << pollInfo[dataListener].fd << " to descriptor list");
+
+  
+   bgcios::SigWritePipe SigWritePipe(SIGUSR1);
+
+   pollInfo[pipeForSig].fd = SigWritePipe._pipe_descriptor[0];
+   pollInfo[pipeForSig].events = POLLIN;
+   pollInfo[pipeForSig].revents = 0;
+   LOG_CIOS_TRACE_MSG("added signal pipe listener using fd " << pollInfo[pipeForSig].fd << " to descriptor list");
 
    // Process events until told to stop.
    while (!_done) {
@@ -260,6 +271,24 @@ HwStdioController::eventMonitor(void)
         pollInfo[dataChannel].events = POLLIN;
       }
 
+
+      // Check for an event on the pipe for signal.
+      if (pollInfo[pipeForSig].revents & POLLIN) {
+         LOG_INFO_MSG_FORCED("input event available pipe from signal handler");
+         pollInfo[pipeForSig].revents = 0;
+         siginfo_t siginfo;
+         read(pollInfo[pipeForSig].fd,&siginfo,sizeof(siginfo_t));
+         const size_t BUFSIZE = 1024;
+         char buffer[BUFSIZE];
+         const size_t HOSTSIZE = 256;
+         char hostname[HOSTSIZE];
+         hostname[0]=0;
+         gethostname(hostname,HOSTSIZE);
+         snprintf(buffer,BUFSIZE,"/var/spool/abrt/fl_stdiod.%d.%s.log",getpid(),hostname);
+         LOG_INFO_MSG_FORCED("Attempting to write flight log "<<buffer);
+         printLogMsg(buffer); //print the log to stdout
+      }
+
       // Check for an event on the data channel listener.
       if (pollInfo[dataListener].revents & POLLIN) {
          LOG_CIOS_TRACE_MSG("input event available on data channel listener");
@@ -314,8 +343,10 @@ HwStdioController::commandChannelHandler(void)
       return err;
    }
 
-   // Make sure the service field is correct.
+
    bgcios::MessageHeader *msghdr = (bgcios::MessageHeader *)_inboundMessage;
+   CIOSLOGMSG(CMD_RECV_MSG,msghdr);
+   // Make sure the service field is correct.
    if ((msghdr->service != bgcios::StdioService) && (msghdr->service != bgcios::IosctlService) && (msghdr->service != bgcios::ToolctlService)) {
       LOG_ERROR_MSG("Job " << msghdr->jobId << ": message service " << (int)msghdr->service << " is wrong, header: " << bgcios::printHeader(*msghdr));
       sendErrorAckToCommandChannel(source, bgcios::WrongService, 0);
@@ -368,8 +399,11 @@ HwStdioController::dataChannelHandler(InetSocketPtr authOnly)
       return err;
    }
 
-   // Make sure the service field is correct.
    bgcios::MessageHeader *msghdr = (bgcios::MessageHeader *)_inboundMessage;
+   CIOSLOGMSG(DTA_RECV_MSG,msghdr);
+
+   // Make sure the service field is correct.
+
    if (msghdr->service != bgcios::StdioService) {
       LOG_ERROR_MSG("Job " << msghdr->jobId << ": message service " << msghdr->service << " is wrong");
       sendErrorAckToDataChannel(bgcios::WrongService, bgcios::StdioService);
@@ -596,6 +630,14 @@ HwStdioController::completionChannelHandler(void)
 
                // Handle the message.
                bgcios::MessageHeader *msghdr = (bgcios::MessageHeader *)client->getInboundMessagePtr();
+               if (msghdr->type == WriteStdout)
+               {}
+               else if (msghdr->type == WriteStderr) 
+               {}
+               else {
+                 CIOSLOGMSG_RECV_WC(BGV_RECV_MSG, msghdr,completion);
+               }
+
                LOG_CIOS_DEBUG_MSG("Job " << msghdr->jobId << "." << msghdr->rank << ": " << toString(msghdr->type) <<
                              " message is available on completion channel from queue pair " << completion->qp_num);
                
@@ -639,6 +681,10 @@ HwStdioController::completionChannelHandler(void)
 
                // Send reply message in outbound message buffer to client.
                if (client->isOutboundMessageReady()) {
+                   bgcios::MessageHeader * msgout = (bgcios::MessageHeader *)client->getOutboundMessagePtr();
+                   if ( (msgout->type != WriteStdout) && (msgout->type != WriteStdout) ){
+                     CIOSLOGMSG_QP(BGV_SEND_MSG, client->getOutboundMessagePtr(),client->getQpNum());
+                   }
                   client->postSendMessage();
                }
 
@@ -837,6 +883,7 @@ HwStdioController::readStdinAck(void)
       void *outMsg = client->getOutboundMessagePtr();
       memcpy(outMsg, inMsg, inMsg->header.length);
       try {
+         CIOSLOGMSG_QP(BGV_SEND_MSG, client->getOutboundMessagePtr(),client->getQpNum());
          client->postSendMessage(inMsg->header.length);
          LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << "." << inMsg->header.rank << ": ReadStdinAck message is ready for queue pair " <<
                        client->getQpNum() << " (" << bgcios::dataLength(&(inMsg->header)) << " bytes)");
@@ -893,6 +940,7 @@ HwStdioController::interrupt(const std::string source)
       ackMsg->header.jobId = inMsg->header.jobId;
 
       try {
+         CIOSLOGMSG_QP(BGV_SEND_MSG, client->getOutboundMessagePtr(),client->getQpNum());
          client->postSendMessage(ackMsg->header.length);
          LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << "." << inMsg->header.rank << ": ReadStdinAck message is ready for queue pair " <<
                        client->getQpNum() << " to interrupt in progress operation");
@@ -908,7 +956,7 @@ HwStdioController::interrupt(const std::string source)
    }
 
    // Mark the job as killed to stop subsequent I/O operations.
-   if (!fromToolCtld)
+   if (!fromToolCtld && (inMsg->signo == SIGKILL))
    {
        job->markKilled();
        LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << "." << inMsg->header.rank << ": marked job as killed");
@@ -980,6 +1028,9 @@ HwStdioController::writeStdio(const RdmaClientPtr& client)
 
    // Send reply message in outbound message buffer to client.
    if (client->isOutboundMessageReady()) {
+      if ( (outMsg->header.type != WriteStdoutAck) && (outMsg->header.type != WriteStderrAck) ){
+        CIOSLOGMSG_QP(BGV_SEND_MSG, client->getOutboundMessagePtr(),client->getQpNum());
+      }
       client->postSendMessage();
    }
 

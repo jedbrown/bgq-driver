@@ -77,25 +77,33 @@ compiler: ${INSTALL_DIR}
 	@if [ "${PLATFORM}" = "BGQ" ]; then \
 	rm -f ${INSTALL_DIR}/COMPILER; \
 	( \
-	echo "#"; \
-	echo "# ${HOST_CC} -v"; \
-	echo "#"; \
-        ${HOST_CC} -v 2>&1; \
-	echo; \
-	echo "#"; \
-	echo "# ${FAST_CC} -qversion=verbose"; \
-	echo "#"; \
-	${FAST_CC} -qversion=verbose; \
-	echo; \
-	echo "#"; \
-	echo "# ${FAST_F77} -qversion=verbose"; \
-	echo "#"; \
-	${FAST_F77} -qversion=verbose; \
-	echo; \
-	echo "#"; \
-	echo "# ${FAST_F90} -qversion=verbose"; \
-	echo "#"; \
-	${FAST_F90} -qversion=verbose; \
+	if [ -f ${HOST_CC} ]; then			\
+	echo "#";					\
+	echo "# ${HOST_CC} -v";				\
+	echo "#";					\
+        ${HOST_CC} -v 2>&1;				\
+	fi;						\
+	if [ -f ${FAST_CC} ]; then			\
+	echo;						\
+	echo "#";					\
+	echo "# ${FAST_CC} -qversion=verbose";		\
+	echo "#";					\
+	${FAST_CC} -qversion=verbose;			\
+	fi;						\
+	if [ -f ${FAST_F77} ]; then			\
+	echo;						\
+	echo "#";					\
+	echo "# ${FAST_F77} -qversion=verbose";		\
+	echo "#";					\
+	${FAST_F77} -qversion=verbose;			\
+	fi;						\
+	if [ -f ${FAST_F90} ]; then			\
+	echo;						\
+	echo "#";					\
+	echo "# ${FAST_F90} -qversion=verbose";		\
+	echo "#";					\
+	${FAST_F90} -qversion=verbose;			\
+	fi;						\
 	) >> ${INSTALL_DIR}/COMPILER; fi
 
 print-xl:

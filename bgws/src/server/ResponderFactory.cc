@@ -214,7 +214,8 @@ ResponderFactory::ResponderFactory(
         ServerStats& server_stats,
         blue_gene::service_actions::ServiceActions& service_actions,
         Sessions& sessions,
-        teal::Teal& teal
+        teal::Teal& teal,
+        BlockingOperationsThreadPool& blocking_operations_thread_pool
     ) :
         _bgws_server(bgws_server),
         _blue_gene(blue_gene),
@@ -225,7 +226,8 @@ ResponderFactory::ResponderFactory(
         _server_stats(server_stats),
         _service_actions(service_actions),
         _sessions(sessions),
-        _teal(teal)
+        _teal(teal),
+        _blocking_operations_thread_pool(blocking_operations_thread_pool)
 {
     // Nothing to do.
 }
@@ -277,7 +279,8 @@ capena::server::ResponderPtr ResponderFactory::createResponder(
             _server_stats,
             _service_actions,
             _sessions,
-            _teal
+            _teal,
+            _blocking_operations_thread_pool
         );
 
 

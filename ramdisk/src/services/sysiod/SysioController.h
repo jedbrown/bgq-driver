@@ -38,6 +38,14 @@ namespace bgcios
 
 namespace sysio
 {
+typedef struct interrupt_tracker {
+       uint64_t jobId;
+       uint64_t startTimestamp;
+       uint32_t rank;   
+       uint32_t signo;
+       uint32_t seconds;
+       uint32_t progress_value;
+} interrupt_tracker_t;
 
 //! \brief Handle system I/O service messages.
 
@@ -96,14 +104,33 @@ private:
 
    int interruptForToolCtl(std::string source);
 
+   //! \brief  Formats and issues a "HangNoSignal" stuck syscall
+   
+   void reportHangNoSignal();
+
    //! Unique identifier for this instance of the daemon.
    uint32_t _serviceId;
+
+   //! Control RAS 
+   uint32_t _doRasOnce;
+
+   //! Start time of the syscall that is currently stuck, or zero if there is no such syscall.
+   uint64_t _timeOfSlowSyscall;
+
+   //! Duration of the stuck sys call
+   uint64_t _durationOfSlowSyscall;
+
+   //! Start time of the syscall that is currently hung, or zero if there is no such syscall.
+   uint64_t _timeOfHungSyscall;
 
    //! Thread to monitor the client connection to the compute node.
    ClientMonitorPtr _clientMonitor;
 
+   uint64_t _SlowSyscallTimeout;
+   uint64_t _HungSyscallTimeout;
+
    //! List of Interrupt messages queued waiting for final job cleanup
-   std::list <bgcios::iosctl::InterruptMessage *> _queuedInterruptMessages;
+   std::list <interrupt_tracker_t *> _queuedInterruptTracker;
 };
 
 //! Smart pointer for SysioController object.

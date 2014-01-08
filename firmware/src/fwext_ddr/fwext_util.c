@@ -603,3 +603,41 @@ void FW_Warning( const char* fmt, ... ) {
 
    printf("(W) %s\n", buffer);
 }
+
+void FW_Error( const char* fmt, ... ) {
+
+    char buffer[1024];
+
+   va_list args;
+   va_start( args, fmt );
+
+   int len = 0;
+   len = vsprintf( buffer, fmt, args );
+   va_end( args );
+
+   printf("(E) %s\n", buffer);
+}
+
+
+void FW_RAS_printf( const uint32_t msg_id, const char* fmt, ... ) {
+
+   va_list args;
+   va_start( args, fmt );
+
+   int len = 0;
+   char buffer[256];
+    
+
+   len = vsprintf( buffer, fmt, args );
+   va_end( args );
+   buffer[len] = 0;
+
+   extern int _fw_writeRASString(uint32_t , const char*  );
+   fwext_getFwInterface()->writeRASString( msg_id, buffer);
+
+   if (len > sizeof(buffer)) {
+       printf("PRINTF OVERFLOWED\n");
+       asm volatile( "b 0"); //crash(__LINE__);
+   }
+
+}

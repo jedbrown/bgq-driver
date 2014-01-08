@@ -27,11 +27,15 @@
 
 #include <utility/include/Log.h>
 
+
 LOG_DECLARE_FILE( "database" );
+
 
 namespace cxxdb {
 
+
 const ParameterNames Connection::NoParameterNames;
+
 
 ConnectionPtr Connection::create(
         const std::string& db_name,

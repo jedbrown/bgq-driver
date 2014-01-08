@@ -24,6 +24,7 @@
 #ifndef CXXDB_STATEMENT_HANDLE_H_
 #define CXXDB_STATEMENT_HANDLE_H_
 
+
 #include "ColumnInfo.h"
 #include "ParameterInfo.h"
 
@@ -33,9 +34,12 @@
 
 #include <string>
 
+
 namespace cxxdb {
 
+
 class ConnectionHandle;
+
 
 /*! \brief Wrapper around an ODBC statement handle. */
 class StatementHandle : boost::noncopyable
@@ -137,6 +141,9 @@ public:
      *  This function does nothing if there is no cursor on the statement.
      */
     void closeCursor();
+
+    /*! \brief Calls SQLCancel. */
+    void cancel();
 
     ~StatementHandle();
 

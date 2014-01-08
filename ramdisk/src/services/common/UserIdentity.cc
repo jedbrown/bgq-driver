@@ -97,7 +97,7 @@ UserIdentity::swap(void)
    LOG_CIOS_TRACE_MSG("setting " << _numGroups << " secondary groups: " << gidListToNames(_numGroups, _groupList));
    if (setgroups(_numGroups, _groupList) != 0) {
       result.set(bgcios::SecondaryGroupIdError, errno);
-      LOG_ERROR_MSG("error setting " << _numGroups << "secondary groups: " << bgcios::errorString(result.errorCode()));
+      LOG_ERROR_MSG("error setting " << _numGroups << " secondary groups: " << bgcios::errorString(result.errorCode()));
       set(_initialUserId, _initialGroupId, _numInitialGroups, _initialGroupList);
       swap();
       return result;
@@ -107,7 +107,7 @@ UserIdentity::swap(void)
    LOG_CIOS_TRACE_MSG("setting gid to " << _groupId << " (" << gidToName(_groupId) << ")");
    if (setgid(_groupId) == -1) {
       result.set(bgcios::PrimaryGroupIdError, errno);
-      LOG_ERROR_MSG("error swapping gid to " << _groupId << "(" << gidToName(_groupId) << "): " << bgcios::errorString(result.errorCode()));
+      LOG_ERROR_MSG("error swapping gid to " << _groupId << " (" << gidToName(_groupId) << "): " << bgcios::errorString(result.errorCode()));
       set(_initialUserId, _initialGroupId, _numInitialGroups, _initialGroupList);
       swap();
       return result;
@@ -117,7 +117,7 @@ UserIdentity::swap(void)
    LOG_CIOS_TRACE_MSG("setting uid to " << _userId << " (" <<  uidToName(_userId) << ")");
    if (setuid(_userId) == -1) {
       result.set(bgcios::UserIdError, errno);
-      LOG_ERROR_MSG("error swapping uid to " << _userId << "(" << uidToName(_userId) << "): " << bgcios::errorString(result.errorCode()));
+      LOG_ERROR_MSG("error swapping uid to " << _userId << " (" << uidToName(_userId) << "): " << bgcios::errorString(result.errorCode()));
       set(_initialUserId, _initialGroupId, _numInitialGroups, _initialGroupList);
       swap();
       return result;

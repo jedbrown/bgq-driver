@@ -27,8 +27,8 @@ define(
     "./AbstractTemplatedContainer",
     "./MonitorActiveMixin",
     "../../Bgws",
+    "dojo/when",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dojo/text!./templates/IoBlockDetails.html",
     "module",
@@ -43,8 +43,8 @@ function(
         l_AbstractTemplatedContainer,
         l_MonitorActiveMixin,
         b_Bgws,
+        d_when,
         d_declare,
-        d_Deferred,
         d_lang,
         template,
         module
@@ -53,7 +53,6 @@ function(
 
 
 var b_navigator_dijit_IoBlockDetails = d_declare(
-        "bluegene.navigator.dijit.IoBlockDetails",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -80,6 +79,10 @@ var b_navigator_dijit_IoBlockDetails = d_declare(
     {
         this._block_id = block_id;
         this._refresh();
+
+        if ( block_id === null ) {
+            this.onGotBlockDetails( null );
+        }
     },
 
 
@@ -87,6 +90,10 @@ var b_navigator_dijit_IoBlockDetails = d_declare(
     {
         this._refresh();
     },
+
+
+    onLoading : function() {},
+    onGotBlockDetails : function( block_info ) {},
 
 
     // override
@@ -127,7 +134,7 @@ var b_navigator_dijit_IoBlockDetails = d_declare(
 
         if ( this._fetch_deferred ) {
             this._fetch_deferred.cancel();
-            this._fetch_deferred();
+            this._fetch_deferred = null;
         }
 
         if ( this._block_id === null ) {
@@ -139,7 +146,9 @@ var b_navigator_dijit_IoBlockDetails = d_declare(
 
         this._setDisplayed( this._loadingPane );
 
-        d_Deferred.when(
+        this.onLoading();
+
+        d_when(
                 this._fetch_deferred,
                 d_lang.hitch( this, this._fetchSuccess ),
                 d_lang.hitch( this, this._fetchFailed )
@@ -153,6 +162,8 @@ var b_navigator_dijit_IoBlockDetails = d_declare(
 
         this._loadedPane.set( "value", response );
         this._setDisplayed( this._loadedPane );
+
+        this.onGotBlockDetails( response );
     },
 
 
@@ -169,6 +180,8 @@ var b_navigator_dijit_IoBlockDetails = d_declare(
         this._errorFmt.set( "value", { name: this._block_id, "msg": err_text } );
 
         this._setDisplayed( this._errorPane );
+
+        this.onGotBlockDetails( null );
     },
 
 

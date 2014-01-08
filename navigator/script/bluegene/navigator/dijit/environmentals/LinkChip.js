@@ -36,7 +36,6 @@ function(
 {
 
 var b_navigator_dijit_environmentals_LinkChip = d_declare(
-        "bluegene.navigator.dijit.environmentals.LinkChip",
         [ l_AbstractQueryResultsDijit ],
 
 {

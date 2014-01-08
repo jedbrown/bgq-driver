@@ -28,9 +28,9 @@
 
 #include "common/logging.h"
 
-#include "server/Job.h"
-
+#include "server/mux/Connection.h"
 #include "server/CommandConnection.h"
+#include "server/Job.h"
 
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
@@ -97,6 +97,14 @@ JobStatus::impl()
     }
 
     response->_killTimeout = _job->killTimer().expires();
+    const mux::Connection::Ptr mux( _job->mux().lock() );
+    if ( mux ) {
+        try {
+            response->_mux = boost::lexical_cast<std::string>(mux->getEndpoint());
+        } catch ( const boost::bad_lexical_cast& e ) {
+            LOG_WARN_MSG( e.what() );
+        }
+    }
 
     _connection->write( response );
 }

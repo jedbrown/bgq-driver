@@ -21,8 +21,8 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#ifndef BGWS_SERVICE_ACTIONS_HPP_
-#define BGWS_SERVICE_ACTIONS_HPP_
+#ifndef BGWS_BLUE_GENE_SERVICE_ACTIONS_SERVICE_ACTIONS_HPP_
+#define BGWS_BLUE_GENE_SERVICE_ACTIONS_SERVICE_ACTIONS_HPP_
 
 
 #include "fwd.hpp"
@@ -74,6 +74,22 @@ public:
             CloseCb cb
         );
 
+
+    typedef boost::function<void ( AttentionMessagesMap )> GetAttentionMessagesSnapshotCb;
+
+    void getAttentionMessagesSnapshot(
+            GetAttentionMessagesSnapshotCb cb
+        );
+
+
+    typedef boost::function<void ( const std::string& )> GetAttentionMessagesCb;
+
+    void getAttentionMessages(
+            const std::string& service_action_id,
+            GetAttentionMessagesCb cb
+        );
+
+
     void setConfiguration(
             const boost::filesystem::path& executable_path,
             const std::string& properties_filename
@@ -88,6 +104,8 @@ private:
 
     boost::filesystem::path _executable_path;
     std::string _properties_filename;
+
+    AttentionMessagesMap _attention_messages;
 
 
     void _startImpl(
@@ -112,6 +130,22 @@ private:
             const boost::filesystem::path& executable_path,
             const std::string& properties_filename
         );
+
+
+    void _addAttentionMessages(
+            const std::string& service_action_id,
+            const std::string& attention_messages
+        );
+
+    void _getAttentionMessagesSnapshotImpl(
+            GetAttentionMessagesSnapshotCb cb
+        );
+
+    void _getAttentionMessagesImpl(
+            const std::string& service_action_id,
+            GetAttentionMessagesCb cb
+        );
+
 };
 
 } } } // namespace bgws::blue_gene::service_actions

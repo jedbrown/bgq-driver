@@ -253,3 +253,16 @@ BOOST_AUTO_TEST_CASE( test_result_set_internalize )
 
     BOOST_CHECK( rs_ptr->isValid() );
 }
+
+
+BOOST_AUTO_TEST_CASE( test_prepare_later )
+{
+    // Can create a statement and later prepare it.
+
+    QueryStatementPtr q_stmt_ptr(Fixture::conn_ptr->createQuery());
+
+    q_stmt_ptr->prepare( "SELECT * FROM tbgqBlock WHERE blockId='NOTABLOCK'" );
+
+    ResultSetPtr rs_ptr(q_stmt_ptr->execute());
+    BOOST_CHECK( ! rs_ptr->fetch() );
+}

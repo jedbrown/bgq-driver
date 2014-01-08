@@ -46,7 +46,6 @@ function(
 
 
 var b_navigator_dijit_Footer = d_declare(
-        "bluegene.navigator.dijit.Footer",
         [ l_AbstractTemplatedContainer ],
 
 {

@@ -117,6 +117,7 @@ private:
     Message::Ptr _request;
     bgcios::MessageHeader _header;
     const boost::shared_ptr<cios::Message> _ack;
+    bool _timedOut;
 };
 
 } // cios

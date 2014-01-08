@@ -164,6 +164,58 @@ config_net_dev()
 	fi
 }
 
+# Create the necessary config file in /etc/sysconfig/network-scripts so that ifup/ifdown will work.
+# Add the file to /etc/bgfs.files so it get pushed forward into the NFS root space.
+# $1=DEVICE,$2=IPv4ADDR,$3=NETMASK,$4=BROADCAST,$5=MTU,$6=IPv6ADDR,$7=PREFIX
+write_ifcfg()
+{
+    IFCFG_FILE=/etc/sysconfig/network-scripts/ifcfg-$1
+
+    if [ ! -d /etc/sysconfig/network-scripts ] ; then mkdir -p /etc/sysconfig/network-scripts ; fi
+
+    touch $IFCFG_FILE
+    if [ ! -e $IFCFG_FILE ] ; then
+	bgras $BGRAS_ID_SCRIPT_FAILURE \
+	      "network - WARNING: unable to create ifcfg script $IFCFG_FILE. The ifup and ifdown commands will not work."
+    fi
+
+    cat $IFCFG_FILE | grep "DEVICE" &> /dev/null
+    if [ $? -ne 0 ] ; then /bin/echo "DEVICE=$1" >> $IFCFG_FILE ; fi
+    cat $IFCFG_FILE | grep "BOOTPROTO" &> /dev/null
+    if [ $? -ne 0 ] ; then /bin/echo "BOOTPROTO=none" >> $IFCFG_FILE ; fi
+    if [ ! -z $2 ] ; then /bin/echo "IPADDR=$2" >> $IFCFG_FILE ; fi
+    if [ ! -z $3 ] ; then /bin/echo "NETMASK=$3" >> $IFCFG_FILE ; fi
+    if [ ! -z $4 ] ; then /bin/echo "BROADCAST=$4" >> $IFCFG_FILE ; fi
+    cat $IFCFG_FILE | grep "ONBOOT" &> /dev/null
+    if [ $? -ne 0 ] ; then /bin/echo "ONBOOT=yes" >> $IFCFG_FILE; fi
+    cat $IFCFG_FILE | grep "USERCTL" &> /dev/null
+    if [ $? -ne 0 ] ; then /bin/echo "USERCTL=no" >> $IFCFG_FILE ; fi
+    cat $IFCFG_FILE | grep "TYPE" &> /dev/null
+    if [ $? -ne 0 ] ; then
+	if [[ "$1" =~ "ib" ]] ; then
+	    /bin/echo "TYPE=Infiniband" >> $IFCFG_FILE
+	    /bin/echo "CONNECTED_MODE=yes" >> $IFCFG_FILE
+	else
+	    /bin/echo "TYPE=Ethernet" >> $IFCFG_FILE
+	fi
+    fi
+    if [ ! -z $5 ] ; then /bin/echo "MTU=$5" >> $IFCFG_FILE ; fi
+    if [ ! -z $6 ] ; then
+	/bin/echo "IPV6INIT=yes" >> $IFCFG_FILE
+	/bin/echo "IPV6ADDR='$6'" >> $IFCFG_FILE
+	if [ ! -z $7 ] ; then /bin/echo "IPV6PREFIX=$7" >> $IFCFG_FILE ; fi
+    else
+	/bin/echo "IPV6INIT=no" >> $IFCFG_FILE
+    fi
+
+    # Add to /etc/bgfs.files
+    cat /etc/bgfs.files | grep "/etc/sysconfig/network-scripts/" &> /dev/null
+    if [ $? -ne 0 ] ; then /bin/echo "/etc/sysconfig/network-scripts/" >> /etc/bgfs.files ; fi
+    cat /etc/bgfs.files | grep "$IFCFG_FILE" &> /dev/null
+    if [ $? -ne 0 ] ; then /bin/echo "$IFCFG_FILE" >> /etc/bgfs.files ; fi
+
+}
+
 case "$1" in
     start)
 
@@ -187,6 +239,68 @@ case "$1" in
 		    exit 0
 		fi
 
+		# Ensure the ports on the PCIe adapter are properly configured in cause Autosensing isn't enabled..
+		echo -en "\n\tChecking adapter configuration"
+   		if [ ! -e /etc/sysconfig/bgqadapters ] ; then
+      			bgras $BGRAS_ID_SCRIPT_FAILURE \
+            		"network - Unable to verify network port configuration.  /etc/sysconfig/bgqadapters is missing."
+   		else
+        		if [ -r /sys/bus/pci/devices/0000:01:00.0/vpd ] ; then
+				# Decide if this is a supported adapter.  If so, validate that the ports are properly
+				# configured.  If the adapter is not supported we have to skip this step.
+
+               			ADAPTERARR=(`cat /etc/sysconfig/bgqadapters | grep -v '#'`)
+               			MATCHED=0
+               			I=0
+
+               			PNARR=(`lspci -vv -s 0000:01:00.0 | grep -e "\[PN\]" | tr -s '\t' ' ' | tr -s '\s' '\n'`)
+               			while [ $I -lt ${#ADAPTERARR[@]} ] && [ $MATCHED -eq 0 ] ; do
+               				if [[ ${ADAPTERARR[$I]} =~ ${PNARR[3]} ]] ; then
+                      				MATCHED=1
+						PORTARR=(`echo ${ADAPTERARR[$I]} | tr -s ':' '\n'`)
+                			else
+                      				let I=$I+1
+                			fi
+                		done
+
+                		if [ $MATCHED -eq 0 ] ; then
+					echo -en "\n\tUnsupported network adapter.  Skipping port validation.\n"
+                		else
+					if [ -z ${PORTARR[1]} ] ; then
+						bgras $BGRAS_ID_SCRIPT_FAILURE \
+						"network - Unable to verify network port configuration. /etc/sysconfig/bgqadapters contains no network port configuration data."
+					else
+						I=1
+						while [ $I -lt ${#PORTARR[@]} ] ; do
+							if [[ "${PORTARR[$I]}" =~ "PORT1" ]] ; then
+								PORTNUM=1
+							else
+								PORTNUM=2
+							fi
+						
+							export "${PORTARR[$I]}"
+						
+							if [ $PORTNUM -eq 1 ] ; then
+								if [ "`cat /sys/bus/pci/devices/0000:01:00.0/mlx4_port1`" != "$PORT1" ] ; then
+									echo -en "\n\tSetting network port 1 to $PORT1...\n"
+									# Need to sleep a bit to let things stabilize.
+									sleep 8
+									echo $PORT1 >> /sys/bus/pci/devices/0000:01:00.0/mlx4_port1
+								fi
+							fi
+							if [ $PORTNUM -eq 2 ] ; then
+                                                               	if [ "`cat /sys/bus/pci/devices/0000:01:00.0/mlx4_port2`" != "$PORT2" ] ; then
+                                                                       	echo -en "\n\tSetting network port 2 to $PORT2...\n"
+									# Need to sleep a bit to let things stabilize.
+									echo $PORT2 >> /sys/bus/pci/devices/0000:01:00.0/mlx4_port2
+                                                               	fi # End if different config
+                                                       	fi # End if port 2
+							let I=$I+1
+						done # End While more ports
+					fi # End if/else for values in PORTARR
+                		fi # End if/else for supported adapter
+        		fi # End check for VPD
+  		fi # End check for bgqadapters file
 		# Need to increase the PCIe payload size to 256 bytes to get the best utilization.
 		setpci -s 0:0.0 48.b=0x20
 		if [ $? -ne 0 ] ; then
@@ -273,6 +387,7 @@ case "$1" in
                                       "network - Failure configuring device $BG_INTF0_NAME. ifconfig returned: '$RC' ."
 			    else
 				config_net_dev $BG_INTF0_NAME $BG_INTF0_NETMASK $BG_INTF0_BROADCAST $BG_INTF0_MTU
+				write_ifcfg $BG_INTF0_NAME $BG_INTF0_IPV4 $BG_INTF0_NETMASK $BG_INTF0_BROADCAST $BG_INTF0_MTU '' ''
 			    fi
 			fi
 			
@@ -283,9 +398,11 @@ case "$1" in
 			    if [ -z $BG_INTF0_IPV6_PREFIX ] ; then
 				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/64 ...\n"
 				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/64 up 2>&1 )
+				write_ifcfg $BG_INTF0_NAME '' '' '' '' $BG_INTF0_IPV6 64
 			    else
 				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX ...\n"
 				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX up 2>&1 )
+				write_ifcfg $BG_INTF0_NAME '' '' '' '' $BG_INTF0_IPV6 $BG_INTF0_IPV6_PREFIX
 			    fi
 
 			    if [ ! -z "$RC" ] ; then
@@ -296,6 +413,7 @@ case "$1" in
 			        # to get an MTU configured.  
 				if [ -z $BG_INTF0_IPV4 ] || [ $BG_INTF0_IPV4 == "0.0.0.0" ] && [ ! -z $BG_INTF0_MTU ] ; then
 					RC=$( ifconfig $BG_INTF0_NAME mtu $BG_INTF0_MTU )
+					write_ifcfg $BG_INTF0_NAME '' '' '' $BG_INTF0_MTU '' ''
 				    	if [ ! -z "$RC" ] ; then
 						bgras $BGRAS_ID_SCRIPT_FAILURE \
 					      	      "network - Failure configure MTU for device $BG_INTF0_NAME. ifconfig returned: '$RC' ."
@@ -318,6 +436,7 @@ case "$1" in
 				      "network - Failure setting default mtu for $BG_INTF0_NAME. ifconfig returned: '$RC' ."
 			    else
                        		config_net_dev $BG_INTF0_NAME $BG_INTF0_NETMASK $BG_INTF0_BROADCAST $BG_INTF0_MTU
+				write_ifcfg $BG_INTF0_NAME $BG_INTF0_IPV4 $BG_INTF0_NETMASK $BG_INTF0_BROADCAST $BG_INTF0_MTU '' ''
 			    fi
 			fi
 
@@ -328,9 +447,11 @@ case "$1" in
 			    if [ -z $BG_INTF0_IPV6_PREFIX ] ; then
 				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/64 ...\n"
 				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/64 up 2>&1 )
+				write_ifcfg $BG_INTF0_NAME '' '' '' '' $BG_INTF0_IPV6 64
 			    else
 				echo -en $"\n\tConfiguring $BG_INTF0_NAME for IPv6, address $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX ...\n"
 				RC=$( ifconfig $BG_INTF0_NAME add $BG_INTF0_IPV6/$BG_INTF0_IPV6_PREFIX up 2>&1 )
+				write_ifcfg $BG_INTF0_NAME '' '' '' '' $BG_INTF0_IPV6 $BG_INTF0_IPV6_PREFIX
 			    fi
 
 			    if [ ! -z "$RC" ] ; then
@@ -424,6 +545,7 @@ case "$1" in
 					"network - Failure configuring $BG_INTF1_NAME. ifconfig retured: '$RC' ."
 			else
                       		config_net_dev $BG_INTF1_NAME $BG_INTF1_NETMASK $BG_INTF1_BROADCAST $BG_INTF1_MTU
+				write_ifcfg $BG_INTF1_NAME $BG_INTF1_IPV4 $BG_INTF1_NETMASK $BG_INTF1_BROADCAST $BG_INTF1_MTU '' ''
 			fi
 		    fi
 
@@ -434,9 +556,11 @@ case "$1" in
 			if [ -z $BG_INTF1_IPV6_PREFIX ] ; then
 			    echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/64 ...\n"
 			    RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/64 up 2>&1 )
+			    write_ifcfg $BG_INTF1_NAME '' '' '' '' $BG_INTF1_IPV6 64
 			else
 			    echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX ...\n"
 			    RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX up 2>&1 )
+			    write_ifcfg $BG_INTF1_NAME '' '' '' '' $BG_INTF1_IPV6 $BG_INTF1_IPV6_PREFIX
 			fi
 
 			if [ ! -z "$RC" ] ; then
@@ -470,6 +594,7 @@ case "$1" in
 				      "network - Failure configuring $BG_INTF1_NAME. ifconfig returned: '$RC' ."
 			    else
                         	config_net_dev $BG_INTF1_NAME $BG_INTF1_NETMASK $BG_INTF1_BROADCAST $BG_INTF1_MTU
+				write_ifcfg $BG_INTF1_NAME $BG_INTF1_IPV4 $BG_INTF1_NETMASK $BG_INTF1_BROADCAST $BG_INTF1_MTU '' ''
 			    fi
 			fi
 			
@@ -480,9 +605,11 @@ case "$1" in
 			    if [ -z $BG_INTF1_IPV6_PREFIX ] ; then
 				echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/64 ...\n"
 				RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/64 up 2>&1 )
+				write_ifcfg $BG_INTF1_NAME '' '' '' '' $BG_INTF1_IPV6 64
 			    else
 				echo -en $"\n\tConfiguring $BG_INTF1_NAME for IPv6, address $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX ...\n"
 				RC=$( ifconfig $BG_INTF1_NAME add $BG_INTF1_IPV6/$BG_INTF1_IPV6_PREFIX up 2>&1 )
+				write_ifcfg $BG_INTF1_NAME '' '' '' '' $BG_INTF1_IPV6 $BG_INTF1_IPV6_PREFIX
 			    fi
 
 			    if [ ! -z "$RC" ] ; then

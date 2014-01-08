@@ -27,6 +27,7 @@ define(
     "../AbstractTemplatedContainer",
     "../MonitorActiveMixin",
     "../../FilterOptions",
+    "../../xlate",
     "dojo/_base/declare",
     "dojo/data/ObjectStore",
     "dojo/store/Memory",
@@ -37,7 +38,6 @@ define(
     "../MultiWildcardTextBox",
     "../TimeInterval",
     "../../format",
-    "../../xlate",
     "dijit/TooltipDialog",
     "dijit/form/Button",
     "dijit/form/DropDownButton",
@@ -51,6 +51,7 @@ function(
         ll_AbstractTemplatedContainer,
         ll_MonitorActiveMixin,
         b_navigator_FilterOptions,
+        b_navigator_xlate,
         d_declare,
         d_data_ObjectStore,
         d_store_Memory,
@@ -72,7 +73,6 @@ var _formToQuery = function( form_obj )
 
 
 var b_navigator_dijit_environmentals_HealthCheck = d_declare(
-        "bluegene.navigator.dijit.environmentals.HealthCheck",
         [ ll_AbstractTemplatedContainer, ll_MonitorActiveMixin ],
 
 {
@@ -175,7 +175,10 @@ var b_navigator_dijit_environmentals_HealthCheck = d_declare(
         }
 
         this._dirty = false;
-    }
+    },
+
+
+    _b_navigator_xlate : b_navigator_xlate
 
 } );
 

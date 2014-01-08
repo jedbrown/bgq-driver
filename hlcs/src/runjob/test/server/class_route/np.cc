@@ -44,6 +44,7 @@ BOOST_AUTO_TEST_CASE( max_np )
     // --np for the entire job shape should result in no nodes excluded
     JobInfo info;
     info.setNp( 2*2*2*2*2 ); 
+    info.setMapping( Mapping(Mapping::Type::Permutation, "ABCDET") );
 
     CR_RECT_T world;
     *CR_RECT_LL(&world) = (CR_COORD_T) {{0,0,0,0,0}};
@@ -68,6 +69,7 @@ BOOST_AUTO_TEST_CASE( max_np_and_ranks_per_node )
         JobInfo info;
         info.setRanksPerNode( i );
         info.setNp( 2*2*2*2*2*i ); 
+        info.setMapping( Mapping(Mapping::Type::Permutation, "ABCDET") );
         job::class_route::Mapping mapping;
 
         CR_RECT_T world;
@@ -96,6 +98,7 @@ BOOST_AUTO_TEST_CASE( np_provided )
     for ( unsigned int i=1; i <= rect.size(); ++i ) {
         JobInfo info;
         info.setNp( i );
+        info.setMapping( Mapping(Mapping::Type::Permutation, "ABCDET") );
         job::class_route::Mapping mapping;
 
         const job::class_route::Np np( info, &rect, &mapping );
@@ -119,6 +122,7 @@ BOOST_AUTO_TEST_CASE( np_and_ranks_per_node_provided )
         for ( unsigned j=1; j <= rect.size() * i; ++j ) {
             JobInfo info;
             info.setNp( j );
+            info.setMapping( Mapping(Mapping::Type::Permutation, "ABCDET") );
             info.setRanksPerNode( i );
             job::class_route::Mapping mapping;
 

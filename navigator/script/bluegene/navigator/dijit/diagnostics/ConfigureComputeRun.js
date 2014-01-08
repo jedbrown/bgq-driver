@@ -26,11 +26,12 @@ define(
 [
     "../AbstractTemplatedContainer",
     "../../../BlueGene",
+    "../../../dijit/OutputFormat",
     "../../../dijit/OutputText",
     "dojo/dom-construct",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dijit/form/CheckBox",
     "dojo/text!./templates/ConfigureComputeRun.html",
@@ -47,11 +48,12 @@ define(
 function(
         ll_AbstractTemplatedContainer,
         b_BlueGene,
+        b_dijit_OutputFormat,
         b_dijit_OutputText,
         d_construct,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         j_form_CheckBox,
         template,
@@ -61,7 +63,6 @@ function(
 
 
 var b_navigator_dijit_diagnostics_ConfigureComputeRun = d_declare(
-        "bluegene.navigator.dijit.diagnostics.ConfigureComputeRun",
         [ ll_AbstractTemplatedContainer ],
 
 {
@@ -104,9 +105,14 @@ var b_navigator_dijit_diagnostics_ConfigureComputeRun = d_declare(
     },
 
 
-    notifyMidplaneSelected : function( location )
+    notifyMidplaneSelected : function( loc )
     {
-        var mp_loc = location.substr( 0, 6 );
+        if ( loc.search( /^R..-M./ ) === -1 ) {
+            console.log( module.id + ": [" + this.id + "]  selected location not in midplane. ", loc );
+            return;
+        }
+
+        var mp_loc = loc.substr( 0, 6 );
 
         if ( this._midplanes[mp_loc] ) {
             delete this._midplanes[mp_loc];
@@ -379,7 +385,7 @@ var b_navigator_dijit_diagnostics_ConfigureComputeRun = d_declare(
         this._resultHideable.set( "visiblity", "hidden" );
         this._submittingHideable.set( "visibility", "visible" );
 
-        d_Deferred.when(
+        d_when(
                 this._submit_promise,
                 d_lang.hitch( this, this._diagnosticsSubmitComplete ),
                 d_lang.hitch( this, this._diagnosticsSubmitFailed )
@@ -474,7 +480,10 @@ var b_navigator_dijit_diagnostics_ConfigureComputeRun = d_declare(
         var new_command_text = this._calcCommandText();
 
         this._commandText.set( "value", new_command_text );
-    }
+    },
+    
+    
+    _b_dijit_OutputFormat : b_dijit_OutputFormat
 
 } );
 

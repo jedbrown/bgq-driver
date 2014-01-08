@@ -67,12 +67,12 @@ Plugin::verify(
     LOG_TRACE_MSG( __FUNCTION__ );
     const runjob::mux::Plugin::Ptr plugin( _plugin.lock() );
     if ( !plugin ) return;
-    
+
     LOGGING_DECLARE_LOCATION_MDC( _id );
 
     // Time this operation
     _timers.start_plugin_verify();
-   
+
     try {
         // copy environment variables into a type the plugin
         // will understand
@@ -114,7 +114,7 @@ Plugin::verify(
 
         bgsched::runjob::Verify data( impl );
         plugin->getPlugin()->execute( data );
-        
+
         // plugin failed the request
         if ( data.deny_job() == bgsched::runjob::Verify::DenyJob::Yes ) {
             LOG_WARN_MSG( "plugin verify failed: '" << data.message() << "'" );
@@ -234,6 +234,7 @@ Plugin::terminated(
     LOG_TRACE_MSG( "job          : " << impl->_job );
     LOG_TRACE_MSG( "status       : " << impl->_status );
     LOG_TRACE_MSG( "kill timeout : " << std::boolalpha << impl->_killTimeout );
+    LOG_TRACE_MSG( "failed nodes : " << impl->_nodes.size() );
     try {
         plugin->getPlugin()->execute( bgsched::runjob::Terminated(impl) );
     } catch ( ... ) {

@@ -57,3 +57,11 @@ uint64_t sc_readlink(SYSCALL_FCN_ARGS)
    return File_GetFSPtrFromPath(pathname)->readlink(pathname, buf, bufsiz);
 }
 
+uint64_t internal_readlink(const char* path, char* buffer, size_t length)
+{
+    uint64_t rc;
+    BEGIN_KERNELINTERNALSC();
+    rc = sc_readlink((uint64_t)((void*)path), (uint64_t)((void*)buffer), length, 0,0,0);
+    END_KERNELINTERNALSC();
+    return rc;
+}

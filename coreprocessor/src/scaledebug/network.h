@@ -21,11 +21,15 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 #include <iostream>
+#include <map>
 #include <string>
 #include <ifaddrs.h>
 #include <bgq_util/include/pthreadmutex.h>
-#include <utility/include/cxxsockets/SocketTypes.h>
-#include <utility/include/cxxsockets/CxxSocket.h>
+#include <utility/include/cxxsockets/ListenerSet.h>
+#include <utility/include/cxxsockets/SecureTCPSocket.h>
+#include <utility/include/cxxsockets/SockAddr.h>
+#include <utility/include/cxxsockets/SockAddrList.h>
+#include <utility/include/cxxsockets/TCPSocket.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -59,5 +63,6 @@ extern CxxSockets::TCPSocketPtr side_sock;
 
 int connectToTool(int argc, char* argv[]);
 int sendCommand(const char* str);
-int receiveReply(CxxSockets::MsgMap& msgs);
+typedef std::map<CxxSockets::TCPSocketPtr, std::string>  MsgMap;
+int receiveReply(MsgMap& msgs);
 void findIPs(std::vector<string>& IPs);

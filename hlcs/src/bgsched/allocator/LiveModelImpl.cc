@@ -1097,6 +1097,49 @@ LiveModel::Impl::getBlockStatus(
         const string& blockName
         )
 {
+    // Verify block name was specified
+    if (blockName.empty()) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::InvalidBlockName,
+                No_Block_Name_Str
+        );
+    }
+    BGQDB::DBTBlock dbo;
+    // Validate the block name size
+    if (blockName.size() >= sizeof(dbo._blockid)) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::InvalidBlockName,
+                Block_Name_Too_Long_Str
+                );
+    }
+
+    // Block filter
+    BlockFilter block_filter;
+    block_filter.setName(blockName);
+    block_filter.setExtendedInfo(false);
+
+    // Block returned from core::getBlocks()
+    Block::Ptrs blocks;
+    try {
+        // Check if compute block exists in database
+        blocks = bgsched::core::getBlocks(block_filter);
+    } catch (...) {
+        LOG_ERROR_MSG("Error occurred while attempting to get status for compute block " << blockName);
+        // Rethrow the exception
+        throw;
+    }
+
+    // Did we get a compute block back?
+    if (blocks.empty()) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " not found"
+                );
+    }
+
     BGQDB::BLOCK_STATUS state;
     BGQDB::STATUS result = BGQDB::getBlockStatus(blockName, state);
     switch (result) {
@@ -1119,13 +1162,13 @@ LiveModel::Impl::getBlockStatus(
         THROW_EXCEPTION(
                 bgsched::InputException,
                 bgsched::InputErrors::BlockNotFound,
-                "Block " << blockName << " not found"
+                "Compute block " << blockName << " not found"
         );
     case BGQDB::FAILED:    // Block in unknown state
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::InvalidBlockState,
-                "Invalid block status for " << blockName
+                "Invalid compute block status for " << blockName
         );
     default :
         THROW_EXCEPTION(
@@ -1188,6 +1231,32 @@ LiveModel::Impl::removeBlock(
                 Block_Name_Too_Long_Str
                 );
     }
+
+    // Block filter
+    BlockFilter block_filter;
+    block_filter.setName(blockName);
+    block_filter.setExtendedInfo(false);
+
+    // Block returned from core::getBlocks()
+    Block::Ptrs blocks;
+    try {
+        // Check if compute block exists in database
+        blocks = bgsched::core::getBlocks(block_filter);
+    } catch (...) {
+        LOG_ERROR_MSG("Error occurred while attempting to remove compute block " << blockName);
+        // Rethrow the exception
+        throw;
+    }
+
+    // Did we get a compute block back?
+    if (blocks.empty()) {
+        THROW_EXCEPTION(
+                bgsched::InputException,
+                bgsched::InputErrors::BlockNotFound,
+                "Compute block " << blockName << " not found"
+                );
+    }
+
     // Remove the block from the database
     try {
         Block::remove(blockName);

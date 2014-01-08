@@ -63,9 +63,7 @@ Impl::~Impl()
 {
     if ( !_connection ) return;
 
-    if ( _error ) {
-        _response->setError( runjob::commands::error::unknown_failure );
-    }
+    _response->setError( _error );
 
     if ( !_message.str().empty() ) {
         _response->setMessage( _message.str() );
@@ -106,9 +104,9 @@ Impl::handle(
             return;
         }
 
-        job->find( _request->_rank );
-
         this->validateMappingFile( job );
+
+        job->find( _request->_rank );
 
         // getting here is a success
         _response->_block = job->block();
@@ -129,6 +127,22 @@ Impl::validateMappingFile(
 {
     const Mapping& mapping( job->mapping() );
     if ( mapping.type() != Mapping::Type::File ) return;
+
+    // ensure we can read the file
+    if ( access(mapping.value().c_str(), R_OK) == -1 ) {
+        const int error = errno;
+        char buf[256];
+        BOOST_THROW_EXCEPTION(
+                Exception(
+                    std::string() +
+                    "Could not read mapping file (" +
+                    strerror_r(error, buf, sizeof(buf)) + "): " +
+                    mapping.value(),
+                    runjob::commands::error::permission_denied
+                    )
+                );
+    }
+    LOG_DEBUG_MSG( "Can read mapping file: " << mapping.value() );
 
     // get utc time when the mapping file was last modified
     const boost::filesystem::path path( mapping );

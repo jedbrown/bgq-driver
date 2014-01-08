@@ -37,6 +37,7 @@
 #include <stdexcept>
 #include <string>
 #include <tr1/memory>
+#include <ramdisk/include/services/common/Cioslog.h>
 
 namespace bgcios
 {
@@ -205,6 +206,31 @@ int postSend(uint32_t regionLocalKey, void *address, uint32_t length, uint64_t r
    return err;
 }
 
+uint64_t
+postSendNoImmed(RdmaMemoryRegionPtr region, void *address, uint64_t length)
+{
+   struct ibv_send_wr *badRequest;
+   // Build scatter/gather element for outbound data.
+   struct ibv_sge send_sge;
+   send_sge.addr = (uint64_t)address;
+   send_sge.length = length;
+   send_sge.lkey = region->getLocalKey();
+
+   // Build a send work request.
+   struct ibv_send_wr send_wr;
+   memset(&send_wr, 0, sizeof(send_wr));
+   send_wr.next = NULL;
+   send_wr.sg_list = &send_sge;
+   send_wr.num_sge = 1;
+   send_wr.opcode = IBV_WR_SEND;
+   send_wr.wr_id = region->getLocalKey(); // So memory region is available in work completion.
+
+   // Post a send for outbound message.
+   ++_totalSendPosted;
+   int err = ibv_post_send(_cmId->qp, &send_wr, &badRequest);
+   return err;
+}
+
    //! \brief  Post a rdma write operation from the specified memory region to a remote memory region.
    //! \param  region Memory region that contains data to send.
    //! \param  remoteAddr Address of remote memory region.
@@ -259,6 +285,47 @@ postRdmaRead(uint64_t reqID, uint32_t remoteKey, uint64_t remoteAddr,
    // Post a send to read data.
    ++_totalReadPosted;
    int err = ibv_post_send(_cmId->qp, &send_wr, &badRequest);
+   CIOSLOGPOSTSEND(BGV_POST_RDR,send_wr,err);
+   return err;
+}
+
+   //! \brief  Post a rdma write operation to a remote memory region from the specified memory region.
+   //! \param  reqID is the request ID for the requested operation
+   //! \param  remoteKey Key of remote memory region.
+   //! \param  remoteAddr Address of remote memory region.
+   //! \param  localKey Key of local memory region.
+   //! \param  localAddr Address of local memory region
+   //! \param  length is the size of the transfer
+   //! \return error status for the posted operation.
+   //!
+int
+postRdmaWrite(uint64_t reqID, uint32_t remoteKey, uint64_t remoteAddr, 
+                                             uint32_t localKey,  uint64_t localAddr,
+                                             ssize_t length)
+{
+   // Build scatter/gather element for inbound message.
+   struct ibv_send_wr *badRequest;
+   struct ibv_sge read_sge;
+   read_sge.addr = localAddr;
+   read_sge.length = length;
+   read_sge.lkey = localKey;
+
+   // Build a send work request.
+   struct ibv_send_wr send_wr;
+   memset(&send_wr, 0, sizeof(send_wr));
+   send_wr.next = NULL;
+   send_wr.sg_list = &read_sge;
+   send_wr.num_sge = 1;
+   send_wr.opcode = IBV_WR_RDMA_WRITE;
+   send_wr.send_flags = IBV_SEND_SIGNALED; // Force completion queue to be posted with result.
+   send_wr.wr_id = reqID;
+   send_wr.wr.rdma.remote_addr = remoteAddr;
+   send_wr.wr.rdma.rkey = remoteKey;
+
+   // Post a send to read data.
+   ++_totalReadPosted;
+   int err = ibv_post_send(_cmId->qp, &send_wr, &badRequest);
+   CIOSLOGPOSTSEND(BGV_POST_WRR,send_wr,err);
    return err;
 }
 

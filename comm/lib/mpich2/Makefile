@@ -15,49 +15,67 @@
 default: install
 
 ROOTDIR=$(shell readlink -f `pwd`/../..)
-include ${ROOTDIR}/Make.rules
-include make/${PLATFORM}.platform
-include make/*.build
 
-export TEXTFILTER_PATH=.:/usr/local/share
-export DOCTEXT_PATH=.:/usr/local/share/doctext
-LD_LIBRARY_PATH=
-LANG=en_US
+ifeq ("${_MPICH_TOOLS_BIN_}", "")
+	include ${ROOTDIR}/Make.rules
+	include make/${PLATFORM}.platform
+	export TEXTFILTER_PATH=.:/usr/local/share
+	export DOCTEXT_PATH=.:/usr/local/share/doctext
+	LD_LIBRARY_PATH=
+	LANG=en_US
+endif
+
+include make/*.build
 
 DEFAULT=${PLATFORM_DEFAULT_MPICH2}
 POST_INSTALL_LIST=$(foreach i, ${POST_PROCESS_LIST},${i}-install)
 
-install: ${POST_INSTALL_LIST}
+install: ${POST_INSTALL_LIST} ${EXTRA_PLATFORM_INSTALL_DEPENDENCIES}
+install: ${POST_INSTALL_LIST} ${INSTALL_DIR}/mpich2-testsuite-1.2.tar.gz
 # Create the XL versions of the compiler scripts
 	@ for i in ${POST_PROCESS_LIST} ; do				\
 		perl genmpixl.pl ${INSTALL_DIR}/$$i ${PLATFORM};	\
 	done
-# Create libfmpich_ for the GA library
-#	@ for i in ${POST_PROCESS_LIST} ; do													\
-#		${HOST_NM} --defined ${INSTALL_DIR}/$$i/lib/libfmpich.a | perl -ne 'print "$${1} $${1}_\n" if m/^\d{8} T (\w+)$$/' > objnames;	\
-#		${HOST_OBJCOPY} --redefine-syms=objnames ${INSTALL_DIR}/$$i/lib/libfmpich.a ${INSTALL_DIR}/$$i/lib/libfmpich_.a;		\
-#	done
-#	@ ${RM} objnames
 
-pre-install: ${DEFAULT}
+%-install: % man html
+	${MAKE} -C ${MPICH2BUILD}-$< install
+
+man: ${DEFAULT}
 # Build the man pages and copy back to the source area for install
 	${MAKE} -C ${MPICH2BUILD}-${DEFAULT} mandoc
 	mkdir -p ${MPICH2DIR}/man/
 	rsync -a --delete ${MPICH2BUILD}-${DEFAULT}/man/ ${MPICH2DIR}/man/
+
+html: ${DEFAULT}
+# Build the html pages and copy back to the source area for install
 	${MAKE} -C ${MPICH2BUILD}-${DEFAULT} htmldoc
-	${MAKE} -C ${MPICH2BUILD}-${DEFAULT} htmldoc-local
 	mkdir -p ${MPICH2DIR}/www/
 	rsync -a --delete ${MPICH2BUILD}-${DEFAULT}/www/ ${MPICH2DIR}/www/
+
+${MPICH2BUILD}-${DEFAULT}/test/mpi/mpich2-testsuite-1.2.tar.gz: ${DEFAULT}
+	cd ${MPICH2BUILD}-${DEFAULT}/test/mpi && make dist
+
+${INSTALL_DIR}/mpich2-testsuite-1.2.tar.gz: ${MPICH2BUILD}-${DEFAULT}/test/mpi/mpich2-testsuite-1.2.tar.gz
+	for tmpdir in $(shell mktemp -d) ; do								\
+		echo "tmpdir = $$tmpdir";								\
+		tar -C $$tmpdir -xzf ${MPICH2BUILD}-${DEFAULT}/test/mpi/mpich2-testsuite-1.2.tar.gz;	\
+		echo "TOP_INSTALL_DIR ?= ${INSTALL_DIR}" > $$tmpdir/mpich2-testsuite-1.2/GNUmakefile;	\
+		echo "TESTSUITE_CONFIGURE_EXTRA ?= ${TESTSUITE_CONFIGURE_EXTRA}" >> $$tmpdir/mpich2-testsuite-1.2/GNUmakefile;	\
+		cat testsuite/GNUmakefile >> $$tmpdir/mpich2-testsuite-1.2/GNUmakefile;  		\
+		cp testsuite/*.patch $$tmpdir/mpich2-testsuite-1.2;				\
+		tar -C $$tmpdir -czf $$tmpdir/mpich2-testsuite-1.2.tar.gz mpich2-testsuite-1.2;		\
+		cp $$tmpdir/mpich2-testsuite-1.2.tar.gz ${INSTALL_DIR};					\
+		rm -rf $$tmpdir;									\
+	done
 
 
 # ***************************************************************************
 # * This step needs to be performed the first time after checking out MPICH *
 # ***************************************************************************
 autoconf: ${MPICH2DIR}/Makefile.in
-${MPICH2DIR}/Makefile.in: ${MPICH2DIR}/Makefile.sm
+${MPICH2DIR}/Makefile.in:
 	@echo "============= Updating the MPICH2 directory =========="
-	cd ${MPICH2DIR} && maint/updatefiles
-	@touch --no-create ${MPICH2DIR}/Makefile.in
+	cd ${MPICH2DIR} && ./autogen.sh
 
 clean:
 	${RM} -r ${BUILDDIR}
@@ -70,30 +88,18 @@ re-autoconf:
 	${RM} -v ${MPICH2DIR}/Makefile.in
 
 
-DOCS="${INSTALL_DIR}/www/mpi:dcmfd"
+DOCS="${INSTALL_DIR}/www/mpi:pamid"
 docs:
 	${RM} -r ${DOCS}
 	mkdir -p ${DOCS}
 	perl ${ROOTDIR}/tools/doxygen.pl											\
-		--subdirs="${MPICH2DIR}/src/mpid/dcmfd ${MPICH2DIR}/src/mpi/romio/adio/ad_bg ${ROOTDIR}/sys/dcmf/include"	\
+		--subdirs="${MPICH2DIR}/src/mpid/pamid ${MPICH2DIR}/src/mpi/romio/adio/ad_bg ${ROOTDIR}/sys/dcmf/include"	\
 		--output=${DOCS}												\
 		OPTIMIZE_OUTPUT_FOR_C=YES											\
-		PROJECT_NAME='"MPICH2 DCMFd ADI"'										\
+		PROJECT_NAME='"MPICH2 PAMI ADI"'										\
 		HTML_OUTPUT=.													\
 		${ROOTDIR}/tools/Doxyfile											\
 		> ${DOCS}.out.txt 2> ${DOCS}.err.txt
-
-
-# include ../Make.rules
-# MPICH2_VERSION=1.1
-# OUR_DEV=${LIB_DEV}/mpich2
-# source:
-# 	rm -rf ${OUR_DEV}
-# 	tar -C ${LIB_DEV} -zxf ${TARBALL_DIRECTORY}/mpich2-${MPICH2_VERSION}.tar.gz
-# 	mv ${OUR_DEV}-${MPICH2_VERSION} ${OUR_DEV}
-# 	zcat patch.gz | patch -p0 --force --directory=${OUR_DEV} > /dev/null
-# 	zcat patch.gz | ../../tools/patch-delete --directory=${OUR_DEV}
-
 
 list-build:
 	@ echo "Build list    = ${POST_PROCESS_LIST}"

@@ -37,6 +37,7 @@ define(
     // Any extra ones discovered by the build.
 
     "dijit/a11y",
+    "dijit/a11yclick",
     "dijit/BackgroundIframe",
     "dijit/_base/focus",
     "dijit/_base/manager",
@@ -46,6 +47,7 @@ define(
     "dijit/_Contained",
     "dijit/_Container",
     "dijit/_CssStateMixin",
+    "dijit/Destroyable",
     "dijit/Dialog",
     "dijit/_DialogMixin",
     "dijit/DialogUnderlay",
@@ -110,10 +112,10 @@ define(
     "dijit/Tooltip",
     "dijit/TooltipDialog",
     "dijit/typematic",
+    "dijit/Viewport",
     "dijit/_Widget",
     "dijit/_WidgetBase",
     "dijit/_WidgetsInTemplateMixin",
-    "dojo/_base/url",
     "dojo/cache",
     "dojo/cldr/nls/gregorian",
     "dojo/cldr/nls/number",
@@ -124,7 +126,6 @@ define(
     "dojo/data/util/sorter",
     "dojo/date",
     "dojo/date/locale",
-    "dojo/date/stamp",
     "dojo/dnd/autoscroll",
     "dojo/dnd/Avatar",
     "dojo/dnd/common",
@@ -136,11 +137,13 @@ define(
     "dojo/dnd/Source",
     "dojo/dnd/TimedMoveable",
     "dojo/fx/easing",
+    "dojo/hccss",
     "dojo/html",
     "dojo/i18n",
     "dojo/number",
-    "dojo/parser",
     "dojo/regexp",
+    "dojo/request",
+    "dojo/request/default",
     "dojo/Stateful",
     "dojo/store/JsonRest",
     "dojo/store/Memory",
@@ -162,8 +165,10 @@ define(
     "dojox/charting/Chart",
     "dojox/charting/Element",
     "dojox/charting/plot2d/Base",
+    "dojox/charting/plot2d/CartesianBase",
     "dojox/charting/plot2d/Columns",
     "dojox/charting/plot2d/common",
+    "dojox/charting/plot2d/commonStacked",
     "dojox/charting/plot2d/Default",
     "dojox/charting/plot2d/Lines",
     "dojox/charting/plot2d/Pie",
@@ -175,6 +180,7 @@ define(
     "dojox/charting/scaler/linear",
     "dojox/charting/scaler/primitive",
     "dojox/charting/Series",
+    "dojox/charting/SimpleTheme",
     "dojox/charting/Theme",
     "dojox/charting/themes/common",
     "dojox/charting/themes/Julie",
@@ -223,19 +229,17 @@ define(
     "dojox/lang/functional/object",
     "dojox/lang/functional/reversed",
     "dojox/lang/functional/scan",
-    "dojox/lang/functional/sequence",
     "dojox/lang/utils",
     "dojox/main",
     "dojox/rpc/Rest",
 
     // These you see when loading Navigator in the browser.
 
-    "dojo/i18n",
-    "dojo/_firebug/firebug",
     "dojo/selector/acme",
 
     "dojox/gfx/path",
     "dojox/gfx/svg"
+
 ],
 function(
 )

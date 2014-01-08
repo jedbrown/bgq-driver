@@ -36,20 +36,19 @@
 
 //! \brief Small class for grabbing properties and parsing arguments
 //! for BGmaster commands
-class Args {
-
+class Args
+{
     //! \brief host/port pairs to connect
     bgq::utility::PortConfiguration::Pairs _portpairs;
 
     //! \brief map of other args
     std::map<std::string, std::string> _argpairs;
     std::vector<std::string> _otherargs;
-    bool setupLogger(std::string& verbarg);
-    void setupLoggerDefaults();
-public:
-    //! \brief BG properties file
-    static bgq::utility::Properties::Ptr _props;
+    bool setupLogger(const std::string& verbarg) const;
+    void setupLoggerDefaults() const;
+    bgq::utility::Properties::ConstPtr _props;
 
+public:
     //! \brief ctor
     //! \param argc standard c-style argument count
     //! \param argv standard c-style argument vector
@@ -58,28 +57,28 @@ public:
     //! \param valargs vector of options to be followed with
     //  parameters.  Ex: "--foo bar".  "--foo" is in the valargs vector.
     //! \param singles Vector of arguments that don't take a parameter
-    Args(unsigned int argc,
-         const char** argv,
-         void (*usage)(),
-         void (*help)(),
-         std::vector<std::string>& valargs,
-         std::vector<std::string>& singles,
-         int default_port = 32042,  // Default server port for bgmaster_server.
-         bool ignore_defaults = false);
+    Args(
+            const unsigned int argc,
+            const char** argv,
+            void (*usage)(),
+            void (*help)(),
+            std::vector<std::string>& valargs,
+            const std::vector<std::string>& singles,
+            const bool ignore_defaults = false
+        );
 
-    bgq::utility::Properties::Ptr get_props() { return _props; }
-    bgq::utility::PortConfiguration::Pairs get_portpairs() { return _portpairs; }
+    const bgq::utility::Properties::ConstPtr& get_props() const { return _props; }
+    const bgq::utility::PortConfiguration::Pairs& get_portpairs() const { return _portpairs; }
 
-    bool find_arg(std::string& arg) {
-        if(std::find(_otherargs.begin(), _otherargs.end(), arg) != _otherargs.end())
-            return true; else return false;
+    bool find_arg(const std::string& arg) const {
+        return std::find(_otherargs.begin(), _otherargs.end(), arg) != _otherargs.end();
     }
 
     // Vector ops and iterators to get the "free form"
     // arguments out.
     typedef std::vector<std::string>::iterator iterator;
     typedef std::vector<std::string>::const_iterator const_iterator;
-    size_t size() {
+    size_t size() const {
         return _otherargs.size(); }
     iterator begin() {
         return _otherargs.begin(); }
@@ -89,9 +88,7 @@ public:
         return _otherargs.begin(); }
     const_iterator end() const {
         return _otherargs.end(); }
-    void clear() {
-        _otherargs.clear(); }
-    std::string operator[] (std::string& value) { return _argpairs[value]; }
+    std::string operator[](const std::string& value) const;
 };
 
 #endif

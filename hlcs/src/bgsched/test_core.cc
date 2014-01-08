@@ -24,6 +24,7 @@
 #include <bgsched/bgsched.h>
 #include <bgsched/Block.h>
 #include <bgsched/Coordinates.h>
+#include <bgsched/IOBlock.h>
 
 #include <bgsched/core/core.h>
 
@@ -40,11 +41,12 @@
 #include <time.h>
 
 using namespace bgsched;
-using namespace bgsched::core;
 using namespace log4cxx;
 using namespace std;
 
 // Forward declares
+void printIODrawerInfo(const IODrawer::ConstPtr IODrawerPtr, const bool isVerbose);
+void printIONodeInfo(const IONode::ConstPtr IONodePtr, const bool isVerbose);
 void printMidplaneInfo(const Midplane::ConstPtr midplanePtr);
 void printMidplaneInfoBrief(const Midplane::ConstPtr midplanePtr);
 void printSwitchInfo(const Switch::ConstPtr switchPtr);
@@ -55,11 +57,15 @@ void printCableInfoSuperBrief(const Cable::ConstPtr cablePtr);
 void printIOLinkInfo(const IOLink::ConstPtr IOLinkPtr);
 void printBlockInfo(const Block::Ptr blockPtr);
 void printBlockBrief(const Block::Ptr blockPtr);
+void printIOBlockInfo(const IOBlock::Ptr IOBlockPtr);
+void printIOBlockBrief(const IOBlock::Ptr IOBlockPtr);
 void printJobInfo(const Job::ConstPtr jobPtr);
 void printNodeBoardInfo(const NodeBoard::ConstPtr nodeBoardPtr);
 void printNodeInfo(const Node::ConstPtr nodePtr);
 const string blockStatusToString(EnumWrapper<Block::Status> blockStatus);
 const string blockActionToString(EnumWrapper<Block::Action::Value> blockAction);
+const string IOBlockStatusToString(EnumWrapper<IOBlock::Status> IOBlockStatus);
+const string IOBlockActionToString(EnumWrapper<IOBlock::Action::Value> IOBlockAction);
 const string jobStatusToString(EnumWrapper<Job::Status> jobStatus);
 const string hardwareStateToString(EnumWrapper<Hardware::State> hardwareState);
 const string nodeBoardQuadrantToString(EnumWrapper<NodeBoard::Quadrant> quadrant);
@@ -169,7 +175,7 @@ int listHardware(const bool isVerbose)
     try {
         // Get the compute hardware
         //LOG_INFO_MSG("Calling core::getComputeHardware()");
-        ComputeHardware::ConstPtr bgq = getComputeHardware();
+        ComputeHardware::ConstPtr bgq = core::getComputeHardware();
         LOG_INFO_MSG("Blue Gene system configuration: " <<  bgq->getMachineRows() << " row(s)  X  " << bgq->getMachineColumns() << " column(s)");
         LOG_INFO_MSG("Midplane size in compute nodes: " << bgq->getMidplaneSize(Dimension::A) <<
                 "x" << bgq->getMidplaneSize(Dimension::B) << "x" << bgq->getMidplaneSize(Dimension::C) <<
@@ -228,11 +234,84 @@ int listHardware(const bool isVerbose)
             }
         }
     } catch (...) { // Handle all exceptions
-        LOG_ERROR_MSG("Unexpected error calling getComputeHardware");
+        LOG_ERROR_MSG("Unexpected error calling core::getComputeHardware");
         return -1;
     }
 
     return 0;
+}
+
+int listIOHardware(const bool isVerbose)
+{
+    try {
+        // Get the I/O hardware
+        //LOG_INFO_MSG("Calling core::getIOHardware()");
+        IOHardware::ConstPtr bgqIO = core::getIOHardware();
+        //LOG_INFO_MSG("Testing out getIONode() on IOHardware object --- find R11-ID-J01");
+        //printIONodeInfo(bgqIO->getIONode("R11-ID-J01"),isVerbose);
+        //LOG_INFO_MSG("Testing out IOHardware copy ctor");
+        //IOHardware::ConstPtr bgqIOCopy = bgqIO;
+        //vector<IODrawer::ConstPtr> iodrawers = bgqIOCopy->getIODrawers();
+        //LOG_INFO_MSG("Testing out getState() on IOHardware object --- state of R01-ID-J04");
+        //LOG_INFO_MSG("     Hardware state . . . . . . . : " << hardwareStateToString(bgqIO->getState("R01-ID-J04")));
+        //LOG_INFO_MSG("Testing out getState() on IOHardware object --- state of R11-ID");
+        //LOG_INFO_MSG("     Hardware state . . . . . . . : " << hardwareStateToString(bgqIO->getState("R11-ID")));
+        //LOG_INFO_MSG("Testing out getState() on IOHardware object --- state of R11-IZ -- should fail");
+        //LOG_INFO_MSG("     Hardware state . . . . . . . : " << hardwareStateToString(bgqIO->getState("R11-IZ")));
+        //LOG_INFO_MSG("Testing out getState() on IOHardware object --- state of R11 -- should fail");
+        //LOG_INFO_MSG("     Hardware state . . . . . . . : " << hardwareStateToString(bgqIO->getState("R11")));
+        //LOG_INFO_MSG("Testing out getState() on IOHardware object --- state of R11-ID-JW9 -- should fail");
+        //LOG_INFO_MSG("     Hardware state . . . . . . . : " << hardwareStateToString(bgqIO->getState("R11-ID-JW9")));
+        //LOG_INFO_MSG("Testing out getState() on IOHardware object --- state of RX1-ID-JW9 -- should fail");
+        //LOG_INFO_MSG("     Hardware state . . . . . . . : " << hardwareStateToString(bgqIO->getState("RX1-ID-JW9")));
+
+        vector<IODrawer::ConstPtr> iodrawers = bgqIO->getIODrawers();
+
+        if (iodrawers.size() == 0) {
+            LOG_INFO_MSG(" No I/O drawers");
+        } else {
+            LOG_INFO_MSG("Found " << iodrawers.size() << " I/O drawers");
+            for (vector<IODrawer::ConstPtr>::const_iterator iter = iodrawers.begin(); iter != iodrawers.end(); iter++) {
+                IODrawer::ConstPtr iodrawerPtr = *(iter);
+                printIODrawerInfo(iodrawerPtr, isVerbose);
+                IONode::ConstPtrs ionodes = iodrawerPtr->getIONodes();
+                for (vector<IONode::ConstPtr>::const_iterator nodeIter = ionodes.begin(); nodeIter != ionodes.end(); nodeIter++) {
+                    printIONodeInfo(*(nodeIter), isVerbose);
+                }
+                LOG_INFO_MSG("========================================");
+            }
+        }
+    } catch (...) { // Handle all exceptions
+        LOG_ERROR_MSG("Unexpected error calling core::getIOHardware");
+        return -1;
+    }
+
+    return 0;
+}
+
+void printIODrawerInfo(const IODrawer::ConstPtr IODrawerPtr, const bool isVerbose)
+{
+    LOG_INFO_MSG(" I/O drawer location  . . . . . . : " << IODrawerPtr->getLocation());
+    LOG_INFO_MSG(" Hardware state . . . . . . . . . : " << hardwareStateToString(IODrawerPtr->getState()));
+    if (isVerbose) {
+        LOG_INFO_MSG(" Sequence ID  . . . . . . . . . . : " << IODrawerPtr->getSequenceId());
+        LOG_INFO_MSG(" Available I/O nodes  . . . . . . : " << IODrawerPtr->getAvailableIONodeCount());
+    }
+}
+
+void printIONodeInfo(const IONode::ConstPtr IONodePtr, const bool isVerbose)
+{
+    LOG_INFO_MSG("   I/O node location  . . . . . . : " << IONodePtr->getLocation());
+    LOG_INFO_MSG("     Hardware state . . . . . . . : " << hardwareStateToString(IONodePtr->getState()));
+    if (isVerbose) {
+        if (IONodePtr->isInUse()) {
+            LOG_INFO_MSG("     In use . . . . . . . . . . . : Yes");
+            LOG_INFO_MSG("     In use I/O block . . . . . . : " << IONodePtr->getIOBlockName());
+        } else {
+            LOG_INFO_MSG("     In Use . . . . . . . . . . . : No");
+        }
+        LOG_INFO_MSG("     Sequence ID  . . . . . . . . : " << IONodePtr->getSequenceId());
+    }
 }
 
 int listHardwareWiring()
@@ -241,7 +320,7 @@ int listHardwareWiring()
         // Print the machine size
         listMachineSize();
         // Get the compute hardware
-        ComputeHardware::ConstPtr bgq = getComputeHardware();
+        ComputeHardware::ConstPtr bgq = core::getComputeHardware();
         for (uint32_t d = 0; d < bgq->getMachineSize(Dimension::D); ++d) {
             for (uint32_t c = 0; c < bgq->getMachineSize(Dimension::C); ++c) {
                 for (uint32_t b = 0; b < bgq->getMachineSize(Dimension::B); ++b) {
@@ -342,12 +421,12 @@ void printCableInfoSuperBrief(const Cable::ConstPtr cablePtr)
 
 int listIOLinks(const string& midplane)
 {
-    vector<IOLink::ConstPtr> IOLinkVector; // Vector of I/O links returned by getIOLinks
+    vector<IOLink::ConstPtr> IOLinkVector; // Vector of I/O links returned by core::getIOLinks
 
     try {
-        IOLinkVector = getIOLinks(midplane);
+        IOLinkVector = core::getIOLinks(midplane);
     } catch (...) { // Handle all exceptions
-        LOG_ERROR_MSG("Unexpected error calling getIOLinks");
+        LOG_ERROR_MSG("Unexpected error calling core::getIOLinks");
         return -1;
     }
 
@@ -373,12 +452,12 @@ int listIOLinks(const string& midplane)
 
 int listAvailableIOLinks(const string& midplane)
 {
-    vector<IOLink::ConstPtr> IOLinkVector; // Vector of I/O links returned by getAvailableIOLinks
+    vector<IOLink::ConstPtr> IOLinkVector; // Vector of I/O links returned by core::getAvailableIOLinks
 
     try {
-        IOLinkVector = getAvailableIOLinks(midplane);
+        IOLinkVector = core::getAvailableIOLinks(midplane);
     } catch (...) { // Handle all exceptions
-        LOG_ERROR_MSG("Unexpected error calling getAvailableIOLinks");
+        LOG_ERROR_MSG("Unexpected error calling core::getAvailableIOLinks");
         return -1;
     }
 
@@ -533,6 +612,31 @@ int checkBlockIOConnected(const string& block)
     return 0;
 }
 
+int listconnectedcomputeblocks(const string& ioblock)
+{
+    IOBlock::ConnectedComputeBlocks connectedcomputeblocks; // Vector of connected compute blocks returned
+
+    try {
+        connectedcomputeblocks = IOBlock::getConnectedComputeBlocks(ioblock);
+    } catch (...) { // Handle all exceptions
+        LOG_ERROR_MSG("Unexpected error calling getConnectedComputeBlocks");
+        return -1;
+    }
+
+    // Check if we got any compute blocks back
+    if (connectedcomputeblocks.empty()) {
+        LOG_INFO_MSG("Found no compute blocks connected to I/O block " << ioblock);
+        return 0; // Leave
+    }
+
+    // Print the connected compute blocks
+    LOG_INFO_MSG("I/O block " << ioblock << " has the following " << connectedcomputeblocks.size() << " connected compute blocks:");
+    for (unsigned int it = 0; it < connectedcomputeblocks.size(); it++) {
+        LOG_INFO_MSG(connectedcomputeblocks[it]);
+    }
+    return 0;
+}
+
 void printIOLinkInfo(const IOLink::ConstPtr IOLinkPtr)
 {
     LOG_INFO_MSG("===================================");
@@ -543,7 +647,7 @@ void printIOLinkInfo(const IOLink::ConstPtr IOLinkPtr)
     LOG_INFO_MSG("    I/O node hardware state . . . : " << hardwareStateToString(IOLinkPtr->getIONodeState()));
 }
 
-int listBlocks(const BlockFilter& blockFilter, const BlockSort& blockSort, const bool isVerboseBlock)
+int listBlocks(const BlockFilter& blockFilter, const core::BlockSort& blockSort, const bool isVerboseBlock)
 {
     Block::Ptrs blockVector; // Vector of blocks returned by getBlocks
 
@@ -636,12 +740,12 @@ void printBlockInfo(const Block::Ptr blockPtr)
         Block::Midplanes midplanes(blockPtr->getMidplanes());
         if (!midplanes.empty()) {
             // Print the midplane locations for the block
-            for ( Block::Midplanes::const_iterator i = midplanes.begin(); i != midplanes.end(); ++i ) {
+            for (Block::Midplanes::const_iterator i = midplanes.begin(); i != midplanes.end(); ++i) {
                 LOG_INFO_MSG("    Midplane  . . . . . . . . . . : " << (*i));
             }
             // Print any pass-through midplanes for the block
             Block::PassthroughMidplanes  passthroughMidplanes(blockPtr->getPassthroughMidplanes());
-            for ( Block::PassthroughMidplanes::const_iterator i = passthroughMidplanes.begin(); i != passthroughMidplanes.end(); ++i ) {
+            for (Block::PassthroughMidplanes::const_iterator i = passthroughMidplanes.begin(); i != passthroughMidplanes.end(); ++i) {
                 LOG_INFO_MSG("    Pass-through midplane . . . . : " << (*i));
             }
         }
@@ -679,7 +783,89 @@ const string blockActionToString(EnumWrapper<Block::Action::Value> blockAction)
     return BLOCK_ACTION_STRINGS[blockAction.toValue()];
 }
 
-int listJobs(const JobFilter& jobFilter, const JobSort& jobSort) {
+int listIOBlocks(const IOBlockFilter& IOBlockFilter, const core::IOBlockSort& IOBlockSort, const bool isVerboseIOBlock)
+{
+    IOBlock::Ptrs IOBlockVector; // Vector of I/O blocks returned by getIOBlocks
+
+    //LOG_INFO_MSG("Calling core::getIOBlocks()");
+    try {
+        IOBlockVector = core::getIOBlocks(IOBlockFilter, IOBlockSort);
+    } catch (...) { // Handle all exceptions
+        LOG_ERROR_MSG("Unexpected error calling getIOBlocks");
+        return -1;
+    }
+    //LOG_INFO_MSG("Completed call to core::getIOBlocks()");
+
+
+    // Check if we got any I/O blocks back
+    if (IOBlockVector.empty()) {
+        LOG_INFO_MSG("Found no matching I/O blocks");
+        return 0; // Leave
+    }
+
+    // Print the I/O block info
+    for (IOBlock::Ptrs::iterator IOBlockVectorIter = IOBlockVector.begin(); IOBlockVectorIter != IOBlockVector.end(); IOBlockVectorIter++) {
+        if (isVerboseIOBlock) {
+            printIOBlockInfo(*(IOBlockVectorIter));
+        }
+        else {
+            printIOBlockBrief(*(IOBlockVectorIter));
+        }
+    }
+
+    LOG_INFO_MSG("Number of I/O blocks returned: " << IOBlockVector.size());
+
+    return 0;
+}
+
+void printIOBlockInfo(const IOBlock::Ptr IOBlockPtr)
+{
+    LOG_INFO_MSG("===================================");
+    LOG_INFO_MSG(" I/O block name . . . . . . . . . : " << IOBlockPtr->getName());
+    LOG_INFO_MSG("    Creation id . . . . . . . . . : " << IOBlockPtr->getCreationId());
+    LOG_INFO_MSG("    Status  . . . . . . . . . . . : " << IOBlockStatusToString(IOBlockPtr->getStatus()));
+    LOG_INFO_MSG("    Action  . . . . . . . . . . . : " << IOBlockActionToString(IOBlockPtr->getAction()));
+    LOG_INFO_MSG("    I/O nodes . . . . . . . . . . : " << IOBlockPtr->getIONodeCount());
+    LOG_INFO_MSG("    Microloader image . . . . . . : " << IOBlockPtr->getMicroLoaderImage());
+    LOG_INFO_MSG("    Node configuration  . . . . . : " << IOBlockPtr->getNodeConfiguration());
+    LOG_INFO_MSG("    Boot options  . . . . . . . . : " << IOBlockPtr->getBootOptions());
+    LOG_INFO_MSG("    Owner . . . . . . . . . . . . : " << IOBlockPtr->getOwner());
+    LOG_INFO_MSG("    User (block booter) . . . . . : " << IOBlockPtr->getUser());
+    LOG_INFO_MSG("    Sequence ID . . . . . . . . . : " << IOBlockPtr->getSequenceId());
+    LOG_INFO_MSG("    Description . . . . . . . . . : " << IOBlockPtr->getDescription());
+    // Check if any I/O locations
+    IOBlock::IOLocations locations(IOBlockPtr->getIOLocations());
+    if (!locations.empty()) {
+        // Print the I/O locations for the I/O block
+        for (IOBlock::IOLocations::const_iterator i = locations.begin(); i != locations.end(); ++i ) {
+            LOG_INFO_MSG("    I/O location  . . . . . . . . : " << (*i));
+        }
+    }
+}
+
+void printIOBlockBrief(const IOBlock::Ptr IOBlockPtr)
+{
+    LOG_INFO_MSG("===================================");
+    LOG_INFO_MSG(" I/O block name . . . . . . . . . : " << IOBlockPtr->getName());
+    LOG_INFO_MSG("    Status  . . . . . . . . . . . : " << IOBlockStatusToString(IOBlockPtr->getStatus()));
+    LOG_INFO_MSG("    Action  . . . . . . . . . . . : " << IOBlockActionToString(IOBlockPtr->getAction()));
+    LOG_INFO_MSG("    Owner . . . . . . . . . . . . : " << IOBlockPtr->getOwner());
+    LOG_INFO_MSG("    User (block booter) . . . . . : " << IOBlockPtr->getUser());
+    LOG_INFO_MSG("    I/O nodes . . . . . . . . . . : " << IOBlockPtr->getIONodeCount());
+    LOG_INFO_MSG("    Description . . . . . . . . . : " << IOBlockPtr->getDescription());
+}
+
+const string IOBlockStatusToString(EnumWrapper<IOBlock::Status> IOBlockStatus)
+{
+    return BLOCK_STATUS_STRINGS[IOBlockStatus.toValue()];
+}
+
+const string IOBlockActionToString(EnumWrapper<IOBlock::Action::Value> IOBlockAction)
+{
+    return BLOCK_ACTION_STRINGS[IOBlockAction.toValue()];
+}
+
+int listJobs(const JobFilter& jobFilter, const core::JobSort& jobSort) {
     Job::ConstPtrs jobVector; // Vector of jobs returned by getJobs
 
     try {
@@ -744,12 +930,12 @@ const string jobStatusToString(EnumWrapper<Job::Status> jobStatus)
 
 int listNodeBoards(const string& midplane)
 {
-    vector<NodeBoard::ConstPtr> nodeBoardVector; // Vector of node boards returned by getNodeBoards
+    vector<NodeBoard::ConstPtr> nodeBoardVector; // Vector of node boards returned by core::getNodeBoards
 
     try {
-        nodeBoardVector = getNodeBoards(midplane);
+        nodeBoardVector = core::getNodeBoards(midplane);
     } catch (...) { // Handle all exceptions
-        LOG_ERROR_MSG("Unexpected error calling getNodeBoards");
+        LOG_ERROR_MSG("Unexpected error calling core::getNodeBoards");
         return -1;
     }
 
@@ -793,13 +979,13 @@ void printNodeBoardInfo(const NodeBoard::ConstPtr nodeBoardPtr)
 
 int listMidplaneNodes(const string& midplane)
 {
-    vector<Node::ConstPtr> nodeVector; // Vector of nodes returned by getMidplaneNodes
+    vector<Node::ConstPtr> nodeVector; // Vector of nodes returned by core::getMidplaneNodes
 
     try {
-        LOG_INFO_MSG("About to call getMidplaneNodes()for midplane " << midplane);
-        nodeVector = getMidplaneNodes(midplane);
+        LOG_INFO_MSG("About to call core::getMidplaneNodes()for midplane " << midplane);
+        nodeVector = core::getMidplaneNodes(midplane);
     } catch (...) { // Handle all exceptions
-        LOG_ERROR_MSG("Unexpected error calling getMidplaneNodes");
+        LOG_ERROR_MSG("Unexpected error calling core::getMidplaneNodes");
         return -1;
     }
 
@@ -821,12 +1007,12 @@ int listMidplaneNodes(const string& midplane)
 
 int listNodes(const string& nodeBoard)
 {
-    vector<Node::ConstPtr> nodeVector; // Vector of nodes returned by getNodes
+    vector<Node::ConstPtr> nodeVector; // Vector of nodes returned by core::getNodes
 
     try {
-        nodeVector = getNodes(nodeBoard);
+        nodeVector = core::getNodes(nodeBoard);
     } catch (...) { // Handle all exceptions
-        LOG_ERROR_MSG("Unexpected error calling getNodes");
+        LOG_ERROR_MSG("Unexpected error calling core::getNodes");
         return -1;
     }
 
@@ -857,7 +1043,7 @@ int iterateAllNodes()
 {
     try {
         // Get the compute hardware
-        ComputeHardware::ConstPtr bgq = getComputeHardware();
+        ComputeHardware::ConstPtr bgq = core::getComputeHardware();
         LOG_INFO_MSG("Blue Gene system configuration: " <<  bgq->getMachineRows() << " row(s)  X  " << bgq->getMachineColumns() << " column(s)");
         LOG_INFO_MSG("Start iterating on all nodes");
         for (uint32_t a = 0; a < bgq->getMachineSize(Dimension::A); ++a) {
@@ -868,11 +1054,11 @@ int iterateAllNodes()
                         Midplane::ConstPtr midplane = bgq->getMidplane(coords);
                         for (uint32_t i = 0; i <  Midplane::MaxNodeBoards; i++) {
                             NodeBoard::ConstPtr nodeBoard = midplane->getNodeBoard(i);
-                            vector<Node::ConstPtr> nodeVector; // Vector of nodes returned by getNodes
+                            vector<Node::ConstPtr> nodeVector; // Vector of nodes returned by core::getNodes
                             try {
-                                nodeVector = getNodes(nodeBoard->getLocation());
+                                nodeVector = core::getNodes(nodeBoard->getLocation());
                             } catch (...) { // Handle all exceptions
-                                LOG_ERROR_MSG("Unexpected error calling getNodes()");
+                                LOG_ERROR_MSG("Unexpected error calling core::getNodes()");
                                 return -1;
                             }
 
@@ -888,7 +1074,7 @@ int iterateAllNodes()
         }
         LOG_INFO_MSG("Stop iterating on all nodes");
     } catch (...) { // Handle all exceptions
-        LOG_ERROR_MSG("Unexpected error calling getComputeHardware");
+        LOG_ERROR_MSG("Unexpected error calling core::getComputeHardware");
         return -1;
     }
 
@@ -901,7 +1087,7 @@ int iterateAllMidplaneNodes()
 
     try {
         // Get the compute hardware
-        ComputeHardware::ConstPtr bgq = getComputeHardware();
+        ComputeHardware::ConstPtr bgq = core::getComputeHardware();
         LOG_INFO_MSG("Blue Gene system configuration: " <<  bgq->getMachineRows() << " row(s)  X  " << bgq->getMachineColumns() << " column(s)");
         LOG_INFO_MSG("Start iterating on all midplane nodes");
         for (uint32_t a = 0; a < bgq->getMachineSize(Dimension::A); ++a) {
@@ -910,11 +1096,11 @@ int iterateAllMidplaneNodes()
                     for (uint32_t d = 0; d < bgq->getMachineSize(Dimension::D); ++d) {
                         Coordinates coords(a, b, c, d);
                         midplane = bgq->getMidplane(coords);
-                        vector<Node::ConstPtr> nodeVector; // Vector of nodes returned by getMidplaneNodes
+                        vector<Node::ConstPtr> nodeVector; // Vector of nodes returned by core::getMidplaneNodes
                         try {
-                            nodeVector = getMidplaneNodes(midplane->getLocation());
+                            nodeVector = core::getMidplaneNodes(midplane->getLocation());
                         } catch (...) { // Handle all exceptions
-                            LOG_ERROR_MSG("Unexpected error calling getMidplaneNodes()");
+                            LOG_ERROR_MSG("Unexpected error calling core::getMidplaneNodes()");
                             return -1;
                         }
 
@@ -929,7 +1115,7 @@ int iterateAllMidplaneNodes()
         }
         LOG_INFO_MSG("Stop iterating on all midplane nodes");
     } catch (...) { // Handle all exceptions
-        LOG_ERROR_MSG("Unexpected error calling getComputeHardware");
+        LOG_ERROR_MSG("Unexpected error calling core::getComputeHardware");
         return -1;
     }
 
@@ -983,20 +1169,27 @@ int main(int argc, char *argv[])
 
     JobFilter jobFilter;
     BlockFilter blockFilter;
-    JobSort jobSort;
-    BlockSort blockSort;
+    IOBlockFilter IOblockFilter;
+    core::JobSort jobSort;
+    core::BlockSort blockSort;
+    core::IOBlockSort IOblockSort;
 
     bool isListJobs = false;
     bool isListHardware = false;
     bool isListHardwareBrief = false;
+    bool isListIOHardware = false;
+    bool isListIOHardwareBrief = false;
     bool isListHardwareWiring = false;
     bool isListMachineSize = false;
     bool isListIOUsageLimit = false;
     bool isListBlocks = false;
     bool isListBlocksBrief = false;
+    bool isListIOBlocks = false;
+    bool isListIOBlocksBrief = false;
     bool isListMidplaneNodeBoards = false;
     bool isListNodeBoardNodes = false;
     bool isListMidplaneNodes = false;
+    bool isListConnectedComputeBlocks = false;
     bool isListIOLinks = false;
     bool isListAvailableIOLinks = false;
     bool isListBlockIOLinks = false;
@@ -1011,6 +1204,7 @@ int main(int argc, char *argv[])
     bgsched::TimeInterval startTimeInterval;
     bgsched::TimeInterval endTimeInterval;
     BlockFilter::Statuses blockStatuses;
+    IOBlockFilter::Statuses IOBlockStatuses;
     string midplane;
     string IOLinksMidplane;
     string IOLinksAvailableMidplane;
@@ -1019,6 +1213,7 @@ int main(int argc, char *argv[])
     string IOLinksBlockBrief;
     string checkIOBlock;
     string IOConnectedBlock;
+    string IOBlock;
     string nodeBoard;
     string nodesMidplane;
     string nodeLocation;
@@ -1109,6 +1304,10 @@ int main(int argc, char *argv[])
             isListHardwareBrief = true;
         } else if (strcasecmp(argKey, "-listhardware") == 0  || strcasecmp(argKey, "--listhardware") == 0) {
             isListHardware = true;
+        } else if (strcasecmp(argKey, "-listIOhardwarebrief") == 0 || strcasecmp(argKey, "--listIOhardwarebrief") == 0) {
+            isListIOHardwareBrief = true;
+        } else if (strcasecmp(argKey, "-listIOhardware") == 0  || strcasecmp(argKey, "--listIOhardware") == 0) {
+            isListIOHardware = true;
         } else if (strcasecmp(argKey, "-listhardwarewiring") == 0 || strcasecmp(argKey, "--listhardwarewiring") == 0) {
             isListHardwareWiring = true;
         } else if (strcasecmp(argKey, "-listmachinesize") == 0 || strcasecmp(argKey, "--listmachinesize") == 0) {
@@ -1119,6 +1318,10 @@ int main(int argc, char *argv[])
             isListBlocksBrief = true;
         } else if (strcasecmp(argKey, "-listblocks") == 0 || strcasecmp(argKey, "--listblocks") == 0) {
             isListBlocks = true;
+        } else if (strcasecmp(argKey, "-listIOblocksbrief") == 0 || strcasecmp(argKey, "--listIOblocksbrief") == 0) {
+            isListIOBlocksBrief = true;
+        } else if (strcasecmp(argKey, "-listIOblocks") == 0 || strcasecmp(argKey, "--listIOblocks") == 0) {
+            isListIOBlocks = true;
         } else if (strcasecmp(argKey, "-listmidplanenodeboards") == 0 || strcasecmp(argKey, "--listmidplanenodeboards") == 0) {
             isListMidplaneNodeBoards = true;
             if (argVal != NULL) {
@@ -1172,6 +1375,15 @@ int main(int argc, char *argv[])
                 printf("listAvailableIOlinks keyword specified without an argument value\n");
                 return -1;
             }
+        } else if (strcasecmp(argKey, "-listconnectedcomputeblocks") == 0 || strcasecmp(argKey, "--listconnectedcomputeblocks") == 0) {
+            isListConnectedComputeBlocks = true;
+            if (argVal != NULL) {
+                IOBlock.assign(argVal);
+                argNbr++;
+            } else {
+                printf("listconnectedcomputeblocks keyword specified without an argument value\n");
+                return -1;
+            }
         } else if (strcasecmp(argKey, "-listblockIOlinks") == 0 || strcasecmp(argKey, "--listblockIOlinks") == 0) {
             isListBlockIOLinks = true;
             if (argVal != NULL) {
@@ -1222,25 +1434,25 @@ int main(int argc, char *argv[])
                 while (argVal != NULL) {
                     if (strcasecmp(argVal, "NAME") == 0) {
                         LOG_INFO_MSG("Sorting blocks by NAME");
-                        blockSort.setSort(BlockSort::Field::Name, SortOrder::Ascending);
+                        blockSort.setSort(core::BlockSort::Field::Name, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "OWNER") == 0) {
                         LOG_INFO_MSG("Sorting blocks by OWNER");
-                        blockSort.setSort(BlockSort::Field::Owner, SortOrder::Ascending);
+                        blockSort.setSort(core::BlockSort::Field::Owner, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "USER") == 0) {
                         LOG_INFO_MSG("Sorting blocks by USER");
-                        blockSort.setSort(BlockSort::Field::User, SortOrder::Ascending);
+                        blockSort.setSort(core::BlockSort::Field::User, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "STATUS") == 0) {
                         LOG_INFO_MSG("Sorting blocks by STATUS");
-                        blockSort.setSort(BlockSort::Field::Status, SortOrder::Ascending);
+                        blockSort.setSort(core::BlockSort::Field::Status, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "COMPUTENODECOUNT") == 0) {
                         LOG_INFO_MSG("Sorting blocks by COMPUTENODECOUNT");
-                        blockSort.setSort(BlockSort::Field::ComputeNodeCount, SortOrder::Ascending);
+                        blockSort.setSort(core::BlockSort::Field::ComputeNodeCount, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "CREATEDATE") == 0) {
                         LOG_INFO_MSG("Sorting blocks by CREATEDATE");
-                        blockSort.setSort(BlockSort::Field::CreateDate, SortOrder::Ascending);
+                        blockSort.setSort(core::BlockSort::Field::CreateDate, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "STATUSLASTMODIFIED") == 0) {
                         LOG_INFO_MSG("Sorting blocks by STATUSLASTMODIFIED");
-                        blockSort.setSort(BlockSort::Field::StatusLastModified, SortOrder::Ascending);
+                        blockSort.setSort(core::BlockSort::Field::StatusLastModified, core::SortOrder::Ascending);
                     } else {
                         printf("blocksort argument value, %s, is not valid\n", argVal);
                         printf("Valid values are: NAME OWNER USER STATUS COMPUTENODECOUNT CREATEDATE STATUSLASTMODIFIED\n");
@@ -1385,39 +1597,161 @@ int main(int argc, char *argv[])
                 printf("blockfiltersize keyword specified without an argument value\n");
                 return -1;
             }
+        } else if (strcasecmp(argKey, "-IOblocksort") == 0 || strcasecmp(argKey, "--IOblocksort") == 0) {
+            if (argVal != NULL) {
+                while (argVal != NULL) {
+                    if (strcasecmp(argVal, "NAME") == 0) {
+                        LOG_INFO_MSG("Sorting I/O blocks by NAME");
+                        IOblockSort.setSort(core::IOBlockSort::Field::Name, core::SortOrder::Ascending);
+                    } else if (strcasecmp(argVal, "OWNER") == 0) {
+                        LOG_INFO_MSG("Sorting I/O blocks by OWNER");
+                        IOblockSort.setSort(core::IOBlockSort::Field::Owner, core::SortOrder::Ascending);
+                    } else if (strcasecmp(argVal, "USER") == 0) {
+                        LOG_INFO_MSG("Sorting I/O blocks by USER");
+                        IOblockSort.setSort(core::IOBlockSort::Field::User, core::SortOrder::Ascending);
+                    } else if (strcasecmp(argVal, "STATUS") == 0) {
+                        LOG_INFO_MSG("Sorting I/O blocks by STATUS");
+                        IOblockSort.setSort(core::IOBlockSort::Field::Status, core::SortOrder::Ascending);
+                    } else if (strcasecmp(argVal, "IONODECOUNT") == 0) {
+                        LOG_INFO_MSG("Sorting I/O blocks by IONODECOUNT");
+                        IOblockSort.setSort(core::IOBlockSort::Field::IONodeCount, core::SortOrder::Ascending);
+                    } else if (strcasecmp(argVal, "CREATEDATE") == 0) {
+                        LOG_INFO_MSG("Sorting I/O blocks by CREATEDATE");
+                        IOblockSort.setSort(core::IOBlockSort::Field::CreateDate, core::SortOrder::Ascending);
+                    } else if (strcasecmp(argVal, "STATUSLASTMODIFIED") == 0) {
+                        LOG_INFO_MSG("Sorting I/O blocks by STATUSLASTMODIFIED");
+                        IOblockSort.setSort(core::IOBlockSort::Field::StatusLastModified, core::SortOrder::Ascending);
+                    } else {
+                        printf("IOblocksort argument value, %s, is not valid\n", argVal);
+                        printf("Valid values are: NAME OWNER USER STATUS IONODECOUNT CREATEDATE STATUSLASTMODIFIED\n");
+                        return -1;
+                    }
+                    argNbr++;
+                    argVal = NULL;
+                    if (argNbr < argc && argv[argNbr][0] != '-') {
+                        argVal = argv[argNbr];
+                    }
+                }
+            } else {
+                printf("IOblocksort keyword specified without an argument value\n");
+                return -1;
+            }
+        } else if (strcasecmp(argKey, "-IOblockfilterstatus") == 0 || strcasecmp(argKey, "--IOblockfilterstatus") == 0) {
+            if (argVal != NULL) {
+                while (argVal != NULL) {
+                    if (strcasecmp(argVal, "FREE") == 0) {
+                        LOG_INFO_MSG("Filtering on I/O blocks in FREE state");
+                        IOBlockStatuses.insert(IOBlock::Free);
+                    } else if (strcasecmp(argVal, "BOOTING") == 0) {
+                        LOG_INFO_MSG("Filtering on I/O blocks in BOOTING state");
+                        IOBlockStatuses.insert(IOBlock::Booting);
+                    } else if (strcasecmp(argVal, "ALLOCATED") == 0) {
+                        LOG_INFO_MSG("Filtering on I/O blocks in ALLOCATED state");
+                        IOBlockStatuses.insert(IOBlock::Allocated);
+                    } else if (strcasecmp(argVal, "INITIALIZED") == 0) {
+                        LOG_INFO_MSG("Filtering on I/O blocks in INITIALIZED state");
+                        IOBlockStatuses.insert(IOBlock::Initialized);
+                    } else if (strcasecmp(argVal, "TERMINATING") == 0) {
+                        LOG_INFO_MSG("Filtering on I/O blocks in TERMINATING state");
+                        IOBlockStatuses.insert(IOBlock::Terminating);
+                    } else {
+                        printf("IOblockfilterstatus argument value, %s, is not valid\n", argVal);
+                        printf("Valid values are: FREE BOOTING ALLOCATED INITIALIZED TERMINATING\n");
+                        return -1;
+                    }
+                    argNbr++;
+                    argVal = NULL;
+                    if (argNbr < argc && argv[argNbr][0] != '-') {
+                        argVal = argv[argNbr];
+                    }
+                }
+                IOblockFilter.setStatuses(&IOBlockStatuses);
+            } else {
+                printf("IOblockfilterstatus keyword specified without an argument value\n");
+                return -1;
+            }
+        } else if (strcasecmp(argKey, "-IOblockfiltername") == 0 || strcasecmp(argKey, "--IOblockfiltername") == 0) {
+            if (argVal != NULL) {
+                LOG_INFO_MSG("Filtering on I/O blocks named " << argVal);
+                IOblockFilter.setName(string(argVal));
+                argNbr++;
+            } else {
+                printf("IOblockfiltername keyword specified without an argument value\n");
+                return -1;
+            }
+        } else if (strcasecmp(argKey, "-IOblockfilterowner") == 0 || strcasecmp(argKey, "--IOblockfilterowner") == 0) {
+            if (argVal != NULL) {
+                LOG_INFO_MSG("Filtering on I/O blocks owned by " << argVal);
+                IOblockFilter.setOwner(string(argVal));
+                argNbr++;
+            } else {
+                printf("IOblockfilterowner keyword specified without an argument value\n");
+                return -1;
+            }
+        } else if (strcasecmp(argKey, "-IOblockfilteruser") == 0 || strcasecmp(argKey, "--IOblockfilteruser") == 0) {
+            if (argVal != NULL) {
+                LOG_INFO_MSG("Filtering on I/O blocks booted by " << argVal);
+                IOblockFilter.setUser(string(argVal));
+                argNbr++;
+            } else {
+                printf("IOblockfilteruser keyword specified without an argument value\n");
+                return -1;
+            }
+        } else if (strcasecmp(argKey, "-IOblockfilterextendedinfo") == 0 || strcasecmp(argKey, "--IOblockfilterextendedinfo") == 0) {
+            if (argVal != NULL) {
+                while (argVal != NULL) {
+                    if (strcasecmp(argVal, "Y") == 0) {
+                        IOblockFilter.setExtendedInfo(true);
+                    } else if (strcasecmp(argVal, "N") == 0)  {
+                        IOblockFilter.setExtendedInfo(false);
+                    } else {
+                        printf("IOblockfilterextendedinfo argument value, %s, is not valid\n", argVal);
+                        printf("Valid values are: Y or N\n");
+                        return -1;
+                    }
+                    argNbr++;
+                    argVal = NULL;
+                    if (argNbr < argc && argv[argNbr][0] != '-') {
+                        argVal = argv[argNbr];
+                    }
+                }
+            } else {
+                printf("IOblockfilterextendedinfo keyword specified without an argument value\n");
+                return -1;
+            }
         } else if (strcasecmp(argKey, "-jobsort") == 0 || strcasecmp(argKey, "--jobsort") == 0) {
             if (argVal != NULL) {
                 while (argVal != NULL) {
                     if (strcasecmp(argVal, "ID") == 0) {
                         LOG_INFO_MSG("Sorting jobs by ID");
-                        jobSort.setSort(JobSort::Field::Id, SortOrder::Ascending);
+                        jobSort.setSort(core::JobSort::Field::Id, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "USER") == 0) {
                         LOG_INFO_MSG("Sorting jobs by USER");
-                        jobSort.setSort(JobSort::Field::User, SortOrder::Ascending);
+                        jobSort.setSort(core::JobSort::Field::User, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "BLOCK") == 0) {
                         LOG_INFO_MSG("Sorting jobs by BLOCK");
-                        jobSort.setSort(JobSort::Field::Block, SortOrder::Ascending);
+                        jobSort.setSort(core::JobSort::Field::Block, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "STATUS") == 0) {
                         LOG_INFO_MSG("Sorting jobs by STATUS");
-                        jobSort.setSort(JobSort::Field::Status, SortOrder::Ascending);
+                        jobSort.setSort(core::JobSort::Field::Status, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "COMPUTENODESUSED") == 0) {
                         LOG_INFO_MSG("Sorting jobs by COMPUTENODESUSED");
-                        jobSort.setSort(JobSort::Field::ComputeNodesUsed, SortOrder::Ascending);
+                        jobSort.setSort(core::JobSort::Field::ComputeNodesUsed, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "STARTTIME") == 0) {
                         LOG_INFO_MSG("Sorting jobs by STARTTIME");
-                        jobSort.setSort(JobSort::Field::StartTime, SortOrder::Ascending);
+                        jobSort.setSort(core::JobSort::Field::StartTime, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "ENDTIME") == 0) {
                         LOG_INFO_MSG("Sorting jobs by ENDTIME");
-                        jobSort.setSort(JobSort::Field::EndTime, SortOrder::Ascending);
+                        jobSort.setSort(core::JobSort::Field::EndTime, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "EXECUTABLE") == 0) {
                         LOG_INFO_MSG("Sorting jobs by EXECUTABLE");
-                        jobSort.setSort(JobSort::Field::Executable, SortOrder::Ascending);
+                        jobSort.setSort(core::JobSort::Field::Executable, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "EXITSTATUS") == 0) {
                         LOG_INFO_MSG("Sorting jobs by EXITSTATUS");
-                        jobSort.setSort(JobSort::Field::ExitStatus, SortOrder::Ascending);
+                        jobSort.setSort(core::JobSort::Field::ExitStatus, core::SortOrder::Ascending);
                     } else if (strcasecmp(argVal, "RANKSPERNODE") == 0) {
                         LOG_INFO_MSG("Sorting jobs by RANKSPERNODE");
-                        jobSort.setSort(JobSort::Field::RanksPerNode, SortOrder::Ascending);
+                        jobSort.setSort(core::JobSort::Field::RanksPerNode, core::SortOrder::Ascending);
                     } else {
                         printf("jobSort argument value, %s, is not valid\n", argVal);
                         printf("Valid values are: ID USER BLOCK STARTTIME ENDTIME EXITSTATUS EXECUTABLE STATUS COMPUTENODESUSED RANKSPERNODE\n");
@@ -1690,6 +2024,22 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (isListIOHardware) {
+        rc = listIOHardware(true);
+        if (0 != rc) {
+           LOG_ERROR_MSG("Unexpected error calling listIOHardware");
+           return -1;
+        }
+    }
+
+    if (isListIOHardwareBrief) {
+        rc = listIOHardware(false);
+        if (0 != rc) {
+           LOG_ERROR_MSG("Unexpected error calling listIOHardware");
+           return -1;
+        }
+    }
+
     if (isListHardwareWiring) {
         rc = listHardwareWiring();
         if (0 != rc) {
@@ -1730,6 +2080,22 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (isListIOBlocks) {
+        rc = listIOBlocks(IOblockFilter, IOblockSort, true);
+        if (0 != rc) {
+           LOG_ERROR_MSG("Unexpected error calling listIOBlocks");
+           return -1;
+        }
+    }
+
+    if (isListIOBlocksBrief) {
+        rc = listIOBlocks(IOblockFilter, IOblockSort, false);
+        if (0 != rc) {
+           LOG_ERROR_MSG("Unexpected error calling listIOBlocks");
+           return -1;
+        }
+    }
+
     if (isListJobs) {
         rc = listJobs(jobFilter, jobSort);
         if (0 != rc) {
@@ -1760,6 +2126,14 @@ int main(int argc, char *argv[])
         rc = listMidplaneNodes(nodesMidplane);
         if (0 != rc) {
            LOG_ERROR_MSG("Unexpected error calling listMidplaneNodes");
+           return -1;
+        }
+    }
+
+    if (isListConnectedComputeBlocks) {
+        rc = listconnectedcomputeblocks(IOBlock);
+        if (0 != rc) {
+           LOG_ERROR_MSG("Unexpected error calling listconnectedcomputeblocks");
            return -1;
         }
     }
@@ -1835,10 +2209,12 @@ void printHelp()
     printf("  -listhardware                       - Display a list of midplanes, node boards, cables and switches\n");
     printf("  -listhardwarebrief                  - Displays brief info on midplanes, cables and switches\n");
     printf("  -listhardwarewiring                 - Displays hardware wiring\n");
+    printf("  -listIOhardware                     - Display a list of I/O drawers and I/O nodes\n");
+    printf("  -listIOhardwarebrief                - Displays brief info on I/O drawers and I/O nodes\n");
     printf("  -listmachinesize                    - Displays machine size in ABCD dimensions\n");
     printf("  -listIOusagelimit                   - Display the I/O usage limit from bg.properties\n");
-    printf("  -listblocks                         - Display a list of blocks with full info\n");
-    printf("  -listblocksbrief                    - Display a list of blocks with brief info\n");
+    printf("  -listblocks                         - Display a list of compute blocks with full info\n");
+    printf("  -listblocksbrief                    - Display a list of compute blocks with brief info\n");
     printf("  -blocksort sort                     - Optional sort order for -listblocks and -listblocksbrief\n");
     printf("                                          Specify one of the following:\n");
     printf("                                          NAME OWNER USER STATUS COMPUTENODECOUNT\n");
@@ -1855,6 +2231,20 @@ void printHelp()
     printf("                                          Specify Y or N\n");
     printf("  -blockfiltersize LARGE|SMALL|ALL    - Optional block size filter for -listblocks and -listblocksbrief\n");
     printf("                                          Specify LARGE, SMALL or ALL\n");
+    printf("  -listIOblocks                       - Display a list of I/O blocks with full info\n");
+    printf("  -listIOblocksbrief                  - Display a list of I/O blocks with brief info\n");
+    printf("  -IOblocksort sort                   - Optional sort order for -listIOblocks and -listIOblocksbrief\n");
+    printf("                                          Specify one of the following:\n");
+    printf("                                          NAME OWNER USER STATUS IONODECOUNT\n");
+    printf("                                          CREATEDATE STATUSLASTMODIFIED\n");
+    printf("  -IOblockfilterstatus statuses       - Optional status filter for -listIOblocks and -listIOblocksbrief\n");
+    printf("                                          Specify one or more of the following:\n");
+    printf("                                          FREE BOOTING ALLOCATED INITIALIZED TERMINATING\n");
+    printf("  -IOblockfiltername block            - Optional I/O block name filter for -listIOblocks and -listIOblocksbrief\n");
+    printf("  -IOblockfilterowner owner           - Optional I/O block owner filter for -listIOblocks and -listIOblocksbrief\n");
+    printf("  -IOblockfilteruser user             - Optional I/O block user filter for -listIOblocks and -listIOblocksbrief\n");
+    printf("  -IOblockfilterextendedinfo Y|N      - Optional extended info filter for -listIOblocks and -listIOblocksbrief\n");
+    printf("                                          Specify Y or N\n");
     printf("  -listjobs                           - Display a list of jobs - default is Active jobs\n");
     printf("  -jobsort sort                       - Optional sort order for -listjobs\n");
     printf("                                          Specify one of the following:\n");
@@ -1881,11 +2271,13 @@ void printHelp()
     printf("                                          For all midplanes specify *ALL for midplane argument\n");
     printf("  -listAvailableIOlinks  mp or *ALL   - Display a list of the available I/O links for a midplane\n");
     printf("                                          For all midplanes specify *ALL for midplane argument\n");
-    printf("  -listblockIOlinks block             - Display a list of all the I/O links for a block\n");
-    printf("  -listblockAvailableIOlinks block    - Display a list of the available I/O links for a block\n");
-    printf("  -listblockIOlinksbrief block        - Display a summary count of available/unavailable I/O links for a block\n");
-    printf("  -checkblockIO block                 - Indicates unconnected I/O nodes and midplanes failing I/O rules for block\n");
-    printf("  -checkblockIOconnected block        - Indicates if all I/O nodes are available for block\n");
+    printf("  -getNodeMidplaneCoordinates loc     - Display coordinate for the node relative to the midplane.\n");
+    printf("  -listconnectedcomputeblocks ioblock - Display a list of compute blocks connected to I/O block\n");
+    printf("  -listblockIOlinks block             - Display a list of all the I/O links for a compute block\n");
+    printf("  -listblockAvailableIOlinks block    - Display a list of the available I/O links for a compute block\n");
+    printf("  -listblockIOlinksbrief block        - Display a summary count of available/unavailable I/O links for a compute block\n");
+    printf("  -checkblockIO block                 - Indicates unconnected I/O nodes and midplanes failing I/O rules for compute block\n");
+    printf("  -checkblockIOconnected block        - Indicates if all I/O nodes are available for compute block\n");
     printf("  -getNodeMidplaneCoordinates loc     - Display coordinate for the node relative to the midplane.\n");
     printf("  -dumpxml                            - Set BG_DUMP_XML=true envvar\n");
     printf("                                          This option causes Core API internal XML files to\n");

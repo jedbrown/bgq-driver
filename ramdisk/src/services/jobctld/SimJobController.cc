@@ -102,8 +102,8 @@ SimJobController::startup(in_port_t dataChannelPort)
    std::ostringstream portFileName;
    portFileName << _workDirectory << "jobcontrol.port";
    std::ofstream portFile(portFileName.str().c_str(), std::ios_base::trunc);
-   portFile << _dataListener->getPort() << std::endl;
-   LOG_DEBUG_MSG("stored port number " << _dataListener->getPort() << " in file " << portFileName.str());
+   portFile << ntohs(_dataListener->getPort()) << std::endl;
+   LOG_DEBUG_MSG("stored port number " << ntohs(_dataListener->getPort()) << " in file " << portFileName.str());
 
    // Prepare socket to listen for connections.
    try {
@@ -563,6 +563,11 @@ SimJobController::signalJob(void)
          outMsg->header.errorCode = (uint32_t)err;
       }
    }
+   
+   // End all of the tools if the signal is SIGKILL and the job must end.
+   if (inMsg->signo == SIGKILL) {
+      job->endAllTools(SIGTERM); // Give the tools a chance to cleanup and end.
+   }
 
    // Send SignalJobAck message.
    return sendToDataChannel(outMsg);
@@ -606,6 +611,8 @@ SimJobController::cleanupJob(void)
          monitor->signalJob(SIGKILL);
       }
    }
+   
+   job->cleanup();
 
    // Remove the job from the map and destroy the Job object.
    _jobs.remove(job->getJobId());
@@ -701,15 +708,13 @@ SimJobController::startTool(void)
       return sendToDataChannel(outMsg);
    }
 
-   // Validate tool path exists
-   struct stat buf;
-   memset( &buf, 0, sizeof(buf) );
-   const int rc = stat( inMsg->arguments, &buf );
-   if ( rc != 0 ) {
-        outMsg->header.returnCode = bgcios::ToolStartError;
-        outMsg->header.errorCode = static_cast<unsigned>( errno );
+   // Start the tool and add it to the job.
+   bgcios::MessageResult result = job->startTool(inMsg, true);
+   if (result.isError()) {
+      result.setHeader(outMsg->header);
+      return sendToDataChannel(outMsg);
    }
-
+   
    // Send StartToolAck message.
    return sendToDataChannel(outMsg);
 }
@@ -735,6 +740,13 @@ SimJobController::endTool(void)
       outMsg->header.returnCode = bgcios::JobIdError;
       outMsg->header.errorCode = ENOENT;
       LOG_ERROR_MSG("Job " << outMsg->header.jobId << ": job was not found");
+      return sendToDataChannel(outMsg);
+   }
+
+   // End the tool with the specified signal.
+   bgcios::MessageResult result = job->endTool(inMsg->toolId, inMsg->signo);
+   if (result.isError()) {
+      result.setHeader(outMsg->header);
       return sendToDataChannel(outMsg);
    }
 

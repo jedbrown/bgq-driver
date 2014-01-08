@@ -78,19 +78,26 @@ start() {
 
     PROPFILE=/bgsys/local/etc/bg.properties
         # Start daemons.
-    echo -en $"Starting $prog: \n"
+    if [ ! -e $lockfile ] ; then
+    	echo -en $"Starting $prog: \n"
         # log files created by bgagentd should be world readable
-    daemon $prog $OPTIONS "--properties " $PROPFILE &> /dev/null
-    RETVAL=$?
-    if [ $RETVAL -eq 0 ] ; then 
-	touch $lockfile
-	echo -en $"Startup of $prog completed: "
-	success
-	echo
+    	daemon $prog $OPTIONS "--properties " $PROPFILE &> /dev/null
+    	RETVAL=$?
+    	if [ $RETVAL -eq 0 ] ; then 
+		touch $lockfile
+		echo -en $"Startup of $prog completed: "
+		success
+		echo
+    	else
+		echo -en $"Startup of $prog returned $RETVAL: "
+		failure
+		echo
+    	fi
     else
-	echo -en $"Startup of $prog returned $RETVAL: "
-	failure
+        echo -en $"Lockfile $lockfile for $prog found. bgagentd is already running or was terminated improperly.\nStarting $prog: "
+        skipped 
 	echo
+        RETVAL=0
     fi
     return $RETVAL
 }

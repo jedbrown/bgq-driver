@@ -81,11 +81,9 @@ HTTP status: 403 Forbidden
 
 #include "common.hpp"
 
+#include "../../BlockingOperationsThreadPool.hpp"
 #include "../../dbConnectionPool.hpp"
-#include "../../DiagnosticsRunIdOption.hpp"
 #include "../../Error.hpp"
-#include "../../StringDbColumnOption.hpp"
-#include "../../WhereClause.hpp"
 
 #include "../../blue_gene/diagnostics/types.hpp"
 
@@ -94,12 +92,9 @@ HTTP status: 403 Forbidden
 
 #include "chiron-json/json.hpp"
 
-#include <db/include/api/tableapi/gensrc/bgqtableapi.h>
-
 #include <utility/include/Log.h>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/program_options.hpp>
 
 #include <string>
 
@@ -136,102 +131,50 @@ void Testcases::_doGet()
     }
 
 
-    StringDbColumnOption block_id( "blockId", BGQDB::DBTDiagtests::BLOCKID_SIZE );
-    StringDbColumnOption hardware_status( "hardwareStatus", BGQDB::DBTDiagtests::HARDWARESTATUS_SIZE );
-    StringDbColumnOption location( "location", BGQDB::DBTDiagresults::LOCATION_SIZE );
-    DiagnosticsRunIdOption run_id_option;
-    StringDbColumnOption testcase( "testcase", BGQDB::DBTDiagtests::TESTCASE_SIZE );
+    query::diagnostics::TestcasesOptions query_options(
+            _getRequest().getUrl().getQuery()
+        );
 
-    namespace po = boost::program_options;
+    _blocking_operations_thread_pool.post( boost::bind(
+            &Testcases::_startQuery, this,
+            capena::server::AbstractResponder::shared_from_this(),
+            query_options
+        ) );
 
-    po::options_description desc;
-
-    desc.add_options()
-            ( "runId", po::value( &run_id_option ) )
-        ;
-
-    block_id.addTo( desc );
-    hardware_status.addTo( desc );
-    location.addTo( desc );
-    testcase.addTo( desc );
-
-    po::variables_map vm;
-    po::store( po::command_line_parser( _getRequest().getUrl().getQuery().calcArguments() ).options( desc ).allow_unregistered().run(), vm );
-    po::notify( vm );
+}
 
 
-    WhereClause where_clause;
-    cxxdb::ParameterNames param_names;
-
-    block_id.addTo( where_clause, param_names, BGQDB::DBTDiagtests::BLOCKID_COL );
-    hardware_status.addTo( where_clause, param_names, BGQDB::DBTDiagtests::HARDWARESTATUS_COL );
-    location.addTo( where_clause, param_names, BGQDB::DBTDiagresults::LOCATION_COL );
-    testcase.addTo( where_clause, param_names, BGQDB::DBTDiagtests::TESTCASE_COL );
-
-    if ( run_id_option.getOpt() ) {
-        where_clause.add( "runId = ?" );
-        param_names.push_back( "runId" );
-    }
-
-    bool only_location(location.hasValue() && (! block_id.hasValue()) && (! hardware_status.hasValue()) && (! run_id_option.getOpt()) && (! testcase.hasValue()));
-
+void Testcases::_startQuery(
+        capena::server::ResponderPtr,
+        const query::diagnostics::TestcasesOptions& query_options
+    )
+{
+    query::diagnostics::Testcases query;
 
     auto conn_ptr(dbConnectionPool::getConnection());
 
-    string sql;
+    cxxdb::ResultSetPtr rs_ptr;
 
-    if ( only_location ) {
+    query.execute(
+            query_options,
+            conn_ptr,
+            &rs_ptr
+        );
 
-        sql =
-
- "WITH mr AS ("
-  " SELECT testcase, MAX(endTime) AS et"
-    " FROM bgqDiagResults"
-    " WHERE location = ?"
-    " GROUP BY testcase"
-" )"
-" SELECT dr.runId, dr.blockId, dr.testcase, dr.location, dr.serialnumber, dr.endTime, dr.hardwareStatus, dr.hardwareReplace, dr.logfile, dr.analysis"
-  " FROM bgqDiagResults AS dr"
-       " JOIN"
-       " mr"
-       " ON dr.testcase = mr.testcase AND dr.endTime = mr.et"
-  " " + where_clause.getString() +
-  " ORDER BY testcase"
-
-            ;
-
-        param_names.insert( param_names.begin(), "location" );
-
-    } else {
-
-        sql = string() +
-
- "SELECT runId, blockId, testcase, location, serialnumber, endTime, hardwareStatus, hardwareReplace, logfile, analysis"
-  " FROM bgqDiagResults"
-  " " + where_clause.getString() +
-  " ORDER BY runId, blockId, testcase, location"
-
-            ;
-
-    }
-
-    cxxdb::QueryStatementPtr stmt_ptr(conn_ptr->prepareQuery( sql, param_names ));
-
-    cxxdb::Parameters &params(stmt_ptr->parameters());
-
-    block_id.bindParameters( params );
-    hardware_status.bindParameters( params );
-    location.bindParameters( params );
-    testcase.bindParameters( params );
-
-    if ( run_id_option.getOpt() ) {
-        DiagnosticsRunIdOption::RunIdOpt run_id_opt(run_id_option.getOpt());
-        params["runId"].cast( *run_id_opt );
-    }
-
-    cxxdb::ResultSetPtr rs_ptr(stmt_ptr->execute());
+    _getStrand().post( boost::bind(
+            &Testcases::_queryComplete, this,
+            capena::server::AbstractResponder::shared_from_this(),
+            conn_ptr, rs_ptr
+        ) );
+}
 
 
+void Testcases::_queryComplete(
+        capena::server::ResponderPtr,
+        cxxdb::ConnectionPtr,
+        cxxdb::ResultSetPtr rs_ptr
+    )
+{
     json::ArrayValue arr_val;
     json::Array &arr(arr_val.get());
 

@@ -27,7 +27,6 @@ define(
     "../dijit/diagnostics/ConfigureIoRun",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -35,7 +34,6 @@ function(
         b_navigator_dijit_diagnostics_ConfigureIoRun,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -48,7 +46,6 @@ var b_navigator_diagnostics_ConfigureIoRun = d_declare( null,
     _bgws : null,
     _diagnostics : null,
 
-    _io_drawers : null,
     _test_config : null,
 
     _configure_io_run_dij : null,
@@ -60,9 +57,27 @@ var b_navigator_diagnostics_ConfigureIoRun = d_declare( null,
         this._bgws = bgws;
         this._diagnostics = diagnostics;
 
-        b_navigator_topic.subscribe( b_navigator_topic.gotMachineInfo, d_lang.hitch( this, this._gotMachineInfo ) );
         b_navigator_topic.subscribe( b_navigator_topic.diags.loggedIn, d_lang.hitch( this, this._loggedIn ) );
         b_navigator_topic.subscribe( b_navigator_topic.diags.gotTestsConfiguration, d_lang.hitch( this, this._gotTestsConfiguration ) );
+    },
+
+
+    getDijit : function()  { return  this._configure_io_run_dij; },
+
+
+    getMachineHighlightData : function()
+    {
+        if ( this._configure_io_run_dij ) {
+            return this._configure_io_run_dij.getMachineHighlightData();
+        }
+        return null;
+    },
+
+
+    notifyMachineClicked : function( loc )
+    {
+        if ( ! this._configure_io_run_dij )  return;
+        this._configure_io_run_dij.notifyMachineClicked( loc );
     },
 
 
@@ -86,10 +101,7 @@ var b_navigator_diagnostics_ConfigureIoRun = d_declare( null,
                 this._diagnostics.addTab( this._configure_io_run_dij );
 
                 this._configure_io_run_dij.setSubmitDiagnosticsRunFn( d_lang.hitch( this, this._submitDiagnosticsRun ) );
-
-                if ( this._io_drawers ) {
-                    this._configure_io_run_dij.setIoDrawers( this._io_drawers );
-                }
+                this._configure_io_run_dij.on( "machineHighlightingChanged", d_lang.hitch( this, this._machineHighlightingChanged ) );
 
                 if ( this._test_config ) {
                     this._configure_io_run_dij.setConfig( this._test_config );
@@ -125,14 +137,6 @@ var b_navigator_diagnostics_ConfigureIoRun = d_declare( null,
     },
 
 
-    _gotMachineInfo : function( args )
-    {
-        this._io_drawers = args.machineInfo.ioDrawers;
-
-        if ( this._configure_io_run_dij )  this._configure_io_run_dij.setIoDrawers( this._io_drawers );
-    },
-
-
     _gotTestsConfiguration : function( config )
     {
         console.log( module.id + ": setConfig, config=", config );
@@ -140,6 +144,12 @@ var b_navigator_diagnostics_ConfigureIoRun = d_declare( null,
         this._test_config = config;
 
         if ( this._configure_io_run_dij )  this._configure_io_run_dij.setConfig( this._test_config );
+    },
+
+
+    _machineHighlightingChanged : function()
+    {
+        this._diagnostics.updateMachineHighlighting();
     },
 
 

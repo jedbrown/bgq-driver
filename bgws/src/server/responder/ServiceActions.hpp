@@ -98,6 +98,12 @@ private:
             const std::string& service_action_id
         );
 
+
+    void _gotAttentionMessagesSnapshot(
+            capena::server::ResponderPtr /*responder_ptr*/,
+            const blue_gene::service_actions::AttentionMessagesMap& attention_messages
+        );
+
 };
 
 

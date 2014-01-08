@@ -27,13 +27,11 @@
 
 #include "../../AbstractResponder.hpp"
 
-#include "../../BlueGene.hpp"
-
 #include "capena-http/http/uri/Path.hpp"
 
-#include "chiron-json/json.hpp"
+#include "chiron-json/fwd.hpp"
 
-#include <db/include/api/cxxdb/cxxdb.h>
+#include <exception>
 
 
 namespace bgws {
@@ -54,7 +52,7 @@ public:
             CtorArgs& args
         ) :
             AbstractResponder( args ),
-            _blue_gene(args.blue_gene)
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool)
     { /* Nothing to do */ }
 
 
@@ -65,38 +63,13 @@ public:
 
 private:
 
-    const BlueGene &_blue_gene;
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
 
 
-    void _calcJobSummary(
-            cxxdb::Connection& db_conn,
-            uint64_t& job_count_out,
-            uint64_t& job_cpus_out
-        ) const;
-
-    void _addAlertSummary(
-            cxxdb::Connection& db_conn,
-            json::Object& obj_in_out
-        );
-
-    void _addMidplaneStatus(
-            cxxdb::Connection& db_conn,
-            json::Object& obj_in_out
-        );
-
-    void _addHardwareNotifications(
-            cxxdb::Connection& db_conn,
-            json::Object& obj_in_out
-        );
-
-    void _addDiagnostics(
-            cxxdb::Connection& db_conn,
-            json::Object& obj_in_out
-        );
-
-    void _addServiceActions(
-            cxxdb::Connection& db_conn,
-            json::Object& obj_in_out
+    void _queryComplete(
+            capena::server::ResponderPtr,
+            std::exception_ptr exc_ptr,
+            json::ObjectValuePtr val_ptr
         );
 
 };

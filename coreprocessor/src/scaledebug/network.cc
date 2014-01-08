@@ -104,7 +104,7 @@ int connectToTool(int argc, char* argv[])
         assert(side_msg.str() == "READY");
         side_msg.str().clear();
     }
-    catch(CxxSockets::CxxError& err)
+    catch(CxxSockets::Error& err)
     {
         return -1;
     }
@@ -125,7 +125,7 @@ int sendCommand(const char* str)
     side_msg.str().clear();
 }
 
-int receiveReply(CxxSockets::MsgMap& msgs)
+int receiveReply(MsgMap& msgs)
 {
 #if USE_SECURE_CERTIFICATE
     for(std::vector<CxxSockets::SecureTCPSocketPtr>::iterator iter = SocketVector.begin(); iter != SocketVector.end(); ++iter)

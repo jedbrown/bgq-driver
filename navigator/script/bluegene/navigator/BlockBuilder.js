@@ -29,7 +29,6 @@ define(
     "./dijit/BlockBuilder",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -38,14 +37,12 @@ function(
         l_dijit_BlockBuilder,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
 
 
 var b_navigator_BlockBuilder = d_declare(
-        "bluegene.navigator.BlockBuilder",
         [ l_AbstractTab ],
 
 /** @lends bluegene^navigator^BlockBuilder# */
@@ -137,7 +134,7 @@ var b_navigator_BlockBuilder = d_declare(
 
         }
 
-        j_registry.byId( "navigator" ).switchTo( TAB_NAME );
+        this._navigator.switchTo( TAB_NAME );
     },
 
 
@@ -161,7 +158,7 @@ var b_navigator_BlockBuilder = d_declare(
         l_topic.publish( l_topic.tabControllerChange, { id: this._block_builder_dijit.id } );
 
         // Switch back to Blocks.
-        j_registry.byId( "navigator" ).switchTo( "blocks" /*tab name*/ );
+        this._navigator.switchTo( "blocks" /*tab name*/ );
 
         this._block_builder_dijit = null;
     }

@@ -94,7 +94,7 @@ FLIGHTPRINT(RQ_CANCELED_,"Request canceled errno=%llu type=%llu, ccontext=%p, re
 //FLIGHTFUNCT(DB_NHCN2LONG,MUDM_parseInjNetHdr)
 FLIGHTFUNCT(CN_TOOK2LONG,MUDM_parsePK)
 FLIGHTPRINT(DM_WKUP_EXIT, "MUDM wakeup poll completed at line %ld, protocol version %ld.  %ld links, contextptr=%p")
-FLIGHTPRINT(DM_USEC_DIFF, "time difference %lld milliseconds line= %ld cyclesstart=%lld cyclesend=%lld")  
+FLIGHTPRINT(DM_USEC_DIFF, "time difference %lld usec line= %ld cyclesstart=%lld cyclesend=%lld")  
 
 FLIGHTFUNCT(DM_PERS_INFO,MUDM_personality_info)
 FLIGHTFUNCT(DB_RECF_INFO,MUDM_receiveFifoInfo)

@@ -32,44 +32,38 @@
 <title>OutputText Sample</title>
 
 <style>
-    @import "../../../../dojo/resources/dojo.css";
-    @import "../../../../dijit/themes/claro/claro.css";
-    @import "../../../../dijit/themes/claro/document.css";
+    @import "../../../dojo/resources/dojo.css";
+    @import "../../../dijit/themes/claro/claro.css";
+    @import "../../../dijit/themes/claro/document.css";
 
-    @import "../../../../../../style/bluegene.css";
+    @import "../../../../../style/bluegene.css";
 
     html, body, #main-div { width: 100%; height: 100%; border: 0; margin: 0; padding: 0; }
 </style>
 
-<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, isDebug: 1"></script>
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, isDebug: 1"></script>
 
 <script>
 
-g_b_layer = null;
-
-g_b_dijit_OutputText = null;
 g_bold_formatter = null;
 
 require(
 [
-    "bluegene/dijit/OutputText",
-    "bluegene/layer",
+    "dojo/parser",
     "dojo/ready",
-    "dijit/registry"
+    "dijit/registry",
+
+    "bluegene/layer",
+    "bluegene/dijit/OutputText"
 ],
 
 function(
-        b_dijit_OutputText,
-        b_layer,
+        d_parser,
         d_ready,
         j_registry
     )
 {
     // Put symbols used in navigator.html into global space.
-
-    g_b_layer = b_layer; // Note: keep this around since might be useful when using debugger.
-
-    g_b_dijit_OutputText = b_dijit_OutputText;
 
     g_bold_formatter = function( value )
         {
@@ -79,7 +73,9 @@ function(
     var ready_fn = function() 
         {
             console.log( "Ready!" );
-            
+
+            d_parser.parse();
+
             j_registry.byId( "ot1" ).set( "value", "a &amp; b" );
             console.log( "ot1 innerHTML=", j_registry.byId( "ot1" ).get( "value" ) );
             console.log( "ot2 innerHTML=", j_registry.byId( "ot2" ).get( "value" ) );
@@ -96,11 +92,13 @@ function(
 
 <h1>OutputText Samples</h1>
 
-<span id="ot1" data-dojo-type="g_b_dijit_OutputText"></span>
-<span id="ot2" data-dojo-type="g_b_dijit_OutputText" data-dojo-props="value : 'test1 <br/> test2'"></span>
-<span id="ot3" data-dojo-type="g_b_dijit_OutputText" data-dojo-props="value : 'test3 <br> test4', escapeHtml: false"></span><br/>
-<span data-dojo-type="g_b_dijit_OutputText" data-dojo-props="nullText: 'Loading...'"></span><br/>
-<span data-dojo-type="g_b_dijit_OutputText" data-dojo-props="escapeHtml: false, formatter: g_bold_formatter, value: 'be bold'"></span><br/>
+<ul>
+<li>Set to a value with HTML escape: <span id="ot1" data-dojo-type="bluegene/dijit/OutputText"></span>
+<li>Set to a value with HTML: <span id="ot2" data-dojo-type="bluegene/dijit/OutputText" data-dojo-props="value : 'test1 <br/> test2'"></span>
+<li>Set to a value with HTML, but escapeHtml=false: <span id="ot3" data-dojo-type="bluegene/dijit/OutputText" data-dojo-props="value : 'test3 <br> test4', escapeHtml: false"></span><br/>
+<li>Has nullText: <span data-dojo-type="bluegene/dijit/OutputText" data-dojo-props="nullText: 'Loading...'"></span><br/>
+<li>Has a formatter that sets HTML: <span data-dojo-type="bluegene/dijit/OutputText" data-dojo-props="escapeHtml: false, formatter: g_bold_formatter, value: 'be bold'"></span><br/>
+</ul>
 
 </body>
 </html>

@@ -505,9 +505,9 @@ kernel_shutdown_timeout = 60
     # Number of seconds compute and I/O kernels have to complete shutdown  
     # The default is 60.
 
-io_link_shutdown_timeout = 15
+io_link_shutdown_timeout = 180
     # Number of seconds to complete I/O link shutdown  
-    # The default is 15.
+    # The default is 180.
 
 [machinecontroller.subnet.0]
     # This is the header that indicates the start of the parameters for the first SubnetMc.

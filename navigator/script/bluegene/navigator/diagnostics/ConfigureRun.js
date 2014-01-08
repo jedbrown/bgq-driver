@@ -27,7 +27,6 @@ define(
     "../dijit/diagnostics/ConfigureComputeRun",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -35,7 +34,6 @@ function(
         ll_dijit_diagnostics_ConfigureComputeRun,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {

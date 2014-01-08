@@ -29,9 +29,9 @@ define(
     "../../Bgws",
     "../../BlueGene",
     "../../TimeInterval",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dojo/text!./templates/ComputeBlockDetails.html",
     "module",
@@ -52,9 +52,9 @@ function(
         b_Bgws,
         b_BlueGene,
         b_TimeInterval,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         template,
         module
@@ -63,7 +63,6 @@ function(
 
 
 var b_navigator_dijit_ComputeBlockDetails = d_declare(
-        "bluegene.navigator.dijit.ComputeBlockDetails",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -179,7 +178,7 @@ var b_navigator_dijit_ComputeBlockDetails = d_declare(
 
         this.onMachineHighlightingChanged();
 
-        d_Deferred.when(
+        d_when(
                 this._fetch_details_deferred,
                 d_lang.hitch( this, this._gotBlockDetails ),
                 d_lang.hitch( this, this._fetchDetailsFailed )

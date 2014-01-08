@@ -114,6 +114,8 @@ var b_navigator_FilterOptions = d_declare( [],
         if ( ! this._form.isValid() )  return;
 
         this.apply();
+
+        this._dropdown.toggleDropDown();
     },
 
 

@@ -19,3 +19,5 @@ This package contains snapbug tool and resource agent script for Linux-HA.
 %defattr(-,root,root,-)
 %{_base_dir}/scripts/snapbug.pl
 %{_base_dir}/scripts/bgRA
+%{_base_dir}/scripts/check_opt_health.sh
+%{_base_dir}/scripts/check_cable_spares.py

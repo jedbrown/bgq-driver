@@ -49,10 +49,9 @@ public:
     void setCount(unsigned count) { _agents_per_host = count; }
 
     //! \brief End processing of all agent threads
-    //! \param end_agents Also end all of the agent processes
     //! \param end_binaries Also end all managed binaries
     //! \param signal to use to end binaries
-    void cancel(bool end_agents, bool end_binaries, unsigned signal);
+    void cancel(bool end_binaries, unsigned signal);
 
     //! \brief Insert a new agent in the list
     bool addNew(AgentRepPtr agent);

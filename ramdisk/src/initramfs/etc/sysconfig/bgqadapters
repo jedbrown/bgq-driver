@@ -28,20 +28,23 @@
 # BG/Q Node.  The list is checked, at boot time, by rc.sysinit and compared to
 # the PCIe adapters associated with the ION.  If an attached adapter is not found in
 # this list, a RAS event is thrown.  Note that we are checking for both the IBM and
-# Mellanox part numbers in each adapter's VPD.
+# Mellanox part numbers in each adapter's VPD. In addition to listing the supported adapters
+# this file also provides the expected port configuration for each of the supported adapters.
+# The port information is used by the network configuration script to ensure that the ports
+# are properly configured as is required on systems that have port sensing disabled.
 
 #
 # WARNING: changing this file requires a rebuild of the ramdisk
 #
 
 # ConnectX2 IB Adapter (Kestrel)
-MHQH19B-XTR
-74Y9057
+MHQH19B-XTR:PORT1=ib
+74Y9057:PORT1=ib
 
 # ConnectX2 Dual Port 10GbE Adapter (Hawk)
-MNPH29D-XTR
-74Y9059
+MNPH29D-XTR:PORT1=eth:PORT2=eth
+74Y9059:PORT1=eth:PORT2=eth
 
 # ConnectX2 Combo 10GbE/IB Adapter (Raptor)
-MHZH29B-XTR
-74Y9058
+MHZH29B-XTR:PORT1=ib:PORT2=eth
+74Y9058:PORT1=ib:PORT2=eth

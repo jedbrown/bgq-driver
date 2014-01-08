@@ -73,6 +73,8 @@ private:
             ) const;
 
 private:
+    pid_t _pid;
+    std::string _hostname;
     boost::program_options::options_description _options;
     bool _details;
 };

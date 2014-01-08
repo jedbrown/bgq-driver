@@ -97,6 +97,15 @@ operator==(
         );
 
 /*!
+ * \brief less than operator.
+ */
+bool
+operator<(
+        const Coordinates& rhs, //!< [in]
+        const Coordinates& lhs  //!< [in]
+        );
+
+/*!
  * \brief Insertion operator.
  */
 std::ostream&

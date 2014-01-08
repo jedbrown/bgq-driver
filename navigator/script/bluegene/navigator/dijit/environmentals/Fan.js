@@ -36,7 +36,6 @@ function(
 {
 
 var b_navigator_dijit_environmentals_Fan = d_declare(
-        "bluegene.navigator.dijit.environmentals.Fan",
         [ l_AbstractQueryResultsDijit ],
 
 {

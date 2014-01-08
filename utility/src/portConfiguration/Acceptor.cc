@@ -34,6 +34,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <boost/throw_exception.hpp>
 
 #include <algorithm>
@@ -163,17 +164,18 @@ void Acceptor::_startResolve(
     const string &hostname(pi->first);
     const string &service_name(pi->second);
 
-    tcp::resolver::query query( hostname, service_name );
+    boost::scoped_ptr<tcp::resolver::query> query_ptr;
 
     if ( hostname.empty() ) {
-        query = tcp::resolver::query( tcp::v6(), service_name );
+        query_ptr.reset( new tcp::resolver::query( tcp::v6(), service_name ) );
         LOG_DEBUG_MSG( "Looking up " << service_name );
     } else {
+        query_ptr.reset( new tcp::resolver::query( hostname, service_name ) );
         LOG_DEBUG_MSG( "Looking up [" << hostname << "]:" << service_name );
     }
 
     _resolver.async_resolve(
-            query,
+            *query_ptr,
             bind(
                 &Acceptor::_handleResolve,
                 this,
@@ -304,7 +306,9 @@ void Acceptor::_handleAccept(
         // If there are no acceptors remaining, notify the caller that no acceptors,
         // otherwise notify that lost an acceptor.
 
-        _acceptors.erase( std::find( _acceptors.begin(), _acceptors.end(), acceptor_ptr ) );
+        _Acceptors::iterator i(std::find( _acceptors.begin(), _acceptors.end(), acceptor_ptr ));
+
+        if ( i != _acceptors.end() )  _acceptors.erase( i );
 
         _accept_handler( _acceptors.empty() ? AcceptArguments::NoAcceptors : AcceptArguments::AcceptError );
 

@@ -66,7 +66,7 @@ typedef union _swb
 // define types on packets for MUDM use
 #define MUDM_DPUT            0x5544 //type reserved for mudm
 #define MUDM_REDUCE_ONE      0xF501 //Reduce to a target, MUDM internal
-#define MUDM_REDUCE_ALL      0xF50F //Reduce result to all participants, MUDM internal, number of nodes
+#define MUDM_REDUCE_ALL_INT  0xF50E //Reduce result to all participants, MUDM internal, number of nodes
 #define MUDM_REDUCE_ALL_LNC  0xF51F //Reduce result to all participants, MUDM internal, largest node corner
 #define MUDM_REDUCE_BCAST_ORIGIN 0xF5B0 //REDUCE directed to origin of RDMA broadcast, MUDM internal
 #define MUDM_REDUCE_BCAST_FINISH 0xF5BF //REDUCE directed to all to complete RDMA broadcast, MUDM internal
@@ -336,9 +336,13 @@ struct my_context {
   uint64_t largest_node_corner; //in least significant 32 bits
   //! \todo TODO set base table for counter to physical address of my_context and then use offsets into the struct of test_counter and for bcast_rdma
   volatile uint64_t test_counter;    
-
+    
+  volatile uint64_t bcast_reduceall_complete;
+  char*    bcast_reduceall_data;
+  size_t   bcast_reduceall_datasize;
+    
   uint64_t num_nodes_this_node_bridges;   
-
+    
   uint64_t max_connections;
   uint64_t poll_active;
   Lock_Atomic_t conn_list_lock;/* lock conn_list */
@@ -365,8 +369,10 @@ struct my_context {
   uint64_t rget_memfifo_sent;
   uint32_t wakeupActive;
   uint32_t StuckState;
-  uint64_t RAS_pacing_timestamp; 
+  uint64_t RAS_pacing_timestamp;
   uint64_t RAS_pacing_count;
+
+
  
 
 } __attribute__ ((aligned (64)));
@@ -410,5 +416,9 @@ void dump_ccontext_info(struct mudm_connection * ccontext);
 void run_atomic_tests(struct my_context * mcontext);
 int mudm_recv_bcast_test(struct my_context * mcontext);
 void largest_node_corner_in_block(struct my_context * mcontext);
+
+uint64_t InjFifoInject_rget_emulation (MUDM_InjFifo_t   * injfifo_ctls, 
+					 void              * desc, 
+                                         BG_FlightRecorderRegistry_t *logregistry);
 
 #endif /* _MUDM_COMMON_H_ */

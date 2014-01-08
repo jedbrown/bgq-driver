@@ -40,10 +40,12 @@ enum {
     FD_STDERR,
     FD_SHARED_MEM,
     FD_PERSIST_MEM,
+    FD_PROC_MEM,
     FD_MEMFILE,
     FD_CONSOLE,
     FD_LOCAL,
     FD_SOCKET,
+    FD_RDMA,
     FD_FILE,            // Must be last as "default" file system
     FD_TOTAL_FILESYS
 };

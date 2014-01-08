@@ -52,7 +52,7 @@ public:
     };
 
     /*!
-     * \brief Contaienr of ranks
+     * \brief Container of ranks
      */
     typedef std::set<uint32_t> Rank;
 
@@ -72,8 +72,16 @@ public:
      */
     Mapping(
             Type t = Type::None,                        //!< [in]
-            const std::string& value = std::string()    //!< [in]
+            const std::string& value = std::string(),   //!< [in]
+            bool performValidation = true               //!< [in]
           );
+
+    /*!
+     * \brief get mapping type
+     */
+    static Type getType(
+            const std::string& value    //!< [in]
+            );
 
     Type type() const { return _type; }   //!< Get type.
     const std::string& value() const { return _value; } //!< Get value.

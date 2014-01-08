@@ -29,8 +29,16 @@ include ../Make.rules
 # Set compiler flags
 CXXFLAGS += -fPIC
 
-# Source files
+do_build=no
 ifeq ($(OS_ARCH),ppc64)
+do_build=yes
+endif
+ifeq ($(BGQ_CONTROL_SYSTEM_SIMULATION),yes)
+do_build=yes
+endif
+
+# Source files
+ifeq ($(do_build),yes)
 SRCS  := ServiceController.cc
 SRCS  += Thread.cc
 SRCS  += Socket.cc
@@ -60,7 +68,7 @@ endif
 OBJS  = $(SRCS:%.cc=%.o_64)
 
 LDFLAGS  += -L $(IOS_LIBRARY_DIR)
-ifeq ($(OS_ARCH),ppc64)
+ifeq ($(do_build),yes)
 LDFLAGS  += -L $(BGQ_INSTALL_DIR)/ramdisk/initramfs/usr/lib64
 LDFLAGS  += -libverbs -lrdmacm
 endif
@@ -91,9 +99,11 @@ $(lib_short): $(lib_vers)
 objdump: $(lib_full)
 	$(OBJDUMP) $< > $<.objdump
 
-ifeq ($(OS_ARCH),ppc64)
+ifeq ($(do_build),yes)
 install: $(lib_short)
+	$(MKDIR) -p $(IOS_LIBRARY_DIR)
 	$(CP) -P $(lib_short) $(lib_vers) $(lib_full) $(IOS_LIBRARY_DIR)
+	$(MKDIR) -p $(BGQ_INITRAMFS_PATH)/lib64
 	$(CP) -P $(lib_short) $(lib_vers) $(lib_full) $(BGQ_INITRAMFS_PATH)/lib64
 else
 install: $(lib_short)

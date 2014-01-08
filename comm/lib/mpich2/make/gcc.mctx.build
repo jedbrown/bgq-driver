@@ -12,44 +12,24 @@
 #                                                                  #
 # end_generated_IBM_copyright_prolog                               #
 
-gcc.mctx-install: pre-install gcc.mctx
-	${MAKE} -C ${MPICH2BUILD}-gcc.mctx install
-
 gcc.mctx: autoconf
-	mkdir -p ${MPICH2BUILD}-gcc.mctx
-	cd ${MPICH2BUILD}-gcc.mctx &&					\
+	mkdir -p ${MPICH2BUILD}-$@
+	cd ${MPICH2BUILD}-$@ &&						\
 	if [ ! -f Makefile ] ; then					\
-	  GCC="${HOST_CC}"						\
-	  CC="${HOST_CC}"						\
-	  CXX="${HOST_CXX}"						\
-	  F77="${HOST_F77}"						\
-	  FC="${HOST_F90}"						\
-	  AR="${HOST_AR}"						\
-	  LD="${HOST_LD}"						\
-	  MPICH2LIB_CFLAGS="${HOST_CFLAGS} -O3"				\
-	  MPICH2LIB_CXXFLAGS="${HOST_CXXFLAGS} -O3"			\
-	  MPICH2LIB_FFLAGS="${HOST_FFLAGS} -O3"				\
-	  MPICH2LIB_F90FLAGS="${HOST_FFLAGS} -O3"			\
-	  MPICH2LIB_LDFLAGS="${HOST_LDFLAGS} -O3"			\
-	  CFLAGS="${MPI_CFLAGS}"					\
-	  CXXFLAGS="${MPI_CXXFLAGS}"					\
-	  FFLAGS="${MPI_FFLAGS}"					\
-	  FCFLAGS="${MPI_FFLAGS}"					\
-	  LDFLAGS="${MPI_LDFLAGS}"					\
-	  MPILIBNAME="mpich"						\
-	  MPICXXLIBNAME="cxxmpich"					\
-	  MSGLAYER_INCLUDE="${HOST_INCLUDE}"				\
-	  MSGLAYER_LIB="${HOST_LIB}"					\
+	  MPILIBNAME="mpi"						\
+	  MPICXXLIBNAME="mpigc4"					\
 	  ${MPICH2DIR}/configure					\
 	  --enable-cache						\
-	  --prefix=${INSTALL_DIR}/gcc.mctx				\
-	  --mandir=${INSTALL_DIR}/gcc.mctx/man				\
-	  --htmldir=${INSTALL_DIR}/gcc.mctx/www				\
+          --disable-rpath                                               \
+	  --disable-versioning						\
+	  --prefix=${INSTALL_DIR}/$@					\
+	  --mandir=${INSTALL_DIR}/$@/man				\
+	  --htmldir=${INSTALL_DIR}/$@/www				\
 	  --host=${BUILD_HOST}						\
 	  --target=${BUILD_TARGET}					\
 	  --build=${BUILD_BUILD}					\
 	  --enable-dependencies						\
-	  --enable-g=none						\
+	  --enable-g=dbg						\
 	  --with-device=pamid:${PLATFORM}				\
 	  --enable-romio=yes						\
 	  --enable-f77=yes						\
@@ -57,20 +37,19 @@ gcc.mctx: autoconf
 	  --with-file-system=${FILE_SYSTEM}				\
 	  --enable-timer-type=device					\
 	  --enable-threads=${THREAD_LEVEL}				\
-	  --with-fwrapname=fmpich					\
-	  --with-cross=${MPICH2DIR}/src/mpid/pamid/cross/${PLATFORMlc}8	\
+	  --with-fwrapname=mpigf					\
+	  --with-cross=${MPICH2DIR}/src/mpid/pamid/cross/${CROSSFILE}	\
 	  --with-mpe=no							\
-	  --enable-timing=no						\
-	  --disable-collchk						\
-	  --disable-graphics						\
-	  --disable-rlog						\
-	  --disable-sample						\
-	  --disable-rpath						\
+	  --with-smpcoll=yes						\
+	  --without-valgrind						\
+	  --enable-timing=runtime					\
 	  --with-aint-size=8						\
 	  --with-assert-level=2						\
+	  --with-pmi=pmi2/poe						\
 	  --enable-shared						\
 	  --enable-sharedlibs=gcc					\
 	  --enable-dynamiclibs						\
+	  --disable-static						\
 	  --enable-debuginfo						\
 	  --enable-fast=O3						\
 	  --with-atomic-primitives					\
@@ -80,5 +59,8 @@ gcc.mctx: autoconf
 	  --disable-predefined-refcount					\
 	; fi
 
-	${MAKE} -j1 -C ${MPICH2BUILD}-gcc.mctx dependencies
-	${MAKE} -j1 -C ${MPICH2BUILD}-gcc.mctx
+	${MAKE} -j8 -C ${MPICH2BUILD}-$@
+	cd ${MPICH2BUILD}-$@ && ${CC} ${CFLAGS} ${LDFLAGS}              \
+		-shared src/binding/f77/.libs/*.o                       \
+		        src/binding/f90/.libs/*.o                       \
+                -o      lib/.libs/libmpigf.so

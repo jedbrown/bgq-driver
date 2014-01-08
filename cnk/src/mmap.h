@@ -29,6 +29,10 @@
 //  lower 5 bits of addr are available for flags
 #define MMAPCHUNK_ADDR_FREE (0x00000001ULL)
 
+#ifndef MAP_UNINITIALIZED
+#define MAP_UNINITIALIZED 0x4000000    /* For anonymous mmap, memory could be uninitialized */
+#endif
+
 #define NULL_MMAP_CHUNK (MMapChunk_t *)0
 
 typedef enum
@@ -77,6 +81,8 @@ typedef struct MmapMgr_t
     uint64_t chunks_left;
     uint64_t high_mark;
     uint64_t high_mark_max;
+    uint64_t low_unmap;
+    uint64_t high_unmap;
 
 
     MMapChunk_t   *FreeChunk_anchor;      // free chunks queued here

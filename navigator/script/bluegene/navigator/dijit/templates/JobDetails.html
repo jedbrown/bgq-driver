@@ -1,20 +1,20 @@
 <div>
 
-<div data-dojo-type="dijit.layout.StackContainer" data-dojo-attach-point="_displayStack">
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_noJobPane">
+<div data-dojo-type="dijit/layout/StackContainer" data-dojo-attach-point="_displayStack">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_noJobPane">
         Select a job to show job details.
     </div>
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_loadingPane">
-        <span data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_loadingFmt">Loading details for job ${_d}{id}...</span>
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_loadingPane">
+        <span data-dojo-type="bluegene/dijit/OutputFormat" data-dojo-attach-point="_loadingFmt">Loading details for job ${_d}{id}...</span>
     </div>
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_errorPane">
-        <span data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-attach-point="_errorFmt">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_errorPane">
+        <span data-dojo-type="bluegene/dijit/OutputFormat" data-dojo-attach-point="_errorFmt">
             Loading details for job ${_d}{id} failed, error is '${_d}{msg}'
         </span>
     </div>
 
-    <div data-dojo-type="dijit.layout.TabContainer" data-dojo-attach-point="_loadedPane">
-        <div title="Details" data-dojo-type="bluegene.navigator.dijit.JobFields" data-dojo-attach-point="_detailsTab"></div>
+    <div data-dojo-type="dijit/layout/TabContainer" data-dojo-attach-point="_loadedPane">
+        <div title="Details" data-dojo-type="bluegene/navigator/dijit/JobFields" data-dojo-attach-point="_detailsTab"></div>
     </div>
 </div>
 

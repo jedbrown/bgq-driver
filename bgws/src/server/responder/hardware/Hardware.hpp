@@ -55,7 +55,8 @@ public:
     Hardware(
             CtorArgs& args
         ) :
-            AbstractResponder( args )
+            AbstractResponder( args ),
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool)
     { /* Nothing to do */ }
 
 
@@ -65,6 +66,21 @@ public:
 
 
 private:
+
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
+
+
+    void _startQuery(
+            capena::server::ResponderPtr,
+            const std::string& location_str
+        );
+
+    void _queryComplete(
+            capena::server::ResponderPtr,
+            const std::string& location_str,
+            json::ValuePtr val_ptr
+        );
+
 
     json::ValuePtr _getComputeRack( const std::string& location );
 
@@ -79,6 +95,7 @@ private:
 
     void _addPowerModules( const std::string& rack_location, cxxdb::ConnectionPtr conn_ptr, json::Object& obj );
     json::Array* _addIoDrawers( const std::string& rack_location, cxxdb::ConnectionPtr conn_ptr, json::Object& obj );
+
 };
 
 

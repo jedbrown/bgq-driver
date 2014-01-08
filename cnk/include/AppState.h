@@ -234,7 +234,14 @@ typedef struct AppState_t
     uint8_t jobControlIssuedSIGKILL;  // Job Controller issued kill
     uint8_t pad;                      // pad
 
-    uint64_t jobControlSIGKILLstart;  // timebase when Job Controller requested kill
+    uint8_t disableCorefileWrite;     // Indicator that internal write operations for core file generation has been disabled
+    
+    volatile uint64_t jobControlSIGKILLstart;  // timebase when Job Controller requested kill
+    
+    uint32_t LoadSequence;
+    uint32_t MaxSequence;
+    uint32_t IsLoadLeader;
+    uint32_t LoadNodeCount;
 }
 AppState_t;
 

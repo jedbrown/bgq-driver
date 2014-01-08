@@ -61,7 +61,6 @@ var _Visibility =
 var _HIDDEN_CLASS_NAME = "dijitHidden";
 
 var b_dijit_Hideable = d_declare(
-        "bluegene.dijit.Hideable",
         [ j__WidgetBase ],
 
 /** @lends bluegene^dijit^Hideable# */

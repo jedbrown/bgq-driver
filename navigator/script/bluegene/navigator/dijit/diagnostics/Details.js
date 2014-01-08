@@ -30,9 +30,9 @@ define(
     "../../../dijit/ActionLink",
     "../../../dijit/OutputText",
     "dojo/dom-construct",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dojo/text!./templates/Details.html",
     "module",
@@ -52,9 +52,9 @@ function(
         b_dijit_ActionLink,
         b_dijit_OutputText,
         d_construct,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         template,
         module
@@ -63,7 +63,6 @@ function(
 
 
 var b_navigator_dijit_diagnostics_Details = d_declare(
-        "bluegene.navigator.dijit.diagnostics.Details",
         [ l_AbstractTemplatedContainer, ll_MonitorActiveMixin ],
 
 {
@@ -579,7 +578,7 @@ var b_navigator_dijit_diagnostics_Details = d_declare(
             var block_url = "blocks/" + this._cur.blockId + "?runId=" + this._cur.runId;
 
             if ( this._request )  this._request.cancel();
-            this._request = d_Deferred.when(
+            this._request = d_when(
                     this._fetch_data_fn( block_url ),
                     d_lang.hitch( this, this._gotBlock )
                 );
@@ -607,7 +606,7 @@ var b_navigator_dijit_diagnostics_Details = d_declare(
             var run_url = "runs/" + this._cur.runId;
 
             if ( this._request )  this._request.cancel();
-            this._request = d_Deferred.when(
+            this._request = d_when(
                     this._fetch_data_fn( run_url ),
                     d_lang.hitch( this, this._gotRun )
                 );
@@ -807,7 +806,11 @@ var b_navigator_dijit_diagnostics_Details = d_declare(
         this._runForwardBtn.set( "disabled", forward_disabled );
         this._locationForwardBtn.set( "disabled", forward_disabled );
         this._tcLocForwardBtn.set( "disabled", forward_disabled );
-    }
+    },
+    
+    
+    _b_navigator_format : b_navigator_format
+
 
 } );
 

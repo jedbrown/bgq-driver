@@ -245,6 +245,20 @@ public:
      */
     const TimeInterval getEndTimeInterval() const;
 
+
+    void setHostname(
+            const std::string& hostname
+        )
+    { _hostname = hostname; }
+
+    const std::string& getHostname() const  { return _hostname; }
+
+    void setPid( int pid )
+    { _pid = pid; }
+
+    int getPid() const  { return _pid; }
+
+
 protected:
     Id              _jobId;
     std::string     _schedulerData;
@@ -257,6 +271,9 @@ protected:
     int             _exitStatus;
     TimeInterval    _endTimeInterval;
     TimeInterval    _startTimeInterval;
+
+    std::string _hostname;
+    int _pid;
 };
 
 } // filtering

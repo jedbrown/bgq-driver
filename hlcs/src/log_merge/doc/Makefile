@@ -28,7 +28,8 @@ include ../../../../Make.rules
 
 doxygen_docs_install_dir := $(bgq_tld_install_dir)/doc/log_merge
 
-doxygen_version := $(shell doxygen --version)
+doxygen_version := $(subst 1.7,1.6,$(findstring 1.6, $(shell doxygen --version))$(findstring 1.7, $(shell doxygen --version)))
+required_doxygen_version := 1.6
 
 man1_install_dir := $(bgq_tld_install_dir)/man/man1
 
@@ -44,7 +45,7 @@ man_pages_links := \
 
 targets := 
 
-ifeq ($(doxygen_version),1.6.1)
+ifeq ($(doxygen_version),$(required_doxygen_version))
 targets += doxygen_generated.ind
 endif
 

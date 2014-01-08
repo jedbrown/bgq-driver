@@ -39,12 +39,9 @@
  * fence.h
  *
  * The comm agent is a BG/Q program that runs on one of the threads of the 17th
- * core of each node.  It is loaded by specifying the pathname to the comm agent
- * executable on the BG_APPAGENT1 or BG_APPAGENT2 environment variable.
- * BG_APPAGENT1 runs the comm agent on hardware thread 0.
- * BG_APPAGENT2 runs the comm agent on hardware thread 1.
- * It is loaded immediately after the application executable is loaded on the
- * other cores of the node.
+ * core of each node.  It is loaded automatically by CNK from
+ * /bgsys/drivers/ppcfloor/agents/bin/comm.elf.  This pathname may be
+ * overridden by BG_APPAGENTCOMM=<pathname>.
  *
  * There are several interfaces that are used by an application to use the
  * comm agent:

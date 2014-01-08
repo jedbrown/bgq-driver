@@ -28,6 +28,7 @@
 
 #include <sqlite3.h>
 
+namespace mmcs {
 namespace lite {
 
 /*!
@@ -59,6 +60,6 @@ private:
     sqlite3* _handle;
 };
 
-} // lite
+} } // namespace mmcs::lite
 
 #endif

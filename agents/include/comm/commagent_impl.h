@@ -30,6 +30,38 @@
  *
  * \brief C Header File containing Comm Agent Inline Implementations.
  *        This header is included by commagent.h.
+ *
+ * The comm agent uses its own shared memory segment to communicate with the
+ * processes on the node.  CommAgent_Init() is used by a process to map this
+ * shared memory and wait for a field in that shared memory to change to
+ * the comm agent's version number, indicating that it is ready to accept
+ * requests.
+ *
+ * After using the other initializer functions to initialize the fence and
+ * rget pacing functions of the agent, a process is ready to submit requests
+ * to the agent.  CommAgent_AllocateWorkRequest() returns a pointer to
+ * storage in the shared memory where the process can build the request.
+ * When the process is done building the request, it calls one of the
+ * submit functions to submit the request to the agent.  This storage
+ * for the request is actually a slot in an L2 atomic bounded queue.
+ * The allocate function attempts to increment the L2 atomic producer
+ * counter.  The process must keep calling the allocate function until the
+ * counter is successfully incremented.  The value of the counter
+ * (mod'd by the number of elements in the queue)
+ * is the slot number in the queue, which is converted to the pointer to
+ * the storage for the request.  The successful increment of the counter
+ * wakes up the comm agent (since the atomic queue counters are in the
+ * wakeup address compare range).  The comm agent spins until the request
+ * has been submitted.  After the process builds the request in the storage,
+ * and during the submit function, a "ready indicator" in the request is
+ * changed from zero to non-zero.  When the comm agent sees this change, it
+ * knows the request is ready to consume.  The comm agent malloc's space for a
+ * work item, copies info from the request into the work item, clears the
+ * "ready indicator" in the request storage, and increments the bound on the
+ * queue, freeing up that slot in the queue.  Basically, the comm agent
+ * moves the requests from the queue into work items, freeing up space in
+ * the queue as soon as possible.  The comm agent manages its work items
+ * separate from the queue.
  */
 
 

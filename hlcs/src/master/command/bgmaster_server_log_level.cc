@@ -85,7 +85,7 @@ int main(int argc, const char** argv)
 
     Args largs(argc, argv, &usage, &help, validargs, singles);
     pargs = &largs;
-    client.initProperties(pargs->_props);
+    client.initProperties(pargs->get_props());
     try {
         client.connectMaster(pargs->get_portpairs());
     }

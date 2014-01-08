@@ -39,7 +39,10 @@
 
 #include <ramdisk/include/services/common/Cioslog.h>
 #include <stdio.h>
+
+#ifdef __PPC64__
 #include <hwi/include/bqc/A2_inlines.h>
+#endif
 
 #include <infiniband/verbs.h>
 
@@ -71,12 +74,71 @@ static uint32_t fl_index=0;
 static uint32_t wrapped=0;
 static int log_fd= 2;  //stdout default
 
+#ifdef __PPC64__
 #define LLUS long long unsigned int
 void printMsg(uint32_t ID, bgcios::MessageHeader *mh){
    printf("%s: type=%u rank=%u jobid=%llu sequenceId=%d length=%d timestamp=%llu\n", CIOS_FLIGHTLOG_FMT[ID],(int)mh->type,(int)mh->rank,(LLUS)mh->jobId, (int)mh->sequenceId,(int)mh->length,(LLUS)GetTimeBase());
 }
-#undef LLUS 
+#undef LLUS
+#endif
 
+#ifdef __x86_64__
+void printMsg(uint32_t /*ID*/, bgcios::MessageHeader */*mh*/){
+// Don't do anything for x86.
+}
+
+static uint64_t GetTimeBase() { return 0; }
+#endif
+
+
+uint32_t logPostSend(uint32_t ID, struct ibv_send_wr& send_wr,int err){
+   uint32_t index = fl_index++;
+   BG_FlightRecorderLog_t * entry = &FlightLog[index];
+   entry->entry_num = total_entries++;
+   entry->id = ID;
+   entry->timeStamp = GetTimeBase();
+   uint64_t * sge = (uint64_t *)send_wr.sg_list;
+   entry->data[0] = sge[0];
+   entry->data[1] = sge[1];
+   uint64_t * save = (uint64_t *)&send_wr.send_flags;
+   entry->data[2] = save[0];
+   entry->data[3] = save[1];
+
+   //grab some other helpful data
+   entry->ci.BGV_recv[0] = send_wr.opcode;
+   entry->ci.BGV_recv[1] = send_wr.wr.rdma.rkey;
+   if (err){
+      entry->id = BGV_POST_ERR;
+      entry->ci.BGV_recv[1]=(uint32_t)err;
+   }
+
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   return index;
+}
+
+uint32_t log4values(uint32_t ID, uint64_t val0, uint64_t val1, uint64_t val2, uint64_t val3){
+   uint32_t index = fl_index++;
+   BG_FlightRecorderLog_t * entry = &FlightLog[index];
+   entry->entry_num = total_entries++;
+   entry->id = ID;
+   entry->timeStamp = GetTimeBase();
+   entry->data[0] = val0;
+   entry->data[1] = val1;
+   entry->data[2] = val2;
+   entry->data[3] = val3;
+
+   //grab some other helpful data
+   entry->ci.other = (uint64_t)getpid();
+
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   return index;
+}
 
 
 uint32_t logMsg(uint32_t ID,bgcios::MessageHeader *mh){
@@ -138,6 +200,246 @@ uint32_t logMsgQpNum(uint32_t ID,bgcios::MessageHeader *mh,uint32_t qp_num){
    return index;
 }
 
+uint32_t logMsgSig(uint32_t ID,siginfo_t * siginfo_ptr){
+   uint32_t index = fl_index++;
+   BG_FlightRecorderLog_t * entry = &FlightLog[index];
+   entry->entry_num = total_entries++;
+   entry->id = ID;
+   entry->timeStamp = GetTimeBase();
+   uint64_t * msg = (uint64_t *)siginfo_ptr;
+   entry->data[0] = msg[0];
+   entry->data[1] = msg[1];
+   entry->data[2] = msg[2];
+   entry->data[3] = msg[3];
+   entry->ci.other = (uint64_t)getpid();
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   return index;
+}
+
+uint32_t logIntString(uint32_t ID,int int_val, const char * info){
+   uint32_t index = fl_index++;
+   BG_FlightRecorderLog_t * entry = &FlightLog[index];
+   entry->entry_num = total_entries++;
+   entry->id = ID;
+   entry->timeStamp = GetTimeBase();
+   entry->ci.other = (uint64_t)int_val;
+   memcpy(entry->data,info,32);
+   return index;
+}
+
+struct chanEventLog{
+	enum rdma_cm_event_type	 event;
+	int			 status;
+        uint32_t                 qp;
+        short int                lcl_port;
+        short int                rmt_port; 
+        int                     lcl_addr;
+        int                      rmt_addr;                     
+};
+
+uint32_t logChanEvent(uint32_t ID,struct rdma_cm_event * event){
+   uint32_t index = fl_index++;
+   BG_FlightRecorderLog_t * entry = &FlightLog[index];
+   entry->entry_num = total_entries++;
+   entry->id = ID;
+   entry->timeStamp = GetTimeBase();
+
+   entry->ci.other = (uint64_t)event->id;
+
+   struct chanEventLog * cel = (struct chanEventLog *)entry->data;
+   if ( (event->id!=NULL)&& (event->id->qp!=NULL) ){
+       cel->qp=event->id->qp->qp_num;
+   }
+   
+   cel->event = event->event;
+   cel->status = event->status;
+   struct sockaddr_in * sin = (struct sockaddr_in *)&event->id->route.addr.src_addr;
+   struct sockaddr_in * sout = (struct sockaddr_in *)&event->id->route.addr.dst_addr;
+   switch(cel->event){
+   case RDMA_CM_EVENT_CONNECT_REQUEST:
+     if (sin){ 
+       cel->lcl_port = (short int)sin->sin_port;
+       memcpy(&cel->lcl_addr,&sin->sin_addr,sizeof(struct in_addr));
+     }
+     if (sout){
+      cel->rmt_port= (short int)sout->sin_port;
+      memcpy(&cel->rmt_addr,&sout->sin_addr,sizeof(struct in_addr));
+     }
+     break;
+     default: break;
+   }
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   return index;
+}
+
+uint32_t logCRdmaReg(uint32_t ID, void* address, uint64_t length, uint32_t lkey, int frags, int filedescriptor ){
+   uint32_t index = fl_index++;
+   BG_FlightRecorderLog_t * entry = &FlightLog[index];
+   entry->entry_num = total_entries++;
+   entry->id = ID;
+   entry->timeStamp = GetTimeBase();
+
+   entry->ci.other = (uint64_t)filedescriptor;
+   entry->data[0] = (uint64_t)address;
+   entry->data[1] = length;
+   entry->data[2] = uint64_t(lkey);
+   entry->data[3] = uint64_t(frags);
+
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   return index;
+}
+
+size_t rdmaReg_decoder(size_t bufsize, char* buffer, const BG_FlightRecorderLog_t* log)
+{
+
+#define LLUS long long unsigned int
+   size_t length = (size_t)snprintf(buffer,bufsize,"address=%p length=%llu lkey=%llu frags=%llu fd=%lld\n",(void *)log->data[0],(LLUS)log->data[1],(LLUS)log->data[2],(LLUS)log->data[3], (long long signed int)log->ci.other); 
+#undef LLUS
+   buffer += length;
+   bufsize -= length;
+   return length;
+}
+size_t Flight_CIOS_EvtDecoder(size_t bufsize, char* buffer, const BG_FlightRecorderLog_t* log)
+{
+   struct chanEventLog * cel = (struct chanEventLog *)log->data;
+   size_t length = (size_t)snprintf(buffer,bufsize,"cm_id=%p",(void * )log->ci.other); 
+   buffer += length;
+   bufsize -= length;
+
+   switch (cel->event){
+   case RDMA_CM_EVENT_CONNECT_REQUEST:
+     length = (size_t)snprintf(buffer,bufsize," RDMA_CM_EVENT_CONNECT_REQUEST(%d)",cel->event); break;
+   case RDMA_CM_EVENT_DISCONNECTED:
+     length = (size_t)snprintf(buffer,bufsize," RDMA_CM_EVENT_DISCONNECTED(%d)",cel->event); break;
+   case RDMA_CM_EVENT_ESTABLISHED:
+     length = (size_t)snprintf(buffer,bufsize," RDMA_CM_EVENT_ESTABLISHED(%d)",cel->event); break;
+   case RDMA_CM_EVENT_REJECTED:
+     length = (size_t)snprintf(buffer,bufsize," RDMA_CM_EVENT_REJECTED(%d)",cel->event); break;
+   default:
+     length = (size_t)snprintf(buffer,bufsize," event(%d)",cel->event); 
+   }
+   buffer += length;
+   bufsize -= length;
+
+   if (cel->status){
+      length = (size_t)snprintf(buffer,bufsize," status(%d)",cel->status);
+      buffer += length;
+      bufsize -= length;
+   }
+ 
+   char * l = (char *)&cel->lcl_addr;
+   char * r = (char *)&cel->rmt_addr;
+   length = (size_t)snprintf(buffer, bufsize, "lcl=%hhu.%hhu.%hhu.%hhu:%d rmt=%hhu.%hhu.%hhu.%hhu:%d",l[0],l[1],l[2],l[3], cel->lcl_port,r[0],r[1],r[2],r[3],cel->rmt_port );
+   buffer += length;
+   bufsize -= length;  
+
+   if (cel->qp){
+     length = (size_t)snprintf(buffer, bufsize, " lQP=%d ",cel->qp );
+     buffer += length;
+     bufsize -= length;  
+   }
+
+   length = (size_t)snprintf(buffer,bufsize," \n");
+   buffer += length;
+   bufsize -= length;
+
+   return length;
+}
+
+size_t postSendDecoder(size_t bufsize, char* buffer, const BG_FlightRecorderLog_t* log)
+{
+   struct ibv_sge * sge = (struct ibv_sge *)log->data;
+   int send_flags = (int)(log->data[2]>>32);
+   void * imm_data = (void *)(log->data[2] & 0xFFFFFFFF);
+   void * remote_addr = (void *)log->data[3];
+   int opcode = (int)log->ci.BGV_recv[0];
+   uint32_t rkey_or_error = log->ci.BGV_recv[1];
+
+   size_t length = (size_t)snprintf(buffer,bufsize,"immData=%p laddr=%p len=%u lkey=%u raddr=%p",imm_data,(void *)sge->addr,(unsigned int)sge->length,(unsigned int)sge->lkey,remote_addr); 
+   buffer += length;
+   bufsize -= length;
+
+   if (log->id==BGV_POST_ERR){
+      length = (size_t)snprintf(buffer,bufsize," error=%d",rkey_or_error); 
+      buffer += length;
+      bufsize -= length;
+   }
+   else {
+      length = (size_t)snprintf(buffer,bufsize," rkey=%d",rkey_or_error); 
+      buffer += length;
+      bufsize -= length;
+   }
+
+   //opcode
+   switch(opcode){
+   case IBV_WR_RDMA_WRITE:
+      length = (size_t)snprintf(buffer,bufsize," RDMA_WRITE(%d)",opcode); 
+      buffer += length;
+      bufsize -= length;
+      break;
+   case IBV_WR_RDMA_READ:
+      length = (size_t)snprintf(buffer,bufsize," RDMA_READ(%d)",opcode); 
+      buffer += length;
+      bufsize -= length;
+      break;
+   default:
+      length = (size_t)snprintf(buffer,bufsize," opcode=%d",opcode); 
+      buffer += length;
+      bufsize -= length;
+      break;
+   }
+
+   length = (size_t)snprintf(buffer,bufsize," sendflags(%d)",send_flags); 
+   buffer += length;
+   bufsize -= length;
+
+   if(send_flags&IBV_SEND_FENCE){
+      length = (size_t)snprintf(buffer,bufsize,":FENCE"); 
+      buffer += length;
+      bufsize -= length;
+   }
+   if(send_flags&IBV_SEND_SIGNALED){
+      length = (size_t)snprintf(buffer,bufsize,":SIGNALED"); 
+      buffer += length;
+      bufsize -= length;
+   }
+   if(send_flags&IBV_SEND_SOLICITED){
+      length = (size_t)snprintf(buffer,bufsize,":SOLICITED"); 
+      buffer += length;
+      bufsize -= length;
+   }
+   if(send_flags&IBV_SEND_INLINE){
+      length = (size_t)snprintf(buffer,bufsize,":INLINE"); 
+      buffer += length;
+      bufsize -= length;
+   }
+   length = (size_t)snprintf(buffer,bufsize,"\n"); 
+   buffer += length;
+   bufsize -= length;
+
+   return length;
+}
+
+
+size_t Flight_CIOS_SigDecoder(size_t bufsize, char* buffer, const BG_FlightRecorderLog_t* log)
+{
+   siginfo_t * sg = (siginfo_t * )log->data;
+   size_t length = (size_t)snprintf(buffer,bufsize,"signal(%ld) errno(%ld) sender-pid=%ld \n" ,(long int)sg->si_signo , (long int)sg->si_errno,(long int)sg->si_pid); 
+   buffer += length;
+   bufsize -= length;
+
+   return length;
+}
+
 size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecorderLog_t* log, bool doendl=true);
 
 size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecorderLog_t* log, bool doendl)
@@ -150,6 +452,70 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
     size_t length = (size_t)snprintf(buffer, bufsize, "entry=%8x timestamp=%16llx %s: ",log->entry_num,(long long unsigned int)log->timeStamp,CIOS_FLIGHTLOG_FMT[log->id]);
     buffer += length;
     bufsize -= length;
+
+    switch(log->id){
+      case CFG_PLG_INVL:
+        length = (size_t)snprintf(buffer, bufsize, "NO PLUGIN LOADED--INVALID _serviceId=%llu \n",(long long unsigned int)log->data[0]);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+      break;
+      case CFG_PLG_PATH:
+        length = (size_t)snprintf(buffer, bufsize, "NO PLUGIN LOADED--PATH _serviceId=%llu \n",(long long unsigned int)log->data[0]);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+      break;
+      case CFG_PLG_SYMS:
+        length = (size_t)snprintf(buffer, bufsize, "NO PLUGIN LOADED--MISSING SYMBOLS _serviceId=%llu \n",(long long unsigned int)log->data[0]);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+      break;
+      case CFG_PLGINADD:
+        length = (size_t)snprintf(buffer, bufsize, "ADDED PLUGIN _serviceId=%llu fl=%p\n",(long long unsigned int)log->data[0],(void*)log->data[1]);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+      break;
+      case CFG_PLGINDFT:
+        length = (size_t)snprintf(buffer, bufsize, "NO PLUGIN LOADED _serviceId=%llu  \n",(long long unsigned int)log->data[0]);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+        break;
+      case BGV_POST_SND:
+      case BGV_POST_ERR:
+      case BGV_POST_WRR:
+      case BGV_POST_RDR:
+        postSendDecoder(bufsize, buffer, log);
+        return (size_t)strlen(buffer_start);
+        break;
+      case BGV_RDMA_REG:
+      case BGV_RDMA_RMV:
+      case BGV_RDMADROP:
+        rdmaReg_decoder(bufsize, buffer, log);
+        return (size_t)strlen(buffer_start);
+      break;
+      case BGV_RECV_SIG :
+        Flight_CIOS_SigDecoder(bufsize, buffer, log);
+        return (size_t)strlen(buffer_start);
+        break;
+      case BGV_STAT_SIG:
+        length = (size_t)snprintf(buffer, 32, "%s",(char *)log->data);
+        buffer += length;
+        bufsize -= length;
+        length = (size_t)snprintf(buffer, bufsize, " sent signal %llu\n",(long long unsigned int)log->ci.other);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+        break;
+      case BGV_RECV_EVT:
+        Flight_CIOS_EvtDecoder(bufsize, buffer, log);
+        return (size_t)strlen(buffer_start);
+        break;
+      default: break;
+    }
 
     length = (size_t)snprintf(buffer, bufsize, "svc=%ld type=%ld rank=%d seq=%ld msglen=%ld jobid=%lld",(long int)mh->service,(long int)mh->type,(int)mh->rank,(long int)mh->sequenceId,(long int)mh->length,(long long int)mh->jobId);    
     buffer += length;
@@ -173,6 +539,14 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
          length = (size_t)snprintf(buffer,bufsize,">EEXIST(%ld)",(long int)mh->errorCode); break;
        case ENOTCONN:
          length = (size_t)snprintf(buffer,bufsize,">ENOTCONN(%ld)",(long int)mh->errorCode); break;
+       case ESTALE:
+         length = (size_t)snprintf(buffer,bufsize,">ESTALE(%ld)",(long int)mh->errorCode); break;
+       case EBUSY:
+         length = (size_t)snprintf(buffer,bufsize,">EBUSY(%ld)",(long int)mh->errorCode); break;
+       case EAGAIN:
+         length = (size_t)snprintf(buffer,bufsize,">EAGAIN(%ld)",(long int)mh->errorCode); break;
+       case ENOSPC:
+         length = (size_t)snprintf(buffer,bufsize,">ENOSPC(%ld)",(long int)mh->errorCode); break;
        default:
          length = (size_t)snprintf(buffer,bufsize,">EC(%ld)",(long int)mh->errorCode);
       }
@@ -211,6 +585,15 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
         case jobctl::Authenticate: text=(char *)"jobctl::Authenticate";break;
         case jobctl::AuthenticateAck: text=(char *)"jobctl::AuthenticateAck";break;
 
+        case jobctl::StartTool: text=(char *)"jobctl::StartTool";break;
+        case jobctl::StartToolAck: text=(char *)"jobctl::StartToolAck";break;
+        case jobctl::EndTool: text=(char *)"jobctl::EndTool";break;
+        case jobctl::EndToolAck: text=(char *)"jobctl::EndToolAck";break;
+        case jobctl::ExitTool: text=(char *)"jobctl::ExitTool";break;
+        case jobctl::ExitToolAck: text=(char *)"jobctl::ExitToolAck";break;
+        case jobctl::CheckToolStatus: text=(char *)"jobctl::CheckToolStatus";break;
+        case jobctl::CheckToolStatusAck: text=(char *)"jobctl::CheckToolStatusAck";break;
+
         case jobctl::Reconnect: text=(char *)"jobctl::Reconnect";break;
         case jobctl::ReconnectAck: text=(char *)"jobctl::ReconnectAck";break;
 
@@ -221,7 +604,12 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
         case stdio::WriteStderrAck: text=(char *)"stdio::WriteStderrAck";break;
         case stdio::CloseStdio: text=(char *)"stdio::CloseStdio";break;
         case stdio::CloseStdioAck: text=(char *)"stdio::CloseStdioAck";break;
-
+        case stdio::Authenticate: text=(char *)"stdio::Authenticate";break;
+        case stdio::AuthenticateAck: text=(char *)"stdio::AuthenticateAck";break;
+        case stdio::StartJob: text=(char *)"stdio::StartJob";break;
+        case stdio::StartJobAck: text=(char *)"stdio::StartJobAck";break;
+        case stdio::Reconnect: text=(char *)"stdio::Reconnect";break;
+        case stdio::ReconnectAck: text=(char *)"stdio::ReconnectAck";break;
 
         case jobctl::DiscoverNode: text=(char *)"jobctl::DiscoverNode"; break;
         case jobctl::DiscoverNodeAck: text=(char *)"jobctl::DiscoverNodeAck";break;
@@ -229,6 +617,8 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
         case jobctl::SetupJobAck: text=(char *)"jobctl::SetupJobAck";break;
  
         case jobctl::Completed: text=(char *)"jobctl::Completed"; break;
+
+        case sysio::ErrorAck: text=(char *)"sysio::ErrorAck";break;
 
         case sysio::WriteKernelInternal: text=(char *)"sysio::WriteKernelInternal";break;
         case sysio::OpenKernelInternal: text=(char *)"sysio::OpenKernelInternal";break;
@@ -247,12 +637,19 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
 
         case sysio::Write: text=(char *)"sysio::Write";break;
         case sysio::WriteAck: text=(char *)"sysio::WriteAck";break;
+        case sysio::Pwrite64: text=(char *)"sysio::Pwrite64";break;
+        case sysio::Pwrite64Ack: text=(char *)"sysio::Pwrite64Ack";break;
 
         case sysio::Pread64: text=(char *)"sysio::Pread64";break;
         case sysio::Pread64Ack: text=(char *)"sysio::Pread64Ack";break;
 
         case sysio::Read: text=(char *)"sysio::Read";break;
         case sysio::ReadAck: text=(char *)"sysio::ReadAck";break;
+        case sysio::Recv: text=(char *)"sysio::Recv";break;
+        case sysio::RecvAck: text=(char *)"sysio::RecvAck";break;
+        case sysio::Send: text=(char *)"sysio::Send";break;
+        case sysio::SendAck: text=(char *)"sysio::SendAck";break;
+
         case sysio::Lseek64: text=(char *)"sysio::Lseek64";break;
         case sysio::Lseek64Ack: text=(char *)"sysio::Lseek64Ack";break;
         case sysio::Stat64: text=(char *)"sysio::Stat64";break;
@@ -265,6 +662,13 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
         case sysio::ReadlinkAck: text=(char *)"sysio::ReadlinkAck";break;
         case sysio::Fcntl: text=(char *)"sysio::Fcntl";break;
         case sysio::FcntlAck: text=(char *)"sysio::FcntlAck";break;
+        case sysio::Unlink: text=(char *)"sysio::Unlink";break;
+        case sysio::UnlinkAck: text=(char *)"sysio::UnlinkAck";break;
+        case sysio::Link: text=(char *)"sysio::Link";break;
+        case sysio::LinkAck: text=(char *)"sysio::LinkAck";break;
+        case sysio::Symlink: text=(char *)"sysio::Symlink";break;
+        case sysio::SymlinkAck: text=(char *)"sysio::SymlinkAck";break;
+
 
 
         default:   break;
@@ -284,6 +688,9 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
         length = (size_t)snprintf(buffer, bufsize, " lQP=%d ",log->ci.BGV_recv[1] );
         buffer += length;
         bufsize -= length;    
+   }
+   else {
+       // do nothing
    }
 
    if (doendl){

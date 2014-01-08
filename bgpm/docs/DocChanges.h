@@ -53,7 +53,11 @@
  *   - When using automatic multiplexing (Bgpm_SetMultiplex() with a period value), there
  *     seems to be a small window where an Bgpm_Stop() may not work.  Problem still being investigated.
  *
- */
+ * - \b 06/11/2012
+ *   - Limitation: 
+     There is a limitation for setting period value for a counter which is configured with overflow.This depends mainly on the time it takes to execute the overflow handler. In BGPM, with few experimentation, the minimum acceptable period value to set for PEVT_CYCLES event is value > 2000. This value is denpendent on the event we are configuring for overflow. and with the basic overflow handler without any user profiling added to teh handler. If the user set a value less than the minimum acceptable threshold value of the event, it will create a hang inside the handler and the test case will eventually fail.
+*
+*/
 
 #if 0
 /*!

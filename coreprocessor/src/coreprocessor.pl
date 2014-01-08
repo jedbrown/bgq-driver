@@ -52,14 +52,16 @@ BEGIN
     
     $OPTIONVALUEREQ{'-a'}  = 1;
     $OPTIONVALUEREQ{'-j'}  = 1;
+    $OPTIONVALUEREQ{'-pid'}  = 1;
     $OPTIONVALUEREQ{'-s'}  = 1;
     $OPTIONVALUEREQ{'-b'}  = 1;
     $OPTIONVALUEREQ{'-templates'} = 1;
-    @VALIDOPTIONS = ("-b", "-c", "-a", "-s", "-templates", "-nogui", "-j", "-h");
+    @VALIDOPTIONS = ("-b", "-c", "-a", "-s", "-templates", "-nogui", "-j", "-pid", "-h");
     @{$ADDOPTIONS{'-c'}} = ("-mincore", "-maxcore", "-coreprefix");
     @{$ADDOPTIONS{'-a'}} = ("-numbadframes", "-user");
     @{$ADDOPTIONS{'-s'}} = ();
     @{$ADDOPTIONS{'-j'}} = ();
+    @{$ADDOPTIONS{'-pid'}} = ();
 #    @{$ADDOPTIONS{'-m'}} = ();
     @{$ADDOPTIONS{'-nogui'}} = ("-mode", "-register", "-snapshot", "-flightlog");
     
@@ -75,6 +77,8 @@ BEGIN
     $OPTIONDESC{"-a"} = "Connects to mc_server and attaches to the specified hardware";
     $OPTIONEXAM{"-j"} = "-j=57132";
     $OPTIONDESC{"-j"} = "Connects to a running job via the scalable debugger interface";
+    $OPTIONEXAM{"-pid"} = "-pid=3121";
+    $OPTIONDESC{"-pid"} = "Connects to a running job using the pid of the runjob process via the scalable debugger interface";
     $OPTIONEXAM{"-nogui"} = "-nogui";
     $OPTIONDESC{"-nogui"} = "GUI-less mode.  Coreprocessor processes the data and terminates";
     $OPTIONEXAM{"-snapshot"} = "-snapshot=/tmp/hang_issue1234";
@@ -238,6 +242,7 @@ $reader_type = "bgpcorereader" if(exists $OPTIONS{"-c"});
 #$reader_type = "bglmmcsreader" if(exists $OPTIONS{"-a"});
 $reader_type = "bgqjtagreader" if(exists $OPTIONS{"-a"});
 $reader_type = "sdbgreader"    if(exists $OPTIONS{"-j"});
+$reader_type = "sdbgreader"    if(exists $OPTIONS{"-pid"});
 
 if($OPTIONS{"-nogui"})
 {
@@ -251,7 +256,7 @@ if($OPTIONS{"-nogui"})
     }
     else
     {
-	die "Coreprocessor mode was not specified.  -c, -a, -j\n";
+	die "Coreprocessor mode was not specified.  -c, -a, -j, or -pid\n";
     }
     &console::build($CORE);
 }

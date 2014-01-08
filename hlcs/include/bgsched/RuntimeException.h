@@ -58,7 +58,9 @@ struct RuntimeErrors
         InvalidBlockState,       //!< Block state is not correct for the operation
         DimensionOutOfRange,     //!< Dimension out of range error
         AuthorityError,          //!< Error granting or revoking user authority
-        HardwareInUseError       //!< Hardware "in use" status prevents hardware state operation
+        HardwareInUseError,      //!< Hardware "in use" status prevents hardware state operation
+        MmcsConnectionError,     //!< Connection to MMCS server failed
+        BlockRetrievalError      //!< Error trying to retrieve block from database
     };
 
 

@@ -83,7 +83,15 @@ AbstractResponder::AbstractResponder(
         _security_enforcer(_dynamic_configuration_ptr->getSecurityEnforcer()),
         _start_time(boost::posix_time::microsec_clock::local_time())
 {
-    _server_stats.notifyNewRequest();
+    _server_stats.notifyNewRequest(
+            this,
+            ServerStats::RequestData::create(
+                    _getRequest().getMethod(),
+                    _getRequest().getUrlStr(),
+                    _start_time,
+                    _user_info
+                )
+        );
 }
 
 
@@ -121,6 +129,25 @@ void AbstractResponder::_handleError( std::exception& e )
     }
 
     _getResponse().setException( e );
+}
+
+
+void AbstractResponder::_postEmptyResult()
+{
+    _getStrand().post( boost::bind(
+            &AbstractResponder::_emptyResult, this,
+            capena::server::AbstractResponder::shared_from_this()
+        ) );
+}
+
+
+void AbstractResponder::_inCatchPostCurrentExceptionToHandlerFn()
+{
+    _getStrand().post( boost::bind(
+            &AbstractResponder::_handleErrorCb, this,
+            capena::server::AbstractResponder::shared_from_this(),
+            std::current_exception()
+        ) );
 }
 
 
@@ -271,13 +298,43 @@ AbstractResponder::~AbstractResponder()
 
     LOG_DEBUG_MSG( "Responder complete. Time: " << time_to_process_request.total_microseconds() << " us" );
 
-    _server_stats.notifyRequestComplete( time_to_process_request );
+    _server_stats.notifyRequestComplete(
+            this,
+            time_to_process_request
+        );
 }
 
 
 void AbstractResponder::_throwMethodNotAllowed()
 {
     BOOST_THROW_EXCEPTION( capena::server::exception::MethodNotAllowed( _getAllowedMethods() ) );
+}
+
+
+void AbstractResponder::_emptyResult(
+        capena::server::ResponderPtr
+    )
+{
+    capena::server::Response &response(_getResponse());
+
+    response.setContentTypeJson();
+    response.headersComplete();
+
+    json::Formatter()( json::ArrayValue(), response.out() );
+}
+
+
+void AbstractResponder::_handleErrorCb(
+        capena::server::ResponderPtr,
+        std::exception_ptr exc_ptr
+    )
+{
+    try {
+        std::rethrow_exception( exc_ptr );
+    } catch ( std::exception& e )
+    {
+        _handleError( e );
+    }
 }
 
 

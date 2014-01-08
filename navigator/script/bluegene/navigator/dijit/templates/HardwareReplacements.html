@@ -1,16 +1,16 @@
 <div>
 
-<div data-dojo-type="dijit.layout.BorderContainer" data-dojo-props="gutters: false">
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'top'">
-        <div data-dojo-type="dijit.form.DropDownButton" data-dojo-attach-point="_filterOptionsDropDownButton">
+<div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="gutters: false">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'top'">
+        <div data-dojo-type="dijit/form/DropDownButton" data-dojo-attach-point="_filterOptionsDropDownButton">
             <span>Filter options</span>
-            <div style="width: 500px;" data-dojo-type="dijit.TooltipDialog" data-dojo-props="style: 'width: 500px;'">
-                <div class="bgFilterOptions bgFilterOptionsHardwareReplacements" data-dojo-type="dijit.form.Form"
+            <div style="width: 500px;" data-dojo-type="dijit/TooltipDialog" data-dojo-props="style: 'width: 500px;'">
+                <div class="bgFilterOptions bgFilterOptionsHardwareReplacements" data-dojo-type="dijit/form/Form"
                     data-dojo-attach-point="_filterOptionsForm"
                     >
                     <fieldset>
                         <ul>
-                            <li><input data-dojo-type="bluegene.navigator.dijit.TimeInterval" data-dojo-props="name: 'interval', label: 'Replacements'" /></li>
+                            <li><input data-dojo-type="bluegene/navigator/dijit/TimeInterval" data-dojo-props="name: 'interval', label: 'Replacements'" /></li>
                             <li>
                                 <label for="${id}-fo-types">Hardware types</label>
                                 <select id="${id}-fo-types" name="types" size="4" data-dojo-attach-point="_filterOptionsTypes">
@@ -18,29 +18,29 @@
                             </li>
                             <li>
                                 <label for="${id}-fo-location">Location</label>
-                                <input id="${id}-fo-location" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'location'" />
+                                <input id="${id}-fo-location" data-dojo-type="bluegene/navigator/dijit/MultiWildcardTextBox" data-dojo-props="name: 'location'" />
                             </li>
                             <li>
                                 <label for="${id}-fo-serialnumber">Serial Number</label>
-                                <input name="serialnumber" id="${id}-fo-serialnumber" data-dojo-type="dijit.form.TextBox" data-dojo-props="name: 'serialnumber'" />
+                                <input name="serialnumber" id="${id}-fo-serialnumber" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'serialnumber'" />
                             </li>
                             <li>
                                 <label for="${id}-fo-ecid">ECID</label>
-                                <input name="ecid" id="${id}-fo-ecid" data-dojo-type="dijit.form.TextBox" data-dojo-props="name: 'ecid'" />
+                                <input name="ecid" id="${id}-fo-ecid" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'ecid'" />
                             </li>
                         </ul>
                     </fieldset>
                     <fieldset class="submit">
-                        <button type="submit" data-dojo-type="dijit.form.Button">Apply</button>
-                        <button type="button" data-dojo-type="dijit.form.Button" data-dojo-attach-point="_filterOptionsResetButton">Reset</button>
+                        <button type="submit" data-dojo-type="dijit/form/Button">Apply</button>
+                        <button type="button" data-dojo-type="dijit/form/Button" data-dojo-attach-point="_filterOptionsResetButton">Reset</button>
                     </fieldset>
                 </div>
            </div>
         </div>
     </div>
-    
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'center'">
-        <table style="height: 100%;" data-dojo-type="dojox.grid.EnhancedGrid"
+
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'center'">
+        <table style="height: 100%;" data-dojo-type="dojox/grid/EnhancedGrid"
                 data-dojo-props="selectable: true, rowsPerPage: 100, noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No replacements match the filter options.&lt;/span&gt;'"
                 data-dojo-attach-point="_grid"
                 >

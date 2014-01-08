@@ -1880,7 +1880,6 @@ int svc_StoreOption(char* source, char* na0, int na1, char* na2) {
 
 int svc_ArgFile(char* file,  char* na1, int na2, char* na3) {
 
-  char* nxt;
   int rc = 0;
   char buff[1024];
   char* savePtr = 0;

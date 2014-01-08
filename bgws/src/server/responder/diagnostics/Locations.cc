@@ -90,12 +90,13 @@ HTTP status: 403 Forbidden
 
 #include "common.hpp"
 
+#include "../../BlockingOperationsThreadPool.hpp"
 #include "../../dbConnectionPool.hpp"
 #include "../../Error.hpp"
 #include "../../RequestRange.hpp"
 
-#include "../../query/DiagnosticsLocations.hpp"
-#include "../../query/DiagnosticsLocationsOptions.hpp"
+#include "../../query/diagnostics/Locations.hpp"
+#include "../../query/diagnostics/LocationsOptions.hpp"
 
 #include "capena-http/server/Request.hpp"
 #include "capena-http/server/Response.hpp"
@@ -142,45 +143,94 @@ void Locations::_doGet()
 
     RequestRange req_range( request );
 
-    query::DiagnosticsLocationsOptions options(
+    query::diagnostics::LocationsOptions options(
             request.getUrl().getQuery().calcArguments(),
             req_range
         );
 
-    query::DiagnosticsLocations query( options );
+    _blocking_operations_thread_pool.post( boost::bind(
+            &Locations::_startQuery, this,
+            capena::server::AbstractResponder::shared_from_this(),
+            options,
+            req_range
+        ) );
 
-    auto conn_ptr(dbConnectionPool::getConnection());
-    uint64_t all_count(0);
-    cxxdb::ResultSetPtr rs_ptr;
+}
 
-    query.execute( conn_ptr, &all_count, &rs_ptr );
 
-    json::ArrayValue arr_val;
-    json::Array &arr(arr_val.get());
+void Locations::_startQuery(
+        capena::server::ResponderPtr,
+        const query::diagnostics::LocationsOptions& options,
+        const RequestRange& req_range
+    )
+{
+    try {
+        query::diagnostics::Locations query( options );
 
-    capena::server::Response &response(_getResponse());
+        auto conn_ptr(dbConnectionPool::getConnection());
+        uint64_t all_count(0);
+        cxxdb::ResultSetPtr rs_ptr;
 
-    if ( all_count != 0 && rs_ptr ) {
+        query.execute( conn_ptr, &all_count, &rs_ptr );
 
-        while ( rs_ptr->fetch() ) {
-            const cxxdb::Columns &cols(rs_ptr->columns());
 
-            json::Object &obj(arr.addObject());
+        _getStrand().post( boost::bind(
+                &Locations::_queryComplete, this,
+                capena::server::AbstractResponder::shared_from_this(),
+                all_count,
+                conn_ptr,
+                rs_ptr,
+                req_range
+            ) );
+    } catch ( std::exception& e ) {
 
-            obj.set( "location", cols["location"].getString() );
-            obj.set( "lastRun", cols["lastRun"].getTimestamp() );
-            obj.set( "hardwareStatus", cols["hardwareStatus"].getString() );
-            obj.set( "replace", (cols["hardwareReplace"].getString() == "T" ? true : false) );
-        }
+        _inCatchPostCurrentExceptionToHandlerFn();
 
-        req_range.updateResponse( response, arr.size(), all_count );
     }
 
-    response.setContentTypeJson();
-    response.headersComplete();
-
-    json::Formatter()( arr_val, response.out() );
 }
+
+
+void Locations::_queryComplete(
+        capena::server::ResponderPtr,
+        uint64_t all_count,
+        cxxdb::ConnectionPtr,
+        cxxdb::ResultSetPtr rs_ptr,
+        const RequestRange& req_range
+    )
+{
+    try {
+        json::ArrayValue arr_val;
+        json::Array &arr(arr_val.get());
+
+        capena::server::Response &response(_getResponse());
+
+        if ( all_count != 0 && rs_ptr ) {
+
+            while ( rs_ptr->fetch() ) {
+                const cxxdb::Columns &cols(rs_ptr->columns());
+
+                json::Object &obj(arr.addObject());
+
+                obj.set( "location", cols["location"].getString() );
+                obj.set( "lastRun", cols["lastRun"].getTimestamp() );
+                obj.set( "hardwareStatus", cols["hardwareStatus"].getString() );
+                obj.set( "replace", (cols["hardwareReplace"].getString() == "T" ? true : false) );
+            }
+
+            req_range.updateResponse( response, arr.size(), all_count );
+        }
+
+        response.setContentTypeJson();
+        response.headersComplete();
+
+        json::Formatter()( arr_val, response.out() );
+
+    } catch ( std::exception& e ) {
+        _handleError( e );
+    }
+}
+
 
 
 } } } // namespace bgws::responder::diagnostics

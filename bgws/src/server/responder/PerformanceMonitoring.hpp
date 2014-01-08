@@ -8,7 +8,7 @@
 /*                                                                  */
 /* Blue Gene/Q                                                      */
 /*                                                                  */
-/* (C) Copyright IBM Corp.  2010, 2011                              */
+/* (C) Copyright IBM Corp.  2010, 2012                              */
 /*                                                                  */
 /* US Government Users Restricted Rights -                          */
 /* Use, duplication or disclosure restricted                        */
@@ -32,6 +32,8 @@
 
 #include "capena-http/http/uri/Path.hpp"
 
+#include <db/include/api/cxxdb/cxxdb.h>
+
 #include <string>
 
 
@@ -51,13 +53,19 @@ public:
     PerformanceMonitoring(
             CtorArgs& args
         ) :
-            AbstractResponder( args )
+            AbstractResponder( args ),
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool)
     { /* Nothing to do */ }
 
 
+    // override
     capena::http::Methods _getAllowedMethods() const  { return { capena::http::Method::GET }; }
 
+    // override
     void _doGet();
+
+    //override
+    void notifyDisconnect();
 
 
 private:
@@ -75,25 +83,61 @@ private:
     static _Grouping _parseGroupingCode( const std::string& grouping_code );
 
 
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
+
+    cxxdb::QueryStatementPtr _stmt_ptr;
+
+
     void _checkAuthority();
 
-    void _getMultiDetails(
+
+    void _getMultiDetailsQuery(
+            capena::server::ResponderPtr,
             const RequestRange& req_range,
             const TimeIntervalOption& interval
         );
 
-    void _getSingle(
+    void _getMultiDetailsQueryComplete(
+            capena::server::ResponderPtr,
+            cxxdb::ConnectionPtr,
+            cxxdb::ResultSetPtr rs_ptr,
+            cxxdb::QueryStatementPtr comps_stmt_ptr,
+            const RequestRange& req_range,
+            unsigned total_count
+        );
+
+
+    void _getSingleQuery(
+            capena::server::ResponderPtr,
             const TimeIntervalOption& interval,
             const std::string& detail,
             const std::string& block
         );
 
-    void _getGrouped(
+    void _getSingleQueryComplete(
+            capena::server::ResponderPtr,
+            cxxdb::ConnectionPtr,
+            cxxdb::ResultSetPtr rs_ptr
+        );
+
+
+    void _getGroupedQuery(
+            capena::server::ResponderPtr,
             const RequestRange& req_range,
             const TimeIntervalOption& interval,
             const std::string& detail,
             const std::string& block,
             _Grouping grouping
+        );
+
+    void _getGroupedQueryComplete(
+            capena::server::ResponderPtr,
+            const RequestRange& req_range,
+            _Grouping grouping,
+            cxxdb::ConnectionPtr,
+            cxxdb::ResultSetPtr groups_rs_ptr,
+            cxxdb::QueryStatementPtr comps_stmt_ptr,
+            unsigned total_count
         );
 
 };

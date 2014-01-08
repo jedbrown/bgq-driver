@@ -170,7 +170,6 @@ private:
     boost::shared_ptr<Input> _stdin;                        //!<
     boost::shared_ptr<Output> _stdout;                      //!<
     boost::shared_ptr<Output> _stderr;                      //!<
-    boost::shared_ptr<ProctablePrompt> _proctablePrompt;    //!<
     bgq::utility::ExitStatus& _exitStatus;                  //!<
     BGQDB::job::Id _id;
     boost::shared_ptr<Debugger> _debugger;

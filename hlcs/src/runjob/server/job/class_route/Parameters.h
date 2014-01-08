@@ -64,7 +64,6 @@ private:
 
 private:
     friend class runjob::server::job::ClassRoute;
-    friend class runjob::server::job::class_route::Rank;
 
     Rectangle* _world;
     Coordinates _coordinates;

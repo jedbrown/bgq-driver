@@ -264,7 +264,7 @@ void fw_machineCheckHandler( void ) {
   }
   
   if ( pueaSummary != 0 ) {
-    FW_Warning( "Unrecognized PUEA status bits: %lX\n", pueaSummary );
+    FW_Warning( "Unrecognized PUEA status bits: %lX", pueaSummary );
     fw_machineCheckIsFatal |= 1; 
   }
 
@@ -508,7 +508,7 @@ int fw_GEA_PUEA_Handler( uint64_t pueaStatus ) {
     }
 
     if ( ( geaStatus[0] != 0 ) || ( geaStatus[1] != 0 ) || ( geaStatus[2] != 0 ) ) {
-      FW_Error("(E) unhandled GEA status : %lX-%lX-%lX\n", geaStatus[0], geaStatus[1], geaStatus[2] );
+      FW_Error("(E) unhandled GEA status : %lX-%lX-%lX", geaStatus[0], geaStatus[1], geaStatus[2] );
       rc = -1;
     }
 

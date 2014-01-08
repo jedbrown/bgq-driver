@@ -41,7 +41,7 @@
 // get file system pointer prototypes - functions in filesetup.cc
 class virtFS;    // forward reference for virtFS pointers in prototypes
 extern virtFS*  File_GetFSPtr( int local_fd );
-extern virtFS*  File_GetFSPtrFromPath( char* pathname);
+extern virtFS*  File_GetFSPtrFromPath( const char* pathname);
 extern virtFS*  File_GetFSPtrFromType( int type );
 
 // List of pointers to file system objects.
@@ -470,6 +470,19 @@ class virtFS {
 
       virtual int clearAllocations(void)
       {
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+
+      virtual int sendx(char * mInput)
+      {  
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+
+      virtual uint64_t deregisterMemory(int fd, void * usingRegion4RDMA){
+         return CNK_RC_FAILURE(ENOSYS);
+      }
+
+      virtual uint64_t registerMemory(int fd, void * usingRegion4RDMA){
          return CNK_RC_FAILURE(ENOSYS);
       }
 

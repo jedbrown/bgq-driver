@@ -27,16 +27,14 @@ define(
     "./topic",
     "../Bgws",
     "dojo/_base/declare",
-    "dojo/_base/lang",
-    "dijit/registry"
+    "dojo/_base/lang"
 ],
 function(
         l_EventsMonitorMixin,
         l_topic,
         b_Bgws,
         d_declare,
-        d_lang,
-        j_registry
+        d_lang
     )
 {
 
@@ -74,7 +72,11 @@ var bluegene_navigator_ComputeBlockDetails = d_declare( [ l_EventsMonitorMixin ]
      *  @constructs
      *
      */
-    constructor: function( /** bluegene^Bgws */ bgws, update_machine_highlighting_fn )
+    constructor: function(
+            /** bluegene^Bgws */ bgws,
+            update_machine_highlighting_fn,
+            compute_block_details_dij
+        )
     {
         this._bgws = bgws;
         this._update_machine_highlighting_fn = update_machine_highlighting_fn;
@@ -82,7 +84,7 @@ var bluegene_navigator_ComputeBlockDetails = d_declare( [ l_EventsMonitorMixin ]
         l_topic.subscribe( l_topic.computeBlockSelected, d_lang.hitch( this, this._blockSelected ) );
 
 
-        this._compute_block_details_dij = j_registry.byId( "navigator" ).getComputeBlockDetailsDij();
+        this._compute_block_details_dij = compute_block_details_dij;
         this._compute_block_details_dij.setBlockFetchFn( d_lang.hitch( this, this._fetchBlockDetails ) );
 
         this._compute_block_details_dij.setJobsStore(

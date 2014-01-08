@@ -26,6 +26,7 @@
 
 // Includes
 #include "IosConfig.h"
+#include <ramdisk/include/services/common/RasEvent.h>
 #include <ramdisk/include/services/ServicesConstants.h>
 #include <ramdisk/include/services/common/logging.h>
 #include <iostream>
@@ -99,28 +100,11 @@ IosConfig::IosConfig(int argc, char **argv) : bgcios::CiosConfig()
          _properties = bgq::utility::Properties::create();
       }
    }
-   catch (const bgq::utility::Properties::FileError& e) {
+   catch (const std::exception& e) {
       std::cout << "Error with properties file: " << e.what() << std::endl;
-      exit(EXIT_FAILURE);
-   }
-   catch (const bgq::utility::Properties::DuplicateKey& e) {
-      std::cout << "Error with properties file: " << e.what() << std::endl;
-      exit(EXIT_FAILURE);
-   }
-   catch (const bgq::utility::Properties::DuplicateSection& e) {
-      std::cout << "Error with properties file: " << e.what() << std::endl;
-      exit(EXIT_FAILURE);
-   }
-   catch (const bgq::utility::Properties::MalformedKey& e) {
-      std::cout << "Error with properties file: " << e.what() << std::endl;
-      exit(EXIT_FAILURE);
-   }
-   catch (const bgq::utility::Properties::MalformedSection& e) {
-      std::cout << "Error with properties file: " << e.what() << std::endl;
-      exit(EXIT_FAILURE);
-   }
-   catch (const bgq::utility::Properties::MissingSection& e) {
-      std::cout << "Error with properties file: " << e.what() << std::endl;
+      bgcios::RasEvent rasEvent(bgcios::DaemonStartFailed);
+      rasEvent << getpid() << -1; // bogus errno
+      rasEvent.send();
       exit(EXIT_FAILURE);
    }
 

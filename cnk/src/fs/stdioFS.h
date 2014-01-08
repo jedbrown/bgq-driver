@@ -110,12 +110,6 @@ private:
    //! Memory region for inbound messages.
    struct cnv_mr _inMessageRegion;
 
-   //! Storage for outbound messages.
-   char _outMessage[bgcios::SmallMessageRegionSize] ALIGN_L1D_CACHE;
-
-   //! Storage for inbound messages.
-   char _inMessage[bgcios::SmallMessageRegionSize] ALIGN_L1D_CACHE;
-
    //! Lock to control access to message buffers.
    Lock_Atomic_t _lock;
 };

@@ -218,7 +218,8 @@ int mudm_rdma_read_on_torus(       void* mudm_context ,
                                    0,
                                    (uint64_t)counter_paddr,
                                    (uint64_t)local_paddr);
-    desc_count = InjFifoInjectMemFifo_withDest( &mcontext->injfifo_ctls[0], 
+    if (torus_destination.Destination.Destination != mcontext->myTorusAddress.Destination.Destination){ 
+      desc_count = InjFifoInjectMemFifo_withDest( &mcontext->injfifo_ctls[0], 
                                              &mcontext->mu_iMemoryFifoDescriptor,
                                              torus_destination,
                                              MUDM_DPUT,
@@ -226,11 +227,17 @@ int mudm_rdma_read_on_torus(       void* mudm_context ,
                                              (uint64_t)(sizeof(MUHWI_Descriptor_t)), //sending directput to remote
                                              &mcontext->rget_memfifo_sent,
                                              &mcontext->mudm_hi_wrap_flight_recorder);
-    while( MUSPI_CheckDescComplete(mcontext->injfifo_ctls[0].injfifo, desc_count) == 0)
-    {        
+      while( MUSPI_CheckDescComplete(mcontext->injfifo_ctls[0].injfifo, desc_count) == 0)
+      {
+      }
+      release_pkt_to_free(pktd,0);
+
     }
-    release_pkt_to_free(pktd,0);
-  }
+    else {//local memcopy--handle it now
+      desc_count = InjFifoInject_rget_emulation (&mcontext->injfifo_ctls[0],&mcontext->mu_iMemoryFifoDescriptor, &mcontext->mudm_hi_wrap_flight_recorder);
+      release_pkt_to_free(pktd,0);
+    }
+  }  
 
 
   

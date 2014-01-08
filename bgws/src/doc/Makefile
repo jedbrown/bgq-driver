@@ -40,6 +40,7 @@ doc_dirs := \
   ../server/blue_gene/diagnostics \
   ../server/blue_gene/service_actions \
   ../server/query \
+  ../server/query/diagnostics \
   ../server/query/env \
   ../server/responder \
   ../server/responder/diagnostics \

@@ -316,8 +316,8 @@ fail_over = fail_over [ binary id ] [ --properties filename ] [ --help ] [ --hos
 list_agents = list_agents [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]
 list_clients = list_clients [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]
 master_start = master_start [ alias ] | [ bgmaster ] [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]
-master_status = master_status [ alias ] | [ bgmaster ] [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]
-master_stop = master_stop [ alias ] | [ "bgmaster" ] | [ --binary binary id ] | [ --agent agent id ] [ --signal signal number ] [ --help ] [ --properties filename ]
+master_status = master_status [ alias ] [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]
+master_stop = master_stop [ alias ] | [ "bgmaster" ] | [ --binary binary id ] [ --signal signal number ] [ --help ] [ --properties filename ]
 monitor_master = monitor_master [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]
 get_history = get_history [ --properties filename ] [ --help ] [ --host host:port ] [ --verbose verbosity ]
 get_errors = get_errors [ --properties filename ] [ --host host:port ] [ --verbose verbosity ]
@@ -384,9 +384,15 @@ io_boot_slope = .017
 
 [mmcs.envs]
 
+thread_pool_size = auto
+    # Number of threads to run in the server.
+    # Allowed values are integers greater than 0 or "auto".
+    # "auto" means the mmcs_server will pick the number of threads to start.
+    # The default is auto.
+
 sc_interval_seconds = 1800
 io_interval_seconds = 300
-nc_interval_seconds = 300
+nc_interval_seconds = 900
 bulk_interval_seconds = 300
 coolant_interval_seconds = 300
 optical_interval_seconds = 3600
@@ -498,16 +504,13 @@ CardThatTalksToMasterClockCard = R00-M0-S
 bringupOptions=
     # Options to be used when bringing up the machine (indicates how to initialize this machine). 
 
-secure = true
-    # Use SSL for incoming connections. Defaults to false if not specified here.
-
 kernel_shutdown_timeout = 60
     # Number of seconds compute and I/O kernels have to complete shutdown  
     # The default is 60.
 
-io_link_shutdown_timeout = 15
+io_link_shutdown_timeout = 180
     # Number of seconds to complete I/O link shutdown  
-    # The default is 15.
+    # The default is 180.
 
 [machinecontroller.subnet.0]
     # This is the header that indicates the start of the parameters for the first SubnetMc.
@@ -761,6 +764,12 @@ thread_pool_size = auto
     # "auto" means the BGWS server will pick the number of threads to start.
     # The default is auto.
 
+blocking_operations_thread_pool_size = auto
+    # Number of threads in the blocking operations thread pool.
+    # Allowed values are integers greater than 0 or "auto".
+    # "auto" means the BGWS server will pick the number of threads used for blocking operations.
+    # The default is auto.
+
 connection_pool_size = 20
     # Maximum number of connections held in the BGWS server database connection pool.
 
@@ -827,9 +836,7 @@ large_region_size = 1048576
     # Size in bytes of large memory regions.
     # Valid values are 65536 to 8388608.
     # If large_region_size is invalid or not specified, the default value is used (1048576).
-
-num_large_regions = 256
-    # Number of large memory regions to allocate on I/O node.
+    # This value can be updated using the refresh_config command in bg_console.
 
 max_connected_nodes = 256
     # Maximum number of compute nodes an I/O node will accept.
@@ -925,6 +932,8 @@ log_function_ship_errors = false
     # When true, the I/O node log file may become large if they are many errors from function shipped operations.
     # If log_function_ship_errors is invalid or not specified, the default value is used (false).
 
+#sysiod_plugin = /bgsys/Plugin/Plugx.so
+#sysiod_plugin is a configuration option for adding a conforming plugin to sysiod for user function-shipping messages
 
 [ras]
     # Reliability, Availability, and Serviceability (RAS) configuration and settings.
@@ -962,10 +971,10 @@ log4j.logger.ibm.realtime               = INFO   # Real-time server
 log4j.logger.ibm.runjob                 = WARN   # job submission
 log4j.logger.ibm.runjob.mux             = INFO   # job submission multiplexer
 log4j.logger.ibm.runjob.server          = INFO   # job submission server
-log4j.logger.ibm.mc                     = DEBUG  # MC (machine controller)
-log4j.logger.ibm.boot                   = DEBUG  # MC boot lib
+log4j.logger.ibm.mc                     = INFO   # MC (machine controller)
+log4j.logger.ibm.boot                   = INFO   # MC boot lib
 log4j.logger.ibm.bgqconfig              = INFO   # BGQ config
-log4j.logger.ibm.icon                   = DEBUG  # iCon
+log4j.logger.ibm.icon                   = INFO   # iCon
 log4j.logger.ibm.bgws                   = INFO   # Web Services
 log4j.logger.ibm.mmcs                   = INFO   # MMCS server
 log4j.logger.ibm.ras                    = WARN   # RAS

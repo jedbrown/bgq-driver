@@ -52,7 +52,6 @@ function(
 {
 
 var b_navigator_dijit_Environmentals = d_declare(
-        "bluegene.navigator.dijit.Environmentals",
         [ l_AbstractTemplatedContainer ],
 
 {

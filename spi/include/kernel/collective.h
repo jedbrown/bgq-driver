@@ -218,7 +218,15 @@ int32_t Kernel_SetCollectiveClassRoute ( uint32_t      id,
 
 /**
    \brief Clear torus injection checksum registers for a given link
-
+   
+   The affect of this call clears the torus injection checksum registers for the entire node.  Clearing the checksum injection registers
+   can be used for link checksum verification between identical runs.
+   
+   As packets are injected into the torus, the torus hardware accumulates a checksum of the data sent across the link.  At a deterministic
+   point in the future, the program can query the current checksum value.  This value can be preserved as a check to make sure that the 
+   data transmitted across the link has not changed from run to run.  
+   
+   \see Link checksum library
    \param [in]  linkID   0 => t0, 1 => t1, ..., 9 => t9, 10 => l0, 11=> l1, 12 => hp, 13 => io, 14 => c0, 15 => c1
    \retval 0 Successful.
  */

@@ -71,7 +71,8 @@ struct InputErrors
         BlockNotAdded,                  //!< Error prevented block from being added
         BlockNotCreated,                //!< Error prevented block from being created
         InvalidUser,                    //!< User name is not valid
-        JobNotFound                     //!< Job ID was not found
+        JobNotFound,                    //!< Job ID was not found
+        InvalidIONodeCount              //!< I/O node count is not valid
     };
 
     /*!

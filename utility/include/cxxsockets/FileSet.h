@@ -21,47 +21,36 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 /*!
- * \file FileSet.h
+ * \file utility/include/cxxsockets/FileSet.h
  */
-#ifndef FILESET_H
-#define FILESET_H
+#ifndef CXXSOCKETS_FILESET_H
+#define CXXSOCKETS_FILESET_H
 
-#include <vector>
-#include <list>
-#include "SocketTypes.h"
-#include "SocketAddrs.h"
+#include <utility/include/cxxsockets/types.h>
 
 #include <bgq_util/include/pthreadmutex.h>
 
+#include <vector>
+#include <list>
+
 namespace CxxSockets {
     
-class FileSet {
-    protected:
-        std::vector<FilePtr> _filevec;
-        bool _blocking;
-        std::list<FilePtr> _readySockets;
-        PthreadMutex _setLock;
-        bool LockSet(PthreadMutexHolder& mutex);
-        virtual void pAddFile(FilePtr file);
-        void RemoveInternal(FilePtr file);
-    public:
-        typedef std::vector<FilePtr>::iterator iterator;
-        typedef std::vector<FilePtr>::const_iterator const_iterator; 
-        FileSet() {};
-        virtual ~FileSet() {}
-        virtual void AddFile(FilePtr file);
-        virtual void AddFiles(std::vector<FilePtr>& files);
-        virtual void RemoveFile(FilePtr file);
-        FilePtr& front() { return _filevec.front(); }
-        size_t size() { return _filevec.size(); }
-        void push_back(FilePtr sp) { _filevec.push_back(sp); }
-        void pop_back() { _filevec.pop_back(); }
-        iterator insert ( iterator position, FilePtr& sp ) { return _filevec.insert(position, sp); }
-        iterator begin() { return _filevec.begin(); }                                        
-        iterator end() { return _filevec.end(); } 
-        iterator erase ( iterator first, iterator last ) { return _filevec.erase(first, last); }
-        const_iterator begin() const { return _filevec.begin(); }                            
-        const_iterator end() const { return _filevec.end(); }        
+class FileSet
+{
+protected:
+    std::vector<FilePtr> _filevec;
+    PthreadMutex _setLock;
+    bool LockSet(PthreadMutexHolder& mutex);
+    virtual void pAddFile(FilePtr file);
+    void RemoveInternal(FilePtr file);
+public:
+    typedef std::vector<FilePtr>::iterator iterator;
+    typedef std::vector<FilePtr>::const_iterator const_iterator; 
+    FileSet() {};
+    virtual ~FileSet() {}
+    virtual void AddFile(FilePtr file);
+    virtual void RemoveFile(FilePtr file);
+    FilePtr& front() { return _filevec.front(); }
 };
 
 }

@@ -26,20 +26,18 @@ define(
     "./AbstractTab",
     "./dijit/Alerts",
     "../Bgws",
+    "dojo/when",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
         l_AbstractTab,
         l_dijit_Alerts,
         b_Bgws,
+        d_when,
         d_declare,
-        d_Deferred,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -74,9 +72,9 @@ var b_navigator_Alerts = d_declare( [ l_AbstractTab ],
     // override from AbstractTab
     _refresh : function()
     {
-        if ( this._alerts_dijit ) {
-            this._alerts_dijit.notifyRefresh();
-        }
+        if ( ! this._alerts_dijit )  return;
+
+        this._alerts_dijit.notifyRefresh();
     },
 
 
@@ -151,7 +149,7 @@ var b_navigator_Alerts = d_declare( [ l_AbstractTab ],
 
         this._alerts_dijit.setOperationInProgress( { opType: this._op_type, id: this._op_id } );
 
-        d_Deferred.when( this._op_promise,
+        d_when( this._op_promise,
                 d_lang.hitch( this, this._operationSuccessful ),
                 d_lang.hitch( this, this._operationFailed )
             );
@@ -174,7 +172,7 @@ var b_navigator_Alerts = d_declare( [ l_AbstractTab ],
 
         this._alerts_dijit.setOperationInProgress( { opType: this._op_type, id: this._op_id } );
 
-        d_Deferred.when( this._op_promise,
+        d_when( this._op_promise,
                 d_lang.hitch( this, this._operationSuccessful ),
                 d_lang.hitch( this, this._operationFailed )
             );

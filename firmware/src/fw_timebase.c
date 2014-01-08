@@ -162,7 +162,7 @@ int fw_sync_timebase( void )
             MUSPI_GIBarrierEnterAndWait(&GIBarrier);
             if ( rc != 0 )
             {
-                FW_Warning("MUSPI_GIBarrierInit for class route 15 returned rc = %ld\n", rc);
+                FW_Warning("MUSPI_GIBarrierInit for class route 15 returned rc = %ld.", rc);
                 return -1;
             }
             

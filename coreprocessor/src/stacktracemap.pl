@@ -328,7 +328,8 @@ sub mkmenu
     
     FCTRL("file", Menubutton, -text => "File", -side => 'left');
     FMENU("file", [-tearoff => 0], [ "Attach to Block" => ['attachdebugger::build'],
-#				     "Attach to Job"   => ['attachsdbg::build'],
+				     "Attach to Job ID"   => ['attachsdbg::build'],
+				     "Attach to runjob PID"   => ['attachsdbgpid::build'],
 				     "Load Core"       => ['loadcore::build'],
 				     "Load Snapshot"   => ['loadsnapshot::build'],
 				     "sep",
@@ -450,6 +451,7 @@ sub build
     FMW()->after(500, sub { &loadcore::build() })          if(exists $::OPTIONS{"-c"});    
     FMW()->after(500, sub { &loadsnapshot::build() })      if(exists $::OPTIONS{"-s"});
     FMW()->after(500, sub { &attachsdbg::build() })        if(exists $::OPTIONS{"-j"});
+    FMW()->after(500, sub { &attachsdbgpid::build() })     if(exists $::OPTIONS{"-pid"});
     
     MainLoop;
 }
@@ -659,10 +661,11 @@ sub build
     {
 	FIN();
 	FCTRL(undef, Label, -text => "Preview:", frame => 1, -side => 'left', -fill => 'x');
-	FCTRL("data", Text, -width => 80, -height => 15, orient => 'y', -fill => 'both', -expand => 'yes');
+	FCTRL("data", Text, -width => 80, -height => 15, orient => 'y', -fill => 'both', -expand => 'yes', -exportselection => 'no');
 	FOUT(-fill => 'both', -expand => 'yes');
 	
 	($pdata = $data) =~ s/([[:^print:]])/&xlate($1)/oge;
+	print "$pdata\n";
 	SetValue("data", $pdata);
 	FGET("data")->configure(-state => "disabled");
 	
@@ -895,6 +898,62 @@ sub build
 sub Attach
 {
     $opt{"-j"} = GetValue("jobid");
+    $opt{"-numbadframes"} = $::OPTIONS{"-numbadframes"} if(exists $::OPTIONS{"-numbadframes"});
+    
+    eval
+    {
+	my $core = sdbgreader->new(\%opt);
+	$core->{"cnkbin"} = objdump->new(GetValue("cnkbin"));
+	$core->{"options"}{"-b"} = GetValue("cnkbin");
+	
+	&gui::addsession(GetValue("name"), $core);
+	FCLOSE();
+    };
+    
+    if($@)
+    {
+	&errordialog::build("Unable to attach to block", $@);
+    }
+}
+
+package attachsdbgpid;
+use Tk;
+use bagotricks;
+
+sub build
+{
+    FINIT("Attach to Scalable Debugger");
+    FIN();
+    FIN();
+    FCTRL(undef, Label, -text => "Session Name: ", -side => 'left');
+    FCTRL("name", Entry, -width => 20, -side => 'left');
+    FSPACE(-width => '2c');
+    FCTRL(undef, Label, -text => "Runjob PID: ", -side => 'left');
+    FCTRL("pidid", Entry, -width => 25, -side => 'left');
+    FOUT();
+    FIN();
+    FCTRL(undef, Label, -text => "ELF Image(s): ", -side => 'left');
+    FCTRL("cnkbin", Entry, -width => 80, -side => 'left');
+    FOUT();
+    
+    FIN();
+    FCTRL(undef, Button, -text => "Attach", -command => [\&Attach], -side => 'left');
+    FCTRL(undef, Button, -text => "Close", -command => sub { FCLOSE(); }, -side => 'left');
+    FOUT();
+    FOUT();
+
+    $::OPTIONS{"-b"}="remote:localhost:1200" if(($^O =~ /^win/i)&&(!exists $::OPTIONS{"-b"}));
+    $::OPTIONS{"-lb"}="remote:localhost:1201" if(($^O =~ /^win/i)&&(!exists $::OPTIONS{"-lb"}));
+    
+    SetValue("name", "Session " . ++$::SESSIONID);
+    SetValue("cnkbin", $::OPTIONS{"-b"});
+    SetValue("pidid", $::OPTIONS{"-pid"});
+    
+    FGET("name")->focus();
+}
+sub Attach
+{
+    $opt{"-pid"} = GetValue("pidid");
     $opt{"-numbadframes"} = $::OPTIONS{"-numbadframes"} if(exists $::OPTIONS{"-numbadframes"});
     
     eval

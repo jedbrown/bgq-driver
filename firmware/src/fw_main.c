@@ -287,7 +287,9 @@ void __NORETURN  fw_takeCPU_spin( void ) {
 	if ( FW_InternalState.coreState[ProcessorCoreID()].flags & FW_CORE_STATE_THD_ACTIVE(ProcessorThreadID()) ) {
 
 	    // This thread has been "taken" ... transition to its entry point:
-      
+
+	    fw_l1p_unmaskCorrectableErrors();      
+
 	    // ----------------------------------------------------------------------- //
 	    // @hypervisor This code would have to transition into guest mode if/when  //
 	    //             firmware supports kernels as guests.                        //
@@ -334,6 +336,8 @@ int fw_takeCPU( unsigned coreNumber, unsigned threadMask, void (*entryPoint)(voi
     // We have arrived at the point where correctable errors may be enabled:
 
     fw_ddr_unmaskCorrectableErrors();
+    fw_l1p_unmaskCorrectableErrors();
+    fw_l2_unmaskCorrectableErrors();
 
     int rc = 0;
 
@@ -773,7 +777,7 @@ void __NORETURN fw_main( void ) {
 	  rc = INIT_TABLE[i].init();
 
 	  if (rc) {
-	      FW_Error("FW: Initialization failed in entry %d.  rc=0x%x\n", i, rc); 
+	      FW_Error("FW: Initialization failed in entry %d.  rc=0x%x.", i, rc); 
 	      crash(-__LINE__);
 	  }
       }
@@ -790,7 +794,7 @@ void __NORETURN fw_main( void ) {
   }
 
   if ( FW_DD1_WORKAROUNDS_ENABLED() && !TI_isDD1() ) {
-    FW_Warning("DD1 workarounds are enabled on DD2 hardware.  Check your svchost settings.\n");
+    FW_Warning("DD1 workarounds are enabled on DD2 hardware.  Check your svchost settings.");
   }
 
 

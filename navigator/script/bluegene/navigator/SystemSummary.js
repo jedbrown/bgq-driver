@@ -29,7 +29,6 @@ define(
     "../Bgws",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -38,7 +37,6 @@ function(
         b_Bgws,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -54,11 +52,13 @@ var b_navigator_SystemSummary = d_declare( [ l_AbstractTab ],
 
 
     /** @constructs */
-    constructor: function( bgws )
+    constructor: function(
+            bgws,
+            system_summary_dij
+        )
     {
         this._bgws = bgws;
-
-        this._system_summary_dij = j_registry.byId( "navigator" ).getSystemSummaryTabDij();
+        this._system_summary_dij = system_summary_dij;
 
         this._system_summary_dij.on(
                 "machineHighlightDataChanged",

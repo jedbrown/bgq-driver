@@ -26,9 +26,9 @@ define(
 [
     "../ChartsCommon",
     "dojo/dom-class",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dijit/_WidgetBase",
     "dijit/_TemplatedMixin",
@@ -44,9 +44,9 @@ define(
 function(
         ll_ChartsCommon,
         d_class,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         j__WidgetBase,
         j__TemplatedMixin,
@@ -64,7 +64,6 @@ function(
 
 
 var b_navigator_dijit_UtilizationChart = d_declare(
-        "bluegene.navigator.dijit.UtilizationChart",
         [ j__WidgetBase, j__TemplatedMixin ],
 
 {
@@ -171,7 +170,7 @@ var b_navigator_dijit_UtilizationChart = d_declare(
 
         this._promise = this._fetch_data_fn();
 
-        d_Deferred.when(
+        d_when(
                 this._promise,
                 d_lang.hitch( this, this._gotChartData )
             );

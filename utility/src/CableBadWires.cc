@@ -40,6 +40,12 @@ using bgq::util::LocationError;
 using namespace std;
 
 /**
+ * Number of node board and IO drawer ports.
+ */
+const int NODEBOARD_PORTS = 12;
+const int IODRAWER_PORTS = 24;
+
+/**
  * Link chip registers
  */
 const std::string REG_C01 = "C01";	// Receiver
@@ -130,7 +136,7 @@ const int IoIoPort[6][8] = {
  * The table that converts the IO drawer port index (0-23 for T00-T23) to the link chip index
  * (0-5 for U00-U05).
  */
-const int IoPortToLinkChip[24] = {
+const int IoPortToLinkChip[IODRAWER_PORTS] = {
 		5, 0, 5, 0, 5, 0, 5, 0,	// T00-T07
 		4, 1, 4, 1, 4, 1, 4, 1, // T08-T15
 		3, 2, 3, 2, 3, 2, 3, 2	// T16-T23
@@ -141,7 +147,7 @@ const int IoPortToLinkChip[24] = {
  * This table converts the transmitting IO drawer port index (0-23) to the transmitting
  * link chip register.
  */
-const string IoTxReg[24] = {
+const string IoTxReg[IODRAWER_PORTS] = {
 		REG_D23, REG_D01, REG_D23, REG_D01, REG_D01, REG_D23, REG_D01, REG_D23,	// T00-T07
 		REG_D23, REG_D01, REG_D23, REG_D01,	REG_D01, REG_D23, REG_D01, REG_D23,	// T08-T15
 		REG_D23, REG_D01, REG_D23, REG_D01,	REG_D01, REG_D23, REG_D01, REG_D23	// T16-T23
@@ -152,7 +158,7 @@ const string IoTxReg[24] = {
  * This table converts the transmitting node board port index (0-11) to the transmitting
  * link chip register.
  */
-const string NodeTxReg[12] = {
+const string NodeTxReg[NODEBOARD_PORTS] = {
 		REG_D01, REG_D01, REG_D23, REG_D23, "", REG_D01, REG_D23, "", "", REG_D01, REG_D23, ""	// T00-T11
 }; // (Note: T04, T07, T08, T11 are receiving ports and not applicable.)
 
@@ -170,7 +176,7 @@ const string PosToStr[36] = {
  * Bit mask to be used to get the RX register (C01 or C23) from the least significant (right most)
  * 12 bits of bad wire mask for the IO drawer port.
  */
-const int IoIoRxBitMask[24] = {
+const int IoIoRxBitMask[IODRAWER_PORTS] = {
 		0xfc0, 0x03f, 0xfc0, 0x03f, 0x03f, 0xfc0, 0x03f, 0xfc0,	// T00-T07
 		0xfc0, 0x03f, 0xfc0, 0x03f, 0x03f, 0xfc0, 0x03f, 0xfc0,	// T08-T15
 		0xfc0, 0x03f, 0x03f, 0x03f, 0x03f, 0xfc0, 0x03f, 0x03f	// T16-T23
@@ -180,7 +186,7 @@ const int IoIoRxBitMask[24] = {
  * Bit mask to be used to get the TX register (D01 or D23) from the least significant (right most)
  * 12 bits of bad wire mask for the IO drawer port.
  */
-const int IoIoTxBitMask[24] = {
+const int IoIoTxBitMask[IODRAWER_PORTS] = {
 		0x03f, 0xfc0, 0x03f, 0xfc0, 0xfc0, 0x03f, 0xfc0, 0x03f,	// T00-T07
 		0x03f, 0xfc0, 0x03f, 0xfc0, 0xfc0, 0x03f, 0xfc0, 0x03f,	// T08-T15
 		0x03f, 0xfc0, 0xfc0, 0xfc0, 0xfc0, 0x03f, 0xfc0, 0xfc0	// T16-T23
@@ -190,7 +196,7 @@ const int IoIoTxBitMask[24] = {
  * Indicates how to restore the RX value for each IO port location on an IO drawer:
  * -1 = shift left 6 bits, 0 = no shift, 1= shift right 6 bits.
  */
-const int IoIoRxShift[24] = {
+const int IoIoRxShift[IODRAWER_PORTS] = {
 		0, -1, 1, 0, -1, 0, 0, 1,	// T00-T07
 		0, -1, 1, 0, -1, 0, 0, 1,	// T08-T15
 		0, -1, 0, 0, -1, 0, 0, 0	// T00-T23
@@ -200,8 +206,8 @@ const int IoIoRxShift[24] = {
  * Indicates how to restore the TX value for each IO port location on an IO drawer:
  * -1 = shift left 6 bits, 0 = no shift, 1= shift right 6 bits.
  */
-const int IoIoTxShift[24] = {
-		-1 ,0, 0, 1, 0, -1, 1, 0,	// T00-T07
+const int IoIoTxShift[IODRAWER_PORTS] = {
+		-1, 0, 0, 1, 0, -1, 1, 0,	// T00-T07
 		-1, 0, 0, 1, 0, -1, 1, 0,	// T08-T15
 		-1, 0 ,1, 1, 0, -1, 1, 1	// T00-T23
 };
@@ -210,15 +216,68 @@ const int IoIoTxShift[24] = {
  * Indicates how to restore the TX value for each IO port location on a node board:
  * -1 = shift left 6 bits, 0 = no shift, 1= shift right 6 bits.
  */
-const int NodeIoTxShift[12] = {
+const int NodeIoTxShift[NODEBOARD_PORTS] = {
 		-1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0	// T00-T11
 };
 /**
  * Indicates how to restore the RX value for each IO port location on a node board:
  * -1 = shift left 6 bits, 0 = no shift, 1= shift right 6 bits.
  */
-const int NodeIoRxShift[12] = {
+const int NodeIoRxShift[NODEBOARD_PORTS] = {
 		0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0	// T00-T11
+};
+
+/**
+ * Indicate which IO drawer optical module is associated with bits 11-6 and 5-0 in the bad wire mask.
+ */
+const int IoIoOpticModule[IODRAWER_PORTS][2] = {
+		{ 23, 20 }, 		// T00
+		{ 2, 1 }, 			// T01
+		{ 23, 20 }, 		// T02
+		{ 2, 1 }, 			// T03
+		{ 22, 21 }, 		// T04
+		{ 3, 0 }, 			// T05
+		{ 22, 21 }, 		// T06
+		{ 3, 0 }, 			// T07
+		{ 19, 16 }, 		// T08
+		{ 6, 5 }, 			// T09
+		{ 19, 16 }, 		// T10
+		{ 6, 5 }, 			// T11
+		{ 18, 17 }, 		// T12
+		{ 7, 4 }, 			// T13
+		{ 18, 17 }, 		// T14
+		{ 7, 4 }, 			// T15
+		{ 15, 12 }, 		// T16
+		{ 10, 9 }, 			// T17
+		{ 12, 15 }, 		// T18
+		{ 10, 9 }, 			// T19
+		{ 14, 13 }, 		// T20
+		{ 11, 8 }, 			// T21
+		{ 14, 13 }, 		// T22
+		{ 8, 11 }	 		// T23
+};
+/**
+ * Indicate which node board IO port optical module is associated with bits 11-6 and 5-0 in the bad wire mask.
+ */
+const int NodeIoOpticModule[4][4] = {
+		{ 17, 18 }, 		// T00
+		{ 17, 18 }, 		// T01
+		{ 19, 16 }, 		// T02
+		{ 19, 16 } 			// T03
+};
+/**
+ * Indicate which node board Torus port optical module is associated with bits
+ * 47-36, 35-24, 23-12, and 11-0 in the bad wire mask.
+ */
+const int NodeTorusOpticModule[8][4] = {
+		{ 5,  9, 25, 29 }, 		// T04
+		{ 6, 10, 26, 30 },		// T05
+		{ 4,  8, 24, 28 },		// T06
+		{ 7, 11, 27, 31 },		// T07
+		{ 1, 13, 21, 33 },		// T08
+		{ 2, 14, 22, 34 },		// T09
+		{ 0, 12, 20, 32 },		// T10
+		{ 3, 15, 23, 35 }		// T11
 };
 
 namespace bgq {
@@ -288,22 +347,30 @@ CableBadWires::CableBadWires(const string& location, const string& reg, int badF
 	}
 
 	// Process the Torus cable and IO cable in the node board.
+	bool goodMask = false;
 	if (_rxIsNodeBoard) {
 		if (_isTorusCable) {
-			processNodeBoardTorusCable(boardLocation, _rxLinkChipPos);
+			goodMask = processNodeBoardTorusCable(boardLocation, _rxLinkChipPos);
 		}
 		else {
-			processNodeBoardIoCable(boardLocation, _rxLinkChipPos);
+			goodMask = processNodeBoardIoCable(boardLocation, _rxLinkChipPos);
 		}
 		_portPos = atoi(_port.substr(12,14).c_str());
 	}
 	// Process the IO cable in the IO drawer.
 	else {
-		processIoDrawerIoCable(boardLocation, _rxLinkChipPos);
+		goodMask = processIoDrawerIoCable(boardLocation, _rxLinkChipPos);
 		_portPos = atoi(_port.substr(8,10).c_str());
 	}
 	LOG_DEBUG_MSG( "_port=" << _port << " _badwiremask=" << hex << _badwiremask );
 
+	// Verify the bad fiber mask.
+	if (!goodMask) {
+		_errormessage = "More than one bad fiber per IO channel";
+		LOG_DEBUG_MSG( _errormessage );
+		throw invalid_argument(_errormessage);
+	}
+ 								
 } // End ctor
 
 
@@ -420,7 +487,7 @@ void CableBadWires::setTxPortAndBadWireMask(const string& location, uint64_t bad
 		}
 	}
 
-	// Determine the RX register bad filer bits.
+	// Determine the RX register bad fiber bits.
 	_rxRegValue = _badfibermask;
 	if (_rxIsNodeBoard) { // Rxx-Mx-Nxx-Txx
 		// Already got the bad fiber mask for Torus cable.
@@ -504,7 +571,7 @@ int CableBadWires::getTxFiberMask() const
 //
 
 
-void CableBadWires::processNodeBoardTorusCable(const string& location, int linkChipIndex)
+bool CableBadWires::processNodeBoardTorusCable(const string& location, int linkChipIndex)
 {
 	LOG_DEBUG_MSG(
                 "processNodeBoardTorusCable: location=" << location << " linkChipIndex=" << linkChipIndex
@@ -532,11 +599,12 @@ void CableBadWires::processNodeBoardTorusCable(const string& location, int linkC
 	LOG_DEBUG_MSG( 
                 "processNodeBoardTorusCable: _port=" << _port << " _badwiremask=" << hex << _badwiremask
                 );
+	return true;
 
 } // End processNodeBoardTorusCable(...)
 
 
-void CableBadWires::processNodeBoardIoCable(const string& location, int linkChipIndex)
+bool CableBadWires::processNodeBoardIoCable(const string& location, int linkChipIndex)
 {
 	LOG_DEBUG_MSG( __FUNCTION__ << " location=" << location << " linkChipIndex=" << linkChipIndex );
 	// Separate bad fiber mask into corresponding registers.
@@ -607,11 +675,12 @@ void CableBadWires::processNodeBoardIoCable(const string& location, int linkChip
 		_badwiremask |= (d23_6_11 << NodeIoShift[7]);
 		_port = location + "-T" + PosToStr[NodeIoPort[7]];
 	}
+	return checkIoCable(_badwiremask);
 
 } // End processNodeBoardIoCable(...)
 
 
-void CableBadWires::processIoDrawerIoCable(const string& location, int linkChipIndex)
+bool CableBadWires::processIoDrawerIoCable(const string& location, int linkChipIndex)
 {
 	LOG_DEBUG_MSG( __FUNCTION__ << ": location=" << location << " linkChipIndex=" << linkChipIndex );
 	// Separate bad fiber mask into corresponding registers.
@@ -675,6 +744,7 @@ void CableBadWires::processIoDrawerIoCable(const string& location, int linkChipI
 		_badwiremask |= (d23_6_11 << IoIoShift[linkChipIndex][7]);
 		_port = location + "-T" + PosToStr[IoIoPort[linkChipIndex][7]];
 	}
+	return checkIoCable(_badwiremask);
 
 } // End processIoDrawerIoCable(...)
 
@@ -774,7 +844,7 @@ bool CableBadWires::isIoDrawerLinkChipLocation(const string& location) const
 } // End isIoDrawerLinkChipLocation(...)
 
 
-bool CableBadWires::isNodeBoardPortLocation(const string& location) const
+bool CableBadWires::isNodeBoardPortLocation(const string& location)
 {
 	bool answer = false;
 	if (location.length() == 14) {
@@ -802,11 +872,26 @@ bool CableBadWires::isNodeBoardPortLocation(const string& location) const
 } // End isNodeBoardPortLocation(...)
 
 
-bool CableBadWires::isIoDrawerPortLocation(const string& location) const
+bool CableBadWires::isNodeBoardIoPort(const string& location)
+{
+	bool answer = false;
+	if (isNodeBoardPortLocation(location)) {
+		// Ensure that the location is Rxx-Mx-Nxx-T00 - T03.
+		int position = getPortPosition(location);
+		if (position >= 0 && position <= 3) {
+			answer = true;
+		}
+	}
+	return answer;
+
+} // End isNodeBoardIoPort(...)
+
+
+bool CableBadWires::isIoDrawerPortLocation(const string& location)
 {
 	bool answer = false;
 	if (location.length() == 10) {
-		// Ensure that the location is Rxx-Ix-T00 - T24 or Qxx-Ix-T00 - T23.
+		// Ensure that the location is Rxx-Ix-T00 - T23 or Qxx-Ix-T00 - T23.
 		if ((location[0] == 'R' || location[0] == 'Q')
 			&& ((location[1] >= '0' && location[1] <= '9') || (location[1] >= 'A' && location[1] <= 'V'))
 			&& ((location[2] >= '0' && location[2] <= '9') || (location[2] >= 'A' && location[2] <= 'V'))
@@ -826,7 +911,57 @@ bool CableBadWires::isIoDrawerPortLocation(const string& location) const
 } // End isIoDrawerPortLocation(...)
 
 
-int CableBadWires::charToInt(char number) const
+string CableBadWires::getBoardLocation(const string& portLocation)
+{
+	string board;
+	if (isNodeBoardPortLocation(portLocation)) {
+		board = portLocation.substr(0, 10);
+	}
+	else if (isIoDrawerPortLocation(portLocation)) {
+		board = portLocation.substr(0,6);
+	}
+	return board;
+
+} // End getBoardLocation(...)
+
+
+int CableBadWires::getPortPosition(const string& portLocation)
+{
+	int position = -1;
+	if (isNodeBoardPortLocation(portLocation)) {
+		position = charToInt(portLocation[12]) * 10 + charToInt(portLocation[13]);
+	}
+	else if (isIoDrawerPortLocation(portLocation)) {
+		position = charToInt(portLocation[8]) * 10 + charToInt(portLocation[9]);
+	}
+	return position;
+
+} // End getPortPosition(...)
+
+
+bool CableBadWires::isTorusSender(const string& portLocation)
+{
+	bool sender = false;
+	int position = -1;
+	if (isNodeBoardPortLocation(portLocation)) {
+		position = getPortPosition(portLocation);
+		switch(position) {
+			case 5:
+			case 6:
+			case 9:
+			case 10:
+				sender = true;
+				break;
+			default:
+				break;
+		}
+	}
+	return sender;
+
+} // End isTorusSender(...)
+
+
+int CableBadWires::charToInt(char number)
 {
 	int answer = 0;
 	switch(number) {
@@ -840,10 +975,187 @@ int CableBadWires::charToInt(char number) const
 		case '7': answer = 7; break;
 		case '8': answer = 8; break;
 		case '9': answer = 9; break;
+		default: break;
 	}
 	return answer;
 
-} // Ende charToInt(...)
+} // End charToInt(...)
+
+
+/**
+ * Ensure that no or one fiber is marked bad for every 6 fibers in the 12-bit bad wire mask.
+ */
+bool CableBadWires::checkIoCable(uint64_t badWireMask) const
+{
+	bool answer = false;
+	if (onBits(badWireMask & 0x3f) > 1) {}
+	else if (onBits(badWireMask & 0xfc0) > 1) {}
+	else {
+		answer = true;
+	}
+	return answer;
+
+} // End checkIoCable(...)
+
+
+/**
+ * Count the number of ON (1) bits.
+ */
+int CableBadWires::onBits(int mask) const
+{
+	int count = 0;
+	while (mask != 0) {
+		if ((mask & 1) == 1) ++count;
+		mask >>= 1;
+	}
+	return count;
+
+} // End onBits(...)
+
+
+/**
+ * Translate the bad wire mask between two Torus/IO ports into pairs of optical module locations.
+ */
+vector<string> CableBadWires::getBadOpticalConnections(const string& fromPort, const string& toPort, long int badWireMask)
+{
+	LOG_DEBUG_MSG( fromPort << " " << toPort << " 0x" << hex << badWireMask );
+
+	// Build an empty list.
+	vector<string> list;
+
+	// Validate that the ports are compatible.
+	int error = 0;
+	bool fromTorusPort = true;						// TRUE = fromPort is a Torus port
+	bool fromNodeBoard = true;						// TRUE = fromPort is a node board
+	bool toTorusPort = true;						// TRUE = toPort is a Torus port
+	bool toNodeBoard = true;						// TRUE = toPort is a node board
+	int fromPortPos = getPortPosition(fromPort);	// fromPort position (eg, 5 for T05)
+	int toPortPos = getPortPosition(toPort);		// toPort position
+	if (isNodeBoardPortLocation(fromPort)) {
+		if (isNodeBoardIoPort(fromPort)) {
+			fromTorusPort = false;
+		}
+		if (fromPortPos >= NODEBOARD_PORTS) {
+			error = 1;
+		}
+	}
+	else if (isIoDrawerPortLocation(fromPort)) {
+		fromTorusPort = false;
+		fromNodeBoard = false;
+		if (fromPortPos >= IODRAWER_PORTS) {
+			error = 1;
+		}
+	}
+	else {
+		error = 1;
+	}
+	if (error == 0) {
+		if (isNodeBoardPortLocation(toPort)) {
+			if (isNodeBoardIoPort(toPort)) {
+				toTorusPort = false;
+			}
+			if (toPortPos >= NODEBOARD_PORTS) {
+				error = 2;
+			}
+		}
+		else if (isIoDrawerPortLocation(toPort)) {
+			toTorusPort = false;
+			toNodeBoard = false;
+			if (toPortPos >= IODRAWER_PORTS) {
+				error = 2;
+			}
+		}
+		else {
+			error = 2;
+		}
+	}
+	if (error == 0) {
+		if (fromTorusPort != toTorusPort) {
+			error = 3;
+		}
+	}
+	/*cout << "getBadOpticalConnections(1):" <<
+			" fromTorusPort=" << fromTorusPort << " fromNodeBoard=" << fromNodeBoard <<
+			" fromPortPos=" << fromPortPos <<
+			" toTorusPort=" << toTorusPort << " toNodeBoard=" << toNodeBoard <<
+			" toPortPos" << toPortPos << " error=" << error << endl;*/
+	if (error != 0) {
+		string message;
+		switch(error) {
+			case 1: message = "Invalid fromPort location."; break;
+			case 2: message = "Invalid toPort location."; break;
+			case 3: message = "Incompatible port combination."; break;
+		}
+		LOG_DEBUG_MSG( message );
+		throw invalid_argument(message);
+	}
+	string fromBoard = getBoardLocation(fromPort);	// fromBoard node/IO board location
+	string toBoard = getBoardLocation(toPort);		// toBoard node/IO board location
+	// Ensure that fromBoard is for TX and toBoard for RX.
+	if (fromTorusPort && isTorusSender(toPort)) {
+		string tempStr = fromBoard;
+		fromBoard = toBoard;
+		toBoard = tempStr;
+		int tempPos = fromPortPos;
+		fromPortPos = toPortPos;
+		toPortPos = tempPos;
+	}
+
+	LOG_DEBUG_MSG( fromBoard << " " << fromPortPos << " " << toBoard << " " << toPortPos );
+
+	long int wireMask = 0;
+
+	string fromLoc;
+	string toLoc;
+	// Determine the optical module locations for a Torus cable.
+	if (fromTorusPort) {
+		wireMask = badWireMask & 0xffffffffffff;
+		int index = 3;
+		while (wireMask != 0) {
+			if ((wireMask & 0xfff) != 0) {
+				fromLoc = fromBoard + "-O" + PosToStr[NodeTorusOpticModule[fromPortPos - 4][index]];
+				toLoc = toBoard + "-O" + PosToStr[NodeTorusOpticModule[toPortPos - 4][index]];
+				list.push_back(fromLoc);
+				LOG_DEBUG_MSG( fromLoc );
+                                list.push_back(toLoc);
+				LOG_DEBUG_MSG( toLoc );
+			}
+			wireMask >>= 12;
+			--index;
+		}
+	}
+	// Determine the optical module locations for an IO cable.
+	else {
+		wireMask = badWireMask & 0xfff;
+		int index = 1;
+		while (wireMask != 0) {
+			if ((wireMask & 0x3f) != 0) {
+				if (fromNodeBoard) {
+					fromLoc = fromBoard + "-O" + PosToStr[NodeIoOpticModule[fromPortPos][index]];
+				}
+				else {
+					fromLoc = fromBoard + "-O" + PosToStr[IoIoOpticModule[fromPortPos][index]];
+				}
+				if (toNodeBoard) {
+					toLoc = toBoard + "-O" + PosToStr[NodeIoOpticModule[toPortPos][index]];
+				}
+				else {
+					toLoc = toBoard + "-O" + PosToStr[IoIoOpticModule[toPortPos][index]];
+				}
+				list.push_back(fromLoc);
+                                LOG_DEBUG_MSG(fromLoc);
+				list.push_back(toLoc);
+                                LOG_DEBUG_MSG(toLoc);
+			}
+			wireMask >>= 6;
+			--index;
+		}
+	}
+
+	return list;
+
+} // End getBadOpticalConnections(...)
+
 
 } // utility
 } // bgq

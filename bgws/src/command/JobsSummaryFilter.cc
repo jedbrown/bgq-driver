@@ -70,9 +70,10 @@ void JobsSummaryFilter::addOptionsTo(
             ( "block", po::value( &_block_id ), "Block ID" )
             ( "executable", po::value( &_executable), "Executable" )
             ( "user", po::value( &_user ), "User name" )
-            ( "start-time", po::value( &_start_time), "Start time interval" )
-            ( "end-time", po::value( &_end_time), "End time interval" )
+            ( "start-time", po::value( &_start_time ), "Start time interval" )
+            ( "end-time", po::value( &_end_time ), "End time interval" )
             ( "exit-status", po::value<int>()->notifier( bind( &JobsSummaryFilter::_notifyExitStatus, this, _1 ) ), "Job exit status" )
+            ( "client", po::value( &_client ), "runjob hostname:pid" )
             ( "sort", po::value( &_sort ), "Sort field and direction" )
         ;
 
@@ -91,6 +92,7 @@ capena::http::uri::Query JobsSummaryFilter::calcQuery() const
     if ( ! _statuses.empty() )  params += Query::Parameter( "status", _statuses );
     if ( ! _user.empty() )  params += Query::Parameter( "user", _user );
     if ( ! _sort.empty() )  params += Query::Parameter( "sort", _sort );
+    if ( ! _client.empty() )  params += Query::Parameter( "client", _client );
 
     return Query( params );
 }

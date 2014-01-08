@@ -23,7 +23,12 @@
 
 #include "Query.hpp"
 
+#include "../../BlockingOperationsThreadPool.hpp"
+#include "../../dbConnectionPool.hpp"
+
 #include <utility/include/Log.h>
+
+#include <boost/bind.hpp>
 
 #include <string>
 
@@ -63,6 +68,25 @@ void Query::execute(
     }
 
     *rs_ptr_out = _queryRows( conn_ptr );
+}
+
+
+void Query::executeAsync(
+        BlockingOperationsThreadPool& blocking_operations_thread_pool,
+        ExecuteCbFn cb_fn
+    )
+{
+    blocking_operations_thread_pool.post( boost::bind( &Query::_executeAsyncImpl, this, cb_fn ) );
+}
+
+
+void Query::cancel()
+{
+    cxxdb::QueryStatementPtr stmt_ptr(_stmt_ptr);
+
+    if ( ! stmt_ptr )  return;
+
+    stmt_ptr->cancel();
 }
 
 
@@ -135,18 +159,24 @@ uint64_t Query::_queryRowCount( cxxdb::ConnectionPtr conn_ptr )
 
     LOG_DEBUG_MSG( "Preparing " << sql );
 
-    cxxdb::QueryStatementPtr stmt_ptr(conn_ptr->prepareQuery( sql, parameter_names ));
+    _stmt_ptr = conn_ptr->createQuery();
 
-    _options_ptr->bindParameters( true, stmt_ptr );
+    _stmt_ptr->prepare( sql, parameter_names );
 
-    cxxdb::ResultSetPtr rs_ptr(stmt_ptr->execute());
+    _options_ptr->bindParameters( true, _stmt_ptr );
+
+    cxxdb::ResultSetPtr rs_ptr(_stmt_ptr->execute());
 
     if ( rs_ptr->fetch() ) {
-        return rs_ptr->columns()["c"].as<uint64_t>();
+        uint64_t ret(rs_ptr->columns()["c"].as<uint64_t>());
+        _stmt_ptr.reset();
+        return ret;
     }
 
+    _stmt_ptr.reset();
     return 0;
 }
+
 
 cxxdb::ResultSetPtr Query::_queryRows( cxxdb::ConnectionPtr conn_ptr )
 {
@@ -224,16 +254,46 @@ cxxdb::ResultSetPtr Query::_queryRows( cxxdb::ConnectionPtr conn_ptr )
       ;
 
 
+    _stmt_ptr = conn_ptr->createQuery();
+
     LOG_DEBUG_MSG( "Preparing " << sql );
+    _stmt_ptr->prepare( sql, parameter_names );
 
-    cxxdb::QueryStatementPtr stmt_ptr(conn_ptr->prepareQuery( sql, parameter_names ));
+    _options_ptr->bindParameters( false, _stmt_ptr );
 
-    _options_ptr->bindParameters( false, stmt_ptr );
+    LOG_DEBUG_MSG( "Executing" );
+    cxxdb::ResultSetPtr rs_ptr(_stmt_ptr->execute());
+    LOG_DEBUG_MSG( "Complete" );
 
-    cxxdb::ResultSetPtr rs_ptr(stmt_ptr->execute());
-
-    rs_ptr->internalize( stmt_ptr );
+    rs_ptr->internalize( _stmt_ptr );
+    _stmt_ptr.reset();
     return rs_ptr;
+}
+
+
+void Query::_executeAsyncImpl(
+        ExecuteCbFn cb_fn
+    )
+{
+    Result res;
+
+    try {
+
+        res.connection_ptr = dbConnectionPool::getConnection();
+
+        execute(
+                res.connection_ptr,
+                &res.all_count,
+                &res.rs_ptr
+            );
+
+    } catch ( std::exception& e ) {
+
+        res.exc_ptr = std::current_exception();
+
+    }
+
+    cb_fn( res );
 }
 
 

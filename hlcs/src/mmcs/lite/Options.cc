@@ -21,9 +21,9 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#include "lite/Options.h"
+#include "Options.h"
 
-#include "MMCSProperties.h"
+#include "common/Properties.h"
 
 #include <utility/include/version.h>
 
@@ -37,9 +37,16 @@
 
 #include <iostream>
 
-LOG_DECLARE_FILE( "mmcs" );
 
-using namespace lite;
+using mmcs::common::Properties;
+
+
+LOG_DECLARE_FILE( "mmcs.lite" );
+
+
+namespace mmcs {
+namespace lite {
+
 
 Options::Options(
         unsigned int argc,
@@ -94,7 +101,7 @@ Options::Options(
     // open properties
     this->openProperties();
 
-    MMCSProperties::setProperty(
+    Properties::setProperty(
             MMCS_PROCESS,
             boost::filesystem::basename(
                 boost::filesystem::path( _argv[0])
@@ -104,21 +111,21 @@ Options::Options(
     std::ostringstream version;
     version << bgq::utility::DriverName << " (revision " << bgq::utility::Revision << ")";
     version << " " << __DATE__ << " " << __TIME__;
-    MMCSProperties::setProperty(
+    Properties::setProperty(
             MMCS_VERSION,
             version.str()
             );
     if ( _variables_map["no-eof-exit"].as<bool>() ) {
-        MMCSProperties::setProperty(
+        Properties::setProperty(
                 FILE_EXIT,
                 boost::lexical_cast<std::string>( _variables_map["no-eof-exit"].as<bool>() )
                 );
     } else if ( !isatty(STDIN_FILENO) ) {
         // backwards compatibility for scripting environments
-        MMCSProperties::setProperty(FILE_EXIT, "true");
+        Properties::setProperty(FILE_EXIT, "true");
     }
 
-    MMCSProperties::init( _propertiesOptions.getFilename(), MMCSProperties::lite);
+    Properties::init( _propertiesOptions.getFilename(), Properties::lite);
     _host_port = _variables_map["host"].as<std::string>();
     if(_host_port.length() != 0) {
         // Get host:port pair
@@ -126,13 +133,13 @@ Options::Options(
         boost::char_separator<char> sep(":");
         tokenizer port_tok(_host_port, sep);
         tokenizer::iterator curr_tok = port_tok.begin();
-        MMCSProperties::setProperty(MC_SERVER_IP, *curr_tok);
+        Properties::setProperty(MC_SERVER_IP, *curr_tok);
         ++curr_tok;
         if(curr_tok == port_tok.end()) {
             std::cerr << "invalid host:port specified" << std::endl;
             exit(EXIT_FAILURE);
         }
-        MMCSProperties::setProperty(MC_SERVER_PORT, *curr_tok);
+        Properties::setProperty(MC_SERVER_PORT, *curr_tok);
     }
 
     // log each arg
@@ -144,9 +151,7 @@ Options::Options(
 void
 Options::openProperties()
 {
-    using namespace bgq::utility;
-
-    Properties::Ptr properties;
+    bgq::utility::Properties::Ptr properties;
     try {
         if ( !_propertiesOptions.getFilename().empty() ) {
             properties = bgq::utility::Properties::create( _propertiesOptions.getFilename() );
@@ -156,18 +161,19 @@ Options::openProperties()
 
         // setup logging
         bgq::utility::initializeLogging( *properties, _loggingOptions );
-    } catch (Properties::FileError& e) {
+    } catch (bgq::utility::Properties::FileError& e) {
         std::cerr << e.what() << std::endl;
-    } catch (Properties::DuplicateKey& e) {
+    } catch (bgq::utility::Properties::DuplicateKey& e) {
         std::cerr << e.what() << std::endl;
-    } catch (Properties::DuplicateSection& e) {
+    } catch (bgq::utility::Properties::DuplicateSection& e) {
         std::cerr <<  e.what() << std::endl;
-    } catch (Properties::MalformedKey& e) {
+    } catch (bgq::utility::Properties::MalformedKey& e) {
         std::cerr << e.what() << std::endl;
-    } catch (Properties::MalformedSection& e) {
+    } catch (bgq::utility::Properties::MalformedSection& e) {
         std::cerr << e.what() << std::endl;
-    } catch (Properties::MissingSection& e) {
+    } catch (bgq::utility::Properties::MissingSection& e) {
         std::cerr << e.what() << std::endl;
     }
 }
 
+} } // namespace mmcs::lite

@@ -27,6 +27,9 @@
 #ifndef CIOSLOG_H
 #define CIOSLOG_H
 #include <ramdisk/include/services/MessageHeader.h>
+#include <signal.h>
+#include <infiniband/verbs.h>
+#include <rdma/rdma_cma.h>
 
 extern char Flight_log_table[][256];
 enum
@@ -51,6 +54,12 @@ typedef struct BG_FlightRecorderFormatter
 #define CIOSLOGMSG(ID,msg) logMsg(ID,(bgcios::MessageHeader *)msg)
 #define CIOSLOGMSG_RECV_WC(ID,msg,completion) logMsgWC(ID,(bgcios::MessageHeader *)msg, (struct ibv_wc *)completion)
 #define CIOSLOGMSG_QP(ID,msg,qpNum) logMsgQpNum(ID,(bgcios::MessageHeader *)msg, qpNum)
+#define CIOSLOGMSG_SG(ID,siginfo_ptr) logMsgSig(ID,siginfo_ptr)
+#define CIOSLOGEVT_CH(ID,event) logChanEvent(ID,event)
+#define CIOSLOGSTAT_SIG(ID,sig_no,source) logIntString(ID,sig_no,source)
+#define CIOSLOGRDMA_REQ(ID,region,frags,fd) logCRdmaReg(ID, region->addr, region->length, region->lkey, frags, fd );
+#define CIOSLOGPLUGIN(ID,v0,v1,v2,v3) log4values(ID, (uint64_t)v0,(uint64_t)v1,(uint64_t)v2,(uint64_t)v3)
+#define CIOSLOGPOSTSEND(ID,send_wr,err) logPostSend( ID, send_wr,err)
 
 void printMsg(const char * ID, bgcios::MessageHeader *mh);
 
@@ -73,12 +82,18 @@ typedef struct BG_FlightRecorderLog
 uint32_t logMsg(uint32_t ID,bgcios::MessageHeader *mh);
 uint32_t logMsgWC(uint32_t ID,bgcios::MessageHeader *mh,struct ibv_wc *wc);
 uint32_t logMsgQpNum(uint32_t ID,bgcios::MessageHeader *mh,uint32_t qp_num);
+uint32_t logMsgSig(uint32_t ID,siginfo_t * siginfo_ptr);
+uint32_t logIntString(uint32_t ID,int int_val, const char * info);
+uint32_t logChanEvent(uint32_t ID,struct rdma_cm_event * event);
 void printLogMsg(const char * pathname);
 void setFlightLogSize(unsigned int size);
 void printLogEntry(uint32_t entry);
 void printprevLogEntries(uint32_t entry,uint32_t quantity);
 void printlastLogEntries(uint32_t quantity);
 size_t snprintfLogEntry(size_t bufsize, char* buffer,uint32_t entry );
+uint32_t logCRdmaReg(uint32_t ID, void* address, uint64_t length, uint32_t lkey, int frags, int filedescriptor );
+uint32_t logPostSend(uint32_t ID, struct ibv_send_wr& send_wr, int err=0);
+uint32_t log4values(uint32_t ID, uint64_t val0, uint64_t val1, uint64_t val2, uint64_t val3);
 
 #endif
 

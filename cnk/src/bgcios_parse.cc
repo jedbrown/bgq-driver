@@ -70,6 +70,14 @@ void Flight_SysioMsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecorde
          length = snprintf(buffer,bufsize,">EEXIST(%ld)",(long int)mh->errorCode); break;
        case ENOTCONN:
          length = snprintf(buffer,bufsize,">ENOTCONN(%ld)",(long int)mh->errorCode); break;
+       case ESTALE:
+         length = snprintf(buffer,bufsize,">ESTALE(%ld)",(long int)mh->errorCode); break;
+       case EBUSY:
+         length = snprintf(buffer,bufsize,">EBUSY(%ld)",(long int)mh->errorCode); break;
+       case EAGAIN:
+         length = snprintf(buffer,bufsize,">EAGAIN(%ld)",(long int)mh->errorCode); break;
+       case ENOSPC:
+         length = snprintf(buffer,bufsize,">ENOSPC(%ld)",(long int)mh->errorCode); break;
        default:
          length = snprintf(buffer,bufsize,">EC(%ld)",(long int)mh->errorCode);
       }
@@ -78,12 +86,15 @@ void Flight_SysioMsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecorde
     }
 
     if (mh->returnCode){
-      length = snprintf(buffer,bufsize," rc=%ld",(long int)mh->returnCode);
+      length = snprintf(buffer,bufsize," rc=%d",(int)mh->returnCode);
       buffer += length;
       bufsize -= length;
     }
 
     char * text = NULL;
+    if (SysioUserServiceFdRDMA == mh->service) text=(char *)"svc=SysioUserServiceFdRDMA";
+    else if (SysioUserService == mh->service) text=(char *)"svc=SysioUserService";
+    else
     switch(mh->type){
         case jobctl::ErrorAck: text=(char *)"jobctl::ErrorAck";break;
 
@@ -140,6 +151,11 @@ void Flight_SysioMsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecorde
 
         case sysio::Read: text=(char *)"sysio::Read";break;
         case sysio::ReadAck: text=(char *)"sysio::ReadAck";break;
+        case sysio::Recv: text=(char *)"sysio::Recv";break;
+        case sysio::RecvAck: text=(char *)"sysio::RecvAck";break;
+        case sysio::Send: text=(char *)"sysio::Send";break;
+        case sysio::SendAck: text=(char *)"sysio::SendAck";break;
+
         case sysio::Lseek64: text=(char *)"sysio::Lseek64";break;
         case sysio::Lseek64Ack: text=(char *)"sysio::Lseek64Ack";break;
         case sysio::Stat64: text=(char *)"sysio::Stat64";break;
@@ -152,6 +168,12 @@ void Flight_SysioMsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecorde
         case sysio::ReadlinkAck: text=(char *)"sysio::ReadlinkAck";break;
         case sysio::Fcntl: text=(char *)"sysio::Fcntl";break;
         case sysio::FcntlAck: text=(char *)"sysio::FcntlAck";break;
+        case sysio::Unlink: text=(char *)"sysio::Unlink";break;
+        case sysio::UnlinkAck: text=(char *)"sysio::UnlinkAck";break;
+        case sysio::Link: text=(char *)"sysio::Link";break;
+        case sysio::LinkAck: text=(char *)"sysio::LinkAck";break;
+        case sysio::Symlink: text=(char *)"sysio::Symlink";break;
+        case sysio::SymlinkAck: text=(char *)"sysio::SymlinkAck";break;
 
 
         default:   break;

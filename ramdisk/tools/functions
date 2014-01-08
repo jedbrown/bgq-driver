@@ -28,8 +28,8 @@
 #	    tools directory.
 #
 
-CURR_RHEL=RHEL6.2
-RHEL6_PATH=/install/redhat/RHEL6.2-ppc/Packages
+CURR_RHEL=RHEL6.3
+RHEL6_PATH=/install/redhat/RHEL6.3-ppc/Packages
 if [ -e /bgsys/logs/BGQ/distrofs ] ; then
 	LOG_DIR="/bgsys/logs/BGQ/distrofs"
 else

@@ -54,7 +54,7 @@ required_doxygen_version := 1.6
 
 docs: doxygen.out
 
-doxygen.out: Doxyfile
+doxygen.out: Doxyfile | $(INSTALL_DIR)
 ifeq ($(doxygen_version),$(required_doxygen_version))
 	@echo "generating documentation"
 	cd ../../../../ && cat src/master/docs/html/$^ | sed 's:BGQ_INSTALL_DIR:$(BGQ_INSTALL_DIR):' | doxygen - > src/master/docs/html/doxygen.out

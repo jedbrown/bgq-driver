@@ -31,12 +31,12 @@
 
 #include <db/include/api/GenBlockParams.h>
 
+#include <db/include/api/cxxdb/fwd.h>
+
 #include <db/include/api/filtering/BlockFilter.h>
 #include <db/include/api/filtering/BlockSort.h>
 
 #include <hlcs/include/security/Enforcer.h>
-
-#include <string>
 
 
 namespace bgws {
@@ -60,7 +60,8 @@ public:
     Blocks(
             CtorArgs& args
         ) :
-            AbstractResponder( args )
+            AbstractResponder( args ),
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool)
     { /* Nothing to do */ }
 
 
@@ -75,9 +76,20 @@ public:
 
 private:
 
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
 
-    static void _statusNotifier( BGQDB::filtering::BlockFilter& block_filter_in_out, const std::string& status_str );
-    static void _sortNotifier( BGQDB::filtering::BlockSort& block_sort_in_out, const std::string& sort_str );
+
+    void _doQuery(
+            capena::server::ResponderPtr,
+            const BGQDB::filtering::BlockFilter& block_filter,
+            const BGQDB::filtering::BlockSort& block_sort
+        );
+
+    void _queryComplete(
+            capena::server::ResponderPtr,
+            cxxdb::ConnectionPtr,
+            cxxdb::ResultSetPtr rs_ptr
+        );
 
 
     void _checkCreateBlockAuthority();

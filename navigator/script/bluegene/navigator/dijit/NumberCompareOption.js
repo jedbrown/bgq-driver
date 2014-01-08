@@ -53,7 +53,6 @@ var _VALUE_RE = /(..)(.*)/;
 
 
 var b_navigator_dijit_NumberCompareOption = d_declare(
-        "bluegene.navigator.dijit.NumberCompareOption",
         [ j__Widget, j__TemplatedMixin, j__WidgetsInTemplateMixin ],
 
 /** @lends bluegene^navigator^dijit^NumberCompareOption# */

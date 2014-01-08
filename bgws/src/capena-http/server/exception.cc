@@ -71,6 +71,8 @@ void Error::updateResponse( Response& r ) const
     } else {
         r.out() << _response_str << "\n\n";
     }
+
+    r.notifyComplete();
 }
 
 

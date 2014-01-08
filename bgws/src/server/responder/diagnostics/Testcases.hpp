@@ -27,6 +27,8 @@
 
 #include "../../AbstractResponder.hpp"
 
+#include "../../query/diagnostics/Testcases.hpp"
+
 #include "capena-http/http/http.hpp"
 
 
@@ -52,7 +54,8 @@ public:
     Testcases(
             CtorArgs& args
         ) :
-            AbstractResponder( args )
+            AbstractResponder( args ),
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool)
     { /* Nothing to do */ }
 
     capena::http::Methods _getAllowedMethods() const  { return { capena::http::Method::GET }; }
@@ -60,6 +63,22 @@ public:
     // override
     void _doGet();
 
+
+private :
+
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
+
+
+    void _startQuery(
+            capena::server::ResponderPtr,
+            const query::diagnostics::TestcasesOptions& query_options
+        );
+
+    void _queryComplete(
+            capena::server::ResponderPtr,
+            cxxdb::ConnectionPtr,
+            cxxdb::ResultSetPtr rs_ptr
+        );
 };
 
 } } } // namespace bgws::responder::diagnostics

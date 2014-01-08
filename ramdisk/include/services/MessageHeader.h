@@ -56,6 +56,8 @@ const uint8_t JobctlService  = 2; //!< Job control service.
 const uint8_t StdioService   = 3; //!< Standard I/O service.
 const uint8_t SysioService   = 4; //!< System I/O service.
 const uint8_t ToolctlService = 5; //!< Tool control service.
+const uint8_t SysioUserService = 0x10; //!<User Message Function Ship through Sysio
+const uint8_t SysioUserServiceFdRDMA = 0x11; //!<User Message Function Ship through Sysio using file descriptors and/or RDMA
 
 //! Values for return code field of MessageHeader.
 

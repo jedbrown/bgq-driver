@@ -42,7 +42,7 @@ all: sample $(UNIT_TESTS:%=out_%)
 out_%: test_%
 	@strip $<
 	@echo "execute $@"
-	./$< 1> $(patsubst test_%, out_%, $<)
+	$(SILENT)BG_PROPERTIES_FILE=$(BGQ_INSTALL_DIR)/utility/etc/bg.properties.tpl ./$< 1> $(patsubst test_%, out_%, $<)
 
 sample: sample.o Makefile
 	@echo "link $@"

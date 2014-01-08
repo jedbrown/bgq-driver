@@ -134,6 +134,8 @@ Options::doHandle(
     std::cout << (response->_realtime ? "realtime" : "polling") << " block notifications" << std::endl;
     std::cout << std::endl;
 
+    this->displayConnectionPool( response );
+
     this->displayCiosProtocol( response );
 
     this->displayPerformanceCounters( response );
@@ -148,13 +150,25 @@ Options::doHandle(
 }
 
 void
-Options::displayCiosProtocol(
+Options::displayConnectionPool(
         const runjob::commands::response::ServerStatus::Ptr& response
         ) const
 {
     std::cout << "CIOS protocol" << std::endl;
     std::cout << static_cast<unsigned>(response->_jobctlProtocol) << " job control" << std::endl;
     std::cout << static_cast<unsigned>(response->_stdioProtocol) << " standard I/O" << std::endl;
+    std::cout << std::endl;
+}
+
+void
+Options::displayCiosProtocol(
+        const runjob::commands::response::ServerStatus::Ptr& response
+        ) const
+{
+    std::cout << response->_connectionPoolAvailable << " database connections available" << std::endl;
+    std::cout << response->_connectionPoolUsed << " database connections used" << std::endl;
+    std::cout << response->_connectionPoolSize << " configured pool size" << std::endl;
+    std::cout << response->_connectionPoolMax << " maximum database connections" << std::endl;
     std::cout << std::endl;
 }
 

@@ -54,17 +54,17 @@ uint64_t sc_setrlimit(SYSCALL_FCN_ARGS)
     }
     
     // Make sure the soft limit will not be greater than the hard limit.
-    AppProcess_t* app = GetProcessByProcessorID(ProcessorID());
-    rlim_t rlim_cur = ((rlp->rlim_cur == RLIM_SAVED_CUR) ? app->resourceLimits[resource].rlim_cur : rlp->rlim_cur);
-    rlim_t rlim_max = ((rlp->rlim_max == RLIM_SAVED_MAX) ? app->resourceLimits[resource].rlim_max : rlp->rlim_max);
+    AppProcess_t* proc = GetMyProcess();
+    rlim_t rlim_cur = ((rlp->rlim_cur == RLIM_SAVED_CUR) ? proc->resourceLimits[resource].rlim_cur : rlp->rlim_cur);
+    rlim_t rlim_max = ((rlp->rlim_max == RLIM_SAVED_MAX) ? proc->resourceLimits[resource].rlim_max : rlp->rlim_max);
     if (rlim_cur > rlim_max)
     {
         return CNK_RC_FAILURE(EINVAL);
     }
     
     // Set the new resource limit values.  Note we don't restrict raising the hard limit.
-    app->resourceLimits[resource].rlim_cur = rlim_cur;
-    app->resourceLimits[resource].rlim_max = rlim_max;
+    proc->resourceLimits[resource].rlim_cur = rlim_cur;
+    proc->resourceLimits[resource].rlim_max = rlim_max;
 
     return CNK_RC_SUCCESS(0);
 }

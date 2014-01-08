@@ -69,6 +69,13 @@ void Kernel_Barrier_First(int numThreadsToBarrier);
 // Should only be used in special situations when the above enumerated lock types are not appropriate.
 void Kernel_Barrier_Internal(Lock_Atomic_t*, uint32_t);
 
+// Exclusive lock. When obtained by a hwthread, other hwthreads will spin until Kernel_Unlock is called
+// by the hwthread that obtained the lock.
+//  parm1: doubleword initialized to zero on first use.
+//  parm2: time in microseconds until the lock request times out.
+//  returns: 0:lock has been obtained. (-1):timeout has occurrred and lock has not been obtained 
+int Kernel_Lock_WithTimeout(Lock_Atomic_t *pLock, uint64_t microseconds);
+
 #endif // not __ASSEMBLY__
 #endif // __KERNEL__ 
 

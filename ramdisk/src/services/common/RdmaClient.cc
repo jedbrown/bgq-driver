@@ -54,7 +54,7 @@ RdmaClient::createRegions(RdmaProtectionDomainPtr domain)
 {
    // Create a memory region for inbound messages.
    _inMessageRegion = RdmaMemoryRegionPtr(new RdmaMemoryRegion());
-   int err = _inMessageRegion->allocate(domain, bgcios::SmallMessageRegionSize);
+   int err = _inMessageRegion->allocate64kB(domain);
    if (err != 0) {
       RdmaError e(err, "allocating inbound memory region failed");
       LOG_ERROR_MSG(_tag << "error allocating inbound message region: " << bgcios::errorString(err));
@@ -63,7 +63,7 @@ RdmaClient::createRegions(RdmaProtectionDomainPtr domain)
 
    // Create a memory region for outbound messages.
    _outMessageRegion = RdmaMemoryRegionPtr(new RdmaMemoryRegion());
-   err = _outMessageRegion->allocate(domain, bgcios::SmallMessageRegionSize);
+   err = _outMessageRegion->allocate64kB(domain);
    if (err != 0) {
       RdmaError e(err, "allocating outbound memory region failed");
       LOG_ERROR_MSG(_tag << "error allocating outbound message region: " << bgcios::errorString(err));

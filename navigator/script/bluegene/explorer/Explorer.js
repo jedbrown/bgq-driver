@@ -22,20 +22,16 @@
 /* end_generated_IBM_copyright_prolog                               */
 
 
-console.log( "bluegene/explorer/Explorer" );
-
-
 define(
 [
     "bluegene/Bgws",
     "dojo/cookie",
     "dojo/dom-prop",
     "dojo/json",
+    "dojo/request",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
-    "dojo/_base/xhr",
     "dojo/data/ObjectStore",
     "dojo/store/Memory",
     "dijit/registry",
@@ -50,11 +46,10 @@ function(
         d_cookie,
         d_prop,
         d_json,
+        d_request,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
-        d_xhr,
         d_data_ObjectStore,
         d_store_Memory,
         j_registry,
@@ -72,8 +67,6 @@ var b_explorer_Explorer =  d_declare( null,
 
     _session_id: null,
 
-    _dfd: null,
-
     _request_headers_obj: {},
 
     _stored_requests: {},
@@ -82,7 +75,7 @@ var b_explorer_Explorer =  d_declare( null,
     /** @constructs */
     constructor : function()
     {
-        this._bgws = new b_Bgws();
+        this._bgws = new b_Bgws( {} );
 
 
         var stored_username = d_cookie( "username" );
@@ -248,13 +241,12 @@ var b_explorer_Explorer =  d_declare( null,
     {
         var form_val = j_registry.byId( "start-session-form" ).get( "value" );
 
-        this._dfd = this._bgws.startSession(
+        var promise = this._bgws.startSession(
                 form_val.username,
                 form_val.password
             );
 
-        d_Deferred.when(
-                this._dfd,
+        promise.then( 
                 d_lang.hitch( this, this._sessionStarted ),
                 d_lang.hitch( this, this._sessionFailed )
             );
@@ -263,7 +255,7 @@ var b_explorer_Explorer =  d_declare( null,
 
     _sessionStarted : function( response )
     {
-        console.log( module.id + ": session started. dfd=", this._dfd, "response=", response );
+        console.log( module.id + ": session started. response=", response );
 
         this._session_id = response.sessionId;
 
@@ -274,23 +266,19 @@ var b_explorer_Explorer =  d_declare( null,
 
         this._setRequestHeaders( this._request_headers_obj );
 
-        this._dfd = { ioArgs: response.ioArgs }; // fake out deferred, since it's actually a promise.
-
-        this._updateResponse();
+        this._updateResponse( response.response );
     },
 
     _sessionFailed : function( error )
     {
-        console.log( module.id + ": session failed. dfd=", this._dfd, "error=", error );
+        console.log( module.id + ": session failed. error=", error );
 
         this._session_id = null;
         delete this._request_headers_obj[b_Bgws.sessionIdHeaderName];
 
         this._setRequestHeaders( this._request_headers_obj );
 
-        this._dfd = { ioArgs: error.ioArgs }; // fake out deferred, since it's actually a promise.
-
-        this._updateResponse();
+        this._updateResponse( error.response );
     },
 
 
@@ -315,56 +303,58 @@ var b_explorer_Explorer =  d_declare( null,
 
         console.log( module.id + ": submit form=", form_val, "headers=", headers );
 
+ 
+        var req_options = { headers: headers };
+
+        
         if ( form_val.operation == "GET" ) {
-            this._dfd = d_xhr.get( {
-                    url: form_val.uri,
-                    handleAs: "json",
-                    headers: headers
-                } );
+
+            // Nothing to do.
+            
         } else if ( form_val.operation == "DELETE" ) {
-            this._dfd = d_xhr.del( {
-                url: form_val.uri,
-                handleAs: "json",
-                headers: headers
-            } );
+
+            req_options.method = "DELETE";
+
         } else if ( form_val.operation == "POST" ) {
-            this._dfd = d_xhr.post( {
-                    url: form_val.uri,
-                    handleAs: "json",
-                    headers: headers,
-                    postData: form_val.body
-                } );
+
+            req_options.method = "POST";
+            req_options.data = form_val.body;
+
         } else if ( form_val.operation == "PUT" ) {
-            this._dfd = d_xhr.put( {
-                    url: form_val.uri,
-                    handleAs: "json",
-                    headers: headers,
-                    postData: form_val.body
-                } );
+
+            req_options.method = "PUT";
+            req_options.data = form_val.body;
+
         } else {
             return;
         }
 
-        d_Deferred.when(
-                this._dfd,
+
+        var req_promise = d_request(
+                form_val.uri,
+                req_options
+            );
+
+        req_promise.response.then(
                 d_lang.hitch( this, this._requestSuccess ),
                 d_lang.hitch( this, this._requestFailed )
             );
+
     },
 
 
     _requestSuccess : function( response )
     {
-        console.log( module.id + ": response success. dfd=", this._dfd, "response", response );
-
-        this._updateResponse();
+        console.log( module.id + ": request was successful, response=", response );
+        
+        this._updateResponse( response );
     },
 
-    _requestFailed : function( response )
+    _requestFailed : function( error_data )
     {
-        console.log( module.id + ": request failed. dfd=", this._dfd, "response", response );
+        console.log( module.id + ": request failed. error_data=", error_data );
 
-        this._updateResponse();
+        this._updateResponse( error_data.response );
     },
 
 
@@ -450,29 +440,25 @@ var b_explorer_Explorer =  d_declare( null,
         this._setRequestHeaders( this._request_headers_obj );
     },
 
-    _updateResponse : function()
+    _updateResponse : function ( response )
     {
-        var xhr = this._dfd.ioArgs.xhr;
+        d_prop.set( "response-status", "innerHTML", ("" + response.status + " " + response.xhr.statusText) );
+        d_prop.set( "response-headers", "innerHTML", response.xhr.getAllResponseHeaders() );
 
-        d_prop.set( "response-status", "innerHTML", ("" + xhr.status + " " + xhr.statusText) );
-        d_prop.set( "response-headers", "innerHTML", xhr.getAllResponseHeaders() );
+        if ( response.getHeader( "Content-Type" ) == "application/json" ) {
 
-        if ( xhr.getResponseHeader( "Content-Type" ) == "application/json" ) {
-
-            var obj = d_json.parse( xhr.responseText );
+            var obj = d_json.parse( response.text );
 
             d_prop.set( "response-body", "innerHTML", d_json.stringify( obj, null, " " ) );
 
         } else {
 
-            d_prop.set( "response-body", "innerHTML", xhr.responseText );
+            d_prop.set( "response-body", "innerHTML", response.data );
 
         }
-
-        this._dfd = null;
     },
 
-
+    
     _calcRequestHeaderItemsSelecteds : function( headers_obj )
     {
         var items = [];

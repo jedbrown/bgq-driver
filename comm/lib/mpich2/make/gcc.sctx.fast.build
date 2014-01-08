@@ -12,39 +12,19 @@
 #                                                                  #
 # end_generated_IBM_copyright_prolog                               #
 
-gcc.sctx.fast-install: pre-install gcc.sctx.fast
-	${MAKE} -C ${MPICH2BUILD}-gcc.sctx.fast install
-
 gcc.sctx.fast: autoconf
-	mkdir -p ${MPICH2BUILD}-gcc.sctx.fast
-	cd ${MPICH2BUILD}-gcc.sctx.fast &&				\
+	mkdir -p ${MPICH2BUILD}-$@
+	cd ${MPICH2BUILD}-$@ &&						\
 	if [ ! -f Makefile ] ; then					\
-	  GCC="${HOST_CC}"						\
-	  CC="${HOST_CC}"						\
-	  CXX="${HOST_CXX}"						\
-	  F77="${HOST_F77}"						\
-	  FC="${HOST_F90}"						\
-	  AR="${HOST_AR}"						\
-	  LD="${HOST_LD}"						\
-	  MPICH2LIB_CFLAGS="${HOST_CFLAGS} -O3"				\
-	  MPICH2LIB_CXXFLAGS="${HOST_CXXFLAGS} -O3"			\
-	  MPICH2LIB_FFLAGS="${HOST_FFLAGS} -O3"				\
-	  MPICH2LIB_F90FLAGS="${HOST_FFLAGS} -O3"			\
-	  MPICH2LIB_LDFLAGS="${HOST_LDFLAGS} -O3"			\
-	  CFLAGS="${MPI_CFLAGS}"					\
-	  CXXFLAGS="${MPI_CXXFLAGS}"					\
-	  FFLAGS="${MPI_FFLAGS}"					\
-	  FCFLAGS="${MPI_FFLAGS}"					\
-	  LDFLAGS="${MPI_LDFLAGS}"					\
-	  MPILIBNAME="mpich"						\
-	  MPICXXLIBNAME="cxxmpich"					\
-	  MSGLAYER_INCLUDE="${HOST_INCLUDE}"				\
-	  MSGLAYER_LIB="${HOST_LIB}"					\
+	  MPILIBNAME="mpi"						\
+	  MPICXXLIBNAME="mpigc4"	       			       	\
 	  ${MPICH2DIR}/configure					\
 	  --enable-cache						\
-	  --prefix=${INSTALL_DIR}/gcc.sctx.fast				\
-	  --mandir=${INSTALL_DIR}/gcc.sctx.fast/man			\
-	  --htmldir=${INSTALL_DIR}/gcc.sctx.fast/www			\
+          --disable-rpath                                               \
+	  --disable-versioning						\
+	  --prefix=${INSTALL_DIR}/$@					\
+	  --mandir=${INSTALL_DIR}/$@/man				\
+	  --htmldir=${INSTALL_DIR}/$@/www				\
 	  --host=${BUILD_HOST}						\
 	  --target=${BUILD_TARGET}					\
 	  --build=${BUILD_BUILD}					\
@@ -57,28 +37,25 @@ gcc.sctx.fast: autoconf
 	  --with-file-system=${FILE_SYSTEM}				\
 	  --enable-timer-type=device					\
 	  --enable-threads=${THREAD_LEVEL}				\
-	  --with-fwrapname=fmpich					\
-	  --with-cross=${MPICH2DIR}/src/mpid/pamid/cross/${PLATFORMlc}8	\
+	  --with-fwrapname=mpigf					\
+	  --with-cross=${MPICH2DIR}/src/mpid/pamid/cross/${CROSSFILE}	\
 	  --with-mpe=no							\
-	  --enable-timing=no						\
-	  --disable-collchk						\
-	  --disable-graphics						\
-	  --disable-rlog						\
-	  --disable-sample						\
-	  --disable-rpath						\
+	  --with-smpcoll=yes						\
+	  --without-valgrind						\
+	  --enable-timing=none						\
 	  --with-aint-size=8						\
 	  --with-assert-level=0						\
+	  --with-pmi=pmi2/poe						\
 	  --enable-shared						\
 	  --enable-sharedlibs=gcc					\
 	  --enable-dynamiclibs						\
-	  --disable-debuginfo						\
-	  --enable-fast=yes,O3						\
-          --disable-error-messages					\
+	  --disable-static						\
+	  --enable-debuginfo						\
+	  --enable-fast=all,O3						\
 	; fi
 
-
-
-
-
-	${MAKE} -j1 -C ${MPICH2BUILD}-gcc.sctx.fast dependencies
-	${MAKE} -j1 -C ${MPICH2BUILD}-gcc.sctx.fast
+	${MAKE} -j8 -C ${MPICH2BUILD}-$@
+	cd ${MPICH2BUILD}-$@ && ${CC} ${CFLAGS} ${LDFLAGS}              \
+		-shared src/binding/f77/.libs/*.o                       \
+		        src/binding/f90/.libs/*.o                       \
+                -o      lib/.libs/libmpigf.so

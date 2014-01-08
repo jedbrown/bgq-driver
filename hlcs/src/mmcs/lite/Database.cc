@@ -21,9 +21,9 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#include "lite/Database.h"
+#include "Database.h"
 
-#include "MMCSProperties.h"
+#include "common/Properties.h"
 
 #include <utility/include/Log.h>
 #include <utility/include/UserId.h>
@@ -32,9 +32,12 @@
 #include <unistd.h>
 #include <pwd.h>
 
-LOG_DECLARE_FILE( "mmcs" );
+LOG_DECLARE_FILE( "mmcs.lite" );
 
-using namespace lite;
+
+namespace mmcs {
+namespace lite {
+
 
 Database::Database(
         const std::string& name
@@ -44,7 +47,7 @@ Database::Database(
     std::string dbname = name;
     if (dbname.empty()) {
         // use properties file
-        dbname = MMCSProperties::getProperty("sqlite");
+        dbname = common::Properties::getProperty("sqlite");
     }
 
     size_t loc;
@@ -78,3 +81,6 @@ Database::~Database()
 {
     (void)sqlite3_close(_handle);
 }
+
+
+} } // namespace mmcs::lite

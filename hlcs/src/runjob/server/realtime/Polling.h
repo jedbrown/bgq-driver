@@ -25,11 +25,12 @@
 
 #include "common/error.h"
 
+#include "server/block/Container.h"
 #include "server/fwd.h"
 
 #include <hlcs/include/bgsched/types.h>
 
-#include <db/include/api/cxxdb/cxxdb.h>
+#include <db/include/api/cxxdb/fwd.h>
 
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -93,12 +94,21 @@ private:
             bgsched::SequenceId sequence
            );
 
-    cxxdb::QueryStatementPtr prepareQuery(
+    cxxdb::QueryStatementPtr prepareSequenceQuery(
+            const cxxdb::ConnectionPtr& database
+            );
+
+    cxxdb::QueryStatementPtr prepareDeletionQuery(
             const cxxdb::ConnectionPtr& database
             );
 
     void impl(
             const boost::system::error_code& error
+            );
+
+    void getBlocksCallback(
+            const block::Container::Blocks& blocks,
+            const cxxdb::ConnectionPtr& database
             );
 
     void createCallback(
@@ -112,13 +122,13 @@ private:
             const std::string& block,
             error_code::rc error,
             const std::string& message
-            );
+            ) const;
     
     void initializedCallback(
             const std::string& block,
             error_code::rc error,
             const std::string& message
-            );
+            ) const;
 
 
 private:

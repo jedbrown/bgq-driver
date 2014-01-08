@@ -49,6 +49,8 @@ done
 echo "Removing alert $teal_alert_id"
 echo "TEAL_LOG_DIR=" $TEAL_LOG_DIR
 
+. ~bgqsysdb/sqllib/db2profile
+
 db2 "CONNECT TO $db_name"
 db2 "SET SCHEMA $db_schema"
 

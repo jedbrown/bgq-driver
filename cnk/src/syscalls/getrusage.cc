@@ -33,31 +33,24 @@ uint64_t sc_getrusage(SYSCALL_FCN_ARGS)
     int who = r3;
     struct rusage *buf = (struct rusage *)r4;
 
-    int processorID = ProcessorID();
-    AppProcess_t *pAppProc = GetMyProcess();
-
-    TRACESYSCALL(("(I) %s[%d]: who=%d, buf=0x%016lx\n", __func__, processorID, who, (unsigned long)buf));
+    TRACESYSCALL(("(I) %s[%d]: who=%d, buf=0x%016lx\n", __func__, ProcessorID(), who, (unsigned long)buf));
 
     // Check for error conditions.
     if (who != RUSAGE_SELF)
     {
         return CNK_RC_FAILURE(EINVAL);
     }
-
     if (!VMM_IsAppAddress(buf, sizeof(*buf)))
     {
         return CNK_RC_FAILURE(EFAULT);
     }
-
-    uint64_t text_vaddr, heap_vaddr, maxAlloc_vaddr;
-    uint64_t text_size, heap_size;
-    uint64_t processLeader_r1;
-    text_vaddr = pAppProc->Data_VStart;
-    text_size = pAppProc->Data_VEnd - pAppProc->Data_VStart;
-    heap_vaddr = pAppProc->Heap_VStart;
-    heap_size = pAppProc->Heap_End - pAppProc->Heap_Start;
-    maxAlloc_vaddr = MAX(pAppProc->Heap_Break, pAppProc->MmapMgr.high_mark);
-
+    AppProcess_t *pAppProc = GetMyProcess();
+    uint64_t text_size = pAppProc->Data_VEnd - pAppProc->Data_VStart;
+    uint64_t heap_vaddr = pAppProc->Heap_VStart;
+    uint64_t heap_size = pAppProc->Heap_End - pAppProc->Heap_Start;
+    uint64_t maxAlloc_vaddr = MAX(pAppProc->Heap_Break, pAppProc->MmapMgr.high_mark);
+    uint64_t processLeader_r1 = pAppProc->ProcessLeader_KThread->Reg_State.gpr[1];
+    uint64_t now = GetCurrentTimeInMicroseconds() - GetMyAppState()->JobStartTime;
     /* Multi-core can't be completely precise when a non-process-leader thread
      * does a getrusage() and needs to get the *current* stack depth of the
      * process leader.  Probably should interrupt the process leader in this
@@ -65,11 +58,8 @@ uint64_t sc_getrusage(SYSCALL_FCN_ARGS)
      * If we happen to be the process leader or are on the same hwthread as
      * the leader, the r1 value we're about to pick up will be precise.
      */
-    HWThreadState_t *hwThreadState = GetHWThreadStateByProcessorID( GetProcessLeaderProcessorID() );
-    processLeader_r1 = hwThreadState->SchedSlot[CONFIG_SCHED_SLOT_FIRST]->Reg_State.gpr[1];
 
     // All time is attributed to the user application.
-    uint64_t now = GetCurrentTimeInMicroseconds() - GetMyAppState()->JobStartTime;
     buf->ru_utime.tv_sec  = now / MILLION;
     buf->ru_utime.tv_usec = now % MILLION;
     buf->ru_stime.tv_sec  = 0;
@@ -78,7 +68,6 @@ uint64_t sc_getrusage(SYSCALL_FCN_ARGS)
     buf->ru_maxrss       += (text_size+1023)/1024;
     buf->ru_maxrss       += (maxAlloc_vaddr - heap_vaddr + 1023)/1024;
     buf->ru_maxrss       += ((heap_vaddr+heap_size-1) - processLeader_r1 + 1023)/1024;
-
 
     buf->ru_ixrss         = 0;
     buf->ru_idrss         = 0;

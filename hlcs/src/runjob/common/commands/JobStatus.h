@@ -59,20 +59,23 @@ public:
      */
     typedef boost::shared_ptr<JobStatus> Ptr;
 
+    /*!
+     * \brief Protocol version.
+     */
+    static const unsigned ProtocolVersion = 2;
+
 public:
     /*!
      * \brief ctor.
      */
     JobStatus() :
         Request( Message::Tag::JobStatus ),
-        _id( 0 )
+        _job( 0 ),
+        _pid( 0 ),
+        _hostname( )
     {
 
     }
-
-    void setId( BGQDB::job::Id id ) { _id = id; } //!< Set job ID.
-
-    BGQDB::job::Id getId() const { return _id; }  //!< Get job ID.
 
     /*!
      * \copydoc runjob::commands::Message::serialize
@@ -91,11 +94,15 @@ private:
     void serialize(Archive & ar, const unsigned int /* version */)
     {
         ar & boost::serialization::base_object<Request>(*this);
-        ar & _id;
+        ar & _job;
+        ar & _pid;
+        ar & _hostname;
     }
 
-private:
-    BGQDB::job::Id _id;
+public:
+    BGQDB::job::Id _job;
+    pid_t _pid;
+    std::string _hostname;
 };
 
 } // request
@@ -112,7 +119,7 @@ public:
     /*!
      * \brief Protocol version.
      */
-    static const unsigned ProtocolVersion = 4;
+    static const unsigned ProtocolVersion = 5;
 
     /*!
      * \brief pointer type.
@@ -184,13 +191,15 @@ public:
     JobStatus() :
         Response( Message::Tag::JobStatus ),
         _connections(),
-        _killTimeout()
+        _killTimeout(),
+        _mux()
     {
 
     }
 
     Connections _connections;   //!< connection container
     boost::posix_time::time_duration _killTimeout;   //!< kill timeout
+    std::string _mux;
 
     /*!
      * \copydoc runjob::commands::Message::serialize
@@ -211,6 +220,7 @@ private:
         ar & boost::serialization::base_object<Response>(*this);
         ar & _connections;
         ar & _killTimeout;
+        ar & _mux;
     }
 };
 
@@ -218,7 +228,7 @@ private:
 } // commands
 } // runjob
 
-BOOST_CLASS_VERSION( runjob::commands::request::JobStatus, runjob::commands::ProtocolVersion )
+BOOST_CLASS_VERSION( runjob::commands::request::JobStatus, runjob::commands::request::JobStatus::ProtocolVersion )
 BOOST_CLASS_VERSION( runjob::commands::response::JobStatus, runjob::commands::response::JobStatus::ProtocolVersion )
 BOOST_CLASS_VERSION( runjob::commands::response::JobStatus::IoConnection, runjob::commands::response::JobStatus::ProtocolVersion )
 

@@ -29,7 +29,7 @@
 #include "common/Ids.h"
 #include "common/types.h"
 
-#include <utility/include/cxxsockets/SocketTypes.h>
+#include <utility/include/cxxsockets/SecureTCPSocket.h>
 
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
@@ -74,10 +74,6 @@ class ClientController : public boost::enable_shared_from_this<ClientController>
     void doStopRequest(const BGMasterClientProtocolSpec::StopRequest& stopreq);
     //! \brief process a status request
     void doStatusRequest(const BGMasterClientProtocolSpec::StatusRequest& statusreq);
-    //! \brief process an exit status request
-    void doExitRequest(const BGMasterClientProtocolSpec::ExitStatusRequest& exitreq);
-    //! \brief process a die request
-    void doEnd_agentRequest(const BGMasterClientProtocolSpec::End_agentRequest& diereq);
     //! \brief process a request to terminate bgmaster_server
     void doTermRequest(const BGMasterClientProtocolSpec::TerminateRequest& termreq);
     //! \brief process a request to reload config

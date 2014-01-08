@@ -252,7 +252,7 @@ extern int  fw_nd_loopback_termcheck(Personality_t *p);
 extern inline int fw_nd_compare_values(uint64_t a, uint64_t b, uint64_t addr, int line_num)
 {
   if ( a == b) return 0;
-  FW_Warning(" Error: a != b addr=0x%016lx line=%d   a=0x%016lx b=0x%016lx \n",addr,line_num,a,b);
+  FW_Warning(" Error: a != b addr=0x%016lx line=%d   a=0x%016lx b=0x%016lx",addr,line_num,a,b);
   return line_num;
   
 }

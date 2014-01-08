@@ -27,6 +27,7 @@ define(
     "./AbstractTemplatedContainer",
     "./MonitorActiveMixin",
     "../FilterOptions",
+    "../xlate",
     "../../Bgws",
     "../../BlueGene",
     "dojo/_base/declare",
@@ -40,7 +41,6 @@ define(
     "./MultiSelectCodes",
     "./TimeInterval",
     "../format",
-    "../xlate",
     "dijit/TooltipDialog",
     "dijit/form/Button",
     "dijit/form/DropDownButton",
@@ -54,6 +54,7 @@ function(
         l_AbstractTemplatedContainer,
         l_MonitorActiveMixin,
         ll_FilterOptions,
+        ll_xlate,
         b_Bgws,
         b_BlueGene,
         d_declare,
@@ -88,7 +89,6 @@ var _formToQuery = function( form_obj )
 
 
 var b_navigator_dijit_Jobs = d_declare(
-        "bluegene.navigator.dijit.Jobs",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -190,7 +190,10 @@ var b_navigator_dijit_Jobs = d_declare(
         console.log( module.id + ": selected job", job_id, "started at", start_time );
 
         this.onJobSelected( { id : job_id, startTime: start_time } );
-    }
+    },
+    
+    
+    _ll_xlate : ll_xlate
 
 } );
 

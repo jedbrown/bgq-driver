@@ -118,6 +118,7 @@ private:
     boost::shared_ptr<blue_gene::service_actions::ServiceActions> _service_actions_ptr;
     boost::shared_ptr<Sessions> _sessions_ptr;
     boost::shared_ptr<teal::Teal> _teal_ptr;
+    boost::shared_ptr<BlockingOperationsThreadPool> _blocking_operations_thread_pool_ptr;
 
     boost::shared_ptr<ResponderFactory> _responder_factory_ptr;
 

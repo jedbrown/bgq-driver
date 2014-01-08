@@ -23,9 +23,9 @@
 /*!
  * \mainpage notitle
  * \author IBM
- * \version 1.0.1
+ * \version 1.2.0
  *
- * (C) Copyright IBM Corp.  2011, 2011
+ * (C) Copyright IBM Corp.  2011, 2012
  *
  * The Blue Gene/Q (BG/Q) solution provides interfaces for external job
  * schedulers (resource managers) to access system hardware topology and to

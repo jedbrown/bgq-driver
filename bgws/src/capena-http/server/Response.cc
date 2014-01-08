@@ -23,7 +23,6 @@
 
 #include "Response.hpp"
 
-#include "Connection.hpp"
 #include "exception.hpp"
 #include "AbstractResponder.hpp"
 
@@ -49,13 +48,16 @@ namespace server {
 
 
 Response::Response(
-        ConnectionPtr connection_ptr
+        NotifyStatusHeadersFn notify_status_headers_fn, //!< [copy]
+        NotifyDataFn notify_data_fn //!< [copy]
     ) :
-        _connection_ptr(connection_ptr),
+        _notify_status_headers_fn(notify_status_headers_fn),
+        _notify_data_fn(notify_data_fn),
         _status(http::Status::OK),
         _headers_complete(false),
+        _complete(false),
         _body_presense(BodyPresense::NO_BODY),
-        _body_streambuf( _connection_ptr ),
+        _body_streambuf( notify_data_fn ),
         _body( &_body_streambuf )
 {
     // Nothing to do.
@@ -118,12 +120,21 @@ void Response::headersComplete()
     }
 
     _headers_complete = true;
+    if ( ! hasBody() )  _complete = true;
 
-    _connection_ptr->postResponseStatusHeaders(
+    _notify_status_headers_fn(
             _status,
             _headers,
             _body_presense
         );
+
+    _notify_status_headers_fn = NotifyStatusHeadersFn();
+}
+
+
+void Response::notifyComplete()
+{
+    _complete = true;
 }
 
 
@@ -157,6 +168,8 @@ void Response::setException( const std::exception& e )
             headersComplete();
 
             out() << "Exception handling the request. Check the BGWS server log.\n\n";
+
+            notifyComplete();
         }
 
     }
@@ -186,7 +199,8 @@ Response::~Response()
 
     if ( _body_presense == BodyPresense::EXPECT_BODY ) {
         _body.flush();
-        _connection_ptr->postResponseBodyData( string(), DataContinuesIndicator::END_OF_DATA );
+        _notify_data_fn( string(), DataContinuesIndicator::END_OF_DATA );
+        _notify_data_fn = NotifyDataFn();
     }
 }
 

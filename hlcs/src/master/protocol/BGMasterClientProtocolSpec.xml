@@ -119,28 +119,6 @@
     </Class>
   </Method>
 
-  <Method name="exit_status" type="RequestReply" comment="Status of managed binaries">
-    <Class name="ExitStatusRequest">
-      <DataMember type="text" name="agent_id" occurrences="many" comment="Optional Ids of agents to query"/>
-    </Class>
-
-    <Class name="ExitStatusReply" parent="BGMasterClientReply">
-      <Class name="Agent">
-        <Class name="Binary">
-          <DataMember type="text" name="status" comment="status of this binary"/>
-          <DataMember type="uint32" name="exit_status" comment="exit status of the last binary"/>
-          <DataMember type="text" name="name" comment="path/args of the binary"/>
-          <DataMember type="text" name="alias" comment="alias name of the binary"/>
-          <DataMember type="text" name="user" comment="user id under which the binary is running"/>
-          <DataMember type="text" name="binary_id" comment="unique identifier for this binary"/>
-        </Class>
-        <DataMember type="Binary" name="binary" comment="last binary to run on this agent"/>
-        <DataMember type="text" name="agent_id" comment="id of this agent"/>
-      </Class>
-      <DataMember type="Agent" name="agent" occurrences="many" comment="this agent"/>
-    </Class>
-  </Method>
-
   <Method name="failover" type="RequestReply" comment="Failover a managed binary message">
     <Class name="FailoverRequest">
       <DataMember type="text" name="binary_ids" occurrences="many" comment="binaries to stop"/>

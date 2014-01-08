@@ -30,12 +30,16 @@
 #define BGSCHED_CORE_CORE_H_
 
 #include <bgsched/core/BlockSort.h>
+#include <bgsched/core/IOBlockSort.h>
 #include <bgsched/core/JobSort.h>
 
 #include <bgsched/Block.h>
 #include <bgsched/BlockFilter.h>
 #include <bgsched/Coordinates.h>
 #include <bgsched/ComputeHardware.h>
+#include <bgsched/IOBlock.h>
+#include <bgsched/IOBlockFilter.h>
+#include <bgsched/IOHardware.h>
 #include <bgsched/IOLink.h>
 #include <bgsched/Job.h>
 #include <bgsched/JobFilter.h>
@@ -55,11 +59,27 @@ namespace core {
  * for all the midplanes, node boards, switches and cables in the system.
  *
  * \throws bgsched::InternalException with values:
- * - bgsched::InternalErrors::UnexpectedError - if any type of error occurs retrieving hardware information
+ * - bgsched::InternalErrors::UnexpectedError - if any type of error occurs retrieving compute hardware information
  *
  * \return Blue Gene compute hardware information.
  */
 ComputeHardware::ConstPtr getComputeHardware();
+
+/*!
+ * \brief Get Blue Gene I/O hardware information.
+ *
+ * Retrieves an instance of a Blue Gene I/O hardware object containing information for all the
+ * I/O drawers and I/O nodes in the system.
+ *
+ * \note This method was added in V1R2M0.
+ * \ingroup V1R2
+ *
+ * \throws bgsched::InternalException with values:
+ * - bgsched::InternalErrors::UnexpectedError - if any type of error occurs retrieving I/O hardware information
+ *
+ * \return Blue Gene I/O hardware information.
+ */
+IOHardware::ConstPtr getIOHardware();
 
 /*!
  * \brief Get the machine size in midplanes for each dimension.
@@ -89,7 +109,6 @@ Coordinates getMidplaneCoordinates(
         const std::string& midplaneLocation    //!< [in] Midplane location to get coordinates for
 );
 
-
 /*!
  * \brief Get coordinates within the midplane for the node location.
  *
@@ -103,7 +122,6 @@ Coordinates getMidplaneCoordinates(
 Coordinates getNodeMidplaneCoordinates(
         const std::string& nodeLocation        //!< [in] Node location to get coordinates for
 );
-
 
 /*!
  * \brief Get node boards for a Blue Gene midplane.
@@ -240,9 +258,38 @@ IOLink::ConstPtrs getAvailableIOLinks(
  * \return Compute blocks matching the block filter criteria.
  */
 Block::Ptrs getBlocks(
-        const BlockFilter& filter,                   //!< [in] Block filter to search on
-        const BlockSort& sort = BlockSort::AnyOrder, //!< [in] Blocks will be returned in this order
-        const std::string& user = std::string()      //!< [in] Check read authority to blocks for user
+        const BlockFilter& filter,                   //!< [in] Compute filter to search on
+        const BlockSort& sort = BlockSort::AnyOrder, //!< [in] Compute blocks will be returned in this order
+        const std::string& user = std::string()      //!< [in] Check read authority to compute blocks for user
+);
+
+/*!
+ * \brief Get I/O blocks using filter.
+ *
+ * Retrieves the I/O blocks matching the block filter criteria.
+ *
+ * Note: An empty user string means no security filtering will be performed and all results will be returned.
+ *
+ * \note This method was added in V1R2M0.
+ * \ingroup V1R2
+ *
+ * \throws bgsched::DatabaseException with values:
+ * - bgsched::DatabaseErrors::DatabaseError - if error occurs accessing the database
+ * - bgsched::DatabaseErrors::OperationFailed - if database operation failed
+ *
+ * \throws bgsched::RuntimeException with values:
+ * - bgsched::RuntimeErrors::AuthorityError - if user not found
+ *
+ * \throws bgsched::InternalException with values:
+ * - bgsched::InternalErrors::InconsistentDataError - if I/O node locations not found in database
+ * - bgsched::InternalErrors::UnexpectedError - if any type of unexpected error occurs
+ *
+ * \return I/O blocks matching the block filter criteria.
+ */
+IOBlock::Ptrs getIOBlocks(
+        const IOBlockFilter& filter,                     //!< [in] I/O block filter to search on
+        const IOBlockSort& sort = IOBlockSort::AnyOrder, //!< [in] I/O blocks will be returned in this order
+        const std::string& user = std::string()          //!< [in] Check read authority to I/O blocks for user
 );
 
 /*!
@@ -265,6 +312,7 @@ Job::ConstPtrs getJobs(
         const JobSort& sort = JobSort::AnyOrder, //!< [in] Jobs will be returned in this order
         const std::string& user = std::string()  //!< [in] Check read authority to jobs for user
 );
+
 
 } // namespace bgsched::core
 } // namespace bgsched

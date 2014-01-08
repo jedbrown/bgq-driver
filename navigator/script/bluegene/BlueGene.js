@@ -288,6 +288,13 @@ var b_BlueGene =
         console.log( module.id + ": calcDiagnosticsCommand data=", post_data, "str: " + cmd_str );
 
         return cmd_str;
+    },
+
+
+    diagnostics : {
+
+        LOG_FILE_NAME : "diags.log"
+
     }
 };
 

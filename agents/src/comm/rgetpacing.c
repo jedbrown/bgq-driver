@@ -26,6 +26,118 @@
  * \file rgetpacing.c
  *
  * \brief C File containing Comm Agent Remote Get Pacing Implementation
+ *
+ * Remote Get Pacing work items are malloced in chunks from the heap as needed
+ * and put on a free list.  Work items are allocated from the free list, and
+ * if that is empty, another chunk of work items are malloc'd and added to the
+ * free list.  
+ *
+ * An allocated work item is no longer on the free list.  Instead, it is queued
+ * on a work item queue until it is complete.  The work item queues look like this:
+ *
+ * \verbatim
+
+    ---nextWorkItemToProcess
+    |
+    |  |----->-----
+    |  |          |
+    |  |     dummyWorkItem
+    |  |          |
+    |  |      activeItem--->peerItem--->peerItem--
+    |  |          |   |                          |
+    |  |          |   --------------<-------------
+    |  |          |
+    ---|----> activeItem
+       |          |
+       |      activeItem
+       |          |
+       -----<------
+
+ * \endverbatim
+ *
+ * When the comm agent starts processing work items, it processes the activeItems
+ * starting with the nextWorkItemToProcess in a circular fashion.  When it stops
+ * processing activeItems, it updates the nextWorkItemToProcess to the next
+ * activeItem so every activeItem gets equal attention over time.
+ *
+ * When a work item is finished, it is removed from the activeItem list.
+ * If there is a peerItem associated with that activeItem, the first peerItem
+ * becomes the activeItem.
+ *
+ * When the comm agent sees a new work request in the input L2 atomic queue,
+ * it allocates a new work item from the free list.  It copies the rget descriptor
+ * and the payload descriptor from the work request into the work item.  At this
+ * time, it also updates fields in the descriptors.  For examples, 
+ * - The rget's physical address of the payload must point to the payload
+ *   descriptor that is* now in the work item.
+ * - The base address table ID for the direct put counter must be the agent's ID
+ *   associated with the agent's counters.
+ *
+ * There are two ordering techniques that determine where the work item is
+ * queued in the work item lists:
+ *
+ * 1. The activeItems and peerItems in the list are scanned for a peer ID that
+ *    matches the peer ID specified in the work request by the caller.  If an
+ *    Item is found with a matching peer ID, the new work item is queued
+ *    as a peerItem to the end of the peerItem list associated with that matching
+ *    Item.  This work item will not be processed until the Items queued before
+ *    it on the peerItem list are finished.
+ *
+ * 2. If no Item with a matching peer ID exists, then the same kind of search
+ *    and queuing is performed based on the ID calculated from the global
+ *    injection fifo number where this rget would have been injected by the caller,
+ *    the global rget fifo number where the payload descriptor will be injected,
+ *    and the destination node's coordinates.  This ensures ordering of the 
+ *    requests in the same way they would have been ordered had the rget been
+ *    injected by the caller.
+ 
+ * There are a set of MU counters in the wake on address compare (WAC) range.
+ * There is one counter for each sub-message.  When the comm agent wakes up, it
+ * looks at the value of each of these counters.  If a counter is zero, it
+ * injects the next sub-message for the nextWorkItemToProcess and moves
+ * nextWorkItemToProcess to the next activeItem.  Thus, each work item gets
+ * to inject one sub-message before a given work item can inject its next
+ * sub-message.  The counter address specified in the dput descriptor has
+ * coherence-on-zero, so the comm agent will only wake up when one of its
+ * counters hits zero or when a new work request is added to its L2 atomic queue.
+ *
+ * There are two distinct types of work items:
+ *
+ * 1. DirectPut.  This work item has an rget whose payload is a direct put.
+ *
+ * 2. Non-DirectPut.  This work item has an rget whose payload is a memfifo transfer.
+ *
+ * DirectPut work items must wait for a counter to hit zero in order to make
+ * progress.  Eventually, when all sub-messages for a work item have been sent,
+ * that work item is complete and is removed from the activeItem list.
+ *
+ * Non-DirectPut work items can be processed immediately, since there is no
+ * counter to wait for.  However, this type of work item usually has a peer ID
+ * that matches a DirectPut work item, so it has to wait on the peer item list
+ * for that DirectPut work item to complete before it can be processed.
+ *
+ * For example, the DirectPut work item transfers the data, and the corresponding
+ * Non-DirectPut work item is injected afterwards to send a completion message
+ * that causes the caller to be notified of the message completion.  Because
+ * the comm agent will not start the Non-DirectPut work item until the last
+ * sub-message of the associated DirectPut work item is complete, the
+ * Non-DirectPut rget and memfifo descriptors can be local transfers to
+ * speed up the message completion.
+ *
+ * Note that when the rget for a Non-DirectPut work item is injected, the
+ * comm agent must wait until that descriptor is complete (it has left the
+ * injection fifo) before re-using the work item.  This is because the payload
+ * descriptor is inside the work item.
+ * 
+ * Note that because a DirectPut work item may have several sub-messages in the
+ * network at once, the rget descriptor that is injected cannot point to the 
+ * payload descriptor inside the work item (there is only one of those, and
+ * its counter offset and payload offset are different for each sub-message).
+ * The comm agent maintains an array of payload buffers that hold payload
+ * descriptors, one descriptor for each counter.  Before a sub-message
+ * rget is injected, the payload descriptor in the work item is updated and
+ * copied into the payload buffer associated with the counter, and the rget
+ * that is injected is set to point to that payload buffer.
  */
 
 
@@ -54,6 +166,8 @@
 #include <agents/include/comm/rgetpacing.h>
 #include "rgetpacing_internal.h"
 #include "commagent_internal.h"
+#include <firmware/include/personality.h>
+#include <spi/include/kernel/process.h>
 
 
 #ifdef TRACE
@@ -151,6 +265,8 @@ static workItem_t *_freeWorkItemList            = NULL;
 static workItem_t *_ensureWorkItemList          = NULL;
 static workItem_t **_counterWorkItems; /* Array of pointers to work items that are associated with
 					* the sub-message counters */
+static int         *_subMessageSizes;  /* Array of sub-message sizes that are associated with
+                                          the sub-message counters */
 
 /* We need rget payload buffers, one for each active rget.  The payload (containing descriptors)
  * is copied from the work item payload into the buffer associated with the counter being used.
@@ -166,7 +282,13 @@ static int _numActiveCounters=0;
 static int _numActivePacedCounters=0;
 static int _isDD1; /* 0 = Not DD1 hardware
 		    * 1 = DD1 hardware */
-
+static size_t _numAnodes, _numBnodes, _numCnodes, _numDnodes;
+static size_t _numAplanes, _numBplanes, _numCplanes, _numDplanes;
+static size_t _numBCD, _numCD;
+static size_t _numSubRegions;
+static uint32_t *_subRegions;
+static uint32_t  _numActiveSubRegions = 0;
+static uint32_t  _useRandomZone = 0;
 
 /**
  * \brief Return whether to pace this work item.
@@ -327,6 +449,19 @@ int setupRecCounters ()
   memset ( memory, 0x00, size );
   _counterWorkItems = ( workItem_t **)memory;
 
+  /* Initialize an array of submessage sizes associated with each submessage counter.
+   * The submessage size can change dynamically, so each injection may use a different
+   * submessage size.
+   */
+  size = _numCounters * sizeof(int);
+  rc = posix_memalign ( &memory, 8, size );
+  if (rc) 
+    {
+      fprintf(stderr,"Remote Get Pacing: Failed to allocate heap for submessage sizes\n");
+      assert( rc == 0 );
+    }
+  memset ( memory, 0x00, size );
+  _subMessageSizes = ( int*)memory;
 
   return 0;
 }
@@ -346,6 +481,60 @@ void add2RecCounter ( uint64_t value )
 /* 		     value ); */
 }
 #endif
+
+
+/**
+ * \brief Initialize for Random Zone Management
+ *
+ * Allocate space for a multi-dimensional array of counters,
+ * one counter per subRegion of the network.
+ *
+ * \retval  0  Success
+ *          non-zero  Error.
+ */
+static
+int initRandomZone()
+{
+  int rc;
+  /* Determine the size of the ABCD dimensions.  This is used to dimension the 
+   * _subRegions array used to track the number of messages in subregions.
+   * Dimensions of size less than 16 have 4 subregion planes.
+   * Dimensions of size 16 have 8 subregion planes.
+   * The _subRegions array counts the number of active messages in each subregion.
+   * _numActiveSubRegions counts the number of subregions that have active messages in them.
+   */
+  Personality_t p;
+
+  rc = Kernel_GetPersonality ( &p, sizeof(Personality_t) );
+  if ( rc ) 
+  {
+    fprintf(stderr,"%s() [%s:%d]: Remote Get Pacing: Failure to get the personality, rc=%d.\n",__FUNCTION__,__FILE__,__LINE__,rc);
+    return rc;
+  }
+  _numAnodes = p.Network_Config.Anodes;
+  _numBnodes = p.Network_Config.Bnodes;
+  _numCnodes = p.Network_Config.Cnodes;
+  _numDnodes = p.Network_Config.Dnodes;
+  _numAplanes = _numAnodes < 16 ? ((_numAnodes < 4)? _numAnodes : 4) : 8;
+  _numBplanes = _numBnodes < 16 ? ((_numBnodes < 4)? _numBnodes : 4) : 8;
+  _numCplanes = _numCnodes < 16 ? ((_numCnodes < 4)? _numCnodes : 4) : 8;
+  _numDplanes = _numDnodes < 16 ? ((_numDnodes < 4)? _numDnodes : 4) : 8;
+  _numBCD = _numBplanes * _numCplanes * _numDplanes;
+  _numCD  = _numCplanes * _numDplanes;
+  _numSubRegions = _numAplanes * _numBplanes * _numCplanes * _numDplanes;
+
+  void *memory;
+  rc = posix_memalign ( &memory, 8, _numSubRegions * sizeof(_subRegions[0]) );
+  if (rc) 
+    {
+      fprintf(stderr,"Remote Get Pacing: Failed to allocate heap for the subRegions array\n");
+      assert( rc == 0 );
+    }
+  memset ( memory, 0x00,  _numSubRegions * sizeof(_subRegions[0]) );
+  _subRegions = ( uint32_t *)memory;
+  TRACE((stderr,"%s() [%s:%d]: Init: numNodes=(%zu,%zu,%zu,%zu), numPlanes=(%zu,%zu,%zu,%zu), _numSubRegions=%zu\n",__FUNCTION__,__FILE__,__LINE__,_numAnodes,_numBnodes,_numCnodes,_numDnodes,_numAplanes,_numBplanes,_numCplanes,_numDplanes,_numSubRegions));
+  return 0;
+}
 
 
 /**
@@ -377,7 +566,172 @@ int init ()
     _isDD1 = 0;
   TRACE((stderr,"%s() [%s:%d]: Running on DD1 hardware = %d\n",__FUNCTION__,__FILE__,__LINE__,_isDD1));
 
+  /* Initialize for random zone management */
+  if ( _doSubRegionCalculations) rc = initRandomZone();
+
   return rc;
+}
+
+
+/** \brief Calculate Sub Region Parameters
+ * This subroutine is called when the number of active subRegions has been
+ * changed.
+ * 1.  Check to see if we need to begin using the randomZone.  This occurs when
+ *     a configurable percentage of the active subRegions has been reached.
+ * 2.  Check to see if we need to change the subMessageSize and maxBytesInNetwork.
+ */
+void calculateSubRegionParameters()
+{
+  /* This is the percentage of subRegions that have at least one message in them */
+  int percentageActive = (_numActiveSubRegions * 100) / _numSubRegions;
+  
+  /* Handle Random Zone */
+  if ( percentageActive >= _randomThreshold )
+  {
+    _useRandomZone = 1; /* Remember this in a static variable */
+  }
+  
+  /* Handle subRemoteGetSize */
+  /* - From Threshold2 and greater, use largest multiplying factor */
+  if ( percentageActive >= _subRemoteGetSizeThreshold2 )
+  {
+    _subRemoteGetSize = _subRemoteGetSizeBase * _subRemoteGetSizeMultiplyingFactor2;
+  }
+  else 
+  {
+    /* - From Threshold1 -> Threshold2, use multiplying factor1 -> factor2 */
+    if ( percentageActive >= _subRemoteGetSizeThreshold1 )
+    {
+      int amountIntoMultiplyingFactorRange = 
+        (percentageActive - _subRemoteGetSizeThreshold1) *
+        _subRemoteGetSizeMultiplyingFactorRangeSize /
+        _subRemoteGetSizeThresholdRangeSize;
+      _subRemoteGetSize = _subRemoteGetSizeBase * 
+        ( _subRemoteGetSizeMultiplyingFactor1 +
+          amountIntoMultiplyingFactorRange );
+    }
+    else
+    {
+      /* - Less than Threshold1 uses base size */
+      _subRemoteGetSize = _subRemoteGetSizeBase;
+    }
+  }
+  
+  /* Handle maxBytesInNetwork */
+  /* - From Threshold2 and greater, use largest multiplying factor */
+  if ( percentageActive >= _maxBytesInNetworkThreshold2 )
+  {
+    _maxBytesInNetwork = _maxBytesInNetworkBase * _maxBytesInNetworkMultiplyingFactor2;
+  }
+  else 
+  {
+    /* - From Threshold1 -> Threshold2, use multiplying factor1 -> factor2 */
+    if ( percentageActive >= _maxBytesInNetworkThreshold1 )
+    {
+      int amountIntoMultiplyingFactorRange = 
+        (percentageActive - _maxBytesInNetworkThreshold1) *
+        _maxBytesInNetworkMultiplyingFactorRangeSize /
+        _maxBytesInNetworkThresholdRangeSize;
+      _maxBytesInNetwork = _maxBytesInNetworkBase * 
+        ( _maxBytesInNetworkMultiplyingFactor1 +
+          amountIntoMultiplyingFactorRange );
+    }
+    else
+    {
+      /* - Less than Threshold1 uses base size */
+      _maxBytesInNetwork = _maxBytesInNetworkBase;
+    }
+  }
+
+  if ( _maxBytesInNetwork < _subRemoteGetSize ) _maxBytesInNetwork = _subRemoteGetSize;
+
+  /* Re-calculate the number of sub-message reception counters used for pacing. */
+  _numSubMessageCounters = _maxBytesInNetwork / _subRemoteGetSize;  
+
+  TRACE((stderr,"%s() [%s:%d]: Recalculate: percentageActive=%d, _useRandomZone=%d, _subRemoteGetSize=%d, _maxBytesInNetwork=%d, _numSubMessageCounters=%d\n",__FUNCTION__,__FILE__,__LINE__, percentageActive, _useRandomZone, _subRemoteGetSize, _maxBytesInNetwork, _numSubMessageCounters));
+}
+
+
+/* 
+ * \brief Set SubRegion Parameters
+ * 
+ * Use the destination coordinates to determine which subRegion it is in.
+ *
+ * When starting a work item....
+ *  - Increment the count of messages in that subRegion.
+ *  - When the count changes from 0 to 1, 
+ *    - increment the number of active subRegions.
+ *    - Recalculate random zone, subRemoteGetSize, and maxBytesInNetwork.
+ *
+ * When ending a work item....
+ *  - Decrement the count of messages in the subRegion.
+ *  - When the count changes from 1 to 0, 
+ *    - decrement the number of active subRegions.
+ *    - Recalculate random zone, subRemoteGetSize, and maxBytesInNetwork.
+ *
+ * \param[in]  workItem  Pointer to work item.
+ * \param[in]  state     0 = Start of work item
+ *                       1 = End of work item
+ */
+void setRandomZone( workItem_t *workItem,
+                    uint32_t    state )
+{
+  uint32_t A = workItem->rgetDescriptor.PacketHeader.NetworkHeader.pt2pt.Destination.Destination.A_Destination;
+  uint32_t B = workItem->rgetDescriptor.PacketHeader.NetworkHeader.pt2pt.Destination.Destination.B_Destination;
+  uint32_t C = workItem->rgetDescriptor.PacketHeader.NetworkHeader.pt2pt.Destination.Destination.C_Destination;
+  uint32_t D = workItem->rgetDescriptor.PacketHeader.NetworkHeader.pt2pt.Destination.Destination.D_Destination;
+  uint32_t Aindex = (_numAplanes * A) / _numAnodes;
+  uint32_t Bindex = (_numBplanes * B) / _numBnodes;
+  uint32_t Cindex = (_numCplanes * C) / _numCnodes;
+  uint32_t Dindex = (_numDplanes * D) / _numDnodes;
+  uint32_t index  = (Aindex * _numBCD) + (Bindex * _numCD) + (Cindex * _numDplanes) + Dindex;
+
+  TRACE((stderr,"%s() [%s:%d]: SubRegion: %s workItem = %p, index = %u for dest (%u,%u,%u,%u), ABCDindex = (%u,%u,%u,%u)\n",__FUNCTION__,__FILE__,__LINE__,(state==0)?"START":"END  ",workItem,index,A,B,C,D,Aindex,Bindex,Cindex,Dindex));
+
+  /* Handle the start of a work item */
+  if ( state == 0 )
+  {
+    _subRegions[index]++;
+
+    /* If we just increased the number of active regions, recalculate the
+     * random zone, _subRemoteGetSize, and _maxBytesInNetwork.
+     */
+    if ( _subRegions[index] == 1 )
+    {
+      _numActiveSubRegions++;
+      
+      TRACE((stderr,"%s() [%s:%d]: SubRegion START: subRegions[%u]=%u, numActiveSubRegions=%u, _numSubRegions=%zu\n",__FUNCTION__,__FILE__,__LINE__,index,_subRegions[index],_numActiveSubRegions, _numSubRegions));
+
+      calculateSubRegionParameters(index);
+
+    }
+    
+    if ( _useRandomZone )
+    {
+      TRACE((stderr,"%s() [%s:%d]: SubRegion: Setting zone to %d\n",__FUNCTION__,__FILE__,__LINE__,_randomZone));
+      //MUSPI_DescriptorDumpHex("before",&workItem->payloadDescriptor);
+      MUSPI_SetZoneRouting ( &workItem->payloadDescriptor,
+                             _randomZone );
+      //MUSPI_DescriptorDumpHex("after ",&workItem->payloadDescriptor);
+    }
+  }
+  /* End of a work item */
+  else
+  {
+    _subRegions[index]--;
+
+    /* If we just decreased the number of active regions, recalculate the
+     * random zone, _subRemoteGetSize, and _maxBytesInNetwork.
+     */
+    if ( _subRegions[index] == 0 ) 
+    {
+      _numActiveSubRegions--;
+
+      TRACE((stderr,"%s() [%s:%d]: SubRegion END  : subRegions[%u]=%u, numActiveSubRegions=%u, _numSubRegions=%zu\n",__FUNCTION__,__FILE__,__LINE__,index,_subRegions[index],_numActiveSubRegions, _numSubRegions));
+      
+      calculateSubRegionParameters(index);
+    }
+  }
 }
 
 
@@ -547,20 +901,27 @@ workItem_t *addWorkItem ( workItemID_t ID,
  * Complete a work item.  Remove it from the work item list.
  */
 static
-void completeWorkItem ( workItem_t *workItem )
+void completeWorkItem ( workItem_t *workItem,
+                        uint64_t    counterNum )
 {
+  /* This is the number of bytes that were just transferred */
+  uint64_t lengthCompleted = _subMessageSizes[counterNum];
+
   /* If this is the last sub message to be completed for this work item,
    * remove the work item from the list.  Otherwise, decrement the
    * length remaining to complete and leave the work item active.
    */
-  if ( ( workItem->paceIt == 0 ) || (workItem->remainingCompletionLength <= _subRemoteGetSize ) )
+  if ( ( workItem->paceIt == 0 ) || (workItem->remainingCompletionLength <= lengthCompleted ) )
     {
+      /* Optionally update the subRegion tracking of messages */
+      if ( _doSubRegionCalculations) setRandomZone ( workItem, 1 /* End of work item */ );
+
       TRACE((stderr,"%s() [%s:%d]: Removing work item %p\n",__FUNCTION__,__FILE__,__LINE__,workItem));
       removeWorkItem ( workItem );
     }
   else
     {
-      workItem->remainingCompletionLength -= _subRemoteGetSize;
+      workItem->remainingCompletionLength -= lengthCompleted;
       TRACE((stderr,"%s() [%s:%d]: Work item %p still active, remaining inject length %lu, remaining completion length %lu\n",__FUNCTION__,__FILE__,__LINE__,workItem,workItem->remainingInjectLength,workItem->remainingCompletionLength));
     }
 
@@ -787,8 +1148,10 @@ uint32_t injectNextDPutSubMessage ( uint64_t counterNum )
   /* 4. Inject */
   MUSPI_InjFifoAdvanceDesc ( _ififo );
 
-  /* 5. Remember this work item as being associated with this counter. */
+  /* 5. Remember this work item as being associated with this counter, and the
+   *    message length that was injected. */
   _counterWorkItems[counterNum] = workItem;
+  _subMessageSizes[counterNum]  = messageLength;
 
   /* 6. Update the payload descriptor's payload offset and receive offset for next time */
   workItem->payloadDescriptor.Pa_Payload += _subRemoteGetSize;
@@ -820,7 +1183,7 @@ void  doRemoteGetPacingWork ()
   numCounters           = _numCounters;
   subMessageRecCounters = _agentShmPtr->receptionCounters;
 
-  TRACE2((stderr,"%s() [%s:%d]: numCounters=%lu, _numActiveCounters=%d, _numActivePacedCounters=%d, _bytesWaitingToInject=%lu, _numNonDPutWorkItems=%u\n",__FUNCTION__,__FILE__,__LINE__,numCounters, _numActiveCounters, _numActivePacedCounters, _bytesWaitingToInject, _numNonDPutWorkItems));
+  TRACE2((stderr,"%s() [%s:%d]: numCounters=%lu, _numActiveCounters=%d, _numActivePacedCounters=%d, _numSubMessageCounters=%d, _bytesWaitingToInject=%lu, _numNonDPutWorkItems=%u\n",__FUNCTION__,__FILE__,__LINE__,numCounters, _numActiveCounters, _numActivePacedCounters, _numSubMessageCounters, _bytesWaitingToInject, _numNonDPutWorkItems));
 
   /* Keep going while new work may have appeared due to completion of existing work */
   uint32_t doWorkAgain, tryToInject;
@@ -851,7 +1214,7 @@ void  doRemoteGetPacingWork ()
 	      _numActiveCounters--;
 	      numCountersToBeProcessed--;
 
-	      completeWorkItem ( workItem );
+	      completeWorkItem ( workItem, counterNum );
 	      _counterWorkItems[counterNum] = NULL;
 	      tryToInject = 1;
 	    }
@@ -896,6 +1259,8 @@ void  doRemoteGetPacingWork ()
 
   } while ( doWorkAgain );
 }
+
+
 /*
  * \brief Setup a New Work Item
  *
@@ -994,6 +1359,12 @@ void setupWorkItem( CommAgent_RemoteGetPacing_InternalWorkRequest_t *workRequest
       MUSPI_SetRecCounterBaseAddressInfo( &workItem->payloadDescriptor,
 					  _globalBatId,
 					  0 ); /* Use 0 offset since this will be set later */
+
+      /* Use the destination coordinates to determine which subRegion it is in.
+       * Increment the count of messages in that subRegion.
+       * When the count changes from 0 to 1, increment the number of active subRegions.
+       */
+      if ( _doSubRegionCalculations) setRandomZone( workItem, 0 /* Start of work item */ );
     }
   else
     {

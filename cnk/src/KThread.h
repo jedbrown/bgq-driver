@@ -82,9 +82,10 @@ typedef struct KThread_t
     // Tool/Debugger control 
     uint8_t  watch1Type; // DAC1/DAC2 pair has a watchpoint active. Value of bgcios::toolctl::WatchType
     uint8_t  watch2Type; // DAC3/DAC4 pair has a watchpoint active. Value of bgcios::toolctl::WatchType
-    uint8_t  pad1;         // (avail)   
-    uint8_t  pad2;         // (avail)   
-    uint8_t  pad3;         // (avail)   
+    uint8_t  pad1;         // (avail)  
+                           //
+    // Hardware pid value to be used during migration. 
+    uint16_t  physical_pid; // physical pid used during dispatch. 
                                                
     struct HWThreadState_t* pHWThread;  // State for this h/w thread's scheduler, etc.
     struct CoreState_t*     pCoreState;
@@ -99,15 +100,19 @@ typedef struct KThread_t
     void   *pChild_TID;  // points into user-space
     void   *TID_Address; // set by sc_set_tid_address
     int32_t Clone_Flags;  // save for debugging
+                          //
+    uint32_t pad;         // available.
 
     // Migration data.
     union {
-        volatile uint32_t word; 
+        volatile uint32_t dword; 
         struct {
             int8_t  active; // Non-zero value indicates migration data is active
-            int8_t  pad;
+            int8_t  pad1;
             int8_t  targetCPU; // Target processor id for the migration
             int8_t  slot;      // Target slot identifying the kthread to consume.
+            uint16_t physical_pid; 
+            uint16_t pad2;
         } b;
     } MigrationData;
 

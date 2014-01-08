@@ -34,9 +34,56 @@ RDOPTS=
 CROSS_COMPILER=${BGQ_CROSS_LD}
 
 TOOLSDIR=$(BGQ_LINUX_PATH)/tools
-SUBDIRS=$(shell find * -type d | grep -ve "\.svn" | grep -v rpms | grep -v '/' | grep -v ofed | grep -v bgfirmwaredev | grep -v bglogdev | grep -v bgmudev | grep -v bgpersdev | grep -v bgrasdev ) 
+SUBDIRS=$(shell find * -type d | grep -ve "\.svn" | grep -v rpms | grep -v '/' ) 
 INSTALL_RAMDISK=${BGQ_RAMDISK_PATH}/bin
 INSTALL_BUILD_RAMDISK=${INSTALL_RAMDISK}/build-ramdisk
+
+
+# First check to make sure we are on RHEL6 before we start to build.  If so, make sure that it
+# is a ppc64 based system.  If either case is false we configure the install rule to
+# print the user a warning.  We cannot make this a fatal error as it would break the
+# RHEL5 build which works around this by copying over a RHEL6 ramdisk.
+
+install_targets =
+install_commands =
+
+ifeq ($(OS_ARCH),ppc64)
+  install_targets = Make.rules ${BGQ_RAMDISK_PATH} ${BGQ_DISTROFS_PATH} ${BGQ_INITRAMFS_PATH} MAKE_BIN_PATH ${INSTALL_RAMDISK} ${SUBDIRS} build-ramdisk ${INSTALL_BUILD_RAMDISK} mlxFwUpdate distrofs.tar build-rpms
+
+else
+
+install_targets =
+
+define install_commands
+	@echo -en "\n\n#############################################################"
+	@echo -en "\n# WARNING:"
+	@echo -en "\n#\tRamdisk build is only supported on PPC64 based systems."
+	@echo -en "\n#\tSkipping the ramdisk build."
+	@echo -en "\n###############################################################\n\n"
+endef
+
+endif
+
+ifneq ($(RHEL6),yes)
+  install_targets = 
+
+define install_commands
+	@echo -en "\n\n#############################################################"
+	@echo -en "\n# WARNING:"
+	@echo -en "\n#\tRamdisk build is only supported on RHEL6 based systems."
+	@echo -en "\n#\tSkipping the ramdisk build."
+	@echo -en "\n###############################################################\n\n"
+endef
+
+endif
+
+# For control system simulation build (x86),
+# override to build the services directory only.
+ifeq ($(BGQ_CONTROL_SYSTEM_SIMULATION),yes)
+  install_targets = services
+  install_commands =
+endif
+
 
 .PHONY: ${SUBDIRS} FORCE
 
@@ -46,29 +93,10 @@ default: install
 
 all: default	 
 
-# First check to make sure we are on RHEL6 before we start to build.  If so, make sure that it
-# is a ppc64 based system.  If either case is false we configure the install rule to
-# print the user a warning.  We cannot make this a fatal error as it would break the
-# RHEL5 build which works around this by copying over a RHEL6 ramdisk.
-ifeq ($(RHEL6),yes)
-ifeq ($(OS_ARCH),ppc64)
-install: Make.rules ${BGQ_RAMDISK_PATH} ${BGQ_DISTROFS_PATH} ${BGQ_INITRAMFS_PATH} MAKE_BIN_PATH ${INSTALL_RAMDISK} ${SUBDIRS} build-ramdisk ${INSTALL_BUILD_RAMDISK} mlxFwUpdate distrofs.tar build-rpms
-else
-install:
-	@echo -en "\n\n#############################################################"
-	@echo -en "\n# WARNING:"
-	@echo -en "\n#\tRamdisk build is only supported on PPC64 based systems."
-	@echo -en "\n#\tSkipping the ramdisk build."
-	@echo -en "\n###############################################################\n\n"
-endif
-else
-install:
-	@echo -en "\n\n#############################################################"
-	@echo -en "\n# WARNING:"
-	@echo -en "\n#\tRamdisk build is only supported on RHEL6 based systems."
-	@echo -en "\n#\tSkipping the ramdisk build."
-	@echo -en "\n###############################################################\n\n"
-endif
+
+install: $(install_targets)
+	$(install_commands)
+
 
 ${SUBDIRS}: FORCE
 	@${MAKE} -C $@
@@ -138,7 +166,6 @@ mlxFwUpdate: ${SUBDIRS} build-ramdisk $(TOOLSDIR) ../tools/mlxFwUpdate $(BGQ_INS
 	cp -a /lib64/libz.so.1 ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/lib64/
 	cp -a /usr/lib64/libstdc++.so.6* ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/usr/lib64
 	cp /usr/bin/mstflint ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/usr/bin
-	find ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/* -type f | xargs /usr/sbin/prelink -u &> /dev/null ; exit 0
 	if [ ! -e ${INSTALL_RAMDISK}/$@ ] ; then cp -a $(BGQ_INSTALL_DIR)/baremetal/firmware/mlxFwUpdate/* $(BGQ_BUILD_DIR)/ramdisk/tools/mlxFwUpdate/bin/ ; ./build-ramdisk --saveimg --verbose --rootfs ${BGQ_INITRAMFS_PATH} --addtree ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate ${RDOPTS} -o $@ ; cp $@ ${INSTALL_RAMDISK} ; fi
 #	@${CP} $@ ${INSTALL_RAMDISK}
 #	@${LN} -sf ${INSTALL_RAMDISK}/$@ ${INSTALL_RAMDISK}/ramdisk
@@ -152,14 +179,13 @@ build-ramdisk: build-ramdisk.pl
 clean: Make.rules
 	@echo "Cleaning `basename $$PWD`"
 	@make -C bgras clean
-	@make -C bgrasdev clean
-	@make -C bgvrnic clean
-	@make -C bgmudev clean
-	@make -C bgpersdev clean
-	@make -C bgfirmwaredev clean
+	@make -C bghalt clean
+	@make -C bghealthmond clean
 	@make -C bgsethostid clean
+	@make -C bgvrnic clean
+	@make -C distrofs clean
+	@make -C initramfs clean
 	@make -C rpms clean
-	@make -C ofed clean
 	@make -C services clean
 	@rm -f *.o *~ *.elf *.objdump ramdisk* build-ramdisk distrofs.tar
 
@@ -168,14 +194,11 @@ distclean:  Make.rules
 	@make -C initramfs distclean
 	@make -C distrofs distclean
 	@make -C bgras distclean
-	@make -C bgrasdev distclean
-	@make -C bgvrnic distclean
-	@make -C bgmudev distclean
-	@make -C bgpersdev distclean
-	@make -C bgfirmwaredev distclean
+	@make -C bghalt distclean
 	@make -C bgsethostid distclean
+	@make -C bghealthmond distclean
+	@make -C bgvrnic distclean
 	@make -C rpms distclean
-	@make -C ofed distclean
 	@make -C services distclean
 	@rm -f *.o *~ *.elf *.objdump ramdisk* build-ramdisk Make.rules distrofs.tar
 	@rm -rf ${BGQ_RAMDISK_PATH}/*

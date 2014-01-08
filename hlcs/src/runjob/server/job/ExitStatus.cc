@@ -24,8 +24,6 @@
 
 #include "common/logging.h"
 
-#include <ramdisk/include/services/JobctlMessages.h>
-
 #include <iomanip>
 
 namespace runjob {
@@ -86,18 +84,6 @@ ExitStatus::set(
         )
 {
     LOG_TRACE_MSG( "status 0x" << std::setw(8) << std::setfill('0') << std::hex << status << " from rank " << std::dec << rank );
-
-    // check for CRC exchange and Termination check failure bits from CNK, we need to remember these since
-    // they will only come from the ExitJob message and not ExitProcess, which may have already arrived and
-    // set the exit status
-    if ( status & bgcios::jobctl::ExitStatus_CrcError ) {
-        LOG_WARN_MSG( "CRC exchange failed" );
-        _status = bgq::utility::ExitStatus( _status.get() | bgcios::jobctl::ExitStatus_CrcError );
-    }
-    if ( status & bgcios::jobctl::ExitStatus_TermCheck ) {
-        LOG_WARN_MSG( "Termination check failed" );
-        _status = bgq::utility::ExitStatus( _status.get() | bgcios::jobctl::ExitStatus_TermCheck );
-    }
 
     // short circuit if status is already set
     if ( _status.get() & 0xFFFF ) {

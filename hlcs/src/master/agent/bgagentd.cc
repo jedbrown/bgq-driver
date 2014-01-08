@@ -24,76 +24,23 @@
 #include "Agent.h"
 
 #include "common/AgentProtocol.h"
-#include "common/ArgParse.h"
 
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <csignal>
-#include <boost/filesystem.hpp>
+#include <utility/include/BoolAlpha.h>
 #include <utility/include/Log.h>
 #include <utility/include/version.h>
 #include <utility/include/LoggingProgramOptions.h>
-#include <utility/include/cxxsockets/SocketTypes.h>
+
+#include <boost/filesystem.hpp>
+#include <boost/program_options.hpp>
 
 LOG_DECLARE_FILE( "master" );
 
 static Agent agent;
-
-// Need a signal handler to bring down all threads
-// and all binaries gently.
-
-static int signals[] = {
-    SIGHUP,
-    SIGINT,
-    SIGQUIT,
-    SIGILL,
-    SIGABRT,
-    SIGFPE,
-    SIGSEGV,
-    SIGPIPE,
-    SIGALRM,
-    SIGTERM,
-    SIGUSR1,
-    SIGUSR2,
-    SIGXFSZ,
-    SIGBUS,
-    SIGPOLL,
-    SIGPROF,
-    SIGSYS,
-    SIGVTALRM,
-    SIGXCPU
-};
-
-static int num_signals = sizeof(signals) / sizeof(signals[0]);
-volatile int signal_number = 0;          // flag to terminate bgagentd
-                                         // set to termination signal by signal handler
-Args* pargs;
-
-void
-bgagentd_sighandler(
-        int signum,
-        siginfo_t* siginfo,
-        void*)
-{
-    if (signum == SIGUSR1 || signum == SIGPIPE || signum == SIGHUP) {
-        return;
-    } else {
-        std::cerr << "bgagentd ending due to signal " << signum <<  " in thread "
-                  << pthread_self() << " from " << siginfo->si_pid << "." << std::endl;
-        signal_number = signum;
-        agent.cleanup();
-        // Reset to default action for our signal
-        struct sigaction sigact;
-        sigact.sa_handler = SIG_DFL;
-        int rc = sigaction(signum, &sigact, 0);
-        if (rc < 0) {
-            std::cerr << "Error resetting default action for bgagentd signal handler." << std::endl;
-            exit(1);
-        }
-        // now raise it again
-        raise(signum);
-    }
-}
 
 std::string
 setlogging(
@@ -130,67 +77,97 @@ setlogging(
     return logfile;
 }
 
-void
-help()
+int
+main(int argc, const char** argv)
 {
-    std::cerr << "bgagentd is the BGmaster system's process monitor." << std::endl;
-}
+    // Parse --properties and --verbose before everything else
+    namespace po = boost::program_options;
+    bgq::utility::Properties::Ptr props;
+    try {
+        po::options_description temp;
+        bgq::utility::Properties::ProgramOptions propertiesOptions;
+        propertiesOptions.addTo( temp );
+        bgq::utility::LoggingProgramOptions lpo( "ibm.master" );
+        lpo.addTo( temp );
+        po::command_line_parser cmd_line( argc, const_cast<char**>(argv) );
+        cmd_line.allow_unregistered();
+        cmd_line.options( temp );
+        po::variables_map vm;
+        po::store( cmd_line.run(), vm );
+        po::notify( vm );
 
-void
-usage()
-{
-    std::cerr << "bgagentd [ --properties < filename > ] [ --help ] [ --logdir < directory > ] [ --debug < true | false > ] [ --workingdir < directory > ]  [ --host host:port ] --users < users >" << std::endl;
-}
-
-int main(int argc, const char** argv) {
-    std::vector<std::string> validargs;
-    std::vector<std::string> singles;
-    std::string debugarg = "--debug";
-    std::string logdirarg = "--logdir";
-    std::string userarg = "--users";
-    std::string workingdirarg = "--workingdir";
-    validargs.push_back(debugarg);
-    validargs.push_back(logdirarg);
-    validargs.push_back(userarg);
-    validargs.push_back(workingdirarg);
-    validargs.push_back("*"); // One argument without a "--" is allowed
-    Args largs(argc, argv, &usage, &help, validargs, singles, 32041, true);
-    pargs = &largs;
-
-    std::string debugstr = (*pargs)[debugarg];
-    bool debug = false;
-    if (debugstr == "true")
-        debug = true;
-    else if (debugstr == "false")
-        debug = false;
-    else if (!debugstr.empty()) {
-        std::cerr << "Please indicate 'true' or 'false' after --debug" << std::endl;
+        // Create properties and initialize logging
+        props = bgq::utility::Properties::create( propertiesOptions.getFilename() );
+        bgq::utility::initializeLogging(*props, lpo, "master");
+    } catch(const std::runtime_error& e) {
+        std::cerr << "Error reading configuration file: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
+    } catch ( const std::exception& e ) {
+        std::cerr << e.what() << std::endl;
+        exit( EXIT_FAILURE );
     }
 
-    // Signal handlers
-    for (int i = 0; i < num_signals; i++)
-    {
-        struct sigaction action;
-        action.sa_sigaction = &bgagentd_sighandler;
-        action.sa_flags = SA_SIGINFO;
-        int rc = sigaction(signals[i], &action, 0);
-        if (rc < 0)
-        {
-            std::cerr << "Error setting up bgagentd signal handler: " << strerror(errno) << std::endl;
-            exit(1);
-        }
+    bgq::utility::BoolAlpha debug;
+    std::string logdir;
+    std::string workingdir;
+    std::string users;
+
+    po::options_description options;
+    options.add_options()
+        ("help,h", po::bool_switch(), "this help text")
+        ("debug,d", po::value(&debug)->implicit_value(true), "enable debug mode (do not daemonize)")
+        ("logdir", po::value(&logdir), "path to logging directory")
+        ("workingdir", po::value(&workingdir), "path to working directory")
+        ("users", po::value(&users), "comma separated list of usernames")
+        ;
+
+    // Add properties and verbose options
+    bgq::utility::Properties::ProgramOptions propertiesOptions;
+    propertiesOptions.addTo( options );
+    bgq::utility::LoggingProgramOptions lpo( "ibm.master" );
+    lpo.addTo( options );
+
+    // Add host option
+    bgq::utility::ClientPortConfiguration host(
+            32041,
+            bgq::utility::ClientPortConfiguration::ConnectionType::Administrative
+            );
+    host.addTo( options );
+
+    po::variables_map vm;
+    po::command_line_parser cmd_line( argc, const_cast<char**>(argv) );
+    cmd_line.options( options );
+    po::positional_options_description positional;
+    cmd_line.positional( positional );
+    try {
+        po::store( cmd_line.run(), vm );
+
+        // Notify variables_map that we are done processing options
+        po::notify( vm );
+    } catch ( const std::exception& e ) {
+        std::cerr << e.what() << std::endl;
+        exit( EXIT_FAILURE );
     }
 
-    std::string logdir = (*pargs)[logdirarg];
-    if (!debug) {
+    if ( vm["help"].as<bool>() ) {
+        std::cout << argv[0] << std::endl;
+        std::cout << std::endl;
+        std::cout << "OPTIONS:" << std::endl;
+        std::cout << options << std::endl;
+        exit(EXIT_SUCCESS);
+    }
+
+    host.setProperties( props, "master.agent" );
+    host.notifyComplete();
+
+    if (!debug._value) {
         // Now find the logdir
-        if (logdir.length() == 0) {
+        if (logdir.empty()) {
             try {
-                logdir = pargs->get_props()->getValue("master.agent", "logdir");
-            } catch(std::invalid_argument& e) {
+                logdir = props->getValue("master.agent", "logdir");
+            } catch(const std::invalid_argument& e) {
                 LOG_ERROR_MSG("No logging directory specified or missing section. " << e.what());
-                exit(1);
+                exit(EXIT_FAILURE);
             }
         }
 
@@ -203,11 +180,10 @@ int main(int argc, const char** argv) {
         }
     }
 
-    if (debug) {
+    if (debug._value) {
         LOG_INFO_MSG( argv[0] << " [" << getpid() << "] starting in debug mode." );
     }
 
-    const std::string workingdir = (*pargs)[workingdirarg];
     if (!workingdir.empty() ) {
         LOG_DEBUG_MSG("Changing working directory to: " << workingdir);
         const int rc = chdir(workingdir.c_str());
@@ -217,9 +193,8 @@ int main(int argc, const char** argv) {
         }
     }
 
-
-    bgq::utility::Properties::Ptr props = pargs->get_props();
-    agent.set_users((*pargs)[userarg]);
+    agent.set_users(users);
+    
     std::string basename = boost::filesystem::basename( boost::filesystem::path(argv[0]) );
     std::ostringstream version;
     version << "Blue Gene/Q " << basename << " " << bgq::utility::DriverName << " (revision " << bgq::utility::Revision << ")";
@@ -248,6 +223,6 @@ int main(int argc, const char** argv) {
     LOG_DEBUG_MSG("File limits: " << rlimit_nofile.rlim_cur);
 
     LOG_INFO_MSG("bgagentd [" << getpid() << "] " << version.str() << " starting");
-    agent.set_pairs(pargs->get_portpairs());
+    agent.set_pairs(host.getPairs());
     agent.startup(props);
 }

@@ -59,6 +59,7 @@ HTTP status: 403 Forbidden
 
 #include "Jobs.hpp"
 
+#include "../../BlockingOperationsThreadPool.hpp"
 #include "../../dbConnectionPool.hpp"
 #include "../../Error.hpp"
 #include "../../sqlStrings.gen.hpp"
@@ -112,7 +113,6 @@ capena::http::Methods Jobs::_getAllowedMethods() const
 
 void Jobs::_doGet()
 {
-
     // The user must be authenticated.
     if ( ! _isUserAuthenticated() ) {
         LOG_WARN_MSG( "Cannot get jobs summary because the user isn't authenticated." );
@@ -124,34 +124,67 @@ void Jobs::_doGet()
             ) );
     }
 
+    _blocking_operations_thread_pool.post( boost::bind(
+            &Jobs::_doQuery, this,
+            capena::server::AbstractResponder::shared_from_this()
+        ) );
+}
 
-    // Do query to get count of jobs...
 
-    auto conn_ptr(dbConnectionPool::getConnection());
+void Jobs::_doQuery(
+        capena::server::ResponderPtr
+    )
+{
+    try {
+        auto conn_ptr(dbConnectionPool::getConnection());
 
-    cxxdb::ResultSetPtr rs_ptr(conn_ptr->query(
-            sql::JOBS_CHART // queries/jobsChart.txt
-        ));
+        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query(
+                sql::JOBS_CHART // queries/jobsChart.txt
+            ));
 
-    if ( ! rs_ptr->fetch() ) {
-        BOOST_THROW_EXCEPTION( std::runtime_error( "no result for jobs chart query." ) );
+        _getStrand().post( boost::bind(
+                &Jobs::_queryComplete, this,
+                capena::server::AbstractResponder::shared_from_this(),
+                conn_ptr,
+                rs_ptr
+            ) );
+    } catch ( std::exception& e )
+    {
+        _inCatchPostCurrentExceptionToHandlerFn();
     }
+}
 
-    json::ArrayValue arr_val;
-    json::Array &arr(arr_val.get());
 
-    for ( unsigned i(1) ; i <= 5 ; ++i ) {
-        json::Object &obj(arr.addObject());
+void Jobs::_queryComplete(
+        capena::server::ResponderPtr,
+        cxxdb::ConnectionPtr,
+        cxxdb::ResultSetPtr rs_ptr
+    )
+{
+    try {
+        if ( ! rs_ptr->fetch() ) {
+            BOOST_THROW_EXCEPTION( std::runtime_error( "no result for jobs chart query." ) );
+        }
 
-        obj.set( "date", boost::gregorian::to_iso_string( rs_ptr->columns()[string() + "d" + lexical_cast<string>(i)].getDate() ) );
-        obj.set( "jobCount", rs_ptr->columns()[string() + "j" + lexical_cast<string>(i)].as<uint64_t>() );
+        json::ArrayValue arr_val;
+        json::Array &arr(arr_val.get());
+
+        for ( unsigned i(1) ; i <= 5 ; ++i ) {
+            json::Object &obj(arr.addObject());
+
+            obj.set( "date", boost::gregorian::to_iso_string( rs_ptr->columns()[string() + "d" + lexical_cast<string>(i)].getDate() ) );
+            obj.set( "jobCount", rs_ptr->columns()[string() + "j" + lexical_cast<string>(i)].as<uint64_t>() );
+        }
+
+        capena::server::Response &response(_getResponse());
+
+        response.setContentTypeJson();
+        response.headersComplete();
+        json::Formatter()( arr_val, response.out() );
+    } catch ( std::exception& e )
+    {
+        _handleError( e );
     }
-
-    capena::server::Response &response(_getResponse());
-
-    response.setContentTypeJson();
-    response.headersComplete();
-    json::Formatter()( arr_val, response.out() );
 }
 
 

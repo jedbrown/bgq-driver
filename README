@@ -2,8 +2,8 @@
 To build the open source Blue Gene software, perform the following steps.
 
 The software is available in two tar files:
-o bgq-V1R1M2.tar.gz
-o bgq-V1R1M2-gpl.tar.gz
+o bgq-V1R2M0.tar.gz
+o bgq-V1R2M0-gpl.tar.gz
 
 Both of these must be downloaded.
 
@@ -12,18 +12,18 @@ Both of these must be downloaded.
 
 In addition to the Blue Gene software distribution, you must have these extra packages/software installed:
 
-- Dojo 1.7.1
+- Dojo 1.8.1
 
 To build the Blue Gene Navigator administrative web application, you will need the Dojo JavaScript library.
 
-Download Dojo from Dojo's site, http://download.dojotoolkit.org/release-1.7.1/dojo-release-1.7.1-src.tar.gz.
+Download Dojo from Dojo's site, http://download.dojotoolkit.org/release-1.8.1/dojo-release-1.8.1.tar.gz .
 
 In addition, you need to create an archive for the Navigator build.
 
 $ mkdir dojo-repackage
 $ cd dojo-repackage
-$ tar -xzf dojo-release-1.7.1-src.tar.gz
-$ mv dojo-release-1.7.1-src dojo
+$ tar -xzf dojo-release-1.8.1.tar.gz
+$ mv dojo-release-1.8.1 dojo
 $ tar -czf dojo.tgz dojo
 
 Put dojo.tgz somewhere, such as /bgsys/dowloads.
@@ -63,6 +63,7 @@ To create the database, use the following commands:
 $ su - bgqsysdb
 $ mkdir ~bgqsysdb/data/ts
 $ db2 "CREATE DATABASE bgdb0scr PAGESIZE 8192"
+$ db2 connect to bgdb0scr user bgqsysdb using db24bgq
 $ db2 "create bufferpool bp3scr size 100000 pagesize 16k"
 $ db2 "create tablespace userspace3scr pagesize 16k managed by system using ('/dbhome/bgqsysdb/data/ts') extentsize 64 prefetchsize 32 bufferpool bp3scr overhead 7.5"
 $ db2 "alter bufferpool bp3scr size AUTOMATIC"
@@ -74,10 +75,10 @@ $ db2 "create temporary tablespace userspace3scrtemp pagesize 16k managed by sys
 When the system has the required software and configuration, build the source code by by running the following steps:
 
 Un-tar the two tar files in the same directory, the second will add more files to the directories created by the first un-tar.
-$ tar -xzf bgq-V1R1M2.tar.gz
-$ tar -xzf bgq-V1R1M2-gpl.tar.gz
+$ tar -xzf bgq-V1R2M0.tar.gz
+$ tar -xzf bgq-V1R2M0-gpl.tar.gz
 
-$ cd bgq-V1R1M2
+$ cd bgq-V1R2M0
 
 $ scripts/configure \
  --with-floor=/bgsys/drivers/ppcfloor \

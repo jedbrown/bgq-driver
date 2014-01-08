@@ -25,208 +25,273 @@
  * \file MMCSCommandProcessor.cc
  */
 
-#include <boost/foreach.hpp>
-#include <ras/include/RasEventImpl.h>
-#include <ras/include/RasEventHandlerChain.h>
-#include "lite/MMCSCommand_runjob.h"
-#include "lite/MMCSCommand_killjob.h"
-#include "lite/MMCSCommand_waitjob.h"
-
-#include "BlockControllerTarget.h"
-#include "ConsoleController.h"
-#include "MMCSProperties.h"
-
 #include "MMCSCommandProcessor.h"
-#include "MMCSCommand_allocate.h"
-#include "MMCSCommand_authority.h"
-#include "MMCSCommand_block.h"
-#include "MMCSCommand_block_status.h"
-#include "MMCSCommand_db.h"
-#include "MMCSCommand_diags.h"
-#include "MMCSCommand_dump.h"
-#include "MMCSCommand_envs.h"
-#include "MMCSCommand_free.h"
-#include "MMCSCommand_help.h"
-#include "MMCSCommand_ionodes.h"
-#include "MMCSCommand_lite.h"
-#include "MMCSCommand_list.h"
-#include "MMCSCommand_locate.h"
-#include "MMCSCommand_log_level.h"
-#include "MMCSCommand_mcserver.h"
-#include "MMCSCommand_mmcs_server_cmd.h"
-#include "MMCSCommand_mmcs_server_connect.h"
-#include "MMCSCommand_redirect.h"
-#include "MMCSCommand_replyformat.h"
-#include "MMCSCommand_select_block.h"
-#include "MMCSCommand_shell.h"
-#include "MMCSCommand_status.h"
-#include "MMCSCommand_username.h"
-#include "MMCSCommand_version.h"
-#include "MMCSCommand_reboot.h"
-#include "MMCSCommand_inject_ras.h"
-#include "MMCSCommand_refresh_config.h"
-#include "MMCSCommand_barrier.h"
-#include "MMCSServerCommand_xml.h"
-#include "MMCSConsoleCommand_xml.h"
-#include "MMCSServerCommand_block.h"
-#include "MMCSConsoleCommand_redirect.h"
-#include "MMCSConsoleCommand_refresh_config.h"
-#include "MMCSConsoleCommand_replyformat.h"
-#include "MMCSConsoleCommand_username.h"
-#include "MMCSExternalCommand.h"
-#include "MMCSServerCommand_disconnect.h"
-#include "ras.h"
 
-#ifdef WITH_DB
-#include <db/include/api/BGQDBlib.h>
-#include <hlcs/include/security/Enforcer.h>
+#ifndef BG_CONSOLE
+#include "server/BlockControllerBase.h"
+#include "server/BlockControllerTarget.h"
+#include "server/BlockHelper.h"
+#include "server/ras.h"
 #endif
 
+#include "common/ConsoleController.h"
+
+#include <ras/include/RasEventImpl.h>
+#include <ras/include/RasEventHandlerChain.h>
+
 #include <utility/include/Log.h>
-#include <utility/include/Properties.h>
-#include <utility/include/Exec.h>
 
-#include <vector>
-
-LOG_DECLARE_FILE( "mmcs" );
-
-using namespace std;
-
-// Static initialization
-EnforcerPtr MMCSCommandProcessor::_command_enforcer;
-
-// /brief Build a vector containing all of the available MMCSCommands
-static vector<MMCSCommand*>* allCommands()
-{
-    vector<MMCSCommand*> *commands = new vector<MMCSCommand*>;
 
 #ifdef MMCS_SERVER
 #ifdef WITH_DB
-#ifdef WITH_SECURITY
-       commands->push_back(MMCSCommand_grant_block_authority::build());
-       commands->push_back(MMCSCommand_revoke_block_authority::build());
-       commands->push_back(MMCSCommand_list_block_authority::build());
-#endif // end WITH_SECURITY
-       // commands->push_back(MMCSCommand_mmcs_server_cmd::build());
-       // commands->push_back(MMCSCommand_mmcs_server_connect::build());
-       commands->push_back(MMCSCommand_allocate::build());
-       commands->push_back(MMCSCommand_allocate_block::build());
-       commands->push_back(MMCSCommand_deselect_block::build());
-       commands->push_back(MMCSCommand_free::build());
-       commands->push_back(MMCSCommand_free_block::build());
-       commands->push_back(MMCSCommand_free_all::build());
-       commands->push_back(MMCSCommand_list_blocks::build());
-       commands->push_back(MMCSCommand_list_selected_block::build());
-       commands->push_back(MMCSCommand_list_users::build());
-       commands->push_back(MMCSCommand_reboot_nodes::build());
-       commands->push_back(MMCSCommand_redirect::build());
-       commands->push_back(MMCSCommand_redirect_block::build());
-       commands->push_back(MMCSCommand_select_block::build());
-       commands->push_back(MMCSCommand_start_hw_polling::build());
-       commands->push_back(MMCSCommand_stop_hw_polling::build());
-       commands->push_back(MMCSCommand_list_hw_polling::build());
-       commands->push_back(MMCSCommand_username::build());
-       commands->push_back(MMCSCommand_wait_boot::build());
-       commands->push_back(MMCSServerCommand_add_boot_option::build());
-       commands->push_back(MMCSServerCommand_dump_block::build());
-       commands->push_back(MMCSServerCommand_copy_block::build());
-       commands->push_back(MMCSServerCommand_create_node_config::build());
-       commands->push_back(MMCSCommand_delete::build());
-       commands->push_back(MMCSServerCommand_gen_io_block::build());
-       commands->push_back(MMCSServerCommand_gen_midplane_block::build());
-       commands->push_back(MMCSServerCommand_gen_block::build());
-       commands->push_back(MMCSServerCommand_gen_blocks::build());
-       commands->push_back(MMCSServerCommand_gen_full_block::build());
-       commands->push_back(MMCSServerCommand_gen_small_block::build());
-       commands->push_back(MMCSServerCommand_disconnect::build());
-       commands->push_back(MMCSCommand_get_block_info::build());
-       commands->push_back(MMCSCommand_list::build());
-       commands->push_back(MMCSCommand_list_midplanes::build());
-       commands->push_back(MMCSCommand_list_io::build());
-       commands->push_back(MMCSCommand_list_io_links::build());
-       commands->push_back(MMCSServerCommand_dump_machine::build());
-       commands->push_back(MMCSServerCommand_boot_block::build());
-       commands->push_back(MMCSServerCommand_set_block_info::build());
-       commands->push_back(MMCSServerCommand_set_boot_options::build());
-       commands->push_back(MMCSCommand_sql::build());
-       commands->push_back(MMCSCommand_kill_midplane_jobs::build());
-       commands->push_back(MMCSCommand_complete_io_service::build());
-       commands->push_back(MMCSCommand_refresh_config::build());
-       commands->push_back(MMCSCommand_status::build());
+#include "server/command/GrantBlockAuthority.h"
+#include "server/command/RevokeBlockAuthority.h"
+#include "server/command/ListBlockAuthority.h"
+#include "server/command/Allocate.h"
+#include "server/command/AllocateBlock.h"
+#include "server/command/DeselectBlock.h"
+#include "server/command/Free.h"
+#include "server/command/FreeBlock.h"
+#include "server/command/FreeAll.h"
+#include "server/command/ListBlocks.h"
+#include "server/command/ListSelectedBlock.h"
+#include "server/command/ListUsers.h"
+#include "server/command/RebootNodes.h"
+#include "server/command/Redirect.h"
+#include "server/command/RedirectBlock.h"
+#include "server/command/SelectBlock.h"
+#include "server/command/StartHwPolling.h"
+#include "server/command/StopHwPolling.h"
+#include "server/command/ListHwPolling.h"
+#include "server/command/WaitBoot.h"
+#include "server/command/AddBootOption.h"
+#include "server/command/DumpBlock.h"
+#include "server/command/CopyBlock.h"
+#include "server/command/CreateNodeConfig.h"
+#include "server/command/Delete.h"
+#include "server/command/GenIoBlock.h"
+#include "server/command/GenMidplaneBlock.h"
+#include "server/command/GenBlock.h"
+#include "server/command/GenBlocks.h"
+#include "server/command/GenFullBlock.h"
+#include "server/command/GenSmallBlock.h"
+#include "server/command/GetBlockInfo.h"
+#include "server/command/List.h"
+#include "server/command/ListMidplanes.h"
+#include "server/command/ListIo.h"
+#include "server/command/ListIoLinks.h"
+#include "server/command/DumpMachine.h"
+#include "server/command/BootBlock.h"
+#include "server/command/SetBlockInfo.h"
+#include "server/command/SetBootOptions.h"
+#include "server/command/Sql.h"
+#include "server/command/KillMidplaneJobs.h"
+#include "server/command/CompleteIoService.h"
+#include "server/command/RefreshConfig.h"
+#include "server/command/Status.h"
 #endif // end WITH_DB
-       commands->push_back(MMCSCommand_help::build());
-       commands->push_back(MMCSCommand_show_barrier::build());
-       commands->push_back(MMCSCommand_connect::build());
+#include "common/command/Help.h"
+#include "server/command/ShowBarrier.h"
+#include "server/command/Connect.h"
 #ifndef WITH_DB
        // these are mmcs_lite commands
-       commands->push_back(MMCSCommand_create_block::build());
-       commands->push_back(MMCSCommand_bringup::build());
-       commands->push_back(MMCSCommand_dump_ras::build());
-       commands->push_back(MMCSCommand_gen_block::build());
-       commands->push_back(MMCSCommand_gen_io_block::build());
-       commands->push_back(MMCSCommand_killjob::build());
-       commands->push_back(MMCSCommand_waitjob::build());
-       commands->push_back(MMCSCommand_runjob::build());
-       commands->push_back(MMCSCommand_show_envs::build());
-       commands->push_back(MMCSCommand_wait_for_terminate::build());
-       commands->push_back(MMCSCommand_d::build());
-       commands->push_back(MMCSCommand_sleep::build());
-       commands->push_back(MMCSCommand_sub_shell::build());
-       commands->push_back(MMCSCommand_redirect_input::build());
-       commands->push_back(MMCSCommand_delete_block::build());
-       commands->push_back(MMCSCommand_boot_block::build());
+#include "lite/command/CreateBlock.h"
+#include "lite/MMCSCommand_killjob.h"
+#include "lite/MMCSCommand_lite.h"
+#include "lite/MMCSCommand_runjob.h"
+#include "lite/MMCSCommand_waitjob.h"
+#include "console/command/Sleep.h"
+#include "console/command/SubShell.h"
+#include "console/command/RedirectInput.h"
+#include "lite/command/DumpBlock.h"
+#include "lite/command/DumpMachine.h"
+#include "lite/command/Quit.h"
 #endif // end !WITH_DB
-#ifdef MMCS_PROHIBITED
-       commands->push_back(MMCSCommand_inject_ras::build());
-       commands->push_back(MMCSCommand_inject_console::build());
-#endif // end MMCS_PROHIBITED
-       commands->push_back(MMCSCommand_diag_wait::build());
-       commands->push_back(MMCSCommand_disconnect::build());
-       commands->push_back(MMCSCommand_dump_block::build());
-       commands->push_back(MMCSCommand_dump_machine::build());
-       commands->push_back(MMCSCommand_dump_personalities::build());
-       commands->push_back(MMCSCommand_get_block_size::build());
-       commands->push_back(MMCSCommand_locate::build());
-       commands->push_back(MMCSCommand_log_level::build());
-       commands->push_back(MMCSCommand_mcserver_clients::build());
-       commands->push_back(MMCSCommand_mcserver_status::build());
-       commands->push_back(MMCSCommand_quit::build());
-       commands->push_back(MMCSCommand_replyformat::build());
-       commands->push_back(MMCSCommand_block_status::build());
-       commands->push_back(MMCSCommand_sysrq::build());
-       commands->push_back(MMCSCommand_version::build());
-       commands->push_back(MMCSCommand_write_con::build());
-       commands->push_back(MMCSCommand_wc::build());
+#include "server/command/DiagWait.h"
+#include "server/command/Disconnect.h"
+#include "server/command/DumpPersonalities.h"
+#include "server/command/GetBlockSize.h"
+#include "server/command/Locate.h"
+#include "server/command/LogLevel.h"
+#include "server/command/McserverClients.h"
+#include "server/command/McserverStatus.h"
+#include "server/command/BlockStatus.h"
+#include "server/command/Sysrq.h"
+#include "server/command/Version.h"
+#include "server/command/WriteCon.h"
+#include "server/command/Wc.h"
 #endif // end MMCS_SERVER
 #ifdef BG_CONSOLE
-       commands->push_back(MMCSCommand_comment::build());
-       commands->push_back(MMCSConsoleCommand_quit::build());
-       commands->push_back(MMCSCommand_sleep::build());
-       commands->push_back(MMCSCommand_sub_shell::build());
-       commands->push_back(MMCSCommand_redirect_input::build());
-       commands->push_back(MMCSConsoleCommand_dump_machine::build());
-       commands->push_back(MMCSConsoleCommand_redirect::build());
-       commands->push_back(MMCSConsoleCommand_redirect_block::build());
-       commands->push_back(MMCSConsoleCommand_refresh_config::build());
-       commands->push_back(MMCSConsoleCommand_replyformat::build());
-       commands->push_back(MMCSConsoleCommand_username::build());
-       commands->push_back(MMCSConsoleCommand_dump_block::build());
-       commands->push_back(MMCSCommand_help::build());
-       commands->push_back(MMCSCommand_mmcs_server_cmd::build());
-       commands->push_back(MMCSCommand_mmcs_server_connect::build());
+#include "console/command/Comment.h"
+#include "console/command/Quit.h"
+#include "console/command/Sleep.h"
+#include "console/command/SubShell.h"
+#include "console/command/RedirectInput.h"
+#include "console/command/DumpMachine.h"
+#include "console/command/Redirect.h"
+#include "console/command/RedirectBlock.h"
+#include "console/command/RefreshConfig.h"
+#include "console/command/Username.h"
+#include "console/command/DumpBlock.h"
+#include "common/command/Help.h"
+#include "console/command/MmcsServerCmd.h"
+#include "console/command/MmcsServerConnect.h"
+#endif // end bg_console
+
+#ifdef BG_CONSOLE
+#include "console/ExternalCommand.h"
+#endif
+
+
+#ifdef MMCS_SERVER
+#ifdef WITH_DB
+static const std::string LOGGER_NAME("ibm.mmcs.server.MMCSCommandProcessor");
+#else
+static const std::string LOGGER_NAME("ibm.mmcs.lite.MMCSCommandProcessor");
+#endif
+#else
+static const std::string LOGGER_NAME("ibm.mmcs.console.MMCSCommandProcessor");
+#endif
+
+static log4cxx::LoggerPtr log_logger_(log4cxx::Logger::getLogger( LOGGER_NAME ));
+
+
+using namespace std;
+
+using mmcs::common::AbstractCommand;
+using mmcs::common::ConsoleController;
+using mmcs::common::Properties;
+
+#ifdef BG_CONSOLE
+using mmcs::console::ExternalCommand;
+#endif
+
+
+namespace {
+
+
+vector<AbstractCommand*>* allCommands()
+{
+    vector<AbstractCommand*> *commands = new vector<AbstractCommand*>;
+
+#ifdef MMCS_SERVER
+#ifdef WITH_DB
+       commands->push_back(mmcs::server::command::GrantBlockAuthority::build());
+       commands->push_back(mmcs::server::command::RevokeBlockAuthority::build());
+       commands->push_back(mmcs::server::command::ListBlockAuthority::build());
+       commands->push_back(mmcs::server::command::Allocate::build());
+       commands->push_back(mmcs::server::command::AllocateBlock::build());
+       commands->push_back(mmcs::server::command::DeselectBlock::build());
+       commands->push_back(mmcs::server::command::Free::build());
+       commands->push_back(mmcs::server::command::FreeBlock::build());
+       commands->push_back(mmcs::server::command::FreeAll::build());
+       commands->push_back(mmcs::server::command::ListBlocks::build());
+       commands->push_back(mmcs::server::command::ListSelectedBlock::build());
+       commands->push_back(mmcs::server::command::ListUsers::build());
+       commands->push_back(mmcs::server::command::RebootNodes::build());
+       commands->push_back(mmcs::server::command::Redirect::build());
+       commands->push_back(mmcs::server::command::RedirectBlock::build());
+       commands->push_back(mmcs::server::command::SelectBlock::build());
+       commands->push_back(mmcs::server::command::StartHwPolling::build());
+       commands->push_back(mmcs::server::command::StopHwPolling::build());
+       commands->push_back(mmcs::server::command::ListHwPolling::build());
+       commands->push_back(mmcs::server::command::WaitBoot::build());
+       commands->push_back(mmcs::server::command::AddBootOption::build());
+       commands->push_back(mmcs::server::command::DumpBlock::build());
+       commands->push_back(mmcs::server::command::CopyBlock::build());
+       commands->push_back(mmcs::server::command::CreateNodeConfig::build());
+       commands->push_back(mmcs::server::command::Delete::build());
+       commands->push_back(mmcs::server::command::GenIoBlock::build());
+       commands->push_back(mmcs::server::command::GenMidplaneBlock::build());
+       commands->push_back(mmcs::server::command::GenBlock::build());
+       commands->push_back(mmcs::server::command::GenBlocks::build());
+       commands->push_back(mmcs::server::command::GenFullBlock::build());
+       commands->push_back(mmcs::server::command::GenSmallBlock::build());
+       commands->push_back(mmcs::server::command::GetBlockInfo::build());
+       commands->push_back(mmcs::server::command::List::build());
+       commands->push_back(mmcs::server::command::ListMidplanes::build());
+       commands->push_back(mmcs::server::command::ListIo::build());
+       commands->push_back(mmcs::server::command::ListIoLinks::build());
+       commands->push_back(mmcs::server::command::DumpMachine::build());
+       commands->push_back(mmcs::server::command::BootBlock::build());
+       commands->push_back(mmcs::server::command::SetBlockInfo::build());
+       commands->push_back(mmcs::server::command::SetBootOptions::build());
+       commands->push_back(mmcs::server::command::Sql::build());
+       commands->push_back(mmcs::server::command::KillMidplaneJobs::build());
+       commands->push_back(mmcs::server::command::CompleteIoService::build());
+       commands->push_back(mmcs::server::command::RefreshConfig::build());
+       commands->push_back(mmcs::server::command::Status::build());
+#endif // end WITH_DB
+       commands->push_back(mmcs::common::command::Help::build());
+       commands->push_back(mmcs::server::command::ShowBarrier::build());
+       commands->push_back(mmcs::server::command::Connect::build());
+#ifndef WITH_DB
+       // these are mmcs_lite commands
+       commands->push_back(mmcs::lite::command::CreateBlock::build());
+       commands->push_back(mmcs::lite::MMCSCommand_bringup::build());
+       commands->push_back(mmcs::lite::MMCSCommand_dump_ras::build());
+       commands->push_back(mmcs::lite::MMCSCommand_gen_block::build());
+       commands->push_back(mmcs::lite::MMCSCommand_gen_io_block::build());
+       commands->push_back(mmcs::lite::MMCSCommand_killjob::build());
+       commands->push_back(mmcs::lite::MMCSCommand_waitjob::build());
+       commands->push_back(mmcs::lite::MMCSCommand_runjob::build());
+       commands->push_back(mmcs::lite::MMCSCommand_show_envs::build());
+       commands->push_back(mmcs::lite::MMCSCommand_wait_for_terminate::build());
+       commands->push_back(mmcs::lite::MMCSCommand_d::build());
+       commands->push_back(mmcs::console::command::Sleep::build());
+       commands->push_back(mmcs::console::command::SubShell::build());
+       commands->push_back(mmcs::console::command::RedirectInput::build());
+       commands->push_back(mmcs::lite::MMCSCommand_delete_block::build());
+       commands->push_back(mmcs::lite::MMCSCommand_boot_block::build());
+       commands->push_back(mmcs::lite::command::DumpBlock::build());
+       commands->push_back(mmcs::lite::command::DumpMachine::build());
+       commands->push_back(mmcs::lite::command::Quit::build());
+#endif // end !WITH_DB
+       commands->push_back(mmcs::server::command::DiagWait::build());
+       commands->push_back(mmcs::server::command::Disconnect::build());
+       commands->push_back(mmcs::server::command::DumpPersonalities::build());
+       commands->push_back(mmcs::server::command::GetBlockSize::build());
+       commands->push_back(mmcs::server::command::Locate::build());
+       commands->push_back(mmcs::server::command::LogLevel::build());
+       commands->push_back(mmcs::server::command::McserverClients::build());
+       commands->push_back(mmcs::server::command::McserverStatus::build());
+       commands->push_back(mmcs::server::command::BlockStatus::build());
+       commands->push_back(mmcs::server::command::Sysrq::build());
+       commands->push_back(mmcs::server::command::Version::build());
+       commands->push_back(mmcs::server::command::WriteCon::build());
+       commands->push_back(mmcs::server::command::Wc::build());
+#endif // end MMCS_SERVER
+#ifdef BG_CONSOLE
+       commands->push_back(mmcs::console::command::Comment::build());
+       commands->push_back(mmcs::console::command::Quit::build());
+       commands->push_back(mmcs::console::command::Sleep::build());
+       commands->push_back(mmcs::console::command::SubShell::build());
+       commands->push_back(mmcs::console::command::RedirectInput::build());
+       commands->push_back(mmcs::console::command::DumpMachine::build());
+       commands->push_back(mmcs::console::command::Redirect::build());
+       commands->push_back(mmcs::console::command::RedirectBlock::build());
+       commands->push_back(mmcs::console::command::RefreshConfig::build());
+       commands->push_back(mmcs::console::command::Username::build());
+       commands->push_back(mmcs::console::command::DumpBlock::build());
+       commands->push_back(mmcs::common::command::Help::build());
+       commands->push_back(mmcs::console::command::MmcsServerCmd::build());
+       commands->push_back(mmcs::console::command::MmcsServerConnect::build());
 #endif // end bg_console
     return commands;
 }
 
+} // anonymous namespace
 
 
-/*!
-** log the command and parameters
-** @param string - command name
-** @param deque<string> - command parameters
-*/
+namespace mmcs {
+
+
+// Static initialization
+EnforcerPtr MMCSCommandProcessor::_command_enforcer;
+
+
 void
-MMCSCommandProcessor::logCommand(string cmd, deque<string> args)
+MMCSCommandProcessor::logCommand(const string& cmd, const deque<string>& args)
 {
     if (cmd.size() > 0 || args.size() > 0)
     {
@@ -239,12 +304,8 @@ MMCSCommandProcessor::logCommand(string cmd, deque<string> args)
     }
 }
 
-/*!
-** log the command and parameters
-** @param deque<string> - command name and command parameters
-*/
 void
-MMCSCommandProcessor::logCommand(deque<string> cmd_and_args)
+MMCSCommandProcessor::logCommand(const deque<string>& cmd_and_args)
 {
     if (cmd_and_args.size() > 0)
     {
@@ -256,15 +317,12 @@ MMCSCommandProcessor::logCommand(deque<string> cmd_and_args)
     }
 }
 
-/*!
-** /brief create a command map from specified attributes
-** /parm attr MMCSCommandAttributes matching desired commands
-** /parm mask MMCSCommandAttributes mask indicating which attributes
-**            to check
-*/
 MMCSCommandMap*
-MMCSCommandProcessor::createCommandMap(MMCSCommandAttributes& attr, MMCSCommandAttributes& mask,
-                                       MMCSProperties::Map* externalCmds)
+MMCSCommandProcessor::createCommandMap(
+        AbstractCommand::Attributes& attr,
+        AbstractCommand::Attributes& mask,
+        Properties::Map* externalCmds
+        )
 {
     LOG_DEBUG_MSG("Creating command map");
 
@@ -274,132 +332,129 @@ MMCSCommandProcessor::createCommandMap(MMCSCommandAttributes& attr, MMCSCommandA
 #ifdef WITH_DB // No security in mmcs_lite
     if(attr.mmcsConsoleCommand() != true) {
         // Security in the server, not the client
-        EnforcerPtr ep(new hlcs::security::Enforcer(MMCSProperties::getProperties() ));
+        EnforcerPtr ep(new hlcs::security::Enforcer(Properties::getProperties() ));
         MMCSCommandProcessor::_command_enforcer = ep;
     }
 #endif
 
     // create a list of all MMCS commands
-    vector<MMCSCommand*>* cmds = allCommands();
+    vector<AbstractCommand*>* cmds = allCommands();
 
+#ifdef BG_CONSOLE
     if(externalCmds != 0) {
-        for(MMCSProperties::Map::iterator it = externalCmds->begin(); it != externalCmds->end();
+        for(Properties::Map::const_iterator it = externalCmds->begin(); it != externalCmds->end();
             ++it) {
-            MMCSCommandAttributes cmdattr;
+            AbstractCommand::Attributes cmdattr;
             cmdattr.externalCommand(true);
-            MMCSExternalCommand* externalcmd = new MMCSExternalCommand((*it).first.c_str(), (*it).second.c_str(), cmdattr);
+            ExternalCommand* externalcmd = new ExternalCommand((*it).first.c_str(), (*it).second.c_str(), cmdattr);
 
-            if(MMCSProperties::getProperty("USER").find(externalcmd->name()) != std::string::npos)
-                externalcmd->attributes().helpCategory(USER);
-            else if(MMCSProperties::getProperty("ADMIN").find(externalcmd->name()) != std::string::npos)
-                externalcmd->attributes().helpCategory(ADMIN);
-            else if(MMCSProperties::getProperty("SPECIAL").find(externalcmd->name()) != std::string::npos)
-                externalcmd->attributes().helpCategory(SPECIAL);
+            if(Properties::getProperty("USER").find(externalcmd->name()) != std::string::npos)
+                externalcmd->attributes().helpCategory(common::USER);
+            else if(Properties::getProperty("ADMIN").find(externalcmd->name()) != std::string::npos)
+                externalcmd->attributes().helpCategory(common::ADMIN);
+            else if(Properties::getProperty("SPECIAL").find(externalcmd->name()) != std::string::npos)
+                externalcmd->attributes().helpCategory(common::SPECIAL);
             else
-                externalcmd->attributes().helpCategory(DEFAULT);
+                externalcmd->attributes().helpCategory(common::DEFAULT);
             externalcmd->attributes().externalCommand(true);
             externalcmd->attributes().mmcsConsoleCommand(true);
             cmds->push_back(externalcmd);
         }
     }
+#else
+    (void)externalCmds;
+#endif
 
     // check each command for the attributes specified by the caller.
     // If they match, add them to the command map
     while (!cmds->empty())
     {
-	MMCSCommand* cmd = cmds->back();	// get the last element in the list
-	cmds->pop_back();	// remove it from the list
+        AbstractCommand* cmd = cmds->back(); // get the last element in the list
+        cmds->pop_back(); // remove it from the list
 
-	// check the command attributes against the selection criteria
-	if ((mask.requiresBlock() && cmd->attributes().requiresBlock() != attr.requiresBlock()) ||
-	    (mask.requiresTarget() && cmd->attributes().requiresTarget() != attr.requiresTarget()) ||
-	    (mask.requiresConnection() && cmd->attributes().requiresConnection() != attr.requiresConnection()) ||
-	    (mask.internalCommand() && cmd->attributes().internalCommand() != attr.internalCommand()) ||
-	    (mask.mmcsConsoleCommand() && cmd->attributes().mmcsConsoleCommand() != attr.mmcsConsoleCommand()) ||
-	    (mask.mmcsServerCommand() && cmd->attributes().mmcsServerCommand() != attr.mmcsServerCommand()) ||
-	    (mask.mmcsLiteCommand() && cmd->attributes().mmcsLiteCommand() != attr.mmcsLiteCommand()))
-	{
+        // check the command attributes against the selection criteria
+        if (
+                (mask.requiresBlock() && cmd->attributes().requiresBlock() != attr.requiresBlock()) ||
+                (mask.requiresTarget() && cmd->attributes().requiresTarget() != attr.requiresTarget()) ||
+                (mask.requiresConnection() && cmd->attributes().requiresConnection() != attr.requiresConnection()) ||
+                (mask.internalCommand() && cmd->attributes().internalCommand() != attr.internalCommand()) ||
+                (mask.mmcsConsoleCommand() && cmd->attributes().mmcsConsoleCommand() != attr.mmcsConsoleCommand()) ||
+                (mask.mmcsServerCommand() && cmd->attributes().mmcsServerCommand() != attr.mmcsServerCommand()) ||
+                (mask.mmcsLiteCommand() && cmd->attributes().mmcsLiteCommand() != attr.mmcsLiteCommand())
+           )
+        {
             LOG_TRACE_MSG("Deleting cmd " << cmd->name() << " from the command map");
-	    delete cmd;		// this command doesn't match the selection criteria
-	}
-	else
-	{
+            delete cmd; // this command doesn't match the selection criteria
+        }
+        else
+        {
             if (!mask.externalCommand() && cmd->attributes().externalCommand() == true) {
                 // If we did not specify external commands and this is one, delete it.  (IE in mmcs_server).
                 LOG_TRACE_MSG("Deleting internal cmd " << cmd->name() << " from the command map");
-                delete cmd;		// this command doesn't match the selection criteria
+                delete cmd; // this command doesn't match the selection criteria
             }
 
             LOG_TRACE_MSG("Adding command " << cmd->name() << " to the command map");
-	    (*cmdMap)[cmd->name()] = cmd; // add the command to the command map
-	}
+            (*cmdMap)[cmd->name()] = cmd; // add the command to the command map
+        }
     }
 
     // return the commands matching the attributes specified by the caller
     return cmdMap;
 }
 
-/*!
-** Break up command line into words.
-** @param rStr	          null terminated command line
-** @returns deque<string> sequence of words
-*/
 deque<string>
 MMCSCommandProcessor::parseCommand(const std::string &rStr)
 {
     deque<string> words;
-    string szDelimiters = " \n";
+    const string szDelimiters = " \n";
 
     std::string::size_type lastPos(rStr.find_first_not_of(szDelimiters, 0));
     std::string::size_type pos(rStr.find_first_of(szDelimiters, lastPos));
     while (std::string::npos != pos || std::string::npos != lastPos)
     {
-	words.push_back(rStr.substr(lastPos, pos - lastPos));
-	lastPos = rStr.find_first_not_of(szDelimiters, pos);
-	pos = rStr.find_first_of(szDelimiters, lastPos);
+        words.push_back(rStr.substr(lastPos, pos - lastPos));
+        lastPos = rStr.find_first_not_of(szDelimiters, pos);
+        pos = rStr.find_first_of(szDelimiters, lastPos);
     }
     return words;
 }
 
-/*! /brief combine words into a command line
-**  /param deque<string> sequence of words
-**  /returns string      null terminated command line
-*/
 string
 MMCSCommandProcessor::unparseCommand(const std::deque<string>& cmdStr)
 {
     string str;
     if (cmdStr.size() > 0)
     {
-	for (unsigned i = 0; i < cmdStr.size(); ++i)
-	    str.append(cmdStr[i]).append(" ");
+        for (unsigned i = 0; i < cmdStr.size(); ++i)
+            str.append(cmdStr[i]).append(" ");
     }
     if (str.size() > 0 && str[str.size()-1] != '\n')
-	str.append("\n");
+        str.append("\n");
     return str;
 }
 
-#ifndef WITH_SECURITY
-MMCSCommandProcessorStatus::procstat
-MMCSCommandProcessor::validate_security(deque<string>& cmdStr,
-                                        MMCSCommandReply& reply,
-                                        ConsoleController* pController,
-                                        MMCSCommand** pCmd,
-                                        std::string& cmdName,
-                                        std::vector<std::string>* validnames) {
-    return MMCSCommandProcessorStatus::procstat(0);
+#ifndef WITH_DB
+procstat
+MMCSCommandProcessor::validate_security(deque<string>& ,//cmdStr,
+                                        mmcs_client::CommandReply& ,//reply,
+                                        ConsoleController* ,//pController,
+                                        AbstractCommand** ,//pCmd,
+                                        std::string& ,//cmdName,
+                                        std::vector<std::string>* /*validnames*/) {
+    return procstat(0);
 }
 #else
-MMCSCommandProcessorStatus::procstat
+procstat
 MMCSCommandProcessor::validate_security(deque<string>& cmdStr,
-                                        MMCSCommandReply& reply,
+                                        mmcs_client::CommandReply& reply,
                                         ConsoleController* pController,
-                                        MMCSCommand** pCmd,
+                                        AbstractCommand** pCmd,
                                         std::string& cmdName,
                                         std::vector<std::string>* validnames) {
 
     if(_bg_console) // Security happens in the server, the console skips it.
-        return MMCSCommandProcessorStatus::procstat(0);
+        return procstat(0);
 
     // We're doing security.  Here are a few ground rules:
     // 1)  External commands' servers do their own security.  We don't check it.
@@ -423,216 +478,197 @@ MMCSCommandProcessor::validate_security(deque<string>& cmdStr,
     //     If a command requires both, the object may NOT be used.
     // 11) Hardware auth is all or nothing.
 
-    BlockHelperPtr pBlock = pController->getBlockHelper();
+    server::BlockHelperPtr pBlock = pController->getBlockHelper();
     if((*pCmd)->attributes().externalCommand() == true)
         // We can return without security checking because external servers do their own.
-        return MMCSCommandProcessorStatus::CMD_EXTERNAL;
+        return CMD_EXTERNAL;
 
     // Special internal commands without security objects.
     if((*pCmd)->attributes().getInternalAuth() == true)
-        return MMCSCommandProcessorStatus::procstat(0);
+        return procstat(0);
 
     bool blockauth = false;  // Set this if we need authorization to a block
 
-    std::vector<MMCSCommandAttributes::AuthPair>* aps = (*pCmd)->attributes().getAuthPairs();
+    const std::vector<AbstractCommand::Attributes::AuthPair>* aps = (*pCmd)->attributes().getAuthPairs();
     std::vector<std::string> bogus_objects;
     if(aps->size() == 0 && (*pCmd)->attributes().getBgAdminAuth() != true ) {
-        std::ostringstream msg;
-        msg << "Internal error.  Command " <<
-            cmdName << " invalid.  Has no security data.";
-        LOG_ERROR_MSG(msg.str());
-        reply << FAIL << msg.str() << DONE;
-        return MMCSCommandProcessorStatus::CMD_INVALID;
-    } else if((*pCmd)->attributes().getBgAdminAuth()) {
-        if (pController->getUserType() == CxxSockets::Administrator) {
-            LOG_DEBUG_MSG("bgadmin authority granted");
-            // We're good to go.  Don't need to do anything else.
-            return MMCSCommandProcessorStatus::CMD_EXECUTED;
+        reply << mmcs_client::FAIL;
+        reply << "Internal error.  Command " << cmdName << " invalid.  Has no security data.";
+        reply << mmcs_client::DONE;
+        return CMD_INVALID;
+    }
+    
+    if (pController->getUserType() == CxxSockets::Administrator) {
+        LOG_DEBUG_MSG("bgadmin authority granted");
+        return CMD_EXECUTED;
+    }
+
+    if ((*pCmd)->attributes().getBgAdminAuth()) {
+        RasEventImpl event(MMCSOps_0301);
+        event.setDetail("USER", pController->getUser().getUser());
+        event.setDetail("COMMAND", (*pCmd)->name());
+        RasEventHandlerChain::handle(event);
+        reply << mmcs_client::FAIL << event.getDetail(RasEvent::MESSAGE) << mmcs_client::DONE;
+        BGQDB::putRAS(event);
+        return CMD_INVALID;
+    }
+
+    // We have auth pairs
+    for(std::vector<AbstractCommand::Attributes::AuthPair>::const_iterator it = aps->begin(); it != aps->end(); ++it) {
+        const AbstractCommand::Attributes::AuthPair ap = *it;
+        std::vector<std::string> objnames;
+        if(ap.first == hlcs::security::Object::Block) {
+            blockauth = true;
+            if(pBlock) {
+                objnames.push_back(pBlock->getBase()->getBlockName());
+            }
+
+            // See if the command can parse out some block IDs. It'll only do that
+            // if it has to operate on something other than the selected block.
+            // Note that the following will nuke anything stuffed in 'objnames'
+            // in the if check above.  It's supposed to do that.  See rule #9 above.
+            std::vector<std::string> t = (*pCmd)->getBlockObjects(cmdStr, (server::DBConsoleController*)(pController));
+            bool good = false;
+            if(!t.empty() && (*pCmd)->attributes().requiresBlock() == false) {
+                // This means the command has at least one arg.
+
+                // Copy_block needs to do its own special authorization.
+                // This lets it happen.
+                procstat stat;
+                const boost::shared_ptr<hlcs::security::Enforcer> e = MMCSCommandProcessor::_command_enforcer;
+                if((*pCmd)->doSpecialAuths(t, e, stat, pController->getUser()) == true) {
+                    LOG_TRACE_MSG("Special Auths done");
+                    for(unsigned i = 0; i < t.size(); ++i) {
+                        validnames->push_back(t[i]);
+                    }
+                    if(stat == CMD_INVALID) {
+                        t.clear(); // No usable objects!
+                        reply << mmcs_client::FAIL << "User has insufficient authority to necessary security objects." << mmcs_client::DONE;
+                        return stat;
+                    }
+                } else {
+                    for(std::vector<std::string>::const_iterator it = t.begin(); it != t.end(); ++it) {
+                        BGQDB::BlockInfo binfo;
+                        const bool foundindb = (BGQDB::getBlockInfo(*it, binfo) == BGQDB::OK);
+                        const bool createaction = (ap.second == hlcs::security::Action::Create);
+                        if((foundindb && !createaction) || (!foundindb && createaction)) {
+                            // If it's create, we'll call it good because it won't be in the db any way.
+                            LOG_TRACE_MSG("Got a valid block from command " << *it);
+                            good = true;
+                        } else if(!foundindb && !createaction) {
+                            LOG_DEBUG_MSG("Block is not in DB and action is not create.");
+                            if(std::find(bogus_objects.begin(), bogus_objects.end(), *it) == bogus_objects.end())
+                                bogus_objects.push_back(*it);
+                            good = false;
+                        } else if(foundindb && createaction) {
+                            reply << mmcs_client::FAIL << "Cannot create block already created." << mmcs_client::DONE;
+                            return CMD_INVALID;
+                        }
+                    }
+                }
+                if(good || (*pCmd)->attributes().requiresObjNames()) {
+                    // At least one name in the arg list is a valid block and we don't
+                    // need a selected block so we'll use the arg list.
+                    objnames = t;
+                }
+            }
+
+            // Found no objnames and we don't require a =selected= block.
+            if(objnames.size() == 0 && (*pCmd)->attributes().requiresBlock() == true) {
+                // If there's no block object and we need one, and the command doesn't
+                // even know about any, we darn well better not
+                // even attempt to do security.
+                reply << mmcs_client::FAIL;
+                reply << "Internal error.  Command security requires block security object but no block object exists.";
+                reply << mmcs_client::DONE;
+                return CMD_INVALID;
+            }
+
+        } else if(ap.first == hlcs::security::Object::Hardware) {
+            objnames.clear(); // Empty string.  Hardware is all or nothing.
+            try {
+                const hlcs::security::Object hw(hlcs::security::Object::Hardware, "all hardware");
+                if( !MMCSCommandProcessor::_command_enforcer->validate(hw, ap.second, pController->getUser()) ) {
+                    reply << mmcs_client::FAIL;
+                    reply << "User " << pController->getUser().getUser() << " not authorized to hardware.";
+                    reply << mmcs_client::DONE;
+                    return CMD_INVALID;
+                } else {
+                    LOG_DEBUG_MSG("User " << pController->getUser().getUser() << " authorized to hardware.");
+                }
+            } catch (const std::runtime_error& d) {
+                reply << mmcs_client::FAIL << "Unable to validate object hardware.  " << d.what() << ". "  << (*pCmd)->description() << mmcs_client::DONE;
+                return CMD_INVALID;
+            } catch (const std::invalid_argument& v) {
+                reply << mmcs_client::FAIL << "Unable to validate object hardware.  " << v.what() << ". "  << (*pCmd)->description() << mmcs_client::DONE;
+                return CMD_INVALID;
+            }
         } else {
-#ifdef WITH_DB
+            reply << mmcs_client::FAIL;
+            reply << "Internal error.  Invalid security object type." << ap.first;
+            reply << mmcs_client::DONE;
+            return CMD_INVALID;
+        }
+
+        LOG_DEBUG_MSG("Command " << cmdName << " wants to operate on "
+                << objnames.size() << " objects.");
+
+        // For each name returned by the command, we have to
+        // determine if we can use it.
+        std::ostringstream msg;
+        msg << "User " << pController->getUser().getUser()
+            << " does not have appropriate authority for security object(s)";
+        std::vector<std::string> failednames; // fill with names that enforcer disallows
+        for(std::vector<std::string>::const_iterator i = objnames.begin(); i != objnames.end(); ++i) {
+            LOG_TRACE_MSG("validating object name " << *i);
+            const hlcs::security::Object blockobj(hlcs::security::Object::Block, *i);
+            try {
+                if( !MMCSCommandProcessor::_command_enforcer->validate(blockobj, ap.second, pController->getUser()) ) {
+                    msg << " " << *i;
+                    failednames.push_back(*i);
+                } else {
+                    LOG_DEBUG_MSG("User " << pController->getUser().getUser() << " authorized to " << *i);
+                    if(std::find(validnames->begin(), validnames->end(), *i) == validnames->end())
+                        validnames->push_back(*i); // It's good.  Save it.
+                }
+            } catch (const std::runtime_error& d) {
+                reply << mmcs_client::FAIL << "Unable to validate object " << *i << ".  " << d.what() << ". "  << (*pCmd)->description() << mmcs_client::DONE;
+                return CMD_INVALID;
+            } catch (const std::invalid_argument& v) {
+                reply << mmcs_client::FAIL << "Unable to validate object " << *i << ".  " << v.what() << ". "  << (*pCmd)->description() << mmcs_client::DONE;
+                return CMD_INVALID;
+            }
+        }
+        if ( !failednames.empty() ) {
+            LOG_DEBUG_MSG( msg.str() );
+        }
+
+        // If none of the names the command wants to use are
+        // available, fail the command.
+        if(validnames->size() == 0 && objnames.size() != 0) {
             RasEventImpl event(MMCSOps_0301);
             event.setDetail("USER", pController->getUser().getUser());
-            event.setDetail("COMMAND", (*pCmd)->name());
+            event.setDetail("COMMAND", cmdName);
             RasEventHandlerChain::handle(event);
-            reply << FAIL << event.getDetail(RasEvent::MESSAGE) << DONE;
             BGQDB::putRAS(event);
-            return MMCSCommandProcessorStatus::CMD_INVALID;
-#endif
+            reply << mmcs_client::FAIL << event.getDetail(RasEvent::MESSAGE) << mmcs_client::DONE;
+            return CMD_INVALID;
         }
-    } else {  // We have auth pairs
-        for(std::vector<MMCSCommandAttributes::AuthPair>::iterator it = aps->begin();
-            it != aps->end(); ++it) {
-            MMCSCommandAttributes::AuthPair ap = *it;
-            std::vector<std::string> objnames;
-            if(ap.first == hlcs::security::Object::Block) {
-                blockauth = true;
-                if(pBlock) {
-                    objnames.push_back(pBlock->getBase()->getBlockName());
+
+        // Now check to make sure that none of the failed names
+        // are in the valid list.  This is a subtle issue.  If
+        // a user needs BOTH B:E and B:R authority to perform
+        // an action on that block, then that block name will
+        // show up in both validnames and the failednames .
+        for(std::vector<std::string>::const_iterator it = failednames.begin(); it != failednames.end(); ++it) {
+            const std::vector<std::string>::iterator found = std::find(validnames->begin(), validnames->end(), *it);
+            if(found != validnames->end()) {
+                // Uh oh.  There's a bad one in the good list.  Yank it.
+                LOG_TRACE_MSG("Removing " << *found << " from list of usable objects");
+                if(pBlock && *found == pBlock->getBase()->getBlockName()) {
+                    pBlock.reset();
                 }
-
-                // See if the command can parse out some block IDs. It'll only do that
-                // if it has to operate on something other than the selected block.
-                // Note that the following will nuke anything stuffed in 'objnames'
-                // in the if check above.  It's supposed to do that.  See rule #9 above.
-                std::vector<std::string> t = (*pCmd)->getBlockObjects(cmdStr, (DBConsoleController*)(pController));
-                bool good = false;
-                if(!t.empty()  && (*pCmd)->attributes().requiresBlock() == false) {
-                    // This means the command has at least one arg.
-
-                    // Copy_block needs to do its own special authorization.
-                    // This lets it happen.
-                    MMCSCommandProcessorStatus::procstat stat;
-                    boost::shared_ptr<hlcs::security::Enforcer> e = MMCSCommandProcessor::_command_enforcer;
-                    bgq::utility::UserId i = pController->getUser();
-                    if((*pCmd)->doSpecialAuths(t, e, stat, i) == true) {
-                        LOG_TRACE_MSG("Special Auths done");
-                        for(unsigned i = 0; i < t.size(); ++i) {
-                            validnames->push_back(t[i]);
-                        }
-                        if(stat == MMCSCommandProcessorStatus::CMD_INVALID) {
-                            t.clear(); // No usable objects!
-                            reply << FAIL << "User has insufficient authority to necessary security objects." << DONE;
-                            return stat;
-                        }
-                    } else {
-#ifdef WITH_DB
-                        for(std::vector<std::string>::iterator it = t.begin(); it != t.end(); ++it) {
-                            BGQDB::BlockInfo binfo;
-                            bool foundindb = (BGQDB::getBlockInfo(*it, binfo) == BGQDB::OK);
-                            bool createaction = (ap.second == hlcs::security::Action::Create);
-                            if((foundindb && !createaction) || (!foundindb && createaction)) {
-                                // If it's create, we'll call it good because it won't be in the db any way.
-                                LOG_TRACE_MSG("Got a valid block from command " << *it);
-                                good = true;
-                            } else if(!foundindb && !createaction) {
-                                LOG_DEBUG_MSG("Block is not in DB and action is not create.");
-                                if(std::find(bogus_objects.begin(), bogus_objects.end(), *it) == 
-                                   bogus_objects.end())
-                                    bogus_objects.push_back(*it);
-                                good = false;
-                            } else if(foundindb && createaction) {
-                                reply << FAIL << "Cannot create block already created." << DONE;
-                                return MMCSCommandProcessorStatus::CMD_INVALID;
-                            }
-                        }
-#endif
-                    }
-                    if(good || (*pCmd)->attributes().requiresObjNames()) {
-                        // At least one name in the arg list is a valid block and we don't
-                        // need a selected block so we'll use the arg list.
-                        objnames = t;
-                    }
-                }
-
-                // Found no objnames and we don't require a =selected= block.
-                if(objnames.size() == 0 && (*pCmd)->attributes().requiresBlock() == true) {
-                    // If there's no block object and we need one, and the command doesn't
-                    // even know about any, we darn well better not
-                    // even attempt to do security.
-                    std::ostringstream msg;
-                    msg << "Internal error.  Command security requires block security object but no block object exists.";
-                    LOG_ERROR_MSG(msg.str());
-                    reply << FAIL << msg.str() << DONE;
-                    return MMCSCommandProcessorStatus::CMD_INVALID;
-                }
-
-            } else if(ap.first == hlcs::security::Object::Hardware) {
-                objnames.clear(); // Empty string.  Hardware is all or nothing.
-                try {
-                    hlcs::security::Object hw(hlcs::security::Object::Hardware, "all hardware");
-                    if(MMCSCommandProcessor::_command_enforcer->
-                       validate(hw,
-                                ap.second,
-                                pController->getUser()) == false) {
-                        std::ostringstream emsg;
-                        emsg << "User " << pController->getUser().getUser()
-                             << " not authorized to hardware.";
-                        LOG_ERROR_MSG(emsg.str());
-                        reply << FAIL << emsg.str() << DONE;
-                        return MMCSCommandProcessorStatus::CMD_INVALID;
-                    } else {
-                        LOG_DEBUG_MSG("User " << pController->getUser().getUser()
-                                      << " authorized to hardware.");
-                    }
-                } catch (std::runtime_error& d) {
-                    reply << FAIL << "Unable to validate object hardware.  " << d.what() << ". "  << (*pCmd)->description() << DONE;
-                    return MMCSCommandProcessorStatus::CMD_INVALID;
-                } catch (std::invalid_argument& v) {
-                    reply << FAIL << "Unable to validate object hardware.  " << v.what() << ". "  << (*pCmd)->description() << DONE;
-                    return MMCSCommandProcessorStatus::CMD_INVALID;
-                }
-            } else {
-                std::ostringstream msg;
-                msg << "Internal error.  Invalid security object type." << ap.first;
-                LOG_ERROR_MSG(msg.str());
-                reply << FAIL << msg.str() << DONE;
-                return MMCSCommandProcessorStatus::CMD_INVALID;
-            }
-
-            LOG_DEBUG_MSG("Command " << cmdName << " wants to operate on "
-                          << objnames.size() << " objects.");
-
-            // For each name returned by the command, we have to
-            // determine if we can use it.
-            std::ostringstream msg;
-            msg << "User " << pController->getUser().getUser()
-                << " does not have appropriate authority for security object(s)";
-            std::vector<std::string> failednames; // fill with names that enforcer disallows
-            for(std::vector<std::string>::iterator i = objnames.begin();
-                i != objnames.end(); ++i) {
-                LOG_TRACE_MSG("validating object name " << *i);
-                hlcs::security::Object blockobj(hlcs::security::Object::Block, *i);
-                try {
-                    if(MMCSCommandProcessor::_command_enforcer->
-                       validate(blockobj,
-                                ap.second,
-                                pController->getUser()) == false) {
-                        msg << " " << *i;
-                        failednames.push_back(*i);
-                        LOG_ERROR_MSG(msg.str());
-                    } else {
-                        LOG_DEBUG_MSG("User " << pController->getUser().getUser()
-                                      << " authorized to object " << *i);
-                        if(std::find(validnames->begin(), validnames->end(), *i) == validnames->end())
-                            validnames->push_back(*i); // It's good.  Save it.
-                    }
-                } catch (std::runtime_error& d) {
-                    reply << FAIL << "Unable to validate object " << *i << ".  " << d.what() << ". "  << (*pCmd)->description() << DONE;
-                    return MMCSCommandProcessorStatus::CMD_INVALID;
-                } catch (std::invalid_argument& v) {
-                    reply << FAIL << "Unable to validate object " << *i << ".  " << v.what() << ". "  << (*pCmd)->description() << DONE;
-                    return MMCSCommandProcessorStatus::CMD_INVALID;
-                }
-            }
-
-            // If none of the names the command wants to use are
-            // available, fail the command.
-            if(validnames->size() == 0 && objnames.size() != 0) {
-                RasEventImpl event(MMCSOps_0301);
-                event.setDetail("USER", pController->getUser().getUser());
-                event.setDetail("COMMAND", cmdName);
-                RasEventHandlerChain::handle(event);
-                BGQDB::putRAS(event);
-                reply << FAIL << event.getDetail(RasEvent::MESSAGE) << DONE;
-                return MMCSCommandProcessorStatus::CMD_INVALID;
-            }
-
-            // Now check to make sure that none of the failed names
-            // are in the valid list.  This is a subtle issue.  If
-            // a user needs BOTH B:E and B:R authority to perform
-            // an action on that block, then that block name will
-            // show up in both validnames and the failednames .
-            for(std::vector<std::string>::iterator it = failednames.begin();
-                it != failednames.end(); ++it) {
-                std::vector<std::string>::iterator found = std::find(validnames->begin(), validnames->end(), *it);
-                if(found != validnames->end()) {
-                    // Uh oh.  There's a bad one in the good list.  Yank it.
-                    LOG_TRACE_MSG("Removing " << *found << " from list of usable objects");
-                    if(pBlock && *found == pBlock->getBase()->getBlockName()) {
-                        pBlock.reset();
-                    }
-                    validnames->erase(found);
-                }
+                validnames->erase(found);
             }
         }
     }
@@ -646,21 +682,21 @@ MMCSCommandProcessor::validate_security(deque<string>& cmdStr,
             // list_blocks is special because it can still succeed without all authorities.
             // gen_blocks is special because it requires block create but doesn't take a block name.
             if(bogus_objects.size() == 0)
-                reply << FAIL << "User has insufficient authority to a required security object or no objects were specified." << DONE;
+                reply << mmcs_client::FAIL << "User has insufficient authority to a required security object or no objects were specified." << mmcs_client::DONE;
             else if(bogus_objects.size() == 1) {  // Some blocks either don't exist or no blocks were specified.
-                reply << FAIL << "Block";
+                reply << mmcs_client::FAIL << "Block";
                 BOOST_FOREACH(std::string& curr_block, bogus_objects) {
                     reply << " " << curr_block;
                 }
-                reply << " does not exist." << DONE;
+                reply << " does not exist." << mmcs_client::DONE;
             } else if(bogus_objects.size() > 1) {
-                reply << FAIL << "Blocks";
+                reply << mmcs_client::FAIL << "Blocks";
                 BOOST_FOREACH(std::string& curr_block, bogus_objects) {
                     reply << " " << curr_block;
                 }
-                reply << " do not exist." << DONE;
+                reply << " do not exist." << mmcs_client::DONE;
             }
-            return MMCSCommandProcessorStatus::CMD_INVALID;
+            return CMD_INVALID;
         }
     }
 
@@ -674,28 +710,21 @@ MMCSCommandProcessor::validate_security(deque<string>& cmdStr,
         validnames->clear();
     }
 
-    return MMCSCommandProcessorStatus::procstat(0);
+    return procstat(0);
 }
 #endif
 
-/*!
-** validate() - check parameters for MMCS commands
-** @param cmdStr      the command string as parsed by parse()
-** @param reply       the command output stream. Refer to class MMCSCommandProcessorReply
-** @param pController the ConsoleController object that the command is to work on
-** @param pTarget     (output) the BlockControllerTarget list that the command is to work on
-** @param pCmd        (output) the MMCSCommand object to be executed
-** @returns           execution status, refer the MMCSCommandProcessor::status
-*/
-MMCSCommandProcessorStatus::procstat
-MMCSCommandProcessor::validate(deque<string>& cmdStr,
-			       MMCSCommandReply& reply,
-			       ConsoleController* pController,
-			       BlockControllerTarget** pTarget,
-			       MMCSCommand** pCmd,
-                               std::vector<std::string>* validnames)
+procstat
+MMCSCommandProcessor::validate(
+        deque<string>& cmdStr,
+        mmcs_client::CommandReply& reply,
+        ConsoleController* pController,
+        server::BlockControllerTarget** pTarget,
+        AbstractCommand** pCmd,
+        std::vector<std::string>* validnames
+        )
 {
-    BlockHelperPtr pBlock;        // selected BlockController
+    server::BlockHelperPtr pBlock;        // selected BlockController
     *pTarget = NULL;                // initial return value for pTarget
     *pCmd = NULL;                   // initial return value for pCmd
     bool targetSpec_found = false;  // did the command contain a target specification?
@@ -704,13 +733,13 @@ MMCSCommandProcessor::validate(deque<string>& cmdStr,
     // validate input
     if (cmdStr.size() == 0) {
         // called with no command
-        reply << FAIL << "command?" << DONE;
-        return MMCSCommandProcessorStatus::CMD_INVALID;
+        reply << mmcs_client::FAIL << "command?" << mmcs_client::DONE;
+        return CMD_INVALID;
     }
 
     if (pController == NULL) {
-        reply << FAIL << "internal error: invalid ConsoleController" << DONE;
-        return MMCSCommandProcessorStatus::CMD_INVALID;
+        reply << mmcs_client::FAIL << "internal error: invalid ConsoleController" << mmcs_client::DONE;
+        return CMD_INVALID;
     }
 
     // return a pointer to the BlockController selected by the ConsoleController
@@ -721,12 +750,12 @@ MMCSCommandProcessor::validate(deque<string>& cmdStr,
     if (cmdStr.front().c_str()[0] == '{') {
         targetSpec_found = true;
         targetSpec = cmdStr.front();
-        cmdStr.pop_front();		// remove target spec from command string
+        cmdStr.pop_front(); // remove target spec from command string
 
         if (cmdStr.size() == 0) {
             // called with no command
-            reply << FAIL << "command?" << DONE;
-            return MMCSCommandProcessorStatus::CMD_INVALID;
+            reply << mmcs_client::FAIL << "command?" << mmcs_client::DONE;
+            return CMD_INVALID;
         }
 
         if (cmdStr.front().c_str()[0] == '.') {
@@ -737,13 +766,13 @@ MMCSCommandProcessor::validate(deque<string>& cmdStr,
 
         if (cmdStr.size() == 0) {
             // called with no command
-            reply << FAIL << "command?" << DONE;
-            return MMCSCommandProcessorStatus::CMD_INVALID;
+            reply << mmcs_client::FAIL << "command?" << mmcs_client::DONE;
+            return CMD_INVALID;
         }
 
         if (targetSpec.at(targetSpec.length() - 1) != '}') {
-            reply << FAIL << "invalid target" << DONE;
-            return MMCSCommandProcessorStatus::CMD_INVALID;
+            reply << mmcs_client::FAIL << "invalid target" << mmcs_client::DONE;
+            return CMD_INVALID;
         }
     } else {
         targetSpec = "{*}";
@@ -752,283 +781,157 @@ MMCSCommandProcessor::validate(deque<string>& cmdStr,
     // search for the command object for this command
     string cmdName = cmdStr.front();
 
-    MMCSCommandMap::iterator mmcsCommandIter = _mmcsCommands->find(cmdName);
+    MMCSCommandMap::const_iterator mmcsCommandIter = _mmcsCommands->find(cmdName);
 
     if (mmcsCommandIter == _mmcsCommands->end()) {
         if (targetSpec_found) {
             cmdStr.push_front(targetSpec);
         }
-        return MMCSCommandProcessorStatus::CMD_NOT_FOUND;
+        return CMD_NOT_FOUND;
     }
 
     *pCmd = mmcsCommandIter->second; // get the command object
 
     if((*pCmd)->attributes().externalCommand() == false)
-        cmdStr.pop_front();	    // remove command name from command string
+        cmdStr.pop_front(); // remove command name from command string
 
     // check that command requirements are satisfied
     if ((*pCmd)->attributes().requiresBlock() && pBlock == NULL) {
-        reply << FAIL << "block not selected" << DONE;
-        return MMCSCommandProcessorStatus::CMD_INVALID;
+        reply << mmcs_client::FAIL << "block not selected" << mmcs_client::DONE;
+        return CMD_INVALID;
+#ifndef BG_CONSOLE
     } else if ((*pCmd)->attributes().requiresConnection() && (pBlock == NULL || (pBlock)->getBase()->isConnected() == false)) {
-        reply << FAIL << "block not connected" << DONE;
-        return MMCSCommandProcessorStatus::CMD_INVALID;
+        reply << mmcs_client::FAIL << "block not connected" << mmcs_client::DONE;
+        return CMD_INVALID;
+#endif
     }
     // if((*pCmd)->attributes().requiresBlock() && pBlock) {
     //     if(pBlock->getBase()->hardWareAccessBlocked()) {
     //         // Important, non-security related check.  If there's a dead subnet_mc associated
     //         // with this block's hardware, then fail the command.
-    //         reply << FAIL << "SubnetMc managing hardware for this block is temporarily unavailable." << DONE;
-    //         return MMCSCommandProcessorStatus::CMD_INVALID;
+    //         reply << mmcs_client::FAIL << "SubnetMc managing hardware for this block is temporarily unavailable." << mmcs_client::DONE;
+    //         return CMD_INVALID;
     //     }
     // }
+
+#ifndef BG_CONSOLE
     // build target specification
     if ((*pCmd)->attributes().requiresTarget()) {
         if (pBlock != NULL) {
-            *pTarget = new BlockControllerTarget(pBlock->getBase(), targetSpec, reply);
-            if (reply.getStatus() < MMCSCommandReply::STATUS_OK) {
-                return MMCSCommandProcessorStatus::CMD_INVALID;
+            *pTarget = new server::BlockControllerTarget(pBlock->getBase(), targetSpec, reply);
+            if (reply.getStatus() < mmcs_client::CommandReply::STATUS_OK) {
+                return CMD_INVALID;
             }
         } else {
-            reply << FAIL << "block not selected" << DONE;
-            return MMCSCommandProcessorStatus::CMD_INVALID;
+            reply << mmcs_client::FAIL << "block not selected" << mmcs_client::DONE;
+            return CMD_INVALID;
         }
     }
+#endif
 
     if((*pCmd)->checkArgs(cmdStr) == false) {
-        reply << FAIL << "args? " << (*pCmd)->get_usage() << DONE;
-        return MMCSCommandProcessorStatus::CMD_INVALID;
+        reply << mmcs_client::FAIL << "args? " << (*pCmd)->get_usage() << mmcs_client::DONE;
+        return CMD_INVALID;
     }
 
-#ifndef WITH_SECURITY
-    return MMCSCommandProcessorStatus::procstat(0);
+#ifndef WITH_DB
+    return procstat(0);
 #else
-
-    return validate_security(cmdStr, reply,
-                             pController,
-			     pCmd, cmdName, validnames);
+    return validate_security(
+            cmdStr,
+            reply,
+            pController,
+            pCmd,
+            cmdName,
+            validnames
+            );
 #endif
 }
 
 
-/*!
-** execute() - Perform specific MMCS command
-** @param cmdStr      the command string as parsed by parse()
-** @param reply       the command output stream. Refer to class MMCSCommandProcessorReply
-** @param pController the ConsoleController object that the command is to work on
-** @returns           execution status, refer the MMCSCommandProcessor::status
-*/
-MMCSCommandProcessorStatus::procstat
-MMCSCommandProcessor::execute(deque<string> cmdStr,
-			      MMCSCommandReply& reply,
-			      ConsoleController* pController)
+procstat
+MMCSCommandProcessor::execute(
+        deque<string> cmdStr,
+        mmcs_client::CommandReply& reply,
+        ConsoleController* pController
+        )
 {
-    BlockControllerTarget* pTarget = NULL;
-    MMCSCommand* pCmd = NULL;
+    server::BlockControllerTarget* pTarget = NULL;
+    AbstractCommand* pCmd = NULL;
 
     // validate input
     std::vector<std::string> validnames;  // list of object names the command can legally use.
-    MMCSCommandProcessorStatus::procstat status = validate(cmdStr,reply,pController,&pTarget,&pCmd, &validnames);
+    procstat status = validate(cmdStr,reply,pController,&pTarget,&pCmd, &validnames);
 
     // execute the command
-    if (status != MMCSCommandProcessorStatus::CMD_INVALID)
-	status = invokeCommand(cmdStr, reply, pController, pTarget, pCmd, status, validnames);
+    if (status != CMD_INVALID)
+        status = invokeCommand(cmdStr, reply, pController, pTarget, pCmd, status, validnames);
 
+#ifndef BG_CONSOLE
     // clean up
     if (pTarget)
-	delete pTarget;
+        delete pTarget;
+#endif
 
     // log errors
-    if (reply.getStatus() == MMCSCommandReply::STATUS_NOT_SET)
-	reply << FAIL << "no reply from command" << DONE;
+    if (reply.getStatus() == mmcs_client::CommandReply::STATUS_NOT_SET)
+        reply << mmcs_client::FAIL << "no reply from command" << mmcs_client::DONE;
     if (_logFailures && reply.getStatus() < 0) {
-	if (pCmd != NULL) {
-	    LOG_ERROR_MSG(pCmd->name() << ": " << reply.str(true,0));
-	} else {
-	    LOG_ERROR_MSG("unknown command: " << reply.str(true,0));
-	}
+        if (pCmd != NULL) {
+            LOG_ERROR_MSG(pCmd->name() << ": " << reply.str(true,0));
+        } else if ( !cmdStr.empty() && cmdStr[0] == "replyformat" ) {
+            reply << mmcs_client::OK << mmcs_client::DONE;
+            status = procstat(0);
+        } else {
+            LOG_ERROR_MSG("unknown command: " << reply.str(true,0));
+        }
     }
 
     return status;
 }
 
 
-/*!
-** execute() - Perform specific MMCS command
-** @param cmdName     the command name
-** @param cmdArgs     the command arguments
-** @param reply       the command output stream. Refer to class MMCSCommandProcessorReply
-** @param pController the ConsoleController object that the command is to work on
-** @returns           execution status, refer the MMCSCommandProcessor::status
-*/
-MMCSCommandProcessorStatus::procstat
-MMCSCommandProcessor::execute(string cmdName,
-			      deque<string> cmdArgs,
-			      MMCSCommandReply& reply,
-			      ConsoleController* pController)
+procstat
+MMCSCommandProcessor::execute(
+        string cmdName,
+        deque<string> cmdArgs,
+        mmcs_client::CommandReply& reply,
+        ConsoleController* pController
+        )
 {
     cmdArgs.push_front(cmdName);
     return execute(cmdArgs, reply, pController);
 }
 
 
-/*!
-** invokeCommand() - Call the command processor for the command
-** @param cmdStr      the command string as parsed by parse()
-** @param reply       the command output stream. Refer to class MMCSCommandProcessorReply
-** @param pController the ConsoleController object that the command is to work on
-** @param pTarget     the BlockControllerTarget list that the command is to work on
-** @param pCmd        the MMCSCommand object to be executed
-** @param status      the validation status, refer to MMCSCommandProcessor::status
-** @returns           execution status, refer to MMCSCommandProcessor::status
-*/
-MMCSCommandProcessorStatus::procstat
-MMCSCommandProcessor::invokeCommand(deque<string> cmdStr,
-				    MMCSCommandReply& reply,
-				    ConsoleController* pController,
-				    BlockControllerTarget*  pTarget,
-				    MMCSCommand*  pCmd,
-				    MMCSCommandProcessorStatus::procstat status,
-                                    std::vector<std::string>& validnames)
+procstat
+MMCSCommandProcessor::invokeCommand(
+        deque<string> cmdStr,
+        mmcs_client::CommandReply& reply,
+        ConsoleController* pController,
+        server::BlockControllerTarget*  pTarget,
+        AbstractCommand*  pCmd,
+        procstat status,
+        std::vector<std::string>& //validnames
+        )
 {
     // execute the command
     if (status == 0)
     {
-	try
-	{
-	    status = MMCSCommandProcessorStatus::CMD_EXECUTED;
-	    pCmd->execute(cmdStr, reply, pController, pTarget);
-	}
-	catch (exception &e)
-	{
-	    reply << ABORT << e.what() << DONE;
-	}
+        try
+        {
+            status = CMD_EXECUTED;
+            pCmd->execute(cmdStr, reply, pController, pTarget);
+        }
+        catch (const exception &e)
+        {
+            reply << mmcs_client::ABORT << e.what() << mmcs_client::DONE;
+        }
     }
-    else if (status == MMCSCommandProcessorStatus::CMD_NOT_FOUND)
-      reply << FAIL << "command not found" << DONE;
+    else if (status == CMD_NOT_FOUND)
+      reply << mmcs_client::FAIL << "command not found" << mmcs_client::DONE;
     return status;
 }
 
-#ifdef WITH_DB
-/*!
-** Class: MMCSConsoleCommandProcessor
-*/
 
-/*!
-** invokeCommand() - Call the command processor for the command
-** @param cmdStr      the command string as parsed by parse()
-** @param reply       the command output stream. Refer to class MMCSCommandProcessorReply
-** @param pController the ConsoleController object that the command is to work on
-** @param pTarget     the BlockControllerTarget list that the command is to work on
-** @param pCmd        the MMCSCommand object to be executed
-** @param status      the validation status, refer to MMCSCommandProcessor::status
-** @returns           execution status, refer to MMCSCommandProcessor::status
-*/
-MMCSCommandProcessorStatus::procstat
-MMCSConsoleCommandProcessor::invokeCommand(deque<string> cmdStr,
-					   MMCSCommandReply& reply,
-					   ConsoleController* pController,
-					   BlockControllerTarget*  pTarget,
-					   MMCSCommand*  pCmd,
-					   MMCSCommandProcessorStatus::procstat status,
-                                           std::vector<std::string>& validnames)
-{
-    // execute the command
-    if (status == 0)
-    {
-	try
-	{
-	    status = MMCSCommandProcessorStatus::CMD_EXECUTED;
-	    pCmd->execute(cmdStr, reply, pController, pTarget);
-	}
-	catch (exception &e)
-	{
-	    reply << ABORT << e.what() << DONE;
-	}
-    }
-    else if (status == MMCSCommandProcessorStatus::CMD_EXTERNAL) {
-        static_cast<MMCSExternalCommand*>(pCmd)->execute(cmdStr, reply, pController, pTarget);
-        //        executeExternal(cmdStr, reply, pController, pTarget);
-    }
-    else if (status == MMCSCommandProcessorStatus::CMD_NOT_FOUND)
-    {
-	// if the command is not available locally,
-	// try to forward the command to the mmcs server
-	if (pController->getConsolePort() != NULL)
-	{
-	    status = execute("mmcs_server_cmd", cmdStr, reply, pController);
-	    if (status == MMCSCommandProcessorStatus::CMD_NOT_FOUND) // prevent infinite loop
-	    {
-		status = MMCSCommandProcessorStatus::CMD_INVALID;
-		reply << FAIL << "Internal failure: mmcs_server_cmd is missing" << DONE;
-	    }
-	}
-        else
-          reply << FAIL << "lost connection to mmcs_server;use mmcs_server_connect to reconnect" << DONE;
-    }
-
-    return status;
-}
-
-MMCSServerCommandProcessor::MMCSServerCommandProcessor(MMCSCommandMap* mmcsCommands) :
-    MMCSCommandProcessor(mmcsCommands)
-{
-
-}
-
-MMCSCommandProcessorStatus::procstat
-MMCSServerCommandProcessor::invokeCommand(deque<string> cmdStr,
-					  MMCSCommandReply& reply,
-					  ConsoleController* pController,
-					  BlockControllerTarget*  pTarget,
-					  MMCSCommand*  pCmd,
-					  MMCSCommandProcessorStatus::procstat status,
-                                          std::vector<std::string>& validnames)
-{
-    // execute the command
-    if (status == 0)
-    {
-	try
-	{
-	    status = MMCSCommandProcessorStatus::CMD_EXECUTED;
-
-            if(!validnames.empty())// && pCmd->attributes().requiresBlock() == false)
-                pCmd->execute(cmdStr, reply, (DBConsoleController*) pController, pTarget, &validnames);
-            else
-                pCmd->execute(cmdStr, reply, (DBConsoleController*) pController, pTarget);
-	}
-	catch (exception &e)
-	{
-	    reply << ABORT << e.what() << DONE;
-	}
-    }
-    else if (status == MMCSCommandProcessorStatus::CMD_NOT_FOUND)
-    {
-	reply << FAIL << "command not found" << DONE;
-    }
-
-    return status;
-}
-
-MMCSCommandProcessorStatus::procstat
-MMCSServerCommandProcessor::validate(
-            std::deque<std::string>& cmdStr,
-            MMCSCommandReply& reply,
-            ConsoleController* pController,
-            BlockControllerTarget** pTarget,
-            MMCSCommand** pCmd,
-            std::vector<std::string>* validnames)
-{
-    return MMCSCommandProcessor::validate(cmdStr, reply, pController, pTarget, pCmd, validnames);
-}
-
-void
-MMCSConsoleCommandProcessor::executeExternal(deque<string>& cmdStr,
-                                             MMCSCommandReply& reply,
-                                             ConsoleController* pController,
-                                             BlockControllerTarget* pTarget)
-{
-    // Find the command and call its execute with the args.
-}
-
-#endif
+} // namespace mmcs

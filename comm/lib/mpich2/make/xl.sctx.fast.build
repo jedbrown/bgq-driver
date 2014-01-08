@@ -1,0 +1,59 @@
+# -*- mode: makefile-gmake; -*-
+# begin_generated_IBM_copyright_prolog                             #
+#                                                                  #
+# This is an automatically generated copyright prolog.             #
+# After initializing,  DO NOT MODIFY OR MOVE                       #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# (C) Copyright IBM Corp.  2007, 2008                              #
+# IBM CPL License                                                  #
+#                                                                  #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# end_generated_IBM_copyright_prolog                               #
+
+xl.sctx.fast-install: xl.sctx.fast
+	${MAKE} -C ${MPICH2BUILD}-xl.sctx.fast install
+
+xl.sctx.fast: autoconf
+	mkdir -p ${MPICH2BUILD}-$@
+	cd ${MPICH2BUILD}-$@ &&	         				\
+	if [ ! -f Makefile ] ; then					\
+	  MPILIBNAME="mpi"						\
+	  MPICXXLIBNAME="mpigc4"					\
+	  ${MPICH2DIR}/configure					\
+	  --enable-cache						\
+          --disable-rpath                                               \
+	  --disable-versioning						\
+	  --prefix=${INSTALL_DIR}/$@					\
+	  --mandir=${INSTALL_DIR}/$@/man				\
+	  --htmldir=${INSTALL_DIR}/$@/www				\
+	  --host=${BUILD_HOST}						\
+	  --target=${BUILD_TARGET}					\
+	  --build=${BUILD_BUILD}					\
+	  --enable-dependencies						\
+	  --enable-g=none						\
+	  --with-device=pamid:${PLATFORM}				\
+	  --enable-romio=yes						\
+	  --enable-f77=yes						\
+	  --enable-fc=yes						\
+	  --with-file-system=${FILE_SYSTEM}				\
+	  --enable-timer-type=device					\
+	  --enable-threads=${THREAD_LEVEL}				\
+	  --with-fwrapname=mpigf					\
+	  --with-cross=${MPICH2DIR}/src/mpid/pamid/cross/${CROSSFILE}	\
+	  --with-mpe=no							\
+	  --with-smpcoll=yes						\
+	  --without-valgrind						\
+	  --enable-timing=none						\
+	  --with-aint-size=8						\
+	  --with-assert-level=0						\
+	  --with-pmi=pmi2/poe						\
+	  --enable-shared						\
+	  --enable-dynamiclibs						\
+	  --disable-static						\
+	  --enable-debuginfo						\
+	  --enable-fast=all,O3						\
+	; fi
+
+	${MAKE} -j8 -C ${MPICH2BUILD}-$@

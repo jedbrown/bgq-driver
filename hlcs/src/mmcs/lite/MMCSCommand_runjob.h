@@ -21,25 +21,29 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#ifndef MMCS_COMMAND_RUNJOB_H
-#define MMCS_COMMAND_RUNJOB_H
+#ifndef MMCS_LITE_MMCS_COMMAND_RUNJOB_H
+#define MMCS_LITE_MMCS_COMMAND_RUNJOB_H
 
-#include "MMCSCommand.h"
+#include "common/AbstractCommand.h"
 
-class CNBlockController;
-class ConsoleController;
-class IOBlockController;
+
+namespace mmcs {
+
+namespace server {
+    class CNBlockController;
+    class IOBlockController;
+}
 
 namespace lite {
 
+
 class JobInfo;
 
-}
 
 /*!
  * \brief
  */
-class MMCSCommand_runjob: public MMCSCommand
+class MMCSCommand_runjob: public common::AbstractCommand
 {
 public:
     /*!
@@ -48,7 +52,7 @@ public:
     MMCSCommand_runjob(
             const char* name,
             const char* description,
-            const MMCSCommandAttributes& attributes
+            const Attributes& attributes
             );
 
     /*!
@@ -56,9 +60,9 @@ public:
      */
     void execute(
             std::deque<std::string> args,
-            MMCSCommandReply& reply,
-            ConsoleController* pController,
-            BlockControllerTarget* pTarget=NULL
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            server::BlockControllerTarget* pTarget=NULL
             );
 
     /*!
@@ -66,7 +70,7 @@ public:
      */
     void help(
             std::deque<std::string> args,
-            MMCSCommandReply& reply
+            mmcs_client::CommandReply& reply
             );
 
     /*!
@@ -83,27 +87,31 @@ private:
      * \brief
      */
     void insert(
-            MMCSCommandReply& reply,    //!< [in]
-            lite::JobInfo& info         //!< [in]
+            mmcs_client::CommandReply& reply,    //!< [in]
+            JobInfo& info         //!< [in]
             );
 
     /*!
      * \brief
      */
     void getConnectedIoNode(
-            boost::shared_ptr<CNBlockController> block,  //!< [in]
-            lite::JobInfo& job_info,                        //!< [in]
-            MMCSCommandReply& reply                         //!< [in]
+            boost::shared_ptr<server::CNBlockController> block,  //!< [in]
+            JobInfo& job_info,                        //!< [in]
+            mmcs_client::CommandReply& reply                         //!< [in]
             );
 
     /*!
      * \brief
      */
     void getConnectedIoNode(
-            boost::shared_ptr<IOBlockController> block,  //!< [in]
-            lite::JobInfo& job_info,                        //!< [in]
-            MMCSCommandReply& reply                         //!< [in]
+            boost::shared_ptr<server::IOBlockController> block,  //!< [in]
+            JobInfo& job_info,                        //!< [in]
+            mmcs_client::CommandReply& reply                         //!< [in]
             );
 };
+
+
+} } // namespace mmcs::lite
+
 
 #endif

@@ -1,156 +1,156 @@
 <div>
 
-<div data-dojo-type="dijit.layout.BorderContainer" data-dojo-props="gutters: false">
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'top'">
-        <div data-dojo-type="dijit.form.DropDownButton" data-dojo-attach-point="_filterOptionsDropDown">
+<div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="gutters: false">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'top'">
+        <div data-dojo-type="dijit/form/DropDownButton" data-dojo-attach-point="_filterOptionsDropDown">
             <span>Filter options</span>
-            <div style="width: 500px;" data-dojo-type="dijit.TooltipDialog">
-                <div class="bgFilterOptions bgFilterOptionsRas" data-dojo-type="dijit.form.Form" data-dojo-attach-point="_filterOptionsForm">
+            <div style="width: 500px;" data-dojo-type="dijit/TooltipDialog">
+                <div class="bgFilterOptions bgFilterOptionsRas" data-dojo-type="dijit/form/Form" data-dojo-attach-point="_filterOptionsForm">
                     <fieldset>
                         <ul>
-                            <li><input data-dojo-type="bluegene.navigator.dijit.TimeInterval" data-dojo-props="name: 'interval', label: 'Entries', ras: true" data-dojo-attach-point="_filterOptionsTime" /></li>
+                            <li><input data-dojo-type="bluegene/navigator/dijit/TimeInterval" data-dojo-props="name: 'interval', label: 'Entries', ras: true" data-dojo-attach-point="_filterOptionsTime" /></li>
                             <li>
                                 <label for="${id}-fo-block">Block</label>
-                                <input id="${id}-fo-block" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'block'" />
+                                <input id="${id}-fo-block" data-dojo-type="bluegene/navigator/dijit/MultiWildcardTextBox" data-dojo-props="name: 'block'" />
                             </li>
                             <li>
                                 <label for="${id}-fo-category">Category</label>
-                                <input id="${id}-fo-category" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'category'" />
+                                <input id="${id}-fo-category" data-dojo-type="bluegene/navigator/dijit/MultiWildcardTextBox" data-dojo-props="name: 'category'" />
                             </li>
                             <li>
                                 <label for="${id}-fo-component">Component</label>
-                                <input id="${id}-fo-component" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'component'" />
+                                <input id="${id}-fo-component" data-dojo-type="bluegene/navigator/dijit/MultiWildcardTextBox" data-dojo-props="name: 'component'" />
                             </li>
                             <li>
                                 <label for="${id}-fo-job">Job</label>
-                                <input name="job" id="${id}-fo-job" data-dojo-type="dijit.form.ValidationTextBox" data-dojo-props="name: 'job', invalidMessage: 'The value must be a number.', regExp: '\\d+'" />
+                                <input name="job" id="${id}-fo-job" data-dojo-type="dijit/form/ValidationTextBox" data-dojo-props="name: 'job', invalidMessage: 'The value must be a number.', regExp: '\\d+'" />
                             </li>
                             <li>
                                 <label for="${id}-fo-message">Message</label>
-                                <input id="${id}-fo-message" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'message'" />
+                                <input id="${id}-fo-message" data-dojo-type="bluegene/navigator/dijit/MultiWildcardTextBox" data-dojo-props="name: 'message'" />
                             </li>
                             <li>
                                 <label for="${id}-fo-msgid">Message ID</label>
-                                <input id="${id}-fo-msgid" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'msgid'" />
+                                <input id="${id}-fo-msgid" data-dojo-type="bluegene/navigator/dijit/MultiWildcardTextBox" data-dojo-props="name: 'msgid'" />
                             </li>
                             <li>
                                 <label for="${id}-fo-location">Location</label>
-                                <input id="${id}-fo-location" data-dojo-type="bluegene.navigator.dijit.MultiWildcardTextBox" data-dojo-props="name: 'location'" />
+                                <input id="${id}-fo-location" data-dojo-type="bluegene/navigator/dijit/MultiWildcardTextBox" data-dojo-props="name: 'location'" />
                             </li>
                             <li>
                                 <label for="${id}-fo-serialnumber">Serial Number</label>
-                                <input name="serialnumber" id="${id}-fo-serialnumber" data-dojo-type="dijit.form.TextBox" data-dojo-props="name: 'serialnumber'" />
+                                <input name="serialnumber" id="${id}-fo-serialnumber" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'serialnumber'" />
                             </li>
                             <li>
                                 <label for="${id}-fo-control-action">Control Action</label>
-                                <select name="controlAction" id="${id}-fo-control-action" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'controlAction', maxHeight: -1" data-dojo-attach-point="_filterOptionsControlActionSelect">
+                                <select name="controlAction" id="${id}-fo-control-action" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'controlAction', maxHeight: -1" data-dojo-attach-point="_filterOptionsControlActionSelect">
                                 </select>
                             </li>
                             <li>
                                 <label for="${id}-fo-severity">Severity</label>
-                                <input id="${id}-fo-severity" data-dojo-type="bluegene.navigator.dijit.MultiSelectCodes" data-dojo-props="name: 'severity', values: bluegene.navigator.xlate.rasSeverity" />
+                                <input id="${id}-fo-severity" data-dojo-type="bluegene/navigator/dijit/MultiSelectCodes" data-dojo-props="name: 'severity', values: bluegene.navigator.xlate.rasSeverity" />
                             </li>
                         </ul>
                     </fieldset>
                     <fieldset class="submit">
-                        <button type="submit" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'submit'">Apply</button>
-                        <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_filterOptionsResetButton">Reset</button>
+                        <button type="submit" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'submit'">Apply</button>
+                        <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_filterOptionsResetButton">Reset</button>
                     </fieldset>
                 </div>
             </div>
         </div>
 
-        <div data-dojo-type="dijit.form.DropDownButton" data-dojo-attach-point="_fieldsDropDown">
+        <div data-dojo-type="dijit/form/DropDownButton" data-dojo-attach-point="_fieldsDropDown">
             <span>Display Fields</span>
-            <div style="width: 170px;" data-dojo-type="dijit.TooltipDialog" data-dojo-props="style: 'width: 170px;'">
-                <div class="bgDisplayOptions" data-dojo-type="dijit.form.Form" data-dojo-props="'class': 'bgDisplayOptions'" data-dojo-attach-point="_fieldsForm">
+            <div style="width: 170px;" data-dojo-type="dijit/TooltipDialog" data-dojo-props="style: 'width: 170px;'">
+                <div class="bgDisplayOptions" data-dojo-type="dijit/form/Form" data-dojo-props="'class': 'bgDisplayOptions'" data-dojo-attach-point="_fieldsForm">
                     <fieldset>
                         <ul>
                             <li>
                                 <input type="checkbox" name="field" value="recid" id="${id}-fields-recid"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'recid'" />
                                 <label for="${id}-fields-recid">Record ID</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="time" id="${id}-fields-time"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'time'"
                                     />
                                 <label for="${id}-fields-time">Time</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="severity" id="${id}-fields-severity" 
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'severity'"
                                     />
                                 <label for="${id}-fields-severity">Severity</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="category" id="${id}-fields-category"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'category'"
                                     />
                                 <label for="${id}-fields-category">Category</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="component" id="${id}-fields-component"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'component'"
                                     />
                                 <label for="${id}-fields-component">Component</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="msgid" id="${id}-fields-msgid"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'msgid'"
                                     />
                                 <label for="${id}-fields-msgid">Message ID</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="block" id="${id}-fields-block" 
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'block'" />
                                 <label for="${id}-fields-block">Block</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="location" id="${id}-fields-location"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'location'"
                                     />
                                 <label for="${id}-fields-location">Location</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="serialnumber" id="${id}-fields-serialnumber" 
-                                    data-dojo-type="dijit.form.CheckBox" 
+                                    data-dojo-type="dijit/form/CheckBox" 
                                     data-dojo-props="name: 'field', value: 'serialnumber'" 
                                     />
                                 <label for="${id}-fields-serialnumber">Serial Number</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="jobid" id="${id}-fields-jobid"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'jobid'"
                                     />
                                 <label for="${id}-fields-jobid">Job ID</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="count" id="${id}-fields-count"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'count'"
                                     />
                                 <label for="${id}-fields-count">Count</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="controlAction" id="${id}-fields-control-action"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'controlAction'"
                                     />
                                 <label for="${id}-fields-control-action">Control Action</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="message" id="${id}-fields-message"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'message'"
                                     />
                                 <label for="${id}-fields-message">Message</label>
@@ -159,14 +159,14 @@
 
                             <li>
                                 <input type="checkbox" name="field" value="ecid" id="${id}-fields-ecid"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'ecid'"
                                     />
                                 <label for="${id}-fields-ecid">ECID</label>
                             </li>
                             <li>
                                 <input type="checkbox" name="field" value="cpu" id="${id}-fields-cpu"
-                                    data-dojo-type="dijit.form.CheckBox"
+                                    data-dojo-type="dijit/form/CheckBox"
                                     data-dojo-props="name: 'field', value: 'cpu'"
                                     />
                                 <label for="${id}-fields-cpu">CPU</label>
@@ -175,15 +175,15 @@
                         </ul>
                     </fieldset>
                     <fieldset class="submit">
-                        <button type="submit" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'submit'">Apply</button>
+                        <button type="submit" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'submit'">Apply</button>
                     </fieldset>
                 </div>
             </div>
         </div>
 
     </div>
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'center'">
-        <table style="height: 100%;" data-dojo-type="dojox.grid.EnhancedGrid"
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'center'">
+        <table style="height: 100%;" data-dojo-type="dojox/grid/EnhancedGrid"
             data-dojo-props="rowsPerPage: 50, selectable: true, noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No events match the filter options.&lt;/span&gt;'"
             data-dojo-attach-point="_grid"
             >

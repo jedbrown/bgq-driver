@@ -220,7 +220,7 @@ class bgqCommonAlertAnalyzer(AlertAnalyzer):
             registry.get_logger().debug('windowTime = ' + window_time)
 
         except Exception, e:
-            registry.get_logger().warn('Configuring window time to default {0} seconds'.format(BGQ_DEFAULT_WINDOW_TIME))
+            registry.get_logger().warn('Configuring window time to default {0} seconds due to exception: {1}'.format(BGQ_DEFAULT_WINDOW_TIME, e))
             window_time = str(BGQ_DEFAULT_WINDOW_TIME) + ' SECONDS'
 
         return window_time
@@ -235,11 +235,11 @@ class bgqCommonAlertAnalyzer(AlertAnalyzer):
             if int(threshold) <= 0:
                 registry.get_logger().error('The value ' + threshold + ' specified in the threshold is not valid. The value must be greater than zero.')
                 raise
-            registry.get_logger().debug(loc + ' = ' + threshold)
+            registry.get_logger().debug('threshold = ' + threshold)
 
         except Exception, e:
             threshold = str(BGQ_DEFAULT_THRESHOLD)
-            registry.get_logger().warn('Configuring the threshold to default {0}'.format(threshold))
+            registry.get_logger().warn('Configuring the threshold to default {0} due to exception: {1}'.format(threshold,e))
 
         return int(threshold)
 
@@ -375,7 +375,7 @@ class bgqCommonAlertAnalyzer(AlertAnalyzer):
         block_id = ''
         cursor.execute(block_id_query, event.get_rec_id())
         row = cursor.fetchone()
-        if row is not None and len(row) > 0:
+        if row is not None and len(row) > 0 and row[0] is not None:
             block_id = row[0].strip()
             registry.get_logger().debug('Block id for the current alert = ' + block_id)
         else:
@@ -395,7 +395,7 @@ class bgqCommonAlertAnalyzer(AlertAnalyzer):
                 event_recid = row1[0]
                 cursor.execute(block_id_query, event_recid)
                 row2 = cursor.fetchone()
-                if row2:
+                if row2 and len(row2) > 0 and row2[0] is not None:
                     if row2[0].strip() == block_id:
                         return True
 

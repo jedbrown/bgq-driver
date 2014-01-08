@@ -38,7 +38,8 @@ JobFilter::JobFilter():
     _isExitStatusSet(false),
     _exitStatus(0),
     _endTimeInterval(TimeInterval::ALL),
-    _startTimeInterval(TimeInterval::ALL)
+    _startTimeInterval(TimeInterval::ALL),
+    _pid(-1)
 {
     // Nothing to do.
 }

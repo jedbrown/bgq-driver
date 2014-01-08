@@ -21,8 +21,8 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#ifndef FILTER_IMPL_H_
-#define FILTER_IMPL_H_
+#ifndef BGSCHED_REALTIME_FILTER_IMPL_H_
+#define BGSCHED_REALTIME_FILTER_IMPL_H_
 
 
 #include <bgsched/realtime/Filter.h>
@@ -149,6 +149,12 @@ public:
     const std::string& getRasComputeBlockIdPattern() const
     { return _ras_compute_block_id_pattern; }
 
+    void setIoDrawers( bool io_drawers )  { _io_drawers = io_drawers; }
+    bool getIoDrawers() const  { return _io_drawers; }
+
+    void setIoNodes( bool io_nodes )  { _io_nodes = io_nodes; }
+    bool getIoNodes() const  { return _io_nodes; }
+
 
 private:
 
@@ -172,7 +178,7 @@ private:
     BlockStatusesPtr _block_statuses_ptr;
     bool _block_deleted;
 
-    bool _midplanes, _node_boards, _nodes, _switches, _torus_cables, _io_cables;
+    bool _midplanes, _node_boards, _nodes, _switches, _torus_cables, _io_cables, _io_drawers, _io_nodes;
 
     bool _ras_events;
     std::string _ras_message_id_pattern;
@@ -202,6 +208,8 @@ private:
         ar & _switches;
         ar & _torus_cables;
         ar & _io_cables;
+        ar & _io_drawers;
+        ar & _io_nodes;
 
         ar & _ras_events;
         ar & _ras_message_id_pattern;

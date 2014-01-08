@@ -25,9 +25,9 @@
 define(
 [
     "dojo/dom-construct",
+    "dojo/when",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dojo/store/Memory",
     "dijit/_WidgetBase",
@@ -38,9 +38,9 @@ define(
 ],
 function(
         d_construct,
+        d_when,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
         d_store_Memory,
         j__WidgetBase,
@@ -52,7 +52,6 @@ function(
 {
 
 var b_navigator_dijit_Table = d_declare(
-        "bluegene.navigator.dijit.Table",
         [ j__WidgetBase, j__TemplatedMixin ],
 
 /** @lends bluegene^navigator^dijit^Table# */
@@ -294,7 +293,7 @@ var b_navigator_dijit_Table = d_declare(
         d_construct.create( "td", { colspan: this._column_count, innerHTML: "Loading..." }, tr_elem );
 
 
-        d_Deferred.when(
+        d_when(
                 this._promise,
                 d_lang.hitch( this, this._gotData ),
                 d_lang.hitch( this, this._loadError )

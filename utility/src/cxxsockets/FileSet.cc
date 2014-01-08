@@ -20,45 +20,56 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#include "cxxsockets/SocketTypes.h"
+#include "cxxsockets/FileSet.h"
 
+#include "cxxsockets/exception.h"
 
-bool CxxSockets::FileSet::LockSet(PthreadMutexHolder& mutex) {
-    bool rc = false;
-    rc = mutex.Lock(&_setLock);
-    return rc;
+#include "Log.h"
+
+LOG_DECLARE_FILE( "utility.cxxsockets" );
+
+namespace CxxSockets {
+
+bool
+FileSet::LockSet(
+        PthreadMutexHolder& mutex
+        )
+{
+    return mutex.Lock(&_setLock);
 }
 
 // Do not lock.  Private method called by public methods that lock.
-void CxxSockets::FileSet::pAddFile(FilePtr file) {
-    std::vector<FilePtr>::iterator f = std::find(begin(), end(), file);
-    if (f != end()) {
+void
+FileSet::pAddFile(
+        FilePtr file
+        )
+{
+    const std::vector<FilePtr>::const_iterator f = std::find(_filevec.begin(), _filevec.end(), file);
+    if (f != _filevec.end()) {
         std::ostringstream msg;
         msg << "Socket already added" << std::endl;
-	throw CxxSocketUserError(-1, msg.str());
+	throw UserError(-1, msg.str());
     }
-    push_back(file);
+    _filevec.push_back(file);
 }
 
-void CxxSockets::FileSet::AddFile(FilePtr file) {
+void
+FileSet::AddFile(
+        FilePtr file
+        )
+{
     PthreadMutexHolder mutex; LockSet(mutex);
     pAddFile(file);
 }
 
-void CxxSockets::FileSet::AddFiles(std::vector<FilePtr>& files) {
-    PthreadMutexHolder mutex; LockSet(mutex);
-    for(std::vector<FilePtr>::iterator it = files.begin();
-        it != files.end(); ++it) {
-        pAddFile((*it));
-    }
-}
-
-void CxxSockets::FileSet::RemoveInternal(FilePtr file) {
-    erase(remove(begin(),end(),file), end()); 
-}
-
-void CxxSockets::FileSet::RemoveFile(FilePtr file) { 
+void
+FileSet::RemoveFile(
+        FilePtr file
+        )
+{ 
     PthreadMutexHolder mutex; 
     LockSet(mutex); 
-    erase(remove(begin(),end(),file), end()); 
+    _filevec.erase(remove(_filevec.begin(),_filevec.end(),file), _filevec.end()); 
+}
+
 }

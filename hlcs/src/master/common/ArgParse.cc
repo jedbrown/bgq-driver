@@ -27,8 +27,6 @@
 #include <utility/include/LoggingProgramOptions.h>
 #include <utility/include/Properties.h>
 
-#include <utility/include/cxxsockets/SocketTypes.h>
-
 #include <utility/include/portConfiguration/ClientPortConfiguration.h>
 
 #include <log4cxx/log4cxx.h>
@@ -47,8 +45,6 @@
 
 LOG_DECLARE_FILE( "master" );
 
-bgq::utility::Properties::Ptr Args::_props;
-
 typedef std::map<std::string,log4cxx::LevelPtr> Loggers;
 Loggers loggers = boost::assign::map_list_of
     ( "ibm.master", log4cxx::Level::getFatal() )
@@ -56,9 +52,8 @@ Loggers loggers = boost::assign::map_list_of
     ( "ibm.utility.cxxsockets", log4cxx::Level::getFatal());
 
 void
-Args::setupLoggerDefaults()
+Args::setupLoggerDefaults() const
 {
-    // Set default logging levels
     for ( Loggers::const_iterator i = loggers.begin(); i != loggers.end(); ++i ) {
         const std::string& logger = i->first;
         const log4cxx::LevelPtr& level = i->second;
@@ -70,8 +65,8 @@ Args::setupLoggerDefaults()
 
 bool
 Args::setupLogger(
-        std::string& verbarg
-        )
+        const std::string& verbarg
+        ) const
 {
 
     // parse --verbose arguments
@@ -86,7 +81,7 @@ Args::setupLogger(
     }
 
     // Create a logger.
-    log4cxx::LoggerPtr loggerp = log4cxx::Logger::getLogger(logger_name);
+    const log4cxx::LoggerPtr loggerp = log4cxx::Logger::getLogger(logger_name);
 
     // Remove any loggers specified in --verbose from the default logger list
     const Loggers::iterator i = loggers.find( logger_name );
@@ -96,54 +91,52 @@ Args::setupLogger(
 
     // Get the specified log level
     std::string log_level_string = verbarg.substr(split_pos + 1,verbarg.length());
-    if (log_level_string == "O" || log_level_string == "OFF" || log_level_string == "0") log_level_string =  "OFF";
-    else if (log_level_string == "F" || log_level_string == "FATAL" || log_level_string == "1") log_level_string =  "FATAL";
-    else if (log_level_string == "E" || log_level_string == "ERROR" || log_level_string == "2") log_level_string =  "ERROR";
-    else if (log_level_string == "W" || log_level_string == "WARN" || log_level_string == "3") log_level_string =  "WARN";
-    else if (log_level_string == "I" || log_level_string == "INFO" || log_level_string == "4") log_level_string =  "INFO";
-    else if (log_level_string == "D" || log_level_string == "DEBUG" || log_level_string == "5") log_level_string =  "DEBUG";
-    else if (log_level_string == "T" || log_level_string == "TRACE" || log_level_string == "6") log_level_string =  "TRACE";
-    else if (log_level_string == "A" || log_level_string == "ALL" || log_level_string == "7") log_level_string =  "ALL";
+    if (log_level_string == "O" || log_level_string == "OFF" || log_level_string == "0") log_level_string = "OFF";
+    else if (log_level_string == "F" || log_level_string == "FATAL" || log_level_string == "1") log_level_string = "FATAL";
+    else if (log_level_string == "E" || log_level_string == "ERROR" || log_level_string == "2") log_level_string = "ERROR";
+    else if (log_level_string == "W" || log_level_string == "WARN" || log_level_string == "3") log_level_string = "WARN";
+    else if (log_level_string == "I" || log_level_string == "INFO" || log_level_string == "4") log_level_string = "INFO";
+    else if (log_level_string == "D" || log_level_string == "DEBUG" || log_level_string == "5") log_level_string = "DEBUG";
+    else if (log_level_string == "T" || log_level_string == "TRACE" || log_level_string == "6") log_level_string = "TRACE";
+    else if (log_level_string == "A" || log_level_string == "ALL" || log_level_string == "7") log_level_string = "ALL";
     else return false;
 
-    log4cxx::LevelPtr levelp = log4cxx::Level::toLevel(log_level_string);
-    std::string levels;
-    levelp->toString(levels);
-
-    // Now set the logger level.
+    const log4cxx::LevelPtr levelp = log4cxx::Level::toLevel(log_level_string);
     loggerp->setLevel(levelp);
+
     return true;
 }
 
 void
 APusage(
-        void (*usage)()
+        void (*usage)(),
+        const bool silent = false
         )
 {
     usage();
+    if ( silent ) return;
+
     std::cerr << "Try the --help or -h option for more information." << std::endl;
 }
 
-Args::Args(unsigned int argc, const char** argv,
-           void (*usage)(), void (*help)(),
-           std::vector<std::string>& valargs,
-           std::vector<std::string>& singles,
-           int default_port,
-           bool ignore_defaults
-           )
+Args::Args(
+        const unsigned int argc, 
+        const char** argv,
+        void (*usage)(), 
+        void (*help)(),
+        std::vector<std::string>& valargs,
+        const std::vector<std::string>& singles,
+        const bool ignore_defaults
+        )
 {
-    std::string verbose_arg = "--verbose";
-    valargs.push_back(verbose_arg);
-    std::string v = "-v";
-    valargs.push_back(v);
-    std::string proparg = "--properties";
-    valargs.push_back(proparg);
-    std::string p = "-p";
-    valargs.push_back(p);
+    valargs.push_back("--verbose");
+    valargs.push_back("-v");
+    valargs.push_back("--properties");
+    valargs.push_back("-p");
 
     // First find the properties
     bool gotprops = false;
-    std::string host_string = "";
+    std::string host_string;
     for (unsigned int i = 1; i < argc; ++i) {
         if (!strcasecmp(argv[i], "--properties") || !strcasecmp(argv[i], "-p")) {
             if (argc == ++i) {
@@ -152,7 +145,7 @@ Args::Args(unsigned int argc, const char** argv,
             }
             try {
                 _props = bgq::utility::Properties::create(argv[i]);
-            } catch(std::runtime_error& e) {
+            } catch(const std::runtime_error& e) {
                 std::cerr << "Error reading properties: " << e.what() << std::endl;
                 exit(EXIT_FAILURE);
             }
@@ -163,7 +156,7 @@ Args::Args(unsigned int argc, const char** argv,
             if(++i < argc) {
                 host_string = argv[i];
                 if(host_string.find(":") == std::string::npos) {
-                    host_string = host_string + ":" + boost::lexical_cast<std::string>(default_port);
+                    host_string = host_string + ":32042";
                 }
                 if(argc == i || host_string.find("--") != std::string::npos) {
                     std::cerr << "Must provide host/port pairs for --host parameter" << std::endl;
@@ -181,7 +174,7 @@ Args::Args(unsigned int argc, const char** argv,
     if (!gotprops) {
         try {
             _props = bgq::utility::Properties::create();
-        } catch(std::runtime_error& e) {
+        } catch(const std::runtime_error& e) {
             std::cerr << "Properties file error: " << e.what() << std::endl;
             exit(EXIT_FAILURE);
         }
@@ -189,29 +182,26 @@ Args::Args(unsigned int argc, const char** argv,
 
     const std::string default_logger("ibm.master");
 
-    bgq::utility::LoggingProgramOptions logging_program_options( default_logger );
+    const bgq::utility::LoggingProgramOptions logging_program_options( default_logger );
     bgq::utility::initializeLogging(*_props, logging_program_options, "master");
     if (!ignore_defaults)
         setupLoggerDefaults();
 
 
     // Needs to get master location from properties and command line
-    bgq::utility::ClientPortConfiguration port_config(default_port ? default_port : 32042, bgq::utility::ClientPortConfiguration::ConnectionType::Command);
-    if (default_port && default_port == 32041) {  // Only the agent sets that as the default.
-        port_config.setProperties( _props, "master.agent");
-        port_config.notifyComplete();
-    } else {
-        port_config.setProperties( _props, "master.client");
-        port_config.notifyComplete();
-    }
+    bgq::utility::ClientPortConfiguration port_config(
+            32042, bgq::utility::ClientPortConfiguration::ConnectionType::Command
+            );
+    port_config.setProperties( _props, "master.client");
+    port_config.notifyComplete();
 
-    if (host_string.length() > 0) {
+    if (!host_string.empty()) {
         bgq::utility::PortConfiguration::parsePortsStr(host_string, "32042", _portpairs);
     } else {
         _portpairs = port_config.getPairs();
     }
 
-    if (_portpairs[0].first.length() == 0) {
+    if (_portpairs[0].first.empty()) {
         std::cerr << "No port pairs or invalid port pairs specified. Using defaults." << std::endl;
         bgq::utility::PortConfiguration::parsePortsStr("127.0.0.1:32042", "32042", _portpairs);
     }
@@ -220,14 +210,14 @@ Args::Args(unsigned int argc, const char** argv,
 
     int mandatory_count = 0;
     int optional_count = 0;
-    for (std::vector<std::string>::iterator it = valargs.begin(); it != valargs.end(); ++it) {
+    for (std::vector<std::string>::const_iterator it = valargs.begin(); it != valargs.end(); ++it) {
         // Count up the "wild" args.
         if (*it == "*") {
             ++optional_count;
         }
     }
 
-    for (std::vector<std::string>::iterator it = valargs.begin(); it != valargs.end(); ++it) {
+    for (std::vector<std::string>::const_iterator it = valargs.begin(); it != valargs.end(); ++it) {
         // Count up the "mandatory" args.
         if (*it == "%") {
             ++mandatory_count;
@@ -237,13 +227,13 @@ Args::Args(unsigned int argc, const char** argv,
     for (unsigned int i = 1; i < argc; ++i) {
         if (!strcasecmp(argv[i], "--help") || !strcmp(argv[i], "-h")) {
             help();
-            APusage(usage);
+            APusage(usage, true);
             exit(0);
         } else {
             // See if the arg is in the pairs vector
-            std::string curr_arg = argv[i];
+            const std::string curr_arg = argv[i];
 
-            if (std::find(valargs.begin(), valargs.end(), curr_arg)!= valargs.end()) {
+            if (std::find(valargs.begin(), valargs.end(), curr_arg) != valargs.end()) {
                 // If it's in the vector, make sure there's a value associated with it
                 if (i + 1 == argc) {
                     std::cerr << "Missing value for " << curr_arg << std::endl;
@@ -251,10 +241,10 @@ Args::Args(unsigned int argc, const char** argv,
                     exit(EXIT_FAILURE);
                 }
 
-                std::string nextval = argv[i + 1];
+                const std::string nextval = argv[i + 1];
                 if (nextval.length() != 0 && nextval.find("--") == std::string::npos) {
                     if (curr_arg == "--verbose" || curr_arg == "-v") {
-                        std::string verbarg = argv[++i];
+                        const std::string verbarg = argv[++i];
                         if (setupLogger(verbarg) == false) {
                             APusage(usage);
                             exit(EXIT_FAILURE);
@@ -296,5 +286,19 @@ Args::Args(unsigned int argc, const char** argv,
         std::cerr << "Not enough arguments." << std::endl;
         APusage(usage);
         exit(EXIT_FAILURE);
+    }
+
+}
+
+std::string
+Args::operator[](
+        const std::string& value
+        ) const
+{
+    try {
+        return _argpairs.at(value);
+    } catch ( const std::exception& e ) {
+        LOG_TRACE_MSG( e.what() );
+        return std::string();
     }
 }

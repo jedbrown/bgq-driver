@@ -36,7 +36,11 @@
 
 //! \brief Base class providing agent definition
 //! Both master and agent use this.
-class AgentBase : boost::noncopyable {
+class AgentBase : boost::noncopyable
+{
+public:
+    typedef std::vector<BinaryControllerPtr> Binaries;
+
 public:
     //! \brief Constructor.
     AgentBase() : _ending(false) {}
@@ -45,21 +49,22 @@ public:
 
     const CxxSockets::Host& get_host() const { return _host; }
     const BGAgentId& get_agent_id() const { return _agent_id; }
+
     //! \brief find a binary controller with a binary id
-    bool find_binary(const BinaryId& id, BinaryControllerPtr& p);
+    bool find_binary(const BinaryId& id, BinaryControllerPtr& p) const;
 
     //! \brief Find out if the specified alias is running on this agent.
     //! \param al Alias pointer to check
     //! \returns true or false
     bool runningAlias(const std::string &alias_name) const;
 
-    //! \brief Return a COPY of the internal binary vector.
-    std::vector<BinaryControllerPtr > get_binaries() const { return _binaries; }
+    //! \brief Return a COPY of the internal binary container.
+    const Binaries& get_binaries() const { return _binaries; }
     bool ending() const { return _ending; }
 
 protected:
-    void addController(BinaryControllerPtr controller) {
-        _binaries.push_back(controller); }
+    void addController(const BinaryControllerPtr& controller);
+    void removeController(const BinaryControllerPtr& controller);
 
     //! \brief Protocol management object
     AgentProtocolPtr _prot;
@@ -67,14 +72,15 @@ protected:
     //! \brief agent is ending.
     bool _ending;
 
-    //! Vector of binaries managed by this agent
-    std::vector<BinaryControllerPtr> _binaries;
-
     //! \brief  Agent's unique identifier
     BGAgentId _agent_id;
 
     //! \brief Agent's host name
     CxxSockets::Host _host;
+
+private:
+    //! Container of binaries managed by this agent
+    Binaries _binaries;
 };
 
 #endif

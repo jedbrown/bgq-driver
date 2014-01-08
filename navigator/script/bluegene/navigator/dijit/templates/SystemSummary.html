@@ -1,6 +1,6 @@
 <div>
-	<div data-dojo-type="dijit.layout.ContentPane">
-	    <input id="${id}-auto-update-checkbox" type="checkbox" data-dojo-type="dijit.form.CheckBox" data-dojo-attach-point="_autoUpdateCheckbox" />
+	<div data-dojo-type="dijit/layout/ContentPane">
+	    <input id="${id}-auto-update-checkbox" type="checkbox" data-dojo-type="dijit/form/CheckBox" data-dojo-attach-point="_autoUpdateCheckbox" />
 	    <label for="${id}-auto-update-checkbox">Automatically update</label>
 
 	    <h2>Legend</h2>
@@ -14,9 +14,9 @@
 	    </table>
 
 	    <h2>Utilization</h2>
-	    <span data-dojo-type="bluegene.dijit.OutputFormat" data-dojo-props="nullText: 'Loading...'" data-dojo-attach-point="_jobsText">
-	        ${_d}{jobCount:dojo.number.format} ${_d}{jobCount:bluegene.navigator.format.jobText} running on the system.
-	        ${_d}{jobCpuCount:dojo.number.format} of ${_d}{systemCpuCount:dojo.number.format} nodes (${_d}{jobPct:bluegene.navigator.format.percent}) are allocated to jobs.
+	    <span data-dojo-type="bluegene/dijit/OutputFormat" data-dojo-props="nullText: 'Loading...', thisObject: this" data-dojo-attach-point="_jobsText">
+	        ${_d}{jobCount:_d_number.format} ${_d}{jobCount:_ll_format.jobText} running on the system.
+	        ${_d}{jobCpuCount:_d_number.format} of ${_d}{systemCpuCount:_d_number.format} nodes (${_d}{jobPct:_ll_format.percent}) are allocated to jobs.
 	    </span>
 
 	    <h2>Alerts</h2>
@@ -25,46 +25,46 @@
 	        <div data-dojo-attach-point="_alertsNoneText">
 	            There are no active alerts.
 	        </div>
-	        <span data-dojo-type="bluegene.dijit.OutputFormat"
-	              data-dojo-props="'class': 'dijitHidden'"
+	        <span data-dojo-type="bluegene/dijit/OutputFormat"
+	              data-dojo-props="'class': 'dijitHidden', thisObject: this"
 	              data-dojo-attach-point="_alertsText"
 	            >
-	            There ${_d}{count:bluegene.navigator.format.isAre} ${_d}{count:dojo.number.format} active ${_d}{count:bluegene.navigator.format.alertPlural}.
+	            There ${_d}{count:_ll_format.isAre} ${_d}{count:_d_number.format} active ${_d}{count:_ll_format.alertPlural}.
 	        </span>
 	    </div>
 
 	    <h2>Hardware</h2>
-	    <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_hwLoading">
+	    <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_hwLoading">
 	        Loading...
 	    </div>
-	    <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_hwAllAvailable">
+	    <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_hwAllAvailable">
 	        All hardware is available.
 	    </div>
-	    <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_hwProblems">
+	    <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_hwProblems">
 	        <ul data-dojo-attach-point="_hwProblemsList">
 	        </ul>
 	    </div>
 
 	    <h2>Diagnostics</h2>
-	    <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_diagsLoading">
+	    <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_diagsLoading">
 	        Loading...
 	    </div>
-	    <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_diagsNone">
+	    <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_diagsNone">
 	        No diagnostics are in progress.
 	    </div>
-	    <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_diagsContainer">
+	    <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_diagsContainer">
 	        <ul data-dojo-attach-point="_diagsList">
 	        </ul>
 	    </div>
 
 	    <h2>Service Actions</h2>
-	    <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_saLoading">
+	    <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_saLoading">
 	        Loading...
 	    </div>
-	    <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_saNone">
+	    <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_saNone">
 	        No service actions are in progress.
 	    </div>
-	    <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_saContainer">
+	    <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_saContainer">
 	        <ul data-dojo-attach-point="_saList">
 	        </ul>
 	    </div>

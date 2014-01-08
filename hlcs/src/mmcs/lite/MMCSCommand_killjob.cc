@@ -21,22 +21,31 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#include "lite/MMCSCommand_killjob.h"
+#include "MMCSCommand_killjob.h"
 
-#include "lite/Job.h"
-
+#include "ConsoleController.h"
+#include "Job.h"
 #include "MMCSCommand_lite.h"
 
 #include <utility/include/Log.h>
 
-LOG_DECLARE_FILE( "mmcs" );
+
+LOG_DECLARE_FILE( "mmcs.lite" );
+
+
+using namespace std;
+
+
+namespace mmcs {
+namespace lite {
+
 
 MMCSCommand_killjob::MMCSCommand_killjob(
         const char* name,
         const char* description,
-        const MMCSCommandAttributes& attributes
+        const Attributes& attributes
         ) :
-    MMCSCommand(name, description, attributes)
+    AbstractCommand(name, description, attributes)
 {
     // nothing to do
 }
@@ -44,7 +53,7 @@ MMCSCommand_killjob::MMCSCommand_killjob(
 MMCSCommand_killjob*
 MMCSCommand_killjob::build()
 {
-    MMCSCommandAttributes commandAttributes;
+    Attributes commandAttributes;
     commandAttributes.requiresBlock( true );
     commandAttributes.requiresConnection( true );
     commandAttributes.requiresTarget( false );
@@ -55,25 +64,25 @@ MMCSCommand_killjob::build()
 void
 MMCSCommand_killjob::execute(
         deque<string> args,
-        MMCSCommandReply& reply,
-        ConsoleController* pController,
-        BlockControllerTarget* pTarget
+        mmcs_client::CommandReply& reply,
+        common::ConsoleController* pController,
+        server::BlockControllerTarget* pTarget
         )
 {
     // cast console controller to LiteConsoleController
-    LiteConsoleController* console = dynamic_cast<LiteConsoleController*>( pController );
+    lite::ConsoleController* console = dynamic_cast<lite::ConsoleController*>( pController );
     BOOST_ASSERT( console );
 
     // validate args
     if ( args.size() > 1 ) {
-        reply << FAIL << _description << DONE;
+        reply << mmcs_client::FAIL << _description << mmcs_client::DONE;
         return;
     }
 
     // ensure a previous job is still running
     lite::Job::Ptr job = console->getJob().lock();
     if ( !job ) {
-        reply << FAIL << "Job not running" << DONE;
+        reply << mmcs_client::FAIL << "Job not running" << mmcs_client::DONE;
         return;
     }
 
@@ -82,24 +91,26 @@ MMCSCommand_killjob::execute(
         try {
             signo = boost::lexical_cast<int>( args[0] );
         } catch ( const boost::bad_lexical_cast& e ) {
-            reply << FAIL << "signal " << args[0] << " is not a number" << DONE;
+            reply << mmcs_client::FAIL << "signal " << args[0] << " is not a number" << mmcs_client::DONE;
             return;
         }
     }
 
     // kill job
     job->kill( signo );
-    reply << OK << "sent signal " << signo << " to job" << DONE;
+    reply << mmcs_client::OK << "sent signal " << signo << " to job" << mmcs_client::DONE;
 }
 
 void
 MMCSCommand_killjob::help(
         deque<string> args,
-        MMCSCommandReply& reply
+        mmcs_client::CommandReply& reply
         )
 {
-    reply << OK << description();
+    reply << mmcs_client::OK << description();
     reply << ";sends the specified signal to the currently active job.";
     reply << ";If no signal is specified, SIGKILL is sent.";
-    reply << DONE;
+    reply << mmcs_client::DONE;
 }
+
+} } // namespace mmcs::lite

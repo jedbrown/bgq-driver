@@ -127,6 +127,7 @@ HTTP status: 500 Internal Server Error
 
 #include "Job.hpp"
 
+#include "../BlockingOperationsThreadPool.hpp"
 #include "../dbConnectionPool.hpp"
 #include "../Error.hpp"
 #include "../ras.hpp"
@@ -189,6 +190,36 @@ void jobIdNotifier( const std::string& job_id_str, JobFilter::Id& id_out )
 }
 
 
+void clientNotifier( const std::string& client_str, std::string& hostname_out, int& pid_out )
+{
+    try {
+        string::size_type colon_pos(client_str.find( ':' ));
+        if ( colon_pos == string::npos ) {
+
+            hostname_out = boost::asio::ip::host_name();
+            pid_out = lexical_cast<int>( client_str );
+
+        } else {
+
+            hostname_out = client_str.substr( 0, colon_pos );
+            pid_out = lexical_cast<int>( client_str.substr( colon_pos + 1 ) );
+
+        }
+
+        if ( hostname_out.size() > DBTJob::HOSTNAME_SIZE ) {
+            BOOST_THROW_EXCEPTION( std::runtime_error( "invalid hostname is too long" ) );
+        }
+
+    } catch ( std::exception& e ) {
+
+        LOG_WARN_MSG( "Invalid client option, client string is '" << client_str << "'" );
+        hostname_out = "";
+        pid_out = -1;
+
+    }
+}
+
+
 const capena::http::uri::Path &Jobs::RESOURCE_PATH(::bgws::common::resource_path::JOBS);
 const capena::http::uri::Path Jobs::RESOURCE_PATH_EMPTY_CHILD(RESOURCE_PATH / "");
 
@@ -212,16 +243,6 @@ void Jobs::_doGet()
     static const unsigned DefaultRangeSize(50), MaxRangeSize(100);
     RequestRange req_range( request, DefaultRangeSize, MaxRangeSize );
 
-
-    auto conn_ptr(dbConnectionPool::getConnection());
-    uint64_t all_count(0);
-    cxxdb::ResultSetPtr rs_ptr;
-
-    bgq::utility::UserId::ConstPtr user_id_ptr;
-
-    if ( ! _isUserAdministrator() ) {
-        user_id_ptr = _getRequestUserInfo().getUserIdPtr();
-    }
 
     bool no_jobs(false);
     JobFilter job_filter;
@@ -253,75 +274,15 @@ void Jobs::_doGet()
         return;
     }
 
-    hlcs::security::getJobs(
+
+    _blocking_operations_thread_pool.post( boost::bind(
+            &Jobs::_doQuery, this,
+            capena::server::AbstractResponder::shared_from_this(),
             job_filter,
             job_sort,
-            conn_ptr,
-            _properties_ptr,
-            req_range.getRange().getStart() + 1,
-            req_range.getRange().getEnd() + 1,
-            &all_count,
-            &rs_ptr,
-            user_id_ptr
-        );
+            req_range
+        ) );
 
-    // Format the result as json.
-
-    json::ArrayValue arr_val;
-    json::Array &arr(arr_val.get());
-
-
-    capena::server::Response &response(_getResponse());
-
-    if ( all_count == 0 ) {
-
-        // No rows match the filter options.
-
-        response.setContentTypeJson();
-        response.headersComplete();
-
-        json::Formatter()( arr_val, response.out() );
-
-        return;
-    }
-
-    while ( rs_ptr->fetch() ) {
-        const cxxdb::Columns &cols(rs_ptr->columns());
-
-        json::Object &obj(arr.addObject());
-
-        BGQDB::job::Id id(cols[DBTJob::ID_COL].as<BGQDB::job::Id>());
-
-        obj.set( "id", id );
-        obj.set( "username", cols[DBTJob::USERNAME_COL].getString() );
-        obj.set( "block", cols[DBTJob::BLOCKID_COL].getString() );
-        obj.set( "executable", cols[DBTJob::EXECUTABLE_COL].getString() );
-        obj.set( "startTime", cols[DBTJob::STARTTIME_COL].getTimestamp() );
-        if ( cols[DBTJob_history::ENTRYDATE_COL] ) {
-            obj.set( "endTime", cols[DBTJob_history::ENTRYDATE_COL].getTimestamp() );
-        }
-        obj.set( "status", cols[DBTJob::STATUS_COL].getString() );
-        obj.set( "nodesUsed", cols[DBTJob::NODESUSED_COL].as<uint64_t>() );
-        obj.set( "processesPerNode", cols[DBTJob::PROCESSESPERNODE_COL].as<uint64_t>() );
-        obj.set( "np", cols[DBTJob::NP_COL].as<uint64_t>() );
-        if ( cols[DBTJob_history::EXITSTATUS_COL] ) {
-            obj.set( "exitStatus", cols[DBTJob_history::EXITSTATUS_COL].as<int>() );
-        }
-        if ( cols[DBTJob_history::ERRTEXT_COL] ) {
-            obj.set( "errorText", cols[DBTJob_history::ERRTEXT_COL].getString() );
-        }
-        obj.set( "URI", Job::calcUri( _getDynamicConfiguration().getPathBase(), id ).toString() );
-    }
-
-
-    // Send the response...
-
-    req_range.updateResponse( response, arr.size(), all_count );
-
-    response.setContentTypeJson();
-    response.headersComplete();
-
-    json::Formatter()( arr_val, response.out() );
 }
 
 
@@ -345,6 +306,9 @@ void Jobs::_calcJobFilterAndSort(
     string status_str;
     StringDbColumnOption username( "user", BGQDB::DBTJob::USERNAME_SIZE );
 
+    string hostname;
+    int pid(-1);
+
     TimeIntervalOption end_time_interval( "endTime" );
     TimeIntervalOption start_time_interval( "startTime" );
 
@@ -358,6 +322,7 @@ void Jobs::_calcJobFilterAndSort(
     		( "id", po::value<string>()->notifier( bind( &jobIdNotifier, _1, boost::ref( id ) ) ) )
             ( "status", po::value( &status_str ) )
             ( "sort", po::value( &sort_spec ) )
+            ( "client", po::value<string>()->notifier( bind( &clientNotifier, _1, boost::ref( hostname ), boost::ref( pid ) ) ) )
         ;
 
     block_id.addTo( desc );
@@ -394,11 +359,12 @@ void Jobs::_calcJobFilterAndSort(
     	job_filter.setJobId( id );
     }
     if ( username.hasValue() )  job_filter.setUser( username.getValue() );
+    if ( ! hostname.empty() )  job_filter.setHostname( hostname );
+    if ( pid != -1 )  job_filter.setPid( pid );
 
     if ( ! (start_time_interval.getInterval() == BGQDB::filtering::TimeInterval() || start_time_interval.getInterval() == BGQDB::filtering::TimeInterval::ALL) ) {
         job_filter.setStartTimeInterval( start_time_interval.getInterval() );
     }
-
 
     if ( status_str.empty() ) {
         // Set the statuses to all jobs.
@@ -536,79 +502,272 @@ void Jobs::_getServiceJobs( const std::string& location )
             ) );
     }
 
+    _blocking_operations_thread_pool.post( boost::bind(
+            &Jobs::_doServiceQuery, this,
+            capena::server::AbstractResponder::shared_from_this(),
+            location
+        ) );
 
-    std::vector<BGQDB::job::Id> job_ids;
+}
 
-    BGQDB::STATUS status(BGQDB::killMidplaneJobs( location, &job_ids, true /* list only */ ));
 
-    if ( status == BGQDB::INVALID_ID ) {
-        LOG_DEBUG_MSG( "killMidplaneJobs returned invalid id for " << location << " will return an empty result." );
-        status = BGQDB::OK;
-    } else if ( status != BGQDB::OK ) {
-        error_data["dbStatus"] = lexical_cast<string>( status );
+void Jobs::_doQuery(
+        capena::server::ResponderPtr,
+        const BGQDB::filtering::JobFilter& job_filter,
+        const BGQDB::filtering::JobSort& job_sort,
+        const RequestRange& req_range
+    )
+{
+    try {
 
-        BOOST_THROW_EXCEPTION( Error(
-                string() + "Cannot get jobs affected by service action because the database operation failed. The database return code is " + lexical_cast<string>( status ),
-                "getJobs", "listMidplaneJobsDatabaseError", error_data,
-                capena::http::Status::InternalServerError
+        auto conn_ptr(dbConnectionPool::getConnection());
+
+        uint64_t all_count(0);
+        cxxdb::ResultSetPtr rs_ptr;
+
+        bgq::utility::UserId::ConstPtr user_id_ptr;
+
+        if ( ! _isUserAdministrator() ) {
+            user_id_ptr = _getRequestUserInfo().getUserIdPtr();
+        }
+
+        hlcs::security::getJobs(
+                job_filter,
+                job_sort,
+                conn_ptr,
+                _properties_ptr,
+                req_range.getRange().getStart() + 1,
+                req_range.getRange().getEnd() + 1,
+                &all_count,
+                &rs_ptr,
+                user_id_ptr
+            );
+
+
+        _getStrand().post( boost::bind(
+                &Jobs::_queryComplete, this,
+                capena::server::AbstractResponder::shared_from_this(),
+                conn_ptr,
+                all_count,
+                rs_ptr,
+                req_range
             ) );
+
+    } catch ( std::exception& e ) {
+
+        _inCatchPostCurrentExceptionToHandlerFn();
+
     }
 
-    json::ArrayValue arr_val;
-    auto &response(_getResponse());
+}
 
-    if ( job_ids.empty() ) {
+
+void Jobs::_queryComplete(
+        capena::server::ResponderPtr,
+        cxxdb::ConnectionPtr,
+        uint64_t all_count,
+        cxxdb::ResultSetPtr rs_ptr,
+        const RequestRange& req_range
+    )
+{
+
+    try {
+
+        // Format the result as json.
+
+        json::ArrayValue arr_val;
+        json::Array &arr(arr_val.get());
+
+
+        capena::server::Response &response(_getResponse());
+
+        if ( all_count == 0 ) {
+
+            // No rows match the filter options.
+
+            response.setContentTypeJson();
+            response.headersComplete();
+
+            json::Formatter()( arr_val, response.out() );
+
+            return;
+        }
+
+        while ( rs_ptr->fetch() ) {
+            const cxxdb::Columns &cols(rs_ptr->columns());
+
+            json::Object &obj(arr.addObject());
+
+            BGQDB::job::Id id(cols[DBTJob::ID_COL].as<BGQDB::job::Id>());
+
+            obj.set( "id", id );
+            obj.set( "username", cols[DBTJob::USERNAME_COL].getString() );
+            obj.set( "block", cols[DBTJob::BLOCKID_COL].getString() );
+            obj.set( "executable", cols[DBTJob::EXECUTABLE_COL].getString() );
+            obj.set( "startTime", cols[DBTJob::STARTTIME_COL].getTimestamp() );
+            if ( cols[DBTJob_history::ENTRYDATE_COL] ) {
+                obj.set( "endTime", cols[DBTJob_history::ENTRYDATE_COL].getTimestamp() );
+            }
+            obj.set( "status", cols[DBTJob::STATUS_COL].getString() );
+            obj.set( "nodesUsed", cols[DBTJob::NODESUSED_COL].as<uint64_t>() );
+            obj.set( "processesPerNode", cols[DBTJob::PROCESSESPERNODE_COL].as<uint64_t>() );
+            obj.set( "np", cols[DBTJob::NP_COL].as<uint64_t>() );
+            if ( cols[DBTJob_history::EXITSTATUS_COL] ) {
+                obj.set( "exitStatus", cols[DBTJob_history::EXITSTATUS_COL].as<int>() );
+            }
+            if ( cols[DBTJob_history::ERRTEXT_COL] ) {
+                obj.set( "errorText", cols[DBTJob_history::ERRTEXT_COL].getString() );
+            }
+            obj.set( "URI", Job::calcUri( _getDynamicConfiguration().getPathBase(), id ).toString() );
+        }
+
+
+        // Send the response...
+
+        req_range.updateResponse( response, arr.size(), all_count );
+
         response.setContentTypeJson();
         response.headersComplete();
 
         json::Formatter()( arr_val, response.out() );
-        return;
+
+    } catch ( std::exception& e ) {
+
+        _handleError( e );
+
     }
-
-    LOG_INFO_MSG( "killMidplaneJobs for " << location << " returned " << job_ids.size() << " jobs." );
-
-    string job_ids_sql;
-    BOOST_FOREACH( BGQDB::job::Id job_id, job_ids ) {
-        if ( ! job_ids_sql.empty() )  job_ids_sql += ",";
-        job_ids_sql += lexical_cast<string>( job_id );
-    }
-
-    // Query to get the job details for each job ID.
-    const string sql =
-"SELECT * FROM bgqJob WHERE id IN (" + job_ids_sql + ") ORDER BY id ASC"
-        ;
-
-    auto conn_ptr(dbConnectionPool::getConnection());
-
-    LOG_DEBUG_MSG( "executing\n" << sql );
-
-    cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( sql ));
-
-    json::Array &arr(arr_val.get());
-
-    while ( rs_ptr->fetch() ) {
-        const cxxdb::Columns &cols(rs_ptr->columns());
-
-        json::Object &obj(arr.addObject());
-
-        BGQDB::job::Id id(cols[DBTJob::ID_COL].as<BGQDB::job::Id>());
-
-        obj.set( "id", id );
-        obj.set( "username", cols[DBTJob::USERNAME_COL].getString() );
-        obj.set( "block", cols[DBTJob::BLOCKID_COL].getString() );
-        obj.set( "executable", cols[DBTJob::EXECUTABLE_COL].getString() );
-        obj.set( "startTime", cols[DBTJob::STARTTIME_COL].getTimestamp() );
-        obj.set( "status", cols[DBTJob::STATUS_COL].getString() );
-        obj.set( "nodesUsed", cols[DBTJob::NODESUSED_COL].as<uint64_t>() );
-        obj.set( "processesPerNode", cols[DBTJob::PROCESSESPERNODE_COL].as<uint64_t>() );
-        obj.set( "np", cols[DBTJob::NP_COL].as<uint64_t>() );
-        obj.set( "URI", Job::calcUri( _getDynamicConfiguration().getPathBase(), id ).toString() );
-    }
-
-    response.setContentTypeJson();
-    response.headersComplete();
-
-    json::Formatter()( arr_val, response.out() );
 }
+
+
+void Jobs::_doServiceQuery(
+        capena::server::ResponderPtr,
+        const std::string& location
+    )
+{
+    try {
+
+        Error::Data error_data;
+        error_data["location"] = location;
+
+
+        std::vector<BGQDB::job::Id> job_ids;
+
+        BGQDB::STATUS status(BGQDB::killMidplaneJobs( location, &job_ids, true /* list only */ ));
+
+        if ( status == BGQDB::INVALID_ID ) {
+            LOG_DEBUG_MSG( "killMidplaneJobs returned invalid id for " << location << " will return an empty result." );
+            status = BGQDB::OK;
+        } else if ( status != BGQDB::OK ) {
+            error_data["dbStatus"] = lexical_cast<string>( status );
+
+            BOOST_THROW_EXCEPTION( Error(
+                    string() + "Cannot get jobs affected by service action because the database operation failed. The database return code is " + lexical_cast<string>( status ),
+                    "getJobs", "listMidplaneJobsDatabaseError", error_data,
+                    capena::http::Status::InternalServerError
+                ) );
+        }
+
+        json::ArrayValue arr_val;
+
+        if ( job_ids.empty() ) {
+
+            _getStrand().post( boost::bind(
+                    &Jobs::_serviceQueryComplete, this,
+                    capena::server::AbstractResponder::shared_from_this(),
+                    cxxdb::ConnectionPtr(),
+                    cxxdb::ResultSetPtr()
+                ) );
+
+            return;
+        }
+
+        LOG_INFO_MSG( "killMidplaneJobs for " << location << " returned " << job_ids.size() << " jobs." );
+
+        string job_ids_sql;
+        BOOST_FOREACH( BGQDB::job::Id job_id, job_ids ) {
+            if ( ! job_ids_sql.empty() )  job_ids_sql += ",";
+            job_ids_sql += lexical_cast<string>( job_id );
+        }
+
+        // Query to get the job details for each job ID.
+        const string sql =
+ "SELECT * FROM bgqJob WHERE id IN (" + job_ids_sql + ") ORDER BY id ASC"
+            ;
+
+        auto conn_ptr(dbConnectionPool::getConnection());
+
+        LOG_DEBUG_MSG( "executing\n" << sql );
+
+        cxxdb::ResultSetPtr rs_ptr(conn_ptr->query( sql ));
+
+        _getStrand().post( boost::bind(
+                &Jobs::_serviceQueryComplete, this,
+                capena::server::AbstractResponder::shared_from_this(),
+                conn_ptr,
+                rs_ptr
+            ) );
+
+    } catch ( std::exception& e ) {
+
+        _inCatchPostCurrentExceptionToHandlerFn();
+
+    }
+}
+
+
+void Jobs::_serviceQueryComplete(
+        capena::server::ResponderPtr,
+        cxxdb::ConnectionPtr,
+        cxxdb::ResultSetPtr rs_ptr
+    )
+{
+    try {
+
+        json::ArrayValue arr_val;
+
+        auto &response(_getResponse());
+
+        if ( ! rs_ptr ) {
+            response.setContentTypeJson();
+            response.headersComplete();
+
+            json::Formatter()( arr_val, response.out() );
+            return;
+        }
+
+
+        json::Array &arr(arr_val.get());
+
+        while ( rs_ptr->fetch() ) {
+            const cxxdb::Columns &cols(rs_ptr->columns());
+
+            json::Object &obj(arr.addObject());
+
+            BGQDB::job::Id id(cols[DBTJob::ID_COL].as<BGQDB::job::Id>());
+
+            obj.set( "id", id );
+            obj.set( "username", cols[DBTJob::USERNAME_COL].getString() );
+            obj.set( "block", cols[DBTJob::BLOCKID_COL].getString() );
+            obj.set( "executable", cols[DBTJob::EXECUTABLE_COL].getString() );
+            obj.set( "startTime", cols[DBTJob::STARTTIME_COL].getTimestamp() );
+            obj.set( "status", cols[DBTJob::STATUS_COL].getString() );
+            obj.set( "nodesUsed", cols[DBTJob::NODESUSED_COL].as<uint64_t>() );
+            obj.set( "processesPerNode", cols[DBTJob::PROCESSESPERNODE_COL].as<uint64_t>() );
+            obj.set( "np", cols[DBTJob::NP_COL].as<uint64_t>() );
+            obj.set( "URI", Job::calcUri( _getDynamicConfiguration().getPathBase(), id ).toString() );
+        }
+
+        response.setContentTypeJson();
+        response.headersComplete();
+
+        json::Formatter()( arr_val, response.out() );
+
+    } catch ( std::exception& e ) {
+
+        _handleError( e );
+
+    }
+}
+
 
 }} // namespace bgws::responder

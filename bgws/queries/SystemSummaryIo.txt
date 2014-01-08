@@ -1,0 +1,507 @@
+/bg/summary/system needs to provide info about i/o racks and drawers.
+
+result will be like:
+
+{
+"mps": { ... }, (as they are now)
+ 
+"racks": { // optional
+  "location": {
+    "status": "status", // optional
+    "drawers": {
+      "location": "status" // optional
+    }
+  } ...
+}
+ 
+}
+
+
+-- statuses for racks: AVAILABLE, SERVICE_ACTION, NOT_AVAILABLE ; if not set then the status is AVAILABLE
+  -- status is the "worst" status for any of the I/O Rack, power module, or clock card
+
+-- statuses for drawers: AVAILABLE, BLOCK_BUSY, BLOCK_READY, DIAGNOSTICS, SERVICE_ACTION, NOT_AVAILABLE ; if not set then the status is BLOCK_READY
+  -- status is the "worst" status for any of the drawer, compute card, link module
+     where order is, from best to worst: *1=BLOCK_READY, *2=BLOCK_BUSY, 3=AVAILABLE, 4=DIAGNOSTICS, 5=SERVICE_ACTION, 6=NOT_AVAILABLE  (*BLOCK_READY and BLOCK_BUSY only for compute cards)
+
+
+To generate the result, will do query to get status for each location,
+then create the "racks" object in the result JSON by looping through the results and adding to the objects.
+Will need
+1) a query that gets the status for each location
+2) algorithm to loop through query results and build racks structure
+
+
+1:
+Query that gets the status for I/O racks and drawers, result rows will be like:
+
+LOCATION  STATUSCODE
+
+where location is an I/O rack or I/O drawer, and status code is a value from 1 to 6 where 1 is BLOCK_READY and 6 is NOT_AVAILABLE.
+
+Getting final rack_status will look like: get all the statuses for the racks and stuff in racks, group by rack location, picking max status code.
+- Get status for I/O rack
+- Get status for power module
+- Get status for clock card
+
+Status for I/O rack is one of AVAILABLE, SERVICE_ACTION, or NOT_AVAILABLE, default is AVAILABLE. I think I can use the status from the IORack table.
+
+  SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIORack WHERE status <> 'A'
+
+Status for power module in I/O rack is similar:
+ 
+ SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqBulkPowerSupply WHERE status <> 'A' AND location LIKE 'Q%'
+ 
+Status for clock card is similar:
+
+ SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqClockCard WHERE status <> 'A' AND location LIKE 'Q%'
+
+GROUP and UNION them all together to get final rack status code.
+
+** Gets all the locations with status code.
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIORack WHERE status <> 'A'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqBulkPowerSupply WHERE status <> 'A' AND location LIKE 'Q%'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqClockCard WHERE status <> 'A' AND location LIKE 'Q%'
+
+** Groups by I/O rack and gets final status for I/O rack...
+
+WITH allRackLocsCodes AS
+(
+
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIORack WHERE status <> 'A'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqBulkPowerSupply WHERE status <> 'A' AND location LIKE 'Q%'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqClockCard WHERE status <> 'A' AND location LIKE 'Q%'
+
+)
+
+SELECT SUBSTR( location, 1, 3 ) AS location, MAX( statusCode ) AS statusCode
+  FROM allRackLocsCodes
+  GROUP BY SUBSTR( location, 1, 3 )
+
+***
+
+
+Next is the status for I/O drawers, this is made up of bgqIoDrawer, bgqIoNode, bgqIoLinkChip
+
+Query for bgqIoDrawer, bgqIoNode, bgqIoLinkChip hw queries:
+
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIoDrawer WHERE status <> 'A'
+
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIoLinkChip WHERE status <> 'A'
+
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIoNode WHERE status <> 'A'
+
+
+=======================================================================
+
+I/O nodes also need to know if a block is not Initialized or has diagnostics running on it, so find all the nodes where the block is not F
+
+
+=========================================================================
+Where diags is running
+
+
+-- Running diagnostics
+SELECT runId FROM bgqDiagRuns WHERE endTime IS NULL AND diagStatus <> 'completed'
+
+-- The blocks where diagnostics is running.
+
+SELECT db.blockId
+  FROM bgqDiagBlocks AS db
+       JOIN
+       bgqDiagRuns AS dr
+       ON db.runId = dr.runId
+  WHERE dr.endTime IS NULL AND dr.diagStatus <> 'completed' AND db.endTime IS NULL
+
+=======================================================================
+
+bgqIoBlock has blockId, status
+
+should be able to get all I/O nodes of booted blocks...
+
+bgqioBlockMap has blockId, location ; location is I/O drawer or I/O node.
+
+All the booted I/O blocks:
+
+SELECT blockId
+  FROM bgqIoBlock
+  WHERE status <> 'F'
+
+
+=======================================================================
+
+Figure out the status code for used I/O blocks:
+ 1=BLOCK_READY (status='I' and not diags)
+ 2=BLOCK_BUSY (status <> 'I' or 'F' and not diags)
+ 4=DIAGNOSTICS
+
+
+WITH diagBlocks AS (
+
+SELECT db.blockId
+  FROM bgqDiagBlocks AS db
+       JOIN
+       bgqDiagRuns AS dr
+       ON db.runId = dr.runId
+  WHERE dr.endTime IS NULL AND dr.diagStatus <> 'completed' AND db.endTime IS NULL
+
+)
+
+SELECT b.blockId,
+       CASE WHEN db.blockID IS NOT NULL THEN 4 WHEN b.status = 'I' THEN 1 ELSE 2 END AS statusCode
+  FROM bgqIoBlock AS b
+       LEFT OUTER JOIN
+       diagBlocks AS db
+       ON b.blockId = db.blockId
+  WHERE b.status <> 'F'
+
+
+=========================================================================
+
+From the used blocks, get all the locations (drawers or nodes) from the I/O block map, associated with their statusCode
+
+
+WITH diagBlocks AS (
+
+SELECT db.blockId
+  FROM bgqDiagBlocks AS db
+       JOIN
+       bgqDiagRuns AS dr
+       ON db.runId = dr.runId
+  WHERE dr.endTime IS NULL AND dr.diagStatus <> 'completed' AND db.endTime IS NULL
+
+),
+
+  usedBlocks AS (
+
+SELECT b.blockId,
+       CASE WHEN db.blockID IS NOT NULL THEN 4 WHEN b.status = 'I' THEN 1 ELSE 2 END AS statusCode
+  FROM bgqIoBlock AS b
+       LEFT OUTER JOIN
+       diagBlocks AS db
+       ON b.blockId = db.blockId
+  WHERE b.status <> 'F'
+
+)
+
+SELECT bm.location AS location, b.statusCode
+  FROM usedBlocks AS b
+       JOIN
+       bgqIoBlockMap AS bm
+       ON b.blockId = bm.blockId
+
+
+=======================================================================
+
+Given locations (drawers or nodes), get the I/O node locations:
+
+
+WITH diagBlocks AS (
+
+SELECT db.blockId
+  FROM bgqDiagBlocks AS db
+       JOIN
+       bgqDiagRuns AS dr
+       ON db.runId = dr.runId
+  WHERE dr.endTime IS NULL AND dr.diagStatus <> 'completed' AND db.endTime IS NULL
+
+),
+
+  usedBlocks AS (
+
+SELECT b.blockId,
+       CASE WHEN db.blockID IS NOT NULL THEN 4 WHEN b.status = 'I' THEN 1 ELSE 2 END AS statusCode
+  FROM bgqIoBlock AS b
+       LEFT OUTER JOIN
+       diagBlocks AS db
+       ON b.blockId = db.blockId
+  WHERE b.status <> 'F'
+
+)
+
+SELECT COALESCE( ion.location, bm.location ) AS location, b.statusCode
+  FROM usedBlocks AS b
+       JOIN
+       bgqIoBlockMap AS bm
+       ON b.blockId = bm.blockId
+       LEFT OUTER JOIN
+       bgqIoNode AS ion
+       ON bm.location = ion.ioPos
+
+
+=======================================================================
+
+Next is to get the I/O node locations that are not booted; these are all the rest of the I/O node locations.
+
+
+WITH diagBlocks AS (
+
+SELECT db.blockId
+  FROM bgqDiagBlocks AS db
+       JOIN
+       bgqDiagRuns AS dr
+       ON db.runId = dr.runId
+  WHERE dr.endTime IS NULL AND dr.diagStatus <> 'completed' AND db.endTime IS NULL
+
+),
+
+  usedBlocks AS (
+
+SELECT b.blockId,
+       CASE WHEN db.blockID IS NOT NULL THEN 4 WHEN b.status = 'I' THEN 1 ELSE 2 END AS statusCode
+  FROM bgqIoBlock AS b
+       LEFT OUTER JOIN
+       diagBlocks AS db
+       ON b.blockId = db.blockId
+  WHERE b.status <> 'F'
+
+),
+
+  bootedIoNodes AS (
+
+SELECT COALESCE( ion.location, bm.location ) AS location, b.statusCode
+  FROM usedBlocks AS b
+       JOIN
+       bgqIoBlockMap AS bm
+       ON b.blockId = bm.blockId
+       LEFT OUTER JOIN
+       bgqIoNode AS ion
+       ON bm.location = ion.ioPos
+
+)
+
+SELECT location FROM bgqIoNode
+EXCEPT
+SELECT location FROM bootedIoNodes
+
+
+=========================================================================
+Now I should be able to set F status on I/O nodes where not booted & get status for all I/O nodes.
+
+
+WITH diagBlocks AS (
+
+SELECT db.blockId
+  FROM bgqDiagBlocks AS db
+       JOIN
+       bgqDiagRuns AS dr
+       ON db.runId = dr.runId
+  WHERE dr.endTime IS NULL AND dr.diagStatus <> 'completed' AND db.endTime IS NULL
+
+),
+
+  usedBlocks AS (
+
+SELECT b.blockId,
+       CASE WHEN db.blockID IS NOT NULL THEN 4 WHEN b.status = 'I' THEN 1 ELSE 2 END AS statusCode
+  FROM bgqIoBlock AS b
+       LEFT OUTER JOIN
+       diagBlocks AS db
+       ON b.blockId = db.blockId
+  WHERE b.status <> 'F'
+
+),
+
+  bootedIoNodes AS (
+
+SELECT COALESCE( ion.location, bm.location ) AS location, b.statusCode
+  FROM usedBlocks AS b
+       JOIN
+       bgqIoBlockMap AS bm
+       ON b.blockId = bm.blockId
+       LEFT OUTER JOIN
+       bgqIoNode AS ion
+       ON bm.location = ion.ioPos
+
+),
+
+  notBootedIoNodes AS (
+
+SELECT location FROM bgqIoNode
+EXCEPT
+SELECT location FROM bootedIoNodes
+
+)
+
+SELECT location, statusCode
+  FROM bootedIoNodes
+UNION ALL
+SELECT location, 3 AS statusCode
+  FROM notBootedIoNodes
+
+
+=========================================================================
+Only get those where status is not initialized:
+
+
+WITH diagBlocks AS (
+
+SELECT db.blockId
+  FROM bgqDiagBlocks AS db
+       JOIN
+       bgqDiagRuns AS dr
+       ON db.runId = dr.runId
+  WHERE dr.endTime IS NULL AND dr.diagStatus <> 'completed' AND db.endTime IS NULL
+
+),
+
+  usedBlocks AS (
+
+SELECT b.blockId,
+       CASE WHEN db.blockID IS NOT NULL THEN 4 WHEN b.status = 'I' THEN 1 ELSE 2 END AS statusCode
+  FROM bgqIoBlock AS b
+       LEFT OUTER JOIN
+       diagBlocks AS db
+       ON b.blockId = db.blockId
+  WHERE b.status <> 'F'
+
+),
+
+  bootedIoNodes AS (
+
+SELECT COALESCE( ion.location, bm.location ) AS location, b.statusCode
+  FROM usedBlocks AS b
+       JOIN
+       bgqIoBlockMap AS bm
+       ON b.blockId = bm.blockId
+       LEFT OUTER JOIN
+       bgqIoNode AS ion
+       ON bm.location = ion.ioPos
+
+),
+
+  notBootedIoNodes AS (
+
+SELECT location FROM bgqIoNode
+EXCEPT
+SELECT location FROM bootedIoNodes
+
+)
+
+SELECT location, statusCode
+  FROM bootedIoNodes
+  WHERE statusCode <> 1
+UNION ALL
+SELECT location, 3 AS statusCode
+  FROM notBootedIoNodes
+
+
+
+=========================================================================
+Next I can union them all together to get the status code for each drawer:
+
+
+WITH allRackLocsCodes AS
+(
+
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIORack WHERE status <> 'A'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqBulkPowerSupply WHERE status <> 'A' AND location LIKE 'Q%'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqClockCard WHERE status <> 'A' AND location LIKE 'Q%'
+
+),
+  rackStatusCode AS
+(
+
+SELECT SUBSTR( location, 1, 3 ) AS location, MAX( statusCode ) AS statusCode
+  FROM allRackLocsCodes
+  GROUP BY SUBSTR( location, 1, 3 )
+
+),
+
+
+  drawerPartsHwStatusCode AS
+(
+
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIoDrawer WHERE status <> 'A'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIoLinkChip WHERE status <> 'A'
+UNION ALL
+SELECT location, CASE status WHEN 'S' THEN 5 ELSE 6 END AS statusCode FROM bgqIoNode WHERE status <> 'A'
+
+),
+
+
+ diagBlocks AS (
+
+SELECT db.blockId
+  FROM bgqDiagBlocks AS db
+       JOIN
+       bgqDiagRuns AS dr
+       ON db.runId = dr.runId
+  WHERE dr.endTime IS NULL AND dr.diagStatus <> 'completed' AND db.endTime IS NULL
+
+),
+
+  usedBlocks AS (
+
+SELECT b.blockId,
+       CASE WHEN db.blockID IS NOT NULL THEN 4 WHEN b.status = 'I' THEN 1 ELSE 2 END AS statusCode
+  FROM bgqIoBlock AS b
+       LEFT OUTER JOIN
+       diagBlocks AS db
+       ON b.blockId = db.blockId
+  WHERE b.status <> 'F'
+
+),
+
+  bootedIoNodes AS (
+
+SELECT COALESCE( ion.location, bm.location ) AS location, b.statusCode
+  FROM usedBlocks AS b
+       JOIN
+       bgqIoBlockMap AS bm
+       ON b.blockId = bm.blockId
+       LEFT OUTER JOIN
+       bgqIoNode AS ion
+       ON bm.location = ion.ioPos
+
+),
+
+  notBootedIoNodes AS (
+
+SELECT location FROM bgqIoNode
+EXCEPT
+SELECT location FROM bootedIoNodes
+
+),
+
+  ioNodeBlockStatusCode AS (
+
+SELECT location, statusCode
+  FROM bootedIoNodes
+  WHERE statusCode <> 1
+UNION ALL
+SELECT location, 3 AS statusCode
+  FROM notBootedIoNodes
+
+),
+
+  allDrawerCodes AS
+(
+
+SELECT location, statusCode FROM drawerPartsHwStatusCode
+UNION ALL
+SELECT location, statusCode FROM ioNodeBlockStatusCode
+
+),
+
+  drawerStatusCode AS
+(
+
+SELECT SUBSTR( location, 1, 6 ) AS location, MAX( statusCode ) AS statusCode
+  FROM allDrawerCodes
+  GROUP BY SUBSTR( location, 1, 6 )
+
+)
+
+SELECT location, statusCode
+  FROM rackStatusCode
+UNION ALL
+SELECT location, statusCode
+  FROM drawerStatusCode

@@ -92,13 +92,6 @@ start() {
 
 	[ ! -d /var/lib/ntp/drift ] && mkdir -p /var/lib/ntp/drift ; chown ntp:ntp /var/lib/ntp/drift
 	
-	# Start NTP once to set the initial time
-	$prog -q -g -c $ntp_conf &> /dev/null
-	if [ $? -ne 0 ] ; then
-		bgras $BGRAS_ID_SCRIPT_FAILURE \
-		      "ntpd - Unable to set the initial time!"
-	fi
-
 	# For some reason ntpd always returns successful so we do our own check
 	# to see if ntpd worked.
         daemon $prog $OPTIONS &> /dev/null

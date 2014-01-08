@@ -26,6 +26,7 @@
 
 
 #include "ClientEventListenerImpl.h"
+#include "ClientEventListenerV2Impl.h"
 
 
 namespace bgsched {
@@ -49,6 +50,9 @@ public:
     virtual void visitTorusCableStateChanged( ClientEventListener::TorusCableStateChangedEventInfo::Impl& ) =0;
     virtual void visitIoCableStateChanged( ClientEventListener::IoCableStateChangedEventInfo::Impl& ) =0;
     virtual void visitRasEvent( ClientEventListener::RasEventInfo::Impl& ) =0;
+
+    virtual void visitIoDrawerStateChanged( ClientEventListenerV2::IoDrawerStateChangedEventInfo::Impl& ) =0;
+    virtual void visitIoNodeStateChanged( ClientEventListenerV2::IoNodeStateChangedEventInfo::Impl& ) =0;
 
     virtual ~AbstractDatabaseChangeVisitor() { /* Nothing to do */ }
 

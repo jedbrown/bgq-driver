@@ -53,7 +53,6 @@ function(
 
 
 var b_navigator_dijit_MainTabs = d_declare(
-        "bluegene.navigator.dijit.MainTabs",
         [ l_AbstractTemplatedContainer ],
 
 {

@@ -27,12 +27,17 @@
 #include <boost/foreach.hpp>
 #include <utility/include/Log.h>
 #include <utility/include/LoggingProgramOptions.h>
-#include <utility/include/portConfiguration/PortConfiguration.h>
-#include <SocketTypes.h>
+#include <utility/include/cxxsockets/exception.h>
+#include <utility/include/cxxsockets/ListeningSocket.h>
+#include <utility/include/cxxsockets/SecureTCPSocket.h>
+#include <utility/include/cxxsockets/SockAddr.h>
+#include <utility/include/portConfiguration/ClientPortConfiguration.h>
 #include "../master/server/MasterController.h"
 #include "../master/server/LockFile.h"
 #include "../master/lib/exceptions.h"
-#include "../mmcs/MMCSProperties.h"
+
+#include "mmcs/common/Properties.h"
+
 
 // Bogus value to make BGMaster.o happy.
 LockFile* lock_file;
@@ -63,7 +68,7 @@ void help() {
 bool checkPorts(std::string section, std::string port_type, bool server = true) {
     bgq::utility::PortConfiguration::Pairs portpairs;
     std::string bogus_port = "31337";
-    CxxSockets::CxxError sockerr;
+    CxxSockets::Error sockerr;
     bool success = false;
     if(!server) { // Going to be a client
         // Needs to get master location from properties and command line
@@ -82,7 +87,7 @@ bool checkPorts(std::string section, std::string port_type, bool server = true) 
                     sock->Connect(remote, port_config);
                     success = true;
                 } else return false;
-            } catch(CxxSockets::CxxError& e) {
+            } catch(CxxSockets::Error& e) {
                 std::cerr << "Failed to bind." << std::endl;
                 sockerr = e;
             }
@@ -101,7 +106,7 @@ bool checkPorts(std::string section, std::string port_type, bool server = true) 
                 CxxSockets::SockAddr local(AF_UNSPEC, portpair.first, portpair.second);
                 CxxSockets::ListeningSocket sock(local, 1);
                 success = true;
-            } catch(CxxSockets::CxxError& e) {
+            } catch(CxxSockets::Error& e) {
                 std::cerr << "Failed to listen." << std::endl;
                 sockerr = e;
             }
@@ -135,7 +140,7 @@ bool doBGMaster() {
     // Try master logdir.
     std::string master_logdir = props->getValue("master.server", "logdir");
     if(access(master_logdir.c_str(), R_OK|W_OK) < 0) {
-        std::cerr << "Directory " << master_logdir 
+        std::cerr << "Directory " << master_logdir
                   << " inaccessible to this user.  Make sure "
                   << "that it exists and that bgmaster_server's user ID can reach it." << std::endl;
         exit(EXIT_FAILURE);
@@ -154,14 +159,14 @@ bool doBGMaster() {
 bool doMMCS() {
     std::cout << "Evaluating mmcs properties...." << std::endl;
     std::string logger("mmcs");
-    MMCSProperties mmcsprops;
+    mmcs::common::Properties mmcsprops;
     mmcsprops.setProperties(props);
-    MMCSProperties::object server_object = MMCSProperties::server;
-    MMCSProperties::object console_object = MMCSProperties::console;
+    mmcs::common::Properties::object server_object = mmcs::common::Properties::server;
+    mmcs::common::Properties::object console_object = mmcs::common::Properties::console;
     try {
         mmcsprops.read(server_object, true);
         mmcsprops.read(console_object, true);
-    } catch (MMCSProperties::MMCSPropertiesException& e) {
+    } catch (mmcs::common::Properties::PropertiesException& e) {
         std::cerr << "MMCS Configuration error detected. " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -197,7 +202,7 @@ bool doOthers() {
         }
         if(!found) {
             std::cerr << "Error:" << std::endl;
-            std::cerr << curr_subnet << " not found in [master.binmap] section.  " 
+            std::cerr << curr_subnet << " not found in [master.binmap] section.  "
                       << "Check bg.properties to ensure that " << curr_subnet
                       << " is configured to start a SubnetMc process and that "
                       << "its alias matches its subnet ID." << std::endl;
@@ -224,15 +229,15 @@ int main(int argc, const char** argv) {
         ("dynamic,d", po::bool_switch(&dynamic), "validate port configurations")
         ;
 
+    // add properties and verbose options
+    bgq::utility::Properties::ProgramOptions propertiesOptions;
+    propertiesOptions.addTo( options );
+    bgq::utility::LoggingProgramOptions lpo( "ibm" );
+    lpo.addTo( options );
+
     po::options_description both;
     both.add( options );
     both.add( hidden );
-
-    // add properties and verbose options
-    bgq::utility::Properties::ProgramOptions propertiesOptions;
-    propertiesOptions.addTo( both );
-    bgq::utility::LoggingProgramOptions lpo( "ibm" );
-    lpo.addTo( both );
 
     // parse --properties before everything else
     try {
@@ -246,7 +251,7 @@ int main(int argc, const char** argv) {
         // create properties and initialize logging
         props = bgq::utility::Properties::create( propertiesOptions.getFilename() );
         bgq::utility::initializeLogging(*props, lpo);
-    } catch(std::runtime_error& e) {
+    } catch(const std::runtime_error& e) {
         std::cerr << "Error reading properties: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }

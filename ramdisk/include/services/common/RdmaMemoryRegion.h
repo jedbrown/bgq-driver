@@ -40,6 +40,14 @@
 namespace bgcios
 {
 
+//! Special memory region structure returned by the bgvrnic device.
+
+struct bgvrnic_mr
+{
+   struct ibv_mr region;     //! Standard verbs memory region.
+   uint32_t num_frags;       //! Number of fragments in the physical pages used by the memory region.
+};
+
 // Help for lame declaration for ibv_access_flags
 const int _IBV_ACCESS_LOCAL_WRITE = IBV_ACCESS_LOCAL_WRITE;
 const int _IBV_ACCESS_REMOTE_WRITE = IBV_ACCESS_REMOTE_WRITE;
@@ -59,6 +67,8 @@ public:
    {
       _region = NULL;
       _messageLength = 0;
+      _frags = 0;
+      _fd = -1;
       _allocateLock = bgcios::SystemLockPtr(new bgcios::SystemLock(bgcios::AllocateMemoryRegionKey));
    }
 
@@ -78,6 +88,19 @@ public:
    //! \return 0 when successful, errno when unsuccessful.
 
    int allocate(RdmaProtectionDomainPtr pd, size_t length);
+
+   //! \brief  Allocate and register a memory region from the bgvrnic device
+   //! \param  pd Protection domain for memory region.
+   //! \param  length Length of the memory region.
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int allocateFromBgvrnicDevice(RdmaProtectionDomainPtr pd, size_t length);
+
+   //! \brief  Allocate and register a 64KB memory region.
+   //! \param  pd Protection domain for memory region.
+   //! \return 0 when successful, errno when unsuccessful.
+   int allocate64kB(RdmaProtectionDomainPtr pd);
+
 
    //! \brief  Deregister and free the memory region.
    //! \return 0 when successful, errno when unsuccessful.
@@ -130,6 +153,12 @@ private:
 
    //! Memory region.
    struct ibv_mr *_region;
+
+   //! Number of memory fragments (0 if unknown)
+   int _frags;
+
+   //! File descriptor if using with mmap
+   int _fd;
 
    //! Length of a message in the memory region.
    uint32_t _messageLength;

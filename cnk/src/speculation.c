@@ -23,6 +23,7 @@
 #include "Kernel.h"
 #include "hwi/include/bqc/l2_central_inlines.h"
 #include "hwi/include/bqc/l2_dcr.h"
+#include "hwi/include/bqc/l2_util.h"
 #include "hwi/include/bqc/testint_inlines.h"
 #include "spi/include/kernel/spec.h"
 
@@ -154,7 +155,13 @@ int Speculation_CleanupJob()
 	IPI_invalidate_icache(NodeState.NumCoresEnabled - 1);
 	Kernel_WriteFlightLog(FLIGHTLOG_high, FL_SPCFEPDIS, 0,0,0,0);
     }
-
+    
+    // bqcbugs 1620
+    l2_set_overlock_threshold(0);
+    l2_set_spec_threshold(0);
+    l2_set_prefetch_enables(1);
+    // --
+    
     return 0;
 }
 
@@ -195,6 +202,14 @@ int Speculation_AllocateDomain(unsigned int* domain)
     {
         return ENOMEM;
     }
+    
+    // bqcbugs 1620.
+    l2_set_prefetch_enables(0);
+    l2_unlock_all_with_address((void *) 0x200000);
+    l2_set_overlock_threshold(0xA);                      // set L2 overlock and spec thresholds
+    l2_set_spec_threshold(0xA);
+    // --
+    
     Kernel_WriteFlightLog(FLIGHTLOG_high, FL_SPCALCDOM, domainAllocated,0,0,0);
     *domain = domainAllocated;
     return 0;
@@ -364,37 +379,51 @@ int Speculation_SERollback(L2C_SPECID_t specid)
 
 int Speculation_EnterJailMode(bool longRunningSpec)
 {
+    AppProcess_t* process = GetMyProcess();
+    if (process != GetProcessByProcessorID(ProcessorID()))
+    {
+        Speculation_Restart(SPEC_GetSpeculationIDSelf_priv(), Kernel_SpecReturnCode_INVALID, &GetMyKThread()->Reg_State);
+        return Kernel_SpecReturnCode_INVALID;
+    }
     if(longRunningSpec)
     {
         uint64_t SpecPID;
         uint32_t ProcessOvercommit = 64 / GetMyAppState()->Active_Processes;
         if(ProcessOvercommit > 4) ProcessOvercommit = 4;
-        AppProcess_t* process = GetMyProcess();
         vmm_getSpecPID(process->Tcoord, ProcessorThreadID() % ProcessOvercommit, &SpecPID);
-        mtspr(SPRN_PID, SpecPID);
-        isync();
         
-	// A2 does not reliably notify A2 of DCI
+        if(SpecPID)
+        {
+            mtspr(SPRN_PID, SpecPID);
+            isync();
+            
+            // A2 does not reliably notify A2 of DCI
 #if 0
-	volatile uint64_t* pf_sys_p=(volatile uint64_t*)(SPEC_GetL1PBase_priv()+L1P_CFG_PF_SYS-L1P_ESR);
-	uint64_t pf_sys=*pf_sys_p;
-	*pf_sys_p=pf_sys | L1P_CFG_PF_SYS_pf_invalidate_all;
-	*pf_sys_p=pf_sys & ~L1P_CFG_PF_SYS_pf_invalidate_all;
-        dci();
+            volatile uint64_t* pf_sys_p=(volatile uint64_t*)(SPEC_GetL1PBase_priv()+L1P_CFG_PF_SYS-L1P_ESR);
+            uint64_t pf_sys=*pf_sys_p;
+            *pf_sys_p=pf_sys | L1P_CFG_PF_SYS_pf_invalidate_all;
+            *pf_sys_p=pf_sys & ~L1P_CFG_PF_SYS_pf_invalidate_all;
+            dci();
 #else
-	asm volatile ("dci 2");
+            asm volatile ("dci 2");
 #endif
-        ppc_msync();
+            ppc_msync();
+        }
+        else
+        {
+            Speculation_Restart(SPEC_GetSpeculationIDSelf_priv(), Kernel_SpecReturnCode_INVALID, &GetMyKThread()->Reg_State);
+            return Kernel_SpecReturnCode_INVALID;
+        }
     }
     return 0;
 }
 
 int Speculation_ExitJailMode()
 {
-    AppProcess_t* process = GetMyProcess();
-    if((process != NULL) && (process->PhysicalPID != 0))
+    KThread_t* kthread = GetMyKThread();
+    if((kthread->pAppProc != NULL) && (kthread->physical_pid != 0))
     {
-        mtspr(SPRN_PID, process->PhysicalPID);
+        mtspr(SPRN_PID, kthread->physical_pid);
         isync();
     }
     return 0;

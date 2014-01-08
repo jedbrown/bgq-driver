@@ -24,8 +24,6 @@
 #include <string>
 #include <ifaddrs.h>
 #include <bgq_util/include/pthreadmutex.h>
-#include <utility/include/cxxsockets/SocketTypes.h>
-#include <utility/include/cxxsockets/CxxSocket.h>
 #include <ramdisk/include/services/ToolctlMessages.h>
 #include <ramdisk/include/services/ServicesConstants.h>
 #include <ramdisk/include/services/MessageUtility.h>

@@ -28,46 +28,33 @@
 
 <title>Hideable Browser Tests</title>
 
-<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
 
 <script>
-
-
-g_b_dijit_Hideable = null;
-
-g_j_form_Form = null;
-g_j_form_TextBox = null;
 
 
 require(
 [
     "bluegene/dijit/Hideable",
-    "dojo/dom",
     "dojo/dom-class",
     "dojo/parser",
     "dojo/ready",
     "dijit/_base/manager",
+    "doh/runner",
+
+    // Used in HTML.
     "dijit/form/Form",
-    "dijit/form/TextBox",
-    "doh/runner"
+    "dijit/form/TextBox"
 ],
 function(
         b_dijit_Hideable,
-        d_dom,
         d_class,
         d_parser,
         d_ready,
         j_manager,
-        j_form_Form,
-        j_form_TextBox,
         doh
     )
 {
-
-
-g_b_dijit_Hideable = b_dijit_Hideable;
-g_j_form_Form = j_form_Form;
-g_j_form_TextBox = j_form_TextBox;
 
 
 var checkIsVisible = function( node ) {
@@ -159,6 +146,8 @@ function form_with_hideable_toggle() {
 
 
 d_ready( function() {
+    d_parser.parse();
+
     doh.register( "bluegene/dijit/test/HideableHTML", tests );
     doh.run();
 } );
@@ -171,26 +160,26 @@ d_ready( function() {
 </head>
 
 <body>
-    <span id="hideable1" data-dojo-type="g_b_dijit_Hideable"></span>
-    <span id="hideable2" data-dojo-type="g_b_dijit_Hideable" data-dojo-props="visibility: 'hidden'"></span>
-    <span id="hideable3" data-dojo-type="g_b_dijit_Hideable"></span>
-    <span id="hideable4" data-dojo-type="g_b_dijit_Hideable" data-dojo-props="visibility: 'hidden'"></span>
-    <span id="hideable5" data-dojo-type="g_b_dijit_Hideable" data-dojo-props="visibility: 'hidden'"></span>
-    <span id="hideable6" data-dojo-type="g_b_dijit_Hideable" data-dojo-props="visibility: 'hidden'"></span>
-    <span id="hideable7" data-dojo-type="g_b_dijit_Hideable"></span>
-    <div id="form1" data-dojo-type="g_j_form_Form">
-        <span id="f1-hideable1" data-dojo-type="g_b_dijit_Hideable">
-            <input name="text1" data-dojo-type="g_j_form_TextBox" data-dojo-props="name: 'text1', value: 'testValue'" />
+    <span id="hideable1" data-dojo-type="bluegene/dijit/Hideable"></span>
+    <span id="hideable2" data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'"></span>
+    <span id="hideable3" data-dojo-type="bluegene/dijit/Hideable"></span>
+    <span id="hideable4" data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'"></span>
+    <span id="hideable5" data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'"></span>
+    <span id="hideable6" data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'"></span>
+    <span id="hideable7" data-dojo-type="bluegene/dijit/Hideable"></span>
+    <div id="form1" data-dojo-type="dijit/form/Form">
+        <span id="f1-hideable1" data-dojo-type="bluegene/dijit/Hideable">
+            <input name="text1" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'text1', value: 'testValue'" />
         </span>
     </div>
-    <div id="form2" data-dojo-type="g_j_form_Form">
-        <span id="f2-hideable1" data-dojo-type="g_b_dijit_Hideable" data-dojo-props="visibility: 'hidden'">
-            <input name="text1" data-dojo-type="g_j_form_TextBox" data-dojo-props="name: 'text1', value: 'testValue'" />
+    <div id="form2" data-dojo-type="dijit/form/Form">
+        <span id="f2-hideable1" data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'">
+            <input name="text1" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'text1', value: 'testValue'" />
         </span>
     </div>
-    <div id="form3" data-dojo-type="g_j_form_Form">
-        <span id="f3-hideable1" data-dojo-type="g_b_dijit_Hideable">
-            <input name="text1" data-dojo-type="g_j_form_TextBox" data-dojo-props="name: 'text1', value: 'testValue'" />
+    <div id="form3" data-dojo-type="dijit/form/Form">
+        <span id="f3-hideable1" data-dojo-type="bluegene/dijit/Hideable">
+            <input name="text1" data-dojo-type="dijit/form/TextBox" data-dojo-props="name: 'text1', value: 'testValue'" />
         </span>
     </div>
 </body>

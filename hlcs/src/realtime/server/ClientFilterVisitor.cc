@@ -51,6 +51,8 @@ ClientFilterVisitor::ClientFilterVisitor(
         _send_switch_changes(filter.getSwitches()),
         _send_torus_cable_changes(filter.getTorusCables()),
         _send_io_cable_changes(filter.getIoCables()),
+        _send_io_drawer_changes(filter.getIoDrawers()),
+        _send_io_node_changes(filter.getIoNodes()),
         _send_ras_events(filter.getRasEvents()),
         _res(false)
 {
@@ -264,6 +266,18 @@ bool ClientFilterVisitor::_checkBlockStatesFilter( bgsched::Block::Status block_
 
     bool ret(_block_statuses_ptr->find( block_status ) != _block_statuses_ptr->end());
     return ret;
+}
+
+
+bool ClientFilterVisitor::_checkIoDrawerStateChanged( bgsched::realtime::ClientEventListenerV2::IoDrawerStateChangedEventInfo::Impl& )
+{
+    return _send_io_drawer_changes;
+}
+
+
+bool ClientFilterVisitor::_checkIoNodeStateChanged( bgsched::realtime::ClientEventListenerV2::IoNodeStateChangedEventInfo::Impl& /*i*/ )
+{
+    return _send_io_node_changes;
 }
 
 

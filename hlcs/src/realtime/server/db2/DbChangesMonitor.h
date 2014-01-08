@@ -21,8 +21,8 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#ifndef DB2_DBCHANGESMONITOR_H_
-#define DB2_DBCHANGESMONITOR_H_
+#ifndef REALTIME_SERVER_DB2_DBCHANGESMONITOR_H_
+#define REALTIME_SERVER_DB2_DBCHANGESMONITOR_H_
 
 
 #include "TableInfos.h"
@@ -100,7 +100,11 @@ private:
 
     _Clients _clients;
 
+#ifdef DB2READLOG_LRI_1
+    db2LRI _cur_lsn;
+#else
     db2LSN _cur_lsn;
+#endif
 
     std::vector<char> _log_buf;
 
@@ -113,7 +117,11 @@ private:
 
     std::string _getLogPath( const std::string& db_name );
 
+#ifdef DB2READLOG_LRI_1
+    db2LRI _initCurLsn( const Configuration& configuration );
+#else
     db2LSN _initCurLsn( const Configuration& configuration );
+#endif
 
     void _processChanges();
 
@@ -128,10 +136,6 @@ private:
         );
 
     void _handleDmRecord( const char* dm_header_p, const tid_t& tid );
-
-    void _handleInsertDelete( const char* dm_header_p, int function_id, TableInfos::table::Value table, const tid_t& tid );
-
-    void _handleUpdate( const char *dm_header_p, TableInfos::table::Value table, const tid_t& tid );
 
     void _startInotifyRead();
 

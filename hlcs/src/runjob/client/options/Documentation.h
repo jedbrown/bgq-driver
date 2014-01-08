@@ -170,11 +170,11 @@
  *
  * \subsection mapping --mapping
  * Permutation of ABCDET or a path to a mapping file containing coordinates for each rank.
- * If the path is relative, the combination of --cwd and --mapping Must be less than MAPPING_SIZE characters. 
+ * If the path is relative, the combination of --cwd and --mapping must be less than MAPPING_SIZE characters. 
  * If the path is absolute, --mapping must be less than MAPPING_SIZE characters.  The syntax of a mapping 
  * file is 6 columns separated by white space. The columns indicate the A,B,C,D,E,T coordinates, and the 
  * line number is the rank. Comments can be used anywhere in the line with the # character, any text after 
- * the # is ignored. An example
+ * the # is ignored. Blank lines are also ignored. An example
  *
 \verbatim
 0 0 0 0 0 0 # rank 0
@@ -216,7 +216,8 @@ hello world
  *
  * Fully qualified path to the tool daemon to launch before the job starts. The combination of
  * this value and --tool-args must be less than TOOL_ARGS_SIZE characters. Tools cannot be started
- * for sub-node jobs.
+ * for sub-node jobs. For interactive jobs where standard input is a tty, a proctable prompt will be
+ * presented allowing you to query the contents of the proctable once the tool has been started.
  *
  * \note When using a mapping file (see --mapping) this file must be readable by the runjob_server (typically
  * the bgqadmin uid) to correctly calculate location to rank mappings.

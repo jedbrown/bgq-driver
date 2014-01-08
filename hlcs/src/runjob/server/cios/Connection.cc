@@ -130,7 +130,7 @@ Connection::stop(
         const StopCallback& callback
         )
 {
-    LOG_TRACE_MSG( "stop" );
+    LOG_TRACE_MSG( __FUNCTION__ );
     _strand.post(
             boost::bind(
                 &Connection::stopImpl,

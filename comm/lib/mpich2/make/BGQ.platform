@@ -22,6 +22,7 @@ ifeq (${XL},XL)
     endif
 endif
 
+
     # ---------------- locations for MPICH2 ------------------------------------
     THREAD_LEVEL         = default
     MPICH2DIR            = ${ROOTDIR}/lib/dev/mpich2
@@ -41,15 +42,23 @@ endif
     MPI_FFLAGS           =${HOST_INCLUDE}
 
     HOST_F77_OTHER_LIBS  =-lmpichf90
+    HOST_OTHER_CONFIGURE =--with-bgq-install-dir=${BGQ_INSTALL_DIR}
 
     # These flags are used during a regular build (generally GCC)
-    HOST_FLAGS           =-g -O3 -Wall
-    HOST_CFLAGS          =${HOST_FLAGS} -D__${PLATFORM}__
+    HOST_FLAGS           =-Wall -Wno-unused-function -Wno-unused-label -Wno-unused-variable -fno-strict-aliasing
+    HOST_CFLAGS          =${HOST_FLAGS} -Wno-implicit-function-declaration
     HOST_CXXFLAGS        =${HOST_FLAGS}
     HOST_FFLAGS          =${HOST_FLAGS}
 
     # These flags are used during a fast build (generally XL)
-    FAST_FLAGS           =-g -O3 -qhot -qinline=800 -qflag=i:i -qsaveopt
-    FAST_CFLAGS          =${FAST_FLAGS} -D__${PLATFORM}__
+    FAST_FLAGS           =-qhot -qinline=800 -qflag=i:i -qsaveopt -qsuppress=1506-236
+    FAST_CFLAGS          =${FAST_FLAGS}
     FAST_CXXFLAGS        =${FAST_FLAGS}
     FAST_FFLAGS          =${FAST_FLAGS}
+
+
+    # ---------------- additional 'install' make rule dependencies ------------
+    EXTRA_PLATFORM_INSTALL_DEPENDENCIES =${INSTALL_DIR}/mpich2-testsuite-1.2.tar.gz
+
+    # ---------------- mpich2 testsuite ----------------------------------------
+    TESTSUITE_CONFIGURE_EXTRA = --disable-spawn

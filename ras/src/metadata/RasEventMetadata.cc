@@ -190,6 +190,7 @@ const RasEventMetadata& RasEventMetadata::factory_default(const std::string& msg
 
 void RasEventMetadata::clearMetadata()
 {
+  RasSmartLock lock(&_mdLock);
   // Clear memory allocated by RasEventMetadata
   map<string, RasEventMetadata*>::iterator iter;
   for( iter = _metadatas.begin(); iter != _metadatas.end(); iter++ ) {

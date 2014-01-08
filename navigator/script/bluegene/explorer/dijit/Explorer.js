@@ -21,7 +21,6 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-console.log( "bluegene/explorer/dijit/Explorer" );
 
 define(
 [
@@ -54,7 +53,6 @@ function(
 
 
 var b_explorer_dijit_Explorer = d_declare(
-        "bluegene.explorer.dijit.Explorer",
         [ j_layout__LayoutWidget, j__TemplatedMixin, j__WidgetsInTemplateMixin ],
 
 {

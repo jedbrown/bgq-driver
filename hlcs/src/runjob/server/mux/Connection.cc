@@ -71,7 +71,7 @@ Connection::Connection(
 
 Connection::~Connection()
 {
-    LOGGING_DECLARE_LOCATION_MDC( _hostname );
+    LOGGING_DECLARE_LOCATION_MDC( _shortHostname );
     LOG_INFO_MSG( __FUNCTION__ << " " << _outbox.size() );
     BOOST_FOREACH( const MessagePair& i, _outbox ) {
         const WriteCallback& callback = i.second;
@@ -103,7 +103,7 @@ Connection::readHeaderHandler(
         const size_t bytesTransferred
         )
 {
-    LOGGING_DECLARE_LOCATION_MDC( _hostname );
+    LOGGING_DECLARE_LOCATION_MDC( _shortHostname );
     LOG_TRACE_MSG( "read header handler " << bytesTransferred << " bytes" );
 
     if ( error ) {
@@ -171,7 +171,7 @@ Connection::readBodyHandler(
         const size_t bytesTransferred
         )
 {
-    LOGGING_DECLARE_LOCATION_MDC( _hostname );
+    LOGGING_DECLARE_LOCATION_MDC( _shortHostname );
     LOG_TRACE_MSG( "read body handler " << bytesTransferred << " bytes" );
     _incomingMessage.commit( bytesTransferred );
 
@@ -208,7 +208,7 @@ Connection::writeHandler(
         const size_t bytesTransferred
         )
 {
-    LOGGING_DECLARE_LOCATION_MDC( _hostname );
+    LOGGING_DECLARE_LOCATION_MDC( _shortHostname );
     LOG_TRACE_MSG( "write handler " << bytesTransferred << " bytes" );
     _outgoingMessage.consume( bytesTransferred );
 
@@ -251,7 +251,7 @@ Connection::writeImpl(
         const WriteCallback& callback
         )
 {
-    LOGGING_DECLARE_LOCATION_MDC( _hostname );
+    LOGGING_DECLARE_LOCATION_MDC( _shortHostname );
     
     _outbox.push_back( std::make_pair(msg, callback) );
 
@@ -299,7 +299,7 @@ Connection::handle(
         const runjob::Message::Ptr& msg
         )
 {
-    LOGGING_DECLARE_LOCATION_MDC( _hostname );
+    LOGGING_DECLARE_LOCATION_MDC( _shortHostname );
     LOGGING_DECLARE_JOB_MDC( msg->getClientId() );
     LOG_DEBUG_MSG( "received " << runjob::Message::toString(msg->getType()) << " message" );
 
@@ -312,22 +312,22 @@ Connection::handle(
             server( server )->
             mux( shared_from_this() )->
             message( msg )->
-            hostname( _hostname )->
+            hostname( _hostname, _shortHostname )->
             clients( _clients )->
             start()
             ;
     } else if ( msg->getType() == runjob::Message::StdIn ) {
-        Input::create( server, msg, _hostname );
+        Input::create( server, msg, _shortHostname );
     } else if ( msg->getType() == runjob::Message::KillJob ) {
         Kill::create()->
             // named parameter idiom
             message( msg )->
             clients( _clients )->
-            hostname( _hostname )->
+            hostname( _shortHostname )->
             start()
             ;
     } else if ( msg->getType() == runjob::Message::StartJob ) {
-        StartJob::create( server, msg, _hostname );
+        StartJob::create( server, msg, _shortHostname );
     } else if ( msg->getType() == runjob::Message::StartTool ) {
         StartTool::create( server, msg, shared_from_this() );
     } else if ( msg->getType() == runjob::Message::PerfCounters ) {

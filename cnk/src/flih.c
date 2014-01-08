@@ -27,6 +27,7 @@
 #include <hwi/include/bqc/wu_mmio.h>
 #include <firmware/include/Firmware_Interrupts.h>
 #include <spi/include/upci/upci_syscall.h>
+#include <hwi/include/bqc/upc_c_dcr.h>
 #include <spi/include/wu/wait.h>
 
 #define USE_CNTLZ_IN_INTHANDLER 1
@@ -109,10 +110,10 @@ PUEA_Table puea_table[ FLIH_PUEA_TABLE_SIZE ] =
 {  COREMSK(0), THDMSK(0), BIC_CRITICAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT42_MAPOFFSET, IntHandler_GEA_FLIH  },// 42: GEA 1 This lane reserved for signals that are not expected 
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_MSG,  BIC_INT43_MAPOFFSET, IntHandler_MU        },// 43: GEA 2 This lane reserved for Messaging Unit Interrupts
 {  COREMSK(0), THDMSK(0), BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT44_MAPOFFSET, IntHandler_GEA_FLIH  },// 44: GEA 3 ND Software errors
-{  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_GEA,  BIC_INT45_MAPOFFSET, IntHandler_GEA_FLIH  },// 45: GEA 4
+{  COREMSK(16),THDMSK(1), BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT45_MAPOFFSET, IntHandler_GEA_FLIH  },// 45: GEA 4 UPC Errors
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_GEA,  BIC_INT46_MAPOFFSET, IntHandler_GEA_FLIH  },// 46: GEA 5
-{  COREMSK(16),THDMSK(1), BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT47_MAPOFFSET, IntHandler_GEA_FLIH  },// 47: GEA 6
-{  COREMSK(0), THDMSK(0), BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT48_MAPOFFSET, IntHandler_GEA_FLIH  },// 48: GEA 7
+{  COREMSK(16),THDMSK(1), BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT47_MAPOFFSET, IntHandler_GEA_FLIH  },// 47: GEA 6  Scrubbing
+{  COREMSK(0), THDMSK(0), BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT48_MAPOFFSET, IntHandler_GEA_FLIH  },// 48: GEA 7  DCR Violations
 {  COREMSK(16),THDMSK(1), BIC_CRITICAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT49_MAPOFFSET, IntHandler_GEA_FLIH  },// 49: GEA 8  Inbound Mailbox
 {  COREMSK(16),THDMSK(1), BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT50_MAPOFFSET, IntHandler_GEA_FLIH  },// 50: GEA 9  Power threshold
 {  CORES_ALL,  THDS_ALL,  BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT51_MAPOFFSET, IntHandler_GEA_FLIH  },// 51: GEA 10 GEA Timer Event
@@ -160,7 +161,7 @@ GEA_Table gea_stat_table[FLIH_GEA_NUM_STATUS_REGS][ FLIH_GEA_NUM_STATUS_BITS ] =
 //                                                                  STAT STAT    
 //  GEA_X  MAP REG,OFFSET          2nd LEVEL GEA HANDLER            REG  BIT  NAME            EVENT DESCRIPTION
 // ------  ----------------------  -----------------------          ----  --- ------------    -------------------- 
-{GEA_NOCFG, GEA_INT0_00_MAPOFFSET, IntHandler_GEA_Default       },// 0    0   upc_rt_int      UPC interrupt bit 0  
+{GEA_UPC,   GEA_INT0_00_MAPOFFSET, IntHandler_GEA_UPC           },// 0    0   upc_rt_int      UPC interrupt bit 0  
 {GEA_NOCFG, GEA_INT0_01_MAPOFFSET, IntHandler_GEA_Default       },// 0    1   db_rt_int       Devbus interrupt bit 0  
 {GEA_NOCFG, GEA_INT0_02_MAPOFFSET, IntHandler_GEA_Default       },// 0    2   l1p0_rt_int     L1P0 interrupt bit 0                                             
 {GEA_NOCFG, GEA_INT0_03_MAPOFFSET, IntHandler_GEA_Default       },// 0    3   l1p1_rt_int     L1P1 interrupt bit 0  
@@ -228,7 +229,7 @@ GEA_Table gea_stat_table[FLIH_GEA_NUM_STATUS_REGS][ FLIH_GEA_NUM_STATUS_BITS ] =
 //-----------------------------------------------------------------------------------------------
 //                     GEA INTERRUPT STATUS REGISTER 1 START       
 //-----------------------------------------------------------------------------------------------
-{GEA_NOCFG, GEA_INT1_00_MAPOFFSET, IntHandler_GEA_Default       },// 1    0   upc_int         UPC interrupt bit 1  
+{GEA_UPC,   GEA_INT1_00_MAPOFFSET, IntHandler_GEA_UPC           },// 1    0   upc_int         UPC interrupt bit 1  
 {GEA_NOCFG, GEA_INT1_01_MAPOFFSET, IntHandler_GEA_Default       },// 1    1   db_int          Devbus interrupt bit 1  
 {GEA_NOCFG, GEA_INT1_02_MAPOFFSET, IntHandler_GEA_Default       },// 1    2   l1p0_int        L1P0 interrupt bit 2                                             
 {GEA_NOCFG, GEA_INT1_03_MAPOFFSET, IntHandler_GEA_Default       },// 1    3   l1p1_int        L1P1 interrupt bit 2  
@@ -296,7 +297,7 @@ GEA_Table gea_stat_table[FLIH_GEA_NUM_STATUS_REGS][ FLIH_GEA_NUM_STATUS_BITS ] =
 //-----------------------------------------------------------------------------------------------
 //                     GEA INTERRUPT STATUS REGISTER  2 START       
 //-----------------------------------------------------------------------------------------------
-{GEA_NOCFG, GEA_INT2_00_MAPOFFSET, IntHandler_GEA_Default       },// 2    0   upc_int         UPC interrupt bit 2  
+{GEA_UPC,   GEA_INT2_00_MAPOFFSET, IntHandler_GEA_UPC           },// 2    0   upc_int         UPC interrupt bit 2  
 {GEA_NOCFG, GEA_INT2_01_MAPOFFSET, IntHandler_GEA_Default       },// 2    1   db_int          Devbus interrupt bit 2  
 {GEA_NOCFG, GEA_INT2_02_MAPOFFSET, IntHandler_GEA_Default       },// 2    2   l1p0_int        L1P0 interrupt bit 3                                             
 {GEA_NOCFG, GEA_INT2_03_MAPOFFSET, IntHandler_GEA_Default       },// 2    3   l1p1_int        L1P1 interrupt bit 3  
@@ -995,5 +996,37 @@ void IntHandler_IPI_FlushToolCommands()
             IPImsg_local.fcn(IPImsg_local.param1, IPImsg_local.param2);
         }
     }
+}
+
+void IntHandler_GEA_UPC(int status_reg, int bitnum)
+{
+    //printf("I am in UPC GEA handler: stat reg %d bitnum %d\n", status_reg, bitnum);
+
+    // Shut off this interrupt until the compute node is re-booted. The RAS message will indicate the occurrence of this condition
+    uint64_t interruptMap = BIC_ReadInterruptMap(ProcessorThreadID());
+    int table_offset = cntlz64(PUEA_INTERRUPT_STATUS_GEA(GEA_UPC)); 
+    int shift_amount = 63 - puea_table[table_offset].mapreg_offset;
+    interruptMap &= (~(((uint64_t)0x3) << shift_amount));
+    BIC_WriteInterruptMap(ProcessorThreadID(), interruptMap);
+    isync();
+
+    // Generate RAS for this condition
+    uint64_t upc_c_int_state = DCRReadPriv(UPC_C_DCR(UPC_C_INTERRUPT_STATE__STATE));
+    uint64_t internal_error_state = DCRReadPriv(UPC_C_DCR(INTERRUPT_INTERNAL_ERROR__STATE));
+    uint64_t upc_c_int_first = DCRReadPriv(UPC_C_DCR(UPC_C_INTERRUPT_STATE__FIRST));
+    uint64_t internal_sw_info = DCRReadPriv(UPC_C_DCR(INTERRUPT_INTERNAL_ERROR_SW_INFO));
+    uint64_t internal_hw_info = DCRReadPriv(UPC_C_DCR(INTERRUPT_INTERNAL_ERROR_HW_INFO));
+    uint64_t sram_parity_info = DCRReadPriv(UPC_C_DCR(UPC_SRAM_PARITY_INFO));
+    uint64_t iosram_parity_info = DCRReadPriv(UPC_C_DCR(UPC_IO_SRAM_PARITY_INFO));
+    RASBEGIN(7);
+    RASPUSH(upc_c_int_state);
+    RASPUSH(internal_error_state);
+    RASPUSH(upc_c_int_first);
+    RASPUSH(internal_sw_info);
+    RASPUSH(internal_hw_info);
+    RASPUSH(sram_parity_info);
+    RASPUSH(iosram_parity_info);
+    RASFINAL(RAS_UPCCPARITY);
+
 }
 

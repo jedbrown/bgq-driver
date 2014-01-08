@@ -28,6 +28,7 @@
 #include <string.h>
 #include <errno.h>
 #include <netinet/in.h>
+
 struct Msg_hdr
 {
    uint8_t  service;              //!< Service to process message.
@@ -225,18 +226,38 @@ int cnverbs_recv(char *data, void *callback_context)
 int cnverbs_recv_immed(struct ionet_send_imm *msg, uint32_t qp_handle)
 {
 // dumphex("recv immed", msg, sizeof(struct ionet_send_imm));
+   // qp_handle is bad
 
    // Make sure there is a receive posted for this queue pair.
+   if( (qplist[qp_handle].qp == NULL) ||  (  (uint64_t)qplist[qp_handle].qp > (uint64_t)&__KERNEL_END) )
+   {
+      Kernel_WriteFlightLog(FLIGHTLOG, FL_BADQP_VAL, (uint64_t)qplist[qp_handle].qp,(uint64_t) &__KERNEL_END, qp_handle, msg->ionet_hdr.dest_qpn);
+      uint64_t * data = (uint64_t *)msg->payload;
+      Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVBADIMM, data[0],data[1],data[2],data[3]);
+      Kernel_WriteFlightLog(FLIGHTLOG,FL_UNKMSGRCV, data[0],data[1],data[2],data[3]);
+      return -1;
+   }
+
    uint32_t cq_handle = qplist[qp_handle].qp->recv_cq->handle;
    struct cnverbs_cq *cqe = &(cqlist[cq_handle]);
    Kernel_Lock(&(cqe->wc_lock));
    struct cnverbs_wc *wce = NULL;
-   if ( cqe->cq_character ){
+   if ( cqe->cq_character ==CNVERBS_SEQUENCEID_CQ_CHAR){
       if (msg->ionet_hdr.payload_length >= sizeof(struct Msg_hdr)){
        struct Msg_hdr *header = (struct Msg_hdr *) msg->payload;
        wce = cnverbs_find_recv_wc_by_seqid(cqe->wc_list, qplist[qp_handle].qp, header->sequenceId);
      }
    }
+   else if ( cqe->cq_character ==CNVERBS_WC_LINKEDLIST_CQ_CHAR){
+      if (cqe->receive_wc_list !=NULL){
+         wce = cqe->receive_wc_list;
+         cqe->receive_wc_list = wce->next;
+         wce->next=NULL;
+         if (cqe->receive_wc_list==NULL)cqe->receive_wc_tail=NULL;
+      }
+      else wce=NULL;
+   }
+
    else { 
      
      wce = cnverbs_find_recv_wc(cqe, qplist[qp_handle].qp);
@@ -248,6 +269,10 @@ int cnverbs_recv_immed(struct ionet_send_imm *msg, uint32_t qp_handle)
       uint64_t * data = (uint64_t *)msg->payload;
       Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVBADIMM, data[0],data[1],data[2],data[3]);
       TRACE( TRACE_Verbs, ("(E) incoming starting data 0x%lx 0x%lx 0x%lx 0x%lx \n", data[0],data[1],data[2],data[3]) );
+      if ( cqe->cq_character ==CNVERBS_WC_LINKEDLIST_CQ_CHAR){
+         //! \todo TODO NEED TO MARK QP in ERROR STATE........., AND SEND disconnect to IO node
+         return 0;  //failure should not bring down compute node , return 0 
+      }
       return -1;
    }
 
@@ -263,6 +288,16 @@ int cnverbs_recv_immed(struct ionet_send_imm *msg, uint32_t qp_handle)
    wce->wc.byte_len = msg->ionet_hdr.payload_length;
    wce->wc.src_qp = msg->ionet_hdr.source_qpn;
    wce->state = CNVERBS_WC_READY;
+   if ( cqe->cq_character ==CNVERBS_WC_LINKEDLIST_CQ_CHAR){//put onto end of completion list
+     if (cqe->completed_wc_tail){
+        cqe->completed_wc_tail->next=wce;
+        cqe->completed_wc_tail=wce;
+     }
+     else {
+        cqe->completed_wc_tail=wce;
+        cqe->completed_wc_list=wce;
+     }
+   }
 
    // Update completion queue.
    ppc_msync();
@@ -280,13 +315,26 @@ int cnverbs_recv_remote(struct ionet_send_remote *msg, uint32_t qp_handle)
 // dumphex("recv remote", msg, sizeof(struct ionet_send_imm));
 
    // Make sure there is a receive posted for this queue pair.
+   if( (qplist[qp_handle].qp == NULL) ||  (  (uint64_t)qplist[qp_handle].qp > (uint64_t)&__KERNEL_END) )
+   {
+      Kernel_WriteFlightLog(FLIGHTLOG, FL_BADQP_VAL, (uint64_t)qplist[qp_handle].qp,(uint64_t) &__KERNEL_END, qp_handle, msg->ionet_hdr.dest_qpn);
+      return -1;
+   }
    uint32_t cq_handle = qplist[qp_handle].qp->recv_cq->handle;
    struct cnverbs_cq *cqe = &(cqlist[cq_handle]);
    struct cnverbs_wc *wce;
    Kernel_Lock(&(cqe->wc_lock));
-   if ( cqe->cq_character ){
+   if ( cqe->cq_character ==CNVERBS_SEQUENCEID_CQ_CHAR){
       wce = cnverbs_find_recv_wc_by_seqid(cqe->wc_list, qplist[qp_handle].qp, 
                                           msg->payload.immediate_data);
+   }
+   else if ( cqe->cq_character ==CNVERBS_WC_LINKEDLIST_CQ_CHAR){
+      if (cqe->receive_wc_list !=NULL){
+         wce = cqe->receive_wc_list;
+         cqe->receive_wc_list = wce->next;
+         wce->next=NULL;
+      }
+      else wce=NULL;
    }
    else if ((msg->payload.flags == MUDM_IMMEDIATE_DATA) && (msg->payload.immediate_data & CNV_DIRECTED_RECV)) {
        wce = cnverbs_find_recv_wc_by_id(cqe->wc_list, qplist[qp_handle].qp, (msg->payload.immediate_data & ~CNV_DIRECTED_RECV));
@@ -300,6 +348,10 @@ int cnverbs_recv_remote(struct ionet_send_remote *msg, uint32_t qp_handle)
       uint64_t * data = (uint64_t *)&msg->payload.remote_vaddr;
       Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVBADRMT, data[0],data[1],data[2],data[3]);
       TRACE( TRACE_Verbs, ("(E) cnverbs_recv_remote(): recv is not posted for qpn %u (handle %u)\n", msg->ionet_hdr.dest_qpn, qp_handle) );
+      if ( cqe->cq_character ==CNVERBS_WC_LINKEDLIST_CQ_CHAR){
+         //! \todo TODO NEED TO MARK QP in ERROR STATE........., AND SEND disconnect to IO node
+         return 0;  //failure should not bring down compute node , return 0 
+      }
       return -1;
    }
    Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVSELWCE, (uint64_t)wce, cq_handle, wce->proc_id, wce->recv_sge[0].addr);
@@ -322,6 +374,7 @@ int cnverbs_recv_remote(struct ionet_send_remote *msg, uint32_t qp_handle)
    }
 
    // Start read from remote node.
+   if (qplist[qp_handle].conn_context == NULL) return -1;
    int rc = mudm_rdma_read(qplist[qp_handle].conn_context, wce, (void *)msg->payload.RequestID, msg->payload.rdma_object,
                            msg->payload.data_length, psge, msg->payload.SGE);
 
@@ -336,11 +389,21 @@ int cnverbs_recv_remote(struct ionet_send_remote *msg, uint32_t qp_handle)
       //uint32_t prev_num_wc = fetch_and_add(&(cqlist[cq->handle].num_wc), 1);
       Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVADDWCE, cq_handle, prev_num_wc, wce->wc.status, prev_state);
       TRACE( TRACE_Verbs, ("(I) cnverbs_recv_remote(): posted completion queue %u (num_wc %ld)\n", cq->handle, prev_num_wc) );
+      if ( cqe->cq_character ==CNVERBS_WC_LINKEDLIST_CQ_CHAR){//put onto end of completion list
+         if (cqe->completed_wc_tail) cqe->completed_wc_tail->next=wce;
+         else                        cqe->completed_wc_list = wce;
+         cqe->completed_wc_tail = wce;
+      }
    }
 
    // Wait for read operation to complete.
    else if (rc == -EINPROGRESS) {
       wce->state = CNVERBS_WC_RECV_INPROGRESS;
+      if ( cqe->cq_character ==CNVERBS_WC_LINKEDLIST_CQ_CHAR){//put onto end of completion list
+         if (cqe->completed_wc_tail) cqe->completed_wc_tail->next=wce;
+         else                        cqe->completed_wc_list = wce;
+         cqe->completed_wc_tail=wce;
+      }
    }
 
    // Unexpected error.
@@ -382,6 +445,7 @@ int cnverbs_rdma_read(struct ionet_send_remote *msg, uint32_t qp_handle)
                         msg->payload.rkey, msg->payload.remote_vaddr, (uint64_t)psge[0].physicalAddr, psge[0].memlength) );
 
    // Start read from remote node.
+   if (qplist[qp_handle].conn_context == NULL) return -1;
    int rc = mudm_rdma_read(qplist[qp_handle].conn_context, NULL, (void *)msg->payload.RequestID, msg->payload.rdma_object,
                            msg->payload.data_length, psge, msg->payload.SGE);
 
@@ -419,6 +483,7 @@ int cnverbs_rdma_write(struct ionet_send_remote *msg, uint32_t qp_handle)
                         msg->payload.rkey, msg->payload.remote_vaddr, (uint64_t)psge[0].physicalAddr, psge[0].memlength) );
 
    // Start write from remote node.
+   if (qplist[qp_handle].conn_context == NULL) return -1;
    int rc = mudm_rdma_write(qplist[qp_handle].conn_context, (void *)msg->payload.RequestID, msg->payload.rdma_object,
                             msg->payload.data_length, psge, msg->payload.SGE);
 
@@ -436,6 +501,7 @@ int cnverbs_status(void *requestID[], uint32_t status[], void *callback_context,
    for (index = 0; index < num_ops; ++index) {
       // Make sure there is an outstanding operation for this work completion.
       struct cnverbs_wc *wce = (struct cnverbs_wc *)requestID[index];
+      if (wce==NULL) continue;
       if ((wce->state == CNVERBS_WC_INIT) || (wce->state == CNVERBS_WC_READY)) {
          Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVBADWCE, (uint64_t)wce, wce->state, 0, 0);
          printf("(E) cnverbs_status(): work completion %p with state %u does not have outstanding operation\n", wce, wce->state);
@@ -733,9 +799,32 @@ int cnv_dereg_mr(struct cnv_mr *mr)
    return 0;
 }
 
+
+int init_wc_linked_list(struct cnv_cq *cq){
+     uint32_t handle = cq->handle;
+     int i = 0;
+     cqlist[handle].free_wc_list = NULL;
+     cqlist[handle].send_wc_list = NULL;
+     cqlist[handle].receive_wc_list = NULL;
+     cqlist[handle].completed_wc_list = NULL;
+     cqlist[handle].send_wc_tail = NULL;
+     cqlist[handle].receive_wc_tail = NULL;
+     cqlist[handle].completed_wc_tail = NULL;
+     struct cnverbs_wc * wc = cqlist[handle].wc_list;
+     for (i=0;i<(CNV_MAX_WC -1);i++){
+        (wc+i)->next = (wc+i+1);
+     }
+     cqlist[handle].wc_list[CNV_MAX_WC-1].next = NULL;
+     cqlist[handle].free_wc_list = wc;
+    return 0;
+}
+
 int cnv_modify_cq_character(struct cnv_cq *cq, uint32_t character){
      uint32_t handle = cq->handle;
      cqlist[handle].cq_character=character;
+     if (character == CNVERBS_WC_LINKEDLIST_CQ_CHAR){
+       init_wc_linked_list(cq);
+     }
      return 0;
 }
 
@@ -769,6 +858,13 @@ int cnv_create_cq(struct cnv_cq *cq, struct cnv_context *context, int cqe)
    fetch_and_add(&(cqlist[handle].usecnt), 1);
    cqlist[handle].cq = cq;
    cqlist[handle].cq_character = CNVERBS_DEFAULT_CQ_CHAR;
+   cqlist[handle].free_wc_list = NULL;
+   cqlist[handle].send_wc_list = NULL;
+   cqlist[handle].receive_wc_list = NULL;
+   cqlist[handle].completed_wc_list = NULL;
+   cqlist[handle].send_wc_tail = NULL;
+   cqlist[handle].receive_wc_tail = NULL;
+   cqlist[handle].completed_wc_tail = NULL;
 
    // Set all fields in completion queue structure.
    cq->context = context;
@@ -855,6 +951,42 @@ int cnv_create_qp(struct cnv_qp *qp, struct cnv_pd *pd, struct cnv_qp_init_attr 
    return 0;
 }
 
+int cnv_recycle_qp(struct cnv_qp *qp)
+{
+   // Check for valid pointers.
+   if ((qp == NULL) || (qp->pd == NULL)) {
+      return EFAULT;
+   }
+
+   // Make sure handle is valid.
+   uint32_t handle = qp->handle;
+   if (handle >= CNV_MAX_QP) {
+      TRACE( TRACE_Verbs, ("(E) cnv_destroy_qp(): queue pair handle %u is invalid\n", handle) );
+      return EINVAL;
+   }
+   
+   // Disconnect from the I/O node if connected
+   if (qplist[qp->handle].conn_context){
+       mudm_disconnect(qplist[qp->handle].conn_context);
+       qplist[handle].conn_context = NULL;
+   }
+   
+   fetch_and_and(&(qplist[handle].connected), 0);
+   qplist[handle].psn = 0;
+   qp->state = CNV_QPS_INIT; 
+
+   //reset work requests and completions on the the unified queue array
+   struct cnv_cq *cq = qp->send_cq;
+   struct cnverbs_cq *cqe = &(cqlist[cq->handle]);
+
+   Kernel_Lock(&(cqe->wc_lock));
+   memset(cqe->wc_list, 0, CNV_MAX_WC * sizeof(struct cnverbs_wc) );
+   init_wc_linked_list(cq);
+
+   Kernel_Unlock(&(cqe->wc_lock));
+
+   return 0;
+}
 int cnv_destroy_qp(struct cnv_qp *qp)
 {
    // Check for valid pointers.
@@ -882,8 +1014,10 @@ int cnv_destroy_qp(struct cnv_qp *qp)
    }
 
    // Disconnect from the I/O node.
-   mudm_disconnect(qplist[qp->handle].conn_context);
-
+   if (qplist[qp->handle].conn_context){
+       mudm_disconnect(qplist[qp->handle].conn_context);
+       qplist[handle].conn_context = NULL;
+   }
    // Decrement use count on protection domain.
    if (qp->pd->handle >= CNV_MAX_PD) {
       TRACE( TRACE_Verbs, ("(E) cnv_destroy_qp(): protection domain handle %u is invalid\n", qp->pd->handle) );
@@ -895,7 +1029,6 @@ int cnv_destroy_qp(struct cnv_qp *qp)
    fetch_and_sub(&(qplist[handle].usecnt), 1);
    fetch_and_and(&(qplist[handle].connected), 0);
    qplist[handle].qp = NULL;
-   qplist[handle].conn_context = NULL;
    qplist[handle].conn_qp_num = 0;
    qplist[handle].psn = 0;
    qplist[handle].port_num = 0;
@@ -1146,6 +1279,284 @@ int cnv_post_send_seqID(struct cnv_qp *qp, struct cnv_send_wr *wr_list, struct c
    return 0;
 }
 
+int cnv_get_completions_linked_list(struct cnv_qp *qp, unsigned long int num_entries, Kernel_RDMAWorkCompletion_t* WorkCompletionList){
+
+   // Check for valid pointers.
+   if ((qp == NULL) || (WorkCompletionList == NULL)) {
+      return -EFAULT;
+   }
+
+   // Make sure queue pair is in correct state.
+   if (qp->state != CNV_QPS_RTS) {
+      return -EINVAL;
+   }
+
+   if (num_entries == 0) return 0;
+
+   struct cnv_cq *cq = qp->send_cq;
+   struct cnverbs_cq *cqe = &(cqlist[cq->handle]);
+   
+   ppc_msync();
+
+   // Lock the list of work completions in the internal completion queue.
+   Kernel_Lock(&(cqe->wc_lock));
+   if (cqe->completed_wc_list == NULL){
+     // Unlock the list of work completions in the internal completion queue.
+     Kernel_Unlock(&(cqe->wc_lock));
+     return 0;
+   }
+    Kernel_RDMAWorkCompletion_t* curRWC = WorkCompletionList;
+    struct cnverbs_wc * cur_wc = cqe->completed_wc_list;
+    struct cnverbs_wc * first_wc = cqe->completed_wc_list;
+    if (cur_wc->state != CNVERBS_WC_READY){
+     Kernel_Unlock(&(cqe->wc_lock));
+     return 0;
+    }
+    int i = 0;
+    int num_completions = 0;
+    for (i=0;i<num_entries;i++){
+      struct cnv_wc * wc_user = &cur_wc->wc;
+      curRWC->buf = (void *)wc_user->wr_id;
+      curRWC->len = wc_user->byte_len;
+      curRWC->opcode = wc_user->opcode;
+      curRWC->status = wc_user->status;
+      curRWC->flags  = wc_user->wc_flags;
+      curRWC->reserved = 0;
+      cur_wc->state = CNVERBS_WC_INIT; //previous state was READY
+      curRWC++;
+      num_completions++;
+      if (cur_wc ->next == NULL) break;
+      if (cur_wc->next->state != CNVERBS_WC_READY) break; 
+      cur_wc = cur_wc ->next;
+    }
+    if (num_completions){
+      cqe->completed_wc_list = cur_wc ->next;
+      cur_wc ->next =  cqe->free_wc_list;
+      cqe->free_wc_list = first_wc;
+      if (cqe->completed_wc_list==NULL)cqe->completed_wc_tail=NULL;
+    }
+    Kernel_Unlock(&(cqe->wc_lock));
+    return num_completions;
+}
+#if 0
+typedef
+struct Kernel_RDMAWorkCompletion {
+  void*    buf;    /* buffer address of data for completed operation */
+  uint32_t len;    /* length of data for completed operation         */
+  uint32_t opcode; /* opcode receive=1  send=2                       */
+  uint32_t status; /* =0, successful, >0 errno                       */
+  uint32_t flags;    /* reserved for future use                      */
+  uint64_t reserved; /* reserved for future use                      */
+} Kernel_RDMAWorkCompletion_t;
+
+//! Work completion.
+struct cnv_wc
+{
+   uint64_t             wr_id;         //!< User defined work request id.
+   enum cnv_wc_status   status;        //!< Status of completed work request.
+   enum cnv_wc_opcode   opcode;        //!< Operation type of completed work request.
+   uint32_t             vendor_err;    //!< Vendor error syndrome value. 
+   uint32_t             byte_len;      //!< Number of bytes transferred.
+   uint32_t             imm_data;      //!< Immediate data value.
+   uint32_t             qp_num;        //!< Local queue pair number of completed work request.
+   uint32_t             src_qp;        //!< Source (remote) queue pair number of completed work request.
+   enum cnv_wc_flags    wc_flags;      //!< Flags for the completed work request.
+};
+#endif 
+
+
+int cnv_post_send_linked_list(struct cnv_qp *qp, struct cnv_send_wr *wr_list)
+{
+   // Check for valid pointers.
+   if ((qp == NULL) || (wr_list == NULL)) {
+      return EFAULT;
+   }
+
+   // Make sure queue pair is in correct state.
+   if (qp->state != CNV_QPS_RTS) {
+      return EINVAL;
+   }
+
+   // Make sure handle is valid.
+   uint32_t handle = qp->handle;
+   if (handle >= CNV_MAX_QP) {
+      return EINVAL;
+   }
+
+   // Structure describing send.
+   struct ionet_send_remote_payload payload;
+   int rc = 0;
+
+   // This is very simple.  Only handle one work request.
+   struct cnv_send_wr *wr = wr_list;
+   struct cnv_cq *cq = qp->send_cq;
+   struct cnverbs_cq *cqe = &(cqlist[cq->handle]);
+
+   // Lock the list of work completions in the internal completion queue.
+   Kernel_Lock(&(cqe->wc_lock));
+
+   // Find a free work completion from the linked list
+   struct cnverbs_wc *wce = cqe->free_wc_list;
+   if (wce==NULL){
+      Kernel_Unlock(&(cqe->wc_lock));
+      return ENOMEM;
+   }
+   cqe->free_wc_list = wce->next;
+   wce->next = NULL;
+
+   // Start filling out work completion.
+   wce->wc.opcode = CNV_WC_SEND;
+   wce->wc.vendor_err = 0;
+   wce->wc.qp_num = qp->qp_num;
+   wce->wc.src_qp = qplist[handle].conn_qp_num;
+   wce->cq = cq;
+   wce->qp = qp;
+   wce->state = CNVERBS_WC_POSTED_SEND;
+   wce->proc_id = ProcessorID();
+   wce->num_recv_sge = 0;
+
+   // Unlock the list of work completions in the internal completion queue.
+   Kernel_Unlock(&(cqe->wc_lock));
+
+   // Convert external sge with virtual addresses to mudm sge with physical addresses
+   uint32_t index = 0;
+   payload.RequestID = (uint64_t)wce;
+   payload.sgl_num = wr->num_sge;
+   payload.data_length = 0;
+   payload.flags = 0;
+   payload.immediate_data = 0;
+   payload.reserved = 0;
+
+   for ( ; index < wr->num_sge; ++index) {
+      uint32_t lkey = wr->sg_list[index].lkey - CNV_HANDLE_ADJUST; //! \todo Validate lkey?  Make sure length doesn't exceed memory region?
+      payload.SGE[index].physicalAddr = (wr->sg_list[index].addr - mrlist[lkey].base_va) + mrlist[lkey].base_pa;
+      payload.SGE[index].memlength = wr->sg_list[index].length;
+      payload.data_length += wr->sg_list[index].length;
+      TRACE( TRACE_Verbs, ("(I) cnv_post_send(): SGE %u: vaddr=0x%lx paddr=0x%lx length=%d\n",
+                           index, wr->sg_list[index].addr, (uint64_t)payload.SGE[index].physicalAddr, payload.SGE[index].memlength) );
+   }
+   
+
+   if ((wr->num_sge == 1) && (wr->sg_list[0].length <= MUDM_MAX_PAYLOAD_SIZE) && (wr->opcode == CNV_WR_SEND)) {
+      wce->wc.byte_len = payload.SGE[0].memlength;
+      uint64_t physicalAddr = payload.SGE[0].physicalAddr; 
+      rc = mudm_send_pkt(qplist[handle].conn_context, wce, MUDM_PKT_DATA_IMM, (void *)physicalAddr, payload.SGE[0].memlength);
+   }
+   
+   else {
+      wce->wc.byte_len = payload.data_length;
+      rc = mudm_send_message_remote(qplist[handle].conn_context, MUDM_PKT_DATA_REMOTE, &payload);
+   }
+   Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVPSTSND, qp->qp_num, (uint64_t)wce, cq->handle, rc);
+   
+   // Handle the work completion based on the return code from the MUDM operation.
+   switch (rc) {
+      case 0:
+      {
+         // Complete the work request right now.
+         enum cnverbs_wc_state prev_state = wce->state;
+         wce->wc.status = CNV_WC_SUCCESS;
+         wce->state = CNVERBS_WC_READY;
+
+         // Post to completion queue.  
+         if (cqe->completed_wc_tail)
+             cqe->completed_wc_tail->next = wce;
+         else
+             cqe->completed_wc_list = wce;
+         cqe->completed_wc_tail = wce;
+         
+         ppc_msync();
+        
+         uint64_t prev_num_wc = L2_AtomicLoadIncrement(&CQ_NUM_WC[cq->handle]);
+         Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVADDWCE, cq->handle, prev_num_wc, wce->wc.status, prev_state);
+         break;
+      }
+
+      case -EINPROGRESS:
+         // Post to completion queue.  
+         if (cqe->completed_wc_tail)
+            cqe->completed_wc_tail->next = wce;
+            cqe->completed_wc_list       = wce;
+         cqe->completed_wc_tail = wce;
+         
+         ppc_msync();
+         break;
+      case -EBUSY:
+         // on send queue to send later.  
+         //! \todo TODO Flightlog here, add code to handle when completions do happen
+         if (cqe->receive_wc_tail){
+            cqe->receive_wc_tail->next = wce;
+         }
+         cqe->receive_wc_tail = wce;
+         break; 
+      default:
+         return rc;
+   }
+
+   return 0;
+}
+
+int cnv_post_send_no_comp(struct cnv_qp *qp, struct cnv_send_wr *wr_list)
+{
+   // Check for valid pointers.
+   if ((qp == NULL) || (wr_list == NULL)) {
+      return EFAULT;
+   }
+   // Make sure queue pair is in correct state.
+   if (qp->state != CNV_QPS_RTS) {
+      return EINVAL;
+   }
+   // Make sure handle is valid.
+   uint32_t handle = qp->handle;
+   if (handle >= CNV_MAX_QP) {
+      return EINVAL;
+   }
+
+   // Structure describing send.
+   struct ionet_send_remote_payload payload;
+   int rc = 0;
+
+   // This is very simple.  Only handle one work request.
+   struct cnv_send_wr *wr = wr_list;
+
+   // ignore using completion queue,  Kernel_Lock(&(cqe->wc_lock));
+
+   // Convert external sge with virtual addresses to mudm sge with physical addresses
+   uint32_t index = 0;
+   payload.RequestID = 0;  //no status callback
+   payload.sgl_num = wr->num_sge;
+   payload.data_length = 0;
+   payload.flags = 0;
+   if (wr->opcode == CNV_WR_SEND_WITH_IMM) {
+      payload.immediate_data = wr->imm_data;
+      payload.flags |= MUDM_IMMEDIATE_DATA;
+   }
+   else {
+      payload.immediate_data = 0;
+   }
+   payload.reserved = 0;
+   for ( ; index < wr->num_sge; ++index) {
+      uint32_t lkey = wr->sg_list[index].lkey - CNV_HANDLE_ADJUST; //! \todo Validate lkey?  Make sure length doesn't exceed memory region?
+      payload.SGE[index].physicalAddr = (wr->sg_list[index].addr - mrlist[lkey].base_va) + mrlist[lkey].base_pa;
+      payload.SGE[index].memlength = wr->sg_list[index].length;
+      payload.data_length += wr->sg_list[index].length;
+      TRACE( TRACE_Verbs, ("(I) cnv_post_send(): SGE %u: vaddr=0x%lx paddr=0x%lx length=%d\n",
+                           index, wr->sg_list[index].addr, (uint64_t)payload.SGE[index].physicalAddr, payload.SGE[index].memlength) );
+   }
+   
+   if ((wr->num_sge == 1) && (wr->sg_list[0].length <= MUDM_MAX_PAYLOAD_SIZE) && (wr->opcode == CNV_WR_SEND)) {
+      uint64_t physicalAddr = payload.SGE[0].physicalAddr; 
+      rc = mudm_send_pkt(qplist[handle].conn_context, NULL, MUDM_PKT_DATA_IMM, (void *)physicalAddr, payload.SGE[0].memlength);
+   }
+   
+   else {
+      rc = mudm_send_message_remote(qplist[handle].conn_context, MUDM_PKT_DATA_REMOTE, &payload);
+   }
+   
+   if (rc== (-EINPROGRESS) ) return 0;
+   return rc;
+}
+
 int cnv_post_recv(struct cnv_qp *qp, struct cnv_recv_wr *wr_list, struct cnv_recv_wr **bad_wr)
 {
   return cnv_post_recv_proc(qp, wr_list, bad_wr, ProcessorID());
@@ -1225,6 +1636,7 @@ int cnv_post_recv_proc(struct cnv_qp *qp, struct cnv_recv_wr *wr_list, struct cn
    return 0;
 }
 
+
 int cnv_post_recv_seqID(struct cnv_qp *qp, struct cnv_recv_wr *wr_list, struct cnv_recv_wr **bad_wr, uint32_t seq_ID)
 {
    // assume pointers are nonNULL
@@ -1277,6 +1689,63 @@ int cnv_post_recv_seqID(struct cnv_qp *qp, struct cnv_recv_wr *wr_list, struct c
    }
 
    TRACE( TRACE_Verbs, ("(I) cnv_post_recv(): posted recv from work request at address 0x%p for queue pair %u\n", wr, qp->qp_num) );
+   return 0;
+}
+
+int cnv_post_recv_linked_list(struct cnv_qp *qp, struct cnv_recv_wr *wr_list)
+{
+   // assume pointers are nonNULL
+   // Make sure queue pair is in correct state.
+   if (qp->state != CNV_QPS_RTS) {
+      return EINVAL;
+   }
+
+   // This is very simple.  Only handle one work request.
+   struct cnv_recv_wr *wr = wr_list;
+   struct cnv_cq *cq = qp->send_cq;
+   struct cnverbs_cq *cqe = &(cqlist[cq->handle]);
+
+   // Lock the list of work completions in the internal completion queue.
+   Kernel_Lock(&(cqe->wc_lock));
+
+   // Find a free work completion from the linked list
+   struct cnverbs_wc *wce = cqe->free_wc_list;
+   if (wce==NULL){
+      Kernel_Unlock(&(cqe->wc_lock));
+      return ENOMEM;
+   }
+   cqe->free_wc_list = wce->next;
+   wce->next = NULL;
+   if (cqe->receive_wc_tail){
+      cqe->receive_wc_tail->next = wce;
+      cqe->receive_wc_tail = wce;
+   }
+   else {
+     cqe->receive_wc_tail = wce;
+     cqe->receive_wc_list = wce;
+   }
+   
+
+   // Setup work completion.
+   wce->wc.wr_id = wr->wr_id;
+   wce->wc.opcode = CNV_WC_RECV;
+   wce->wc.vendor_err = 0;
+   wce->wc.qp_num = qp->qp_num;
+   wce->cq = cq;
+   wce->qp = qp;
+   wce->state = CNVERBS_WC_POSTED_RECV;
+   wce->proc_id = ProcessorID();
+   wce->sequence_id = 0;
+
+   // Unlock the list of work completions in the internal completion queue.
+   Kernel_Unlock(&(cqe->wc_lock));
+
+   // Copy scatter/gather element list to internal work completion.
+   memcpy(&(wce->recv_sge), wr->sg_list, (sizeof(struct cnv_sge) * wr->num_sge));
+   wce->num_recv_sge = wr->num_sge;
+
+   Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVPSTRCV, qp->qp_num, (uint64_t)wce, cq->handle, wr->wr_id);
+
    return 0;
 }
 
@@ -1336,6 +1805,43 @@ int cnv_poll_cq(struct cnv_cq *cq, int num_entries, struct cnv_wc *wc, int *num_
    }
    TRACE( TRACE_Verbs, ("(I) cnv_poll_cq(): %d work completions are ready for completion queue %u (num_wc %ld)\n",
                         *num_returned, handle, L2_AtomicLoad(&CQ_NUM_WC[handle])));
+   return 0;
+}
+
+int cnv_poll_cq_for_single_recv(struct cnv_cq *cq, uint32_t proc_id)
+{
+
+   // Make sure handle is valid.
+   uint32_t handle = cq->handle;
+
+   // Spin until a work completion is ready.
+   struct cnverbs_cq *cqe = &(cqlist[handle]);
+   uint64_t ready;
+   uint32_t index = 0;
+   struct cnverbs_wc *wce = NULL;
+   while (index < CNV_MAX_WC ) {
+      wce = &(cqe->wc_list[index]);     
+      if ( (wce->state != CNVERBS_WC_INIT) && (proc_id == wce->proc_id) ) {
+         break;
+      }
+      ++index;
+   }  
+   while((ready = L2_AtomicLoad(&CQ_NUM_WC[handle])) == 0)
+   { }
+   
+   Kernel_Lock(&(cqe->wc_lock));
+
+   // Find the work completions that are ready and copy them to caller's storage.
+
+   ppc_msync();  //  msync needed here to ensure consistent wc/storage prior to memcpy.
+   uint64_t prev_num_wc = L2_AtomicLoadDecrement(&CQ_NUM_WC[handle]);
+   Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVRMVWCE, (uint64_t)wce, proc_id, cq->handle, prev_num_wc-1);
+   memset(wce, '\0', sizeof(struct cnverbs_wc));
+   wce->state = CNVERBS_WC_INIT;
+
+   Kernel_Unlock(&(cqe->wc_lock));
+
+
    return 0;
 }
 

@@ -55,6 +55,8 @@ enum { KERN_NSIG = _NSIG };
 #define  _SIGNAL_H
 #define sigset_t kern_sigset_t
 
+//! Special signal number to indicate a post job integrity check (message crc/terminate checks, etc)
+#define SIGJOBINTEGRITY 39
 
 typedef enum {
     SIG_IGNORE,

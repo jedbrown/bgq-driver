@@ -27,11 +27,11 @@ define(
     "./AbstractTemplatedContainer",
     "./MonitorActiveMixin",
     "../FilterOptions",
+    "../xlate",
     "../../Bgws",
     "../../BlueGene",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "dojo/text!./templates/JobHistory.html",
     "module",
 
@@ -40,7 +40,6 @@ define(
 
     "./MultiSelectCodes",
     "./TimeInterval",
-    "../xlate",
     "dijit/TooltipDialog",
     "dijit/form/Button",
     "dijit/form/DropDownButton",
@@ -56,11 +55,11 @@ function(
         l_AbstractTemplatedContainer,
         l_MonitorActiveMixin,
         ll_FilterOptions,
+        ll_xlate,
         b_Bgws,
         b_BlueGene,
         d_declare,
         d_lang,
-        j_registry,
         template,
         module
     )
@@ -79,7 +78,6 @@ var _formToQuery = function( form_obj )
 
 
 var b_navigator_dijit_JobHistory = d_declare(
-        "bluegene.navigator.dijit.JobHistory",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -119,7 +117,6 @@ var b_navigator_dijit_JobHistory = d_declare(
             this._filter_options.apply();
         } else {
             this._dirty = true;
-            j_registry.byId( "navigator" ).switchTo( "job-history" );
         }
     },
 
@@ -203,7 +200,10 @@ var b_navigator_dijit_JobHistory = d_declare(
         console.log( module.id + ": selected job", job_id, "started at", start_time, "end time=", end_time );
 
         this.onJobSelected( { id: job_id, startTime: start_time, endTime: end_time } );
-    }
+    },
+
+
+    _ll_xlate : ll_xlate
 
 } );
 

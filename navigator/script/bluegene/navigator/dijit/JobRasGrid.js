@@ -44,7 +44,6 @@ function(
 {
 
 var b_navigator_dijit_JobRasGrid = d_declare(
-        "bluegene.navigator.dijit.JobRasGrid",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 {
 

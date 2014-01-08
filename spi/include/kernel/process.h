@@ -123,7 +123,7 @@ __INLINE__
 int Kernel_GetPersonality(Personality_t* personality, size_t size);
 
 /*!
- * \brief Return a 64 bit thread mask indicating which threads are associated with a process
+ * \brief Return a 64 bit thread mask indicating which hardware threads are associated with a process
  * 
  * \param[in]      t   The coordinate representing a process within a node. 
  *
@@ -131,6 +131,19 @@ int Kernel_GetPersonality(Personality_t* personality, size_t size);
 
 __INLINE__
 uint64_t Kernel_ThreadMask(uint32_t t);
+
+
+/*!
+ * \brief Determine if this software thread is running on a hardware thread owned by a different process.
+ * 
+ * 
+ * \return guest indicator
+ * \retval 0 is not a guest thread 
+ * \retval 1 is a guest thread 
+ */
+
+__INLINE__
+uint64_t Kernel_IsGuestThread();
 
 
 /*!

@@ -45,7 +45,8 @@ CREATE TABLE TBGQBlock
           CONSTRAINT BGQBlock_Statchk CHECK ( status IN ('F', 'A', 'B', 'I', 'T') ),
      -- (F)ree, (A)llocated, (B)ooting, (I)nitialized, (T)erminating
    action                char(1)        NOT NULL WITH DEFAULT ' ',
-          CONSTRAINT BGQBlock_actchk CHECK ( action IN ('B', 'D', ' ') ),
+          CONSTRAINT BGQBlock_actchk CHECK ( action IN ('B', 'D', 'N', ' ') ),
+     -- (B)oot, (D)ellocate, (N)o-check option on boot of I/O block
    statusLastModified    timestamp      DEFAULT current timestamp,
    mloaderImg            varchar(256),
    nodeConfig            CHAR(32)       NOT NULL,     
@@ -62,7 +63,7 @@ CREATE TABLE TBGQBlock
 CREATE ALIAS  BGQBlock FOR TBGQBlock;
 
 CREATE VIEW BGQIOBlock AS SELECT blockid, numIOnodes, owner, username,
-   description, options, status,
+   description, options, status, action,
    statuslastmodified, mloaderimg,nodeconfig,bootoptions,createdate,
    securitykey,errtext,seqid,creationid
   from TBGQBlock where numCnodes = 0;
@@ -333,7 +334,7 @@ CREATE TABLE TBGQMidplane
    posInMachine          char(6)        NOT NULL,
        CONSTRAINT BGQMidPo_chk CHECK ( posInMachine LIKE 'R__-M_' ),
    status                char(1)        NOT NULL WITH DEFAULT 'A' ,
-       CONSTRAINT BGQMidSt_chk CHECK ( status IN ('A','M','E', 'S') ),
+       CONSTRAINT BGQMidSt_chk CHECK ( status IN ('A','M','E','S','F') ),
    isMaster              char(1)        NOT NULL WITH DEFAULT 'F',
        CONSTRAINT BGQMidMs_chk CHECK ( isMaster IN ('T', 'F') ),
    vpd                   varchar(4096)  FOR BIT DATA,
@@ -611,14 +612,15 @@ CREATE TABLE TBGQIODrawer
      -- (A)vailable, (M)issing, (E)rror, (S)ervice
    vpd                   varchar(4096)  FOR BIT DATA,
    faildata              varchar(32)    FOR BIT DATA,
+   seqId                 bigint         NOT NULL WITH DEFAULT 0,
    CONSTRAINT BGQIOE_pk PRIMARY KEY (location),
    CONSTRAINT BGQIOEType_fk FOREIGN KEY (productId)
        REFERENCES TBGQProductType (productId)
-);
-CREATE VIEW BGQIODrawer AS SELECT serialnumber, productid, location, status
+) DATA CAPTURE CHANGES;
+CREATE VIEW BGQIODrawer AS SELECT serialnumber, productid, location, status, seqId
        from TBGQIODrawer;
 
-CREATE VIEW BGQIODrawerAll AS SELECT serialnumber, productid, location, status, vpd, faildata
+CREATE VIEW BGQIODrawerAll AS SELECT serialnumber, productid, location, status, vpd, faildata, seqId
        from TBGQIODrawer;
 
 
@@ -645,19 +647,20 @@ CREATE TABLE TBGQIONode
    -- this is the memory voltage, the core voltage is derived from the productId
    bitsteering           integer        NOT NULL WITH DEFAULT -1,
    faildata              varchar(32)    FOR BIT DATA,
+   seqId                 bigint         NOT NULL WITH DEFAULT 0,
    CONSTRAINT BGQIONode_pk PRIMARY KEY (IOPos, position),
    CONSTRAINT BGQIONodeId_fk FOREIGN KEY (IOPos)
         REFERENCES TBGQIODrawer(location) ON DELETE RESTRICT,
    CONSTRAINT BGQIONodeType_fk FOREIGN KEY (productId)
         REFERENCES TBGQProductType (productId)
-);
+) DATA CAPTURE CHANGES;
 CREATE VIEW BGQIONode as SELECT serialnumber,productid, IOpos, ipaddress, macaddress,
-        status, memorymodulesize, memorysize, voltage, bitsteering,  position,
+        status, memorymodulesize, memorysize, voltage, bitsteering, seqid, position,
         IOpos || '-' || position as location  from TBGQIONode ;
 
 CREATE VIEW BGQIONodeAll as SELECT serialnumber,productid, IOpos, ipaddress, macaddress,
-        status, memorymodulesize, memorysize, psro, ecid, vpd, voltage, bitsteering, faildata, position,
-        IOpos || '-' || position as location  from TBGQIONode ;
+        status, memorymodulesize, memorysize, psro, ecid, vpd, voltage, bitsteering, faildata, seqid,
+        position, IOpos || '-' || position as location  from TBGQIONode ;
 
 
 CREATE TABLE TBGQIOLinkChip

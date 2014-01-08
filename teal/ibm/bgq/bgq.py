@@ -47,39 +47,44 @@ BGQ_RAW_DATA_FMT =  0x4247510080010001
 BGQ_TEAL_CONFIG = 'connector.bgq'
 BGQ_TEAL_CONFIG_POLL_INTERVAL = 'poll_interval'
 BGQ_DEFAULT_POLL_INTERVAL = 60
-
-
+        
 def next_row(cursor):
     ''' Helper function to iterate through query results 
     '''
     return cursor # pyodbc-ism
 
-def rt_callback(recid,msgid):
-    '''Realtime callback function.
-    '''
-    registry.get_logger().debug("in rt_callback " + str(recid) + " " + msgid)
-    bgcon = BgqConnector()
-    bgcon._query_and_log_event("=", recid)
-    return
-
-def rt_term_callback():
-    '''Realtime callback function.
-    '''
-    registry.get_logger().debug("in rt_term_callback")
-    return
-    
-        
 class BgqConnector(threading.Thread):
     def __init__(self):
         ''' Constructor
         '''
         self.running = True
         self.last_row_processed = 0
+        self.first_realtime_event = False
         self.notifier = teal_semaphore.Semaphore() 
         self._configure()
         self._getEventList()
         threading.Thread.__init__(self)
 
+    def rt_callback(self,recid,msgid):
+        '''Realtime callback function.
+        '''
+        # In case some RAS events occurred before the real-time server could be started ...
+        if self.first_realtime_event:
+            # Not sure this is needed?  This should be current from the previous call to query_and_log_event
+#            self._get_last_processed_event()
+            self._query_and_log_event(">", self.last_processed_event, recid)
+            self.first_realtime_event = False
+            
+        registry.get_logger().debug("in rt_callback " + str(recid) + " " + msgid)
+        self._query_and_log_event("=", recid)
+        return
+
+    def rt_term_callback(self):
+        '''Realtime callback function.
+        '''
+        registry.get_logger().debug("in rt_term_callback")
+        return
+    
     def _configure(self):
         # Set the polling time based on the BGQ Connector conf file
         cfg = registry.get_service(registry.SERVICE_CONFIGURATION)
@@ -213,7 +218,7 @@ class BgqConnector(threading.Thread):
         registry.get_logger().info('Last Processed Event = ' + str(self.last_processed_event))
         cnxn.close()
 
-    def _query_and_log_event(self, query_sign, recid):
+    def _query_and_log_event(self, query_sign, recid, max_recid=0):
         ''' Query the BG event log for new events and log into TEAAL
         '''
         registry.get_logger().debug("in _query_and_log_event")
@@ -228,13 +233,18 @@ class BgqConnector(threading.Thread):
         bgq_cursor.execute(bgEvent_query, recid)
         commit_count = 0
         for bg_event in next_row(bgq_cursor):
+            
+            # Don't process events with recids >= max_recid, if it is nonzero
+            if max_recid > 0 and bg_event[0] >= max_recid:
+                break
+                
             # Log only events we are interested in
             if bg_event[6] in self.msgIDs:
                 event_logged = True
                 
                 # Log the event into TEAL
                 self._log_event(bg_event, teal_cursor)
-                          
+                      
                 # Commit every so often to limit the transaction size
                 commit_count += 1
                 if commit_count == COMMIT_LIMIT:           
@@ -269,10 +279,6 @@ class BgqConnector(threading.Thread):
         self._get_last_processed_event()
         self._query_and_log_event(">", self.last_processed_event)
 
-        # Attempt to connec to real-time server again    
-        self.run()
-
-
     def run(self):
         ''' Runs the monitor thread waiting for new events to occur
         '''
@@ -283,7 +289,8 @@ class BgqConnector(threading.Thread):
             # Start real-time client
             registry.get_logger().info("starting real-time monitor")
             registry.get_logger().debug("RAS event ids to filter: " + self.filter)
-            self.t = Thread(None, pyrealtime.ras_init, 'pyrealtime', (self.filter,rt_callback,rt_term_callback))
+            self.first_realtime_event = True
+            self.t = Thread(None, pyrealtime.ras_init, 'pyrealtime', (self.filter,self.rt_callback,self.rt_term_callback))
             self.t.start()
 
             # If the real-time client thread terminate for whatever reason, start the periodic monitor

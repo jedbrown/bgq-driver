@@ -20,9 +20,11 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+
 #include "ClientImpl.h"
 
 #include "ClientEventListenerImpl.h"
+#include "ClientEventListenerV2Impl.h"
 #include "StartRealtimeMessage.h"
 
 #include "../utility.h"
@@ -46,6 +48,7 @@
 #include <sstream>
 #include <stdexcept>
 
+
 using bgq::utility::Connector;
 
 using std::istream;
@@ -53,10 +56,13 @@ using std::istringstream;
 using std::ostringstream;
 using std::string;
 
+
 namespace bgsched {
 namespace realtime {
 
+
 LOG_DECLARE_FILE( "bgsched" );
+
 
 Client::Impl::Impl( const ClientConfiguration& client_configuration )
     : _config( client_configuration ),
@@ -826,6 +832,66 @@ void Client::Impl::_handleMessage(
                     boost::bind( &ClientEventListener::handleRasRealtimeEvent, _1, boost::ref(info) ),
                     continue_reading
                 );
+
+            return;
+        }
+    }
+
+    {
+        ClientEventListenerV2::IoDrawerStateChangedEventInfo::Pimpl pimpl(
+                boost::dynamic_pointer_cast<const ClientEventListenerV2::IoDrawerStateChangedEventInfo::Impl>( msg_ptr )
+            );
+
+        if ( pimpl ) {
+
+            ClientEventListenerV2::IoDrawerStateChangedEventInfo info( pimpl );
+
+            for ( _Listeners::iterator i(_listener_ps.begin()) ; i != _listener_ps.end() ; ++i ) {
+                ClientEventListener &l(**i);
+
+                ClientEventListenerV2 *l2_p(dynamic_cast<ClientEventListenerV2*>(&l));
+
+                if ( l2_p ) {
+                    l2_p->handleIoDrawerStateChangedEvent( info );
+                } else {
+                    LOG_DEBUG_MSG( "Got IoDrawerStateChangedEvent but listener is version 1, ignoring." );
+                }
+
+                bool l_cont(l.getRealtimeContinue());
+                if ( ! l_cont ) {
+                    *continue_reading = false;
+                }
+            }
+
+            return;
+        }
+    }
+
+    {
+        ClientEventListenerV2::IoNodeStateChangedEventInfo::Pimpl pimpl(
+                boost::dynamic_pointer_cast<const ClientEventListenerV2::IoNodeStateChangedEventInfo::Impl>( msg_ptr )
+            );
+
+        if ( pimpl ) {
+
+            ClientEventListenerV2::IoNodeStateChangedEventInfo info( pimpl );
+
+            for ( _Listeners::iterator i(_listener_ps.begin()) ; i != _listener_ps.end() ; ++i ) {
+                ClientEventListener &l(**i);
+
+                ClientEventListenerV2 *l2_p(dynamic_cast<ClientEventListenerV2*>(&l));
+
+                if ( l2_p ) {
+                    l2_p->handleIoNodeStateChangedEvent( info );
+                } else {
+                    LOG_DEBUG_MSG( "Got IoNodeStateChangedEvent but listener is version 1, ignoring." );
+                }
+
+                bool l_cont(l.getRealtimeContinue());
+                if ( ! l_cont ) {
+                    *continue_reading = false;
+                }
+            }
 
             return;
         }

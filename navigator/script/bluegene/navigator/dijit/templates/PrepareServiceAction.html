@@ -1,81 +1,81 @@
 <div>
 
-<div data-dojo-type="dijit.layout.StackContainer" data-dojo-attach-point="_stackContainer">
-    <div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_typePane">
+<div data-dojo-type="dijit/layout/StackContainer" data-dojo-attach-point="_stackContainer">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_typePane">
         Pick the type of service action:
         <ul>
-            <li><span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectComputeRack">Service a compute rack</span></li>
-            <li><span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectMidplane">Service the service card or any node boards in a midplane</span></li>
-            <li><span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectAllNodeBoards">Service any node boards in a midplane</span></li>
-            <li><span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectNodeBoard">Service a node board</span></li>
-            <li><span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectNodeDca">Service a direct current assembly (DCA) on node board</span></li>
-            <li data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectComputeIoDrawerContainer">
-                <span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectComputeIoDrawer">Service an I/O drawer in a compute rack</span>
+            <li><span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectComputeRack">Service a compute rack</span></li>
+            <li><span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectMidplane">Service the service card or any node boards in a midplane</span></li>
+            <li><span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectAllNodeBoards">Service any node boards in a midplane</span></li>
+            <li><span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectNodeBoard">Service a node board</span></li>
+            <li><span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectNodeDca">Service a direct current assembly (DCA) on node board</span></li>
+            <li data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectComputeIoDrawerContainer">
+                <span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectComputeIoDrawer">Service an I/O drawer in a compute rack</span>
             </li>
-            <li><span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectComputeBpm">Service a bulk power module in a compute rack</span></li>
-            <li><span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectComputeClockCard">Service the clock card in a compute rack</span></li>
-            <li data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectIoRackContainer">
-                <span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectIoRack">Service an I/O rack</span>
+            <li><span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectComputeBpm">Service a bulk power module in a compute rack</span></li>
+            <li><span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectComputeClockCard">Service the clock card in a compute rack</span></li>
+            <li data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectIoRackContainer">
+                <span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectIoRack">Service an I/O rack</span>
             </li>
-            <li data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectIoIoDrawerContainer">
-                <span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectIoIoDrawer">Service an I/O drawer in an I/O rack</span>
+            <li data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectIoIoDrawerContainer">
+                <span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectIoIoDrawer">Service an I/O drawer in an I/O rack</span>
             </li>
-            <li data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectIoBpmContainer">
-                <span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectIoBpm">Service a bulk power module in an I/O rack</span>
+            <li data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectIoBpmContainer">
+                <span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectIoBpm">Service a bulk power module in an I/O rack</span>
             </li>
-            <li data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectIoClockCardContainer">
-                <span data-dojo-type="bluegene.dijit.ActionLink" data-dojo-attach-point="_selectIoClockCard">Service a clock card in an I/O rack</span>
+            <li data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectIoClockCardContainer">
+                <span data-dojo-type="bluegene/dijit/ActionLink" data-dojo-attach-point="_selectIoClockCard">Service a clock card in an I/O rack</span>
             </li>
         </ul>
     </div>
-    <div data-dojo-type="dijit.layout.BorderContainer" data-dojo-props="gutters: false" data-dojo-attach-point="_detailsPane">
-        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'top'">
-            <div data-dojo-type="dijit.form.Form" data-dojo-attach-point="_locationForm">
-                <span data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_promptText">Select the node board to service</span>:
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectMidplaneHideable">
-                    <select name="midplane" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'midplane', maxHeight: -1" data-dojo-attach-point="_midplaneSelect"></select>
+    <div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="gutters: false" data-dojo-attach-point="_detailsPane">
+        <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'top'">
+            <div data-dojo-type="dijit/form/Form" data-dojo-attach-point="_locationForm">
+                <span data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_promptText">Select the node board to service</span>:
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectMidplaneHideable">
+                    <select name="midplane" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'midplane', maxHeight: -1" data-dojo-attach-point="_midplaneSelect"></select>
                 </span>
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectNodeBoardHideable">
-                    - <select name="nodeBoard" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'nodeBoard', maxHeight: -1" data-dojo-attach-point="_nodeBoardSelect"></select>
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectNodeBoardHideable">
+                    - <select name="nodeBoard" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'nodeBoard', maxHeight: -1" data-dojo-attach-point="_nodeBoardSelect"></select>
                 </span>
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectNodeDcaHideable">
-                    - <select name="nodeDca" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'nodeDca', maxHeight: -1" data-dojo-attach-point="_nodeDcaSelect"></select>
-                </span>
-
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectComputeRackHideable">
-                    <select name="computeRack" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'computeRack', maxHeight: -1" data-dojo-attach-point="_computeRackSelect"></select>
-                </span>
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectComputeBpmHideable">
-                    - <select name="computeBulkPowerAssembly" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'computeBulkPowerAssembly', maxHeight: -1" data-dojo-attach-point="_computeBpaSelect"></select>
-                    - <select name="computeBulkPowerModule" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'computeBulkPowerModule', maxHeight: -1" data-dojo-attach-point="_computeBpmSelect"></select>
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectNodeDcaHideable">
+                    - <select name="nodeDca" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'nodeDca', maxHeight: -1" data-dojo-attach-point="_nodeDcaSelect"></select>
                 </span>
 
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectIoRackHideable">
-                    <select name="ioRack" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'ioRack', maxHeight: -1" data-dojo-attach-point="_ioRackSelect"></select>
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectComputeRackHideable">
+                    <select name="computeRack" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'computeRack', maxHeight: -1" data-dojo-attach-point="_computeRackSelect"></select>
+                </span>
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectComputeBpmHideable">
+                    - <select name="computeBulkPowerAssembly" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'computeBulkPowerAssembly', maxHeight: -1" data-dojo-attach-point="_computeBpaSelect"></select>
+                    - <select name="computeBulkPowerModule" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'computeBulkPowerModule', maxHeight: -1" data-dojo-attach-point="_computeBpmSelect"></select>
                 </span>
 
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectIoBpmHideable">
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectIoRackHideable">
+                    <select name="ioRack" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'ioRack', maxHeight: -1" data-dojo-attach-point="_ioRackSelect"></select>
+                </span>
+
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectIoBpmHideable">
                     -B-
-                    <select name="ioBulkPowerModule" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'ioBulkPowerModule', maxHeight: -1" data-dojo-attach-point="_ioBpmSelect"></select>
+                    <select name="ioBulkPowerModule" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'ioBulkPowerModule', maxHeight: -1" data-dojo-attach-point="_ioBpmSelect"></select>
                 </span>
 
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectComputeIoDrawerRackHideable">
-                    <select name="computeIoDrawerRack" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'computeIoDrawerRack', maxHeight: -1" data-dojo-attach-point="_computeIoDrawerRackSelect"></select>
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectComputeIoDrawerRackHideable">
+                    <select name="computeIoDrawerRack" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'computeIoDrawerRack', maxHeight: -1" data-dojo-attach-point="_computeIoDrawerRackSelect"></select>
                 </span>
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_ioIoDrawerRackHideable">
-                    <select name="ioIoDrawerRack" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'ioIoDrawerRack', maxHeight: -1" data-dojo-attach-point="_ioIoDrawerRackSelect"></select>
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_ioIoDrawerRackHideable">
+                    <select name="ioIoDrawerRack" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'ioIoDrawerRack', maxHeight: -1" data-dojo-attach-point="_ioIoDrawerRackSelect"></select>
                 </span>
 
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_selectIoDrawerHideable">
-                    - <select name="ioDrawer" data-dojo-type="dijit.form.Select" data-dojo-props="name: 'ioDrawer', maxHeight: -1" data-dojo-attach-point="_ioDrawerSelect"></select>
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_selectIoDrawerHideable">
+                    - <select name="ioDrawer" data-dojo-type="dijit/form/Select" data-dojo-props="name: 'ioDrawer', maxHeight: -1" data-dojo-attach-point="_ioDrawerSelect"></select>
                 </span>
             </div>
             <div>
                 The following table lists any jobs that will be affected (forcibly ended) by this service action.
             </div>
         </div>
-        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'center'">
-            <table style="height: 100%;" data-dojo-type="dojox.grid.EnhancedGrid"
+        <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'center'">
+            <table style="height: 100%;" data-dojo-type="dojox/grid/EnhancedGrid"
                     data-dojo-props="selectable: true, selectionMode: 'single', style: 'height: 100%;', rowsPerPage: 50, noDataMessage: '&lt;span class=\'dojoxGridNoData\'&gt;No jobs are affected by the service action.&lt;/span&gt;'"
                     data-dojo-attach-point="_jobsGrid">
                 <thead><tr>
@@ -90,18 +90,18 @@
                 </tr></thead>
             </table>
         </div>
-        <div data-dojo-type="dijit.layout.ContentPane" data-dojo-props="region: 'bottom'">
+        <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'bottom'">
             <div>
-                <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_backButton">Back</button>
-                <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_submitButton">Start Prepare for Service</button>
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_startingHideable">
+                <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_backButton">Back</button>
+                <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_submitButton">Start Prepare for Service</button>
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_startingHideable">
                     Starting service action...
                 </span>
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_startedHideable">
-                    Started service action, the new ID is <span data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_startedIdText"></span>.
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_startedHideable">
+                    Started service action, the new ID is <span data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_startedIdText"></span>.
                 </span>
-                <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_failedHideable">
-                    Failed to start service action, the error is '<span data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_failedText">N/A</span>'.
+                <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_failedHideable">
+                    Failed to start service action, the error is '<span data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_failedText">N/A</span>'.
                 </span>
             </div>
         </div>

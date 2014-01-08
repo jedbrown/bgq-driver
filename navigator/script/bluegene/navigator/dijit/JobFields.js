@@ -25,19 +25,21 @@
 define(
 [
     "./AbstractTemplatedContainer",
+    "../format",
+    "dojo/number",
     "dojo/_base/declare",
     "dojo/text!./templates/JobFields.html",
     "module",
 
     // Used in template.
-    "../format",
     "../../dijit/Hideable",
     "../../dijit/OutputText",
-    "dojo/number",
     "dijit/layout/ContentPane"
 ],
 function(
         l_AbstractTemplatedContainer,
+        ll_format,
+        d_number,
         d_declare,
         template,
         module
@@ -58,7 +60,6 @@ var _setOptional = function( o, fieldname, output_dij, hideable_dij )
 
 
 var b_navigator_dijit_JobFields = d_declare(
-        "bluegene.navigator.dijit.JobFields",
         [ l_AbstractTemplatedContainer ],
 
 {
@@ -91,7 +92,11 @@ var b_navigator_dijit_JobFields = d_declare(
         this._client.set( "value", o.client );
         _setOptional( o, "exitStatus", this._exitStatus, this._exitStatusItem );
         _setOptional( o, "errorText", this._errText, this._errTextItem );
-    }
+    },
+    
+    
+    _d_number : d_number,
+    _ll_format : ll_format
 
 } );
 

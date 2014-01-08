@@ -23,8 +23,6 @@
 
 #include "ResponderStreambuf.hpp"
 
-#include "Connection.hpp"
-
 #include <string>
 
 
@@ -36,10 +34,10 @@ namespace server {
 
 
 ResponderStreambuf::ResponderStreambuf(
-        ConnectionPtr connection_ptr
+        NotifyDataFn notify_data_fn
     ) :
         _buffer(BUFFER_SIZE),
-        _connection_ptr(connection_ptr)
+        _notify_data_fn(notify_data_fn)
 {
     setp( _buffer.data(), _buffer.data() + (BUFFER_SIZE - 1) );
 }
@@ -52,7 +50,7 @@ int ResponderStreambuf::_flushBuffer()
     if ( num > 0 ) {
         string output_str( _buffer.begin(), _buffer.begin() + num );
 
-        _connection_ptr->postResponseBodyData(
+        _notify_data_fn(
                 output_str,
                 DataContinuesIndicator::EXPECT_MORE_DATA
             );

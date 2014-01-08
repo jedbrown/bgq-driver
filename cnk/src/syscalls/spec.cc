@@ -293,6 +293,13 @@ uint64_t sc_ENABLEFASTSPECULATIONPATHS(SYSCALL_FCN_ARGS)
 	// call is not allowed for sub-node jobs.
 	return CNK_RC_SPI(ENOSYS);
     }
+    AppProcess_t *proc = GetMyProcess();
+    if (proc->ThreadModel == CONFIG_THREAD_MODEL_ETA)
+    {
+        // The fast path depends on cached data in the hardware thread state object that may not
+        // be valid on a thread running on a hardware thread that belongs to a different process.
+        return CNK_RC_SPI(ENOSYS);
+    }
     Speculation_EnableFastSpeculationPaths();
     return CNK_RC_SPI(0);
 }

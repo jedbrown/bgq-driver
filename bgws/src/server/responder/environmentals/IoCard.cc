@@ -124,7 +124,6 @@ HTTP status: 403 Forbidden
 
 #include "IoCard.hpp"
 
-#include "../../dbConnectionPool.hpp"
 #include "../../Error.hpp"
 #include "../../RequestRange.hpp"
 
@@ -178,59 +177,92 @@ void IoCard::_doGet()
     static const unsigned DefaultRangeSize(50), MaxRangeSize(100);
     RequestRange req_range( request, DefaultRangeSize, MaxRangeSize );
 
-    auto conn_ptr(dbConnectionPool::getConnection());
-    uint64_t all_count(0);
-    cxxdb::ResultSetPtr rs_ptr;
-
     boost::shared_ptr<query::env::IoCardOptions> options_ptr( new query::env::IoCardOptions() );
 
     options_ptr->setArgs( request.getUrl().getQuery().calcArguments(), req_range );
 
-    query::env::Query query( options_ptr );
+    _query_ptr.reset( new query::env::Query( options_ptr ) );
 
-    query.execute(
-            conn_ptr,
-            &all_count,
-            &rs_ptr
+    _query_ptr->executeAsync(
+            _blocking_operations_thread_pool,
+            _getStrand().wrap( boost::bind( &IoCard::_queryComplete, this,
+                    capena::server::AbstractResponder::shared_from_this(),
+                    req_range,
+                    _1
+                ) )
         );
+}
 
-    json::ArrayValue arr_val;
-    json::Array &arr(arr_val.get());
 
-    if ( all_count != 0 ) {
-        while ( rs_ptr->fetch() ) {
-            json::Object &obj(arr.addObject());
-            obj.set( "location", rs_ptr->columns()[BGQDB::DBTIocardenvironment::LOCATION_COL].getString() );
-            obj.set( "time", rs_ptr->columns()[BGQDB::DBTIocardenvironment::TIME_COL].getTimestamp() );
-            obj.set( "v08", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV08_COL].as<double>() );
-            obj.set( "v14", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV14_COL].as<double>() );
-            obj.set( "v25", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV25_COL].as<double>() );
-            obj.set( "v33", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV33_COL].as<double>() );
-            obj.set( "v120", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV120_COL].as<double>() );
-            obj.set( "v15", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV15_COL].as<double>() );
-            obj.set( "v09", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV09_COL].as<double>() );
-            obj.set( "v10", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV10_COL].as<double>() );
-            obj.set( "v120p", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV120P_COL].as<double>() );
-            obj.set( "v33p", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV33P_COL].as<double>() );
-            obj.set( "v12", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV12_COL].as<double>() );
-            obj.set( "v18", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV18_COL].as<double>() );
-            obj.set( "v12p", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV12P_COL].as<double>() );
-            obj.set( "v15p", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV15P_COL].as<double>() );
-            obj.set( "v18p", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV18P_COL].as<double>() );
-            obj.set( "v25p", rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV25P_COL].as<double>() );
-            obj.set( "temp", rs_ptr->columns()[BGQDB::DBTIocardenvironment::TEMPMONITOR_COL].as<int32_t>() );
+void IoCard::notifyDisconnect()
+{
+    LOG_DEBUG_MSG( "Notified client disconnected" );
+
+    query::env::Query::Ptr query_ptr(_query_ptr);
+
+    if ( ! _query_ptr )  return;
+
+    _query_ptr->cancel();
+}
+
+
+void IoCard::_queryComplete(
+        capena::server::ResponderPtr,
+        RequestRange req_range,
+        query::env::Query::Result res
+    )
+{
+    try {
+
+        if ( res.exc_ptr != 0 ) {
+            std::rethrow_exception( res.exc_ptr );
         }
+
+
+        json::ArrayValue arr_val;
+        json::Array &arr(arr_val.get());
+
+        if ( res.all_count != 0 ) {
+            while ( res.rs_ptr->fetch() ) {
+                json::Object &obj(arr.addObject());
+                obj.set( "location", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::LOCATION_COL].getString() );
+                obj.set( "time", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::TIME_COL].getTimestamp() );
+                obj.set( "v08", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV08_COL].as<double>() );
+                obj.set( "v14", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV14_COL].as<double>() );
+                obj.set( "v25", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV25_COL].as<double>() );
+                obj.set( "v33", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV33_COL].as<double>() );
+                obj.set( "v120", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV120_COL].as<double>() );
+                obj.set( "v15", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV15_COL].as<double>() );
+                obj.set( "v09", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV09_COL].as<double>() );
+                obj.set( "v10", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV10_COL].as<double>() );
+                obj.set( "v120p", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV120P_COL].as<double>() );
+                obj.set( "v33p", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV33P_COL].as<double>() );
+                obj.set( "v12", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV12_COL].as<double>() );
+                obj.set( "v18", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV18_COL].as<double>() );
+                obj.set( "v12p", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV12P_COL].as<double>() );
+                obj.set( "v15p", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV15P_COL].as<double>() );
+                obj.set( "v18p", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV18P_COL].as<double>() );
+                obj.set( "v25p", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::VOLTAGEV25P_COL].as<double>() );
+                obj.set( "temp", res.rs_ptr->columns()[BGQDB::DBTIocardenvironment::TEMPMONITOR_COL].as<int32_t>() );
+            }
+        }
+
+
+        capena::server::Response &response(_getResponse());
+
+        req_range.updateResponse( response, arr.size(), res.all_count );
+
+        response.setContentTypeJson();
+        response.headersComplete();
+
+        json::Formatter()( arr_val, response.out() );
+
+    } catch ( std::exception& e ) {
+
+        _handleError( e );
+
     }
 
-
-    capena::server::Response &response(_getResponse());
-
-    req_range.updateResponse( response, arr.size(), all_count );
-
-    response.setContentTypeJson();
-    response.headersComplete();
-
-    json::Formatter()( arr_val, response.out() );
 }
 
 

@@ -25,18 +25,19 @@
 define(
 [
     "./AbstractTemplatedContainer",
+    "../format",
     "dojo/_base/declare",
     "dojo/text!./templates/RasFields.html",
     "module",
 
     // Used in template.
-    "../format",
     "../../dijit/Hideable",
     "../../dijit/OutputText",
     "dijit/layout/ContentPane"
 ],
 function(
         l_AbstractTemplatedContainer,
+        ll_format,
         d_declare,
         template,
         module
@@ -57,7 +58,6 @@ var _setOptional = function( o, fieldname, output_dij, hideable_dij )
 
 
 var b_navigator_dijit_RasFields = d_declare(
-        "bluegene.navigator.dijit.RasFields",
         [ l_AbstractTemplatedContainer ],
 
 {
@@ -90,7 +90,10 @@ var b_navigator_dijit_RasFields = d_declare(
         _setOptional( o, "svcAction", this._svcAction, this._svcActionItem );
         _setOptional( o, "thresholdCount", this._thresholdCount, this._thresholdCountItem );
         _setOptional( o, "thresholdPeriod", this._thresholdPeriod, this._thresholdPeriodItem );
-    }
+    },
+
+
+    _ll_format : ll_format
 
 } );
 

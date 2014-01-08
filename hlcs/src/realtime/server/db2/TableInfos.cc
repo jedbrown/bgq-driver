@@ -24,6 +24,17 @@
 
 #include "TableInfos.h"
 
+#include "table/Block.h"
+#include "table/Cable.h"
+#include "table/EventLog.h"
+#include "table/IoDrawer.h"
+#include "table/IoNode.h"
+#include "table/Job.h"
+#include "table/Midplane.h"
+#include "table/Node.h"
+#include "table/NodeCard.h"
+#include "table/Switch.h"
+
 #include "../Configuration.h"
 #include "../log_util.h"
 
@@ -229,59 +240,29 @@ TableInfos::TableInfos( const Configuration& configuration )
 
     LOG_INFO_MSG( "Connected to database" << (db_user_p ? string() + " as '" + *db_user_p + "'" : "" ) );
 
-    static const string BLOCK_TABLE_NAME_UC( "TBGQBLOCK" );
-    block_table_info = _s_getTableInfo( hdbc, BLOCK_TABLE_NAME_UC, db_schema_uc );
-
-    static const string JOB_TABLE_NAME_UC( "TBGQJOB" );
-    job_table_info = _s_getTableInfo( hdbc, JOB_TABLE_NAME_UC, db_schema_uc );
-
-    static const string MIDPLANE_TABLE_NAME_UC( "TBGQMIDPLANE" );
-    midplane_table_info = _s_getTableInfo( hdbc, MIDPLANE_TABLE_NAME_UC, db_schema_uc );
-
-    static const string NODE_CARD_TABLE_NAME_UC( "TBGQNODECARD" );
-    node_card_table_info = _s_getTableInfo( hdbc, NODE_CARD_TABLE_NAME_UC, db_schema_uc );
-
-    static const string SWITCH_TABLE_NAME_UC( "TBGQSWITCH" );
-    switch_table_info = _s_getTableInfo( hdbc, SWITCH_TABLE_NAME_UC, db_schema_uc );
-
-    static const string CABLE_TABLE_NAME_UC( "TBGQCABLE" );
-    cable_table_info = _s_getTableInfo( hdbc, CABLE_TABLE_NAME_UC, db_schema_uc );
-
-    static const string EVENT_LOG_TABLE_NAME_UC( "TBGQEVENTLOG" );
-    event_log_table_info = _s_getTableInfo( hdbc, EVENT_LOG_TABLE_NAME_UC, db_schema_uc );
-
-    static const string NODE_TABLE_NAME_UC( "TBGQNODE" );
-    node_table_info = _s_getTableInfo( hdbc, NODE_TABLE_NAME_UC, db_schema_uc );
+    _table_map[_s_getTableInfo( hdbc, table::Block::getTableNameUc(), db_schema_uc )] = table::Block::create();
+    _table_map[_s_getTableInfo( hdbc, table::Job::getTableNameUc(), db_schema_uc )] = table::Job::create();
+    _table_map[_s_getTableInfo( hdbc, table::Midplane::getTableNameUc(), db_schema_uc )] = table::Midplane::create();
+    _table_map[_s_getTableInfo( hdbc, table::NodeCard::getTableNameUc(), db_schema_uc )] = table::NodeCard::create();
+    _table_map[_s_getTableInfo( hdbc, table::Switch::getTableNameUc(), db_schema_uc )] = table::Switch::create();
+    _table_map[_s_getTableInfo( hdbc, table::Cable::getTableNameUc(), db_schema_uc )] = table::Cable::create();
+    _table_map[_s_getTableInfo( hdbc, table::EventLog::getTableNameUc(), db_schema_uc )] = table::EventLog::create();
+    _table_map[_s_getTableInfo( hdbc, table::Node::getTableNameUc(), db_schema_uc )] = table::Node::create();
+    _table_map[_s_getTableInfo( hdbc, table::IoDrawer::getTableNameUc(), db_schema_uc )] = table::IoDrawer::create();
+    _table_map[_s_getTableInfo( hdbc, table::IoNode::getTableNameUc(), db_schema_uc )] = table::IoNode::create();
 }
 
 
-TableInfos::table::Value TableInfos::calcTable( const TableInfo& table_info ) const
+AbstractTable::Ptr TableInfos::calcTable( const TableInfo& table_info ) const
 {
-    if ( block_table_info == table_info ) {
-        return table::BLOCK;
+    static const AbstractTable::Ptr NO_TABLE = AbstractTable::Ptr();
+
+    _TableMap::const_iterator i(_table_map.find( table_info ));
+    if ( i == _table_map.end() ) {
+        return NO_TABLE;
     }
-    if ( job_table_info == table_info ) {
-        return table::JOB;
-    }
-    if ( midplane_table_info == table_info ) {
-        return table::MIDPLANE;
-    }
-    if ( node_card_table_info == table_info ) {
-        return table::NODE_CARD;
-    }
-    if ( switch_table_info == table_info ) {
-        return table::SWITCH;
-    }
-    if ( cable_table_info == table_info ) {
-        return table::CABLE;
-    }
-    if ( event_log_table_info == table_info ) {
-        return table::EVENT_LOG;
-    }
-    if ( node_table_info == table_info ) {
-        return table::NODE;
-    }
-    return table::UNKNOWN;
+
+    return i->second;
 }
 
 

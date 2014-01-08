@@ -27,10 +27,12 @@ define(
     "./AbstractTemplatedContainer",
     "./MonitorActiveMixin",
     "../FilterOptions",
+    "../xlate",
     "../../Bgws",
     "../../BlueGene",
+    "dojo/number",
+    "dojo/when",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dojo/text!./templates/Blocks.html",
     "module",
@@ -39,9 +41,7 @@ define(
     "./ComputeBlockDetails",
     "./MultiSelectCodes",
     "../format",
-    "../xlate",
     "../../dijit/Hideable",
-    "dojo/number",
     "dijit/TooltipDialog",
     "dijit/form/Button",
     "dijit/form/DropDownButton",
@@ -54,10 +54,12 @@ function(
         l_AbstractTemplatedContainer,
         l_MonitorActiveMixin,
         ll_FilterOptions,
+        ll_xlate,
         b_Bgws,
         b_BlueGene,
+        d_number,
+        d_when,
         d_declare,
-        d_Deferred,
         d_lang,
         template,
         module
@@ -76,7 +78,6 @@ var _formToQuery = function( form_obj )
 
 
 var b_navigator_dijit_Blocks = d_declare(
-        "bluegene.navigator.dijit.Blocks",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -305,7 +306,7 @@ var b_navigator_dijit_Blocks = d_declare(
 
         this._checkUpdateDeleteButtonState();
 
-        d_Deferred.when(
+        d_when(
                 this._delete_deferred,
                 d_lang.hitch( this, this._blockDeleted ),
                 d_lang.hitch( this, this._deleteFailed )
@@ -333,15 +334,17 @@ var b_navigator_dijit_Blocks = d_declare(
         this._delete_block_id = null;
 
 
-        var err_text = b_Bgws.calculateErrorMessage( err, io_args );
+        var err_text = b_Bgws.calculateErrorMessage( err.response, io_args );
 
         console.log( module.id + ": failed to delete " + block_id + ", " + err_text );
 
         this._checkUpdateDeleteButtonState();
 
         alert( "Failed to delete " + block_id + ", error is '" + err_text + "'" );
-    }
+    },
 
+    _d_number : d_number,
+    _ll_xlate : ll_xlate
 
 } );
 

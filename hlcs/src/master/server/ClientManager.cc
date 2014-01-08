@@ -76,7 +76,7 @@ ClientManager::addClient(
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
-    if (_ending == true)
+    if (_ending)
         return;  // Don't accept anybody new if we're going away.
     boost::mutex::scoped_lock lock( _clientMutex );
     _clients.push_back(c);

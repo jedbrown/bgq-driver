@@ -52,7 +52,6 @@ function(
 
 
 var b_navigator_dijit_IoBlocks = d_declare(
-        "bluegene.navigator.dijit.IoBlocks",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {

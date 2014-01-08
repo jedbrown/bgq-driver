@@ -28,9 +28,12 @@
 #include "cxxdb/ResultSet.h"
 #include "cxxdb/StatementHandle.h"
 
-#define CHECK_VALID { if ( ! isValid() ) { CXXDB_THROW_EXCEPTION( cxxdb::InvalidObjectException( "Statement", __FUNCTION__ ) ); } }
+
+#define CHECK_VALID { if ( ! isValid() ) { CXXDB_THROW_EXCEPTION( cxxdb::InvalidObjectException( "QueryStatement", __FUNCTION__ ) ); } }
+
 
 namespace cxxdb {
+
 
 QueryStatement::QueryStatement(
         BasicConnectionPtr connection_ptr,
@@ -45,6 +48,29 @@ QueryStatement::QueryStatement(
                 parameter_names
             )
 {
+    _columns_ptr.reset( new Columns( *_handle_ptr ) );
+}
+
+
+QueryStatement::QueryStatement(
+        BasicConnectionPtr connection_ptr,
+        ConnectionHandle& connection_handle
+    ) :
+        AbstractStatement(
+                connection_ptr,
+                connection_handle
+            )
+{
+    // Nothing to do.
+}
+
+
+void QueryStatement::prepare(
+        const std::string& sql,
+        const ParameterNames& parameter_names
+    )
+{
+    AbstractStatement::prepare( sql, parameter_names );
     _columns_ptr.reset( new Columns( *_handle_ptr ) );
 }
 

@@ -184,7 +184,7 @@ enum { RAS_CNKRASID = 0x00010000,
          component="CNK"
          severity="FATAL"
          control_action="SOFTWARE_IN_ERROR,END_JOB,FREE_COMPUTE_BLOCK"
-         message="CNK:  Unable to connect CNV to address %lx %ld with return code %ld"
+         message="CNK:  Unable to connect CNV to address $(%lx,ADDR) with return code $(%ld,RETCODE)"
          description="The compute node verbs (CNV) was unable to establish a connection with another service.  This could indicate a software level mismatch, bad address/port, or a service that isn't running."
          service_action="$(CheckLevels)"
          />
@@ -246,6 +246,21 @@ enum { RAS_CNKRASID = 0x00010000,
    description="An IPI interrupt was delivered to a processor but no function pointer existed in the corresponding message data. This class of interrupt could be bad hardware."
    service_action="Please report these errors to IBM.  Logs, timestamps, and any other recreation material will be helpful."
    relevant_diags="checkup"
+/>
+*/
+
+    RAS_UPCCPARITY,
+/*
+   <rasevent
+  id="00010011"
+  category="UPC"
+  component="CNK"
+  severity="WARN"
+  message="UPC Hardware error detected. $(UPC_C_INT_STATE), $(INTERNAL_ERROR_STATE), $(UPC_C_INT_FIRST), $(INTERNAL_ERROR_FIRST), $(INTERNAL_SW_INFO), $(INTERNAL_HW_INFO), $(SRAM_PARITY_INFO), $(IOSRAM_PARITY_INFO) "
+  description="An unexpected UPC interrupt condition occurred, most likely a temporary condition, but may effect the reliability of hardware performance counter results. On rare occasions, this interrupt could be bad hardware, but is likely to be a single temporary condition."
+  control_action=""
+  service_action="$(Diagnostics)"
+  relevant_diags="processor"
 />
 */
 

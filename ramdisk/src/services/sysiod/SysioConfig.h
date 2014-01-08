@@ -75,6 +75,19 @@ public:
 
    bool getLogFunctionShipErrors(void) const;
 
+   const std::string getDynamicLoadLibrary(void) const;
+   int getFlags() const;
+
+   //! \brief Get the value of the slow system call timeout.
+   //! \return Number of seconds for a syscall to be deemed slow.
+   uint64_t getSlowSyscallTimeout(void) const;
+
+   //! \brief Get the value of the hung system call timeout.
+   //! \return Number of seconds for a syscall to be deemed hung.
+   uint64_t getHungSyscallTimeout(void) const;
+
+
+
 };
 
 //! Smart pointer for SysioConfig object.

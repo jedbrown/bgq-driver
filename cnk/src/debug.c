@@ -36,7 +36,15 @@ __C_LINKAGE void IntHandler_Debug(Regs_t *context, int code)
     context->esr = mfspr(SPRN_ESR);
     context->dear = mfspr(SPRN_DEAR);
     context->dbsr = mfspr(SPRN_DBSR);
-  
+
+#if 0
+    printf("DEBUG INTERRUPT ip:%016lx esr:%016lx dear:%016lx intcode:%d hwpid:%ld cur tid:%d\n", context->ip, context->esr, context->dear, code, mfspr(SPRN_PID), GetTID(GetMyKThread()));
+    int i;
+    for (i=0; i<8; i++)
+    {
+        printf("GPR %02d:%016lx  %02d:%016lx  %02d:%016lx  %02d:%016lx\n", i*4, context->gpr[0+i*4], 1+i*4, context->gpr[1+i*4], 2+i*4, context->gpr[2+i*4], 3+i*4, context->gpr[3+i*4]);
+    }
+#endif  
     Kernel_WriteFlightLog(FLIGHTLOG_high, FL_DEBUGEXCP, context->ip, (((uint64_t)context->dbsr)<<32)|context->esr, code, context->dear);
     
     if (context->msr & MSR_PR)
@@ -127,10 +135,9 @@ __C_LINKAGE void IntHandler_Debug(Regs_t *context, int code)
 	int numStackFrames = 0; // initialize to zero    
 	while (stkptr &&   // stack pointer is not NULL
 	       (numStackFrames < 8) &&  // did not yet store the max number of frames
-	       (VMM_IsAppAddress(stkptr, sizeof(uint64_t[3])) || // Stack pointer is a valid Application address or
-	       ((stkptr > kernel_stack_start) && (stkptr < kernel_stack_end)))) // stack pointer is a kernel stack address
+	       ( ((stkptr > kernel_stack_start) && (stkptr < kernel_stack_end))  || // stack pointer is a kernel stack address
+                (GetMyProcess() && VMM_IsAppAddress(stkptr, sizeof(uint64_t[3]))))) // process exists andstack pointer is an app address
 	{
-
 	    printf("%016lx   %016lx\n", (uint64_t)stkptr, *(stkptr+2));  // current stack frame pointer and value of the saved link register
 	    stkptr = (uint64_t*)(*stkptr);
 	    numStackFrames++;

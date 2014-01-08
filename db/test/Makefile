@@ -52,6 +52,8 @@ LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/bgq_util/lib -lbgq_util
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/bgq_util/lib
 LDFLAGS += -Wl,-rpath,$(libbgqdb_dir)
+LDFLAGS += -L $(BGQ_INSTALL_DIR)/ras/lib -lras
+LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/ras/lib
 
 UNIT_TEST_LDFLAGS = $(LDFLAGS) -lboost_unit_test_framework-mt
 
@@ -75,6 +77,7 @@ REGRESSION_TESTS += test_genblock
 REGRESSION_TESTS += test_performance_counters
 REGRESSION_TESTS += test_pool_connections
 REGRESSION_TESTS += test_job
+REGRESSION_TESTS += test_putras
 REGRESSION_TESTS_RUN = $(addsuffix .run,$(REGRESSION_TESTS))
 
 
@@ -105,6 +108,13 @@ insert_colons: insert_colons.o $(libbgqdb_so)
 
 test_genblock: test_genblock.o $(libbgqdb_so)
 	$(CXX) -o $@ $(UNIT_TEST_LDFLAGS) $^
+
+test_putras: test_putras.o $(libbgqdb_so)
+	$(CXX) -o $@ $(UNIT_TEST_LDFLAGS) $^
+
+test_putras.run: test_putras
+	./$<
+	@touch $@
 
 test_genblock.run: test_genblock
 	./$<

@@ -21,6 +21,7 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
+
 #include "cxxdb/StatementHandle.h"
 
 #include "cxxdb/ConnectionHandle.h"
@@ -32,11 +33,15 @@
 
 #include <string>
 
+
 using std::string;
+
 
 LOG_DECLARE_FILE( "database" );
 
+
 namespace cxxdb {
+
 
 StatementHandle::StatementHandle(
         ConnectionHandle& conn_handle
@@ -364,6 +369,16 @@ void StatementHandle::closeCursor()
     SQLRETURN rc = SQLFreeStmt( _hstmt, SQL_CLOSE );
 
     checkResult( "SQLFreeStmt", rc, SQL_HANDLE_STMT, _hstmt );
+}
+
+
+void StatementHandle::cancel()
+{
+    LOG_DEBUG_MSG( "canceling " << _hstmt );
+
+    SQLRETURN rc = SQLCancel( _hstmt );
+
+    checkResult( "SQLCancel", rc, SQL_HANDLE_STMT, _hstmt );
 }
 
 

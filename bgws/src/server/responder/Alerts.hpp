@@ -27,6 +27,12 @@
 
 #include "../AbstractResponder.hpp"
 
+#include "../query/Alerts.hpp"
+
+#include <boost/shared_ptr.hpp>
+
+#include <stdint.h>
+
 
 namespace bgws {
 namespace responder {
@@ -52,7 +58,8 @@ public:
     Alerts(
             CtorArgs& args
         ) :
-            AbstractResponder( args )
+            AbstractResponder( args ),
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool)
     { /* Nothing to do */ }
 
 
@@ -68,8 +75,20 @@ public:
 
 private:
 
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
+
+
     void _checkAuthority();
 
+
+    void _queryComplete(
+            std::exception_ptr exc_ptr,
+            json::ArrayValuePtr arr_val_ptr,
+            uint64_t total_count,
+            RequestRange req_range,
+            capena::server::ResponderPtr,
+            boost::shared_ptr<query::Alerts>
+        );
 };
 
 

@@ -21,17 +21,19 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#include "lite/MMCSCommand_runjob.h"
+#include "MMCSCommand_runjob.h"
 
-#include "lite/Database.h"
-#include "lite/JobInfo.h"
-#include "lite/Job.h"
-
-#include "CNBlockController.h"
 #include "ConsoleController.h"
-#include "IOBlockController.h"
+#include "Database.h"
+#include "JobInfo.h"
+#include "Job.h"
 #include "MMCSCommand_lite.h"
-#include "MMCSProperties.h"
+
+#include "server/BCNodeInfo.h"
+#include "server/CNBlockController.h"
+#include "server/IOBlockController.h"
+
+#include "common/ConsoleController.h"
 
 #include <control/include/bgqconfig/BGQBlockNodeConfig.h>
 
@@ -45,7 +47,18 @@
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 
-LOG_DECLARE_FILE( "mmcs" );
+
+using namespace mmcs::server;
+
+using namespace std;
+
+
+LOG_DECLARE_FILE( "mmcs.lite" );
+
+
+namespace mmcs {
+namespace lite {
+
 
 extern "C" int
 selectJobCallback(
@@ -74,10 +87,10 @@ selectJobCallback(
 void
 MMCSCommand_runjob::help(
         deque<string> args,
-        MMCSCommandReply& reply
+        mmcs_client::CommandReply& reply
         )
 {
-    reply << OK << description();
+    reply << mmcs_client::OK << description();
     reply << ";";
     reply << ";Runs a job on a block generated with gen_io_block or gen_block, the block must be booted";
     reply << ";with boot_block prior to invoking runjob, only a single job can be run on a block.  For";
@@ -104,14 +117,14 @@ MMCSCommand_runjob::help(
         << ";    --label                    prefix output with stdout/stderr and rank"
         << ";    --inline                   display stdout/stderr inline instead of to a file"
         << ";    --ip <address>             use this IP address rather than the connected I/O node."
-        << DONE;
+        << mmcs_client::DONE;
 }
 MMCSCommand_runjob::MMCSCommand_runjob(
         const char* name,
         const char* description,
-        const MMCSCommandAttributes& attributes
+        const Attributes& attributes
         ) :
-    MMCSCommand(name, description, attributes)
+    AbstractCommand(name, description, attributes)
 {
     // nothing to do
 }
@@ -119,7 +132,7 @@ MMCSCommand_runjob::MMCSCommand_runjob(
 MMCSCommand_runjob*
 MMCSCommand_runjob::build()
 {
-    MMCSCommandAttributes commandAttributes;
+    Attributes commandAttributes;
     commandAttributes.requiresBlock( true );
     commandAttributes.requiresConnection( true );
     commandAttributes.requiresTarget( false );
@@ -130,27 +143,27 @@ MMCSCommand_runjob::build()
 void
 MMCSCommand_runjob::execute(
         deque<string> args,
-        MMCSCommandReply& reply,
-        ConsoleController* pController,
-        BlockControllerTarget* pTarget
+        mmcs_client::CommandReply& reply,
+        common::ConsoleController* pController,
+        server::BlockControllerTarget* pTarget
         )
 {
     // cast console controller to LiteConsoleController
-    LiteConsoleController* console = dynamic_cast<LiteConsoleController*>( pController );
+    lite::ConsoleController* console = dynamic_cast<lite::ConsoleController*>( pController );
     BOOST_ASSERT( console );
 
     // get block controller
-    BlockPtr block = console->getBlockBaseController();
+    server::BlockPtr block = console->getBlockHelper()->getBase();
 
     // ensure block is booted
     if ( !block->isStarted() ) {
-        reply << FAIL << "block is not booted;" << this->description() << DONE;
+        reply << mmcs_client::FAIL << "block is not booted;" << this->description() << mmcs_client::DONE;
         return;
     }
 
     // ensure a previous job is not still running
     if ( !console->getJob().expired() ) {
-        reply << FAIL << "Job already running;" << this->description() << DONE;
+        reply << mmcs_client::FAIL << "Job already running;" << this->description() << mmcs_client::DONE;
         return;
     }
 
@@ -168,7 +181,7 @@ MMCSCommand_runjob::execute(
             try {
                 jinfo.setRanksPerNode( boost::lexical_cast<uint32_t>(*i) );
             } catch ( const boost::bad_lexical_cast& e ) {
-                reply << FAIL << "bad --ranks-per-node value: " << e.what() << DONE;
+                reply << mmcs_client::FAIL << "bad --ranks-per-node value: " << e.what() << mmcs_client::DONE;
                 return;
             }
 
@@ -184,9 +197,9 @@ MMCSCommand_runjob::execute(
                     // these are all valid
                     break;
                 default:
-                    reply << FAIL;
+                    reply << mmcs_client::FAIL;
                     reply << "invalid --ranks-per-node value: " << jinfo.getRanksPerNode() << ". ";
-                    reply << "Please use 1, 2, 4, 8, 16, 32, or 64" << DONE;
+                    reply << "Please use 1, 2, 4, 8, 16, 32, or 64" << mmcs_client::DONE;
                     return;
             }
         } else if ( !arg.compare("--np") && ++i != args.end() ) {
@@ -195,25 +208,25 @@ MMCSCommand_runjob::execute(
             try {
                 jinfo.setTimeout( boost::lexical_cast<unsigned>( *i ) );
             } catch ( const boost::bad_lexical_cast& e ) {
-                reply << FAIL << "bad --timeout value: " << e.what() << DONE;
+                reply << mmcs_client::FAIL << "bad --timeout value: " << e.what() << mmcs_client::DONE;
                 return;
             }
 
             // validate timeout
             if ( jinfo.getTimeout() == 0 ) {
-                reply << FAIL << "--timeout values must be > 0" << DONE;
+                reply << mmcs_client::FAIL << "--timeout values must be > 0" << mmcs_client::DONE;
                 return;
             }
         } else if ( !arg.compare("--transition") && ++i != args.end() ) {
             try {
                 jinfo.setTransitionTimeout( boost::lexical_cast<unsigned>(*i) );
             } catch ( const boost::bad_lexical_cast& e ) {
-                reply << FAIL << "bad --transition value: " << e.what() << DONE;
+                reply << mmcs_client::FAIL << "bad --transition value: " << e.what() << mmcs_client::DONE;
                 return;
             }
 
             if ( jinfo.getTransitionTimeout() == 0 ) {
-                reply << FAIL << "--transition values must be > 0" << DONE;
+                reply << mmcs_client::FAIL << "--transition values must be > 0" << mmcs_client::DONE;
                 return;
             }
         } else if ( !arg.compare("--label") ) {
@@ -233,7 +246,7 @@ MMCSCommand_runjob::execute(
 
     // ensure we have an executable to run
     if ( jinfo.getExe().empty() ) {
-        reply << FAIL << "executable missing;" << this->description() << DONE;
+        reply << mmcs_client::FAIL << "executable missing;" << this->description() << mmcs_client::DONE;
         return;
     }
 
@@ -244,9 +257,9 @@ MMCSCommand_runjob::execute(
         arg_size += 1; // null terminator
     }
     if ( static_cast<int32_t>(arg_size) > bgcios::jobctl::MaxArgumentSize ) {
-        reply << FAIL << "argument size of " << arg_size << " bytes is larger than ";
+        reply << mmcs_client::FAIL << "argument size of " << arg_size << " bytes is larger than ";
         reply << "maximum size (" << bgcios::jobctl::MaxArgumentSize << ");";
-        reply << this->description() << DONE;
+        reply << this->description() << mmcs_client::DONE;
         return;
     }
 
@@ -258,9 +271,9 @@ MMCSCommand_runjob::execute(
         env_size += 1; // null terminator
     }
     if ( static_cast<int32_t>(env_size) > bgcios::jobctl::MaxVariableSize ) {
-        reply << FAIL << "environment variable size of " << env_size << " bytes is larger than ";
+        reply << mmcs_client::FAIL << "environment variable size of " << env_size << " bytes is larger than ";
         reply << "maximum size (" << bgcios::jobctl::MaxVariableSize << ");";
-        reply << this->description() << DONE;
+        reply << this->description() << mmcs_client::DONE;
         return;
     }
 
@@ -272,8 +285,8 @@ MMCSCommand_runjob::execute(
     } else if ( io_block ) {
         this->getConnectedIoNode( io_block, jinfo, reply );
     } else {
-        reply << FAIL << "block is not compute or I/O;";
-        reply << this->description() << DONE;
+        reply << mmcs_client::FAIL << "block is not compute or I/O;";
+        reply << this->description() << mmcs_client::DONE;
         return;
     }
 
@@ -325,13 +338,13 @@ MMCSCommand_runjob::execute(
         // start job
         job->start();
     } catch ( const std::runtime_error& e ) {
-        reply << FAIL << e.what() << ";" << this->description() << DONE;
+        reply << mmcs_client::FAIL << e.what() << ";" << this->description() << mmcs_client::DONE;
     }
 }
 
 void
 MMCSCommand_runjob::insert(
-        MMCSCommandReply& reply,
+        mmcs_client::CommandReply& reply,
         lite::JobInfo& info
         )
 {
@@ -340,7 +353,7 @@ MMCSCommand_runjob::insert(
     try {
         db.reset(new lite::Database);
     } catch (const std::runtime_error& e) {
-        reply << FAIL << e.what() << ";" << this->description() << DONE;
+        reply << mmcs_client::FAIL << e.what() << ";" << this->description() << mmcs_client::DONE;
         return;
     }
 
@@ -364,29 +377,29 @@ MMCSCommand_runjob::insert(
             NULL
             );
     if ( rc != SQLITE_OK || statement == NULL) {
-        reply << FAIL << "could not prepare SQL statement: " << sql << DONE;
+        reply << mmcs_client::FAIL << "could not prepare SQL statement: " << sql << mmcs_client::DONE;
         return;
     }
 
     // bind parameters
     rc = sqlite3_bind_text( statement, 1, info.getBlock().c_str(), info.getBlock().size(), SQLITE_STATIC );
     if ( rc != SQLITE_OK ) {
-        reply << FAIL << "could not bind column 1" << DONE;
+        reply << mmcs_client::FAIL << "could not bind column 1" << mmcs_client::DONE;
         return;
     }
     rc = sqlite3_bind_text( statement, 2, info.getExe().c_str(), info.getExe().size(), SQLITE_STATIC );
     if ( rc != SQLITE_OK ) {
-        reply << FAIL << "could not bind column 2" << DONE;
+        reply << mmcs_client::FAIL << "could not bind column 2" << mmcs_client::DONE;
         return;
     }
     rc = sqlite3_bind_text( statement, 3, info.getCwd().c_str(), info.getCwd().size(), SQLITE_STATIC );
     if ( rc != SQLITE_OK ) {
-        reply << FAIL << "could not bind column 3" << DONE;
+        reply << mmcs_client::FAIL << "could not bind column 3" << mmcs_client::DONE;
         return;
     }
     rc = sqlite3_bind_int( statement, 4, info.getRanksPerNode() );
     if ( rc != SQLITE_OK ) {
-        reply << FAIL << "could not bind column 4" << DONE;
+        reply << mmcs_client::FAIL << "could not bind column 4" << mmcs_client::DONE;
         return;
     }
 
@@ -401,7 +414,7 @@ MMCSCommand_runjob::insert(
     LOG_TRACE_MSG( "arg size: " << offset );
     rc = sqlite3_bind_text( statement, 5, arg_buf, offset, SQLITE_STATIC );
     if ( rc != SQLITE_OK ) {
-        reply << FAIL << "could not bind column 5" << DONE;
+        reply << mmcs_client::FAIL << "could not bind column 5" << mmcs_client::DONE;
         return;
     }
 
@@ -416,14 +429,14 @@ MMCSCommand_runjob::insert(
     LOG_TRACE_MSG( "env size: " << offset );
     rc = sqlite3_bind_text( statement, 6, env_buf, offset, SQLITE_STATIC );
     if ( rc != SQLITE_OK ) {
-        reply << FAIL << "could not bind column 6" << DONE;
+        reply << mmcs_client::FAIL << "could not bind column 6" << mmcs_client::DONE;
         return;
     }
 
     // do the insert
     rc = sqlite3_step( statement );
     if ( rc != SQLITE_DONE ) {
-        reply << FAIL << "could not insert into sqlite database." << DONE;
+        reply << mmcs_client::FAIL << "could not insert into sqlite database." << mmcs_client::DONE;
         return;
     }
 
@@ -437,24 +450,24 @@ MMCSCommand_runjob::insert(
             NULL
             );
     if (rc != SQLITE_OK) {
-        reply << FAIL << "could not select job ID" << DONE;
+        reply << mmcs_client::FAIL << "could not select job ID" << mmcs_client::DONE;
         return;
     }
 
-    reply << OK;
+    reply << mmcs_client::OK;
 }
 
 void
 MMCSCommand_runjob::getConnectedIoNode(
         CNBlockPtr block,
         lite::JobInfo& jobInfo,
-        MMCSCommandReply& reply
+        mmcs_client::CommandReply& reply
         )
 {
     // no need to find a connected I/O node if user requested
     // we use a specific IP address
     if ( !jobInfo.getIp().empty() ) {
-        reply << OK;
+        reply << mmcs_client::OK;
         return;
     }
 
@@ -485,14 +498,14 @@ MMCSCommand_runjob::getConnectedIoNode(
         } else if ( io_node_location != config->connectedIONode( node->location() ) ) {
             LOG_ERROR_MSG( node->location() << " connects to " << config->connectedIONode( node->location() ) );
             LOG_ERROR_MSG( "which differs from " << io_node_location );
-            reply << FAIL << "blocks with multiple I/O connections are not supported" << DONE;
+            reply << mmcs_client::FAIL << "blocks with multiple I/O connections are not supported" << mmcs_client::DONE;
             return;
         }
     }
 
     // ensure we found a connected I/O node
     if ( io_node_location.empty() ) {
-        reply << FAIL << "block " << block->getBlockName() << " has no connected I/O node" << DONE;
+        reply << mmcs_client::FAIL << "block " << block->getBlockName() << " has no connected I/O node" << mmcs_client::DONE;
         return;
     }
 
@@ -511,7 +524,7 @@ MMCSCommand_runjob::getConnectedIoNode(
             // if this location is the connected I/O node, remember its IP address
             if ( location == io_node_location ) {
                 if ( io_node->_netConfig.empty() ) {
-                    reply << FAIL << "missing network configuration for I/O node " << location << DONE;
+                    reply << mmcs_client::FAIL << "missing network configuration for I/O node " << location << mmcs_client::DONE;
                     return;
                 }
 
@@ -524,9 +537,9 @@ MMCSCommand_runjob::getConnectedIoNode(
     }
 
     if ( jobInfo.getIp().empty() ) {
-        reply << FAIL << "could not find IP address for connected I/O node " << io_node_location << DONE;
+        reply << mmcs_client::FAIL << "could not find IP address for connected I/O node " << io_node_location << mmcs_client::DONE;
     } else {
-        reply << OK;
+        reply << mmcs_client::OK;
     }
 }
 
@@ -534,13 +547,13 @@ void
 MMCSCommand_runjob::getConnectedIoNode(
         IOBlockPtr block,
         lite::JobInfo& jobInfo,
-        MMCSCommandReply& reply
+        mmcs_client::CommandReply& reply
         )
 {
     // no need to find a connected I/O node if user requested
     // we use a specific IP address
     if ( !jobInfo.getIp().empty() ) {
-        reply << OK;
+        reply << mmcs_client::OK;
         return;
     }
 
@@ -571,14 +584,14 @@ MMCSCommand_runjob::getConnectedIoNode(
         } else if ( io_node_location != config->connectedIONode( node->location() ) ) {
             LOG_ERROR_MSG( node->location() << " connects to " << config->connectedIONode( node->location() ) );
             LOG_ERROR_MSG( "which differs from " << io_node_location );
-            reply << FAIL << "blocks with multiple I/O connections are not supported" << DONE;
+            reply << mmcs_client::FAIL << "blocks with multiple I/O connections are not supported" << mmcs_client::DONE;
             return;
         }
     }
 
     // ensure we found a connected I/O node
     if ( io_node_location.empty() ) {
-        reply << FAIL << "block " << block->getBlockName() << " has no connected I/O node" << DONE;
+        reply << mmcs_client::FAIL << "block " << block->getBlockName() << " has no connected I/O node" << mmcs_client::DONE;
         return;
     }
 
@@ -597,7 +610,7 @@ MMCSCommand_runjob::getConnectedIoNode(
             // if this location is the connected I/O node, remember its IP address
             if ( location == io_node_location ) {
                 if ( io_node->_netConfig.empty() ) {
-                    reply << FAIL << "missing network configuration for I/O node " << location << DONE;
+                    reply << mmcs_client::FAIL << "missing network configuration for I/O node " << location << mmcs_client::DONE;
                     return;
                 }
 
@@ -610,10 +623,11 @@ MMCSCommand_runjob::getConnectedIoNode(
     }
 
     if ( jobInfo.getIp().empty() ) {
-        reply << FAIL << "could not find IP address for connected I/O node " << io_node_location << DONE;
+        reply << mmcs_client::FAIL << "could not find IP address for connected I/O node " << io_node_location << mmcs_client::DONE;
     } else {
-        reply << OK;
+        reply << mmcs_client::OK;
     }
 }
 
 
+} } // namespace mmcs::lite

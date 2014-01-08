@@ -1861,12 +1861,15 @@ GdbController::threadAliveAck(QueryAckMessage *inMsg, std::ostringstream& respon
 {
    // Make sure the command was successful.
    GetThreadListAckCmd *cmd = (GetThreadListAckCmd *)((char *)inMsg + inMsg->cmdList[0].offset);
-   if (inMsg->cmdList[0].returnCode != CmdSuccess) {
+   if (inMsg->cmdList[0].returnCode == CmdTIDinval) {
+       response << _gdbChannel->errorResponse(ESRCH);
+       return;
+   }
+   else if (inMsg->cmdList[0].returnCode != CmdSuccess) {
       LOG_ERROR_MSG(_tag << "QueryAck message to find out if thread is alive command has bad return code " << inMsg->cmdList[0].returnCode);
       response << commandErrorResponse(inMsg->cmdList[0].returnCode);
       return;
    }
-
    // Build the response with the thread list data.
    for (uint32_t index = 0; index < cmd->numthreads; ++index) {
       if (cmd->threadID == cmd->threadlist[index].tid) {

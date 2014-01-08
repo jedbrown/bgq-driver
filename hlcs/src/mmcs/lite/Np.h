@@ -24,13 +24,16 @@
 #ifndef MMCS_LITE_NP_H
 #define MMCS_LITE_NP_H
 
-#include "BlockHelper.h"
+#include "server/BlockHelper.h"
 
 #include <spi/include/mu/Classroute_inlines.h>
 
 #include <boost/shared_array.hpp>
 
+
+namespace mmcs {
 namespace lite {
+
 
 class JobInfo;
 
@@ -48,7 +51,7 @@ public:
 public:
     Np(
             const JobInfo& info,    //!< [in]
-            const BlockPtr& block   //!< [in]
+            const server::BlockPtr& block   //!< [in]
       );
 
     /*!
@@ -88,7 +91,7 @@ private:
 
 private:
     const JobInfo& _info;
-    const BlockPtr& _block;
+    const server::BlockPtr& _block;
     Container _container;
     CR_RECT_T _world;
     CR_RECT_T _rectangle;
@@ -98,7 +101,7 @@ private:
     int _size;
 };
 
-} // lite
+} } // namespace mmcs::lite
 
 #endif
 

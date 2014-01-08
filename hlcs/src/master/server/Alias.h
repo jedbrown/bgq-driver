@@ -34,6 +34,7 @@
 #include <boost/foreach.hpp>
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
+#include <boost/date_time/posix_time/ptime.hpp>
 
 #include <list>
 #include <string>
@@ -48,7 +49,8 @@ public:
             const std::string& path, 
             const Policy& p, 
             const std::string& user = std::string(),
-            const std::string& logdir = std::string()
+            const std::string& logdir = std::string(),
+	    const int& preferredHostWait = int()
          );
 
     void set_path(const std::string& path) {
@@ -132,6 +134,7 @@ public:
     std::string get_args() const { return _args; }
     std::string get_user() const { return _user; }
     std::string get_logdir() const { return _logdir; }
+    int get_preferredHostWait() const { return _preferredHostWait; }
 private:
 
     AgentRepPtr runPolicy(const BGAgentId& agent_id, bool restart);
@@ -156,6 +159,9 @@ private:
     //! \brief directory in which to log binaries associated with this alias.
     std::string _logdir;
 
+    //! \brief time in seconds to wait for the preferred host's bgagent to become available.
+    int _preferredHostWait;
+
     //! \brief hosts on which alias can run
     std::list<CxxSockets::Host> _hosts;
 
@@ -175,8 +181,8 @@ private:
     //! \brief This flag is set if we need to stop waiting for an agent to start.
     bool _halt_waiting_for_agent;
     
-    //! \brief The number of times we've failed to find an agent on the preferred host.
-    unsigned _preferred_fails;
+    //! \brief The time we failed to start this alias on its preferred host
+    boost::posix_time::ptime _preferred_start_time;
 };
 
 #endif

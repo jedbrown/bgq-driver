@@ -76,18 +76,19 @@ const uint32_t  Midplane_C_Dimension = 4;
 const uint32_t  Midplane_D_Dimension = 4;
 const uint32_t  Midplane_E_Dimension = 2;
 const uint32_t  Nodes_Per_Node_Board = 32;
-const char* BLOCK_FREE =         "F";
-const char* BLOCK_ALLOCATED =    "A";
-const char* BLOCK_BOOTING =      "B";
-const char* BLOCK_DEALLOCATING = "D";
-const char* BLOCK_INITIALIZED =  "I";
-const char* BLOCK_TERMINATING =  "T";
-const char* BLOCK_NO_ACTION   =  " ";
-const char* HARDWARE_AVAILABLE = "A";
-const char* HARDWARE_MISSING =   "M";
-const char* HARDWARE_ERROR =     "E";
-const char* HARDWARE_SERVICE =   "S";
-const char* SOFTWARE_FAILURE =   "F";
+const char* BLOCK_FREE =             "F";
+const char* BLOCK_ALLOCATED =        "A";
+const char* BLOCK_BOOTING =          "B";
+const char* BLOCK_BOOTING_NO_CHECK = "N";
+const char* BLOCK_DEALLOCATING =     "D";
+const char* BLOCK_INITIALIZED =      "I";
+const char* BLOCK_TERMINATING =      "T";
+const char* BLOCK_NO_ACTION =        " ";
+const char* HARDWARE_AVAILABLE =     "A";
+const char* HARDWARE_MISSING =       "M";
+const char* HARDWARE_ERROR =         "E";
+const char* HARDWARE_SERVICE =       "S";
+const char* SOFTWARE_FAILURE =       "F";
 const uint32_t SERIAL_NUM_LEN =   19;
 const std::string DEFAULT_MLOADERIMG = "/bgsys/drivers/ppcfloor/boot/firmware";
 const std::string DEFAULT_COMPUTENODECONFIG = "CNKDefault";
@@ -586,7 +587,8 @@ getBPBlockXML(
 static bool
 isBlockFree(
         TxObject *tx,
-        const std::string& block
+        const std::string& block,
+        bool isIOBlock
 )
 {
     DBTBpblockmap bmap;
@@ -600,133 +602,134 @@ isBlockFree(
     ColumnsBitmap colBitmap;
 
     SQLRETURN sqlrc;
-    string where("where blockId = '");
 
-    colBitmap.set(bmap.BLOCKID);
-    bmap._columns = colBitmap.to_ulong();
+    if (isIOBlock) {
+        // Check for I/O block overlap
+        colBitmap.set(io.BLOCKID);
+        io._columns = colBitmap.to_ulong();
 
-    where = " where ( bpid in (select bpid from ";
-    where += bstat.getTableName();
-    where += " where blockstatus<>'F' and blockstatus<>'E' and blockstatus<>' ') or bpid in (select posinmachine from bgqsmallblock s, bgqblock b ";
-    where += " where b.blockid = s.blockid and status <> 'F' and status <>'E'))  and blockid = '";
-    where += block;
-    where += "'";
+        string where = "  where (substr(location,1,6)  in (select location from bgqioblockmap a, bgqblock b ";
+        where += "        where b.status<>'F' and a.blockid = b.blockid )    ";
+        where += "   or   location              in (select location from bgqioblockmap a, bgqblock b ";
+        where += "        where b.status<>'F' and a.blockid = b.blockid )    ";
+        where += "   or   location              in (select substr(location,1,6) from bgqioblockmap a, bgqblock b ";
+        where += "        where b.status<>'F' and a.blockid = b.blockid )  )   ";
+        where += "   and location not in (select location from bgqiodrawer where status = 'S') ";
+        where += "   and  blockid = '";
+        where += block;
+        where += "'";
 
-    sqlrc = tx->query(&bmap, where.c_str());
-    if (sqlrc != SQL_SUCCESS) {
-        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
-        return false;
+        sqlrc = tx->query(&io, where.c_str());
+        if (sqlrc != SQL_SUCCESS) {
+            LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+            return false;
+        }
+
+        // Since we are querying for IO nodes/drawers that are busy, we don't want to get a hit
+        sqlrc = tx->fetch(&io);
+        if (sqlrc != SQL_NO_DATA_FOUND) {
+            LOG_WARN_MSG( "One or more I/O nodes/drawers required by I/O block "  << block << " are not available.");
+            return false;
+        }
+    } else {
+        // Check for compute block overlap
+        colBitmap.set(bmap.BLOCKID);
+        bmap._columns = colBitmap.to_ulong();
+
+        string where = " where ( bpid in (select bpid from ";
+        where += bstat.getTableName();
+        where += " where blockstatus<>'F' and blockstatus<>'E' and blockstatus<>' ') or bpid in (select posinmachine from bgqsmallblock s, bgqblock b ";
+        where += " where b.blockid = s.blockid and status <> 'F' and status <>'E'))  and blockid = '";
+        where += block;
+        where += "'";
+
+        sqlrc = tx->query(&bmap, where.c_str());
+        if (sqlrc != SQL_SUCCESS) {
+            LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+            return false;
+        }
+
+        // Since we are querying for BPs that are busy, we don't want to get a hit
+        sqlrc = tx->fetch(&bmap);
+        if (sqlrc != SQL_NO_DATA_FOUND) {
+            LOG_WARN_MSG( "One or more midplanes required by compute block "  << block << " are not available.");
+            return false;
+        }
+
+        colBitmap.reset();
+        colBitmap.set(lmap.BLOCKID);
+        lmap._columns = colBitmap.to_ulong();
+
+        where = " where linkid in (select linkid from ";
+        where += lstat.getTableName();
+        where += " where blockstatus<>'F' and blockstatus<>'E')  and blockid = '";
+        where += block;
+        where += "'";
+
+        sqlrc = tx->query(&lmap, where.c_str());
+        if (sqlrc != SQL_SUCCESS) {
+            LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+            return false;
+        }
+
+        // Since we are querying for links that are busy, we don't want to get a hit
+        sqlrc = tx->fetch(&lmap);
+        if (sqlrc != SQL_NO_DATA_FOUND) {
+            LOG_WARN_MSG( "One or more links required by compute block "  << block << " are not available.");
+            return false;
+        }
+
+        colBitmap.reset();
+        colBitmap.set(smap.BLOCKID);
+        smap._columns = colBitmap.to_ulong();
+
+        where = " colBitmap where exists  (select switchid from ";
+        where += sstat.getTableName();
+        where += " stat where stat.switchid = colBitmap.switchid and (stat.include <>  colBitmap.include)  ";
+        where += " and blockstatus<>'F' and blockstatus<>'E' and blockstatus<>' ')  and blockid = '";
+        where += block;
+        where += "'";
+
+        sqlrc = tx->query(&smap, where.c_str());
+        if (sqlrc != SQL_SUCCESS) {
+            LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+            return false;
+        }
+
+        // Since we are querying for switches that are busy, we don't want to get a hit
+        sqlrc = tx->fetch(&smap);
+        if (sqlrc != SQL_NO_DATA_FOUND) {
+            LOG_WARN_MSG( "One or more switches required by compute block "  << block << " are not available.");
+            return false;
+        }
+
+        colBitmap.reset();
+        colBitmap.set(sb.BLOCKID);
+        sb._columns = colBitmap.to_ulong();
+
+        where = " sb  where ( posinmachine in (select bpid from ";
+        where += bstat.getTableName();
+        where += " where blockstatus<>'F' and blockstatus<>'E' and blockstatus<>' ') or exists (select s.nodecardpos from bgqsmallblock s, bgqblock b ";
+        where += " where b.blockid = s.blockid and status <> 'F' and status <>'E' and ( " ;
+        where += " sb.nodecardpos=s.nodecardpos  ";
+        where += ")  and sb.posinmachine=s.posinmachine ))  and blockid = '";
+        where += block;
+        where += "'";
+
+        sqlrc = tx->query(&sb, where.c_str());
+        if (sqlrc != SQL_SUCCESS) {
+            LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+            return false;
+        }
+
+        // Since we are querying for node boards that are busy, we don't want to get a hit
+        sqlrc = tx->fetch(&sb);
+        if (sqlrc != SQL_NO_DATA_FOUND) {
+            LOG_WARN_MSG( "One or more node boards required by compute block "  << block << " are not available.");
+            return false;
+        }
     }
-
-    // since we are querying for BPs that are busy, we don't want to get a hit
-    sqlrc = tx->fetch(&bmap);
-    if (sqlrc != SQL_NO_DATA_FOUND) {
-        LOG_WARN_MSG( "One or more midplanes required by block "  << block << " are not available.");
-        return false;
-    }
-
-    colBitmap.reset();
-    colBitmap.set(lmap.BLOCKID);
-    lmap._columns = colBitmap.to_ulong();
-
-    where = " where linkid in (select linkid from ";
-    where += lstat.getTableName();
-    where += " where blockstatus<>'F' and blockstatus<>'E')  and blockid = '";
-    where += block;
-    where += "'";
-
-    sqlrc = tx->query(&lmap, where.c_str());
-    if (sqlrc != SQL_SUCCESS) {
-        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
-        return false;
-    }
-
-    // since we are querying for links that are busy, we don't want to get a hit
-    sqlrc = tx->fetch(&lmap);
-    if (sqlrc != SQL_NO_DATA_FOUND) {
-        LOG_WARN_MSG( "One or more links required by block "  << block << " are not available.");
-        return false;
-    }
-
-    colBitmap.reset();
-    colBitmap.set(smap.BLOCKID);
-    smap._columns = colBitmap.to_ulong();
-
-    where = " colBitmap where exists  (select switchid from ";
-    where += sstat.getTableName();
-    where += " stat where stat.switchid = colBitmap.switchid and (stat.include <>  colBitmap.include)  ";
-    where += " and blockstatus<>'F' and blockstatus<>'E' and blockstatus<>' ')  and blockid = '";
-    where += block;
-    where += "'";
-
-    sqlrc = tx->query(&smap, where.c_str());
-    if (sqlrc != SQL_SUCCESS) {
-        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
-        return false;
-    }
-
-    // since we are querying for switches that are busy, we don't want to get a hit
-    sqlrc = tx->fetch(&smap);
-    if (sqlrc != SQL_NO_DATA_FOUND) {
-        LOG_WARN_MSG( "One or more switches required by block "  << block << " are not available.");
-        return false;
-    }
-
-    colBitmap.reset();
-    colBitmap.set(sb.BLOCKID);
-    sb._columns = colBitmap.to_ulong();
-
-    where = " sb  where ( posinmachine in (select bpid from ";
-    where += bstat.getTableName();
-    where += " where blockstatus<>'F' and blockstatus<>'E' and blockstatus<>' ') or exists (select s.nodecardpos from bgqsmallblock s, bgqblock b ";
-    where += " where b.blockid = s.blockid and status <> 'F' and status <>'E' and ( " ;
-    where += " sb.nodecardpos=s.nodecardpos  ";
-    where += ")  and sb.posinmachine=s.posinmachine ))  and blockid = '";
-    where += block;
-    where += "'";
-
-    sqlrc = tx->query(&sb, where.c_str());
-    if (sqlrc != SQL_SUCCESS) {
-        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
-        return false;
-    }
-
-    // since we are querying for node boards that are busy, we don't want to get a hit
-    sqlrc = tx->fetch(&sb);
-    if (sqlrc != SQL_NO_DATA_FOUND) {
-        LOG_WARN_MSG( "One or more node boards required by block "  << block << " are not available.");
-        return false;
-    }
-
-    // Check for IO block overlap
-    colBitmap.reset();
-    colBitmap.set(io.BLOCKID);
-    io._columns = colBitmap.to_ulong();
-
-    where = "  where (substr(location,1,6)  in (select location from bgqioblockmap a, bgqblock b ";
-    where += "        where b.status<>'F' and a.blockid = b.blockid )    ";
-    where += "   or   location              in (select location from bgqioblockmap a, bgqblock b ";
-    where += "        where b.status<>'F' and a.blockid = b.blockid )    ";
-    where += "   or   location              in (select substr(location,1,6) from bgqioblockmap a, bgqblock b ";
-    where += "        where b.status<>'F' and a.blockid = b.blockid )  )   ";
-    where += "   and location not in (select location from bgqiodrawer where status = 'S') ";
-    where += "   and  blockid = '";
-    where += block;
-    where += "'";
-
-    sqlrc = tx->query(&io, where.c_str());
-    if (sqlrc != SQL_SUCCESS) {
-        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
-        return false;
-    }
-
-    // since we are querying for IO nodes/drawers that are busy, we don't want to get a hit
-    sqlrc = tx->fetch(&io);
-    if (sqlrc != SQL_NO_DATA_FOUND) {
-        LOG_WARN_MSG( "One or more I/O nodes/drawers required by block "  << block << " are not available.");
-        return false;
-    }
-
+    // No overlapping hardware resources found
     return true;
 }
 
@@ -837,7 +840,7 @@ setBlockAction(
     }
 
     // Make sure it was a valid action requested and there is no action already set
-    if ((action != CONFIGURE_BLOCK && action != DEALLOCATE_BLOCK) || strcmp(dbo._action, BLOCK_NO_ACTION) != 0) {
+    if ((action != CONFIGURE_BLOCK && action != DEALLOCATE_BLOCK && action != CONFIGURE_BLOCK_NO_CHECK) || strcmp(dbo._action, BLOCK_NO_ACTION) != 0) {
         if (strcmp(dbo._action, BLOCK_NO_ACTION) != 0) {
             LOG_DEBUG_MSG(__FUNCTION__ << " block action is already pending");
             return DUPLICATE;
@@ -848,19 +851,30 @@ setBlockAction(
     }
 
     // For allocating block we will have setBlockStatus set both the status and action fields
-    if (action == CONFIGURE_BLOCK) {
+    if (action == CONFIGURE_BLOCK || action == CONFIGURE_BLOCK_NO_CHECK) {
         std::deque<std::string> configure_options(options);
         configure_options.push_back("action");
+        // Need to further differentiate which type of action to set on the block
+        if (action == CONFIGURE_BLOCK_NO_CHECK) {
+            // This indicate to boot I/O block with I/O nodes in error
+            configure_options.push_back("no_check");
+        }
         if ((rc = setBlockStatus(block, ALLOCATED, configure_options)) != OK) {
             return rc;
         }
     } else {
         strcpy(dbo._action, BLOCK_DEALLOCATING);
-    }
-
-    // For allocates the database fields are already updated by setblockstate
-    if (action != CONFIGURE_BLOCK) {
         string whereClause = string("where status <> 'F' and blockid  = '") + block + string("'");
+        for (std::deque<std::string>::const_iterator arg = options.begin(); arg != options.end(); ++arg) {
+            if ( arg->substr(0,7) == "errmsg=" ) {
+                strncpy( dbo._errtext, arg->substr(7).c_str(), sizeof(dbo._errtext) - 1 );
+                dbo._errtext[sizeof(dbo._errtext) - 1] = '\0';
+                colBitmap.set(dbo.ERRTEXT);
+                dbo._columns = colBitmap.to_ulong();
+                break;
+            }
+        }
+
         sqlrc = tx.update(&dbo, whereClause.c_str());
         if ((sqlrc != SQL_NO_DATA_FOUND) && (sqlrc != SQL_SUCCESS)) {
             LOG_ERROR_MSG( "Database update failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
@@ -885,6 +899,7 @@ setBlockStatus(
     std::string user;
     std::string qualifier;
     bool setAction(false);
+    bool setNoCheckAction(false);
     bool clearActionOnFree = true;
 
     if (block.size() >= sizeof(dbo._blockid)) {
@@ -916,6 +931,8 @@ setBlockStatus(
                 clearActionOnFree = false;
             } else if (tokens[0] == "action") {
                 setAction = true;
+            } else if (tokens[0] == "no_check") {
+                setNoCheckAction = true;
             }
         }
     }
@@ -969,7 +986,7 @@ setBlockStatus(
 
     switch(targetState) {
     case ALLOCATED:
-        if ((currentState == FREE && (sharedAllocate || isBlockFree(&tx, block)))
+        if ((currentState == FREE && (sharedAllocate || isBlockFree(&tx, block, ioBlock)))
                 || (currentState == TERMINATING && setAction == false))
         {
             // Set status to (A)llocated
@@ -1076,9 +1093,15 @@ setBlockStatus(
 
     if (targetState == ALLOCATED && currentState == FREE ) {
         // Update action field only if allocate request and it came from setBlockAction
-        if ( setAction ) {
+        if (setAction) {
             colBitmap.set(dbo.ACTION);
-            strcpy(dbo._action, BLOCK_BOOTING);
+            if (setNoCheckAction) {
+                // Set "N" action to indicate boot of I/O block with I/O nodes in error
+                strcpy(dbo._action, BLOCK_BOOTING_NO_CHECK);
+            } else {
+                // Set "B" action to indicate boot action
+                strcpy(dbo._action, BLOCK_BOOTING);
+            }
         }
 
         // update username if current state is free
@@ -1140,9 +1163,21 @@ setBlockStatus(
                 string(" or substr(location,1,6) in (select location from bgqioblockmap where  blockid = '") +  block +  string("' )) ");
             upd_rc = tx.execStmt(sqlstr.c_str());
         } else {
-            sqlstr = "update bgqnode set status = 'A' where status = 'F' and " +
-                string(" ( substr(location,1,6) in (select bpid from bgqbpblockmap where blockid = '") +  block +  string("' ) ") +
-                string(" or substr(location,1,10) in (select posinmachine || '-' || nodecardpos from bgqsmallblock where blockid = '") + block + string("' ))");
+            // this query handles sub-block jobs
+            sqlstr  = "UPDATE BGQNode set status='A' WHERE status='F' and ";
+            sqlstr += "(";
+            sqlstr += "substr(location,1,10) IN (SELECT posinmachine || '-' || nodecardpos FROM BGQSmallBlock where blockid = '";
+            sqlstr += block;
+            sqlstr += "') OR ";
+            sqlstr += "substr(location,1,6) in (select bpid from BGQBpBlockMap where blockid = '";
+            sqlstr += "'))";
+            upd_rc = tx.execStmt(sqlstr.c_str());
+
+            // this query handles large blocks
+            sqlstr  = "UPDATE BGQMidplane set status='A' WHERE status='F' and ";
+            sqlstr += "location in (select bpid from BGQBpBlockMap where blockid = '";
+            sqlstr += block;
+            sqlstr += "')";
             upd_rc = tx.execStmt(sqlstr.c_str());
         }
 
@@ -1190,6 +1225,8 @@ getBlockAction(
 
     whereClause += BLOCK_BOOTING;
     whereClause += "' or action = '";
+    whereClause += BLOCK_BOOTING_NO_CHECK;
+    whereClause += "' or action = '";
     whereClause += BLOCK_DEALLOCATING;
     whereClause += "') order by statuslastmodified";
 
@@ -1214,14 +1251,16 @@ getBlockAction(
         return DB_ERROR;
     }
 
-    // block to which the action has to be performed
+    // Block to which the action has to be performed
     trim_right_spaces(dbo._blockid);
     id = std::string(dbo._blockid, strnlen( dbo._blockid, sizeof(dbo._blockid) ) );
 
-    // now we have to find out which action it was
+    // Now we have to find out which action it was
     trim_right_spaces(dbo._action);
     if (strcmp(dbo._action, BLOCK_BOOTING) == 0) {
         action = CONFIGURE_BLOCK;
+    } else if(strcmp(dbo._action, BLOCK_BOOTING_NO_CHECK) == 0) {
+        action = CONFIGURE_BLOCK_NO_CHECK;
     } else if(strcmp(dbo._action, BLOCK_DEALLOCATING) == 0) {
         action = DEALLOCATE_BLOCK;
     } else {
@@ -1265,7 +1304,7 @@ clearBlockAction(
 
     SQLRETURN sqlrc;
     if (id == "*ALL") {
-        // clear the action for all blocks
+        // Clear the action for all blocks
         string upd = string("update bgqblock set action = ' '");
         sqlrc = tx.execStmt(upd.c_str());
         if (sqlrc != SQL_SUCCESS && sqlrc != SQL_NO_DATA_FOUND)  {
@@ -1274,7 +1313,7 @@ clearBlockAction(
         }
 
     } else {
-        // clear the action field for a single block
+        // Clear the action field for a single block
         snprintf(dbo._blockid, sizeof(dbo._blockid), "%s", id.c_str());
         strcpy(dbo._action, BLOCK_NO_ACTION);
 
@@ -1290,7 +1329,6 @@ clearBlockAction(
         }
 
     }
-
 
     return OK;
 }
@@ -2199,57 +2237,6 @@ setBlockInfo(
 }
 
 STATUS
-setBlockErrorText(
-        const std::string& id,
-        const std::string& text
-)
-{
-    // check parameters
-    if ( id.empty() || text.empty() ) {
-        return FAILED;
-    }
-
-    DBTBlock dbo;
-    ColumnsBitmap colBitmap;
-    string whereClause = string("where blockid='") + id + "'";
-
-    // sanity check for block ID length
-    if (id.size() >= sizeof(dbo._blockid)) {
-        LOG_ERROR_MSG(__FUNCTION__ << " block name too long");
-        return INVALID_ID;
-    }
-
-    colBitmap.set(dbo.BLOCKID);
-    colBitmap.set(dbo.ERRTEXT);
-    dbo._columns = colBitmap.to_ulong();
-
-    // grab block ID
-    snprintf(dbo._blockid, sizeof(dbo._blockid), "%s", id.c_str());
-
-    // copy error text and NULL terminate it
-    strncpy(dbo._errtext, text.c_str(), sizeof(dbo._errtext) - 1);
-    dbo._errtext[sizeof(dbo._errtext) - 1] = '\0';
-
-    TxObject tx(DBConnectionPool::Instance());
-    if (!tx.getConnection()) {
-        LOG_ERROR_MSG(__FUNCTION__ << " Unable to obtain database connection");
-        return CONNECTION_ERROR;
-    }
-
-    SQLRETURN sqlrc = tx.update(&dbo, whereClause.c_str());
-    if (sqlrc != SQL_SUCCESS) {
-        if (sqlrc == SQL_NO_DATA) {
-            return NOT_FOUND;
-        } else {
-            LOG_ERROR_MSG( "Database update failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
-            return DB_ERROR;
-        }
-    }
-
-    return OK;
-}
-
-STATUS
 getBringupOptions(
         std::string& buOptions
 )
@@ -2382,10 +2369,14 @@ getBlockUser(
     trim_right_spaces(dbo._username);
     trim_right_spaces(dbo._qualifier);
     user = dbo._username;
-    try {
-        qualifier = boost::lexical_cast<int>(dbo._qualifier);
-    } catch ( const boost::bad_lexical_cast& e ) {
-        LOG_WARN_MSG( "could not convert qualifier '" << dbo._qualifier << "' into integer");
+    if ( dbo._qualifier[0] == '\0' ) {
+        qualifier = 0;
+    } else {
+        try {
+            qualifier = boost::lexical_cast<int>(dbo._qualifier);
+        } catch ( const boost::bad_lexical_cast& e ) {
+            LOG_WARN_MSG( "could not convert qualifier '" << dbo._qualifier << "' into integer");
+        }
     }
 
     return OK;
@@ -2456,51 +2447,6 @@ setBlockOptions(
         }
     }
 
-    return OK;
-}
-
-STATUS
-getBlockDesc(
-        const std::string& id,
-        std::string& description
-)
-{
-    DBTBlock dbo;
-    ColumnsBitmap colBitmap;
-
-    if (id.size() >= sizeof(dbo._blockid)) {
-        LOG_ERROR_MSG(__FUNCTION__ << " block name too long");
-        return INVALID_ID;
-    }
-
-    colBitmap.set(dbo.BLOCKID);
-    colBitmap.set(dbo.DESCRIPTION);
-    dbo._columns = colBitmap.to_ulong();
-
-    snprintf(dbo._blockid, sizeof(dbo._blockid), "%s", id.c_str());
-    TxObject tx(DBConnectionPool::Instance());
-    if (!tx.getConnection()) {
-        LOG_ERROR_MSG(__FUNCTION__ << " Unable to obtain database connection");
-        return CONNECTION_ERROR;
-    }
-
-    SQLRETURN sqlrc = tx.queryByKey(&dbo);
-    if (sqlrc != SQL_SUCCESS) {
-        LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
-        return DB_ERROR;
-    }
-
-    sqlrc = tx.fetch(&dbo);
-    if (sqlrc == SQL_NO_DATA_FOUND) {
-        LOG_WARN_MSG(__FUNCTION__ << " block name not found");
-        return NOT_FOUND;
-    }
-    if (sqlrc != SQL_SUCCESS) {
-         LOG_ERROR_MSG( "Database fetch failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
-         return DB_ERROR;
-    }
-
-    description = string(dbo._description, sizeof(dbo._description));
     return OK;
 }
 
@@ -3265,29 +3211,35 @@ putRAS(
     if (rasEvent.getDetail(RasEvent::CONTROL_ACTION).find("BOARD_IN_ERROR") != string::npos) {
         if (rasEvent.getDetail(RasEvent::LOCATION).substr(4,1) != "I") {
             sqlstr = "update bgqnodecard set status = 'E' where location = '" + rasEvent.getDetail(RasEvent::LOCATION).substr(0,10) + string("' ");
+            sqlrc = tx.execStmt(sqlstr.c_str());
+            if (sqlrc != SQL_SUCCESS) {
+                LOG_ERROR_MSG(__FUNCTION__ << " RAS event control action processing for BOARD_IN_ERROR failed to update hardware status, rc = " << sqlrc);
+            }
         } else {
             sqlstr = "update bgqiodrawer set status = 'E' where location = '" + rasEvent.getDetail(RasEvent::LOCATION).substr(0,6) + string("' ");
-        }
-        sqlrc = tx.execStmt(sqlstr.c_str());
-        if (sqlrc != SQL_SUCCESS) {
-            LOG_ERROR_MSG(__FUNCTION__ << " RAS event control action processing for BOARD_IN_ERROR failed to update hardware status, rc = " << sqlrc);
+            sqlrc = tx.execStmt(sqlstr.c_str());
+            if (sqlrc != SQL_SUCCESS) {
+                LOG_ERROR_MSG(__FUNCTION__ << " RAS event control action processing for BOARD_IN_ERROR failed to update I/O drawer status, rc = " << sqlrc);
+            }
+            sqlstr = "update bgqionode set status = 'E' where substr(location,1,6) = '" + rasEvent.getDetail(RasEvent::LOCATION).substr(0,6) + string("' ");
+            sqlrc = tx.execStmt(sqlstr.c_str());
+            if (sqlrc != SQL_SUCCESS) {
+                LOG_ERROR_MSG(__FUNCTION__ << " RAS event control action processing for BOARD_IN_ERROR failed to update I/O node status, rc = " << sqlrc);
+            }
         }
     }
 
     if (rasEvent.getDetail(RasEvent::CONTROL_ACTION).find("END_JOB") != string::npos) {
         if ( jobs_list_out && location.getType() == bgq::util::Location::NodeBoard) {
-            sqlstr = "select b.id  from  bgqjob b, bgqsmallblock c, bgqblock d    where '"+  rasEvent.getDetail(RasEvent::LOCATION) +
-                string("' = posinmachine || '-' || nodecardpos  and c.blockid = d.blockid and b.blockid = c.blockid and d.status <> 'F' union  ") +
-                string("SELECT j.id "
-                        "FROM bgqBpBlockMap m "
-                        "JOIN "
-                        "bgqJob j "
-                        "ON m.blockId = j.blockId "
-                        "JOIN "
-                        "bgqBlock b "
-                        "ON j.blockId = b.blockId "
-                        "WHERE  m.bpid = SUBSTR('" + rasEvent.getDetail(RasEvent::LOCATION) + "',1,6) AND b.status <> 'F'"
-                        );
+            sqlstr = std::string() +
+                "SELECT id from bgqjob where blockid in ("
+                "SELECT blockid from bgqsmallblock where posinmachine || '-' || nodecardpos ='" + location.getLocation() + "' "
+                "UNION "
+                "SELECT blockid from bgqbpblockmap where bpid = '" + location.getMidplaneLocation() + "' "
+                "UNION "
+                "SELECT blockid from bgqswitchblockmap where substr(switchid,3,6) = '" + location.getMidplaneLocation() + "' "
+                ")"
+                ;
         } else if (
                 jobs_list_out &&
                 ( location.getType() == bgq::util::Location::IoBoardOnIoRack ||
@@ -3316,10 +3268,15 @@ putRAS(
 
     if (rasEvent.getDetail(RasEvent::CONTROL_ACTION).find("FREE_COMPUTE_BLOCK") != string::npos) {
         if ( location.getType() == bgq::util::Location::NodeBoard) {
-            sqlstr = "select c.blockid  from  bgqsmallblock c, bgqblock d    where '"+  rasEvent.getDetail(RasEvent::LOCATION) +
-                string("' = posinmachine || '-' || nodecardpos  and c.blockid = d.blockid and d.status <> 'F' union  ") +
-                string("select c.blockid  from  bgqbpblockmap c, bgqblock d    where substr('") +  rasEvent.getDetail(RasEvent::LOCATION) +
-                string("',1,6)  = bpid  and c.blockid = d.blockid and d.status <> 'F' ");
+            sqlstr = std::string() +
+                "SELECT blockid from bgqblock where status <> '" + SOFTWARE_FAILURE + "' and blockid in ("
+                "SELECT blockid from bgqsmallblock where posinmachine || '-' || nodecardpos ='" + location.getLocation() + "' "
+                "UNION "
+                "SELECT blockid from bgqbpblockmap where bpid = '" + location.getMidplaneLocation() + "' "
+                "UNION "
+                "SELECT blockid from bgqswitchblockmap where substr(switchid,3,6) = '" + location.getMidplaneLocation() + "' "
+                ")"
+                ;
         } else if (
                 location.getType() == bgq::util::Location::IoBoardOnIoRack ||
                 location.getType() == bgq::util::Location::IoBoardOnComputeRack
@@ -3336,15 +3293,17 @@ putRAS(
         char blockID[33];
         sqlrc = SQLBindCol(hstmt, 1, SQL_C_CHAR,   blockID, sizeof(blockID), &ind1);
         sqlrc = SQLFetch(hstmt);
-        SQLCloseCursor(hstmt);
 
-        if (sqlrc == 0) {
-            string errmsg("errmsg=block freed due to RAS event control action");
+        for (;sqlrc == SQL_SUCCESS;) {
+            const string errmsg("errmsg=block freed due to RAS event control action");
             deque<string> args;
             args.push_back(errmsg);
 
             setBlockAction(string(blockID), DEALLOCATE_BLOCK, args);
+            sqlrc = SQLFetch(hstmt);
         }
+
+        SQLCloseCursor(hstmt);
     }
 
     return OK;
@@ -3516,6 +3475,9 @@ postProcessRAS(
 
         if (strstr(dbe._ctlaction, "FREE_COMPUTE_BLOCK")) {
             string errmsg("errmsg=");
+            errmsg.append("freed by RAS event with recid ");
+            errmsg.append( boost::lexical_cast<std::string>(recid) );
+            errmsg.append( ": " );
             errmsg.append(dbe._message);
             deque<string> args;
             args.push_back(errmsg);
@@ -3553,25 +3515,6 @@ postProcessRAS(
 
         }
 
-        if (strstr(dbe._ctlaction, "FREE_IO_BLOCK")) {
-            string errmsg("errmsg=");  errmsg.append(dbe._message);
-            deque<string> args;
-            args.push_back(errmsg);
-            std::vector<string> connected;
-            STATUS db_status(BGQDB::checkIOBlockConnection( string(dbe._block), &connected ));
-
-            if ( db_status == BGQDB::OK ) {
-                for(unsigned int cn = 0 ; cn < connected.size(); cn++ ) {
-                    setBlockAction(connected[cn], DEALLOCATE_BLOCK, args);
-                }
-            } else {
-                LOG_ERROR_MSG(__FUNCTION__ << " Attempt to retrieve list of connected compute blocks failed for IO block " << string(dbe._block));
-            }
-
-            setBlockAction(string(dbe._block), DEALLOCATE_BLOCK, args);
-
-        }
-
         if (strstr(dbe._ctlaction, "COMPUTE_IN_ERROR")) {
             if (location.getType() == bgq::util::Location::ComputeCardOnIoBoard) {
                 sqlstr = "update bgqionode set status = 'E' where location = '" + string(dbe._location) + string("' ");
@@ -3599,10 +3542,13 @@ postProcessRAS(
         if (strstr(dbe._ctlaction, "BOARD_IN_ERROR")) {
             if (string(dbe._location).substr(4,1) != "I") {
                 sqlstr = "update bgqnodecard set status = 'E' where location = '" + string(dbe._location).substr(0,10) + string("' ");
+                ctl_rc = tx.execStmt(sqlstr.c_str());
             } else {
                 sqlstr = "update bgqiodrawer set status = 'E' where location = '" + string(dbe._location).substr(0,6) + string("' ");
+                ctl_rc = tx.execStmt(sqlstr.c_str());
+                sqlstr = "update bgqionode set status = 'E' where substr(location,1,6) = '" + string(dbe._location).substr(0,6) + string("' ");
+                ctl_rc = tx.execStmt(sqlstr.c_str());
             }
-            ctl_rc = tx.execStmt(sqlstr.c_str());
         }
 
          if (strstr(dbe._ctlaction, "DCA_IN_ERROR")) {
@@ -3954,6 +3900,10 @@ queryMissing(
     }
 
     sqlrc = SQLFetch(hstmt);
+    if (sqlrc == SQL_NO_DATA_FOUND) {
+        LOG_ERROR_MSG("Block " << block << " not found");
+        return NOT_FOUND;
+    }
     if (sqlrc != SQL_SUCCESS) {
         LOG_ERROR_MSG( "Database fetch failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
         return DB_ERROR;
@@ -4154,10 +4104,46 @@ queryError(
 
     sql.str("");
     sql <<
-        "select a.location from bgqionode a, bgqioblockmap b where b.blockid = '" <<
-        block << "' and b.location = a.location group by a.location having min(status) = 'E' " <<
-        " union all select a.location from bgqionode a, bgqioblockmap b where b.blockid = '" <<
-        block << "' and substr(a.location,1,6) = b.location group by a.location having min(status) = 'E' ";
+
+ "WITH badIon AS ("
+
+" SELECT location"
+  " FROM bgqIoNode"
+  " WHERE status = 'E'"
+" UNION ALL"
+" SELECT ion.location"
+  " FROM bgqIoDrawer AS d"
+       " JOIN"
+       " bgqIoNode AS ion"
+       " ON ion.ioPos = d.location"
+  " WHERE d.status <> 'A'"
+
+" ), ioLoc AS ("
+
+" SELECT location"
+  " FROM bgqIoBlockMap"
+  " WHERE blockId = '" << block << "'"
+" UNION ALL"
+" SELECT ion.location"
+  " FROM bgqIoBlockMap AS ibm"
+       " JOIN"
+       " bgqIoDrawer AS d"
+       " ON ibm.location = d.location"
+       " JOIN"
+       " bgqIoNode AS ion"
+       " ON ion.ioPos = d.location"
+  " WHERE ibm.blockId = '" << block << "'"
+
+" )"
+
+" SELECT badIon.location"
+  " FROM badIon"
+       " JOIN"
+       " ioLoc"
+       " ON badIon.location = ioLoc.location"
+  " GROUP BY badIon.location"
+
+       ;
 
     sqlrc = tx.execQuery( sql.str().c_str(), &hstmt );
     if ( sqlrc != SQL_SUCCESS ) {

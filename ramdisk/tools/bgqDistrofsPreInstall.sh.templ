@@ -114,6 +114,11 @@ else
 
 	echo -en "\n\n\t\tYACI is properly configured for BG/Q Linux Distribution Installation."
 
+	# If there is a spaceChecked file around we want to remove it so we don't create a false positive.
+	if [ -e /tftpboot/.spaceChecked ] ; then
+		rm -f /tftpboot/.spaceChecked
+	fi
+
 	# Need to make sure we have enough sapce to install the RHEL6 image.
 	echo -en "\n\n\tPlease wait.  Ensuring there is sufficient space for installation...\n"
 	dd if=/dev/zero of=/tftpboot/testFile bs=1M count=12000 &> /dev/null

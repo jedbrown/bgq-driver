@@ -23,8 +23,12 @@ LDFLAGS += -Wl,-rpath,$(BGQ_BUILD_DIR)/utility/src
 LDFLAGS += -L $(BGQ_BUILD_DIR)/utility/src/cxxsockets -lcxxsockets
 LDFLAGS += -Wl,-rpath,$(BGQ_BUILD_DIR)/utility/src/cxxsockets
 
-SAMPLES   = asio listen_both46
+LIBRARY = $(BGQ_BUILD_DIR)/utility/src/cxxsockets/libcxxsockets.so
+
+SAMPLES   = asio listen_both46 clientAssignAddrError
 TESTERS   = host
+TESTERS  += no_delay
+TESTERS  += user_error_exception
 
 all: $(TESTERS:%=out_%) $(SAMPLES)
 
@@ -41,10 +45,22 @@ out_%: test_% $(etc_install_dir)/bg.properties.tpl
 	BG_PROPERTIES_FILE=$(etc_install_dir)/bg.properties.tpl ./$< 1> $(patsubst test_%, out_%, $<)
 
 test_host: LDFLAGS += -lboost_unit_test_framework-mt
-test_host: host.o Makefile
-	$(CXX) $(LDFLAGS) -o $@ $(filter-out Makefile, $^)
-
+test_host: host.o $(LIBRARY)
+	$(CXX) $(LDFLAGS) -o $@ $(filter-out $(LIBRARY), $^)
 host.o: CXXFLAGS += -DBOOST_TEST_DYN_LINK -DBOOST_TEST_MAIN
 
+test_no_delay: LDFLAGS += -lboost_unit_test_framework-mt
+test_no_delay: no_delay.o $(LIBRARY)
+	$(CXX) $(LDFLAGS) -o $@ $(filter-out $(LIBRARY), $^)
+no_delay.o: CXXFLAGS += -DBOOST_TEST_DYN_LINK -DBOOST_TEST_MAIN
+
+
+test_user_error_exception: LDFLAGS += -lboost_unit_test_framework-mt
+test_user_error_exception: user_error_exception.o $(LIBRARY)
+	$(CXX) $(LDFLAGS) -o $@ $(filter-out $(LIBRARY), $^)
+user_error_exception.o: CXXFLAGS += -DBOOST_TEST_DYN_LINK -DBOOST_TEST_MAIN
+
 clean:
-	$(RM) *o *d asio listen_both46
+	$(RM) *o *d $(SAMPLES) $(TESTERS)
+
+-include *.d

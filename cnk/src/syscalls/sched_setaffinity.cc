@@ -25,6 +25,8 @@
 #include "Kernel.h"
 #include <sched.h>
 
+Lock_Atomic_t runtimeMmuTableUpdate; 
+
 uint64_t sc_sched_setaffinity(SYSCALL_FCN_ARGS)
 {
     int  tid   = (int)r3;
@@ -65,11 +67,20 @@ uint64_t sc_sched_setaffinity(SYSCALL_FCN_ARGS)
         return CNK_RC_FAILURE(EINVAL); // No cpu bit was set in the mask
     }
     // Determine if the target hardware thread index is a resource owned by this process. 
+    bool remoteMigrate = 0;
     if (!((_BN(hwthread_index)) & (GetMyProcess()->HwthreadMask)))
     {
-        // The targetted hardware thread is not a thread belonging to this process.
-        //printf("setaffinity EINVAL due to request to set hwthread %d not belonging to this process\n",hwthread_index);
-        return CNK_RC_FAILURE(EINVAL); // No cpu bit was set in the mask
+        // The targeted hardware thread is not a thread belonging to this process.
+        // If the extended affinity model is activated, allow this
+        if (proc->ThreadModel != CONFIG_THREAD_MODEL_ETA)
+        {
+            //printf("setaffinity EINVAL due to request to set hwthread %d not belonging to this process\n",hwthread_index);
+            return CNK_RC_FAILURE(EINVAL); // No cpu bit was set in the mask
+        }
+        else
+        {
+            remoteMigrate = 1;
+        }
     }
     // Is the target kthread already assigned to the target hardware thread?
     if ((uint32_t)(targetKThread->ProcessorID) == hwthread_index)
@@ -91,15 +102,50 @@ uint64_t sc_sched_setaffinity(SYSCALL_FCN_ARGS)
     {
         return CNK_RC_FAILURE(EINVAL); 
     }
-    // Set the pending migration information in the kthread (target hwt and slot) (compare swap, of fails assume some other thread is
+    // Set the pending migration information in the kthread (target hwt and slot) (compare swap, if fails assume some other thread is
     // moving this kthread.
     if (KThread_SetMigrationTarget(targetKThread, hwthread_index, reserved_slot) < 0)
     {
         KThread_ReleaseForMigration(hwthread_index,reserved_slot);
         return CNK_RC_FAILURE(EINVAL); 
     }
+    // If this is an Extended Affinity model move to a hardware thread outside of this process's ownership, see if we can generate 
+    // generate the proper TLBs for this process space on the target core.
+    uint32_t migration_pid = proc->PhysicalPID;
+    if (remoteMigrate)
+    {
+        // If we are migrating within the hardware threads of a core and the configuration is 32 or 64 processes per node,
+        // then our TLBs are already setup in this core and no additional work is needed to allow the migration to proceed.
+        if ((proc->HWThread_Count > 2) ||
+            (targetKThread->ProcessorID >> 2) != ((int32_t)hwthread_index >> 2))
+        {
+            // Call mapper function to prepare the TLBs for application. If the tlbs cannot be mapped for any
+            // reason, an error will be returned. Also this function call will reserve the target core's mapping
+            // so that no other request comes in before we eventually write the TLBs in the target thread.
+            uint32_t destpid;  // new hardware pid to be used in the target hardware thread to represent this thread's process.
+            int source_process = proc->Tcoord;
+            int dest_process = (GetProcessByProcessorID(hwthread_index))->Tcoord;
 
+            Kernel_Lock(&runtimeMmuTableUpdate);
+            int copyProcessResult = vmm_copyProcessToOtherMMU(source_process, dest_process, &destpid);
+            Kernel_Unlock(&runtimeMmuTableUpdate);
+            if(copyProcessResult != 0)
+            {
+                //printf("vmm_copyProcesstoOtherMMU failed!\n");
+                KThread_ReleaseForMigration(hwthread_index,reserved_slot);
+                return CNK_RC_FAILURE(EINVAL);
+            }
+            //printf("vmm_copyProcesstoOtherMMU: source T:%d dest T:%d new dest Physical PID:%d. My Heap start/end=%016lx/%016lx\n", source_process, dest_process, destpid, proc->Heap_VStart, proc->Heap_VEnd );
+            // Modify the default migration pid value 
+            migration_pid = destpid; 
+        }
+        //printf("(I) Remote thread migration requested by %d from %d to %d slot %d\n", ProcessorID(), targetKThread->ProcessorID, hwthread_index, reserved_slot);
+    }
     // There is no turning back now. Request that the thread be moved.
+
+    // Set the physical pid to be used in the migrated thread.  This cannot be changed until we are ready to be dispatched on the new hwt
+    //printf("sched_setaffinity: Setting migration pid to %d for hwt:%d tid:%d\n", migration_pid, hwthread_index, GetTID(targetKThread));
+    targetKThread->MigrationData.b.physical_pid = migration_pid;
 
     //    Send the IPI to the target kthread to initiate the move
     int targetProcessorID = targetKThread->ProcessorID;

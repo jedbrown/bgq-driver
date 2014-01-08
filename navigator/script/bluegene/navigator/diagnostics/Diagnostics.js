@@ -33,13 +33,11 @@ define(
     "./Summary",
     "../topic",
     "../dijit/Diagnostics",
+    "dojo/request",
     "dojo/topic",
     "dojo/_base/array",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
-    "dojo/_base/xhr",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -52,13 +50,11 @@ function(
         l_Summary,
         ll_topic,
         b_navigator_dijit_Diagnostics,
+        d_request,
         d_topic,
         d_array,
         d_declare,
-        d_Deferred,
         d_lang,
-        d_xhr,
-        j_registry,
         module
     )
 {
@@ -74,6 +70,7 @@ var b_navigator_diagnostics_Diagnostics = d_declare( [ b_navigator_AbstractTab ]
     _diagnostics_dij : null,
 
     _configure_compute_run : null,
+    _configure_io_run : null,
 
     _got_properties : false,
 
@@ -84,12 +81,11 @@ var b_navigator_diagnostics_Diagnostics = d_declare( [ b_navigator_AbstractTab ]
         this._bgws = bgws;
         this._navigator = navigator;
 
-        new l_ConfigureIoRun( this._bgws, this );
         new l_Details( this._bgws, this );
         new l_Locations( this._bgws, this );
         new l_Runs( this._bgws, this );
         new l_Summary( this._bgws, this );
-
+        this._configure_io_run = new l_ConfigureIoRun( this._bgws, this );
         this._configure_compute_run = new l_ConfigureRun( this._bgws, this );
     },
 
@@ -146,10 +142,13 @@ var b_navigator_diagnostics_Diagnostics = d_declare( [ b_navigator_AbstractTab ]
     _getMachineHighlightData : function()
     {
         var cur_tab = this._diagnostics_dij.tabContainer.selectedChildWidget;
-        var ccr_tab = this._configure_compute_run.getDijit();
 
-        if ( cur_tab === ccr_tab ) {
+        if ( cur_tab === this._configure_compute_run.getDijit() ) {
             return this._configure_compute_run.getMachineHighlightData();
+        }
+
+        if ( cur_tab === this._configure_io_run.getDijit() ) {
+            return this._configure_io_run.getMachineHighlightData();
         }
 
         return null;
@@ -193,12 +192,9 @@ var b_navigator_diagnostics_Diagnostics = d_declare( [ b_navigator_AbstractTab ]
 
                 // Load the tests.properties file.
 
-                var def = d_xhr.get( {
-                        url: "resources/diags/tests.properties"
-                    } );
+                var promise = d_request( "resources/diags/tests.properties" );
 
-                d_Deferred.when(
-                        def,
+                promise.then(
                         d_lang.hitch( this, this._gotTestsProperties )
                     );
 
@@ -229,13 +225,16 @@ var b_navigator_diagnostics_Diagnostics = d_declare( [ b_navigator_AbstractTab ]
 
 
     // override AbstractTab
-    notifyMachineClicked : function( location )
+    notifyMachineClicked : function( loc )
     {
         var cur_tab = this._diagnostics_dij.tabContainer.selectedChildWidget;
-        var ccr_tab = this._configure_compute_run.getDijit();
 
-        if ( cur_tab === ccr_tab ) {
-            this._configure_compute_run.notifyMachineClicked( location );
+        if ( cur_tab === this._configure_compute_run.getDijit() ) {
+            this._configure_compute_run.notifyMachineClicked( loc );
+        }
+
+        if ( cur_tab === this._configure_io_run.getDijit() ) {
+            this._configure_io_run.notifyMachineClicked( loc );
         }
     },
 

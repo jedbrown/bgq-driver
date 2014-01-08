@@ -28,39 +28,36 @@
 
 <title>ActionLink Browser Tests</title>
 
-<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
 
 <script>
 
 
-g_b_dijit_ActionLink = null;
-
-
 require(
 [
-    "bluegene/dijit/ActionLink",
     "bluegene/dijit/test/ActionLinkHtmlTests",
     "dojo/parser",
     "dojo/ready",
-    "doh/runner"
+    "doh/runner",
+
+    "bluegene/dijit/ActionLink"
 ],
 function(
-        b_dijit_ActionLink,
         tests,
         d_parser,
         d_ready,
         doh
     )
 {
-    g_b_dijit_ActionLink = b_dijit_ActionLink;
-
 	var onLoad = function() 
 	    {
+	        d_parser.parse();
+
 	        doh.register( "bluegene/dijit/test/ActionLinkHTML", tests );
 	        doh.run();
 	    };
-	
-	
+
+
 	d_ready( onLoad );
 } );
 
@@ -71,11 +68,11 @@ function(
 
 <span id="container1"></span>
 
-<span id="al1" data-dojo-type="g_b_dijit_ActionLink" data-dojo-props="label: 'Test1'"></span>
-<span id="al2" data-dojo-type="g_b_dijit_ActionLink">Test2</span>
+<span id="al1" data-dojo-type="bluegene/dijit/ActionLink" data-dojo-props="label: 'Test1'"></span>
+<span id="al2" data-dojo-type="bluegene/dijit/ActionLink">Test2</span>
 
 <ul>
-<li id="al3" data-dojo-type="g_b_dijit_ActionLink">Test3</li>
+<li id="al3" data-dojo-type="bluegene/dijit/ActionLink">Test3</li>
 </ul>
 
 <table>

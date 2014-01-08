@@ -60,6 +60,9 @@ public:
     void visitIoCableStateChanged( bgsched::realtime::ClientEventListener::IoCableStateChangedEventInfo::Impl& i ) { _res = _checkIoCableStateChanged( i ); }
     void visitRasEvent( bgsched::realtime::ClientEventListener::RasEventInfo::Impl& i ) { _res = _checkRasEvent( i ); }
 
+    void visitIoDrawerStateChanged( bgsched::realtime::ClientEventListenerV2::IoDrawerStateChangedEventInfo::Impl& i ) { _res = _checkIoDrawerStateChanged( i ); }
+    void visitIoNodeStateChanged( bgsched::realtime::ClientEventListenerV2::IoNodeStateChangedEventInfo::Impl& i ) { _res = _checkIoNodeStateChanged( i ); }
+
     bool getRes() const  { return _res; }
 
 
@@ -75,7 +78,7 @@ private:
     bgsched::realtime::Filter::Impl::BlockStatusesPtr _block_statuses_ptr;
     bool _send_block_delete;
 
-    bool _send_midplane_changes, _send_node_board_changes, _send_node_changes, _send_switch_changes, _send_torus_cable_changes, _send_io_cable_changes;
+    bool _send_midplane_changes, _send_node_board_changes, _send_node_changes, _send_switch_changes, _send_torus_cable_changes, _send_io_cable_changes, _send_io_drawer_changes, _send_io_node_changes;
 
     bool _send_ras_events;
     bgsched::realtime::Filter::Impl::RePtr _ras_event_msg_id_re_ptr;
@@ -104,6 +107,8 @@ private:
     bool _checkTorusCableStateChanged( bgsched::realtime::ClientEventListener::TorusCableStateChangedEventInfo::Impl& );
     bool _checkIoCableStateChanged( bgsched::realtime::ClientEventListener::IoCableStateChangedEventInfo::Impl& );
     bool _checkRasEvent( bgsched::realtime::ClientEventListener::RasEventInfo::Impl& );
+    bool _checkIoDrawerStateChanged( bgsched::realtime::ClientEventListenerV2::IoDrawerStateChangedEventInfo::Impl& );
+    bool _checkIoNodeStateChanged( bgsched::realtime::ClientEventListenerV2::IoNodeStateChangedEventInfo::Impl& );
 };
 
 } } // namespace realtime::server

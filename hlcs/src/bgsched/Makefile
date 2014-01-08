@@ -33,8 +33,8 @@ SUBDIRS = allocator realtime core runjob samples docs
 
 lib_base=bgsched
 lib_major_vers=1
-lib_minor_vers=0
-lib_minor_rev=1
+lib_minor_vers=2
+lib_minor_rev=0
 
 lib_short=lib$(lib_base).so
 lib_vers=$(lib_short).$(lib_major_vers)
@@ -58,8 +58,18 @@ SRCS        += HardwareImpl.cc
 SRCS        += InitializationException.cc
 SRCS        += InputException.cc
 SRCS        += InternalException.cc
+SRCS        += IOBlock.cc
+SRCS        += IOBlockFilter.cc
+SRCS        += IOBlockFilterImpl.cc
+SRCS        += IOBlockImpl.cc
+SRCS        += IODrawer.cc
+SRCS        += IODrawerImpl.cc
+SRCS        += IOHardware.cc
+SRCS        += IOHardwareImpl.cc
 SRCS        += IOLink.cc
 SRCS        += IOLinkImpl.cc
+SRCS        += IONode.cc
+SRCS        += IONodeImpl.cc
 SRCS        += Job.cc
 SRCS        += JobImpl.cc
 SRCS        += JobFilter.cc
@@ -107,6 +117,7 @@ LDFLAGS += -L $(BGQ_INSTALL_DIR)/db/lib -lbgdb
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/hlcs/lib -lsecurity
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib
+LDFLAGS += -L../libmmcs_client -lmmcs_client
 LDFLAGS += $(realtime_ldflags)
 LDFLAGS += $(core_ldflags)
 LDFLAGS += -ldl
@@ -122,7 +133,7 @@ default: all samples
 samples: install
 	$(MAKE) -C $@
 
-all: $(lib_short) test_core test_main test_filter realtime_client test_kill_job
+all: $(lib_short) test_core test_main test_filter realtime_client test_kill_job reboot_io_node
 
 $(lib_full): $(lib_objs)
 	$(CXX) -shared $(CXXFLAGS) $(LDFLAGS) $^ -o $@
@@ -165,6 +176,9 @@ realtime_client: realtime_client.o $(lib_short)
 	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/extlib/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/db/lib -o $@ $^
 
 test_core: test_core.o $(lib_short)
+	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^
+
+reboot_io_node: reboot_io_node.o $(lib_short)
 	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^
 
 plugin_tester: plugin_tester.o install

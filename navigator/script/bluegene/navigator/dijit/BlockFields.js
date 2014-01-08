@@ -25,23 +25,25 @@
 define(
 [
     "./AbstractTemplatedContainer",
+    "../format",
     "../../BlueGene",
     "dojo/dom-class",
+    "dojo/number",
     "dojo/_base/declare",
     "dojo/text!./templates/BlockFields.html",
     "module",
 
     // Used in template.
-    "../format",
     "../../dijit/Hideable",
     "../../dijit/OutputText",
-    "dojo/number",
     "dijit/layout/ContentPane"
 ],
 function(
         l_AbstractTemplatedContainer,
+        ll_format,
         b_BlueGene,
         d_class,
+        d_number,
         d_declare,
         template,
         module
@@ -49,7 +51,6 @@ function(
 {
 
 var b_navigator_dijit_BlockFields = d_declare(
-        "bluegene.navigator.dijit.BlockFields",
         [ l_AbstractTemplatedContainer ],
 
 {
@@ -158,7 +159,11 @@ var b_navigator_dijit_BlockFields = d_declare(
             this._nodeConfigurationItem.hide();
         }
 
-    }
+    },
+    
+    
+    _d_number : d_number,
+    _ll_format : ll_format
 
 } );
 

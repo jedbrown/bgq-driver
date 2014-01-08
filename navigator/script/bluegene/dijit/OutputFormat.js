@@ -40,7 +40,6 @@ function(
 
 
 var b_dijit_OutputFormat = d_declare(
-        "bluegene.dijit.OutputFormat",
         [ j__WidgetBase ],
 
 /** @lends bluegene^dijit^OutputFormat# */
@@ -66,6 +65,10 @@ var b_dijit_OutputFormat = d_declare(
      *  @type Object|Array|null
      */
     value : null,
+
+    /** Property; Object to pass as thisObject to substitute.
+     */
+    thisObject : null,
 
 
     /**
@@ -146,7 +149,9 @@ var b_dijit_OutputFormat = d_declare(
 
         var text = d_string.substitute(
                 this.format,
-                this.value
+                this.value,
+                null, /* transform */
+                this.thisObject
             );
 
         this.domNode.appendChild( d_window.doc.createTextNode( text ) );

@@ -24,15 +24,15 @@
 define(
 [
     "./Bgws",
+    "dojo/when",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "module"
 ],
 function(
         l_Bgws,
+        d_when,
         d_declare,
-        d_Deferred,
         d_lang,
         module
     )
@@ -61,7 +61,7 @@ var b_System = d_declare( null,
 
     fetch: function()
     {
-        d_Deferred.when(
+        d_when(
                 this._bgws.fetch( l_Bgws.resourcePaths.summary.machine ),
                 d_lang.hitch( this, this._gotMachineInfo )
             );

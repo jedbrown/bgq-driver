@@ -433,7 +433,7 @@ void fw_hss_pcie_init( void ) {
     fw_udelay(2500ull);
     dval = DCRReadPriv(SERDES_RIGHT_DCR(TS_HSS_PLL_STAT));
     if (0 == (dval & SERDES_RIGHT_DCR__TS_HSS_PLL_STAT__E_PLLB_LOCKED_set(1))) {
-	FW_Warning("PCIe PLL did not lock");
+	FW_Warning("PCIe PLL did not lock.");
     }
 }
 

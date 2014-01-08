@@ -36,7 +36,7 @@ LDFLAGS += -Wl,-rpath,$(BGQ_BUILD_DIR)/utility/src
 TESTERS   = $(patsubst %.cc,%,$(wildcard *.cc))
 
 
-all:
+all: test
 
 test: $(TESTERS:%=out_%)
 

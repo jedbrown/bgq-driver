@@ -31,7 +31,7 @@
 
 #include <utility/include/Properties.h>
 
-#include <utility/include/cxxsockets/SocketTypes.h>
+#include <utility/include/cxxsockets/ListeningSocket.h>
 
 #include <utility/include/portConfiguration/PortConfiguration.h>
 
@@ -44,8 +44,9 @@
 //! The base class provides the definition common
 //! to the master and the agent.  This provides the
 //! agent functionality.
-class Agent : public AgentBase {
-
+class Agent : public AgentBase
+{
+private:
     //! \brief Socket for listening for master to connect back.
     CxxSockets::ListeningSocketPtr _masterListener;
 
@@ -53,8 +54,9 @@ class Agent : public AgentBase {
     std::list<MsgBasePtr> _buffered_messages;
 
     BGMasterAgentProtocolSpec::JoinRequest build_join_request(
-                                             const std::string& hostaddr,
-                                             int servname) const;
+            const std::string& hostaddr,
+            int servname) const;
+
 protected:
     //! \brief Send messages buffered while the master connection is down.
     void sendBuffered();
@@ -66,9 +68,9 @@ protected:
     void doStopRequest(const BGMasterAgentProtocolSpec::StopRequest& stopreq);
 
     //! \brief Master wants the agent to die.
-    //! \param diereq The die request from bgmaster_server
-    //! \param reply_to_master If the request is internal and not from bgmaster, don't reply.
-    void doEndAgentRequest(const BGMasterAgentProtocolSpec::End_agentRequest& diereq, bool reply_to_master);
+    //! \param signal The signal that was sent to bgagent, to propagate to all the running binaries..
+    void doEndAgentRequest(const int signal);
+
 public:
     //! \brief Constructor.
     //! This will initiate the registration process
@@ -81,7 +83,7 @@ public:
     void set_users(const std::string& users) { _user_list = users; }
 
     //! \brief Start the main bgagent process.
-    void startup(bgq::utility::Properties::Ptr props);
+    void startup(const bgq::utility::Properties::ConstPtr& props);
 
     //! \brief set up communication with BGMaster.
     void join();
@@ -93,7 +95,7 @@ public:
     void processRequest();
 
     //! \brief Clean this up and die
-    void cleanup();
+    void cleanup(const int signal);
 
     //! \brief Get the host name
     const CxxSockets::Host& get_hostname() const { return _hostname; }
@@ -103,7 +105,7 @@ private:
     std::string _user_list;
     bgq::utility::PortConfiguration::Pairs _portpairs;
     const CxxSockets::Host _hostname;
-    bgq::utility::Properties::Ptr _properties;
+    bgq::utility::Properties::ConstPtr _properties;
 };
 
 #endif

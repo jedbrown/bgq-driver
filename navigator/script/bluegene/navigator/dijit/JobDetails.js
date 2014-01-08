@@ -29,8 +29,8 @@ define(
     "./MonitorActiveMixin",
     "../../Bgws",
     "../../TimeInterval",
+    "dojo/when",
     "dojo/_base/declare",
-    "dojo/_base/Deferred",
     "dojo/_base/lang",
     "dojo/text!./templates/JobDetails.html",
     "module",
@@ -48,8 +48,8 @@ function(
         l_MonitorActiveMixin,
         b_Bgws,
         b_TimeInterval,
+        d_when,
         d_declare,
-        d_Deferred,
         d_lang,
         template,
         module
@@ -58,7 +58,6 @@ function(
 
 
 var b_navigator_dijit_JobDetails = d_declare(
-        "bluegene.navigator.dijit.JobDetails",
         [ l_AbstractTemplatedContainer, l_MonitorActiveMixin ],
 
 {
@@ -174,7 +173,7 @@ var b_navigator_dijit_JobDetails = d_declare(
 
         this._displayStack.selectChild( this._loadingPane );
 
-        d_Deferred.when(
+        d_when(
                 this._fetch_deferred,
                 d_lang.hitch( this, this._jobDetailsLoaded ),
                 d_lang.hitch( this, this._fetchDetailsFailed )

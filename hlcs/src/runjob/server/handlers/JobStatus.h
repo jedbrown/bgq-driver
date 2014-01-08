@@ -67,9 +67,15 @@ public:
 private:
     void findHandler(
             const boost::shared_ptr<Job>& job,
-            runjob::commands::request::JobStatus::Ptr request,
-            boost::shared_ptr<CommandConnection> connection
+            const boost::shared_ptr<CommandConnection>& connection
         );
+
+    void lookupJob(
+            const boost::shared_ptr<CommandConnection>& connection
+            );
+
+private:
+    runjob::commands::request::JobStatus::Ptr _request;
 };
 
 } // handlers

@@ -99,6 +99,11 @@ public:
      */
     const Timeout& getTimeout() const { return _timeout; }
 
+    /*!
+     * \brief
+     */
+    pid_t getPid() const { return _pid; }
+
 private:
     void doValidate() const;
 
@@ -117,6 +122,8 @@ private:
             );
 
 private:
+    pid_t _pid;
+    std::string _hostname;
     boost::program_options::options_description _options;   //!<
     std::string _signal;
     Timeout _timeout;

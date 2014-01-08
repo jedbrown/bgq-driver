@@ -28,6 +28,7 @@
 #include <ramdisk/include/services/common/SignalHandler.h>
 #include <ramdisk/include/services/common/logging.h>
 #include <ramdisk/include/services/ServicesConstants.h>
+#include <ramdisk/include/services/common/Cioslog.h>
 #include <sys/types.h>
 #include <assert.h>
 #include <errno.h>
@@ -104,11 +105,19 @@ SignalHandler::setDefault(void)
 void
 SignalHandler::myHandler(int signum, siginfo_t *siginfo, void *sigcontext)
 {
+#ifdef __PPC64__
    // Log information from the context.
    ucontext_t *context = (ucontext_t *)sigcontext;
    LOG_ERROR_MSG("Received signal " << signum << ", code=" << siginfo->si_code << " errno=" << siginfo->si_errno <<
                  " address=" << siginfo->si_addr << " nip=" << (void *)(context->uc_mcontext.regs->nip) <<
                  " lr=" << (void *)(context->uc_mcontext.regs->link));
+#else
+
+   // Don't do anything, just need to reference the variables so it compiles.
+   siginfo = 0; sigcontext = 0;
+
+#endif
+
 #if 0
    LOG_ERROR_MSG(std::setfill('0') << std::hex << 
                   "gpr00=0x" << std::setw(16) << context->uc_mcontext.regs->gpr[0] <<
@@ -158,11 +167,12 @@ SignalHandler::myHandler(int signum, siginfo_t *siginfo, void *sigcontext)
    switch (signum){
     case SIGABRT:
     case SIGSEGV:
-    {
+    {  
       struct sigaction sigact;
       memset(&sigact,0,sizeof(sigact) );
       sigact.sa_handler = SIG_DFL;
       sigaction(signum,&sigact,NULL);
+      printlastLogEntries(4);
       raise(signum);
       break;
     }

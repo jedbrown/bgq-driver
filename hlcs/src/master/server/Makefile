@@ -46,7 +46,8 @@ LDFLAGS += \
  -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility -lcxxsockets \
  -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib \
  -L$(BGQ_INSTALL_DIR)/xml/lib -lXML \
- -Wl,-rpath,$(BGQ_INSTALL_DIR)/xml/lib
+ -Wl,-rpath,$(BGQ_INSTALL_DIR)/xml/lib \
+ -lboost_program_options-mt
 
 
 parts := \
@@ -67,8 +68,7 @@ objs := ${parts:%=%.o}
 common_parts := \
  AgentBase \
  Ids \
- Protocol \
- ThreadLog
+ Protocol
 
 common_objs := ${common_parts:%=../common/%.o}
 

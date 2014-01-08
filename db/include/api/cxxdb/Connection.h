@@ -24,12 +24,15 @@
 #ifndef CXXDB_CONNECTION_H_
 #define CXXDB_CONNECTION_H_
 
+
 #include "fwd.h"
 
 #include <string>
 #include <vector>
 
+
 namespace cxxdb {
+
 
 class ConnectionHandle;
 
@@ -164,6 +167,9 @@ public:
             const std::string& sql,
             const ParameterNames& parameter_names = NoParameterNames
         ) =0;
+
+    /*! \brief Create a statement for queries, you can prepare it later. */
+    virtual QueryStatementPtr createQuery() =0;
 
     /*! \brief Start a transaction.
      *

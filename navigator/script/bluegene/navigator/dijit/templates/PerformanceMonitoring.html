@@ -1,12 +1,12 @@
 <div>
 
-<div data-dojo-type="dijit.layout.ContentPane" data-dojo-attach-point="_contentPane">
+<div data-dojo-type="dijit/layout/ContentPane" data-dojo-attach-point="_contentPane">
     <div>
-        <div data-dojo-type="dijit.form.DropDownButton" data-dojo-attach-point="_foDropDown">
+        <div data-dojo-type="dijit/form/DropDownButton" data-dojo-attach-point="_foDropDown">
             <span>Filter options</span>
-            <div style="width: 500px;" data-dojo-type="dijit.TooltipDialog" data-dojo-props="style: 'width: 500px;'">
+            <div style="width: 500px;" data-dojo-type="dijit/TooltipDialog" data-dojo-props="style: 'width: 500px;'">
                 <div class="bgFilterOptions bgFilterOptionsPerfMon"
-                     data-dojo-type="dijit.form.Form"
+                     data-dojo-type="dijit/form/Form"
                      data-dojo-props="'class': 'bgFilterOptions bgFilterOptionsPerfMon'"
                      data-dojo-attach-point="_foForm"
                      >
@@ -15,21 +15,21 @@
                             <li>
                                 <label for="${id}-fo-detail">Detail</label>
                                 <input name="detail" id="${id}-fo-detail" placeHolder="c512i4"
-                                   data-dojo-type="dijit.form.TextBox"
+                                   data-dojo-type="dijit/form/TextBox"
                                    data-dojo-props="name: 'detail', placeHolder: 'c512i4'"
                                    data-dojo-attach-point="_foDetail" />
                             </li>
                             <li>
                                 <label for="${id}-fo-block">Block</label>
                                 <input name="block" id="${id}-fo-block" placeHolder="MyBlock"
-                                   data-dojo-type="dijit.form.TextBox"
+                                   data-dojo-type="dijit/form/TextBox"
                                    data-dojo-props="name: 'block', placeHolder: 'MyBlock'"
                                    data-dojo-attach-point="_foBlock" />
                             </li>
-                            <li><input data-dojo-type="bluegene.navigator.dijit.TimeInterval" data-dojo-props="name: 'interval', label: 'Measurements'" data-dojo-attach-point="_foInterval" /></li>
+                            <li><input data-dojo-type="bluegene/navigator/dijit/TimeInterval" data-dojo-props="name: 'interval', label: 'Measurements'" data-dojo-attach-point="_foInterval" /></li>
                             <li>
                                 <label for="${id}-fo-grouping">Grouping</label>
-                                <select name="grouping" id="${id}-fo-grouping" disabled data-dojo-type="dijit.form.Select" data-dojo-props="name: 'grouping', maxHeight: -1, disabled: true"
+                                <select name="grouping" id="${id}-fo-grouping" disabled data-dojo-type="dijit/form/Select" data-dojo-props="name: 'grouping', maxHeight: -1, disabled: true"
                                     data-dojo-attach-point="_foGrouping"
                                     >
                                     <option value="N">None</option>
@@ -41,24 +41,24 @@
                         </ul>
                     </fieldset>
                     <fieldset class="submit">
-                        <button type="submit" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'submit'">Apply</button>
-                        <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_foResetButton">Reset</button>
+                        <button type="submit" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'submit'">Apply</button>
+                        <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_foResetButton">Reset</button>
                     </fieldset>
                 </div>
             </div>
         </div>
-        <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_backButton">Back</button>
-        <span data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_loadingInd">Loading...</span>
-        <span style="color: red; font-weight: bold;" data-dojo-type="bluegene.dijit.Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_errorHideable">
-            <span data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_errorMessage"></span>
+        <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_backButton">Back</button>
+        <span data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_loadingInd">Loading...</span>
+        <span style="color: red; font-weight: bold;" data-dojo-type="bluegene/dijit/Hideable" data-dojo-props="visibility: 'hidden'" data-dojo-attach-point="_errorHideable">
+            <span data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_errorMessage"></span>
         </span>
     </div>
     <div style="width: 1000px; height: 500px;" data-dojo-attach-point="_perfChart"></div>
-    <div data-dojo-type="bluegene.dijit.Hideable" data-dojo-attach-point="_pagingContainer">
-        <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_prevPageButton">&lt;</button>
-        Page <span data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_currentPageText"></span> of
-             <span data-dojo-type="bluegene.dijit.OutputText" data-dojo-attach-point="_pageCountText"></span>
-        <button type="button" data-dojo-type="dijit.form.Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_nextPageButton">&gt;</button>
+    <div data-dojo-type="bluegene/dijit/Hideable" data-dojo-attach-point="_pagingContainer">
+        <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_prevPageButton">&lt;</button>
+        Page <span data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_currentPageText"></span> of
+             <span data-dojo-type="bluegene/dijit/OutputText" data-dojo-attach-point="_pageCountText"></span>
+        <button type="button" data-dojo-type="dijit/form/Button" data-dojo-props="type: 'button'" data-dojo-attach-point="_nextPageButton">&gt;</button>
     </div>
 </div>
 

@@ -25,16 +25,18 @@ define(
 [
     "./EventsMonitorMixin",
     "./topic",
+    "dojo/_base/array",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry"
+    "module"
 ],
 function(
         l_EventsMonitorMixin,
         l_topic,
+        d_array,
         d_declare,
         d_lang,
-        j_registry
+        module
     )
 {
 
@@ -47,6 +49,10 @@ var b_navigator_IoBlockDetails = d_declare( [ l_EventsMonitorMixin ],
     _bgws: null,
 
     _io_block_details_dij : null,
+
+    _notify_update_machine_highlighting_fn : null,
+
+    _machine_highlighting_data : null,
 
 
     /**
@@ -69,13 +75,31 @@ var b_navigator_IoBlockDetails = d_declare( [ l_EventsMonitorMixin ],
      *
      *  @constructs
      */
-    constructor: function( /** bluegene^Bgws */ bgws )
+    constructor: function(
+            /** bluegene^Bgws */ bgws,
+            /** function */ notifyUpdateMachineHighlightingFn,
+            io_block_details_dij
+        )
     {
         this._bgws = bgws;
+        this._notify_update_machine_highlighting_fn = notifyUpdateMachineHighlightingFn;
+        this._io_block_details_dij = io_block_details_dij;
 
-        this._io_block_details_dij = j_registry.byId( "navigator" ).getIoBlockDetailsDij();
+        this._machine_highlighting_data = {
+                loading: false,
+                highlighting: {}
+            };
+
+        this._io_block_details_dij.on( "Loading", d_lang.hitch( this, this._onLoading ) );
+        this._io_block_details_dij.on( "gotBlockDetails", d_lang.hitch( this, this._gotBlockDetails ) );
 
         l_topic.subscribe( l_topic.ioBlockSelected, d_lang.hitch( this, this._blockSelected ) );
+    },
+
+
+    getMachineHighlightData : function()
+    {
+        return this._machine_highlighting_data;
     },
 
 
@@ -103,7 +127,36 @@ var b_navigator_IoBlockDetails = d_declare( [ l_EventsMonitorMixin ],
     _blockSelected : function( /**String | null*/ block_id )
     {
         this._io_block_details_dij.setBlockId( block_id );
+    },
+
+
+    _onLoading : function()
+    {
+        this._machine_highlighting_data.loading = true;
+        this._notify_update_machine_highlighting_fn();
+    },
+
+
+    _gotBlockDetails : function( block_info )
+    {
+        this._machine_highlighting_data = {
+                    loading: false,
+                    highlighting: {}
+            };
+
+        if ( block_info ) {
+
+            d_array.forEach( block_info.locations, d_lang.hitch( this, function( location ) {
+                this._machine_highlighting_data.highlighting[location.substr( 0, 6 )] = { color: "lightblue" };
+            } ) );
+
+        }
+
+        console.log( module.id + ": _gotBlockDetails, block_info=", block_info, "_machine_highlighting_data=", this._machine_highlighting_data );
+
+        this._notify_update_machine_highlighting_fn();
     }
+
 
 } );
 

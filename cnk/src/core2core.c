@@ -106,6 +106,10 @@ IPIHANDLER_Fcn_t IPI_DeliverInterrupt(int processorID, IPIHANDLER_Fcn_t handler,
                         return NULL;
                     }
                 }
+                // Is there an IPI pending directed to us which requires an ACK by the sender. If this is true, we must process the
+                // pending request so that the target can proceed to an interruptable point and accept the previously pending request
+                // thereby allowing us to make our request pending.
+                IPI_DeadlockAvoidance(processorID);
             }
             ThreadPriority_Medium();
         }
@@ -164,7 +168,8 @@ void IPI_handler_setaffinity(uint64_t parm1, uint64_t parm2)
 {
     KThread_t *kthread = (KThread_t *)parm1;
     // Test to see if the process is still active
-    if (!IsProcessActive())
+
+    if (!IsProcessActive(kthread))  
     {
         return;
     }
@@ -200,7 +205,7 @@ void IPI_handler_changepolicy(uint64_t parm1, uint64_t parm2)
     int newPolicy = (int)(parm2 >> 32);  // upper word is the policy
 
     // Test to see if the process is still active
-    if (!IsProcessActive())
+    if (!IsProcessActive(kthread))
     {
         return;
     }
@@ -235,14 +240,14 @@ void IPI_handler_complete_migration(uint64_t parm1, uint64_t parm2)
 {
     KThread_t *kthread = (KThread_t *)parm1;
     // Test to see if the process is still active
-    if (!IsProcessActive())
+    if (!IsProcessActive(kthread))
     {
         return;
     }
     // Set to restart location if speculation is active. Do not defer the specid invalidation.
     Speculation_CheckJailViolation(&GetMyKThread()->Reg_State);
     
-    //printf("In the set affinity IPI handler in hwthread index %d. parm: %016lx\n", ProcessorID(), parm);
+    //printf("Complete Migration IPI handler. hwt %d. kthread: %016lx\n", ProcessorID(), parm1);
     // Call the function to do the move of the thread
     KThread_CompleteMigration(kthread);
 }
@@ -265,8 +270,8 @@ void IPI_complete_migration(KThread_t *pKThr)
 // Run the scheduler to dispatch the most eligible pthread
 void IPI_handler_run_scheduler(uint64_t kthread, uint64_t unblock_state)
 {
-    // Test to see if the process is still active
-    if (!IsProcessActive())
+    // Test to see if the process associated with the kthread is still active
+    if (kthread && !IsProcessActive((KThread_t*)kthread))
     {
         return;
     }
@@ -297,11 +302,11 @@ void IPI_run_scheduler(int processorID, KThread_t *kthread, int new_state)
     IPI_DeliverInterrupt( processorID, IPI_handler_run_scheduler, (uint64_t)kthread, (uint64_t)new_state);
 }
 
-// Run the scheduler to dispatch the most eligible pthread
+// Run the scheduler to yield a kthread on a specific hardware thread.
 void IPI_handler_block_thread(uint64_t kthread, uint64_t new_state)
 {
     // Test to see if the process is still active
-    if (!IsProcessActive())
+    if (!IsProcessActive((KThread_t *)kthread))
     {
         return;
     }
@@ -395,7 +400,7 @@ void IPI_handler_process_exit(uint64_t phase, uint64_t parm2)
     if (!GetMyProcess())   return;
 
     //printf("In the Process Exit IPI handler in hwthread index %d. status: %ld\n", ProcessorID(), status);
-    App_Exit(phase);
+    App_Exit(phase, 0);
 }
 // Initiate a request to terminate the process
 void IPI_process_exit(int processorID, int phase)
@@ -438,7 +443,7 @@ void IPI_handler_guard_adjust(uint64_t parm1, uint64_t parm2)
     uint64_t high_mark = parm1;
     MoveGuardDirection_t direction = (MoveGuardDirection_t)parm2;
 
-    if (!IsProcessActive())
+    if (!IsMyProcessActive())
     {
         return;
     }
@@ -457,7 +462,7 @@ void IPI_guard_adjust(int processorID, uint64_t high_mark, MoveGuardDirection_t 
 void IPI_handler_load_application(uint64_t parm1, uint64_t parm2)
 {
     // Verify that a process environment still exists. This could be a latent interrupt.
-    if (!IsProcessActive())
+    if (!IsMyProcessActive())
     {
         return;
     }
@@ -476,7 +481,7 @@ void IPI_load_application(int processorID)
 void IPI_handler_load_agent(uint64_t parm1, uint64_t parm2)
 {
     // Test to see if the process is still active
-    if (!IsProcessActive())
+    if (!IsMyProcessActive())
     {
         return;
     }
@@ -498,7 +503,9 @@ void IPI_handler_update_MMU(uint64_t ackParm, uint64_t slot)
 {
     uint32_t tcoord = slot>>32;
     slot &= 0xffff;
+    Kernel_Lock(&NodeState.CoreState[ProcessorCoreID()].coreLock);
     vmm_UpdateMMU(tcoord, slot);
+    Kernel_Unlock(&NodeState.CoreState[ProcessorCoreID()].coreLock);
     *((int64_t*)ackParm) = 1;
 }
 
@@ -510,7 +517,6 @@ void IPI_update_MMU(int processorID, uint64_t slot)
     ThreadPriority_Low();
     while (!(*ackParm) && !IPI_AbortForProcessExit() )
     {
-        // avoid theoretical live lock
         asm volatile("nop;");
         asm volatile("nop;");
         asm volatile("nop;");
@@ -552,7 +558,11 @@ void IPI_tool_suspend(int processorID, AppProcess_t *proc)
     ThreadPriority_Low();
     while (!suspendAck)
     {
-        IPI_DeadlockAvoidance();
+        // Calling an IPI that requires an Ack from the target should be using the Syscall_GetIpiControl() interface to obtain
+        // a global IPI lock. This is done by UPC and L2 atomic operations. However, there is at least one IPI that also requires an
+        // ack that cannot use this system lock interface. Any IPIs that require an ACK and cannot using the Syscall_GetIpiControl() lock will
+        // need to execute this code in its loop that polls for the ack in order to eliminate a deadlock. 
+        IPI_DeadlockAvoidance(processorID);
     }
     ThreadPriority_Medium();
 }
@@ -825,48 +835,60 @@ void IPI_invalidate_icache(int coreID)
 			 IPI_handler_invalidate_icache, 0, 0);
 }
 
-// Calling an IPI that requires an Ack from the target should be using the Syscall_GetIpiControl() interface to obtain
-// a global IPI lock. This is done by UPC and L2 atomic operations. However, there is at least one IPI that also requires an
-// ack that cannot use this system lock interface. Any IPIs that require an ACK and cannot using the Syscall_GetIpiControl() lock will
-// need to execute this code in its loop that polls for the ack in order to eliminate a deadlock.
-void IPI_DeadlockAvoidance()
+//----------------------------------------------------
+// Remote thread exit
+//----------------------------------------------------
+
+// Inform all other threads within the process that the process is exiting
+void IPI_handler_remote_thread_exit(uint64_t proc, uint64_t parm2)
 {
-    int i;
+    // Verify that a process environment still exists. 
+    if (!GetMyProcess())   return;
+
+    App_RemoteThreadExit((AppProcess_t*)proc);
+}
+// Initiate a request to terminate threads running on a remote hardware thread.
+void IPI_remote_thread_exit(int processorID, AppProcess_t *proc)
+{
+    // Deliver the interrupt.
+    IPI_DeliverInterrupt(processorID, IPI_handler_remote_thread_exit, (uint64_t)proc, 0);
+}
+
+// Flush pending IPIs from the specified hwt.
+void IPI_DeadlockAvoidance(int targetProcessorID)
+{
     int myProcessorID = ProcessorID();
     int myProcessorThreadID = ProcessorThreadID();
     uint64_t c2c_status = BIC_ReadStatusExternalRegister0(myProcessorThreadID);
     // Are there any interrupts pending against this hardware thread
-    // Loop through all threads that may be sending an IPI to this thread
-    for (i=0; i<64; i++)
+    // from the passed-in processor id
+    uint64_t mask = _BN(targetProcessorID);
+    // Is an interrupt pending from the selected hardware thread?
+    if ((myProcessorID != targetProcessorID) && (mask & c2c_status))
     {
-        if (!c2c_status) break;
-        uint64_t mask = _BN(i);
-        // Is an interrupt pending from the selected hardware thread?
-        if ((myProcessorID != i) && (mask & c2c_status))
+        // We need to investigate this interrupt to see if it is one of the IPI requests that require an ack from its target
+        IPI_Message_t* pIPImsg = (IPI_Message_t*)&(NodeState.CoreState[targetProcessorID/4].HWThreads[targetProcessorID%4].ipi_message[myProcessorID]);
+        if ((pIPImsg->fcn == IPI_handler_update_MMU) ||
+            (pIPImsg->fcn == IPI_handler_upc_attach) ||
+            (pIPImsg->fcn == IPI_handler_upcp_disable) ||
+            (pIPImsg->fcn == IPI_handler_upcp_init) ||
+            (pIPImsg->fcn == IPI_handler_upc_attach) ||
+            (pIPImsg->fcn == IPI_handler_tool_suspend))
         {
-            // We need to investigate this interrupt to see if it is one of the IPI requests that require an ack from its target
-            IPI_Message_t* pIPImsg = (IPI_Message_t*)&(NodeState.CoreState[i/4].HWThreads[i%4].ipi_message[myProcessorID]);
-            if ((pIPImsg->fcn == IPI_handler_update_MMU) ||
-                (pIPImsg->fcn == IPI_handler_upc_attach) ||
-                (pIPImsg->fcn == IPI_handler_upcp_disable) ||
-                (pIPImsg->fcn == IPI_handler_upcp_init) ||
-                (pIPImsg->fcn == IPI_handler_upc_attach))
+            IPI_Message_t IPImsg_local = *pIPImsg;
+            BIC_WriteClearExternalRegister0(myProcessorThreadID, mask);                    
+            // Reset fcn field in the IPI message data to enable subsequent IPIs
+            pIPImsg->fcn = NULL;
+            ppc_msync();
+            //printf("(W) IPI Deadlock avoidance. Flushing handler: %016lx\n", (uint64_t)IPImsg_local.fcn);
+            Kernel_WriteFlightLog(FLIGHTLOG, FL_ADLOCKIPI, targetProcessorID, (uint64_t)IPImsg_local.fcn, IPImsg_local.param1, mfspr(SPRN_SRR0));
+            // Call the handler
+            if (IPImsg_local.fcn)
             {
-                IPI_Message_t IPImsg_local = *pIPImsg;
-                BIC_WriteClearExternalRegister0(myProcessorThreadID, mask);                    
-                // Reset fcn field in the IPI message data to enable subsequent IPIs
-                pIPImsg->fcn = NULL;
-                ppc_msync();
-                //printf("(W) IPI Deadlock avoidance. Flushing handler: %016lx\n", (uint64_t)IPImsg_local.fcn);
-                Kernel_WriteFlightLog(FLIGHTLOG, FL_ADLOCKIPI, i, (uint64_t)IPImsg_local.fcn, IPImsg_local.param1, mfspr(SPRN_SRR0));
-                // Call the handler
-                if (IPImsg_local.fcn)
-                {
-                    IPImsg_local.fcn(IPImsg_local.param1, IPImsg_local.param2);
-                }
+                IPImsg_local.fcn(IPImsg_local.param1, IPImsg_local.param2);
             }
         }
-        c2c_status &= ~mask;
     }
 }
+
 

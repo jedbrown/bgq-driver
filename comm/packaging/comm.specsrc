@@ -40,10 +40,10 @@ This package provides the MPICH2 communications libraries
 %{_base_dir}/comm/xl.ndebug
 
 %{_base_dir}/comm/shared-objects.tgz
+%{_base_dir}/comm/mpich2-testsuite-1.2.tar.gz
 %{_base_dir}/comm/HEAD
 %{_base_dir}/comm/COMPILER
 %{_base_dir}/comm/README
-
 
 ####################################
 %package pami

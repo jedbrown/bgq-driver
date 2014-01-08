@@ -27,7 +27,13 @@
 
 #include "../AbstractResponder.hpp"
 
+#include "../RequestRange.hpp"
+
+#include "../query/Ras.hpp"
+
 #include "capena-http/http/uri/Path.hpp"
+
+#include <stdint.h>
 
 
 namespace bgws {
@@ -50,7 +56,8 @@ public:
     Ras(
             CtorArgs& args
         ) :
-            AbstractResponder( args )
+            AbstractResponder( args ),
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool)
     { /* Nothing to do */ }
 
 
@@ -61,7 +68,26 @@ public:
 
 private:
 
+
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
+
+
     void _checkAuthority() const;
+
+
+    void _doQuery(
+            capena::server::ResponderPtr,
+            const RequestRange& req_range,
+            const query::RasOptions& query_options
+        );
+
+    void _queryComplete(
+            capena::server::ResponderPtr,
+            const RequestRange& req_range,
+            uint64_t row_count,
+            cxxdb::ConnectionPtr,
+            cxxdb::ResultSetPtr rs_ptr
+        );
 
 };
 

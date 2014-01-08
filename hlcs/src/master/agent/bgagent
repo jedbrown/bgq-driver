@@ -53,6 +53,23 @@ PATH=$PATH:/sbin:/bin:/bgsys/drivers/ppcfloor/hlcs/sbin/
 prog=bgagentd
 lockfile=/var/lock/subsys/bgagent
 
+echo_skipped() {
+  [ "$BOOTUP" = "color" ] && $MOVE_TO_COL
+  echo -n "["
+  [ "$BOOTUP" = "color" ] && $SETCOLOR_SUCCESS
+  echo -n $"  SKIPPED  "
+  [ "$BOOTUP" = "color" ] && $SETCOLOR_NORMAL
+  echo -n "]"
+  echo -ne "\r"
+  return 0
+}
+
+# Log that something was skipped
+skipped() {
+  [ "$BOOTUP" != "verbose" -a -z "${LSB:-}" ] && echo_skipped
+  return 0
+}
+
 start() {
 #	[ "$EUID" != "0" ] && exit 4
 # Source db2profile if it is there
@@ -80,15 +97,21 @@ start() {
 
     PROPFILE=/bgsys/local/etc/bg.properties
 
-        # Start daemons.
-    echo -n $"Starting $prog: "
-    umask 022
+    # Start daemons.
+    if [ ! -e $lockfile ] ; then
+    	echo -n $"Starting $prog: "
+    	umask 022
         # log files created by bgagentd should be world readable
-    daemon $prog $OPTIONS "--properties " $PROPFILE
-    RETVAL=$?
-    echo
-    [ $RETVAL -eq 0 ] && touch $lockfile
-    return $RETVAL
+    	daemon $prog $OPTIONS "--properties " $PROPFILE
+    	RETVAL=$?
+    	echo
+    	[ $RETVAL -eq 0 ] && touch $lockfile
+    	return $RETVAL
+    else
+	echo -e $"Lockfile $lockfile for $prog found. bgagentd is already running or was terminated improperly.\nStarting $prog: "
+	skipped	
+	return 0
+    fi
 }
 
 stop() {

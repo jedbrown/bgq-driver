@@ -8,7 +8,7 @@
 /*                                                                  */
 /* Blue Gene/Q                                                      */
 /*                                                                  */
-/* (C) Copyright IBM Corp.  2009, 2011                              */
+/* (C) Copyright IBM Corp.  2009, 2012                              */
 /*                                                                  */
 /* US Government Users Restricted Rights -                          */
 /* Use, duplication or disclosure restricted                        */
@@ -23,6 +23,7 @@
 
 #include <bgsched/core/core.h>
 #include "bgsched/core/BlockSortImpl.h"
+#include "bgsched/core/IOBlockSortImpl.h"
 #include "bgsched/core/JobSortImpl.h"
 
 #include <bgsched/DatabaseException.h>
@@ -35,6 +36,9 @@
 #include "bgsched/Coordinates.h"
 #include "bgsched/ComputeHardwareImpl.h"
 #include "bgsched/HardwareImpl.h"
+#include "bgsched/IOBlockFilterImpl.h"
+#include "bgsched/IOBlockImpl.h"
+#include "bgsched/IOHardwareImpl.h"
 #include "bgsched/IOLinkImpl.h"
 #include "bgsched/JobFilterImpl.h"
 #include "bgsched/JobImpl.h"
@@ -98,6 +102,21 @@ getComputeHardware()
     try {
         ComputeHardware::Pimpl impl(new ComputeHardware::Impl());
         return ComputeHardware::ConstPtr(new ComputeHardware(impl));
+    } catch (...) {
+        THROW_EXCEPTION(
+                bgsched::InternalException,
+                bgsched::InternalErrors::UnexpectedError,
+                Unexpected_Exception_Str
+                );
+    }
+}
+
+IOHardware::ConstPtr
+getIOHardware()
+{
+    try {
+        IOHardware::Pimpl impl(new IOHardware::Impl());
+        return IOHardware::ConstPtr(new IOHardware(impl));
     } catch (...) {
         THROW_EXCEPTION(
                 bgsched::InternalException,
@@ -820,7 +839,7 @@ getBlocks(
             enforcer_ptr.reset(new hlcs::security::Enforcer(properties, conn_ptr));
             // Build user id with allow remote user indicator
             userid_ptr.reset(new bgq::utility::UserId(user,true));
-            LOG_TRACE_MSG("Performing security filtering on blocks for user " << user);
+            LOG_TRACE_MSG("Performing security filtering on compute blocks for user " << user);
         }
 
         // Convert from bgsched::BlockFilter format to BGQDB::filtering::BlockFilter format
@@ -839,12 +858,12 @@ getBlocks(
         bool includeBlock = true;
 
         while (rs_ptr->fetch()) {
-            // Assume block should be included
+            // Assume compute block should be included
             includeBlock = true;
 
             // See if security check for read authority is needed
             if (checkUserAuthority) {
-                // Call the enforcer to make sure the user has read authority to block
+                // Call the enforcer to make sure the user has read authority to compute block
                 if (! enforcer_ptr->validate(
                         hlcs::security::Object(
                                 hlcs::security::Object::Block,
@@ -857,7 +876,7 @@ getBlocks(
                 }
             }
 
-            // Check if block should be included in returned container of blocks
+            // Check if compute block should be included in returned container of compute blocks
             if (includeBlock) {
                 Block::Pimpl blockImplPtr(Block::Impl::createFromDatabase(rs_ptr->columns(), filter.getExtendedInfo(), *conn_ptr2));
 
@@ -876,7 +895,7 @@ getBlocks(
                         );
                     }
 
-                    // Get job ID of jobs, if any, using this block
+                    // Get job ID of jobs, if any, using this compute block
                     LOG_TRACE_MSG("Querying for job ids for " << blockImplPtr->getName() );
 
                     job_stmt_ptr->parameters()[BGQDB::DBTJob::BLOCKID_COL].set( blockImplPtr->getName() );
@@ -892,7 +911,7 @@ getBlocks(
             }
         }
 
-        LOG_TRACE_MSG("Got " << blockVector.size() << " blocks");
+        LOG_TRACE_MSG("Got " << blockVector.size() << " compute blocks");
     } catch (const bgsched::InternalException& e) {
         // just re-throw it
         throw;
@@ -922,6 +941,114 @@ getBlocks(
         );
     }
     return blockVector;
+}
+
+IOBlock::Ptrs
+getIOBlocks(
+        const bgsched::IOBlockFilter& filter,
+        const bgsched::core::IOBlockSort& sort,
+        const string& user
+        )
+{
+    IOBlock::Ptrs IOBlockVector;
+    cxxdb::ConnectionPtr conn_ptr;
+    cxxdb::ConnectionPtr conn_ptr2;
+    cxxdb::ResultSetPtr rs_ptr;
+    cxxdb::QueryStatementPtr job_stmt_ptr;
+
+    boost::scoped_ptr<hlcs::security::Enforcer> enforcer_ptr;
+    boost::scoped_ptr<bgq::utility::UserId> userid_ptr;
+
+    try {
+        // Get database connections
+        conn_ptr = BGQDB::DBConnectionPool::Instance().getConnection();
+        conn_ptr2 = BGQDB::DBConnectionPool::Instance().getConnection();
+
+        // An empty user string means no security filtering will be performed and all results will be returned.
+        bool checkUserAuthority = true;
+
+        if (user.empty()) {
+            checkUserAuthority = false;
+        } else {
+            // Get properties set on bgsched::init()
+            bgq::utility::Properties::Ptr properties(bgsched::getProperties());
+            enforcer_ptr.reset(new hlcs::security::Enforcer(properties, conn_ptr));
+            // Build user id with allow remote user indicator
+            userid_ptr.reset(new bgq::utility::UserId(user,true));
+            LOG_TRACE_MSG("Performing security filtering on I/O blocks for user " << user);
+        }
+
+        // Convert from bgsched::IOBlockFilter format to BGQDB::filtering::BlockFilter format
+        bgsched::IOBlockFilter::Pimpl IOBlockFilterPimpl = filter.getPimpl();
+        BGQDB::filtering::BlockFilter dbIOBlockFilter(IOBlockFilterPimpl->convertToDBBlockFilter());
+
+        if (sort.isSorted()) {
+            // Convert from bgsched::core::IOBlockSort format to BGQDB::filtering::BlockSort format
+            bgsched::core::IOBlockSort::Pimpl IOBlockSortPimpl = sort.getPimpl();
+            BGQDB::filtering::BlockSort dbIOBlockSort = IOBlockSortPimpl->convertToDBBlockSort();
+            rs_ptr = BGQDB::filtering::getBlocks(dbIOBlockFilter, dbIOBlockSort, *conn_ptr);
+        } else {
+            rs_ptr = BGQDB::filtering::getBlocks(dbIOBlockFilter, BGQDB::filtering::BlockSort::AnyOrder, *conn_ptr);
+        }
+
+        bool includeBlock = true;
+
+        while (rs_ptr->fetch()) {
+            // Assume I/O block should be included
+            includeBlock = true;
+
+            // See if security check for read authority is needed
+            if (checkUserAuthority) {
+                // Call the enforcer to make sure the user has read authority to I/O block
+                if (! enforcer_ptr->validate(
+                        hlcs::security::Object(
+                                hlcs::security::Object::Block,
+                                rs_ptr->columns()[BGQDB::DBVIoblock::BLOCKID_COL].getString()
+                        ),
+                        hlcs::security::Action::Read,
+                        *userid_ptr))
+                {
+                    includeBlock = false;
+                }
+            }
+
+            // Check if block should be included in returned container of blocks
+            if (includeBlock) {
+                IOBlock::Pimpl IOBlockImplPtr(IOBlock::Impl::createFromDatabase(rs_ptr->columns(), filter.getExtendedInfo(), *conn_ptr2));
+                IOBlockVector.push_back(IOBlock::Ptr(new IOBlock(IOBlockImplPtr)));
+            }
+        }
+
+        LOG_TRACE_MSG("Got " << IOBlockVector.size() << " I/O blocks");
+    } catch (const bgsched::InternalException& e) {
+        // just re-throw it
+        throw;
+    } catch (const BGQDB::Exception& e) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::DatabaseError,
+                Unexpected_Exception_Str + " Error text is: " + e.what()
+        );
+    } catch (const cxxdb::DatabaseException& e) {
+        THROW_EXCEPTION(
+                bgsched::DatabaseException,
+                bgsched::DatabaseErrors::OperationFailed,
+                Unexpected_Exception_Str + " Error text is: " + e.what()
+        );
+    } catch (const std::runtime_error& e) {
+        THROW_EXCEPTION(
+                bgsched::RuntimeException,
+                bgsched::RuntimeErrors::AuthorityError,
+                e.what()
+        );
+    } catch (const std::exception& e) {
+        THROW_EXCEPTION(
+                bgsched::InternalException,
+                bgsched::InternalErrors::UnexpectedError,
+                Unexpected_Exception_Str + " Error text is: " + e.what()
+        );
+    }
+    return IOBlockVector;
 }
 
 Job::ConstPtrs
@@ -993,6 +1120,7 @@ getJobs(
     }
     return jobVector;
 }
+
 
 } // namespace bgsched::core
 } // namespace bgsched

@@ -103,39 +103,9 @@ void Connection::start()
 }
 
 
-void Connection::postResponseStatusHeaders(
-        http::Status status,
-        const Headers& headers,
-        Response::BodyPresense::Value expect_body
-    )
-{
-    _strand.post( bind (
-            &Connection::_postResponseStatusHeadersImpl,
-            shared_from_this(),
-            status,
-            headers,
-            expect_body
-        ) );
-}
-
-
-void Connection::postResponseBodyData(
-        const std::string& data,
-        DataContinuesIndicator data_continues
-    )
-{
-    _strand.post( bind (
-            &Connection::_postResponseBodyDataImpl,
-            shared_from_this(),
-            data,
-            data_continues
-        ) );
-}
-
-
 Connection::~Connection()
 {
-    LOG_INFO_MSG( "Connection closed" );
+    LOG_DEBUG_MSG( "Discarding Connection" );
 }
 
 
@@ -194,16 +164,28 @@ void Connection::_handleReadRequestLine(
 
     if ( error ) {
         if ( error == boost::asio::error::eof ) {
-            LOG_DEBUG_MSG( "Client closed connection (got eof)" );
+            LOG_INFO_MSG( "Connection from " << _socket_ptr->lowest_layer().remote_endpoint() << " closed (got eof)" );
+
+            ResponderPtr rptr(_responder_wk_ptr.lock());
+            if ( rptr )  rptr->notifyDisconnect();
+
             return;
         }
 
         if ( error == boost::asio::error::shut_down ) {
-            LOG_DEBUG_MSG( "Client closed connection (got shut_down)" );
+            LOG_INFO_MSG( "Connection from " << _socket_ptr->lowest_layer().remote_endpoint() << " closed (got shutdown)" );
+
+            ResponderPtr rptr(_responder_wk_ptr.lock());
+            if ( rptr )  rptr->notifyDisconnect();
+
             return;
         }
 
         LOG_WARN_MSG( "Unexpected error reading request line, error code = " << error << " message=" << error.message() );
+
+        ResponderPtr rptr(_responder_wk_ptr.lock());
+        if ( rptr )  rptr->notifyDisconnect();
+
         return;
     }
 
@@ -234,7 +216,18 @@ void Connection::_handleReadRequestLine(
 
     } catch ( std::exception& e ) {
 
-        Response r( shared_from_this() );
+        Response r(
+                _strand.wrap( boost::bind(
+                        &Connection::_notifyResponseStatusHeaders,
+                        shared_from_this(),
+                        _1, _2, _3
+                    ) ),
+                _strand.wrap( boost::bind(
+                        &Connection::_notifyResponseBodyData,
+                        shared_from_this(),
+                        _1, _2
+                    ) )
+            );
         r.setException( e );
 
     }
@@ -387,10 +380,22 @@ void Connection::_initializeResponder()
     }
 
 
+    _responder_wk_ptr = responder_ptr;
+
     AbstractResponder::ResponseComplete response_complete(AbstractResponder::ResponseComplete::CONTINUE);
 
     responder_ptr->initialize(
-            shared_from_this(),
+            _strand.io_service(),
+            _strand.wrap( boost::bind(
+                    &Connection::_notifyResponseStatusHeaders,
+                    shared_from_this(),
+                    _1, _2, _3
+                ) ),
+            _strand.wrap( boost::bind(
+                    &Connection::_notifyResponseBodyData,
+                    shared_from_this(),
+                    _1, _2
+                ) ),
             &response_complete
         );
 
@@ -793,10 +798,10 @@ void Connection::_handleReadLine(
 }
 
 
-void Connection::_postResponseStatusHeadersImpl(
+void Connection::_notifyResponseStatusHeaders(
         http::Status status,
         const Headers& headers,
-        Response::BodyPresense::Value expect_body
+        BodyPresense expect_body
     )
 {
     _newResponse( string() +
@@ -807,7 +812,7 @@ void Connection::_postResponseStatusHeadersImpl(
         _newResponse( http::formatHeaderLine( h_pair.first, h_pair.second ) );
     }
 
-    if ( expect_body == Response::BodyPresense::EXPECT_BODY ) {
+    if ( expect_body == BodyPresense::EXPECT_BODY ) {
         _newResponse( http::formatHeaderLine( http::header::TRANSFER_ENCODING, http::TRANSFER_CODING_CHUNKED ) );
     } else {
         _newResponse( http::formatHeaderLine( http::header::CONTENT_LENGTH, "0" ) );
@@ -826,7 +831,7 @@ void Connection::_postResponseStatusHeadersImpl(
 }
 
 
-void Connection::_postResponseBodyDataImpl(
+void Connection::_notifyResponseBodyData(
         const std::string& data,
         DataContinuesIndicator data_continues
     )

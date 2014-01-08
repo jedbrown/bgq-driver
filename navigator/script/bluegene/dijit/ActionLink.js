@@ -44,7 +44,6 @@ var _CLICKABLE_CLASSNAME = "bgActionLink";
 
 
 var b_dijit_ActionLink = d_declare(
-        "bluegene.dijit.ActionLink",
         [ j__WidgetBase ],
 
 /** @lends bluegene^dijit^ActionLink# */

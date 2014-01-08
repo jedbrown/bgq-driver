@@ -17,6 +17,9 @@
 #  --------------------------------------------------------------- 
 #                                                                  
 # end_generated_IBM_copyright_prolog                               
+
+include ../../Make.rules
+
 OS	= $(shell uname)
 OS_ARCH := $(shell uname -m)
 
@@ -26,6 +29,10 @@ ifeq ($(OS),AIX)
 DIRS = svchost include
 else
 DIRS = $(subst /Makefile,,$(wildcard */Makefile))
+endif
+
+ifeq ($(BGQ_CONTROL_SYSTEM_SIMULATION),yes)
+DIRS = svchost include
 endif
 
 

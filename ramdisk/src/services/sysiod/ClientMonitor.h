@@ -42,19 +42,30 @@
 #include <ramdisk/include/services/common/PointerMap.h>
 #include <ramdisk/include/services/MessageHeader.h>
 #include <ramdisk/include/services/SysioMessages.h>
+#include <ramdisk/include/services/UserMessages.h>
 #include <poll.h>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/signals2/mutex.hpp>
 #include <list>
-
+#include <ramdisk/include/services/common/RdmaError.h>
+#include <ramdisk/include/services/common/RdmaDevice.h>
+#include <ramdisk/include/services/Plugin.h>
+#include <sys/resource.h>
+#include <utility/include/PluginHandle.h>
 
 namespace bgcios
 {
 
+
 namespace sysio
 {
 
+  static char BLANK[]="\0";
+  static MessageHeader NULL_MH={  0, 0, 0,0,0,0,.0,32,0};
 //! \brief Monitor the client connection to a compute node and handle system I/O service messages.
+
+
+typedef boost::shared_ptr<bgq::utility::PluginHandle<Plugin> > PluginHandleSharedPtr;
 
 class ClientMonitor : public Thread
 {
@@ -64,7 +75,11 @@ public:
    //! \param  ready Pointer to Counter object to tell main thread initialization is complete.
    //! \param  config Configuration from command line and properties.
 
-   ClientMonitor(bgcios::CounterPtr ready, SysioConfigPtr config) : Thread()
+   ClientMonitor(bgcios::CounterPtr ready, SysioConfigPtr config) 
+: Thread()
+, _dynamicLoadLibrary(config->getDynamicLoadLibrary() )
+, _dynamicLoadLibrary_flags(config->getFlags() )
+, _handle4PluginClass(new Plugin)
    {
       // Initialize private data.
       _ready = ready;
@@ -74,13 +89,15 @@ public:
       _shortCircuitPathDefault = config->getShortCircuitPath();
       _posixModeDefault = config->getPosixMode();
       _logFunctionShipErrors = _logFunctionShipErrorsDefault = config->getLogFunctionShipErrors();
-      _inProgressMessage = 0;
+
       _currentDirFd = -1;
       _freePollSetSlots.resize(MaxPollSetSize, true);
       _lastResidentSetSize = 0;
-       _syscall_mh=NULL;
+       _syscall_mh=&NULL_MH;
        _syscallStartTimestamp=0;
-       _syscallFileString1 = NULL;
+       _syscallFileString1 = BLANK;
+       _syscallFileString2 = BLANK;
+       _syscallFd = -1;
    }
 
    //! \brief  Default destructor.
@@ -165,31 +182,137 @@ private:
 
    bool routeMessage(const ClientMessagePtr& message);
 
+   //! \brief  Route a message to user added handler.
+   //! \param  message Message to route.
+   //! \return True if there is a handler for the message, otherwise false.
+
+   bool routeUserMessage(const ClientMessagePtr& message);
+
+      //! \brief  Route a message to user added handler with file descriptors and RDMA info
+   //! \param  message Message to route.
+   //! \return True if there is a handler for the message, otherwise false.
+
+   bool routeUserFdRDMAMessage(const ClientMessagePtr& message);
+
    //! \brief  Transfer data to the client from the large memory region.
-   //! \param  message Request message from client.
    //! \param  address Address of remote memory region.
    //! \param  rkey Key of remote memory region.
    //! \param  length Length of data to transfer.
    //! \return 0 when successful, error when unsuccessful.
 
-   uint32_t putData(const ClientMessagePtr& message, uint64_t address, uint32_t rkey, uint32_t length);
+uint32_t putData(uint64_t address, uint32_t rkey, uint32_t length)
+{
+   uint32_t rc = 0;
+   try {
+      // Post a rdma write request to the send queue using the large message region.
+      _largeRegion->setMessageLength(length);
+      uint64_t reqID = (uint64_t)_largeRegion->getAddress();
+      uint64_t& localAddress = reqID;
+      uint32_t lkey = _largeRegion->getLocalKey();
+      int err = _client->postRdmaWrite(reqID, rkey, address, //remote key and address
+                     lkey,  localAddress, (ssize_t)length);
+      if (err) return (rc=(uint32_t)err);
+
+      // Wait for notification that the rdma read completed.
+      while (!completionChannelHandler(reqID));
+   }
+
+   catch (const RdmaError& e) {
+      rc = (uint32_t)e.errcode();
+   }
+
+   return rc;
+}
 
    //! \brief  Transfer data from the client into the large memory region.
-   //! \param  message Request message from client.
    //! \param  address Address of remote memory region.
    //! \param  rkey Key of remote memory region.
    //! \param  length Length of data to transfer.
    //! \return 0 when successful, error when unsuccessful.
 
-   uint32_t getData(const ClientMessagePtr& message, uint64_t address, uint32_t rkey, uint32_t length);
+uint32_t getData( uint64_t address, uint32_t rkey, uint32_t length)
+{
+   uint32_t rc = 0;
+   try {
+      // Post a rdma read request to the send queue using the large message region.
+      _largeRegion->setMessageLength(length);
+      uint64_t reqID = (uint64_t)_largeRegion->getAddress();
+      uint64_t& localAddress = reqID;
+      uint32_t lkey = _largeRegion->getLocalKey();
+      int err = _client->postRdmaRead(reqID, rkey, address, //remote key and address
+                     lkey,  localAddress, (ssize_t)length);
+      if (err) return (rc=(uint32_t)err);
 
-   //! \brief  Wait for a work completion indicating that a message of the specified type is available using the specified request id.
-   //! \param  type Type of message to wait for.
-   //! \param  requestId Request id to check for in the completion events.
-   //! \return Nothing.
+      // Wait for notification that the rdma read completed.
+      while (!completionChannelHandler(reqID));
+   }
 
-   void waitForCompletion(uint16_t type, uint64_t requestId);
+   catch (const RdmaError& e) {
+      rc = (uint32_t)e.errcode();
+   }
 
+   return rc;
+}
+
+   //! \brief  Transfer data from the client into the large memory region.
+   //! \param  address Address of remote memory region.
+   //! \param  rkey Key of remote memory region.
+   //! \param  length Length of data to transfer.
+   //! \return 0 when successful, error when unsuccessful.
+
+uint32_t getUserRdmaData( uint64_t address, uint32_t rkey, uint32_t length, uint64_t offset)
+{
+   uint32_t rc = 0;
+   try {
+      // Post a rdma read request to the send queue using the large message region.
+      _largeRegion->setMessageLength(length);
+      uint64_t reqID = (uint64_t)_largeRegion->getAddress() + offset;
+      uint64_t& localAddress = reqID;
+      uint32_t lkey = _largeRegion->getLocalKey();
+      int err = _client->postRdmaRead(reqID, rkey, address, //remote key and address
+                     lkey,  localAddress, (ssize_t)length);
+      if (err) return (rc=(uint32_t)err);
+
+      // Wait for notification that the rdma read completed.
+      while (!completionChannelHandler(reqID));
+   }
+
+   catch (const RdmaError& e) {
+      rc = (uint32_t)e.errcode();
+   }
+
+   return rc;
+}
+
+   //! \brief  Transfer data from the large memory region into the client
+   //! \param  address Address of remote memory region.
+   //! \param  rkey Key of remote memory region.
+   //! \param  length Length of data to transfer.
+   //! \return 0 when successful, error when unsuccessful.
+
+uint32_t putUserRdmaData( uint64_t address, uint32_t rkey, uint32_t length, uint64_t offset)
+{
+   uint32_t rc = 0;
+   try {
+      // Post a rdma read request to the send queue using the large message region.
+      _largeRegion->setMessageLength(length);
+      uint64_t reqID = (uint64_t)_largeRegion->getAddress() + offset;
+      uint64_t& localAddress = reqID;
+      uint32_t lkey = _largeRegion->getLocalKey();
+      int err = _client->postRdmaWrite(reqID, rkey, address, //remote key and address
+                     lkey,  localAddress, (ssize_t)length);
+      if (err) return (rc=(uint32_t)err);
+
+      // Wait for notification that the rdma read completed.
+      while (!completionChannelHandler(reqID));
+   }
+
+   catch (const RdmaError& e) {
+      rc = (uint32_t)e.errcode();
+   }
+
+   return rc;
+}
    //! \brief  Send the current ack message to the client from the outbound message region.
    //! \return 0 when successful, error when unsuccessful.
 
@@ -546,19 +669,16 @@ private:
    bgcios::RdmaMemoryRegionPtr _largeRegion;
 
    //! Maximum number of descriptors to monitor with poll().
-   static const nfds_t MaxPollSetSize = 66;
+   static const nfds_t MaxPollSetSize = 128;
 
    //! Number of fixed entries in poll set.
-   static const nfds_t FixedPollSetSize = 3;
+   static const nfds_t FixedPollSetSize = 2;
 
    //! Index of completion channel descriptor in poll set.
    static const int CompChannel = 0;
 
    //! Index of event channel descriptor in poll set.
    static const int EventChannel = 1;
-
-   //! Index of signaling pipe in poll set.
-   static const int pipeForSig = 2;
 
    //! Set of descriptors to poll.
    struct pollfd _pollSet[MaxPollSetSize];
@@ -571,9 +691,6 @@ private:
 
    //! User identity for file system operations.
    bgcios::FileSystemUserIdentity _identity;
-
-   //! Type of message that is in progress (i.e. takes two steps to complete).
-   uint16_t _inProgressMessage;
 
    //! List of messages queued while waiting for second step of an in progress message to complete.
    std::list <ClientMessagePtr> _queuedMessages;
@@ -597,7 +714,8 @@ private:
    //!        torus network is misbehaving or a problem in the receiving packet software on the CN
    int allocateSendRequestPool(){
       _outMessageRegion = RdmaMemoryRegionPtr(new RdmaMemoryRegion());
-       int err = _outMessageRegion->allocate(_protectionDomain, bgcios::SmallMessageRegionSize);
+       //pint err = _outMessageRegion->allocate(_protectionDomain, bgcios::SmallMessageRegionSize);
+       int err = _outMessageRegion->allocate64kB(_protectionDomain);
        if (err != 0) {
         return err;
        }
@@ -660,14 +778,18 @@ private:
    volatile struct MessageHeader * _syscall_mh;
    volatile uint64_t _syscallStartTimestamp;
    volatile char *   _syscallFileString1;
+   volatile char *   _syscallFileString2;
+   volatile int      _syscallFd;
+   volatile size_t   _syscallAccessLength;
 
 public:
+
 uint64_t getSyscallStartTimeStamp(){
   return (_syscallStartTimestamp);
 }
 
-uint16_t getSyscallMessageType(){
-  return (_syscall_mh->type);
+int getSyscallFd(){
+  return (_syscallFd);
 }
 
 volatile struct MessageHeader * getSyscallMessageHdr(){
@@ -678,22 +800,46 @@ char * getSyscallFileString1(){
   return (char *)(_syscallFileString1);
 }
 
+char * getSyscallFileString2(){
+  return (char *)(_syscallFileString2);
+}
+
+size_t getSyscallAccessLength() const {
+    return _syscallAccessLength;
+}
+
 private:
-uint64_t setSyscallStart(MessageHeader * mh, char * pathname=NULL){
+uint64_t setSyscallStart(MessageHeader * mh, int fd=-1, char * pathname1=BLANK,char * pathname2=BLANK, size_t accessLength=0){
     _syscall_mh = mh;
     _syscallStartTimestamp = GetTimeBase();
-    _syscallFileString1 = pathname;
+    _syscallFileString1 = pathname1;
+    _syscallFileString2 = pathname2;
+    _syscallFd=fd;
+    _syscallAccessLength = accessLength;
   return _syscallStartTimestamp;
 }
 
+
 void clearSyscallStart(void){
-  _syscall_mh=NULL;
+  _syscall_mh=&NULL_MH;
   _syscallStartTimestamp=0;
-  _syscallFileString1 = NULL;
+  _syscallFileString1 = BLANK;
+  _syscallFileString2 = BLANK;
+  _syscallFd=-1;
+
 }
 
-};
 
+const std::string _dynamicLoadLibrary;
+const int _dynamicLoadLibrary_flags;
+typedef boost::shared_ptr<bgcios::sysio::Plugin> PluginPtr;
+PluginPtr _handle4PluginClass;
+PluginHandleSharedPtr _pluginHandlePtr;
+
+
+void updatePlugin();
+
+};
 //! Smart pointer for ClientMonitor object.
 typedef std::tr1::shared_ptr<ClientMonitor> ClientMonitorPtr;
 

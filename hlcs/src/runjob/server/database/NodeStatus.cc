@@ -36,9 +36,7 @@
 
 #include <bgq_util/include/Location.h>
 
-#include <db/include/api/tableapi/gensrc/DBTBlock.h>
-#include <db/include/api/tableapi/gensrc/DBTBpblockmap.h>
-#include <db/include/api/tableapi/gensrc/DBTSmallblock.h>
+#include <db/include/api/tableapi/gensrc/DBVMidplane.h>
 #include <db/include/api/tableapi/gensrc/DBVNodeall.h>
 
 #include <db/include/api/cxxdb/cxxdb.h>
@@ -81,19 +79,15 @@ void
 NodeStatus::execute()
 {
     const bool isSubBlock( _info.getSubBlock().isValid() );
-
-    _sql <<
-        "UPDATE " << BGQDB::DBVNodeall().getTableName() <<
-        " SET " << BGQDB::DBVNodeall::STATUS_COL << "='" << BGQDB::SOFTWARE_FAILURE << "'" <<
-        " WHERE" <<
-        " " << BGQDB::DBVNodeall::STATUS_COL << "='" << BGQDB::HARDWARE_AVAILABLE << "' AND "
-        ;
+    const bool isSmallBlock( _block->size() < BGQDB::Nodes_Per_Midplane );
 
     try {
         if ( isSubBlock ) {
             this->subBlock();
+        } else if ( isSmallBlock ) {
+            this->smallBlock();
         } else {
-            this->fullBlock();
+            this->largeBlock();
         }
     } catch ( const std::exception& e ) {
         LOG_ERROR_MSG( e.what() );
@@ -103,7 +97,15 @@ NodeStatus::execute()
 void
 NodeStatus::subBlock()
 {
-    LOG_TRACE_MSG( "sub block" );
+    LOG_TRACE_MSG( __FUNCTION__ );
+
+    _sql <<
+        "UPDATE " << BGQDB::DBVNodeall().getTableName() <<
+        " SET " << BGQDB::DBVNodeall::STATUS_COL << "='" << BGQDB::SOFTWARE_FAILURE << "'" <<
+        " WHERE" <<
+        " " << BGQDB::DBVNodeall::STATUS_COL << "='" << BGQDB::HARDWARE_AVAILABLE << "' AND "
+        ;
+
     const SubBlock& subBlock = _info.getSubBlock();
     const Corner& corner = subBlock.corner();
     const block::Compute::Midplanes& midplanes( _block->midplanes() );
@@ -162,28 +164,72 @@ NodeStatus::subBlock()
 }
 
 void
-NodeStatus::fullBlock()
+NodeStatus::smallBlock()
 {
-    LOG_TRACE_MSG( "full block" );
+    LOG_TRACE_MSG( __FUNCTION__ );
+    
+    _sql <<
+        "UPDATE " << BGQDB::DBVNodeall().getTableName() <<
+        " SET " << BGQDB::DBVNodeall::STATUS_COL << "='" << BGQDB::SOFTWARE_FAILURE << "'" <<
+        " WHERE" <<
+        " " << BGQDB::DBVNodeall::STATUS_COL << "='" << BGQDB::HARDWARE_AVAILABLE << "' AND "
+        ;
 
     // add midplane and node board clauses
-    if ( _block->size() < BGQDB::Nodes_Per_Midplane ) {
-        _sql << BGQDB::DBVNodeall::MIDPLANEPOS_COL << "=? AND ";
-        _sql << BGQDB::DBVNodeall::NODECARDPOS_COL << "=?";
-        _statement = _connection->prepareUpdate(
-                _sql.str(),
-                boost::assign::list_of
-                (BGQDB::DBVNodeall::MIDPLANEPOS_COL)
-                (BGQDB::DBVNodeall::NODECARDPOS_COL)
-                );
-    } else {
-        _sql << BGQDB::DBVNodeall::MIDPLANEPOS_COL << "=?";
-        _statement = _connection->prepareUpdate(
+    _sql << BGQDB::DBVNodeall::MIDPLANEPOS_COL << "=? AND ";
+    _sql << BGQDB::DBVNodeall::NODECARDPOS_COL << "=?";
+    _statement = _connection->prepareUpdate(
             _sql.str(),
             boost::assign::list_of
             (BGQDB::DBVNodeall::MIDPLANEPOS_COL)
+            (BGQDB::DBVNodeall::NODECARDPOS_COL)
             );
+
+    // update up to 512 (1 midplane) rows in a single transaction
+    const cxxdb::Transaction tx( *_connection );
+    LOGGING_DECLARE_LOCATION_MDC(_block->midplanes().begin()->first);
+
+    const block::Midplane& midplane = _block->midplanes().begin()->second;
+    for (
+            block::Midplane::Nodeboards::const_iterator j = midplane.nodeboards().begin();
+            j != midplane.nodeboards().end();
+            ++j
+        )
+    {
+        _statement->parameters()[ BGQDB::DBVNodeall::NODECARDPOS_COL ].set( *j );
+        _statement->parameters()[ BGQDB::DBVNodeall::MIDPLANEPOS_COL ].set(
+                boost::lexical_cast<std::string>( midplane.location() )
+                );
+
+        unsigned rows;
+        _statement->execute( &rows );
+        LOG_DEBUG_MSG( "updated " << rows << " nodes to '" << BGQDB::SOFTWARE_FAILURE << "'" );
     }
+
+    // if we get here, commit transaction
+    _connection->commit();
+}
+
+void
+NodeStatus::largeBlock()
+{
+    LOG_TRACE_MSG( __FUNCTION__ );
+
+    _sql <<
+        "UPDATE " << BGQDB::DBVMidplane().getTableName() <<
+        " SET " << BGQDB::DBVMidplane::STATUS_COL << "='" << BGQDB::SOFTWARE_FAILURE << "'" <<
+        " WHERE" <<
+        " " << BGQDB::DBVMidplane::STATUS_COL << "='" << BGQDB::HARDWARE_AVAILABLE << "' AND "
+        ;
+
+    _sql << BGQDB::DBVMidplane::LOCATION_COL << "=?";
+    _statement = _connection->prepareUpdate(
+            _sql.str(),
+            boost::assign::list_of
+            (BGQDB::DBVMidplane::LOCATION_COL)
+            );
+
+    const cxxdb::Transaction tx( *_connection );
 
     // iterate through midplanes in the block
     for ( 
@@ -192,35 +238,17 @@ NodeStatus::fullBlock()
             ++i
         )
     {
-        // update up to 512 (1 midplane) rows in a single transaction
-        const cxxdb::Transaction tx( *_connection );
         LOGGING_DECLARE_LOCATION_MDC(i->first);
 
-        const block::Midplane& midplane = i->second;
-        if ( _block->size() < BGQDB::Nodes_Per_Midplane ) {
-            for (
-                    block::Midplane::Nodeboards::const_iterator j = midplane.nodeboards().begin();
-                    j != midplane.nodeboards().end();
-                    ++j
-                )
-            {
-                _statement->parameters()[ BGQDB::DBVNodeall::NODECARDPOS_COL ].set( *j );
-                _statement->parameters()[ BGQDB::DBVNodeall::MIDPLANEPOS_COL ].set( i->first );
+        _statement->parameters()[ BGQDB::DBVMidplane::LOCATION_COL ].set( i->first );
 
-                unsigned rows;
-                _statement->execute( &rows );
-                LOG_DEBUG_MSG( "updated " << rows << " nodes to '" << BGQDB::SOFTWARE_FAILURE << "'" );
-            }
-        } else {
-            _statement->parameters()[ BGQDB::DBVNodeall::MIDPLANEPOS_COL ].set( i->first );
-            unsigned rows;
-            _statement->execute( &rows );
-            LOG_DEBUG_MSG( "updated " << rows << " nodes to '" << BGQDB::SOFTWARE_FAILURE << "'" );
-        }
+        unsigned rows;
+        _statement->execute( &rows );
+        LOG_DEBUG_MSG( "updated " << rows << " nodes to '" << BGQDB::SOFTWARE_FAILURE << "'" );
 
-        // if we get here, commit transaction
-        _connection->commit();
     }
+
+    _connection->commit();
 }
 
 } // database

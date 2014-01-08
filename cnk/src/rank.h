@@ -26,15 +26,17 @@
 
 #include <spi/include/mu/GIBarrier.h>
 
-extern MUSPI_GIBarrier_t systemBlockGIBarrier;  // classroute 15 barrier
-extern MUSPI_GIBarrier_t systemJobGIBarrier;    // classroute 14 barrier
+extern MUSPI_GIBarrier_t systemBlockGIBarrier;   // classroute 15 barrier
+extern MUSPI_GIBarrier_t systemJobGIBarrier;     // classroute 14 barrier
+extern MUSPI_GIBarrier_t systemLoadJobGIBarrier; // classroute 13 barrier
 
 int computeTaskCoordinates(uint32_t startEntry, size_t mapsize, BG_CoordinateMapping_t* map, uint64_t* numEntries);
 int generateCoordinates(const char *mapping, BG_CoordinateMapping_t* map, uint32_t np, uint32_t *myRank);
 int getMyRank(uint32_t* myrank);
 int configureJobClassroutes(struct bgcios::jobctl::SetupJobMessage* jobinfo);
+int configureLoadJobClassroutes(int includeNode);
+
 int deconfigureUserGI(void);
-int setupMapFile();
 
 extern "C"
 {

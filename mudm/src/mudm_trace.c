@@ -387,6 +387,7 @@ void MUDM_parsePKbcast(size_t bufferSize, char* buffer, const BG_FlightRecorderL
        case MUDM_CLR_RDMA_BCAST: typeString = "MUDM_CLR_RDMA_BCAST "; break;    
        case MUDM_REDUCE_ONE:     typeString = "MUDM_REDUCE_ONE     "; break;   
        case MUDM_REDUCE_ALL:     typeString = "MUDM_REDUCE_ALL     "; break;   
+       case MUDM_REDUCE_ALL_INT: typeString = "MUDM_REDUCE_ALL_INT "; break;   
        case MUDM_REDUCE_BCAST_ORIGIN: typeString = "MUDM_REDUCE_BCAST_ORIGIN "; break;          
        case MUDM_REDUCE_BCAST_FINISH: typeString = "MUDM_REDUCE_BCAST_FINISH "; break;   
 

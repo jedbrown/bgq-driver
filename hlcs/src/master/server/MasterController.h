@@ -72,7 +72,7 @@ public:
 
     MasterController();
 
-    void startup(bgq::utility::Properties::Ptr props, int signal_fd);
+    void startup(const bgq::utility::Properties::Ptr& props, int signal_fd);
     static void putRAS(unsigned int id, const std::map<std::string, std::string>& details);
 
     static bool get_master_terminating() { return _master_terminating; }
@@ -91,7 +91,7 @@ public:
     static void getErrorMessages(std::vector<std::string>& messages);
     static void addHistoryMessage(const std::string& message);
     static void getHistoryMessages(std::vector<std::string>& messages);
-    static void stopThreads(bool end_agents, bool end_binaries, unsigned signal);
+    static void stopThreads(bool end_binaries, unsigned signal);
     static bgq::utility::Properties::Ptr getProps()  { return _master_props; }
 
     static bool isStartServers() { return _start_servers; }
@@ -107,6 +107,9 @@ public:
     static ClientManager& get_client_manager() { return _client_manager; }
     static const std::string& get_master_logdir() { return _master_logdir; }
     static AliasList _aliases;
+
+    //! \brief monitor_prots container mutex
+    static boost::mutex _monitor_prots_mutex;
 
 private:
     //! Parse alias args from config file.
@@ -152,7 +155,6 @@ private:
     static bool _start_servers;
     static std::string _master_logdir;
     static boost::barrier _start_barrier;
-    static pid_t _master_pid;
     static bool _master_db;
     static bool _stop_once;
     static bool _start_once;
@@ -162,6 +164,9 @@ private:
     static LockingStringRingBuffer _history_buff;
     static boost::posix_time::ptime _start_time;
     static std::vector<ClientProtocolPtr> _monitor_prots;
+
+private:
+    const pid_t _pid;
 };
 
 #endif

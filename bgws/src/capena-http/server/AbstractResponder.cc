@@ -23,7 +23,6 @@
 
 #include "AbstractResponder.hpp"
 
-#include "Connection.hpp"
 #include "exception.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
@@ -67,18 +66,22 @@ AbstractResponder::AbstractResponder(
 
 
 void AbstractResponder::initialize(
-        ConnectionPtr connection_ptr,
+        boost::asio::io_service& io_service,
+        NotifyStatusHeadersFn notify_status_headers_fn,
+        NotifyDataFn notify_data_fn,
         ResponseComplete *response_complete_out
     )
 {
-    _connection_ptr = connection_ptr;
-    _strand_ptr.reset( new boost::asio::strand( _connection_ptr->ioService() ) );
+    _strand_ptr.reset( new boost::asio::strand( io_service ) );
 
-    _response_ptr.reset( new Response( _connection_ptr ) );
+    _response_ptr.reset( new Response(
+            notify_status_headers_fn,
+            notify_data_fn
+        ) );
 
     _process();
 
-    *response_complete_out = (_response_ptr->isHeadersComplete() && ! _response_ptr->hasBody() ? ResponseComplete::COMPLETE : ResponseComplete::CONTINUE);
+    *response_complete_out = (_response_ptr->isComplete() ? ResponseComplete::COMPLETE : ResponseComplete::CONTINUE);
 }
 
 
@@ -93,6 +96,12 @@ void AbstractResponder::postRequestData(
             data,
             data_continues
         ) );
+}
+
+
+void AbstractResponder::notifyDisconnect()
+{
+    LOG_DEBUG_MSG( "Notified of disconnect (ignored)." );
 }
 
 

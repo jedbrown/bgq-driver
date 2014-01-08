@@ -134,7 +134,7 @@ __INLINE__ uint32_t Kernel_PhysicalProcessorID( void );
 __INLINE__ uint32_t Kernel_PhysicalHWThreadID( void );
 
 
-/*! \brief Returns the physical thread
+/*! \brief Returns the physical thread identifier
  * \return Physical hardware thread ID (0-67)
  * \deprecated use Kernel_ProcessorID() 
  */
@@ -160,7 +160,7 @@ __INLINE__ uint32_t Kernel_RanksToCoords(size_t mapsize, BG_CoordinateMapping_t*
  */
 __INLINE__ uint32_t Kernel_JobCoords(BG_JobCoords_t* sblock);
 
-/*! \brief stores the processor version register
+/*! \brief stores the processor version register into the supplied pointer
  *
  * \return Failure
  */

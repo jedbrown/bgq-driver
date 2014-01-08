@@ -55,6 +55,90 @@ sub updateStatements
 
 # the statements to execute, separate by commas    
 my @insertStmts = (
+
+"DROP VIEW BGQIOBlock",
+
+"CREATE VIEW BGQIOBlock AS SELECT blockid, numIOnodes, owner, username,
+   description, options, status, action,
+   statuslastmodified, mloaderimg,nodeconfig,bootoptions,createdate,
+   securitykey,errtext,seqid,creationid
+  from TBGQBlock where numCnodes = 0;",
+
+
+"ALTER TABLE TBGQIONode
+  ADD COLUMN seqId bigint NOT NULL WITH DEFAULT 0
+  DATA CAPTURE CHANGES",
+  
+"DROP VIEW BGQIONode",
+
+"CREATE VIEW BGQIONode as SELECT serialnumber,productid, IOpos, ipaddress, macaddress,
+        status, memorymodulesize, memorysize, voltage, bitsteering, seqid, position,
+        IOpos || '-' || position as location  from TBGQIONode",
+        
+"DROP VIEW BGQIONodeAll",
+
+"CREATE VIEW BGQIONodeAll as SELECT serialnumber,productid, IOpos, ipaddress, macaddress,
+        status, memorymodulesize, memorysize, psro, ecid, vpd, voltage, bitsteering, faildata, seqid,
+        position, IOpos || '-' || position as location  from TBGQIONode",
+
+"CREATE TRIGGER RT_IONODE_STATE
+  AFTER UPDATE OF status ON TBGQIONode
+  REFERENCING NEW AS newrow OLD AS oldrow
+  FOR EACH ROW MODE DB2SQL
+  BEGIN ATOMIC
+    DECLARE nextSeqId BIGINT;
+    SET nextSeqId = NEXT VALUE FOR SEQID;
+    UPDATE TBGQIONode SET seqId = nextSeqId
+     WHERE IOPos = newrow.IOPos AND
+           position = newrow.position ;
+  END",
+
+
+"ALTER TABLE TBGQIoDrawer
+  ADD COLUMN seqId bigint NOT NULL WITH DEFAULT 0
+  DATA CAPTURE CHANGES",
+
+"DROP VIEW BGQIODrawer",
+
+"CREATE VIEW BGQIODrawer AS SELECT serialnumber, productid, location, status, seqId
+       from TBGQIODrawer",
+
+"DROP VIEW BGQIODrawerAll",
+
+"CREATE VIEW BGQIODrawerAll AS SELECT serialnumber, productid, location, status, vpd, faildata, seqId
+       from TBGQIODrawer",
+
+"CREATE TRIGGER RT_IODRAWER_STATE
+  AFTER UPDATE OF status ON TBGQIODrawer
+  REFERENCING NEW AS newrow OLD AS oldrow
+  FOR EACH ROW MODE DB2SQL
+  BEGIN ATOMIC
+    DECLARE nextSeqId BIGINT;
+    SET nextSeqId = NEXT VALUE FOR SEQID;
+    UPDATE TBGQIODrawer SET seqId = nextSeqId
+     WHERE location = newrow.location ;
+  END",
+
+
+"ALTER TABLE TBGQBlock
+  DROP CONSTRAINT BGQBlock_actchk",
+
+"ALTER TABLE TBGQBlock
+  ADD CONSTRAINT BGQBlock_actchk
+  CHECK ( action IN ('B', 'D', 'N', ' ') )", 
+
+
+"ALTER TABLE TBGQMidplane
+  DROP CONSTRAINT BGQMidSt_chk",
+
+"ALTER TABLE TBGQMidplane
+  ADD CONSTRAINT BGQMidSt_chk 
+  CHECK ( status IN ('A','M','E','S','F') )",
+
+"ALTER TABLE X_TEALALERTLOG ADD COLUMN \"comments\" VARCHAR(128)",
+
+"UPDATE tbgqethgateway set ipaddress='0.0.0.0' WHERE (select count(*) from tbgqmachine WHERE hasEthernetGateway='F') = 1"
+
 );
 
 
@@ -149,7 +233,7 @@ sub processSQL
   
     my $stmtHandle = getDbHandle()->prepare($stmt);
 
-    print "\n" . $stmt . "\n";
+    print "\n" . $stmt . "\n" if($debug);
   
     if (substr($stmt,0,9) eq "IMPORTANT") { return; }
     $stmtHandle->execute();
@@ -157,7 +241,7 @@ sub processSQL
     my $errno = $stmtHandle->err;  
    
     if  (($errno) &&  (($errno == -601) || ($errno == -803) || ($errno == -612) || ($errno == 605))) {
-        print "Schema already updated \n";
+        print "Schema already updated \n" if($debug)
     } 
     
 }
@@ -223,7 +307,8 @@ sub setupDb
 # Parse the command line
                GetOptions(
                           'properties=s' => \$dbPropertiesFile,
-                          'help'           => \$optHelp
+                          'help'           => \$optHelp,
+                          'debug'          => \$debug
                           )
                or printUsage();
 
@@ -231,6 +316,8 @@ sub setupDb
  
 
 setupDb($dbPropertiesFile);
+
+close(STDERR) unless($debug);
 
 updateStatements();
 
@@ -253,6 +340,8 @@ Options:
 --properties [properties-file-name] |  properties file
 
 --help | Prints this help text
+
+--debug | dump extra output
 
 
 =head1 DESCRIPTION

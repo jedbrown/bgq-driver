@@ -28,7 +28,6 @@ define(
     "./dijit/HardwareReplacements",
     "../Bgws",
     "dojo/_base/declare",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -36,7 +35,6 @@ function(
         l_dijit_HardwareReplacements,
         b_Bgws,
         d_declare,
-        j_registry,
         module
     )
 {

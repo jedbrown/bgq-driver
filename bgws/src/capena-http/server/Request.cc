@@ -67,7 +67,7 @@ Request::Request(
     boost::split( parts, request_line, boost::is_any_of(" ") );
 
     if ( parts.size() < 3 ) {
-        BOOST_THROW_EXCEPTION( std::runtime_error( string() + "error creating Request, unexpected format for request line: " + request_line ) );
+        BOOST_THROW_EXCEPTION( std::invalid_argument( string() + "error creating Request, unexpected format for request line: " + request_line ) );
         return;
     }
 

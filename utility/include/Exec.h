@@ -24,11 +24,7 @@
  * \file utility/include/Exec.h
  */
 
-#include <sys/types.h>
 #include <string>
-#include <ostream>
-#include <stdexcept>
-#include <map>
 
 #ifndef BGQ_UTILITY_EXEC_H
 #define BGQ_UTILITY_EXEC_H
@@ -58,18 +54,6 @@ pid_t fexec(
         const std::string& propfile = std::string(),
         const std::string& userid = std::string()
         );
-
-class ChildMonitor
-{
-public:
-    ChildMonitor() : _stopping(false) {}
-    void monitor_child(int& child_fd, std::ostream* outstream);
-    void end();
-private:
-    bool _stopping;
-    pthread_t _my_tid;
-    std::ostream* _outstream;
-};
 
 } // Exec
 

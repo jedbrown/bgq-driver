@@ -86,6 +86,30 @@ __INLINE__ void l2_set_overlock_threshold(uint64_t threshold)
     }
 }
 
+__INLINE__ void l2_set_spec_threshold(uint64_t threshold)
+{
+    uint64_t i;
+    for (i = 0; i < L2_DCR_num; i++) {
+        L2_DCR__LRUCTRL1__SPEC_THRESH_insert(L2_DCR_PRIV_PTR(i)->lructrl1, 
+                                             threshold);
+    }
+}
+
+__INLINE__ void l2_set_prefetch_enables(uint64_t enable)
+{
+    uint64_t i;
+    for (i=0; i<16; i++)
+    {
+        uint64_t data64 = DCRReadPriv(L2_DCR(i, CTRL));
+        if(enable)
+            data64 |= L2_DCR__CTRL__ENABLE_PRFT_set(1);
+        else
+            data64 &= ~(L2_DCR__CTRL__ENABLE_PRFT_set(1));
+        DCRWritePriv(L2_DCR(i, CTRL), data64);
+    }
+}
+
+
 __INLINE__ void l2_l1pcfg_lock_l1_only(uint64_t l1_only)
 {
     uint64_t cfg_pf_sys = in64((uint64_t *) L1P_CFG_PF_SYS);

@@ -30,6 +30,7 @@
 #include <utility/include/LoggingProgramOptions.h>
 #include <utility/include/Properties.h>
 
+#include <boost/format.hpp>
 #include <boost/throw_exception.hpp>
 
 #include <cstdlib>
@@ -69,13 +70,65 @@ static void bgwsServerStatus(
 
     if ( details ) {
 
+        const json::Object &database_connection_pool_obj(obj.getObject( "databaseConnectionPool" ));
+
         cout << "Server started: " << bgws::command::utility::formatTimestamp( obj.getString( "startTime" ) ) << "\n"
                 "Requests in progress: " << obj.as<uint64_t>( "requestsInProgress" ) << "\n"
                 "Requests handled: " << obj.as<uint64_t>( "requestsHandled" ) << "\n"
-                "Max request time: " << obj.as<double>( "maxRequestTime" ) << "\n"
-                "Avg request time: " << obj.as<double>( "avgRequestTime" ) << "\n"
+                "Max request time: " << obj.as<double>( "maxRequestTime" ) << " seconds\n"
+                "Avg request time: " << obj.as<double>( "avgRequestTime" ) << " seconds\n"
+                "\n"
+                "Database connection pool:\n"
+                "  Available: " << database_connection_pool_obj.as<unsigned>( "available" ) << "\n"
+                "  Used: " << database_connection_pool_obj.as<unsigned>( "used" ) << "\n"
+                "  Max: " << database_connection_pool_obj.as<unsigned>( "max" ) << "\n"
+                "  Size: " << database_connection_pool_obj.as<unsigned>( "size" ) << "\n"
+                "\n"
             ;
 
+        if ( obj.contains( "requests" ) ) {
+
+            const json::Array &requests(obj.getArray( "requests" ));
+
+            const unsigned time_field_width(26);
+            unsigned user_field_width(4);
+            unsigned operation_field_width(9);
+
+            for ( json::Array::const_iterator i(requests.begin()) ; i != requests.end() ; ++i ) {
+                const json::Object &req_obj((*i)->getObject());
+                unsigned user_len(req_obj.getString( "user" ).size());
+                user_field_width = std::max( user_field_width, user_len );
+
+                unsigned operation_len(req_obj.getString( "method" ).size() + 1 + req_obj.getString( "url" ).size());
+                operation_field_width = std::max( operation_field_width, operation_len );
+            }
+
+
+            cout << "Current Requests:\n";
+
+            const string format_str((boost::format( "%%-%ds  %%-%ds  %%-%ds" ) % time_field_width % user_field_width % operation_field_width).str());
+
+            cout << boost::format( format_str ) % "Start Time" % "User" % "Operation" << "\n";
+
+            for ( json::Array::const_iterator i(requests.begin()) ; i != requests.end() ; ++i ) {
+
+                const json::Object &req_obj((*i)->getObject());
+
+                cout << boost::format( format_str )
+                    % bgws::command::utility::formatTimestamp( req_obj.getString( "startTime" ) )
+                    % req_obj.getString( "user" )
+                    % (req_obj.getString( "method" ) + " " + req_obj.getString( "url" ))
+                    << "\n";
+
+            }
+
+        } else {
+
+            cout << "No current requests\n";
+
+        }
+
+        cout << "\n";
     }
 }
 

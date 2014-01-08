@@ -244,5 +244,15 @@ const string* Filter::getRasComputeBlockIdPattern_p() const
 }
 
 
+void Filter::setIoDrawers( bool io_drawers )  { _impl_ptr->setIoDrawers( io_drawers ); }
+
+bool Filter::getIoDrawers() const  { return _impl_ptr->getIoDrawers(); }
+
+
+void Filter::setIoNodes( bool io_nodes )  { _impl_ptr->setIoNodes( io_nodes ); }
+
+bool Filter::getIoNodes() const  { return _impl_ptr->getIoNodes(); }
+
+
 } // namespace bgsched::realtime
 } // namespace bgsched

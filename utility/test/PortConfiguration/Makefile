@@ -38,7 +38,8 @@ exes := \
  test_ClientPortConfiguration \
  test_Connector \
  test_PortConfiguration \
- test_ServerPortConfiguration
+ test_ServerPortConfiguration \
+ test_Acceptor
 
 
 run_targets = ${exes:%=%.run}
@@ -61,6 +62,8 @@ all: $(run_targets)
 
 ${exes:%=%.o} $(exes):
 
+
+test_Acceptor.o: test_Acceptor.cc ../../src/libbgutility.so.1.0.0
 
 test_ClientPortConfiguration.o: test_PortConfiguration.cc ../../src/libbgutility.so.1.0.0
 

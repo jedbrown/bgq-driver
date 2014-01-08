@@ -29,6 +29,7 @@
 #include <ramdisk/include/services/ServicesConstants.h>
 #include <ramdisk/include/services/MessageHeader.h>
 #include <ramdisk/include/services/common/logging.h>
+#include <ramdisk/include/services/common/Cioslog.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -570,13 +571,14 @@ RdmaConnection::waitForEvent(void)
 {
    // This operation can block if there are no pending events available.
    LOG_CIOS_TRACE_MSG(_tag << "waiting for rdma cm event on event channel with fd " << _eventChannel->fd << " ...");
+   //LOG_INFO_MSG_FORCED(_tag << "waiting for rdma cm event on event channel with fd " << _eventChannel->fd << " ...");
    int err = rdma_get_cm_event(_eventChannel, &_event);
    if (err != 0) {
       LOG_ERROR_MSG(_tag << "error getting rdma cm event: " << bgcios::errorString(err));
       return err;
-   }
-
-   LOG_CIOS_TRACE_MSG(_tag << rdma_event_str(_event->event) << " (" << _event->event << ") is available for rdma cm id " << _event->id);
+   } 
+   //LOG_INFO_MSG_FORCED(_tag << rdma_event_str(_event->event) << " (" << _event->event << ") is available for rdma cm id " << _event->id);
+   CIOSLOGEVT_CH(BGV_RECV_EVT,_event);
    return 0;
 }
 

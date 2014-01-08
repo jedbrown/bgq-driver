@@ -48,6 +48,11 @@ ifeq ($(OS_ARCH),ppc64)
 JOBCTLD = jobctld
 endif
 
+ifeq ($(BGQ_CONTROL_SYSTEM_SIMULATION),yes)
+JOBCTLD = jobctld
+endif
+
+
 # Additional compiler flags
 #CXXFLAGS +=
 
@@ -69,6 +74,7 @@ objdump: $(JOBCTLD)
 
 $(JOBCTLD): $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
+	$(MKDIR) -p $(IOS_PROGRAM_DIR)
 	$(CP) $(JOBCTLD) $(IOS_PROGRAM_DIR)
 
 #include our dependency rules

@@ -47,7 +47,6 @@ function(
 
 
 var b_navigator_dijit_Navigator = d_declare(
-        "bluegene.navigator.dijit.Navigator",
         [ l_AbstractTemplatedContainer ],
 
 {
@@ -56,6 +55,8 @@ var b_navigator_dijit_Navigator = d_declare(
 
 
     getMachine : function()  { return this._mainArea.getMachine(); },
+
+    getChartsDij : function()  { return this._footer.charts; },
 
     getComputeBlocksTabDij : function()  { return this._mainArea.getComputeBlocksTabDij(); },
     getHardwareTabDij : function()  { return this._mainArea.getHardwareTabDij(); },
@@ -87,12 +88,37 @@ var b_navigator_dijit_Navigator = d_declare(
     },
 
 
+    onEndSession : function()  {},
+    onRefresh : function() {},
+
+
     // override
     startup : function()
     {
         this.inherited( arguments );
 
         this._mainArea.on( "tabChanged", d_lang.hitch( this, this._tabChanged ) );
+
+        this._footer.on( "refresh", d_lang.hitch( this, this._refresh ) );
+        this._header.on( "endSession", d_lang.hitch( this, this._endSession ) );
+    },
+
+
+    _setChartsVisibleAttr : function( is_visible )
+    {
+        this._footer.setChartsVisible( is_visible );
+    },
+
+
+    _setSystemNameAttr : function( system_name )
+    {
+        this._header.set( "systemName", system_name );
+    },
+
+
+    _setUserInfoAttr : function( args )
+    {
+        this._header.set( "userInfo", args );
     },
 
 
@@ -100,6 +126,18 @@ var b_navigator_dijit_Navigator = d_declare(
     {
         console.log( module.id + ": tab changed to", new_tab.id, "dij=", new_tab );
         this.onTabChanged( new_tab );
+    },
+
+
+    _endSession : function()
+    {
+        this.onEndSession();
+    },
+
+
+    _refresh : function()
+    {
+        this.onRefresh();
     }
 
 } );

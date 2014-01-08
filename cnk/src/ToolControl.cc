@@ -570,7 +570,6 @@ int BreakpointController::trapHandler(Regs_t *context)
         mtspr(SPRN_TENC, mask);
         // Note: there is an isync() within the eratilx inline after the MMUCR0 is written, therefore we do not need one here
 
-        //   ?? invalidate the TLB entry corresponding to the trapped text address ?? not sure if this is necessary lets try without this first
         // Do a local erat invalidation of the erat entry corresponding to our trapped address
         eratilx((void*)context->ip, MMUCR0_TLBSEL_IERAT);
 
@@ -578,6 +577,8 @@ int BreakpointController::trapHandler(Regs_t *context)
         int instOffset = context->ip - ROUND_DN_4K(context->ip);
         //printf("virtualAltText %016lx instOffset %08x roundedIP %016lx\n", coreControl[coreID].virtualAltText, instOffset, ROUND_DN_4K(context->ip));
         *((uint32_t*)(coreControl[coreID].virtualAltText+instOffset)) = originalInstruction; 
+        // We need to invalidate the icache so that it sees the data modification that was just written through the dcache
+        icache_block_inval((void*)(coreControl[coreID].virtualAltText+instOffset));
 
         //   Set high water mark to entry index 14 to reserve the last entry (index 15)
         eratwatermark(14, MMUCR0_TLBSEL_IERAT);
@@ -913,9 +914,8 @@ int BreakpointController::remove(void *address, uint32_t instruction, AppProcess
     return 0;
 }
 
-uint32_t BreakpointController::read(uint32_t* address)
+uint32_t BreakpointController::read(uint32_t* address, AppProcess_t *proc)
 {
-    AppProcess_t *proc = GetMyProcess();
     // Lock the trap table for reading.
     TrapTableReadLock();
 
@@ -970,11 +970,15 @@ void BreakpointController::trapTableFree()
     }
 }
 
-KThread_t* BreakpointController::getPendingStepKThread(int processorID)
+KThread_t* BreakpointController::getPendingStepKThread(int processorID, AppProcess_t *proc)
 {
     if (coreControl[processorID>>2].hwt[processorID&0x3].stepAddress)
     {
-        return coreControl[processorID>>2].hwt[processorID&0x3].pendingStepKthread;
+        KThread_t *kthread = coreControl[processorID>>2].hwt[processorID&0x3].pendingStepKthread;
+        if (kthread->pAppProc == proc)
+        {
+            return kthread;
+        }
     }
     return NULL;
 }
@@ -2464,8 +2468,6 @@ uint16_t ToolControl::prepareCommand(CommandDescriptor& cmd_descriptor, CommandD
         while (ipiRequest[processorID].state == TOOL_IPI_STATE_BUSY)
         {
             // spin waiting for a previous IPI to this hardware thread to complete
-            // TODO: may need to be testing some other cancel flag as well, or have a timeout
-            // We do not want to spin indefinititely in this thread since this thread is also needed for JobCtl
         }
         // Set up the structure in preparation to issue the IPI
         int descriptor_index = ipiRequest[processorID].numCommands++;
@@ -2484,15 +2486,15 @@ uint16_t ToolControl::prepareCommand(CommandDescriptor& cmd_descriptor, CommandD
     return 0;
 }
 
-// 
+//
 void ToolControl::query(struct cnv_mr& region)
 {
-    QueryMessage& msg = *((QueryMessage*)(region.addr));
-    TRACE( TRACE_Toolctl, ("(I) ToolControl::query: Query message received from tool %u\n", msg.toolId) );
+    QueryMessage& msg = *((QueryMessage *)(region.addr));
+    TRACE(TRACE_Toolctl, ("(I) ToolControl::query: Query message received from tool %u\n", msg.toolId));
 
     // Initialize the acknowledgement message
     QueryAckMessage *ackMsg = (QueryAckMessage *)_outMessageRegion.addr;
-    memset(ackMsg, 0, sizeof (QueryAckMessage));
+    memset(ackMsg, 0, sizeof(QueryAckMessage));
     int numCmdAcks = 0;
 
     // initialize the outbound pointer for use by the target of the IPI operations
@@ -2506,41 +2508,48 @@ void ToolControl::query(struct cnv_mr& region)
         AppProcess_t *proc = getProcessFromMessage();
         if (proc)
         {
-            if (isToolAttached())
+            if (proc->State != ProcessState_ExitPending)
             {
-                if (msg.numCommands <= MaxQueryCommands)
+                if (isToolAttached())
                 {
-                    // set the number of expected ack cmds
-                    numCmdAcks = msg.numCommands;  
-                    // Iterate through the Command List, sending IPIs to all the hardware threads involved in the requests
-                    for (int i=0; i<numCmdAcks; i++ )
+                    if (msg.numCommands <= MaxQueryCommands)
                     {
-                        // prepare the commmand for the appropriate hardware thread
-                        prepareCommand(msg.cmdList[i], ackMsg->cmdList[i]);
-                    }
-                    // Send the pending IPI interrupts to all targeted hardware threads
-                    for (int i=0; i<CONFIG_MAX_APP_THREADS; i++)
-                    {
-                        if (ipiRequest[i].state == TOOL_IPI_STATE_PENDING)
+                        // set the number of expected ack cmds
+                        numCmdAcks = msg.numCommands;
+                        // Iterate through the Command List, sending IPIs to all the hardware threads involved in the requests
+                        for (int i = 0; i < numCmdAcks; i++)
                         {
-                            ipiRequest[i].state = TOOL_IPI_STATE_BUSY;
-                            // Bump count of IPIs issued
-                            incrementPendingIPIs();
-                            // Send IPI request to the target hardware thread
-                            IPI_tool_cmd(i, &(ipiRequest[i]));
+                            // prepare the commmand for the appropriate hardware thread
+                            prepareCommand(msg.cmdList[i], ackMsg->cmdList[i]);
                         }
+                        // Send the pending IPI interrupts to all targeted hardware threads
+                        for (int i = 0; i < CONFIG_MAX_APP_THREADS; i++)
+                        {
+                            if (ipiRequest[i].state == TOOL_IPI_STATE_PENDING)
+                            {
+                                ipiRequest[i].state = TOOL_IPI_STATE_BUSY;
+                                // Bump count of IPIs issued
+                                incrementPendingIPIs();
+                                // Send IPI request to the target hardware thread
+                                IPI_tool_cmd(i, &(ipiRequest[i]));
+                            }
+                        }
+                        TRACE(TRACE_Toolctl, ("(I) ToolControl::query: sent IPIs to all targeted threads, waiting for completion ...\n"));        // Spin until all IPI messages complete
+                        pollAllMessageIPIsComplete();
                     }
-                    TRACE( TRACE_Toolctl, ("(I) ToolControl::query: sent IPIs to all targeted threads, waiting for completion ...\n") );        // Spin until all IPI messages complete
-                    pollAllMessageIPIsComplete();
+                    else
+                    {
+                        messageReturnCode = bgcios::ToolNumberOfCmdsExceeded;
+                    }
                 }
                 else
                 {
-                    messageReturnCode = bgcios::ToolNumberOfCmdsExceeded;
+                    messageReturnCode = bgcios::ToolIdError;
                 }
             }
             else
             {
-                messageReturnCode = bgcios::ToolIdError;
+                messageReturnCode = bgcios::ToolProcessExiting;
             }
         }
         else
@@ -2556,10 +2565,10 @@ void ToolControl::query(struct cnv_mr& region)
     ackMsg->header.service = bgcios::ToolctlService;
     ackMsg->header.type = QueryAck;
     uint32_t calculated_length = (uint32_t)((uint64_t)outbound_cmd_data - (uint64_t)_outMessageRegion.addr);
-    ackMsg->header.length =  (calculated_length < sizeof(_outMessage)) ? calculated_length : sizeof(_outMessage); 
+    ackMsg->header.length =  (calculated_length < sizeof(_outMessage)) ? calculated_length : sizeof(_outMessage);
     ackMsg->header.jobId = msg.header.jobId;
     ackMsg->header.sequenceId = msg.header.sequenceId;
-    ackMsg->header.rank = msg.header.rank; 
+    ackMsg->header.rank = msg.header.rank;
     ackMsg->header.version = ProtocolVersion;
     ackMsg->header.returnCode = messageReturnCode;
     ackMsg->header.errorCode = messageErrorData;
@@ -2567,15 +2576,14 @@ void ToolControl::query(struct cnv_mr& region)
     ackMsg->numCommands = numCmdAcks;
 
     // Send the message to tool daemon
-    Kernel_WriteFlightLog(FLIGHTLOG, FL_TOOLMSGAK, (((uint64_t)ackMsg->header.sequenceId)<<32) + ackMsg->header.type, (((uint64_t)ackMsg->header.length)<<32) + ackMsg->header.rank, ackMsg->toolId,0);
+    Kernel_WriteFlightLog(FLIGHTLOG, FL_TOOLMSGAK, (((uint64_t)ackMsg->header.sequenceId) << 32) + ackMsg->header.type, (((uint64_t)ackMsg->header.length) << 32) + ackMsg->header.rank, ackMsg->toolId, 0);
     postRecv(region); // Prepare to recieve the next message.
     postSend(_outMessageRegion);
 
-    TRACE( TRACE_Toolctl, ("(I) ToolControl::query: QueryAck message sent to tool %u, return code %u, error code %u\n",
-                           ackMsg->toolId, ackMsg->header.returnCode, ackMsg->header.errorCode) );
+    TRACE(TRACE_Toolctl, ("(I) ToolControl::query: QueryAck message sent to tool %u, return code %u, error code %u\n",
+                          ackMsg->toolId, ackMsg->header.returnCode, ackMsg->header.errorCode));
     return;
 }
-
 void ToolControl::update(struct cnv_mr& region)
 {
     UpdateMessage& msg = *((UpdateMessage*)(region.addr));
@@ -2718,6 +2726,10 @@ void ToolControl::update(struct cnv_mr& region)
             break;
         case ToolPendingAction_NotifyAvail:
             // must be done on a thread other than this thread since this thread needs to poll the completion queue for the notify ack
+            if (pendingNotifyControl.resumeAllThreads)
+            {
+                resumeProcess(proc);
+            }
             IPI_tool_notifycontrol(proc->ProcessLeader_ProcessorID, &pendingNotifyControl);
             break;
         case ToolPendingAction_ResumeProc:
@@ -2725,7 +2737,6 @@ void ToolControl::update(struct cnv_mr& region)
             break;
         case ToolPendingAction_ResumeThd:
             resumePendingSteps(proc);
-
             break;
         default: {}
         }
@@ -2808,8 +2819,12 @@ int ToolControl::notify(int toolId, KThread_t *kthread, int signal)
     setDefaultThreadId(toolId, proc, GetTID(kthread)); // Set the default thread id for messages.
 
     // Obtain lock to serialize Notify messages (lock is released when NotifyAck message is received).
-    Kernel_Lock(&_notifyLock);
-
+    while(Kernel_Lock_WithTimeout(&_notifyLock, 10000) != 0) // attempt to lock. Timeout after 10ms
+    {
+        // The attempt to grab the kernel lock timed out. The Tool controller thread may be hung, preventing another notify to complete. 
+        // Execute any tool IPI commands that the tool controller thread may have pending against us.
+        IntHandler_IPI_FlushToolCommands();
+    }
     // Build and send the Notify message
     NotifyMessage *msg = (NotifyMessage *)_outNotifyMessageRegion.addr;
     memset(msg, 0, sizeof (NotifyMessage));
@@ -2995,7 +3010,13 @@ int ToolControl::suspendProcess(AppProcess_t* proc)
 
     // Loop through all of the hardware threads associated with this process and send suspend IPI's to them.
     int myProcessorID = ProcessorID();
-    uint64_t hwtmask = proc->HwthreadMask & ~(_BN(myProcessorID));  // Get the thread mask for this process and remove ours.
+    uint64_t hwtmask =  proc->HwthreadMask;
+    if (proc->ThreadModel == CONFIG_THREAD_MODEL_ETA) 
+    {
+        // Include remote hardware threads that are hosting threads from this process
+        hwtmask |= proc->HwthreadMask_Remote;
+    }
+    hwtmask &= ~(_BN(myProcessorID)); // remove ours.
     for (int i=cntlz64(hwtmask); hwtmask; i++)
     {
         uint64_t curmask = _BN(i);
@@ -3018,14 +3039,20 @@ int ToolControl::resumePendingSteps(AppProcess_t* proc)
 
     // Loop through all of the hardware threads associated with this process and send resume IPIs to them
     int myProcessorID = ProcessorID();
-    uint64_t hwtmask = proc->HwthreadMask & ~(_BN(myProcessorID)); // Get the thread mask for this process and remove ours.
+    uint64_t hwtmask =  proc->HwthreadMask;
+    if (proc->ThreadModel == CONFIG_THREAD_MODEL_ETA) 
+    {
+        // Include remote hardware threads that are hosting threads from this process
+        hwtmask |= proc->HwthreadMask_Remote;
+    }
+    hwtmask &= ~(_BN(myProcessorID)); // remove ours.
     for (int i=cntlz64(hwtmask); hwtmask; i++)
     {
         uint64_t curmask = _BN(i);
         if (hwtmask & curmask)
         {
             // Ask the breakpoint controller if there is a pending step operation on this hardware thread
-            KThread_t *pendingStepKthread = breakpointController().getPendingStepKThread(i);
+            KThread_t *pendingStepKthread = breakpointController().getPendingStepKThread(i, proc);
             if (pendingStepKthread)
             {
                 // Yes, unblock the suspend state.
@@ -3048,7 +3075,13 @@ int ToolControl::resumeProcess(AppProcess_t* proc)
 
     // Loop through all of the hardware threads associated with this process and send resume IPIs to them
     int myProcessorID = ProcessorID();
-    uint64_t hwtmask = proc->HwthreadMask & ~(_BN(myProcessorID)); // Get the thread mask for this process and remove ours.
+    uint64_t hwtmask =  proc->HwthreadMask;
+    if (proc->ThreadModel == CONFIG_THREAD_MODEL_ETA) 
+    {
+        // Include remote hardware threads that are hosting threads from this process
+        hwtmask |= proc->HwthreadMask_Remote;
+    }
+    hwtmask &= ~(_BN(myProcessorID)); // remove ours.
     for (int i=cntlz64(hwtmask); hwtmask; i++)
     {
         uint64_t curmask = _BN(i);
@@ -3072,7 +3105,13 @@ int ToolControl::releaseProcess(AppProcess_t* proc)
 
     // Loop through all of the hardware threads associated with this process and send resume IPIs to them
     int myProcessorID = ProcessorID();
-    uint64_t hwtmask = proc->HwthreadMask & ~(_BN(myProcessorID)); // Get the thread mask for this process and remove ours.
+    uint64_t hwtmask =  proc->HwthreadMask;
+    if (proc->ThreadModel == CONFIG_THREAD_MODEL_ETA) 
+    {
+        // Include remote hardware threads that are hosting threads from this process
+        hwtmask |= proc->HwthreadMask_Remote;
+    }
+    hwtmask &= ~(_BN(myProcessorID)); // remove ours.
     for (int i=cntlz64(hwtmask); hwtmask; i++)
     {
         uint64_t curmask = _BN(i);
@@ -3206,14 +3245,36 @@ int ToolControl::processCommands(ToolIpiRequest& toolIpiRequest)
         CommandDescriptor* cmd_desc = (CommandDescriptor*)toolIpiRequest.descriptor[i].cmd;
         uint16_t command = cmd_desc->type; 
         void *cmd_data = (void*)((uint64_t)currentMsg + cmd_desc->offset);
+        uint64_t origpid = 0;
+        int restorePID = 0;
         Kernel_WriteFlightLog(FLIGHTLOG, FL_TOOLCMD__, command, ((ToolCommand*)cmd_data)->threadID, currentMsg->header.rank, currentMsg->toolId);
         // Test to see if the process is still active
-        if (!IsProcessActive())
+        // Get the kthread associated with the specified TID
+        KThread_t* kthread = GetKThreadFromTid(((ToolCommand*)cmd_data)->threadID);
+        if (!kthread)
+        {
+            invalidTID(*((ToolCommand*)cmd_data), *((CommandDescriptor*)toolIpiRequest.descriptor[i].ack));
+        }
+        else if (!IsProcessActive(kthread))
         {
             processExitingCmdFailure(*((ToolCommand*)cmd_data), *((CommandDescriptor*)toolIpiRequest.descriptor[i].ack));
         }
         else
         {
+            // If the targeted kthread has a different hwpid than the current hardware thread, we may need to modify the hwpid while we run this command.
+            // Either we interrupted a remote thread with a local request or we interrupted a local thread with a remote thread request.
+            if (kthread->pAppProc->ThreadModel == CONFIG_THREAD_MODEL_ETA)
+            {
+                origpid = mfspr(SPRN_PID);
+                if ((origpid != kthread->physical_pid) &&  // Does the current hwpid match the pid in the targetted kthread? 
+                    (origpid != GetMyHWThreadState()->PhysicalSpecPID)) // Does the current thread match the speculative hwpid for this hwt?
+                {
+                    // We need to force the hwpid to the value for the targetted kthread.
+                    mtspr(SPRN_PID, kthread->physical_pid); 
+                    isync();
+                    restorePID = 1;
+                }
+            }
             switch(currentMsg->header.type)
             {
             case Update:
@@ -3372,6 +3433,13 @@ int ToolControl::processCommands(ToolIpiRequest& toolIpiRequest)
             default:
                 // Should never get here. This function should only be called for Query and Update messages
                 printf("(E) ToolControl unexpected condition in processCommand()\n");
+            }
+            // Do we need to restore a hwpid that we modified?
+            if (restorePID) 
+            {
+                // We need to restore the hwpid. 
+                mtspr(SPRN_PID, origpid); 
+                isync();
             }
         }
         // If a non-zero return code has occurred, set an indicator flag
@@ -3594,8 +3662,9 @@ void ToolControl::getMemory(GetMemoryCmd& cmd, CommandDescriptor& ackdesc)
     ackcmd.addr = cmd.addr;
     ackcmd.length = cmd.length;
 
-    // Make sure the address is valid
-    if ( !VMM_IsAppAddress(address, ackcmd.length) )
+    // Make sure the address is valid. Need to pass in the process since we may have interrupted a kthread on a different process
+    // if the target kthread is a pthread running on a remote hardware thread in the Extended Affinity facility.
+    if ( !VMM_IsAppAddressForProcess(address, ackcmd.length, kthread->pAppProc) )
     {
         ackdesc.returnCode = CmdParmErr;
         return;
@@ -3617,7 +3686,7 @@ void ToolControl::getMemory(GetMemoryCmd& cmd, CommandDescriptor& ackdesc)
             uint64_t source = (uint64_t)(&(address[i]));
             if (!(source % 4) && ((ackcmd.length - i) >= 4))
             {
-                *((uint32_t*)(&ackcmd.data[i])) = breakpointController().read((uint32_t*)source);
+                *((uint32_t*)(&ackcmd.data[i])) = breakpointController().read((uint32_t*)source, kthread->pAppProc);
                 i += 4;
             }
             else
@@ -3631,10 +3700,9 @@ void ToolControl::getMemory(GetMemoryCmd& cmd, CommandDescriptor& ackdesc)
     {
         L2C_SPECID_t specid = 0;
         uint64_t     origpid = mfspr(SPRN_PID);
-        AppProcess_t* process = GetMyProcess();
         if (cmd.specAccess == SpecAccess_ForceNonSpeculative)
         {
-            mtspr(SPRN_PID, process->PhysicalPID); // long-speculative mode
+            mtspr(SPRN_PID, kthread->pAppProc->PhysicalPID); // long-speculative mode
             isync();
             
             specid = SPEC_GetSpeculationIDSelf_priv() & 0x1ff;
@@ -3687,7 +3755,7 @@ void ToolControl::getAuxVectors(GetAuxVectorsCmd& cmd, CommandDescriptor& ackdes
         return;
     }
     // Execute the requested command
-    uint64_t *pAuxVect = GetMyProcess()->pAuxVectors;
+    uint64_t *pAuxVect = kthread->pAppProc->pAuxVectors;
     ackcmd.length = 0;
     for (uint32_t i=0; i<MaxAuxVecDWords; i++)
     {
@@ -3723,7 +3791,7 @@ void ToolControl::getProcessData(GetProcessDataCmd& cmd, CommandDescriptor& ackd
     }
     // Execute the requested command
     AppState_t *app = GetMyAppState();
-    AppProcess_t *proc = GetMyProcess();
+    AppProcess_t *proc = kthread->pAppProc;
     Personality_t *pers = GetPersonality();
     ackcmd.rank = proc->Rank;                  
     ackcmd.tgid = proc->PID;                  
@@ -3776,7 +3844,7 @@ void ToolControl::getThreadData(GetThreadDataCmd& cmd, CommandDescriptor& ackdes
         return;
     }
     // Execute the requested command
-    AppProcess_t *proc = GetMyProcess();
+    AppProcess_t *proc = kthread->pAppProc;
     ackcmd.core = ProcessorCoreID();                     
     ackcmd.thread = ProcessorThreadID();
     if (proc->Guard_Enable)
@@ -3817,7 +3885,7 @@ void ToolControl::getThreadData(GetThreadDataCmd& cmd, CommandDescriptor& ackdes
     ackcmd.numStackFrames = 0; // initialize to zero    
     while (stkptr &&   // stack pointer is not NULL
            (ackcmd.numStackFrames < MaxStackFrames) &&  // did not yet store the max number of frames
-           (VMM_IsAppAddress(stkptr, sizeof(uint64_t[3])) || // Stack pointer is a valid Application address or
+           (VMM_IsAppAddressForProcess(stkptr, sizeof(uint64_t[3]), proc) || // Stack pointer is a valid Application address or
             ((stkptr > kernel_stack_start) && (stkptr < kernel_stack_end)))) // stack pointer is a kernel stack address
     {
         ackcmd.stackInfo[ackcmd.numStackFrames].frameAddr = (BG_Addr_t)stkptr;  // curent stack pointer
@@ -4253,7 +4321,7 @@ void ToolControl::setMemory(SetMemoryCmd& cmd, CommandDescriptor& ackdesc)
         ackdesc.returnCode = CmdSuccess;
         return;
     }
-    if (!VMM_IsAppAddress((void*)cmd.addr, cmd.length))
+    if (!VMM_IsAppAddressForProcess((void*)cmd.addr, cmd.length, kthread->pAppProc))
     {
         // Address parameter is invalid
         ackdesc.returnCode = CmdParmErr;
@@ -4403,7 +4471,7 @@ void ToolControl::releaseAllThreads(ReleaseAllThreadsCmd& cmd, CommandDescriptor
     ackdesc.returnCode = CmdSuccess;
 
     // Remove the HOLD blocking code for all threads in the process
-    releaseProcess(GetMyProcess());
+    releaseProcess(kthread->pAppProc);
 
 }
 void ToolControl::releaseThread(ReleaseThreadCmd& cmd, CommandDescriptor& ackdesc)
@@ -4556,7 +4624,7 @@ void ToolControl::installTrapHandler(InstallTrapHandlerCmd& cmd, CommandDescript
     // Execute the requested command
 
     // Verify that the trap handler is a valid address in the process address space.
-    if (VMM_IsAppAddress((const void*)cmd.trap_handler,16)) // check 16 bytes at this address to cover the code and toc pointers
+    if (VMM_IsAppAddressForProcess((const void*)cmd.trap_handler,16,kthread->pAppProc)) // check 16 bytes at this address to cover the code and toc pointers
     {
         struct kern_sigaction_t sa;
         memset(&sa,0x00, sizeof(sa));
@@ -5045,7 +5113,7 @@ void ToolControl::setBreakpoint(SetBreakpointCmd& cmd,  CommandDescriptor& ackde
         ackdesc.returnCode = CmdTIDinval;
         return;
     }
-    if (!VMM_IsAppAddress((void*)cmd.addr, 4) ||
+    if (!VMM_IsAppAddressForProcess((void*)cmd.addr, 4,kthread->pAppProc) ||
         (cmd.addr & 0x3))
     {
         // Address parameter is invalid
@@ -5109,7 +5177,7 @@ void ToolControl::resetBreakpoint(ResetBreakpointCmd& cmd,  CommandDescriptor& a
         ackdesc.returnCode = CmdTIDinval;
         return;
     }
-    if (!VMM_IsAppAddress((void*)cmd.addr, 4) ||  // Is this a valid address
+    if (!VMM_IsAppAddressForProcess((void*)cmd.addr, 4, kthread->pAppProc) ||  // Is this a valid address
         (cmd.addr &0x3)) // Must be 4 byte aligned.
     {
         // Address parameter is invalid
@@ -5201,7 +5269,7 @@ void ToolControl::setWatchpoint(SetWatchpointCmd& cmd,  CommandDescriptor& ackde
         ackdesc.returnCode = CmdLngthErr;
         return;
     }
-    if (!VMM_IsAppAddress((void*)cmd.addr, cmd.length))
+    if (!VMM_IsAppAddressForProcess((void*)cmd.addr, cmd.length, kthread->pAppProc))
     {
         // Address parameter is invalid
         //printf("Set Watchpoint return CmdAddrErr %016lx\n",cmd.addr);
@@ -5322,7 +5390,7 @@ void ToolControl::setPreferences(SetPreferencesCmd& cmd,  CommandDescriptor& ack
     {
         breakpointController().setTrapAfterDAC();
     }
-    int procindex = GetMyProcess()->ProcessLeader_ProcessorID;
+    int procindex = kthread->pAppProc->ProcessLeader_ProcessorID;
     if (cmd.breakpointMode == FastBreak_Enable)
     {
         processEntry[procindex].enableFastBreakpoints(currentMsg->toolId);
@@ -5377,7 +5445,7 @@ void ToolControl::getPreferences(GetPreferencesCmd& cmd,  CommandDescriptor& ack
     {
         ackcmd.dacMode = TrapOnDAC;
     }
-    int procindex = GetMyProcess()->ProcessLeader_ProcessorID;
+    int procindex = kthread->pAppProc->ProcessLeader_ProcessorID;
     if (processEntry[procindex].isFastBreakpointEnabled(currentMsg->toolId))
     {
         ackcmd.breakpointMode = FastBreak_Enable;
@@ -5598,9 +5666,6 @@ void ToolControl::releaseControl(ReleaseControlCmd& cmd,  CommandDescriptor& ack
         pendingNotifyControl.resumeAllThreads = (proc->pendingAction == ToolPendingAction_ResumeProc) ? 1 : 0; 
         proc->pendingAction = ToolPendingAction_NotifyAvail;
     }
-
-    // If the process controlled by this tool has held threads release them
-    // releaseProcess(proc);  For now, leave this under the control of the tool. It may want to pass held threads to the next tool.
 
     // Reset the indicator within the process object that migrates watchpoints to child threads. Since no tool is in control,
     // we do not want clone to incur this unnecessary overhead

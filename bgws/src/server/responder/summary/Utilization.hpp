@@ -67,6 +67,20 @@ public:
 private:
 
     std::uint64_t _system_cpu_count;
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
+
+
+    void _doQuery(
+            capena::server::ResponderPtr
+        );
+
+
+    void _queryComplete(
+            capena::server::ResponderPtr,
+            cxxdb::ConnectionPtr,
+            cxxdb::ResultSetPtr rs_ptr
+        );
+
 };
 
 

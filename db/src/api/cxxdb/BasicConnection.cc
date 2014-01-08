@@ -179,6 +179,16 @@ QueryStatementPtr BasicConnection::prepareQuery(
 }
 
 
+QueryStatementPtr BasicConnection::createQuery()
+{
+    CHECK_VALID;
+
+    QueryStatementPtr ret( new QueryStatement( shared_from_this(), *_handle_ptr ) );
+    _stmt_ptrs[ret.get()] = ret; // Store a weak ptr to the new statement so can invalidate if conn destroyed.
+    return ret;
+}
+
+
 void BasicConnection::startTransaction()
 {
     CHECK_VALID;

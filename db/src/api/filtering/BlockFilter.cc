@@ -142,6 +142,12 @@ BlockFilter::getSize() const
     return _size;
 }
 
+BlockFilter::BlockType::Value
+BlockFilter::getBlockType() const
+{
+    return _blockType;
+}
+
 } // filtering
 } // BGQDB
 

@@ -36,7 +36,6 @@ function(
 {
 
 var b_navigator_dijit_environmentals_ServiceCardTemp = d_declare(
-        "bluegene.navigator.dijit.environmentals.ServiceCardTemp",
         [ l_AbstractQueryResultsDijit ],
 
 {

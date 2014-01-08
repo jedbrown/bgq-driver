@@ -91,7 +91,8 @@ Authenticate::Authenticate(
     _callback( ),
     _request( ),
     _header( ),
-    _ack( cios::Message::create() )
+    _ack( cios::Message::create() ),
+    _timedOut( false )
 {
 
 }
@@ -191,7 +192,11 @@ Authenticate::writeHandler(
         return;
     }
 
-    if ( error ) {
+    if ( !_timedOut && error == boost::asio::error::operation_aborted ) {
+        // skip callback since this isn't a failure
+        LOG_DEBUG_MSG( boost::system::system_error(error).what() );
+        return;
+    } else if ( error ) {
         LOG_ERROR_MSG( "write failed: " << boost::system::system_error(error).what());
         _callback( ConnectionInterval::SocketPtr() );
         return;
@@ -226,10 +231,15 @@ Authenticate::readHeaderHandler(
     if ( !server ) return;
 
     if ( server->stopped() ) {
+        LOG_TRACE_MSG( "server is shutting down" );
         return;
     }
 
-    if ( error ) {
+    if ( !_timedOut && error == boost::asio::error::operation_aborted ) {
+        // skip callback since this isn't a failure
+        LOG_DEBUG_MSG( boost::system::system_error(error).what() );
+        return;
+    } else if ( error ) {
         LOG_ERROR_MSG( "read failed: " << boost::system::system_error(error).what());
         _callback( ConnectionInterval::SocketPtr() );
         return;
@@ -308,6 +318,7 @@ Authenticate::timerHandler(
     }
 
     try {
+        _timedOut = true;
         _socket->cancel();
     } catch ( const boost::system::system_error& e ) {
         LOG_WARN_MSG( "could not cancel socket: " << e.what() );

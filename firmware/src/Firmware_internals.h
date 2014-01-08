@@ -124,7 +124,7 @@ typedef struct _FW_StopWatch_t {
 	rc = func();							\
     }									\
     if (rc) {								\
-	FW_Error("FW: Initialization failed in %s.  rc=0x%x\n", #func, rc); \
+	FW_Error("FW: Initialization failed in %s.  rc=0x%x.", #func, rc); \
 	crash(-__LINE__);						\
     } \
     if (ProcessorID()==0) LAPTIME(_fw_stopwatch,#func); \
@@ -137,7 +137,7 @@ typedef struct _FW_StopWatch_t {
 	rc = func();							\
     }									\
     if (rc) {								\
-	FW_Error("FW: Initialization failed in %s.  rc=0x%x\n", #func, rc); \
+	FW_Error("FW: Initialization failed in %s.  rc=0x%x.", #func, rc); \
 	crash(-__LINE__);						\
     }
 
@@ -188,14 +188,22 @@ extern uint64_t fw_getThisDomainID( void );
 extern int fw_ddr_init( void );
 extern int fw_ddr_flush_fifos( void );
 extern void fw_ddr_unmaskCorrectableErrors( void );
+extern void fw_ddr_flushCorrectables( int endOfJob );
+
 extern int fw_bedram_init( void );
 extern int fw_devbus_init( void );
 extern int fw_envmon_init( void );
 extern int fw_l1p_init( void );
+extern void fw_l1p_unmaskCorrectableErrors( void );
+extern void fw_l1p_flushCorrectables(int endOfJob );
+
 extern int fw_l2_init( void );
 extern int fw_l2_central_init( void );
 extern int fw_l2_counter_init( void );
 extern int fw_l2_preload( void );
+extern void fw_l2_unmaskCorrectableErrors( void );
+extern void fw_l2_flushCorrectables( int endOfJob );
+
 extern int fw_ms_genct_init( void );
 extern int fw_testint_init( void );
 extern int fw_upc_init( void );
@@ -225,11 +233,13 @@ extern int fw_mailbox_pollOutbox( void );
 
 extern int fw_mu_resetRelease( void );
 extern int fw_mu_termCheck( void );
+extern void fw_mu_flushCorrectables( void );
 
 extern int fw_nd_resetRelease( void );
 extern int fw_nd_init_global_barrier( void );
 extern int fw_nd_termCheck( void );
 extern int fw_nd_machineCheckHandler( uint64_t status[] );
+extern void fw_nd_flushCorrectables( void );
 
 extern int  fw_pcie_init( void );
 extern void fw_pcie_shutdown( void );

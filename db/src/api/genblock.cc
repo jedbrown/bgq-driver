@@ -1425,22 +1425,22 @@ genIOBlock(
     }
 
     if (ionodes == 0) {
-        LOG_ERROR_MSG(__FUNCTION__ << " Number of IO nodes must be a positive integer");
+        LOG_ERROR_MSG(__FUNCTION__ << " Number of I/O nodes must be a positive integer");
         return FAILED;
     }
 
     if (location.size() != 10 && location.size()!= 6) {
-        LOG_ERROR_MSG(__FUNCTION__ << " Location must be an IO node or an IO drawer");
+        LOG_ERROR_MSG(__FUNCTION__ << " Location must be an I/O node or an I/O drawer");
         return FAILED;
     }
 
     if (location.size() == 10 && ionodes > 7) {
-        LOG_ERROR_MSG(__FUNCTION__ << " Location must be an IO drawer for 8 or more IO nodes");
+        LOG_ERROR_MSG(__FUNCTION__ << " Location must be an I/O drawer for 8 or more I/O nodes");
         return FAILED;
     }
 
     if (ionodes == 3 || ionodes == 5 || ionodes == 6 || ionodes == 7) {
-        LOG_ERROR_MSG(__FUNCTION__ << " Invalid number of IO nodes");
+        LOG_ERROR_MSG(__FUNCTION__ << " Invalid number of I/O nodes");
         return FAILED;
     }
 
@@ -1449,17 +1449,17 @@ genIOBlock(
          location.substr(7,3) != "J04" && location.substr(7,3) != "J06") ||
         (ionodes == 4 &&
          location.substr(7,3) != "J00" && location.substr(7,3) != "J04")) {
-        LOG_ERROR_MSG(__FUNCTION__ << " Invalid location for number of IO nodes");
+        LOG_ERROR_MSG(__FUNCTION__ << " Invalid location for number of I/O nodes");
         return FAILED;
     }
 
 
     if (location.size() == 6 && ionodes%8 != 0) {
-        LOG_ERROR_MSG(__FUNCTION__ << " Number of IO nodes must be a multiple of 8 when specifying an IO drawer");
+        LOG_ERROR_MSG(__FUNCTION__ << " Number of I/O nodes must be a multiple of 8 when specifying an I/O drawer");
         return FAILED;
     }
 
-    // check for valid locations, ths checks above only checked the length
+    // check for valid locations, the checks above only checked the length
     string whereClause(" where location='");
     whereClause += location +string("'");
     int nrows;
@@ -1469,7 +1469,7 @@ genIOBlock(
         nrows = tx.count("BGQIONode",whereClause.c_str());
     }
     if (nrows !=1 ) {
-        LOG_ERROR_MSG(__FUNCTION__ << " Location must be a valid IO drawer or IO node");
+        LOG_ERROR_MSG(__FUNCTION__ << " Location must be a valid I/O drawer or I/O node");
         return FAILED;
     }
 
@@ -1510,7 +1510,7 @@ genIOBlock(
     snprintf(iob._location, sizeof(iob._location), "%s", location.c_str());
 
 
-    // handle the spanning of IO racks
+    // Handle the spanning of I/O racks
     DBVIodrawer iod;
     colBitmap.reset();
     colBitmap.set(iod.LOCATION);
@@ -1529,7 +1529,7 @@ genIOBlock(
             if (nodes < ionodes) {
                 sqlrc =  tx.query(&iod,(string(" where location >'") +  string(iob._location)  + "' order by location").c_str() );
                 if ( (sqlrc = tx.fetch( &iod )) != SQL_SUCCESS ) {
-                    LOG_ERROR_MSG( __FUNCTION__ << " Invalid IO Drawer specification. ");
+                    LOG_ERROR_MSG( __FUNCTION__ << " Invalid I/O drawer specification. ");
                     return FAILED;
                 } else {
                     snprintf(iob._location, sizeof(iob._location), "%s", iod._location);

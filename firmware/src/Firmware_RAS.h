@@ -534,7 +534,7 @@
      component="FIRMWARE"
      severity="FATAL"
      message="Unrecoverable Machine Check."
-     description="A machine check occurred before firmware was able to establish a recoverable context."
+     description="A machine check occurred before firmware was able to establish a recoverable context.  See previous RAS events at this location for more details."
      control_action="END_JOB,COMPUTE_IN_ERROR,FREE_COMPUTE_BLOCK"
      service_action="$(Diagnostics)"
      relevant_diags="processor"
@@ -596,7 +596,7 @@
      category="Software_Error"
      component="FIRMWARE"
      severity="WARN"
-     message="(WARNING) $(MSG)."
+     message="(WARNING) $(MSG)"
      description="A serious condition was detected in firmware."
      service_action="$(CheckLevels)"
      />
@@ -611,7 +611,7 @@
      category="Software_Error"
      component="FIRMWARE"
      severity="FATAL"
-     message="(ERROR) $(MSG)."
+     message="(ERROR) $(MSG)"
      description="A fatal condition was detected in firmware."
      service_action="$(CheckLevels)"
      />
@@ -787,7 +787,7 @@
      service_action="$(Diagnostics)"
      decoder="fw_L1P_correctableSummaryDecoder"
      relevant_diags="processor"
-     threshold_count="120000"
+     threshold_count="100000"
      threshold_period="1 day"
      />
  */
@@ -805,8 +805,8 @@
      service_action="$(Diagnostics)"
      decoder="fw_L2_correctableSummaryDecoder"
      relevant_diags="processor"
-     threshold_count="100"
-     threshold_period="1 hour"
+     threshold_count="2400"
+     threshold_period="1 day"
      />
  */
 
@@ -824,9 +824,6 @@
      service_action="$(Diagnostics)"
      decoder="fw_L2_correctableSummaryDecoder"
      relevant_diags="processor"
-     threshold_count="100"
-     threshold_period="1 hour"
-
      />
  */
 
@@ -987,7 +984,7 @@
      category="Software_Error"
      component="FIRMWARE"
      severity="INFO"
-     message="$(MSG)."
+     message="$(MSG)"
      description="This message provides additional information that may be useful to IBM in a support capacity."
      />
  */
@@ -1025,6 +1022,22 @@
  */
 
 // #defined above (FW_RAS_DDR_INIT_INFO)
+
+/*
+    <rasevent 
+     id="0008003F"
+     category="BQC" 
+     component="FIRMWARE"
+     severity="FATAL"
+     message="Barrier Initialization Error : $(DETAILS)"
+     description="An error occurred when initializing the primordial MU barrier.  This could be a defective BQC.  But it could also be due to a defective cable or a misplugged cable.  VerifyCables should be run prior to or in addition to any diagnostics."
+     service_action="$(Diagnostics)"
+     relevant_diags="torus"
+     />
+*/
+
+
+#define FW_RAS_BARRIER_INIT_ERROR  0x0008003F
 
 
 

@@ -24,13 +24,16 @@
 #ifndef CXXDB_QUERY_STATEMENT_H_
 #define CXXDB_QUERY_STATEMENT_H_
 
+
 #include "AbstractStatement.h"
 #include "Columns.h"
 
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 
+
 namespace cxxdb {
+
 
 /*! \brief A database query statement.
  *
@@ -53,6 +56,13 @@ namespace cxxdb {
 class QueryStatement : public AbstractStatement, public boost::enable_shared_from_this<QueryStatement>
 {
 public:
+
+    /*! \brief Prepare SQL for execution */
+    void prepare(
+            const std::string& sql,
+            const ParameterNames& parameter_names = ParameterNames()
+        );
+
 
     /*! \brief Execute the query.
      *
@@ -78,6 +88,12 @@ private:
             const std::string& sql,
             const ParameterNames& parameter_names
         );
+
+    QueryStatement(
+            BasicConnectionPtr connection_ptr,
+            ConnectionHandle& connection_handle
+        );
+
 
     // Called by BasicConnection, creates a ResultSet that retains a reference to me.
     ResultSetPtr _executeRetain();

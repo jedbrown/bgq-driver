@@ -48,6 +48,7 @@ ToolctlConfig::ToolctlConfig(int argc, char **argv) : bgcios::CiosConfig()
       ("service_id", po::value<uint32_t>()->default_value(DefaultServiceId), "unique id for this instance of daemon")
       ("log_level", po::value<std::string>(), "logging level")
       ("properties", po::value<std::string>(), "path to properties file")
+      ("CNtorus",po::value<std::string>(), "torus coordinates")
       ;
    
    // Parse the command line options.

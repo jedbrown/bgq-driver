@@ -90,6 +90,12 @@ public:
     int primaryDimension() const { return _primaryDimension; }
 
 private:
+    unsigned countIncludedNodes(
+            const JobInfo& info,
+            const Rectangle* world
+            ) const;
+
+private:
     Container _container;
     int _size;
     Rectangle _rectangle;

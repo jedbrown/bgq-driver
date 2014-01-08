@@ -32,7 +32,10 @@
 
 #include <boost/array.hpp>
 
+
+namespace mmcs {
 namespace lite {
+
 
 /*!
  * \brief
@@ -69,6 +72,6 @@ private:
     Container _encrypted;
 };
 
-} // lite
+} } // namespace mmcs::lite
 
 #endif

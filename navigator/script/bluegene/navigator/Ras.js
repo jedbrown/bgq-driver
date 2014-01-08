@@ -30,7 +30,6 @@ define(
     "../Bgws",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -41,7 +40,6 @@ function(
         b_Bgws,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {
@@ -155,9 +153,10 @@ var b_navigator_Ras = d_declare( [ l_AbstractTab ],
 
     _selected : function( args )
     {
-        if ( this._ras_results_dij ) {
-            this._ras_results_dij.setFilter( args );
-        }
+        if ( ! this._ras_results_dij )  return;
+
+        this._ras_results_dij.setFilter( args );
+        this._navigator.switchTo( "ras" );
     }
 
 

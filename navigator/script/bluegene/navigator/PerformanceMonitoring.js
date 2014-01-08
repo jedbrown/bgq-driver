@@ -27,7 +27,6 @@ define(
     "./dijit/PerformanceMonitoring",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry",
     "module"
 ],
 function(
@@ -35,7 +34,6 @@ function(
         l_dijit_PerformanceMonitoring,
         d_declare,
         d_lang,
-        j_registry,
         module
     )
 {

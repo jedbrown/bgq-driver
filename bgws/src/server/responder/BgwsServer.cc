@@ -48,7 +48,21 @@ Only a Blue Gene Administrator can get the BGWS server status.
   "requestsHandled" : <i>number</i>,
   "requestsInProgress" : <i>number</i>,
   "maxRequestTime" : <i>number</i>,
-  "avgRequestTime" : <i>number</i>
+  "avgRequestTime" : <i>number</i>,
+  "databaseConnectionPool" : { // New for V1R2M0.
+    "available": <i>number</i>,
+    "used": <i>number</i>,
+    "max": <i>number</i>,
+    "size": <i>number</i>
+  },
+  "requests" : [ // optional -- New for V1R2M0.
+      {
+        "method": &quot;<i>string</i>&quot;,
+        "url": &quot;<i>URL</i>&quot;,
+        "startTime": &quot;<i>\ref timestampFormat "timestamp"</i>&quot;,
+        "user": &quot;<i>string</i>&quot;
+      }, ...
+    ]
 }
 </pre>
 
@@ -121,16 +135,24 @@ HTTP status: 403 Forbidden
 
 #include "chiron-json/json.hpp"
 
+#include <db/include/api/tableapi/DBConnectionPool.h>
+
 #include <utility/include/Log.h>
 
+#include <boost/foreach.hpp>
 #include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <boost/algorithm/string.hpp>
 
 #include <string>
+#include <vector>
 
+
+using boost::lexical_cast;
 
 using std::string;
+using std::vector;
 
 
 LOG_DECLARE_FILE( "bgws" );
@@ -138,6 +160,29 @@ LOG_DECLARE_FILE( "bgws" );
 
 namespace bgws {
 namespace responder {
+
+
+static bool compareRequestPtrs( const ServerStats::RequestData::Ptr& lhs, const ServerStats::RequestData::Ptr& rhs )
+{
+    return (lhs->start_time < rhs->start_time);
+}
+
+
+typedef vector<ServerStats::RequestData::Ptr> RequestDataPtrs;
+
+
+static RequestDataPtrs calcSortedRequests( const ServerStats::Requests& requests )
+{
+    RequestDataPtrs req_data_ptrs;
+
+    BOOST_FOREACH( const auto& req_map_pair, requests ) {
+        req_data_ptrs.push_back( req_map_pair.second );
+    }
+
+    std::sort( req_data_ptrs.begin(), req_data_ptrs.end(), &compareRequestPtrs );
+
+    return req_data_ptrs;
+}
 
 
 const capena::http::uri::Path &BgwsServer::RESOURCE_PATH(::bgws::common::resource_path::BGWS_SERVER);
@@ -192,6 +237,36 @@ void BgwsServer::_gotStatistics(
     obj.set( "avgRequestTime",
              (snapshot.requests_complete == 0 ? 0.0 : (snapshot.total_time_to_process_requests_microseconds / snapshot.requests_complete / 1000000.0))
            );
+
+
+    json::Object &db_conn_pool_obj(obj.createObject( "databaseConnectionPool" ));
+
+    db_conn_pool_obj.set( "available", BGQDB::DBConnectionPool::instance().availableCount() );
+    db_conn_pool_obj.set( "used", BGQDB::DBConnectionPool::instance().usedCount() );
+    db_conn_pool_obj.set( "max", BGQDB::DBConnectionPool::instance().maxCount() );
+    db_conn_pool_obj.set( "size", BGQDB::DBConnectionPool::instance().size() );
+
+
+    if ( ! snapshot.requests.empty() ) {
+
+        RequestDataPtrs req_data_ptrs(calcSortedRequests( snapshot.requests ));
+
+
+        json::Array &reqs(obj.createArray( "requests" ));
+
+        BOOST_FOREACH( const auto &req_data_ptr, req_data_ptrs ) {
+
+            const ServerStats::RequestData &req_data(*req_data_ptr);
+
+            json::Object &req_obj(reqs.addObject());
+
+            req_obj.set( "method", lexical_cast<string>( req_data.method ) );
+            req_obj.set( "url", req_data.url_str );
+            req_obj.set( "startTime", req_data.start_time );
+            req_obj.set( "user", lexical_cast<string>( req_data.user_info ) );
+        }
+
+    }
 
     json::Formatter()( obj_val, response.out() );
 }

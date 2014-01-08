@@ -298,7 +298,15 @@ int disconnect_indicate(struct my_context * mcontext, struct mudm_connection *cc
   return callback_STATUS;
 };
 
-
+int parse_dest2string(char * target,int target_length,MUHWI_Destination_t na){
+  int length;
+  if (na.Destination.Destination == (uint32_t)(-1) ){ return (length = snprintf(target, target_length, 
+       "(unknown)" ) );}
+  length = snprintf(target, target_length, 
+       "(%d %d %d %d %d)",
+        na.Destination.A_Destination,na.Destination.B_Destination,na.Destination.C_Destination,na.Destination.D_Destination,na.Destination.E_Destination);
+  return length;
+};
 
 int32_t flush_iolink_connection_list(struct my_context * mcontext,struct mudm_connection ** conn_activelist){
   
@@ -306,13 +314,16 @@ int32_t flush_iolink_connection_list(struct my_context * mcontext,struct mudm_co
   struct mudm_connection * first_ccontext = ccontext;
   struct mudm_connection * last_ccontext = ccontext;
   if (NULL==ccontext) return 0;
+  int num_connections_freed = 0;
   while (NULL != ccontext){
      last_ccontext = ccontext;
      ccontext->state=CONN_FREE;
      disconnect_indicate(mcontext, ccontext, 0); //0=dontfree
      ccontext->conn_activelist=NULL;
      ccontext = ccontext->nextconn;
+     num_connections_freed++;
   }  
+  MPRINT("%s freed connections=%d \n",__FUNCTION__, num_connections_freed);
   //return the whole list to the free list
   MSPIN_LOCK(mcontext->conn_list_lock);
     last_ccontext->nextconn = mcontext-> conn_freelist;

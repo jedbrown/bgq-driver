@@ -46,6 +46,7 @@ class PrepareServiceAction : public boost::enable_shared_from_this<PrepareServic
 {
 public:
 
+    typedef boost::function<void ( std::string service_action_id, std::string attention_messages )> NotifyAttentionMessagesCb;
 
     /*!
      *  \throws InvalidLocationError If the location is not a valid location for a service action.
@@ -61,7 +62,8 @@ public:
 
 
     void start(
-            StartCb start_cb
+            StartCb start_cb,
+            NotifyAttentionMessagesCb notify_attention_messages_cb
         );
 
 
@@ -72,10 +74,15 @@ private:
     std::string _username;
 
     StartCb _start_cb;
+    NotifyAttentionMessagesCb _notify_attention_messages_cb;
 
     utility::EasyChildProcess::Ptr _process_ptr;
 
+    std::string _id;
+
     std::string _error_text;
+
+    std::string _attention_text;
 
 
     void _handleProcessEnded(
@@ -86,6 +93,15 @@ private:
     void _handleLine(
             utility::EasyChildProcess::OutputType output_type,
             utility::EasyChildProcess::OutputIndicator output_ind,
+            const std::string& line
+        );
+
+
+    void _checkLineStartup(
+            const std::string& line
+        );
+
+    void _checkLineAttention(
             const std::string& line
         );
 

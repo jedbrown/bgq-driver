@@ -31,6 +31,12 @@ CXXFLAGS += -O2
 CXXFLAGS += -MD -MP
 CXXFLAGS += -fpic
 
+ifeq ($(BGQ_HOST_OS),x86_64)
+# tollerate warnings in rh5 x86 builds.
+CFLAGS    := $(subst -Werror,,$(CFLAGS))
+CXXFLAGS  := $(subst -Werror,,$(CXXFLAGS))
+endif
+
 SHARED_LDFLAGS   = $(LDFLAGS)
 SHARED_LDFLAGS  += -L ../ -lbgutility
 SHARED_LDFLAGS  += -lssl
@@ -48,17 +54,17 @@ STATIC_LIB = libcxxsockets.a
 
 install_list=$(call INSTALL_LIB_TARGET,$(lib_dev) $(lib_vers) $(lib_full) $(STATIC_LIB))
 
-SRCS  = Functors.cc
-SRCS += CxxSocket.cc
+SRCS += Socket.cc
 SRCS += TCPSocket.cc
 SRCS += ListeningSocket.cc
 SRCS += SecureTCPSocket.cc
 SRCS += File.cc
-SRCS += SocketAddrs.cc
+SRCS += SockAddr.cc
+SRCS += SockAddrList.cc
 SRCS += FileSet.cc
-SRCS += ListenerSets.cc
-SRCS += PollSocketSet.cc
-SRCS += PollFileSet.cc
+SRCS += ListenerSet.cc
+SRCS += PollingSocketSet.cc
+SRCS += PollingFileSet.cc
 SRCS += Host.cc
 
 OBJS     = $(SRCS:%.cc=%.o)

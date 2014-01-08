@@ -55,13 +55,15 @@ public:
             CtorArgs& args
         ) :
             AbstractResponder( args ),
+            _blocking_operations_thread_pool(args.blocking_operations_thread_pool),
             _diagnostics_runs(args.diagnostics_runs)
     { /* Nothing to do */ }
 
 
     capena::http::Methods _getAllowedMethods() const
     {
-        return { capena::http::Method::GET, capena::http::Method::POST };
+        static const capena::http::Methods methods = { capena::http::Method::GET, capena::http::Method::POST };
+        return methods;
     }
 
     // override
@@ -73,6 +75,7 @@ public:
 
 private:
 
+    BlockingOperationsThreadPool &_blocking_operations_thread_pool;
     blue_gene::diagnostics::Runs &_diagnostics_runs;
 
 
@@ -82,10 +85,17 @@ private:
             const RunsQueryOptions& query_options
         );
 
-    void _doQuery(
+    void _startQuery(
+            capena::server::ResponderPtr,
             blue_gene::diagnostics::Runs::SnapshotPtr snapshot_ptr,
             const RunsQueryOptions& query_options
         );
+
+    void _queryComplete(
+            capena::server::ResponderPtr,
+            json::ArrayValuePtr arr_val_ptr
+        );
+
 
     void _handleGotNewDiagnosticsRunId(
     		capena::server::ResponderPtr shared_ptr,

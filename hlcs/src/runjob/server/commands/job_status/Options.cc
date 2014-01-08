@@ -37,6 +37,11 @@
  *
  * \section OPTIONS
  *
+ * \subsection pid --pid.
+ *
+ * runjob process ID. Either this parameter
+ * or --id must be given.
+ *
  * \subsection id --id
  *
  * job ID
@@ -99,22 +104,35 @@ Options::Options(
         char** argv
         ) :
     runjob::commands::Options( defaults::ServerCommandService, runjob::server::commands::log, runjob::commands::Message::Tag::JobStatus, argc, argv ),
+    _pid( 0 ),
+    _hostname(),
     _options("Options"),
     _details()
 {
     namespace po = boost::program_options;
     _options.add_options()
+        ("pid", po::value(&_pid), "runjob process ID")
         ("id", po::value(&_job), "job ID")
         ("details", po::bool_switch(&_details), "display detailed I/O node information")
+        ;
+
+    // --runjob-hostname is hidden
+    boost::program_options::options_description hidden;
+    hidden.add_options()
+        ("runjob-hostname", po::value(&_hostname), "hostname where runjob was started")
         ;
 
     // id is positional
     _positionalArgs.add( "id", 1 );
 
+    po::options_description both;
+    both.add( _options );
+    both.add( hidden );
+
     // add generic args
     Options::add(
             runjob::server::commands::PropertiesSection,
-            _options
+            both
             );
 }
 
@@ -138,7 +156,7 @@ Options::description() const
 void
 Options::doValidate() const
 {
-    if ( _job == 0 ) {
+    if ( _job == 0 && _pid == 0 ) {
         BOOST_THROW_EXCEPTION( boost::program_options::error("missing required option 'id'") );
     }
     
@@ -146,7 +164,9 @@ Options::doValidate() const
             boost::static_pointer_cast<runjob::commands::request::JobStatus>( this->getRequest() )
             );
 
-    request->setId( _job );
+    request->_job = _job;
+    request->_pid = _pid;
+    request->_hostname = _hostname;
 }
 
 void
@@ -182,6 +202,7 @@ Options::doHandle(
         std::cout << std::endl;
         std::cout << "kill timeout expires in: " << response->_killTimeout.total_seconds() << " seconds" << std::endl;
     }
+    LOG_DEBUG_MSG( "mux " << (response->_mux.empty() ? "not connected" : response->_mux) );
 }
 
 void

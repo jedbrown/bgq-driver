@@ -50,6 +50,11 @@ class KillJob : public Request
 {
 public:
     /*!
+     * \brief Protocol version.
+     */
+    static const unsigned ProtocolVersion = 2;
+
+    /*!
      * \brief pointer type
      */
     typedef boost::shared_ptr<KillJob> Ptr;
@@ -62,6 +67,8 @@ public:
         Request(Message::Tag::KillJob),
         _signal( 0 ),
         _job( 0 ),
+        _pid( 0 ),
+        _hostname( ),
         _timeout( 0 ),
         _controlActionRecordId( 0 )
     {
@@ -70,6 +77,8 @@ public:
 
     int _signal;
     BGQDB::job::Id _job;
+    pid_t _pid;
+    std::string _hostname;
     size_t _timeout;
     int _controlActionRecordId;
 
@@ -92,6 +101,8 @@ private:
         ar & boost::serialization::base_object<Request>(*this);
         ar & _signal;
         ar & _job;
+        ar & _pid;
+        ar & _hostname;
         ar & _timeout;
         ar & _controlActionRecordId;
     }
@@ -153,7 +164,7 @@ private:
 } // commands
 } // runjob
 
-BOOST_CLASS_VERSION( runjob::commands::request::KillJob, runjob::commands::ProtocolVersion )
+BOOST_CLASS_VERSION( runjob::commands::request::KillJob, runjob::commands::request::KillJob::ProtocolVersion )
 BOOST_CLASS_VERSION( runjob::commands::response::KillJob, runjob::commands::ProtocolVersion )
 
 #endif

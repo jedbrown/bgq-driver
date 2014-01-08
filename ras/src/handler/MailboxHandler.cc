@@ -75,9 +75,9 @@ RasEvent& MailboxHandler::handle(RasEvent& event, const RasEventMetadata& metada
  * @param metadata:
  *          The RAS event metadata object.
  */
-void MailboxHandler::handleMailbox(RasEvent& event, string mboxPayload, const RasEventMetadata& metadata)
+void MailboxHandler::handleMailbox(RasEvent& event, const std::string& mboxPayload, const RasEventMetadata& metadata)
 {
-  LOG_TRACE_MSG("MailboxHandler handling event payload = " << mboxPayload.c_str());
+  LOG_TRACE_MSG("handling event payload = " << mboxPayload)
   istringstream in(mboxPayload, istringstream::in);
 
   MailBoxPayload_Common_RAS_t rasEvent;
@@ -86,8 +86,7 @@ void MailboxHandler::handleMailbox(RasEvent& event, string mboxPayload, const Ra
   uint64_t uci;
   uint64_t descriptor;
 
-  // Question: what to do if in.eof() is true before we pull out the UCI and other header pieces?  Exception?
-
+  // if these extraction operators fail we'll handle it in the loop below by short circuiting
   in >> hex >> uci;
   in >> hex >> descriptor;
 
@@ -98,9 +97,6 @@ void MailboxHandler::handleMailbox(RasEvent& event, string mboxPayload, const Ra
   {
     rasEvent.mboxBinary.message_id = descriptor;
 
-    int i = 0;
-    char* message = &(rasEvent.mboxAscii.message[0]);
-
     // remove the leading space
     char space;
     if (!in.eof())
@@ -108,11 +104,15 @@ void MailboxHandler::handleMailbox(RasEvent& event, string mboxPayload, const Ra
       in >> noskipws >> space;
     }
 
-    i = 0;
-    unsigned mboxLen = mboxPayload.length();
-    while (!in.eof() && i < mboxLen)
+    unsigned i = 0;
+    char c;
+    while (in >> noskipws >> c)
     {
-      in >> noskipws >> rasEvent.mboxAscii.message[i++];
+      rasEvent.mboxAscii.message[i++] = c;
+      if (i == MAX_MAILBOX_LEN) {
+	 rasEvent.mboxAscii.message[MAX_MAILBOX_LEN-1] = '\0';
+	 break;
+      }
     }
 
     defaultAscii(event, rasEvent, metadata);
@@ -122,21 +122,20 @@ void MailboxHandler::handleMailbox(RasEvent& event, string mboxPayload, const Ra
   {
     rasEvent.mboxBinary.message_id = descriptor >> 32;
     rasEvent.mboxBinary.num_details = descriptor & 0xFFFF;
-    int i = 0;
 
-    while (!in.eof())
+    unsigned i = 0;
+    uint64_t detail;
+    while (in >> hex >> detail)
     {
-      uint64_t detail;
-      in >> hex >> detail;
       rasEvent.mboxBinary.details[i++] = detail;
-
+      if (i == MAX_MAILBOX_LEN) break;
     } // End loop thru removing binary formatting
 
     defaultBinary(event, rasEvent, metadata);
 
   } // End not ASCII so anything else is treated as binary
 
-  LOG_TRACE_MSG("MailboxHandler done handling event");
+  LOG_TRACE_MSG("done handling event");
 } // End MailboxHandler::handleMailbox(RasEvent& event, string mboxPayload, const RasEventMetadata& metadata )
 
 
@@ -153,7 +152,7 @@ void MailboxHandler::handleMailbox(RasEvent& event, string mboxPayload, const Ra
  */
 void MailboxHandler::handleNonMailbox(RasEvent& event, const RasEventMetadata& metadata)
 {
-  LOG_TRACE_MSG("MailboxHandler handling non-mailbox event");
+  LOG_TRACE_MSG("handling non-mailbox event");
 
   // Perform formatted variable substitutions.
   defaultNonMailbox(event, metadata);
@@ -164,7 +163,7 @@ void MailboxHandler::handleNonMailbox(RasEvent& event, const RasEventMetadata& m
  *  Method to take default action on any Ascii event that did not have a decoder defined for it.
  *  The default action is to look thru the ASCII message and
  */
-void MailboxHandler::defaultAscii(RasEvent& event, MailBoxPayload_Common_RAS_t rasEvent, const RasEventMetadata& metadata)
+void MailboxHandler::defaultAscii(RasEvent& event, const MailBoxPayload_Common_RAS_t& rasEvent, const RasEventMetadata& metadata)
 {
   unsigned int replaceCount = 0;
   unsigned int varsReplaced = 0;
@@ -179,7 +178,7 @@ void MailboxHandler::defaultAscii(RasEvent& event, MailBoxPayload_Common_RAS_t r
   }
 
   string rasAscii = rasEvent.mboxAscii.message;
-  LOG_TRACE_MSG("MailboxHandler RAS ASCII " << rasAscii.c_str());
+  LOG_TRACE_MSG("RAS ASCII " << rasAscii.c_str());
 
   // Vector of tokenized strings using the ASCII string passed in
   vector<string> tokenString = tokenize(rasEvent.mboxAscii.message, ",");
@@ -239,7 +238,7 @@ void MailboxHandler::defaultAscii(RasEvent& event, MailBoxPayload_Common_RAS_t r
 } // End MailboxHandler::defaultAscii(RasEvent& event, const RasEventMetadata& metadata)
 
 
-void MailboxHandler::defaultBinary(RasEvent& event, MailBoxPayload_Common_RAS_t rasEvent, const RasEventMetadata& metadata)
+void MailboxHandler::defaultBinary(RasEvent& event, const MailBoxPayload_Common_RAS_t& rasEvent, const RasEventMetadata& metadata)
 {
   ostringstream subString;
 

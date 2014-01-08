@@ -28,7 +28,7 @@
 
 <title>Optional Browser Tests</title>
 
-<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
+<script src="../../../dojo/dojo.js" data-dojo-config="async: 1, paths: { 'doh': '../util/doh' }, isDebug: 1"></script>
 
 <script>
 
@@ -119,6 +119,7 @@ function setVisibility_showOnly() {
 
 
 var onLoad = function() {
+    d_parser.parse();
     doh.register( "bluegene/utility/test/OptionalHTML", tests );
     doh.run();
 };
@@ -143,7 +144,7 @@ d_ready( onLoad );
 
     <span id="optional8">Stuff</span><span id="optional9">Stuff</span>
     
-    <button id="button1" data-dojo-type="dijit.form.Button">Button1</button>
+    <button id="button1" data-dojo-type="dijit/form/Button">Button1</button>
 </body>
 
 </html>

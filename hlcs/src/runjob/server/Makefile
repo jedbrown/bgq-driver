@@ -68,6 +68,7 @@ LDFLAGS  += -lboost_program_options-mt
 LDFLAGS  += -lboost_serialization-mt
 LDFLAGS  += -lboost_system-mt
 LDFLAGS  += -lboost_thread-mt
+LDFLAGS  += -rdynamic
 
 
 INSTALL_LIST          += $(call INSTALL_SBIN_TARGET, $(SERVER))

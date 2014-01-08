@@ -24,9 +24,9 @@
 #ifndef MMCS_LITE_CLASS_ROUTE_H
 #define MMCS_LITE_CLASS_ROUTE_H
 
-#include "lite/Np.h"
+#include "Np.h"
 
-#include "BlockHelper.h"
+#include "server/BlockHelper.h"
 
 #include <ramdisk/include/services/JobctlMessages.h>
 
@@ -35,7 +35,10 @@
 #include <iosfwd>
 #include <vector>
 
+
+namespace mmcs {
 namespace lite {
+
 
 class JobInfo;
 
@@ -56,7 +59,7 @@ public:
      */
     ClassRoute(
             const JobInfo& info,    //!< [in]
-            const BlockPtr& block   //!< [in]
+            const server::BlockPtr& block   //!< [in]
             );
 
     /*!
@@ -77,12 +80,12 @@ private:
 
 private:
     Np _np;
-    const BlockPtr& _block;
+    const server::BlockPtr& _block;
     CR_COORD_T _leader;
     Container _container;
 };
 
-} // lite
+} } // namespace mmcs::lite
 
 #endif
 
