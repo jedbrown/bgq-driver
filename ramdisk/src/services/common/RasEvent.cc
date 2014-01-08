@@ -35,7 +35,7 @@ LOG_DECLARE_FILE("cios.common");
 
 using namespace bgcios;
 
-RasEvent::RasEvent(uint32_t msgId)
+RasEvent::RasEvent(uint32_t msgId,modeType mt)
 {
    // Initialize private data.
    _rasFd = -1;
@@ -44,7 +44,7 @@ RasEvent::RasEvent(uint32_t msgId)
 
    // Setup the event structure.
    _eventInfo.msgId = msgId;
-   _eventInfo.isBinary = 1;
+   _eventInfo.isBinary = mt;
    _eventInfo.len = 0;
 }
 

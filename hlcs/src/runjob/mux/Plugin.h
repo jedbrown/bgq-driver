@@ -34,6 +34,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
 
 namespace runjob {
 namespace mux {
@@ -56,12 +57,17 @@ public:
     /*!
      * \brief Handle pointer type.
      */
-    typedef boost::shared_ptr<Handle> HandlePtr;
+    typedef boost::shared_ptr<Handle> Ptr;
+
+    /*!
+     * \brief Handle pointer type.
+     */
+    typedef boost::weak_ptr<Handle> WeakPtr;
 
     /*!
      * \brief Callback type to get handle.
      */
-    typedef boost::function< void (const HandlePtr&) > GetCallback;
+    typedef boost::function< void (const WeakPtr&) > GetCallback;
 public:
     /*!
      * \brief ctor.
@@ -94,7 +100,7 @@ private:
 private:
     boost::asio::strand _strand;
     const Options& _options;
-    HandlePtr _handle;
+    Ptr _handle;
 };
 
 } // mux

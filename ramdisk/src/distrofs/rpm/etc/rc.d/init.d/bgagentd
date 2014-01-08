@@ -43,7 +43,8 @@
 # Source function library.
 . /etc/init.d/functions
 
-OPTIONS="--users bgqadmin,bgws,bgqsysdb"
+workingdir=/
+OPTIONS="--users bgqadmin,bgws,bgqsysdb --workingdir $workingdir"
 PATH=$PATH:/sbin:/bin:/bgsys/drivers/ppcfloor/hlcs/sbin/
 prog=bgagentd
 lockfile=/var/lock/subsys/$prog
@@ -53,14 +54,14 @@ LD_LIBRARY_PATH=""
 start() {
 #	[ "$EUID" != "0" ] && exit 4
 # Source db2profile if it is there
-    if [ -f /dbhome/bgqsysdb/sqllib/db2profile ]; then
-	. /dbhome/bgqsysdb/sqllib/db2profile
+    if [ -f ~bgqsysdb/sqllib/db2profile ]; then
+	. ~bgqsysdb/sqllib/db2profile
     fi
     
     [ -x /bgsys/drivers/ppcfloor/hlcs/sbin/bgagentd ] || exit 5
     [ -f /bgsys/local/etc/bg.properties ] || exit 6
 
-    if echo `uname -r` | grep --silent bgq; then
+    if echo `cat /proc/cpuinfo` | grep --silent A2 && [ -e /dev/bgpers ]  ; then
         # we are an I/O or Login node, source the personality
         . /dev/bgpers
 
@@ -72,6 +73,8 @@ start() {
             exit 0
         fi
     fi
+
+    export JAVA_HOME=/usr/lib/jvm/jre
 
     PROPFILE=/bgsys/local/etc/bg.properties
         # Start daemons.
@@ -96,7 +99,7 @@ stop() {
 #	[ "$EUID" != "0" ] && exit 4
     echo -n $"Shutting down $prog: "
 # Add a ten second delay to wait a bit for child procs to end.
-    killproc -d 10 $prog
+    killproc -d 10 $prog -SIGUSR2
     RETVAL=$?
     echo
     [ $RETVAL -eq 0 ] && rm -f $lockfile

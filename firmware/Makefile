@@ -27,11 +27,11 @@ OS_ARCH := $(shell uname -m)
 
 DIRS = 
 DIRS += include
-DIRS += tools
 
 # for aix, we ONLY care about the includes
 ifneq ($(OS),AIX)
 DIRS += src
+DIRS += tools
 
 # ------------------------------------------------------------------------------------
 # NOTE: skip over the ras subcomponent if we are doing this special tool-chain-only
@@ -94,8 +94,12 @@ all: install
 
 # ras_scan
 
-install:	this.install	$(TARGETS_INSTALL) ras_scan $(call TLD_INSTALL_PACKAGING_TARGET, firmware.specsrc)
+ifeq ($(OS),AIX)
+install:	this.install	$(TARGETS_INSTALL)
+else
+install:	this.install	$(TARGETS_INSTALL) ras_scan $(call TLD_INSTALL_PACKAGING_TARGET, firmware.specsrc) 
 	-@${LN} -sf ../firmware/bin/bgq_firmware.elf $(BGQ_INSTALL_DIR)/boot/firmware
+endif
 
 clean:		this.clean	$(TARGETS_CLEAN)
 distclean:	this.distclean	$(TARGETS_DISTCLEAN)
@@ -133,7 +137,6 @@ this.clean:
 this.distclean: this.clean
 	@echo "making distclean"
 
-
 ras_scan:
 	$(MKDIR) -p $(BGQ_INSTALL_DIR)/firmware/ras/metadata/
 	$(BGQ_BUILD_DIR)/scripts/rasScan.py $(BGQ_BUILD_DIR)/firmware/src $(BGQ_INSTALL_DIR)/firmware/ras/metadata firmware_ras.xml $(BGQ_INSTALL_DIR)/ras/include/ras.xml
@@ -143,4 +146,5 @@ print:
 	@echo TARGETS_INSTALL=${TARGETS_INSTALL}
 	@echo BUILD_DIRS=${BUILD_DIRS}
 	@echo TARGETS=$(TARGETS)
+	@echo DIRS=$(DIRS)
 

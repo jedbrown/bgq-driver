@@ -109,6 +109,9 @@ var b_navigator_dijit_Machine = d_declare(
          */
 
 
+    _loading : true,
+    _loading_displayed : true,
+
     /** @constructs */
     constructor: function()
     {
@@ -136,6 +139,8 @@ var b_navigator_dijit_Machine = d_declare(
         this._layoutRoot();
 
         this._doHighlighting();
+
+        this._checkLoading();
     },
 
 
@@ -149,6 +154,37 @@ var b_navigator_dijit_Machine = d_declare(
         }
 
         this._doHighlighting();
+    },
+
+
+    _setLoadingAttr : function( loading )
+    {
+        this._loading = loading;
+
+        this._checkLoading();
+    },
+
+
+    _checkLoading : function()
+    {
+        var loading = (this._visible && (this._loading || (! this._machine_info)));
+
+        console.log( module.id + ": _checkLoading.",
+                "loading=", loading, "displayed=", this._loading_displayed,
+                "visible=", this._visible, "loading=", this._loading, "machine_data=", !!! this._machine_info
+            );
+
+        if ( loading && ! this._loading_displayed ) {
+            d_class.remove( this._loadingContainer, "dijitHidden" );
+            this._loading_displayed = true;
+            return;
+        }
+
+        if ( (! loading) && this._loading_displayed ) {
+            d_class.add( this._loadingContainer, "dijitHidden" );
+            this._loading_displayed = false;
+            return;
+        }
     },
 
 
@@ -386,6 +422,8 @@ var b_navigator_dijit_Machine = d_declare(
             d_class.remove( this._tableElem, "dijitHidden" );
             this._toggleVisibilityButton.set( "iconClass", "bgToggleVisibilityIcon bgToggleVisibilityIconLeft" );
         }
+
+        this._checkLoading();
 
         this._layoutRoot();
     },

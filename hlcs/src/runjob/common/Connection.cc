@@ -63,7 +63,6 @@ Connection::start()
     _hostname = boost::lexical_cast<std::string>( ep.address() );
 
     // resolve hostname
-    LOG_INFO_MSG( "resolving hostname" );
     _resolver.async_resolve(
             ep,
             _strand.wrap(

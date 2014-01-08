@@ -64,8 +64,8 @@ typedef volatile uint64_t BeDRAM_Lock_t;
 #define BeDRAM_LOCKNUM_FW_THREADS_INITD        (31) // The number of firmware threads that have completed initialization
 #define BeDRAM_LOCKNUM_RAS_FLUSH_LOCK          (32) // Used to synchronized flushing of accumulated events
 #define BeDRAM_LOCKNUM_EXIT_STATUS_GATE        (33) // <not currently used>
-#define BeDRAM_LOCKNUM__NOT_USED_34            (34) // <not currently used>
-#define BeDRAM_LOCKNUM__NOT_USED_35            (35) // <not currently used>
+#define BeDRAM_LOCKNUM_MBOX_FULL               (34) // Used to track mailbox full conditions.
+#define BeDRAM_LOCKNUM_MBOX_OPEN_AGAIN         (35) // Used to track mailbox full conditions.
 #define BeDRAM_LOCKNUM__NOT_USED_36            (36) // <not currently used>
 #define BeDRAM_LOCKNUM__NOT_USED_37            (37) // <not currently used>
 #define BEDRAM_LOCKNUM__NOT_USED_38            (38) // <not currently used>

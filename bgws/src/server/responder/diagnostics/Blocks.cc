@@ -109,10 +109,10 @@ const capena::http::uri::Path Blocks::RESOURCE_PATH(common::getBaseUrlPath() / "
 const capena::http::uri::Path Blocks::RESOURCE_PATH_EMPTY_CHILD(RESOURCE_PATH / "");
 
 
-void Blocks::doGet()
+void Blocks::_doGet()
 {
     if ( ! _userHasHardwareRead() ) {
-        LOG_WARN_MSG( "Could not get diagnostics blocks because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not get diagnostics blocks because " << _getRequestUserInfo() << " doesn't have authority." );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get diagnostics blocks because the user doesn't have authority.",
@@ -192,7 +192,7 @@ void Blocks::doGet()
         string block_id(cols["blockId"].getString());
 
         obj.set( "blockId", block_id );
-        obj.set( "URI", Block::calcUri( getDynamicConfiguration().getPathBase(), block_id ).toString() );
+        obj.set( "URI", Block::calcUri( _getDynamicConfiguration().getPathBase(), block_id ).toString() );
 
         if ( boost::algorithm::starts_with( block_id, blue_gene::diagnostics::HARDWARE_BLOCK_PREFIX ) ) {
             obj.set( "location", block_id.substr( blue_gene::diagnostics::HARDWARE_BLOCK_PREFIX.length() ) );
@@ -206,7 +206,7 @@ void Blocks::doGet()
     }
 
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();

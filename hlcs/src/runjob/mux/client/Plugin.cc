@@ -48,7 +48,7 @@ namespace client {
 Plugin::Plugin(
         const Id& id,
         Timers& timers,
-        const runjob::mux::Plugin::HandlePtr& plugin
+        const runjob::mux::Plugin::WeakPtr& plugin
         ) :
     _id( id ),
     _timers( timers ),
@@ -65,7 +65,8 @@ Plugin::verify(
         )
 {
     LOG_TRACE_MSG( __FUNCTION__ );
-    if ( !_plugin ) return;
+    const runjob::mux::Plugin::Ptr plugin( _plugin.lock() );
+    if ( !plugin ) return;
     
     LOGGING_DECLARE_LOCATION_MDC( _id );
 
@@ -112,7 +113,7 @@ Plugin::verify(
         impl->_user = bgsched::runjob::UserId( uid );
 
         bgsched::runjob::Verify data( impl );
-        _plugin->getPlugin()->execute( data );
+        plugin->getPlugin()->execute( data );
         
         // plugin failed the request
         if ( data.deny_job() == bgsched::runjob::Verify::DenyJob::Yes ) {
@@ -148,7 +149,8 @@ Plugin::started(
         )
 {
     LOG_TRACE_MSG( __FUNCTION__ );
-    if ( !_plugin ) return;
+    const runjob::mux::Plugin::Ptr plugin( _plugin.lock() );
+    if ( !plugin ) return;
 
     // time this operation
     _timers.start_plugin_started();
@@ -161,7 +163,7 @@ Plugin::started(
 
     bgsched::runjob::Started data( impl );
     try {
-        _plugin->getPlugin()->execute( data );
+        plugin->getPlugin()->execute( data );
     } catch ( ... ) {
         LOG_WARN_MSG( "caught unknown exception in plugin started" );
     }
@@ -175,7 +177,8 @@ Plugin::startError(
         )
 {
     LOG_TRACE_MSG( __FUNCTION__ );
-    if ( !_plugin ) return;
+    const runjob::mux::Plugin::Ptr plugin( _plugin.lock() );
+    if ( !plugin ) return;
 
     bgsched::runjob::Terminated::Pimpl impl(
             new bgsched::runjob::Terminated::Impl
@@ -184,7 +187,7 @@ Plugin::startError(
     impl->_killTimeout = (error == error_code::kill_timeout);
     impl->_message = message;
     try {
-        _plugin->getPlugin()->execute( bgsched::runjob::Terminated(impl) );
+        plugin->getPlugin()->execute( bgsched::runjob::Terminated(impl) );
     } catch ( ... ) {
         LOG_WARN_MSG( "caught unknown exception in plugin terminated" );
     }
@@ -198,7 +201,8 @@ Plugin::terminated(
         )
 {
     LOG_TRACE_MSG( __FUNCTION__ );
-    if ( !_plugin ) return;
+    const runjob::mux::Plugin::Ptr plugin( _plugin.lock() );
+    if ( !plugin ) return;
 
     bgsched::runjob::Terminated::Pimpl impl(
             new bgsched::runjob::Terminated::Impl
@@ -231,7 +235,7 @@ Plugin::terminated(
     LOG_TRACE_MSG( "status       : " << impl->_status );
     LOG_TRACE_MSG( "kill timeout : " << std::boolalpha << impl->_killTimeout );
     try {
-        _plugin->getPlugin()->execute( bgsched::runjob::Terminated(impl) );
+        plugin->getPlugin()->execute( bgsched::runjob::Terminated(impl) );
     } catch ( ... ) {
         LOG_WARN_MSG( "caught unknown exception in plugin terminated" );
     }

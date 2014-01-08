@@ -35,6 +35,11 @@ namespace capena {
 namespace server {
 
 
+/*! \brief streambuf that buffers output (the response body) from the application's Responder
+ *
+ *  When the internal buffer is full,
+ *  ResponderStreambuf sends the data to the Connection for writing to the client.
+ */
 class ResponderStreambuf : public std::streambuf
 {
 public:

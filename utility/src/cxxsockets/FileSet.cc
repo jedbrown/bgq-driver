@@ -20,7 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#include "SocketTypes.h"
+#include "cxxsockets/SocketTypes.h"
 
 
 bool CxxSockets::FileSet::LockSet(PthreadMutexHolder& mutex) {

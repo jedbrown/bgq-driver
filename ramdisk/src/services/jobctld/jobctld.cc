@@ -86,6 +86,8 @@ int main(int argc, char *argv[])
       LOG_ERROR_MSG("error changing working directory to '/': " << bgcios::errorString(errno));
    }
 
+   setFlightLogSize(4096);
+
    // Create configuration from command-line arguments and properties.
    JobctlConfigPtr config = JobctlConfigPtr(new JobctlConfig(argc, argv));
 

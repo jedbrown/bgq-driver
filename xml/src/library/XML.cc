@@ -76,7 +76,6 @@ int Parser::getCol() {
     std::vector<pthread_t>::iterator it =                                      \
         std::find(_stopping_ids.begin(), _stopping_ids.end(), pthread_self()); \
     if(it != _stopping_ids.end()) {                                            \
-        std::cout << "removing " << pthread_self() << std::endl;               \
         _stopping_ids.erase(it);                                               \
         if(ret) return;                                                        \
     }                                                                          \

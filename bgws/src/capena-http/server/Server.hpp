@@ -47,7 +47,12 @@ namespace server {
 
 /** The HTTP server, the application creates an instance of this.
  *
- * Create using the create function, then call start().
+ * Create using the create() function, then call start().
+ *
+ * Listens for connections on ports as specified in the port config.
+ * When gets a connection,
+ * creates a Connection object to process requests.
+ *
  */
 class Server : public boost::enable_shared_from_this<Server>, boost::noncopyable
 {

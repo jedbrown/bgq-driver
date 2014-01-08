@@ -35,6 +35,20 @@ extern char LC_Trampoline[], LC_Trampoline_End[];
 //
 __C_LINKAGE void __NORETURN Kernel_EntryPrimary( Firmware_Interface_t *fw_interface )
 {
+
+    // Setup the kernel stack
+    uint64_t pStk =
+	(uint64_t) &NodeState.CoreState[ProcessorCoreID()].
+			HWThreads[ProcessorThreadID()].
+			StandardStack[ KSTACK_SIZE - STACK_FRAME_SIZE ];
+    
+    asm volatile (
+                  		  "mr    1,%0;"
+                                        :
+                                        : "r" (pStk)
+                                        : "r1", "memory" 
+                  );
+
     int i;    
     unsigned threadmask;    
     fw_interface->getDomainDescriptor(&NodeState.DomainDesc);

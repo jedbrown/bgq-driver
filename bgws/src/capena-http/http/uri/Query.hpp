@@ -35,6 +35,7 @@ namespace http {
 namespace uri {
 
 
+/*! \brief HTTP URI query string handling, parsing, etc. */
 class Query
 {
 public:
@@ -48,16 +49,16 @@ public:
     static Query parse( const std::string& query_string_escaped );
 
 
-    Query(
+    explicit Query(
             const Parameters& parameters = Parameters()
         );
 
     const Parameters& getParameters() const  { return _parameters; }
 
-    // if any parameters, writes ?name=value&name=value for each pair, where name and value are escaped. If no values, empty string.
+    // If any parameters, returns ?name=value&name=value for each pair, where name and value are escaped. If no values, empty string.
     std::string calcString() const;
 
-    // calculates args like --name value for each pair, could be used with an option parser like boost::program_options.
+    // Calculates args like --name value for each pair, could be used with an option parser like boost::program_options.
     Arguments calcArguments() const;
 
 
@@ -68,6 +69,7 @@ private:
 };
 
 
+/*! \brief Exception for when a HTTP URI query string cannot be parsed because it's not valid. */
 class InvalidQueryStringError : public std::invalid_argument
 {
 public:

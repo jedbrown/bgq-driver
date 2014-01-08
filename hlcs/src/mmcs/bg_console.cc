@@ -22,8 +22,8 @@
 /* end_generated_IBM_copyright_prolog                               */
 
 /*!
- * \file mmcs_console.cc
- * \brief main driver for mmcs_console.
+ * \file bg_console.cc
+ * \brief main driver for bg_console.
  */
 
 #include "ConsoleController.h"
@@ -31,12 +31,9 @@
 #include "MMCSCommandProcessor.h"
 #include "MMCSCommandReply.h"
 #include "MMCSProperties.h"
-#include "MMCSEnvMonitor.h"
 #include "MMCSConsolePort.h"
 #include "MMCSConnectionMonitor.h"
 #include "MMCSCommand_mmcs_server_cmd.h"
-#include <db/include/api/BGQDBlib.h>
-#include <db/include/api/tableapi/gensrc/bgqtableapi.h>
 
 #include <utility/include/Log.h>
 #include <utility/include/Properties.h>
@@ -58,14 +55,8 @@
 LOG_DECLARE_FILE( "mmcs" );
 
 
-MMCSCommandMap* mmcsCommands = NULL;    // map of command names to MMCSCommand objects
-EnvMonitorThread* envMonitor = NULL;    // this is a hack to satisfy the linker since MMCSCommand_envs.cc needs it
-LocationThreadList* locThreads = NULL;
-
-//std::string propfile = "";
-
 void
-signal_handler(int signum)
+signal_handler(const int signum)
 {
     if (signum == SIGUSR1)
     {
@@ -115,7 +106,9 @@ main(int argc, char *argv[])
         // create the list of mmcs_console commands
         MMCSCommandAttributes attr;  attr.mmcsConsoleCommand(true); attr.externalCommand(true);
         MMCSCommandAttributes mask;  mask.mmcsConsoleCommand(true); mask.externalCommand(true);
-        mmcsCommands = MMCSCommandProcessor::createCommandMap(attr, mask, MMCSProperties::getExternalCmds());
+        MMCSCommandMap* mmcsCommands(
+                MMCSCommandProcessor::createCommandMap(attr, mask, MMCSProperties::getExternalCmds())
+                );
 
         // Create the mmcs_console command processor
         boost::scoped_ptr<MMCSConsoleCommandProcessor> commandProcessor;

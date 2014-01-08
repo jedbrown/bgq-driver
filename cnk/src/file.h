@@ -49,7 +49,7 @@ enum {
 };
 
 // Pre-defined descriptor number for current working directory descriptor.
-#define CWD_FILENO (CNK_MAX_FDS - 1)
+#define CWD_FILENO (pFD->maxfds - 1)
 
 typedef struct CNK_Descriptor_Info
 {
@@ -61,21 +61,9 @@ typedef struct CNK_Descriptor_Info
 
 typedef struct CNK_Descriptors_t
 {
-    /*
-     * Define a bit array large enough for the maximum descriptors supported for CNK.
-     * Take the maximum number of descriptors supported and divide by the number
-     * of bits per long for the compiled architecture.  This will result in the number
-     * of longs necessary for the bit set.
-     */
-    unsigned long cnk_fd_bits[ (CNK_MAX_FDS / CNK_BITS_PER_LONG) ];
-
-    /* Define an array of ints for the maximum fds that CNK will support.
-     * The subscript will be the local allocated descriptor.  The value contained at the
-     * subscript will be the IO node descriptor if one was allocated.
-     * NOTE: Currently the only local descriptors that would not contain an IO node descriptor
-     *       would be the shared memory support that is handled totally in CNK.
-     */
-    CNK_Descriptor_Info_t cnk_local_fd[ CNK_MAX_FDS ];
+    int                    maxfds;
+    unsigned long*         cnk_fd_bits;
+    CNK_Descriptor_Info_t* cnk_local_fd;
 } CNK_Descriptors_t;
 
 //! \brief  Setup process-scoped file system resources at beginning of job.

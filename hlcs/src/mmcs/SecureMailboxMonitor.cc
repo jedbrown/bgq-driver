@@ -88,7 +88,7 @@ void SecureMailboxMonitor::start(MMCSCommandReply& reply)
         CxxSockets::SockAddr lsa(BlockControllerBase::_local_saddr.family(), 
                                  BlockControllerBase::_local_saddr.getHostAddr(), "0"); 
         
-        ListeningSocketPtr ln(new ListeningSocket(lsa, SOMAXCONN, SECURE));
+        ListeningSocketPtr ln(new ListeningSocket(lsa, SOMAXCONN));
 
         SockAddr sa;
         ln->getSockName(sa);

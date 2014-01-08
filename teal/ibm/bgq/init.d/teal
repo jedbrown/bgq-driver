@@ -1,0 +1,148 @@
+#!/bin/bash
+# begin_generated_IBM_copyright_prolog
+#
+# This is an automatically generated copyright prolog.
+# After initializing,  DO NOT MODIFY OR MOVE
+# ================================================================
+#
+# Licensed Materials - Property of IBM
+#
+# Blue Gene/Q
+#
+# (C) Copyright IBM Corp.  2012, 2012
+#
+# US Government Users Restricted Rights -
+# Use, duplication or disclosure restricted
+# by GSA ADP Schedule Contract with IBM Corp.
+#
+# This software is available to you under the
+# Eclipse Public License (EPL).
+#
+# ================================================================
+#
+# end_generated_IBM_copyright_prolog
+# chkconfig: - 99 00
+# description: teal daemon providing cluster event monitoring support
+# 
+### BEGIN INIT INFO
+# Provides:          teal
+# Required-Start:
+# Should-Start:
+# Required-Stop:
+# Should-Stop:
+# Default-Start:     
+# Default-Stop:      0 1 2 3 4 5 6
+# Short-Description: teal daemon providing cluster event monitoring support
+# Description:       Start teal to allow monitoring of cluster
+### END INIT INFO
+
+TEAL_SVC_NAME=teal
+TEAL_PID_FILE=/var/lock/$TEAL_SVC_NAME.pid
+TEAL_PROGRAM=/opt/teal/bin/$TEAL_SVC_NAME
+TEAL_EXEC=/usr/bin/python
+TEAL_LOGFILE=/bgsys/logs/BGQ/teal/$HOSTNAME-teal_server.log
+TEAL_PARMS="--daemon --realtime --logfile $TEAL_LOGFILE"
+
+# Determine distro based on file existence and initialize functions accordingly
+if [[ -f /etc/init.d/functions ]]; then
+    . /etc/init.d/functions
+
+    DAEMON_STATUS=rhel_status
+    DAEMON_START=rhel_start
+    DAEMON_STOP=rhel_stop
+    
+    # Redhat just looks for the pid in the pid file
+    TEAL_PROC=$TEAL_PROGRAM
+else
+    . /etc/rc.status
+    rc_status -r
+   
+    DAEMON_STATUS=sles_status
+    DAEMON_START=sles_start
+    DAEMON_STOP=sles_stop
+   
+    # SLES looks for the pid AND the executable name
+    TEAL_PROC=$TEAL_EXEC
+fi
+
+###############################################################################
+# RHEL Services
+###############################################################################
+
+rhel_start() {
+    echo -n "Starting $TEAL_SVC_NAME: "
+    daemon --pidfile $TEAL_PID_FILE $TEAL_PROC $* $TEAL_PARMS
+    RC=$?
+    echo
+    return $RC
+}
+
+rhel_stop() {
+    echo -n "Stopping $TEAL_SVC_NAME: "
+    killproc -p $TEAL_PID_FILE -d 15 $TEAL_PROC
+    RC=$?
+    echo
+    return $RC
+}
+
+rhel_status() {
+    status -p $TEAL_PID_FILE $TEAL_PROC
+}
+
+###############################################################################
+# SLES Services
+###############################################################################
+
+sles_start() {
+    echo -n "Starting $TEAL_SVC_NAME: "
+    startproc -p $TEAL_PID_FILE $TEAL_EXEC $TEAL_PROGRAM $* $TEAL_PARMS
+    rc_status -v
+}
+
+sles_stop() {
+    echo -n "Stopping $TEAL_SVC_NAME: "
+    killproc -p $TEAL_PID_FILE -t 15 $TEAL_PROC
+    rc_status -v
+}
+
+sles_status() {
+    echo -n "Checking for service $TEAL_SVC_NAME:"
+    checkproc -p $TEAL_PID_FILE $TEAL_PROC
+    RC=$?
+    
+    # Return dead if pid file exists and no program running
+    if [[ $RC -eq 3 && -f $TEAL_PID_FILE ]]; then
+        rc_failed 2
+    else
+        rc_failed $RC
+    fi
+
+    rc_status -v
+}
+
+###############################################################################
+# Main
+###############################################################################
+
+case "$1" in
+    start)
+        shift # drop the command and keep the rest as arguments to the daemon
+        $DAEMON_START $*
+        ;;
+    stop)
+        $DAEMON_STOP
+        ;;
+    status)
+        $DAEMON_STATUS
+        ;;
+    restart|reload)
+        $DAEMON_STOP
+        shift # drop the command and keep the rest as arguments to the daemon
+        $DAEMON_START $*
+        ;;
+    *)
+        echo "Usage: $TEAL_SVC_NAME {start|stop|status|restart|reload}"
+        exit 1
+        ;;
+esac
+exit $?

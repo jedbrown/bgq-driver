@@ -81,8 +81,7 @@ void MMCSExternalCommand::runcmd(MMCSCommandReply& reply, const std::ostringstre
     int pipefd;
     const bgq::utility::ScopeGuard logGuard(boost::bind(&::close, boost::ref(pipefd)));
     std::string errorstring = "";
-    Exec exec;
-    const pid_t child_pid = exec.fexec(pipefd, command.str(), errorstring, true, "", MMCSExternalCommand::_propfile);
+    const pid_t child_pid = Exec::fexec(pipefd, command.str(), errorstring, true, "", MMCSExternalCommand::_propfile);
 
     std::ostringstream monitorstream;
 

@@ -157,13 +157,13 @@ bool Sessions::matchesUrl( const capena::http::uri::Path& request_path )
 }
 
 
-capena::http::Methods Sessions::getAllowedMethods() const
+capena::http::Methods Sessions::_getAllowedMethods() const
 {
     return { capena::http::Method::GET, capena::http::Method::POST };
 }
 
 
-void Sessions::doGet()
+void Sessions::_doGet()
 {
     // The user must be authenticated.
     if ( ! _isUserAuthenticated() ) {
@@ -180,7 +180,7 @@ void Sessions::doGet()
     json::ArrayValuePtr sessions_arr_ptr(json::Array::create());
 
     bgws::Sessions::SessionInfos session_infos(_sessions.getSessionInfos(
-            getRequestUserInfo()
+            _getRequestUserInfo()
         ));
 
     for ( bgws::Sessions::SessionInfos::const_iterator i(session_infos.begin()) ; i != session_infos.end() ; ++i ) {
@@ -190,11 +190,11 @@ void Sessions::doGet()
         session_obj.set( "id", session_id );
         session_obj.set(
                 "URI",
-                Session::calcPath( session_id, getDynamicConfiguration().getPathBase() ).toString()
+                Session::calcPath( session_id, _getDynamicConfiguration().getPathBase() ).toString()
             );
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();
@@ -203,7 +203,7 @@ void Sessions::doGet()
 }
 
 
-void Sessions::doPost( json::ConstValuePtr val_ptr )
+void Sessions::_doPost( json::ConstValuePtr val_ptr )
 {
     // No authority required here.
 
@@ -215,7 +215,7 @@ void Sessions::doPost( json::ConstValuePtr val_ptr )
     _pwauth_executor.start(
             _username,
             password,
-            strand().wrap(
+            _getStrand().wrap(
                 boost::bind(
                         &Sessions::_handlePwauthComplete,
                         this,
@@ -253,7 +253,7 @@ void Sessions::_handlePwauthComplete(
 
         _check_user_admin_executor.start(
                 _username,
-                strand().wrap(
+                _getStrand().wrap(
                     boost::bind(
                             &Sessions::_handleCheckUserAdminComplete,
                             this,
@@ -265,7 +265,7 @@ void Sessions::_handlePwauthComplete(
 
     } catch ( std::exception& e ) {
 
-        handleError( e );
+        _handleError( e );
 
     }
 }
@@ -285,13 +285,13 @@ void Sessions::_handleCheckUserAdminComplete(
         json::ValuePtr val_ptr(Session::calcUserJson(
                 session_ptr->getUserInfo(),
                 session_ptr->getId(),
-                _enforcer()
+                _getEnforcer()
             ));
 
-        auto &response(getResponse());
+        auto &response(_getResponse());
 
         response.setStatus( capena::http::Status::Created );
-        response.setLocationHeader( Session::calcPath( session_ptr->getId(), getDynamicConfiguration().getPathBase() ) );
+        response.setLocationHeader( Session::calcPath( session_ptr->getId(), _getDynamicConfiguration().getPathBase() ) );
         response.setContentTypeJson();
         response.headersComplete();
 
@@ -299,7 +299,7 @@ void Sessions::_handleCheckUserAdminComplete(
 
     } catch ( std::exception& e ) {
 
-        handleError( e );
+        _handleError( e );
 
     }
 }

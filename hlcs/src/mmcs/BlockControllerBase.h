@@ -118,7 +118,6 @@ public:
     bool				isCreated()		       { return (_targets.size() > 0 || _nodeset == true); }
     bool 				isConnected();
     bool 				isStarted() 		   { return _isstarted; };
-    bool				isBlock()              { return _isblock; }
     virtual void        setReconnected()       { return; }
     bool                isIOBlock()            { return _isIOblock; }
     CxxSockets::SecureTCPSocketPtr	getRedirectSock()  { return _redirectSock; }
@@ -186,14 +185,13 @@ protected:
     void				deleteTargets();
     int                 makeAndOpenTargetSet(MCServerRef* ref, bool temp_targetset, MMCSCommandReply& reply, BlockControllerTarget* pTarget, bool add_targets = false);
 
-    void                setIsBlock(bool isBlock);  // say whether this is a block or a target set
     unsigned			getBootCookie();           // generate a unique boot id
     bool                parseSteps(MMCSCommandReply& rep, MCServerMessageSpec::BootBlockRequest& req, std::string& steps);
     bool                parseDomains(MCServerMessageSpec::BootBlockRequest& req, std::string& domstring);
     std::vector<std::string>    checkShutdownComplete(BlockControllerTarget* target);
     bool                checkComplete(MMCSCommandReply& reply,
                                       std::vector<std::string>& bad_node_locs,
-                                      std::vector<std::string>& good_nodes,
+                                      std::set<std::string>& good_nodes,
                                       MCServerMessageSpec::VerifyKernelReadyRequest& bootreq,
                                       unsigned nodecount);
     bool                doBarrierAck()         { return _do_barrier_ack; }
@@ -235,7 +233,6 @@ protected:
     time_t				           _last_ras_event_time;   	   // time of last kernel fatal ras event for this block
     time_t				           _shutdown_sent_time;    	   // time that shutdown was sent to I/O nodes
     bool  				           _isstarted;		           // start command issued
-    bool				           _isblock;                   // create_block (t) or create_targetset (f) used to create
     bool				           _isIOblock;                 // create_block (t) or create_targetset (f) used to create
     bool				           _isshared;			       // node cards may be shared between blocks
     string 				           _disconnectReason;	       // reason for asynchronous disconnect

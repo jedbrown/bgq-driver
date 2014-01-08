@@ -39,11 +39,12 @@ namespace bgcios
 class RasEvent
 {
 public:
+  enum modeType { charMode=0,binMode=1};
 
    //! \brief  Default constructor.
    //! \param  msgId Message id for RAS event.
 
-   RasEvent(uint32_t msgId);
+   RasEvent(uint32_t msgId, modeType mt=binMode);
 
    //! \brief  Default destructor.
 
@@ -92,6 +93,10 @@ public:
 
    //! Maximum number of detail words per RAS event.
    static const uint16_t MaxDetailWords = 64;
+
+char * getRasBuff(){return _eventInfo.msg;}
+int getRasBuffSize(){return BG_RAS_MAX_PAYLOAD;}
+void setLength(int l){_eventInfo.len=l;}
 
 private:
 
@@ -178,6 +183,46 @@ enum RasID
          control_action="END_JOB,FREE_COMPUTE_BLOCK"
       />
    */
+
+      SysiodSyscallHangNoSignal,      
+   /*
+      <rasevent 
+         id="000b0006"
+         category="Software_Error"
+         component="CIOS"
+         severity="WARN"
+         message="The sysiod process seems to be stuck in a system call while running.  Flight log $(DETAILS)"
+         description="The SYSIOD process syscall-watchdog monitor detected a system call issued on behalf of a compute node did not complete in a reasonable time.  This may a file-system or network issue."
+         service_action="Check the I/O node log file for additional information.  Check the file system.  Check the network"
+      />
+   */
+         SysiodSyscallHangOnSignal,      
+   /*
+      <rasevent 
+         id="000b0007"
+         category="Software_Error"
+         component="CIOS"
+         severity="WARN"
+         message="The sysiod process seems to be stuck in a system call while ending.  Flight log $(DETAILS)"
+         description="The SYSIOD process syscall-watchdog monitor detected a system call issued on behalf of a compute node did not complete in a reasonable time.  This may a file-system or network issue."
+         service_action="Check the I/O node log file for additional information.  Check the file system.  Check the network"
+      />
+   */
+
+        StringTest     
+   /*
+      <rasevent 
+         id="000b0008"
+         category="Software_Error"
+         component="CIOS"
+         severity="WARN"
+         message="A CIOS daemon is testing RAS."
+         description="A CIOS daemon was issuing RAS. StringInfo=$(STRINGINFO)"
+         service_action="Check the I/O node log file for additional information."
+         control_action="SOFTWARE_IN_ERROR"
+      />
+   */
+
 
 };
 

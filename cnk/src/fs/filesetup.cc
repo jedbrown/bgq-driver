@@ -139,6 +139,9 @@ int File_JobCleanup(void)
  */
 virtFS*  File_GetFSPtrFromPath( char* pathname )
 {
+    AppProcess_t *app = GetMyProcess();
+    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
+    
     // For an absolute pathname, look for a match in the list of file systems.
     if (pathname[0] == '/') {
         for (int fs = 1; fs < FD_TOTAL_FILESYS; fs++)

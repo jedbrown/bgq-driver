@@ -55,113 +55,6 @@ sub updateStatements
 
 # the statements to execute, separate by commas    
 my @insertStmts = (
-"drop trigger linkchip_history_d",
-"alter table TBGQCoolantEnvironment ADD COLUMN shutoffcause INTEGER NOT NULL WITH DEFAULT 0",
-"INSERT INTO TBGQProductType (productid, description) values('WWD2','BG/Q Compute Card')",
-"drop trigger node_history_u",
-"
-create trigger node_history_u
-  after update on tbgqnode
-  referencing new as n old as o
-  for each row mode db2sql
-
-  begin atomic 
-
-   if ((o.midplanepos = n.midplanepos) and (o.nodecardpos = n.nodecardpos) and (o.position = n.position)) then
-
-   if ((n.status = 'F') or (o.status = 'F' and n.status = 'A') or (o.seqid <> n.seqid)) then
-     -- omit insertions for Software Failure transitions
-     -- or when sequence ID has changed from another trigger
-   else
-   insert into tbgqnode_history 
-      (serialNumber, productId, ecid, midplanepos,nodecardpos,  position, ipAddress, macaddress, status, memoryModuleSize, memorySize, psro, vpd, voltage)
-   values
-      (n.serialNumber, n.productId, n.ecid, n.midplanepos, n.nodecardpos, n.position, n.ipAddress, n.macaddress, n.status, n.memoryModuleSize, n.memorySize, n.psro, n.vpd, n.voltage) ;
-
-    if ((o.serialnumber <> n.serialnumber) OR (o.ecid <> n.ecid)) then
-
-     insert into tbgqreplacement_history 
-      (type, location, oldserialnumber,newserialnumber, oldecid, newecid, oldstatus, newstatus)
-     values
-      ( 'Node', n.midplanepos || '-' || n.nodecardpos || '-' || n.position,o.serialnumber,n.serialNumber,o.ecid,n.ecid, o.status, n.status);
-
-     if (n.bitsteering <> -1) then    
-      update tbgqnode set bitsteering = -1 where  midplanepos = n.midplanepos and nodecardpos = n.nodecardpos and position = n.position;
-     end if;
-       
-    end if;
-
-   end if;
- 
-   else
-
-    SIGNAL SQLSTATE '70003' ('Updating positions not permitted');
-
-   end if;
-end
-",
-"
-CREATE TABLE TBGQBlockAction_history
-(
-   blockId               char(32)       NOT NULL,
-   status                char(1)        NOT NULL WITH DEFAULT 'F',
-   action                char(1)        NOT NULL WITH DEFAULT ' ',
-   entrydate             timestamp      DEFAULT current timestamp,
-   creationId            integer        NOT NULL
-);
-CREATE ALIAS BGQBlockAction_history for TBGQBlock_history;
-)
-",
-"
-create trigger block_action_history
-  after update of action on tbgqblock
-  referencing new as n old as o
-  for each row mode db2sql
-  when (
-    n.action <> o.action
-  )
-
-  begin atomic
-    insert into tbgqblockaction_history (blockid,status,action,creationId) values
-    (n.blockid,n.status,n.action,n.creationid);
- end
-",
-"drop trigger cable_history_u",
-"
-
-create trigger cable_history_u
-  after update on tbgqcable
-  referencing new as n old as o
-  for each row mode db2sql
-
-  begin atomic 
-
-   if ((o.fromlocation = n.fromlocation) and (o.tolocation = n.tolocation)) then
-
-     if (o.status <> n.status) then
-       insert into tbgqcable_history (fromlocation,tolocation,status,seqid,badwiremask)
-       values (n.fromlocation,n.tolocation,n.status,n.seqid,n.badwiremask);
-     end if;
-   else
-
-     SIGNAL SQLSTATE '70003' ('Updating positions not permitted');
-
-   end if;
-
-  end
-",
-"
-create trigger cable_history_d
-  before delete on tbgqcable
-  referencing old as n
-  for each row mode db2sql
-
-  begin atomic 
-
-    SIGNAL SQLSTATE '70003' ('Deletion not permitted');
-  
- end
-"
 );
 
 
@@ -181,7 +74,7 @@ create trigger cable_history_d
         $dbConnect .= " user " . $user . " using " . $pwd;
     }
     my $dbImport = "db2 $dbConnect; db2 import from " . $eventFile . " of DEL replace into " . $dbPropHash->{"schema_name"} . ".tbgqmsgtypes";
-    system($dbImport); 
+    my $result = `$dbImport`;
 
 }
 
@@ -224,6 +117,14 @@ sub parseProperties
     my $fileName = shift();
     my $db       = shift();
     my $prop = new Config::IniFiles( -file => $fileName );
+    if (!defined($prop))
+    {
+       print "Could not read $fileName\n";
+       foreach (@Config::IniFiles::errors) {
+          print "$_\n";
+       }
+       exit(1);
+    }
 
     # get database section
     my @section = $prop->Parameters( "database" );
@@ -333,7 +234,7 @@ setupDb($dbPropertiesFile);
 
 updateStatements();
 
-system("mkdir -p --mode=777 /bgsys/logs/BGQ/diags/bringup/");
+print "dbUpdate completed successfully\n";
 
 exit(255);
 

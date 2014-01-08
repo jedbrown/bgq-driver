@@ -48,6 +48,23 @@ namespace capena {
 namespace server {
 
 
+/*! \brief An HTTP connection.
+ *
+ *  Handles the HTTP protocol stuff.
+ *
+ *  The client writes a request on the connection,
+ *  it's composed of a header + body.
+ *  The body is optional.
+ *
+ *  Multiple requests can be sent on a single connection.
+ *  The reponses for requests must be sent back in the order
+ *  of the requests.
+ *
+ *  The request is read and passed off to the application's Responder.
+ *  The application calculates a response and this class writes the
+ *  response back to the client.
+ *  Then it reads the next request and so on.
+ */
 class Connection : public boost::enable_shared_from_this<Connection>, boost::noncopyable
 {
 public:
@@ -63,12 +80,20 @@ public:
     void start();
 
 
+    /*!
+     *  When the application has determined the headers for its response to the current request, this function is called.
+     *
+     *  This will be called once for the request+response, and will be called before postResponseBodyData().
+     */
     void postResponseStatusHeaders(
             http::Status status,
             const Headers& headers,
-            Response::BodyPresense::Value expect_body
+            Response::BodyPresense::Value expect_body /*!< Need to know if HTTP headers indicate no body content */
         );
 
+    /*!
+     *  When the application
+     */
     void postResponseBodyData(
             const std::string& data,
             DataContinuesIndicator data_continues

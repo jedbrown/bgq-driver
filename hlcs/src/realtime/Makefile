@@ -21,6 +21,10 @@
 #                                                                  
 # end_generated_IBM_copyright_prolog                               
 
+
+include ../../../Make.rules
+include ../../Make.hlcs.rules
+
 dirs :=\
  server \
  utilities \
@@ -31,6 +35,8 @@ dirs_install := ${dirs:%=%.install}
 dirs_uninstall := ${dirs:%=%.uninstall}
 dirs_clean := ${dirs:%=%.clean}
 dirs_distclean := ${dirs:%=%.distclean}
+
+init_script_installed := $(BGQ_INSTALL_DIR)/hlcs/etc/init/realtime_server
 
 
 %.install:
@@ -48,7 +54,7 @@ dirs_distclean := ${dirs:%=%.distclean}
 
 default: all
 
-all: $(dirs)
+all: $(dirs) $(init_script_installed)
 
 
 server:
@@ -61,7 +67,13 @@ docs:
 	$(MAKE) -C $@
 
 
-install: $(dirs_install)
+$(init_script_installed): realtime_server
+	mkdir -p $(dir $@)
+	$(CP) $< $@
+
+
+
+install: $(dirs_install) $(init_script_installed)
 
 uninstall: $(dirs_uninstall)
 

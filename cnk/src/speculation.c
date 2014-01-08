@@ -27,7 +27,6 @@
 #include "spi/include/kernel/spec.h"
 
 uint32_t SIMPLE_ROLLBACK = 1;
-Lock_Atomic_t MMIO_TLB_Lock;
 uint64_t SpecDomainsAllocated K_ATOMIC;
 uint64_t domainsConfigured;
 Lock_Atomic_t FastPathsLock;
@@ -62,7 +61,7 @@ int Speculation_Init()
         for(specid=0; specid<128; specid++)
         {
             SPEC_TryChangeState_priv(specid, L2C_IDSTATE_PRED_SPEC | L2C_IDSTATE_INVAL);  
-            SPEC_SetConflict(specid, 0);
+            SPEC_SetConflict_priv(specid, 0);
         }
         ppc_msync();
     }
@@ -387,33 +386,6 @@ int Speculation_EnterJailMode(bool longRunningSpec)
 #endif
         ppc_msync();
     }
-    
-    /*! \todo This should ideally be replaced with a tlbsrx/tlbwe instruction */
-    Kernel_Lock(&MMIO_TLB_Lock);
-    mtspr(SPRN_MAS0,
-          MAS0_ATSEL_TLB  |  // Select TLB (versus LRAT)
-          MAS0_HES_ESEL   |  // Use specified slot rather than LRU replacement
-          MAS0_ESEL(0)    | 
-          MAS0_WQ_ALWAYS  ); // Write the entry (no reservation required)    
-    mtspr(SPRN_MAS5, 0);
-    mtspr(SPRN_MAS6, 0);
-    uint64_t ea = VA_MINADDR_MMIO;
-    isync(); // wait for context to be updated    
-    asm volatile ("tlbsx 0, %0" : : "r" (ea) : "memory");
-    isync();
-    if(mfspr(SPRN_MAS1) & MAS1_V(1))
-    {
-        uint64_t threadmask = mfspr(SPRN_MMUCR3) & MMUCR3_ThdID(0xf ^ (0x8>>ProcessorThreadID()));
-        tlbwe_slot(3,
-                   MAS1_V(1) | MAS1_TID(0) | MAS1_TS(0) | MAS1_TSIZE_1GB,
-                   MAS2_EPN(  PHYMAP_MINADDR_MMIO >> 12) | MAS2_W(0) | MAS2_I(1) |	MAS2_M(1) | MAS2_G(1) | MAS2_E(0),
-                   MAS7_3_RPN(PHYMAP_MINADDR_MMIO >> 12) | MAS3_SR(1) | MAS3_SW(1) | MAS3_SX(0) | MAS3_UR(1) | MAS3_UW(1) | MAS3_UX(0) | MAS3_U1(1),
-                   MAS8_TGS(0) | MAS8_VF(0) | MAS8_TLPID(0),
-                   MMUCR3_X(0) | MMUCR3_R(1) |	MMUCR3_C(1) | MMUCR3_ECL(0) | MMUCR3_CLASS(1) | MMUCR3_ThdID(threadmask)
-                   );
-        // \todo for some reason, simply re-writing the tlb doesn't work.
-    }
-    Kernel_Unlock(&MMIO_TLB_Lock);
     return 0;
 }
 
@@ -425,34 +397,6 @@ int Speculation_ExitJailMode()
         mtspr(SPRN_PID, process->PhysicalPID);
         isync();
     }
-    
-    /*! \todo This should ideally be replaced with a tlbsrx/tlbwe instruction */
-    Kernel_Lock(&MMIO_TLB_Lock);
-    mtspr(SPRN_MAS0,
-          MAS0_ATSEL_TLB  |  // Select TLB (versus LRAT)
-          MAS0_HES_ESEL   |  // Use specified slot rather than LRU replacement
-          MAS0_ESEL(0)    | 
-          MAS0_WQ_ALWAYS  ); // Write the entry (no reservation required)    
-    mtspr(SPRN_MAS1, MAS1_V(1) | MAS1_TID(0) | MAS1_TS(0) | MAS1_TSIZE_1GB);
-    mtspr(SPRN_MAS2, MAS2_EPN(  PHYMAP_MINADDR_MMIO >> 12) | MAS2_W(0) | MAS2_I(1) |	MAS2_M(1) | MAS2_G(1) | MAS2_E(0));
-    mtspr(SPRN_MAS7_MAS3, MAS7_3_RPN(PHYMAP_MINADDR_MMIO >> 12) | MAS3_SR(1) | MAS3_SW(1) | MAS3_SX(0) | MAS3_UR(1) | MAS3_UW(1) | MAS3_UX(0));
-    isync();
-    asm volatile ( "tlbre;" : : : "memory" );
-    isync();
-    
-    if(mfspr(SPRN_MAS1) & MAS1_V(1))
-    {
-        uint64_t threadmask = (mfspr(SPRN_MMUCR3) & MMUCR3_ThdID(0xf)) | (0x8 >> ProcessorThreadID());
-        tlbwe_slot(3,
-                   MAS1_V(1) | MAS1_TID(0) | MAS1_TS(0) | MAS1_TSIZE_1GB,
-                   MAS2_EPN(  PHYMAP_MINADDR_MMIO >> 12) | MAS2_W(0) | MAS2_I(1) |	MAS2_M(1) | MAS2_G(1) | MAS2_E(0),
-                   MAS7_3_RPN(PHYMAP_MINADDR_MMIO >> 12) | MAS3_SR(1) | MAS3_SW(1) | MAS3_SX(0) | MAS3_UR(1) | MAS3_UW(1) | MAS3_UX(0) | MAS3_U1(1),
-                   MAS8_TGS(0) | MAS8_VF(0) | MAS8_TLPID(0),
-                   MMUCR3_X(0) | MMUCR3_R(1) |	MMUCR3_C(1) | MMUCR3_ECL(0) | MMUCR3_CLASS(1) | MMUCR3_ThdID(threadmask)
-                   );
-        // \todo for some reason, simply re-writing the tlb doesn't work.
-    }
-    Kernel_Unlock(&MMIO_TLB_Lock);
     return 0;
 }
 
@@ -475,7 +419,7 @@ void IntHandler_L2Central(int intrp_sum_bitnum)
     Kernel_WriteFlightLog(FLIGHTLOG_high, FL_L2CENTINT, orig_specid_self, reg->ip, reg->lr, 0);
     
     // are we committed?
-    if(specid_self <= 1)
+    if((specid_self <= 1) || (GetMyHWThreadState()->pendingSpecRestartContext))
     {
         // we are either committed, must have been a delayed interrupt, the end_tm/end_tls did our job already
         // \todo if we are rollback, then there is more todo, let's add this later

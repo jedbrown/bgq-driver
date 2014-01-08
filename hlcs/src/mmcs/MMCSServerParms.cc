@@ -270,7 +270,6 @@ MMCSServerParms::usage(
     cerr << "         --iolog <directory>                  Log output from I/O nodes to the specified directory\n";
     cerr << "         --mcserverip <ip address>            TCP/IP address for connecting to mcServer, defaults to 127.0.0.1\n";
     cerr << "         --mcserverport <portnumber>          TCP/IP port for connecting to mcServer, defaults to " << CLIENT_PORT_STR "\n";
-    cerr << "         --no-free-blocks                     Don't mark all blocks as free on startup\n";
     cerr << "         --no-poll-db                         Don't monitor database for allocate/free requests\n";
     cerr << "         --no-poll-envs                       Don't monitor environmental statistics\n";
     cerr << "         --no-reconnect                       Don't reconnect initialized blocks\n";

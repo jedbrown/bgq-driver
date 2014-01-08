@@ -274,7 +274,8 @@ BlockDBPollingGovernor::beginTransaction(string& blockName, string& userName, BG
         return result;
 
     // get the user name
-    result = BGQDB::getBlockOwner(blockName, userName);
+    int notused;
+    result = BGQDB::getBlockUser(blockName, userName, notused);
     if (result != BGQDB::OK)
         return result;
 

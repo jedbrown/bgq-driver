@@ -37,15 +37,12 @@ const unsigned      MuxPerfCounterInterval      = 15;
 // server stuff
 const std::string   ServerMuxService            = "25510";
 const std::string   ServerCommandService        = "24510";
-const size_t        ServerBufferSize            = 8096;
 const bool          ServerJobSimulation         = false;
 const size_t        ServerMaxUserProcesses      = 256;
 const unsigned      ServerPerfCounterInterval   = 30;
 const std::string   ServerIosdIdCounterName     = "/tmp/runjob_server_iosd_counter";
 const size_t        ServerIosdIdCounterSize     = 2048;
 const unsigned      ServerKillJobTimeout        = 60;
-const unsigned      ServerIoNodeOutputThrottle  = 128;
-const unsigned      ServerIoNodeOutputDelay     = 500;
 const uint16_t      ServerJobctlPort            = 7002;
 const uint16_t      ServerStdioPort             = 7003;
 

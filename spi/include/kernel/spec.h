@@ -145,6 +145,9 @@ uint32_t Kernel_ClearSpecConflictInfo(uint32_t l2slice);
 __INLINE__
 uint32_t Kernel_EnableFastSpeculationPaths();
 
+__INLINE__
+uint32_t Kernel_GetSpeculationIDSelf(uint64_t* specid);
+
 /**
  * \brief Include implementations of the above functions.
  */

@@ -94,7 +94,7 @@ int alloc_pkt_list_object( struct my_context * mcontext, uint32_t max_connection
      pktd->message_pa = (uint64_t)pc-> pkt_list_region.base_paddr + i * packetsize;;
      pktd->pkt_control = pc;
    }
-   pktd = pc->pkt_desc_list + pc->num_pkts;
+   pktd = pc->pkt_desc_list + (pc->num_pkts-1);
    pktd->next = NULL;
    PRINT("pc->num_pkts=%llu \n ", (LLUS)pc->num_pkts);
 

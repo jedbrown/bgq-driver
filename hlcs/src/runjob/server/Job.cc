@@ -97,7 +97,7 @@ Job::Job(
     BOOST_FOREACH( auto& i, _io ) {
         job::IoNode& io = i.second;
         io._flags.set( job::Status::Running );
-        io.running();
+        io.drained( true );
     }
 }
 
@@ -116,7 +116,6 @@ Job::~Job()
 
     const Server::Ptr server( _server.lock() );
     if ( !server ) return;
-
 
     // remove entry from database if a job ID was generated
     if ( _id && server ) {
@@ -215,11 +214,15 @@ Job::remove()
         }
     } catch ( const std::exception& e ) {
         LOG_WARN_MSG( e.what() );
- 
     }
-    // remove entry from container
-    if ( const Server::Ptr server = _server.lock() ) {
+
+    if ( mux::Connection::Ptr mux =  _mux.lock() ) {
+        // we have a mux connection, remove entry from container
         server->getJobs()->remove( _id );
+    } else {
+        // no mux connection, likely means this job ended during a
+        // failover event.
+        _status.set( job::Status::Terminating, shared_from_this() );
     }
 
     // cancel kill and heartbeat timers

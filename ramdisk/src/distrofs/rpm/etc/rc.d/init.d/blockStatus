@@ -32,9 +32,12 @@ LOCKFILE=/var/lock/subsys/blockStatus
 
 function start
 {
-	# Check to see if there is a /bgsys/linux/.distroInstallState file.  If there is we want to remove it
-	# as booting a block suggests that we are no longer installing and do not need that data around anymore.
-	if [ -e /bgsys/linux/.distrofsInstallState ] ; then
+	# Check to see if there is a /bgsys/linux/.distroInstallState file and make sure there isn't a
+	# .distrofsPostInstall.lock file.  If there is a .distrofsInstallState file but no 
+	# .distrofsPostInstall.lock we want to remove it as booting a block suggests that we are no longer installing 
+	# and do not need that data around anymore. If the lock file is still there, we need to leave it to avoid
+	# causing issues during eFix installation.
+	if [ -e /bgsys/linux/.distrofsInstallState ] && [ ! -e /bgsys/linux/.distrofsPostInstall.lock ] ; then
 		rm -f /bgsys/linux/.distrofsInstallState
 	fi
 

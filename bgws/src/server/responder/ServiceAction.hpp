@@ -68,10 +68,10 @@ public:
 
 
     // override
-    void doGet();
+    void _doGet();
 
     // override
-    void doPost( json::ConstValuePtr val_ptr );
+    void _doPost( json::ConstValuePtr val_ptr );
 
 
 private:

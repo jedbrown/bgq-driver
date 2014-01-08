@@ -60,9 +60,16 @@ INSTALL_LIST  += $(call INSTALL_BIN_TARGET,svn_revision)
 
 
 CXXFLAGS += -Wall
+CXXFLAGS += -Wextra
 CXXFLAGS += -fpic
 CXXFLAGS += -MD -MP
 CXXFLAGS += -O2
+
+ifeq ($(BGQ_HOST_OS),x86_64)
+CFLAGS    := $(subst -Werror,,$(CFLAGS))
+CXXFLAGS  := $(subst -Werror,,$(CXXFLAGS))
+endif
+
 
 
 LDFLAGS += -pthread

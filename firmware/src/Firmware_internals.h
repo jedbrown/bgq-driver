@@ -22,12 +22,17 @@
 #ifndef _FIRMWARE_INTERNALS_H
 #define _FIRMWARE_INTERNALS_H
 
+#ifndef __ASSEMBLY__
+
 #include <hwi/include/bqc/A2_inlines.h>
 #include <hwi/include/bqc/dcr_support.h>
 #include <hwi/include/common/compiler_support.h>
 #include <firmware/include/personality.h>
 #include <firmware/include/Firmware.h>
 #include <firmware/include/mailbox.h>
+
+#endif
+
 
 /* @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  * @   This header contains things that should be considered internal implementation     @
@@ -37,16 +42,25 @@
  * @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
  */
 
+#ifndef FW_DUAL_DOMAIN
+#define FW_SINGLE_DOMAIN 1
+#endif
 
+#ifdef FW_SINGLE_DOMAIN
+#define FW_MAX_DOMAINS 1
+#define FW_MSG_BOX_SIZE 0
+#else
 #define FW_MAX_DOMAINS 2 // We currently support only two domains
-
 #define FW_MSG_BOX_SIZE 128
+#endif
+
+#ifndef __ASSEMBLY__
 
 typedef struct FW_MessageBox_t {
   volatile unsigned char   from;
   volatile unsigned char   length;
   volatile unsigned char   busy;
-  unsigned char            data[128];
+  unsigned char            data[FW_MSG_BOX_SIZE];
 } FW_MessageBox_t;
 
 typedef struct FW_InternalState_t {
@@ -173,6 +187,7 @@ extern uint64_t fw_getThisDomainID( void );
 
 extern int fw_ddr_init( void );
 extern int fw_ddr_flush_fifos( void );
+extern void fw_ddr_unmaskCorrectableErrors( void );
 extern int fw_bedram_init( void );
 extern int fw_devbus_init( void );
 extern int fw_envmon_init( void );
@@ -259,6 +274,7 @@ unsigned long Crc32n( unsigned long ulInitialCrc, unsigned char *pData, unsigned
 void fw_flushAllRasHistory( void );
 
 extern uint8_t fw_stacks[];
+
 
 __INLINE__  __NORETURN  void fw_sleep_forever( void ) {
   uint64_t mask = (1<<(ProcessorThreadID()));
@@ -447,5 +463,8 @@ extern int fw_upc_machineCheckHandler( uint64_t status[] );
 #define WU_GEA_MASK_2  0
 
 extern int fw_wu_machineCheckHandler( uint64_t status[] );
+
+
+#endif
 
 #endif

@@ -26,6 +26,7 @@ xl.legacy.ndebug: autoconf
 	  FC="${FAST_F90}"						\
 	  AR="${HOST_AR}"						\
 	  LD="${HOST_LD}"						\
+	  F77_OTHER_LIBS="${HOST_F77_OTHER_LIBS}"			\
 	  MPICH2LIB_CFLAGS="${FAST_CFLAGS}"				\
 	  MPICH2LIB_CXXFLAGS="${FAST_CXXFLAGS}"				\
 	  MPICH2LIB_FFLAGS="${FAST_FFLAGS}"				\

@@ -58,7 +58,7 @@ namespace client {
 
 Runjob::Runjob(
         const Multiplexer::Ptr& mux,
-        const Id id
+        const Id& id
         ) :
     _timer( mux->getIoService() ),
     _strand( mux->getIoService() ),
@@ -80,7 +80,11 @@ Runjob::~Runjob()
 {
     LOGGING_DECLARE_LOCATION_MDC( _id );
     LOGGING_DECLARE_USER_MDC( _credentials ? _credentials->getUid()->getUser() : "nobody" );
-    LOG_DEBUG_MSG( __FUNCTION__ );
+    if ( _status == Status::Initializing ) {
+        LOG_DEBUG_MSG( __FUNCTION__ );
+    } else {
+        LOG_INFO_MSG( __FUNCTION__ );
+    }
     if ( Multiplexer::Ptr mux = _mux.lock() ) {
         mux->getClientContainer()->remove( _id );
     }
@@ -119,7 +123,7 @@ Runjob::start()
 
 void
 Runjob::handlePlugin(
-        const runjob::mux::Plugin::HandlePtr& plugin
+        const runjob::mux::Plugin::WeakPtr& plugin
         )
 {
     LOGGING_DECLARE_LOCATION_MDC( _id );
@@ -478,6 +482,9 @@ Runjob::handleDebug(
 
         // update job ID of init timer, but not for start_tool clients
         if ( !_startTool ) _timers.update( _jobId );
+
+        // for start_tool clients, we are done
+        if ( _startTool ) _status.set( Status::Terminated );
 
         _connection->write( msg, _status );
     } else if ( msg->getType() == runjob::Message::Result ) {

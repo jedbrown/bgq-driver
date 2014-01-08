@@ -112,11 +112,11 @@ namespace environmentals {
 const capena::http::uri::Path Fan::RESOURCE_PATH(capena::http::uri::Path() / "environmentals" / "fan");
 
 
-void Fan::doGet()
+void Fan::_doGet()
 {
 
     if ( ! _userHasHardwareRead() ) {
-        LOG_WARN_MSG( "Could not get environmentals because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not get environmentals because " << _getRequestUserInfo() << " doesn't have authority." );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get environmentals because the user doesn't have authority.",

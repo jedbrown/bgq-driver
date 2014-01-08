@@ -1455,8 +1455,7 @@ Optional Packages:
   --with-linux-headers=<path>
                           path to linux headers to use with build
   --with-linux-kernel-version=<version>
-                          Linux kernel version (e.g.
-                          2.6.32-220.4.7.bgq.el6.ppc64)
+                          Linux kernel version (e.g. 2.6.32-220.23.2.bgq.el6.ppc64)
   --with-ddx=<path>       path to floor directory containing prebuilt ddx
                           compilers
   --with-target=<target>  select machine architecture (default=A2)
@@ -2207,9 +2206,9 @@ bgq_default_twinstar_dir=/gsa/yktgsa/projects/t/twinstar
 bgq_default_twinstar_dd1_dir=/gsa/yktgsa/projects/t/twinstar_dd1
 bgq_default_twinstar_dd2_dir=/gsa/yktgsa/projects/t/twinstar_dd2
 bgq_default_mambo=/auto/BGQ/releases/floor-mambo
-bgq_default_rpmversion=1
-bgq_default_rpmrelease=1
-bgq_default_rpmmodification=1
+bgq_default_rpmversion=0
+bgq_default_rpmrelease=0
+bgq_default_rpmmodification=0
 bgq_default_rpmdriver=0
 bgq_default_rpmsuffix=
 
@@ -2252,7 +2251,7 @@ case $bgq_location:$BGQ_HOST_OS in
     ;;
   rchland:ppc )
     if [ `uname -r | grep el6 > /dev/null; echo $?` == 0 ]; then
-      bgq_default_floor=/bgsys/drivers/V1R1M1/ppc64 ;
+      bgq_default_floor=/bgsys/drivers/ppcfloor ;
       bgq_default_gnu=/bgsys/drivers/ppctoolchain ;
     else
       bgq_default_floor=/bgsys/bgq/drivers/ppcfloor ;
@@ -2342,7 +2341,7 @@ fi
 # Setup defaults for vhdl compile and simulation
 #
 
-bgq_fusion_release=R61_0
+bgq_fusion_release=R64_2
 bgq_fusion_subpath=tools/fusion
 bgq_ddx_version_default=dd2
 
@@ -2738,7 +2737,7 @@ if [[ $INSTALL_SUBDIR == "work" ]] ; then
 	bgq_linux_os_default=/bgsys/linux/RHEL6.2_$USER_DISTRO
 else
 	DRIVER=`/bin/echo $BGQ_INSTALL_DIR | awk 'BEGIN{FS="/"} ; {print $(NF-1)}'`
-	bgq_linux_os_default=/bgsys/linux/RHEL6.2_V1R1M1-0
+	bgq_linux_os_default=/bgsys/linux/RHEL6.2_$DRIVER
 fi
 
 # Check whether --with-linux-os was given.
@@ -2790,7 +2789,7 @@ fi
 $as_echo "  BGQ_LINUX_HEADERS_PATH=$BGQ_LINUX_HEADERS_PATH" >&6; }
 
 # BGQ_LINUX_KERNEL_VERSION set-up
-bgq_linux_kernel_version_default=2.6.32-220.4.7.bgq.el6.ppc64
+bgq_linux_kernel_version_default=2.6.32-220.23.3.bgq.el6_V1R1M2_0.ppc64
 
 # Check whether --with-linux-kernel-version was given.
 if test "${with_linux_kernel_version+set}" = set; then
@@ -5351,7 +5350,7 @@ fi
 if test "${with_db+set}" = set; then
   withval=$with_db;  BGQDB="$withval"
 else
-   BGQDB="yes"
+   BGQDB="no"
 fi
 
 

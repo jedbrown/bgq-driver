@@ -24,6 +24,7 @@
 
 #include <firmware/include/Firmware.h>
 #include <hwi/include/bqc/testint_dcr.h>
+#include "Firmware_internals.h"	
 #include "fw_regs.h"
 	
         .file "fw32_start.S"
@@ -194,6 +195,8 @@ label:  li %r3, code;\
 	
 
 	.align 12
+
+	#ifndef FW_SINGLE_DOMAIN
 	
 	.global _fw_Vec1_MCHK 	;
 	
@@ -326,6 +329,7 @@ label:  li %r3, code;\
 	FW_SVEC(_fw_Vec1_UndefFC0, IVO_UNDEFINED )
 	FW_SVEC(_fw_Vec1_UndefFE0, IVO_UNDEFINED )
 
+	#endif
 
 	.extern fw_machineCheckHandler
 	

@@ -371,8 +371,8 @@ else
 		DCRWritePriv(_DDR_MC_MCAODT0(i), val);
 
 
-	for(i=0;i<2;i++)
-		DCRWritePriv(_DDR_MC_MCECCDIS(i), _B5(9,0x3F) | _BN(27) | _BN(29));	// Disable all ECC before calibrating
+//	for(i=0;i<2;i++)
+//		DCRWritePriv(_DDR_MC_MCECCDIS(i), _B5(9,0x3F) | _BN(27) | _BN(29));	// Disable all ECC before calibrating
 
 
 	for(i=0;i<2;i++)
@@ -394,9 +394,9 @@ else
 /*  Step 6. Load IOM registers  */
 /*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-void DDR_Init_IOM(struct DDRINIT_metrics *ddr, unsigned *MC_IOM, int repro)
+void DDR_Init_IOM(struct DDRINIT_metrics *ddr, unsigned *MC_IOM)
 {
-	int i, NN, chip;//, loop;
+	int i, NN, chip, loop;
 	uint64_t val=0;
 
 
@@ -466,10 +466,6 @@ void DDR_Init_IOM(struct DDRINIT_metrics *ddr, unsigned *MC_IOM, int repro)
 #endif
 	for(i=0;i<2;i++)
 		DCRWritePriv(_DDR_MC_MCAPOS(i), _B22(21, 0x155555) | _BN(36) | _BN(37));		// Reset Active (bit35 = 0), CMD bus enabled (bit36), send to Ch0 (bit37)
-	if(!repro)
-		do
-			val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-		while(val);
 
 
 #if FW_DEBUG
@@ -501,20 +497,20 @@ if(TI_isDD1())
 
 else
 {
-//	for(loop=0; loop<32; loop++)
-//	{
-//#if FW_DEBUG
-//		MC_DEBUG(("Loop %2d: IO_Impedance set, AutoCal off\n", loop));
-//#endif
-//		for(i=0; i<4 ;i++)
-//			DCRWritePriv(_DDR_MC_IOM_IO_IMPEDANCE(0) + MC_IOM[i], _B1(51, ddr->VDD < 1.5? 1:0) | ddr->IMPEDANCE | 0x0);
-//
-//#if FW_DEBUG
-//		MC_DEBUG(("Loop %2d: IO_Impedance set, AutoCal on\n", loop));
-//#endif
-//		for(i=0; i<4 ;i++)
-//			DCRWritePriv(_DDR_MC_IOM_IO_IMPEDANCE(0) + MC_IOM[i], _B1(51, ddr->VDD < 1.5? 1:0) | ddr->IMPEDANCE | 0x800);
-//	}
+	for(loop=0; loop<32; loop++)
+	{
+#if FW_DEBUG
+		MC_DEBUG(("Loop %2d: IO_Impedance set, AutoCal off\n", loop));
+#endif
+		for(i=0; i<4 ;i++)
+			DCRWritePriv(_DDR_MC_IOM_IO_IMPEDANCE(0) + MC_IOM[i], _B1(51, ddr->VDD < 1.5? 1:0) | ddr->IMPEDANCE | 0x0);
+
+#if FW_DEBUG
+		MC_DEBUG(("Loop %2d: IO_Impedance set, AutoCal on\n", loop));
+#endif
+		for(i=0; i<4 ;i++)
+			DCRWritePriv(_DDR_MC_IOM_IO_IMPEDANCE(0) + MC_IOM[i], _B1(51, ddr->VDD < 1.5? 1:0) | ddr->IMPEDANCE | 0x800);
+	}
 
 #if FW_DEBUG
 	MC_DEBUG(("IO_Impedance set, AutoCal on\n\n"));
@@ -549,7 +545,7 @@ else
 /*  Step 7. Adjust ADDR Delay  */
 /*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-void DDR_Init_ADDR_Delay(unsigned *MC_IOM, unsigned ADDR_DELAY, unsigned TIS_SHIFT, int repro)
+void DDR_Init_ADDR_Delay(unsigned *MC_IOM, unsigned ADDR_DELAY, unsigned TIS_SHIFT)
 {
 	int i, NN, bbbb;
 	uint64_t val=0, val2;
@@ -561,26 +557,22 @@ void DDR_Init_ADDR_Delay(unsigned *MC_IOM, unsigned ADDR_DELAY, unsigned TIS_SHI
 /*
 	for(i=0;i<2;i++)
 		DCRWritePriv(_DDR_MC_MCAPOS(i), _B19(18, 0x55555) | _BN(19) | _BN(20) | _B8(30,CSB_PAT) | _BN(35) | _BN(36) | _BN(37));	// Enter Self-Refresh
-	if(!repro)
-		do
-			val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-		while(val);
 */
 
 
 	for(i=0; i<4 ;i++)	// ADDR bit Delay setting
 	{
-		for(NN=0; NN<3 ;NN++)
+		for(NN=0; NN < (i<2? 3:2) ;NN++)
+	//	for(NN=0; NN < 3 ;NN++)
 		{
-			DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B8(39,NN) | _B8(47,0xFF));			// PVT compensated mode	-- 01/30/2012
-		//	DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B8(39,NN) | _B8(47,0xFF) | _B3(63,0x7));	// Raw uncompensated mode
+			DCRWritePriv(_DDR_MC_IOM_PHYWRITE(0) + MC_IOM[i], _B8(39,NN) | _B8(47,0xFF));			// PVT compensated mode	-- 01/30/2012
+		//	DCRWritePriv(_DDR_MC_IOM_PHYWRITE(0) + MC_IOM[i], _B8(39,NN) | _B8(47,0xFF) | _B3(63,0x7));	// Raw uncompensated mode
 
-		//	for(bbbb=0; bbbb < (NN<2? 16:12) ;bbbb++)
-			for(bbbb=0; bbbb < 16 ;bbbb++)
+			for(bbbb=0; bbbb < ((i>=2 && NN==1)? 12:16) ;bbbb++)
+		//	for(bbbb=0; bbbb < 16 ;bbbb++)
 			{
 #if FW_DEBUG & 0
-				DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B8(39,NN) | _B8(47,bbbb));
-				val = 0x1FF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+				val = 0x1FF & Mem_IOM_Indirect_Read(0, i, _B8(39,NN) | _B8(47,bbbb));
 				if(val!=0)
 					MC_DEBUG(("This ADDR (MC[%d]_SAT[%d], NN=%d, bbbb=%d) has non zero reset value of 0x%016lx (probably CLK)\n",i%2,i/2,NN,bbbb,val));
 #endif
@@ -593,8 +585,16 @@ void DDR_Init_ADDR_Delay(unsigned *MC_IOM, unsigned ADDR_DELAY, unsigned TIS_SHI
 					else
 						val2 = (uint64_t)ADDR_DELAY;
 				}
-				else
+				else if(val == 0x006 || val == 0x00D || val == 0x009 || val == 0x00F || val == 0x02B || val == 0x02A || val == 0x020 || val == 0x021 ||	// CS
+		   		   val == 0x11A || val == 0x115 || val == 0x112 || val == 0x11E || val == 0x12B || val == 0x127 || val == 0x12E || val == 0x126 ||	// CS
+		   		   val == 0x004 || val == 0x008 || val == 0x024 || val == 0x025 || val == 0x110 || val == 0x114 || val == 0x12F || val == 0x307 ||	// CKE
+		   		   val == 0x210 || val == 0x211 || val == 0x212 || val == 0x213 || val == 0x214 || val == 0x215 || val == 0x217 || val == 0x218 ||	// ODT
+		   		   val == 0x310 || val == 0x311 || val == 0x312 || val == 0x313 || val == 0x314 || val == 0x315 || val == 0x317 || val == 0x318)	// ODT
 					val2 = (uint64_t)ADDR_DELAY + TIS_SHIFT;
+				else if(val == 0x216 || val == 0x219 || val == 0x316 || val == 0x31A)	// RESET
+					val2 = (uint64_t)ADDR_DELAY;
+				else
+					val2 = (uint64_t)ADDR_DELAY;
 				DCRWritePriv(_DDR_MC_IOM_PHYWRITE(0) + MC_IOM[i], _B8(39,NN) | _B8(47,bbbb) | val2%0x200);
 			}
 		}
@@ -604,26 +604,17 @@ void DDR_Init_ADDR_Delay(unsigned *MC_IOM, unsigned ADDR_DELAY, unsigned TIS_SHI
 /*
 	for(i=0;i<2;i++)
 		DCRWritePriv(_DDR_MC_MCAPOS(i), _B22(21, 0x155555) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));     // Exit Self-Refresh
-	if(!repro)
-		do
-			val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-		while(val);
 
 	Delay_ns(300, 265);	// tXS
 
 
 	for(i=0;i<2;i++)
 		DCRWritePriv(_DDR_MC_MCAPOS(i), _B19(18, 0x55555) | _BN(19) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// All Banks Precharge
-	if(!repro)
-		do
-			val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-		while(val);
 */
 
 #if FW_DEBUG
 	i=0;NN=0;bbbb=1;
-	DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B8(39,NN) | _B8(47,bbbb));
-	val = 0x1FF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+	val = 0x1FF & Mem_IOM_Indirect_Read(0, i,_B8(39,NN) | _B8(47,bbbb));
 	MC_DEBUG(("MC0 Instance0 ADDR1 Delay = 0x%016lx\n",val));
 #endif
 
@@ -638,30 +629,20 @@ void DDR_Init_ADDR_Delay(unsigned *MC_IOM, unsigned ADDR_DELAY, unsigned TIS_SHI
 void DDR_Init_Reset_DRAM(struct DDRINIT_metrics *ddr)
 {
 	int i, loop;
-	uint64_t val=0;
 
 
 	for(i=0; i<2 ;i++)
 		DCRWritePriv(_DDR_MC_MCAPOS(i), _B22(21, 0x155555) | _BN(36) | _BN(37));	     // RESET = 'L' (bit35 = 0), CMD bus enabled (bit36), send to Ch0 (bit37)
-	do
-		val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-	while(val);
 
 	Delay_ns(ddr->FAST?1000:200000, 265);
 
 	for(i=0; i<2 ;i++)
 		DCRWritePriv(_DDR_MC_MCAPOS(i), _B22(21, 0x155555) | _BN(35) | _BN(36) | _BN(37));   // RESET = 'H'
-	do
-		val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-	while(val);
 
 	Delay_ns(ddr->FAST?1000:500000, 265);
 
 	for(i=0;i<2;i++)
 		DCRWritePriv(_DDR_MC_MCAPOS(i), _B22(21, 0x155555) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));     // CKE = 'H'
-	do
-		val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-	while(val);
 
 	Delay_ns(300, 265);
 
@@ -672,16 +653,10 @@ void DDR_Init_Reset_DRAM(struct DDRINIT_metrics *ddr)
 				DCRWritePriv(_DDR_MC_MCAPOS(i),
 				_BN(7) |	// TM
 				_BN(19) | _BN(20) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-			do
-				val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-			while(val);
 	
 			for(i=0; i<2 ;i++)	// MR0
 				DCRWritePriv(_DDR_MC_MCAPOS(i),
 				_BN(19) | _BN(20) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-			do
-				val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-			while(val);
 		}
 }
 
@@ -704,8 +679,7 @@ void DDR_Init_CPC(struct DDRINIT_metrics *ddr, unsigned *MC_IOM, int ext_repro)
     {
 	if(recal!=0)
 	{
-		DCRWritePriv(_DDR_MC_IOM_PHYREAD(mc), _B16(47,0xEFFD));
-		effd = 0xFF00 & DCRReadPriv(_DDR_MC_IOM_PHYREAD(mc));
+		effd = 0xFF00 & Mem_IOM_Indirect_Read(mc, 0, _B16(47,0xEFFD));
 	}
 	else
 	{
@@ -748,8 +722,7 @@ void DDR_Init_CPC(struct DDRINIT_metrics *ddr, unsigned *MC_IOM, int ext_repro)
 #if FW_DEBUG
 	for(i=mc; i<4 ;i+=step)
 	{
-		DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0xEFFF));
-		val = 0xFFFF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+		val = Mem_IOM_Indirect_Read(0, i, _B16(47,0xEFFF));
 		MC_DEBUG(("CPC_X4: MASTER_CNTL_ERROR_REG: MC[%d]_SAT[%d] = 0x%08lx\n", i%2, i/2, val));
 	}
 #endif
@@ -769,7 +742,6 @@ void DDR_Init_CPC(struct DDRINIT_metrics *ddr, unsigned *MC_IOM, int ext_repro)
 void DDR_Init_MRS(struct DDRINIT_metrics *ddr)
 {
 	int i;
-	uint64_t val=0;
 
 
 	for(i=0; i<2 ;i++)	// MR2
@@ -782,9 +754,6 @@ void DDR_Init_MRS(struct DDRINIT_metrics *ddr)
 		_B1(16,0) |	// MR2
 		_B1(17,1) |	// MR2
 		_BN(19) | _BN(20) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-	do
-		val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-	while(val);
 
 
 	for(i=0; i<2 ;i++)	// MR3
@@ -792,9 +761,6 @@ void DDR_Init_MRS(struct DDRINIT_metrics *ddr)
 		_B1(16,1) |	// MR3
 		_B1(17,1) |	// MR3
 		_BN(19) | _BN(20) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-	do
-		val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-	while(val);
 
 
 	for(i=0; i<2 ;i++)	// MR1
@@ -809,9 +775,6 @@ void DDR_Init_MRS(struct DDRINIT_metrics *ddr)
 		_B1(16,1) |	// MR1
 		_B1(17,0) |	// MR1
 		_BN(19) | _BN(20) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-	do
-		val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-	while(val);
 
 
 	for(i=0; i<2 ;i++)	// MR0
@@ -828,18 +791,12 @@ void DDR_Init_MRS(struct DDRINIT_metrics *ddr)
 		_B1(16,0) |	// MR0
 		_B1(17,0) |	// MR0
 		_BN(19) | _BN(20) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-	do
-		val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-	while(val);
 
 
 	for(i=0; i<2 ;i++)	// ZQCL
 		DCRWritePriv(_DDR_MC_MCAPOS(i),
 		_BN(10) |	// A10 (Long not Short)
 		_BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// ZQ command
-	do
-		val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-	while(val);
 
 
 	Delay_ns(1000, 265);	// tDLLK
@@ -850,10 +807,11 @@ void DDR_Init_MRS(struct DDRINIT_metrics *ddr)
 /*  Step 11A.Detect Ranks and Fine Write Leveling  */
 /*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-void DDR_Init_Detect_Ranks(unsigned *num_ranks, unsigned dram_density, struct DDRINIT_metrics *ddr, unsigned *MC_IOM, unsigned *ODT, int repro)
+int DDR_Init_Detect_Ranks(unsigned *num_ranks, unsigned dram_density, struct DDRINIT_metrics *ddr, unsigned *MC_IOM, unsigned *ODT, int repro)
 {
 	void DDR_Init_FWL();
 	int  DDR_Init_MasterCtrlErrReg();
+	unsigned error=-1;
 
 
 	for(*num_ranks=MAX_NUM_RANKS; *num_ranks >= 1; *num_ranks /= 2)
@@ -866,14 +824,15 @@ void DDR_Init_Detect_Ranks(unsigned *num_ranks, unsigned dram_density, struct DD
 		DDR_Init_MCA(*num_ranks, dram_density, ddr, ODT);
 
 		DDR_Init_FWL(*num_ranks, ddr, MC_IOM, ODT, repro);	// PASS-1
-		if(DDR_Init_MasterCtrlErrReg(ddr, MC_IOM, 1)==0)
+		if((error=DDR_Init_MasterCtrlErrReg(ddr, MC_IOM, 1)) <= 18)
 			break;
 
 		DDR_Init_FWL(*num_ranks, ddr, MC_IOM, ODT, repro);	// PASS-2
-		if(DDR_Init_MasterCtrlErrReg(ddr, MC_IOM, 1)==0)
+		if((error=DDR_Init_MasterCtrlErrReg(ddr, MC_IOM, 1)) <= 18)
 			break;
 	}
 	MC_DEBUG(("%d RANK%c\n", *num_ranks, (*num_ranks==1)?' ':'S'));
+	return(error);
 }
 
 
@@ -923,10 +882,6 @@ void DDR_Init_FWL(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned *MC_
 		_B1(16,1) |	// MR1
 		_B1(17,0) |	// MR1
 		_BN(19) | _BN(20) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-	if(!repro)
-		do
-			val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-		while(val);
 
 
 	for(rr=0; rr<num_ranks; rr++)
@@ -950,17 +905,9 @@ void DDR_Init_FWL(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned *MC_
 			_B1(16,1) |	// MR1
 			_B1(17,0) |	// MR1
 			_BN(19) | _BN(20) | _BN(21) | _B8(30,0x80 >> rr) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-		if(!repro)
-			do
-				val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-		while(val);
 
 		for(i=0; i<2 ;i++)
 			DCRWritePriv(_DDR_MC_MCAPOS(i), _B22(21, 0x155555) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37) | _B4(42,ODT[rr]) | _B3(45,RRR));
-		if(!repro)
-			do
-				val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-		while(val);
 	
 //long long time0 = GetTimeBase();
 		for(i=0; i<4 ;i++)
@@ -989,17 +936,13 @@ void DDR_Init_FWL(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned *MC_
 			_B1(16,1) |	// MR1
 			_B1(17,0) |	// MR1
 			_BN(19) | _BN(20) | _BN(21) | _B8(30,0x80 >> rr) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-		if(!repro)
-			do
-				val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-		while(val);
 
 #if FW_DEBUG
 		int rr2;
 		for(rr2=0; rr2<4; rr2++)
 		{
-			DCRWritePriv(_DDR_MC_IOM_PHYREAD(0), _B16(47,0x2004) | _B2(38,rr2) | _B4(42,0%9));
-			MC_DEBUG(("MC[0] DQS0[rank%d/%d] WRITE delay = %lx\n",MC_Mapped_Rank(rr2),MC_Mapped_Rank(rr2)+4,0xFFFF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(0))));
+			val = Mem_IOM_Indirect_Read(0, 0, _B16(47,0x2004) | _B2(38,rr2) | _B4(42,0%9));
+			MC_DEBUG(("MC[0] DQS0[rank%d/%d] WRITE delay = %lx\n",MC_Mapped_Rank(rr2),MC_Mapped_Rank(rr2)+4,val));
 		}
 	//	DCRWritePriv(_DDR_MC_IOM_PHYWRITE(0), _B16(47,0x3F88) | _B8(63,0x0F));
 #endif
@@ -1021,10 +964,6 @@ void DDR_Init_FWL(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned *MC_
 		_B1(16,1) |	// MR1
 		_B1(17,0) |	// MR1
 		_BN(19) | _BN(20) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-	if(!repro)
-		do
-			val = DCRReadPriv(_DDR_MC_MCAPOS(1)) & _BN(37);
-		while(val);
 
 #if HARD_FAILURE
 // Hard failure injection (WRLVL)
@@ -1050,7 +989,7 @@ void DDR_Init_Read_Cal(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned
 	int repro = recal==0? (ext_repro & 0x1) : 0;
 	int mc    = recal==0? 0 : (ext_repro & 0x1);
 	int step  = recal==0? 1 : 2;
-	int check = recal==0? 0 : mc;
+//	int check = recal==0? 0 : mc;
 
 #if DELAY_OVERRIDE
 	int chip;
@@ -1100,10 +1039,6 @@ void DDR_Init_Read_Cal(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned
 
 		for(i=mc;i<2;i+=step)
 			DCRWritePriv(_DDR_MC_MCAPOS(i), _B19(18, 0x55555) | _BN(19) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// PREA
-		if(!repro)
-			do
-				val = DCRReadPriv(_DDR_MC_MCAPOS(check)) & _BN(37);
-			while(val);
 	
 		//-----------------------------------------
 		//-- Adding DLL RESET right before RdCal --
@@ -1122,17 +1057,10 @@ void DDR_Init_Read_Cal(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned
 			_B1(16,0) |	// MR0
 			_B1(17,0) |	// MR0
 			_BN(19) | _BN(20) | _BN(21) | _B8(30,0x80 >> rr) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-		do
-			val = DCRReadPriv(_DDR_MC_MCAPOS(check)) & _BN(37);
-		while(val);
 
 
 		for(i=mc;i<2;i+=step)
 			DCRWritePriv(_DDR_MC_MCAPOS(i), _B19(18, 0x55555) | _BN(19) | _BN(20) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// Refresh (Micron)
-		if(!repro)
-			do
-				val = DCRReadPriv(_DDR_MC_MCAPOS(check)) & _BN(37);
-			while(val);
 	
 		Delay_ns(300, 265);	// tRFC
 
@@ -1143,19 +1071,11 @@ void DDR_Init_Read_Cal(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned
 			_B1(16,1) |	// MR3
 			_B1(17,1) |	// MR3
 			_BN(19) | _BN(20) | _BN(21) | _B8(30,0x80 >> rr) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-		if(!repro)
-			do
-				val = DCRReadPriv(_DDR_MC_MCAPOS(check)) & _BN(37);
-			while(val);
 
 	
 		RRR = MC_RANK_RRR(rr);
 		for(i=mc; i<2 ;i+=step)
 			DCRWritePriv(_DDR_MC_MCAPOS(i), _B22(21, 0x155555) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37) | _B3(45,RRR));
-		if(!repro)
-			do
-				val = DCRReadPriv(_DDR_MC_MCAPOS(check)) & _BN(37);
-		while(val);
 
 //long long time0 = GetTimeBase();
 		for(k=0; k<2; k++)
@@ -1176,10 +1096,6 @@ void DDR_Init_Read_Cal(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned
 
 		for(i=mc; i<2 ;i+=step)
 			DCRWritePriv(_DDR_MC_MCAPOS(i), _B19(18, 0x55555) | _BN(19) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// PREA (Elpida)
-		if(!repro)
-			do
-				val = DCRReadPriv(_DDR_MC_MCAPOS(check)) & _BN(37);
-			while(val);
 	
 
 		for(i=mc; i<2 ;i+=step)	// MR3 (MPR disable)
@@ -1187,17 +1103,13 @@ void DDR_Init_Read_Cal(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned
 			_B1(16,1) |	// MR3
 			_B1(17,1) |	// MR3
 			_BN(19) | _BN(20) | _BN(21) | _B8(30,0x80 >> rr) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// common for all MRS
-		if(!repro)
-			do
-				val = DCRReadPriv(_DDR_MC_MCAPOS(check)) & _BN(37);
-			while(val);
 
 #if FW_DEBUG
 		int rr2;
 		for(rr2=0; rr2<8; rr2++)
 		{
-			DCRWritePriv(_DDR_MC_IOM_PHYREAD(0), _B16(47,0x6000) | _B3(38,IOM_RANK_RRR(rr2)) | _B4(42,0%9));
-			MC_DEBUG(("MC[0] DQS0[rank%d] RDCAL delay = %lx\n",rr2,0xFFFF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(0))));
+			val = Mem_IOM_Indirect_Read(0, 0, _B16(47,0x6000) | _B3(38,IOM_RANK_RRR(rr2)) | _B4(42,0%9));
+			MC_DEBUG(("MC[0] DQS0[rank%d] RDCAL delay = %lx\n",rr2,val));
 		}
 	//	DCRWritePriv(_DDR_MC_IOM_PHYWRITE(0), _B16(47,0x7FF0) | _B8(63,0x0F));
 #endif
@@ -1208,19 +1120,16 @@ void DDR_Init_Read_Cal(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned
 // Hard failure injection (RDDLY)
 //
 
-	DCRWritePriv(_DDR_MC_IOM_PHYREAD(0), _B16(47,0x4000));
-	val = 0xFFFF& DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[0]);
+	val = Mem_IOM_Indirect_Read(0, 0, _B16(47,0x4000));
 	DCRWritePriv(_DDR_MC_IOM_PHYWRITE(0), _B16(47,0x4000) | _B3(38,0) | _B4(42,1%9) | (val+HARD_SKEW));
 	DCRWritePriv(_DDR_MC_IOM_PHYWRITE(1), _B16(47,0x4000) | _B3(38,0) | _B4(42,1%9) | (val+HARD_SKEW));
 //	printf("Forcing DQS delay from %lX to %lX\n",val,DCRReadPriv(_DDR_MC_IOM_PHYWRITE(0), _B16(47,0x4000) | _B3(38,0) | _B4(42,1%9)));
 
-	DCRWritePriv(_DDR_MC_IOM_PHYREAD(0), _B16(47,0x4001));
-	val = 0xFFFF& DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[0]);
+	val = Mem_IOM_Indirect_Read(0, 0, _B16(47,0x4001));
 	DCRWritePriv(_DDR_MC_IOM_PHYWRITE(0), _B16(47,0x4001) | _B3(38,0) | _B4(42,1%9) | (val+HARD_SKEW));
 	DCRWritePriv(_DDR_MC_IOM_PHYWRITE(1), _B16(47,0x4001) | _B3(38,0) | _B4(42,1%9) | (val+HARD_SKEW));
 
-	DCRWritePriv(_DDR_MC_IOM_PHYREAD(0), _B16(47,0x4002));
-	val = 0xFFFF& DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[0]);
+	val = Mem_IOM_Indirect_Read(0, 0, _B16(47,0x4002));
 	DCRWritePriv(_DDR_MC_IOM_PHYWRITE(0), _B16(47,0x4002) | _B3(38,0) | _B4(42,1%9) | (val+HARD_SKEW));
 	DCRWritePriv(_DDR_MC_IOM_PHYWRITE(1), _B16(47,0x4002) | _B3(38,0) | _B4(42,1%9) | (val+HARD_SKEW));
 
@@ -1241,7 +1150,7 @@ void DDR_Init_Read_Cal(unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned
 int DDR_Init_MasterCtrlErrReg(struct DDRINIT_metrics *ddr, unsigned *MC_IOM, int ext_rank_detect_mode)
 {
 	int i, error, chip;
-	uint64_t val=0, val2, val3;
+	uint64_t val3;
 	char msg[10],pf;
 	int recal		= ext_rank_detect_mode & 0x2;
 	int rank_detect_mode	= recal==0? (ext_rank_detect_mode & 0x1) : 0;
@@ -1252,61 +1161,52 @@ int DDR_Init_MasterCtrlErrReg(struct DDRINIT_metrics *ddr, unsigned *MC_IOM, int
 	{
 		for(error=0,i=mc; i<(ddr->FAST?1:4) ;)
 		{
-			DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0xEFFF));
-			val3 = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+			val3 = Mem_IOM_Indirect_Read(0, i, _B16(47,0xEFFF));
 			if((val3 & 0xFFFF)!=0x0)
 			{
 				error=1;
+#if PRINTOUT
+	uint64_t val=0, val2;
 				MC_DEBUG(("---\n"));
 				MC_DEBUG(("MASTER_CNTL_ERROR_REG: MC[%d]_SAT[%d] = 0x%08lx\n", i%2, i/2, val3));
 				if((val3 & _BN(59))!=0x0)
 				{
-					DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0x6FFE));
-					val = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+					val = Mem_IOM_Indirect_Read(0, i, _B16(47,0x6FFE));
 					MC_DEBUG(("    RDCAL_STATUS_REG : MC[%d]_SAT[%d] = 0x%08lx\n", i%2, i/2, val));
 			
 					if((val & _BN(49))!=0x0)
 					{
-						DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0x6FE8));
-						val = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
-						DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0x6FF8));
-						val2 = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+						val = Mem_IOM_Indirect_Read(0, i, _B16(47,0x6FE8));
+						val2 = Mem_IOM_Indirect_Read(0, i, _B16(47,0x6FF8));
 						MC_DEBUG(("       RDCAL_DATA_ERR_REG: MC[%d]_SAT[%d] = 0x%08lx-0x%08lx\n", i%2, i/2, val, val2));
 			
-						DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0x6FEC));
-						val = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
-						DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0x6FFC));
-						val2 = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+						val = Mem_IOM_Indirect_Read(0, i, _B16(47,0x6FEC));
+						val2 = Mem_IOM_Indirect_Read(0, i, _B16(47,0x6FFC));
 						MC_DEBUG(("       RDCAL_PREAMBLE_REG: MC[%d]_SAT[%d] = 0x%08lx-0x%08lx\n", i%2, i/2, val, val2));
 					}
 			
-					DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0x6FE5));
-					val = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
-					DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0x6FF5));
-					val2 = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+					val = Mem_IOM_Indirect_Read(0, i, _B16(47,0x6FE5));
+					val2 = Mem_IOM_Indirect_Read(0, i, _B16(47,0x6FF5));
 					MC_DEBUG(("       RDCAL_BYTE_ERR_DQS: MC[%d]_SAT[%d] = 0x%08lx-0x%08lx\n", i%2, i/2, val, val2));
 				}
 				if((val3 & _BN(60))!=0x0)
 				{
-					DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0x2FFE));
-					val = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+					val = Mem_IOM_Indirect_Read(0, i, _B16(47,0x2FFE));
 					MC_DEBUG(("    WR_LEVEL_ERR_REG : MC[%d]_SAT[%d] = 0x%08lx\n", i%2, i/2, val));
 				}
 				if((val3 & _BN(61))!=0x0)
 				{
-					DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0x5002));
-					val = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+					val = Mem_IOM_Indirect_Read(0, i, _B16(47,0x5002));
 					MC_DEBUG(("    RDDLY_ERR_REG    : MC[%d]_SAT[%d] = 0x%08lx\n", i%2, i/2, val));
 				}
 				if((val3 & _BN(63))!=0x0)
 				{
-					DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0xE005));
-					val = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+					val = Mem_IOM_Indirect_Read(0, i, _B16(47,0xE005));
 					MC_DEBUG(("    MASTER_CNTL_CPC_ERR_REG(CMD/ADR): MC[%d]_SAT[%d] = 0x%08lx\n", i%2, i/2, val));
-					DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B16(47,0xE006));
-					val = DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]);
+					val = Mem_IOM_Indirect_Read(0, i, _B16(47,0xE006));
 					MC_DEBUG(("    MASTER_CNTL_CPC_ERROR_REG_(DATA): MC[%d]_SAT[%d] = 0x%08lx\n", i%2, i/2, val));
 				}
+#endif
 			}
 #if FW_DEBUG
 			else
@@ -1328,16 +1228,15 @@ int DDR_Init_MasterCtrlErrReg(struct DDRINIT_metrics *ddr, unsigned *MC_IOM, int
 		{
 			for(chip=0; chip<9; chip++)
 			{
-				DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i], _B4(42,chip) | _B16(47,0x200E));
-				pf=DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[i]) & 0x7;
+				pf = Mem_IOM_Indirect_Read(0, i, _B4(42,chip) | _B16(47,0x200E)) & 0x7;
 				if(pf != 0x0)
 					error++;
 				msg[chip]=pf + '0';
 			}
 			MC_DEBUG(("WRLVL: MC[%d]_SAT[%d] = %s\n", i%2, i/2, msg));
 		}
-		if(error<9)	// up to 1/4th of chips can be bad
-			error=0;
+	//	if(error<9)	// up to 1/4th of chips can be bad
+	//		error=0;
 	}
 
 	if(!rank_detect_mode || FW_DEBUG)
@@ -1352,14 +1251,145 @@ int DDR_Init_MasterCtrlErrReg(struct DDRINIT_metrics *ddr, unsigned *MC_IOM, int
 
 
 /*----------------------------------------------------------------------------------------------------------------------------------------*/
+/*  Step 12B. Calibration Error Recovery */
+/*----------------------------------------------------------------------------------------------------------------------------------------*/
+
+uint64_t DDR_Cal_Error_Recovery(unsigned num_ranks, unsigned *MC_IOM)
+{
+	int mc, chip, n, rr, bbbb;
+	char FAIL[18];
+	char neighbor[3][18] = {
+	//	{0,	1,	2,	3,	4,	5,	6,	7,	8,	9,	10,	11,	12,	13,	14,	15,	16,	17},	// bad chip
+		{1,	2,	7,	8,	3,	4,	5,	6,	9,	10,	11,	12,	17,	14,	13,	14,	15,	16},	// good neighbor-1
+		{5,	0,	1,	4,	5,	6,	7,	12,	3,	8,	9,	10,	11,	8,	15,	16,	17,	12},	// good neighbor-2
+		{3,	6,	6,	13,	9,	10,	11,	17,	13,	14,	5,	16,	7,	3,	9,	10,	11,	7},	// good neighbor-3
+	};
+	int rdcal, rddly, wrlvl, cpc;
+	uint64_t val;
+	unsigned num_rdcal=0, num_rddly=0, num_wrlvl=0, num_cpc=0;
+
+	for(mc=0;mc<2;mc++)
+	{
+		val = Mem_IOM_Indirect_Read(mc, 0, _B16(47,0xEFFF));
+		val |= Mem_IOM_Indirect_Read(mc, 2, _B16(47,0xEFFF));
+
+		rdcal = val & 0x10;
+		rddly = val & 0x04;
+		wrlvl = val & 0x08;
+		cpc = val & 0x01;
+
+		if(rdcal != 0)
+		{
+			val = Mem_IOM_Indirect_Read(mc, 0, _B16(47,0x6FE5));
+			for(chip=0;chip<9;chip++)
+				FAIL[chip] = (val & _BN(63-(chip%9))) >> chip;
+			val = Mem_IOM_Indirect_Read(mc, 2, _B16(47,0x6FE5));
+			for(chip=9;chip<18;chip++)
+				FAIL[chip] = (val & _BN(63-(chip%9))) >> chip;
+			for(chip=0;chip<18;chip++)
+			{
+				if(!FAIL[chip])
+					continue;
+				for(n=0;n<2;n++)
+					if(!FAIL[(int)neighbor[n][chip]])
+						break;
+				for(rr=0;rr<num_ranks;rr++)
+				{
+					val = Mem_IOM_Indirect_Read(mc, (neighbor[n][chip]/9)*2, _B16(47,0x6000) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,neighbor[n][chip]%9));
+					DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + MC_IOM[(chip/9)*2], _B16(47,0x6000) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,chip%9) | _B16(63,val));
+					val = Mem_IOM_Indirect_Read(mc, (neighbor[n][chip]/9)*2, _B16(47,0x6001) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,neighbor[n][chip]%9));
+					DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + MC_IOM[(chip/9)*2], _B16(47,0x6001) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,chip%9) | _B16(63,val));
+				}
+				MC_DEBUG2(("MC%d: IOM RdCal data was copied from Chip%d to Chip%d",mc,neighbor[n][chip],chip));
+				num_rdcal++;
+			}
+		}
+
+		if(rddly != 0)
+		{
+			for(chip=0;chip<18;chip++)
+			{
+				val = Mem_IOM_Indirect_Read(mc, (chip/9)*2, _B4(42,chip%9) | _B16(47,0x5002));
+				FAIL[chip] = (val==0)? 0:1;
+			}
+			for(chip=0;chip<18;chip++)
+			{
+				if(!FAIL[chip])
+					continue;
+				for(n=0;n<2;n++)
+					if(!FAIL[(int)neighbor[n][chip]])
+						break;
+				for(rr=0;rr<num_ranks;rr++)
+				{
+					val = Mem_IOM_Indirect_Read(mc, (neighbor[n][chip]/9)*2, _B16(47,0x4000) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,neighbor[n][chip]%9));
+					DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + MC_IOM[(chip/9)*2], _B16(47,0x4000) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,chip%9) | _B16(63,val));
+					for(bbbb=0;bbbb<8;bbbb++)
+					{
+						val = Mem_IOM_Indirect_Read(mc, (neighbor[n][chip]/9)*2, _B16(47,0x4008) | _B3(38,MC_Mapped_Rank(rr)) | _B4(42,neighbor[n][chip]%9) | _B2(47,bbbb));
+						DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + MC_IOM[(chip/9)*2], _B16(47,0x4008) | _B3(38,MC_Mapped_Rank(rr)) |
+							_B4(42,chip%9) | _B2(47,bbbb) | _B16(63,val));
+					}
+				}
+				MC_DEBUG2(("MC%d: IOM RdDly data was copied from Chip%d to Chip%d",mc,neighbor[n][chip],chip));
+				num_rddly++;
+			}
+		}
+
+		if(wrlvl != 0)
+		{
+			for(chip=0;chip<18;chip++)
+			{
+				val = Mem_IOM_Indirect_Read(mc, (chip/9)*2, _B4(42,chip%9) | _B16(47,0x200E));
+				FAIL[chip] = (val==0)? 0:1;
+			}
+			for(chip=0;chip<18;chip++)
+			{
+				if(!FAIL[chip])
+					continue;
+				for(n=0;n<2;n++)
+					if(!FAIL[(int)neighbor[n][chip]])
+						break;
+				for(rr=0;rr<num_ranks;rr++)
+				{
+					val = Mem_IOM_Indirect_Read(mc, (neighbor[n][chip]/9)*2, _B16(47,0x2004) | _B3(38,MC_Mapped_Rank(rr)) | _B4(42,neighbor[n][chip]%9));
+					DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + MC_IOM[(chip/9)*2], _B16(47,0x2004) | _B3(38,MC_Mapped_Rank(rr)) | _B4(42,chip%9) | _B16(63,val));
+					for(bbbb=0;bbbb<8;bbbb++)
+					{
+						val = Mem_IOM_Indirect_Read(mc, (neighbor[n][chip]/9)*2, _B16(47,0x2000) | _B3(38,MC_Mapped_Rank(rr)) |
+							_B4(42,neighbor[n][chip]%9) | _B1(43,bbbb/4) | _B2(47,bbbb%4));
+						DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + MC_IOM[(chip/9)*2], _B16(47,0x2000) | _B3(38,MC_Mapped_Rank(rr)) |
+							_B4(42,chip%9) | _B1(43,bbbb/4) | _B2(47,bbbb%4) | _B16(63,val));
+					}
+				}
+				MC_DEBUG2(("MC%d: IOM WrLvl data was copied from Chip%d to Chip%d",mc,neighbor[n][chip],chip));
+				num_wrlvl++;
+			}
+		}
+
+		if(cpc != 0)
+		{
+			for(chip=0;chip<18;chip++)
+			{
+				val = Mem_IOM_Indirect_Read(mc, (chip/9)*2, _B4(42,chip%9) | _B16(47,0xE004));
+				FAIL[chip] = (val==0)? 0:1;
+			}
+			MC_DEBUG2(("MC%d: IOM CPC error was found but is not recoverable",mc));
+				num_cpc++;
+		}
+	}
+	return( _B16(15, num_rdcal) | _B16(31, num_rddly) | _B16(47, num_wrlvl) | _B16(63, num_cpc) );
+}
+
+
+/*----------------------------------------------------------------------------------------------------------------------------------------*/
 /*  Step 14A. Detect Density  */
 /*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-void DDR_Init_Detect_Density(unsigned *dram_density, unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned *ODT, uint64_t CWL_wrdata_pat[][17], uint64_t *rddata)
+int DDR_Init_Detect_Density(unsigned *dram_density, unsigned num_ranks, struct DDRINIT_metrics *ddr, unsigned *ODT, uint64_t CWL_wrdata_pat[][17], uint64_t *rddata)
 {
 	char msg[30] = "xGb MC[y] rank[z] got:";
-	int local_pass, i, rr, k, mismatch;
-	uint64_t temp1[17], temp2[17], comp;
+	int local_pass, i, rr, k, mismatch, error=0;
+	uint64_t comp;
 
 
 	for(*dram_density=MAX_DENSITY; *dram_density >= MIN_DENSITY; *dram_density /= 2)
@@ -1371,60 +1401,339 @@ void DDR_Init_Detect_Density(unsigned *dram_density, unsigned num_ranks, struct 
 		DDR_Init_Misc(num_ranks, dram_density, ddr);
 		DDR_Init_MCS(num_ranks, *dram_density); 
 		DDR_Init_MCA(num_ranks, *dram_density, ddr, ODT);
+		error=0;
 		for(local_pass=1,i=0;i<2;i++)
 		{
 			msg[7] = i+'0';
 			for(rr=0;rr<num_ranks;rr++)
 			{
-					MEM_Display_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density), 0x3FF, temp1);
-					MEM_Display_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density)>>1, 0x3FF, temp2);
+				MEM_Display_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density), 0x3FF, rddata);
+				MEM_Display_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density)>>1, 0x3FF, rddata);
 
-					MEM_Alter_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density), 0x3FF, CWL_wrdata_pat[rr%2]);
-					MEM_Alter_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density)>>1, 0x3FF, CWL_wrdata_pat[(rr+1)%2]);
-					MEM_Display_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density), 0x3FF, rddata);
-					comp = Mem_Compare_8L(CWL_wrdata_pat[rr%2], rddata) | Mem_Compare_8H(CWL_wrdata_pat[rr%2], rddata);
-					for(mismatch=0,k=0; k<64; k++)
-						mismatch += (comp>>k) & 0x1;
-					MC_DEBUG(("Compare pattern = 0x%016lX	Number of mismatch bits = %d\n",comp,mismatch));
-					ddr->MRKCHIP[i][rr] = -1;
-					if(mismatch > 8)	// okay up to 1 bad chip per rank per MC
-						local_pass = 0;
-					else
-					{
-						for(k=0; k<18; k++)
-						{
-							if(k<8)
-								comp = Mem_Compare_8L(CWL_wrdata_pat[rr%2], rddata) & (0xFFull << (56 - k*8));
-							else if(k==8)
-								comp = (CWL_wrdata_pat[rr%2][16] ^ rddata[16]) & 0xFFFFFFFF00000000;
-							else if(k<17)
-								comp = Mem_Compare_8H(CWL_wrdata_pat[rr%2], rddata)  & (0xFFull << (56 - (k-9)*8));
-							else if(k==17)
-								comp = (CWL_wrdata_pat[rr%2][16] ^ rddata[16]) & 0x00000000FFFFFFFF;
-							if(comp != 0x0)
-								break;
-						}
-						if(k < 18)
-						{
-						//	ddr->SKIP_SMBTEST = 1;
-							ddr->MRKCHIP[i][rr] = k;
-						}
-					}
+				MEM_Alter_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density), 0x3FF, CWL_wrdata_pat[rr%2]);
+				MEM_Alter_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density)>>1, 0x3FF, CWL_wrdata_pat[(rr+1)%2]);
+
+				MEM_Display_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density), 0x3FF, rddata);
+
+				mismatch=0;
+				comp = Mem_Compare_8L(CWL_wrdata_pat[rr%2], rddata);
+				for(k=0; k<64; k++)
+					mismatch += (comp>>k) & 0x1;
+
+				comp = Mem_Compare_8H(CWL_wrdata_pat[rr%2], rddata);
+				for(k=0; k<64; k++)
+					mismatch += (comp>>k) & 0x1;
+
+				comp = CWL_wrdata_pat[rr%2][16] ^ rddata[16];
+				for(k=0; k<16; k++)
+					mismatch += (comp & _B8((k/2)*8 + 7, 0xAA >> (k%2)))!=0? 1:0;
+
+				Mem_ErrPatDecode(&comp);
+
+				MC_DEBUG(("Compare pattern = 0x%016lX-0x%016lx-0x%016lx	Number of mismatch bits = %d\n"
+					,Mem_Compare_8L(CWL_wrdata_pat[rr%2], rddata),Mem_Compare_8H(CWL_wrdata_pat[rr%2], rddata),comp,mismatch));
+
+				if(mismatch > 14*8)	// okay up to 14 bad chips per rank per MC
+					local_pass = 0;
 #if FW_DEBUG
-					msg[15]= rr+'0';
-					Mem_print_vector(rddata, msg, 17);
+				msg[15]= rr+'0';
+				Mem_print_vector(rddata, msg, 17);
 #endif
-					MEM_Alter_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density), 0x3FF, temp1);
-					MEM_Alter_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density)>>1, 0x3FF, temp2);
+				MEM_Alter_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density), 0x3FF, rddata);
+				MEM_Alter_addr(i, rr, 7, MAX_ROW_ADDR(*dram_density)>>1, 0x3FF, rddata);
+
+				error += mismatch;
 			}
 		}
 		if(local_pass)
 			break;
 	}
 	MC_DEBUG(("%dMb DRAM\n", *dram_density));
+	return(error);
 }
 
+static unsigned wr_window[2];//, ad_window[2];
+//static unsigned ad_side[2][2];
 
+/*----------------------------------------------------------------------------------------------------------------------------------------*/
+/*  Step 17B. Initial Write Calibration  */
+/*----------------------------------------------------------------------------------------------------------------------------------------*/
+
+unsigned DDR_Init_Write_Cal(unsigned num_ranks, struct DDRINIT_metrics *ddr, int mc, int Vref_DQ, int report, uint64_t *wrdata, uint64_t *rddata)
+{
+	int	rank, chip, pat, dq;
+	short	Delay[18][8];
+	unsigned	offset;
+	uint64_t	comp[3], comp_bit;
+	int	direction;
+	short	PF_DQ[2][18][8];
+	unsigned	window=-1, side[2]={-1,-1};
+	unsigned	all_found;
+
+	unsigned	abs_vref = Vref_DQ>0? Vref_DQ-1 : (Vref_DQ<0? -Vref_DQ-1 : 0);
+	unsigned	VREFDQ_pattern = (abs_vref & 0x1) << 3 | (abs_vref & 0x2) << 1 | (abs_vref & 0x4) >> 1 | (Vref_DQ>0? 0x01: (Vref_DQ<0? 0x10:0));
+	uint64_t	vref_cntl = DCRReadPriv(_DDR_MC_IOM_VREF_CNTL(mc) + 0x00);
+	DCRWritePriv(_DDR_MC_IOM_VREF_CNTL(mc) + 0x00, (vref_cntl & ~_B5(63,0x1F)) | _B5(63,VREFDQ_pattern));
+	DCRWritePriv(_DDR_MC_IOM_VREF_CNTL(mc) + 0x40, (vref_cntl & ~_B5(63,0x1F)) | _B5(63,VREFDQ_pattern));
+	Delay_ns(1000000, 265);
+
+	for(pat=0; pat<16; pat++)
+		wrdata[pat] = ((pat ^ (pat>>2)) & 0x2)==0? 0:~0;
+	wrdata[pat] = 0x3333333333333333ull;
+	for(rank=0; rank<num_ranks; rank++)
+	{
+		for(chip=0; chip<18; chip++)
+		{
+			for(dq=0; dq<8; dq++)
+			{
+				Delay[chip][dq] = Mem_IOM_Indirect_Read(mc, (chip/9)*2, _B16(47,0x2000) | _B2(38,MC_Mapped_Rank(rank)) | _B4(42,chip%9) | _B1(43,dq/4) | _B2(47,dq%4));
+				for(direction=0;direction<2;direction++)
+					PF_DQ[direction][chip][dq] = -1;
+			}
+		}
+		for(direction=0;direction<2;direction++)
+		{
+			for(offset=0;offset<0x200;offset++)
+			{
+				for(chip=0; chip<18; chip++)
+				{
+					for(dq=0; dq<8; dq++)
+						DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + (chip<9 ? 0:0x40), _B16(47,0x2000) |
+						_B2(38,MC_Mapped_Rank(rank)) | _B4(42,chip%9) | _B1(43,dq/4) | _B2(47,dq%4) | _B16(63,Delay[chip][dq]+(2*direction-1)*offset));
+				}
+
+				for(pat=0;pat<2;pat++)
+				{
+					MEM_Alter_addr_ECC_sel(mc, rank, 3+pat, 0, 0, wrdata, 0, 1-pat);
+					MEM_Alter_addr_ECC_sel(mc, rank, 3+pat, 0, 0, wrdata, 0, pat);
+				}
+				comp[0]=0;
+				comp[1]=0;
+				comp[2]=0;
+				for(pat=0;pat<2;pat++)
+				{
+					MEM_Display_addr_sel(mc, rank, 3+pat, 0, 0, rddata, 0);
+					comp[0] |= Mem_Compare_Bit(0, wrdata, rddata, pat);
+					comp[1] |= Mem_Compare_Bit(1, wrdata, rddata, pat);
+					comp[2] |= (pat? ~wrdata[16]:wrdata[16]) ^ rddata[16];
+				}
+
+				for(all_found=1, chip=0; chip<18; chip++)
+				{
+					for(dq=0; dq<8; dq++)
+					{
+						if(PF_DQ[direction][chip][dq] == -1)
+						{
+							if(chip != 8 && chip!= 17)
+								comp_bit = comp[chip/9] & _BN(8*(chip%9) + dq);
+							else
+								comp_bit = comp[2] & _B8((chip/9)*32 + (dq/2)*8 + 7, 0xAA >> (dq%2));
+
+							if(comp_bit != 0x0)
+							{
+								PF_DQ[direction][chip][dq] =  offset;
+								if(offset < side[direction])
+									side[direction] = offset;
+							}
+							else
+								all_found=0;
+						}
+					}
+				}
+				if(all_found)
+					break;
+			}
+		//	printf("All found at 0x%X(%dd)\n",offset,offset);
+#if 0
+			if(offset==0x200)
+				FW_Warning("MC%d Rank%d Dir%d Vref=%d: Initial Write Calibration couldn't find the edge",mc,rank,direction,Vref_DQ);
+#endif
+		}
+
+		for(chip=0; chip<18; chip++)
+		{
+		//	MC_DEBUG(("MC%d RANK%d CHIP%d\n",mc,rank,chip));
+			for(dq=0; dq<8; dq++)
+			{
+				DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + (chip<9 ? 0:0x40),
+				_B16(47,0x2000) | _B2(38,MC_Mapped_Rank(rank)) | _B4(42,chip%9) | _B1(43,dq/4) | _B2(47,dq%4) |
+				_B16(63,Delay[chip][dq]+(PF_DQ[1][chip][dq] - PF_DQ[0][chip][dq])/2));
+				if(((ddr->FailDQ[mc][rank][chip] >> (7-dq)) & 0x1) == 0 && ((ddr->MRKCHIP[mc][rank] & (1 << chip)) == 0))
+					if(PF_DQ[1][chip][dq]+PF_DQ[0][chip][dq] < window)
+						window = PF_DQ[1][chip][dq]+PF_DQ[0][chip][dq];
+		//		MC_DEBUG(("	BIT%d:		PF_DQ[0]=%d	PF_DQ[1]=%d\n",dq,PF_DQ[0][chip][dq],PF_DQ[1][chip][dq]));
+			}
+		}
+	}
+	if(report)
+	//	MC_DEBUG2(("MC%d:	Vref=%d	Left=%3d	Right=%3d	Window=%d\n",mc,Vref_DQ,side[0],side[1],window));
+		FW_RAS_printf(FW_RAS_INFO,"MC%d: WrData Vref=%d Left=%d Right=%d Window=%d",mc,Vref_DQ,side[0],side[1],window);
+	wr_window[mc] = window;
+	return(window);
+}
+
+#if 0
+/*----------------------------------------------------------------------------------------------------------------------------------------*/
+/*  Step 17C. Initial Address Calibration  */
+/*----------------------------------------------------------------------------------------------------------------------------------------*/
+
+unsigned DDR_Init_Address_Cal(unsigned num_ranks, struct DDRINIT_metrics *ddr, int mc, int report, uint64_t *wrdata, uint64_t *rddata)
+{
+	uint64_t	val=0, mask[2];
+	int	Delay;
+	int	PF_ADDR[2];
+	unsigned	offset;
+	unsigned	window=-1, side[2]={-1,-1};
+	unsigned	MC_IOM[2]={0,0x40};
+	int	direction, SAT, NN, bbbb;
+	int	i, inv, rank, comp, found, k;
+	unsigned num_addr=0;
+	unsigned total_delay=0;
+	unsigned average_delay;
+	int	t, t_max;
+
+#define	T_MAX_LIMIT	2
+
+	for(SAT=0; SAT<2; SAT++)
+	for(NN=0; NN< (SAT==0? 3:1) ;NN++)
+	for(bbbb=0; bbbb < 16 ;bbbb++)
+	{
+		val = _B4(55,mc+2*SAT) | _B4(59,NN) | _B4(63,bbbb);
+		if(val == 0x000 || val == 0x010 || val == 0x028 || val == 0x100 || val == 0x118 || val == 0x120 || val == 0x200 || val == 0x308 ||	// CLKP
+		   val == 0x001 || val == 0x011 || val == 0x029 || val == 0x101 || val == 0x119 || val == 0x121 || val == 0x201 || val == 0x309 ||	// CLKN
+		   val == 0x004 || val == 0x008 || val == 0x024 || val == 0x025 || val == 0x110 || val == 0x114 || val == 0x12F || val == 0x307 ||	// CKE
+		   val == 0x216 || val == 0x219 || val == 0x316 || val == 0x31A ||									// RESET
+		 ((val == 0x009 || val == 0x00F || val == 0x020 || val == 0x021 || val == 0x112 || val == 0x11E || val == 0x12E || val == 0x126) && num_ranks < 4 ))	// CS2,3,6,7
+			continue;
+
+		Delay = Mem_IOM_Indirect_Read(mc, 2*SAT, _B8(39,NN) | _B8(47,bbbb));
+
+		t_max = 0;
+
+		if(report && (
+		   val == 0x013 || val == 0x02C || val == 0x109 || val == 0x30C ||	// RAS
+		   val == 0x007 || val == 0x027 || val == 0x103 || val == 0x30B ||	// CAS
+		   val == 0x018 || val == 0x02F || val == 0x108 || val == 0x302 ||	// WE
+		   val == 0x006 || val == 0x00D || val == 0x02B || val == 0x02A || val == 0x11A || val == 0x115 || val == 0x12B || val == 0x127 )) 	// CS0,1,4,5
+			;
+		else
+		for(direction=0;direction<2;direction++)
+		{
+			PF_ADDR[direction] = 0x100;
+			for(found=0,offset=0;offset<0x100;offset++)
+			{
+				DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + MC_IOM[SAT], _B8(39,NN) | _B8(47,bbbb) | (Delay+(2*direction-1)*offset));
+				for(comp=1,rank=0;rank<num_ranks;rank++)
+				{
+					mask[0]=0;
+					mask[1]=0;
+					for(i=0;i<17;i++)
+						if(i!=8)
+							mask[i/9] |= _B8(8*(i%9)+7,ddr->FailDQ[mc][rank][i]);
+
+					for(i=0;i<17;i++)
+					{
+						wrdata[i] = 0;
+						for(k=0;k<16;k++)
+							wrdata[i] |= _B4(k*4+3,(8*direction+2*rank+i)%16);
+						for(k=0;k<8;k++)
+							wrdata[i] ^= _B8(k*8+7,offset);
+					}
+		
+					for(inv=0; inv<2; inv++)
+					{
+						t = MEM_Alter_addr_ECC_sel(mc, rank, inv? 7:0, inv? 0x7FFF:0, inv? 0:0x3FF, wrdata, 2, inv);
+						if(t > t_max) t_max = t;
+					}
+
+					for(inv=0; inv<2; inv++)
+					{
+						t = MEM_Display_addr(mc, rank, inv? 7:0, inv? 0x7FFF:0, inv? 0:0x3FF, rddata);
+						if(t > t_max) t_max = t;
+		
+						comp = comp && ((Mem_Compare_Bit(0,wrdata,rddata,inv)  & ~mask[0]) == 0);
+						comp = comp && ((Mem_Compare_Bit(1,wrdata,rddata,inv)  & ~mask[1]) == 0);
+					}
+				}
+				if(t_max > T_MAX_LIMIT) break;
+
+				if(!comp && !found)
+				{
+					found=1;
+					PF_ADDR[direction] = (int)offset;
+				}
+			}
+			if(PF_ADDR[direction] < side[direction])
+				side[direction] = PF_ADDR[direction];
+
+			DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + MC_IOM[SAT], _B8(39,NN) | _B8(47,bbbb) | Delay);		// Revert delay to default before recovery action
+
+			if(val == 0x013 || val == 0x02C || val == 0x109 || val == 0x30C ||	// RAS
+			   val == 0x007 || val == 0x027 || val == 0x103 || val == 0x30B ||	// CAS
+			   val == 0x018 || val == 0x02F || val == 0x108 || val == 0x302 ||	// WE
+			   val == 0x006 || val == 0x00D || val == 0x02B || val == 0x02A || val == 0x11A || val == 0x115 || val == 0x12B || val == 0x127 || 	// CS0,1,4,5
+			 ((val == 0x009 || val == 0x00F || val == 0x020 || val == 0x021 || val == 0x112 || val == 0x11E || val == 0x12E || val == 0x126) && num_ranks >=4 ))	// CS2,3,6,7
+			{
+				DDR_Init_Reset_DRAM(ddr);
+				DDR_Init_MRS(ddr);
+			}
+			else
+			{
+				DCRWritePriv(_DDR_MC_MCAPOS(mc), _B19(18, 0x55555) | _BN(19) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// PREA
+				DCRWritePriv(_DDR_MC_MCAPOS(mc), _B19(18, 0x55555) | _BN(19) | _BN(20) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// Refresh
+				DCRWritePriv(_DDR_MC_MCAPOS(mc), _B19(18, 0x55555) | _BN(19) | _BN(21) | _B8(30,CSB_PAT) | _B4(34,CKE_PAT) | _BN(35) | _BN(36) | _BN(37));	// PREA
+			}
+			if(t_max > T_MAX_LIMIT) break;
+		}
+		if(t_max > T_MAX_LIMIT)
+		{
+			FW_RAS_printf( FW_RAS_INFO, "Exiting Address_Cal MC%d t_max=%d SAT=%d NN=%d bbbb=%d offset=%d direction=%d", mc, t_max, SAT, NN, bbbb, offset, direction);
+			return (99);
+		}
+
+		if(PF_ADDR[1]+PF_ADDR[0] < window)
+			window = PF_ADDR[1]+PF_ADDR[0];
+		Delay += (PF_ADDR[1]-PF_ADDR[0])/2;
+	//	Delay = (Delay < 0x100)? 0x100: Delay;
+	//	DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + MC_IOM[SAT], _B8(39,NN) | _B8(47,bbbb) | _B16(63,Delay));
+
+		if(val == 0x006 || val == 0x00D || val == 0x009 || val == 0x00F || val == 0x02B || val == 0x02A || val == 0x020 || val == 0x021 ||	// CS
+		   val == 0x11A || val == 0x115 || val == 0x112 || val == 0x11E || val == 0x12B || val == 0x127 || val == 0x12E || val == 0x126 )	// CS
+			if(Delay != 0x100)
+			{
+				num_addr++;
+				total_delay += Delay;
+			}
+
+		MC_DEBUG(("MC%d:	%d_%d_%d	PF_ADDR[0]=%d	PF_ADDR[1]=%d	Delay=0x%X\n",mc,mc+2*SAT,NN,bbbb,PF_ADDR[0],PF_ADDR[1],Delay));
+		if(report)
+			FW_RAS_printf(FW_RAS_INFO,"MC%d: %d_%d_%d PF_ADDR[0]=%d PF_ADDR[1]=%d Delay=0x%X",mc,mc+2*SAT,NN,bbbb,PF_ADDR[0],PF_ADDR[1],Delay);
+	}
+
+	average_delay = total_delay / num_addr;
+	MC_DEBUG2(("MC%d: Average delay is %d=%X for %d CS signals\n", mc, average_delay, average_delay, num_addr));
+
+	SAT=1;
+	NN=1;
+//	for(bbbb=0; bbbb < 12 ;bbbb++)
+//	{
+//		val = _B4(55,mc+2*SAT) | _B4(59,NN) | _B4(63,bbbb);
+//		if(!(val == 0x216 || val == 0x219 || val == 0x316 || val == 0x31A) )	// RESET
+//			DCRWritePriv(_DDR_MC_IOM_PHYWRITE(mc) + MC_IOM[SAT], _B8(39,NN) | _B8(47,bbbb) | _B16(63,average_delay));
+//	}
+
+	if(report)
+	//	MC_DEBUG2(("MC%d:	Left=%3d	Right=%3d	Window=%d\n",mc,side[0],side[1],window));
+		FW_RAS_printf(FW_RAS_INFO,"MC%d: Address Left=%d Right=%d Window=%d",mc,side[0],side[1],window);
+	ad_window[mc] = window;
+	ad_side[mc][0] = side[0];
+	ad_side[mc][1] = side[1];
+	return(window);
+}
+#endif
+
+
+#if 0
 /*----------------------------------------------------------------------------------------------------------------------------------------*/
 /*  Step xx. Dump Delays */
 /*----------------------------------------------------------------------------------------------------------------------------------------*/
@@ -1446,16 +1755,14 @@ void DDR_Init_Dump_Delays(unsigned num_ranks, unsigned *MC_IOM)
 			msg[8]=rr+'0';
 			for(chip=0; chip<18; chip++)
 			{
-				DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2], _B16(47,0x2004) | _B2(38,MC_Mapped_Rank(rr)) | _B4(42,chip%9));
-				Delay[chip] = 0xFFFF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2]);
+				Delay[chip] = Mem_IOM_Indirect_Read(0, (chip<9? i:i+2), _B16(47,0x2004) | _B2(38,MC_Mapped_Rank(rr)) | _B4(42,chip%9));
 			}
 			Mem_print_vector(Delay, msg, 18);
 
 		//	msg[25]='0';
 		//	for(chip=0; chip<18; chip++)
 		//	{
-		//		DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2], _B16(47,0x2000) | _B2(38,MC_Mapped_Rank(rr)) | _B4(42,chip%9));
-		//		Delay[chip] = 0xFFFF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2]);
+		//		Delay[chip] = Mem_IOM_Indirect_Read(0, (chip<9? i:i+2), _B16(47,0x2000) | _B2(38,MC_Mapped_Rank(rr)) | _B4(42,chip%9));
 		//	}
 		//	Mem_print_vector(Delay, msg, 18);
 
@@ -1467,8 +1774,7 @@ void DDR_Init_Dump_Delays(unsigned num_ranks, unsigned *MC_IOM)
 			msg[25]='S';
 			for(chip=0; chip<18; chip++)
 			{
-				DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2], _B16(47,0x6000) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,chip%9));
-				Delay[chip] = 0xFFFF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2]);
+				Delay[chip] = Mem_IOM_Indirect_Read(0, (chip<9? i:i+2), _B16(47,0x6000) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,chip%9));
 			}
 			Mem_print_vector(Delay, msg, 18);
 
@@ -1477,8 +1783,7 @@ void DDR_Init_Dump_Delays(unsigned num_ranks, unsigned *MC_IOM)
 			msg[15]='L';
 			for(chip=0; chip<18; chip++)
 			{
-				DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2], _B16(47,0x6001) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,chip%9));
-				Delay[chip] = 0xFFFF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2]);
+				Delay[chip] = Mem_IOM_Indirect_Read(0, (chip<9? i:i+2), _B16(47,0x6001) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,chip%9));
 			}
 			Mem_print_vector(Delay, msg, 18);
 		}
@@ -1488,21 +1793,20 @@ void DDR_Init_Dump_Delays(unsigned num_ranks, unsigned *MC_IOM)
 			msg[15]='Y';
 			for(chip=0; chip<18; chip++)
 			{
-				DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2], _B16(47,0x4000) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,chip%9));
-				Delay[chip] = 0xFFFF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2]);
+				Delay[chip] = Mem_IOM_Indirect_Read(0, (chip<9? i:i+2), _B16(47,0x4000) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,chip%9));
 			}
 			Mem_print_vector(Delay, msg, 18);
 
 			msg[25]='0';
 			for(chip=0; chip<18; chip++)
 			{
-				DCRWritePriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2], _B16(47,0x4008) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,chip%9));
-				Delay[chip] = 0xFFFF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(0) + MC_IOM[chip<9 ? i:i+2]);
+				Delay[chip] = Mem_IOM_Indirect_Read(0, (chip<9? i:i+2), _B16(47,0x4008) | _B3(38,IOM_RANK_RRR(rr)) | _B4(42,chip%9));
 			}
 			Mem_print_vector(Delay, msg, 18);
 		}
 	}
 }
+#endif
 
 
 /*----------------------------------------------------------------------------------------------------------------------------------------*/
@@ -1511,12 +1815,11 @@ void DDR_Init_Dump_Delays(unsigned num_ranks, unsigned *MC_IOM)
 
 
 #define NUM_RECAL_RETRY	4
-#define RECAL_WINDOW	2	// seconds
 #define	WAIT_MCMODE	40000
 
-void DDR_PHY_Recal(int mc)
+void DDR_PHY_Recal(int mc, unsigned recal_window)
 {
-	if ( TI_isDD1() || !PERS_ENABLED(PERS_ENABLE_DDRDynamicRecal) ) return;
+	if ( TI_isDD1() ) return;
 
 	struct DDRINIT_metrics ddr = { 0, };
 	void DDR_Init_CPC();
@@ -1529,7 +1832,7 @@ void DDR_PHY_Recal(int mc)
 	unsigned num_ranks = (val == 0xFF)? 8 : ((val == 0xF0)? 4 : ((val == 0xC0)? 2 : 1));
 
 	uint64_t previous_time = DCRReadPriv(_DDR_MC_MCAPERFMON2(0));	// 0: reset on RDCAL
-	if(previous_time < RECAL_WINDOW * 256000 * num_ranks)		// 256000 = 1000msec / 32msec * 8192
+	if(previous_time < recal_window * 256000 * num_ranks)		// 256000 = 1000msec / 32msec * 8192
 		return;
 
 	ddr.CL		= ((DCRReadPriv(_DDR_MC_IOM_FIFO_CNTL(mc)) & 0x1F) + 1) >> 1;	// CL = (IOM_RL + 1) / 2
@@ -1571,18 +1874,19 @@ void DDR_PHY_Recal(int mc)
 	}
 
 	if(caltry == NUM_RECAL_RETRY)
-	{
-		fw_uint64_t details[2];
-		details[0] = FW_RAS_DDR_INIT_IOM_CALIBRATION_FAILED;
-		details[1] = caltry;
-		fw_writeRASEvent( FW_RAS_DDR_INIT_WARNING, 2, details );
-	}
-	else if(caltry > 0) {
-		fw_uint64_t details[2];
-		details[0] = FW_RAS_DDR_INIT_IOM_CALIBRATION_RETRIED;
-		details[1] = caltry;
-		fw_writeRASEvent( FW_RAS_DDR_INIT_WARNING, 2, details );
-	}
+//	{
+//		fw_uint64_t details[2];
+//		details[0] = FW_RAS_DDR_INIT_IOM_CALIBRATION_FAILED;
+//		details[1] = caltry;
+//		fw_writeRASEvent( FW_RAS_DDR_INIT_WARNING, 2, details );
+		DDR_Cal_Error_Recovery(num_ranks, MC_IOM);
+//	}
+//	else if(caltry > 0) {
+//		fw_uint64_t details[2];
+//		details[0] = FW_RAS_DDR_INIT_IOM_CALIBRATION_RETRIED;
+//		details[1] = caltry;
+//		fw_writeRASEvent( FW_RAS_DDR_INIT_WARNING, 2, details );
+//	}
 
 	DCRWritePriv(_DDR_MC_MCFGP(mc), mcfgp);
 	DCRWritePriv(_DDR_MC_MCZMRINT(mc), mczmrint);
@@ -1593,16 +1897,272 @@ void DDR_PHY_Recal(int mc)
 
 	uint64_t time1 = GetTimeBase();
 
-	printf("DDR%d PHY was recalibrated: time taken = %ld usec. Previous cal was %ld.%ld seconds ago\n",
-		mc,(time1-time0)/1600,(long)previous_time/256000/num_ranks,(long)(previous_time/25600/num_ranks)%10);
+	if(recal_window > 0)
+		FW_RAS_printf( FW_RAS_INFO, "DDR%d PHY was recalibrated(%d): time taken = %ld usec. Previous cal was %ld.%ld seconds ago",
+		mc,caltry,(time1-time0)/1600,(long)previous_time/256000/num_ranks,(long)(previous_time/25600/num_ranks)%10);
 
 	DCRWritePriv(_DDR_MC_MCAPERFMONC0(0), _BN(32) | _B8(63,0xFF));
 }
+
 #undef	NUM_RECAL_RETRY
-#undef	RECAL_WINDOW
 #undef	WAIT_MCMODE
 
+/*----------------------------------------------------------------------------------------------------------------------------------------*/
+/*  Step uu. UE Diagnosis */	// Added 05/31/2012
+/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
+#define	WAIT_MCMODE	40000
+
+void DDR_UE_Diagnose(int mc)
+{
+	uint64_t mcfir	= DCRReadPriv(_DDR_MC_MCFIR(mc));
+
+	if( (mcfir & _BN(33)) == 0 )
+		return;
+
+	uint64_t mcradr	  = DCRReadPriv(_DDR_MC_MCRADR(mc));
+	uint64_t data[17];
+//	uint64_t MC_to_A2();
+	int i,k;
+
+
+#if 0	// read from L2 - masked as it causes hang due to A2-L2 UE
+
+	uint64_t val = DCRReadPriv(_DDR_MC_MCFGC0(0));
+	uint64_t memsize = val >> (63-8);
+	val = (val >> (63-12)) & 0xF;
+	unsigned dram_density = (val==6? 4 : (val==4? 2:1));
+	unsigned num_ranks = memsize / dram_density / 4;
+
+	uint64_t *ptr;
+
+	ptr = (uint64_t *)MC_to_A2(mcradr, num_ranks, dram_density);
+	for(i=0;i<16;i++)
+		data[i]=*(ptr+i);
+
+	for(k=0;k<4;k++)
+		FW_RAS_printf(FW_RAS_INFO,"PBUS READ_%d: 0x%016lx 0x%016lx 0x%016lx 0x%016lx", k, data[4*k+0], data[4*k+1], data[4*k+2], data[4*k+3]);
+#endif
+
+	uint64_t tvsense  = DCRReadPriv(0xc8510);
+
+	FW_RAS_printf(FW_RAS_INFO,"DDR%d UE: TV0=%d TV1=%d TV2=%d, Address=0x%016llx, Syndrome=0x%016llx", mc, (int)((tvsense >> (63-15)) & 0xFF)/2 - 90, (int)((tvsense >> (63-31)) & 0xFF)/2 - 90, (int)((tvsense >> (63-47)) & 0xFF)/2 - 90, mcradr, DCRReadPriv(_DDR_MC_MCRESY(mc)));
+
+	for(i=0;i<8;i++)
+	    FW_RAS_printf(FW_RAS_INFO,"MRKSTDTA[%d]=0x%016llx", i,DCRReadPriv(_DDR_MC_MRKSTDTA0(mc)+i));
+
+//	FW_RAS_printf(FW_RAS_INFO,"WRDATA_WINDOW=%d ADDR_WINDOW=%d (LEFT=%d RIGHT=%d)", wr_window[mc], ad_window[mc], ad_side[mc][0], ad_side[mc][1]);
+	FW_RAS_printf(FW_RAS_INFO,"SAT0: IMPEDANCE=0x%016lx ADDR_IMP=0x%016lx DATA_IMP=0x%016lx", DCRReadPriv(_DDR_MC_IOM_IO_IMPEDANCE(mc)+0x00), DCRReadPriv(_DDR_MC_IOM_ADDR_IMP(mc)+0x00), DCRReadPriv(_DDR_MC_IOM_DATA_IMP(mc)+0x00));
+	FW_RAS_printf(FW_RAS_INFO,"SAT1: IMPEDANCE=0x%016lx ADDR_IMP=0x%016lx DATA_IMP=0x%016lx", DCRReadPriv(_DDR_MC_IOM_IO_IMPEDANCE(mc)+0x40), DCRReadPriv(_DDR_MC_IOM_ADDR_IMP(mc)+0x40), DCRReadPriv(_DDR_MC_IOM_DATA_IMP(mc)+0x40));
+
+	
+	int pid=ProcessorID();
+
+	uint64_t mcfgp	  = DCRReadPriv(_DDR_MC_MCFGP(mc));
+	uint64_t mceccdis = DCRReadPriv(_DDR_MC_MCECCDIS(mc));
+
+	uint64_t threada0 = DCRReadPriv(TESTINT_DCR(THREAD_ACTIVE0_RB));
+	uint64_t threada1 = DCRReadPriv(TESTINT_DCR(THREAD_ACTIVE1_RB));
+	uint64_t threadx0 = threada0 & ( pid < 64 ? ~_BN(pid) : ~0 );
+	uint64_t threadx1 = threada1 & ( pid < 64 ? ~0 : ~_BN(pid-64) );
+
+	DCRWritePriv(TESTINT_DCR(THREAD_ACTIVE0)+2, threadx0);
+	DCRWritePriv(TESTINT_DCR(THREAD_ACTIVE1)+2, threadx1);
+
+	for(i=0; i<2; i++)  ppc_msync();
+
+	DelayTimeBase(WAIT_MCMODE);
+
+	DCRWritePriv(_DDR_MC_MCFGP(mc), 0);
+	Mem_wait_for_MC_idle(mc);
+	Mem_reserve_readbuffer(mc);
+
+	uint64_t writeLine[8]= {0x0000000000000000, 0xFFFFFFFFFFFFFFFF, 0x5555555555555555, 0xAAAAAAAAAAAAAAAA,
+				0xCCCCCCCCCCCCCCCC, 0x3333333333333333, 0xF0F0F0F0F0F0F0F0, 0x0F0F0F0F0F0F0F0F};
+
+	uint64_t address;
+	for(i=0; i<28+7; i++)
+	{
+		if(i==3 || i==19 || i==20)
+			continue;
+		DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(2) | _BN(7));
+		DCRWritePriv(_DDR_MC_MCECTL(mc), _B2(1,3) | _B1(2,1));
+		address = mcradr ^ (i<28 ? _BN(8+i) : (_BN(17+(i-28))|_BN(29+(i-28))));
+		DCRWritePriv(_DDR_MC_MCMACA(mc), address);
+		address = (address & _B4(3,0xF)) | (address << 4);
+		for(k=0;k<16;k++)
+		{
+			data[k] = (address & _B8(7+8*((k%8)/2),0xFF)) << (8*((k%8)/2));
+			data[k] |= data[k]>>8;
+			data[k] |= data[k]>>16;
+			data[k] |= data[k]>>32;
+		}
+		for(k=0;k<16;k++)
+		{
+			DCRWritePriv(_DDR_MC_MCDADR(mc), data[k]);
+			DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,k&0x3) | _B2(3,k>>2) | _BN(4));
+		}
+		DCRWritePriv(_DDR_MC_MCDADR(mc), address | (address>>32));
+		DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(0) | _BN(4) | _BN(5) | _BN(6));
+		while( ( DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60 ) != 0x2 );
+	}
+	address = (mcradr & _B4(3,0xF)) | (mcradr << 4);
+
+	DCRWritePriv(_DDR_MC_MCMACA(mc), mcradr);
+
+	for(i=0; i<5*16+4*28+4*7; i++)
+	{
+		DCRWritePriv(_DDR_MC_MCFIR(mc), mcfir & ~(_BN(35) | _BN(36)));	// 35: MAINT_CE  36: MAINT_UE
+
+		if(i==7 || i==15)
+			DCRWritePriv(_DDR_MC_MCECCDIS(mc), mceccdis);
+		else
+			DCRWritePriv(_DDR_MC_MCECCDIS(mc), mceccdis | _BN(8) | _BN(9));
+
+		if(i>=5*16 && i<5*16+4*28 && i%4==0)
+		{
+			DCRWritePriv(_DDR_MC_MCMACA(mc), mcradr^_BN(8+(i-5*16)/4));
+			FW_RAS_printf(FW_RAS_INFO,"ADDR[%d]=%016lx", (i-5*16)/4, mcradr^_BN(8+(i-5*16)/4));
+		}
+
+		if(i>=5*16+4*28 && i%4==0)
+		{
+			DCRWritePriv(_DDR_MC_MCMACA(mc), mcradr^(_BN(17+(i-5*16-4*28)/4) | _BN(29+(i-5*16-4*28)/4)));
+			FW_RAS_printf(FW_RAS_INFO,"ADDR[%d]=%016lx", (i-5*16)/4, mcradr^(_BN(17+(i-5*16-4*28)/4) | _BN(29+(i-5*16-4*28)/4)));
+		}
+
+		if(i>=16 && i<5*16 && i%4==0)
+		{
+			DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(2) | _BN(7));
+			for(k=0;k<8;k++)
+			{
+				DCRWritePriv(_DDR_MC_MCDADR(mc), writeLine[(i-16)/4<8 ? (i-16)/4 : (((i-16)/4+k/2)%8)]);
+				DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,k&0x3) | _B2(3,k>>2) | _BN(4));
+			}
+			for(k=8;k<16;k++)
+			{
+				data[k] = (address & _B8(7+8*((k%8)/2),0xFF)) << (8*((k%8)/2));
+				data[k] |= data[k]>>8;
+				data[k] |= data[k]>>16;
+				data[k] |= data[k]>>32;
+			}
+			for(k=8;k<16;k++)
+			{
+				DCRWritePriv(_DDR_MC_MCDADR(mc), data[k]);
+				DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,k&0x3) | _B2(3,k>>2) | _BN(4));
+			}
+			DCRWritePriv(_DDR_MC_MCDADR(mc), address | (address>>32));
+			DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(0) | _BN(4) | _BN(5) | _BN(6));
+			while( ( DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60 ) != 0x2 );
+		}
+
+		for(k=0;k<16;k++)
+		{
+			DCRWritePriv(_DDR_MC_MCDADR(mc), 0xEEEEEEEEEEEEEEEEull);
+			DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,k&0x3) | _B2(3,k>>2) | _BN(4));
+		}
+		DCRWritePriv(_DDR_MC_MCDADR(mc), 0xEEEEEEEEEEEEEEEEull);
+
+		DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(1));
+		DCRWritePriv(_DDR_MC_MCECTL(mc), _B2(1,3) | _B1(2,i%2));
+		DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(0) | _BN(4) | _BN(5) | _BN(6));
+		while( ( DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60 ) != 0x2 );
+
+		data[16] = DCRReadPriv(_DDR_MC_MCDADR(mc));
+		for(k=0;k<16;k++)
+		{
+			DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,k&0x3) | _B2(3,k>>2));
+			data[k] = DCRReadPriv(_DDR_MC_MCDADR(mc));
+		}
+
+		for(k=0;k<4;k++)
+		{
+			if(k==1+2*(i%2))
+			    FW_RAS_printf(FW_RAS_INFO,"READ[%d]_%d: 0x%016lx 0x%016lx 0x%016lx 0x%016lx 0x%016lx", i, k, data[4*k+0], data[4*k+1], data[4*k+2], data[4*k+3], data[16]);
+			else
+			    FW_RAS_printf(FW_RAS_INFO,"READ[%d]_%d: 0x%016lx 0x%016lx 0x%016lx 0x%016lx", i, k, data[4*k+0], data[4*k+1], data[4*k+2], data[4*k+3]);
+		}
+
+		if(i==7 || i==15)
+		{
+			if( (DCRReadPriv(_DDR_MC_MCFIR(mc)) & _BN(35)) != 0 )
+			    FW_RAS_printf(FW_RAS_INFO,"READ[%d] result: CE", i);
+			else if( (DCRReadPriv(_DDR_MC_MCFIR(mc)) & _BN(36)) != 0 )
+			    FW_RAS_printf(FW_RAS_INFO,"READ[%d] result: UE", i);
+			else
+			    FW_RAS_printf(FW_RAS_INFO,"READ[%d] result: No Error", i);
+			if(i==7)
+				DDR_PHY_Recal(mc, 0);
+		}
+	}
+
+#if 0
+	uint64_t mczmrint = DCRReadPriv(_DDR_MC_MCZMRINT(mc));
+	DCRWritePriv(_DDR_MC_MCZMRINT(mc), 0);
+	DCRWritePriv(_DDR_MC_MCECCDIS(mc), mceccdis | _BN(8) | _BN(9));
+
+	DDR_Init_Address_Cal(2, 0, mc, 1, writeLine, data);
+
+	DCRWritePriv(_DDR_MC_MCZMRINT(mc), mczmrint);
+#endif
+	DCRWritePriv(_DDR_MC_MCECCDIS(mc), mceccdis);
+	DCRWritePriv(_DDR_MC_MCFIR(mc), mcfir);
+	DCRWritePriv(_DDR_MC_MCFGP(mc), mcfgp);
+
+	DCRWritePriv(TESTINT_DCR(THREAD_ACTIVE0)+1, threadx0);
+	DCRWritePriv(TESTINT_DCR(THREAD_ACTIVE1)+1, threadx1);
+
+}
+#undef	WAIT_MCMODE
+
+/*----------------------------------------------------------------------------------------------------------------------------------------*/
+/*  Step mm. Marking Handler */
+/*----------------------------------------------------------------------------------------------------------------------------------------*/
+
+void DDR_Marking_Handler(int mc)
+{
+	if ( TI_isDD1() ) return;
+
+	uint64_t val = (DCRReadPriv(_DDR_MC_MCFGC0(mc)) >> (63-20)) & 0xFF;
+	unsigned num_ranks = (val == 0xFF)? 8 : ((val == 0xF0)? 4 : ((val == 0xC0)? 2 : 1));
+	unsigned marking[7];
+	int match;
+
+	int i, k;
+	for(i=0; i<num_ranks; i++)
+	{
+		if( (DCRReadPriv(_DDR_MC_MRKSTDTA0(mc)+i+num_ranks) >> 48) == 0xFFFF)
+			continue;
+		if((marking[0] = ((DCRReadPriv(_DDR_MC_MRKSTDTA0(mc)+i) >> 56) & 0xFF)) != 0)
+		{
+			match=1;
+			for(k=1; i+(k+1)/2*num_ranks < 8; k++)
+			{
+				if((marking[k] = ((DCRReadPriv(_DDR_MC_MRKSTDTA0(mc)+i+(k+1)/2*num_ranks) >> (k%2==0? 48:56)) & 0xFF)) != marking[0])
+				{
+					match=0;
+					break;
+				}
+			}
+			if(match)
+			{
+				FW_Warning("MC%d Rank%d Marking (0x%X) Has Been Frozen.", mc, i, marking[0]);	// ==> Warning
+				DCRWritePriv(_DDR_MC_MRKSTDTA0(mc)+i+num_ranks, _B16(15,0xFFFF));
+			}
+			else
+			{
+				for(k=1; i+(k+1)/2*num_ranks < 8; k+=2)
+				{
+					DCRWritePriv(_DDR_MC_MRKSTDTA0(mc)+i+(k+1)/2*num_ranks, _B8(7,marking[k-1]) | _B8(15,marking[k]));
+				}
+				DCRWritePriv(_DDR_MC_MRKSTDTA0(mc)+i, 0);
+				if ( PERS_ENABLED(PERS_ENABLE_DiagnosticsMode) ) FW_RAS_printf(FW_RAS_INFO,"MC%d Rank%d Marking (0x%X) was Reset.", mc, i, marking[0]);
+			}
+		}
+	}
+}
+
+#if 0	// commenting out because not used
 /*----------------------------------------------------------------------------------------------------------------------------------------*/
 /*  Step zz. Refresh Speedup */
 /*----------------------------------------------------------------------------------------------------------------------------------------*/
@@ -1642,15 +2202,15 @@ void DDR_Refresh_Speedup(int mc)
 	DCRWritePriv(_DDR_MC_MCZMRINT(mc), (mczmrint & ~_B10(43,0x3FF)) | _B10(43,ref_rate - 1));
 	int tREFI = ref_rate*2000*32*num_ranks/dram_speed;
 
-	FW_Warning("DDR%d Refresh interval was adjusted to %d (%d.%d%d usec). Previous ReCal was %ld usec ago, and previous RefSU was %ld sec ago\n",
+	FW_RAS_printf(FW_RAS_INFO,"DDR%d Refresh interval was adjusted to %d (%d.%d%d usec). Previous ReCal was %ld usec ago, and previous RefSU was %ld sec ago",
 		mc,ref_rate,tREFI/1000,(tREFI/100)%10,(tREFI/10)%10,(long)previous_ReCal*1000/256/num_ranks,(long)previous_RefSU/256000/num_ranks);
 
 	if(ref_rate <= ref_min)
-		FW_Warning("DDR%d Refresh interval hit the minimum %d (%d.%d%d usec)\n", mc, ref_rate, tREFI/1000, (tREFI/100)%10, (tREFI/10)%10);
+	    FW_RAS_printf(FW_RAS_INFO,"DDR%d Refresh interval hit the minimum %d (%d.%d%d usec)", mc, ref_rate, tREFI/1000, (tREFI/100)%10, (tREFI/10)%10);
 
 	DCRWritePriv(_DDR_MC_MCAPERFMONC0(1), _BN(32) | _B8(63,0xFF));
 }
-
+#endif
 
 #undef	WAIT_CAL_CPC
 #undef	WAIT_CAL_FWL

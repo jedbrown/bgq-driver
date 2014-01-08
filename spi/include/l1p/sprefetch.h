@@ -41,7 +41,7 @@ __BEGIN_DECLS
  */
 __INLINE__ int L1P_GetStreamAdaptiveMode(int* adaptiveState)
 {
-    *adaptiveState = _G1(59, *((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR)));
+    *adaptiveState = _G1(59, *((uint64_t*)(Kernel_L1pBaseAddress() + L1P_CFG_PF_USR_ADJUST)));
     return 0;
 }
 

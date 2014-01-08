@@ -29,26 +29,19 @@ TOP_DIR=hlcs
 # Location of the python scripts to build headers
 XMLSCRIPT_DIR=$(BGQ_INSTALL_DIR)/xml/scripts
 
-CXXFLAGS += $(DEBUG_FLAGS)
-CXXFLAGS += -Wall -g -Wno-format-y2k
-CXXFLAGS += -I$(BGQ_INSTALL_DIR)
-CXXFLAGS += -I$(BGQ_INSTALL_DIR)/utility/include
-CXXFLAGS += -I$(BGQ_INSTALL_DIR)/bgq_util/include
-CXXFLAGS += -I$(BGQ_INSTALL_DIR)/utility/include/cxxsockets
-CXXFLAGS += -I$(BGQ_INSTALL_DIR)/xml/include/library
-CXXFLAGS += -I$(BGQ_INSTALL_DIR)/hlcs/include/c_api
-CXXFLAGS += -fPIC
+CXXFLAGS += -Wall -Wno-format-y2k
+CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)
+CXXFLAGS += -O2
+CXXFLAGS += -fpic
 
 CXXFLAGS_64 += -m64
 
 INSTALL_DIR=$(BGQ_INSTALL_DIR)/hlcs/include/c_api
 BGMASTER_PROTOCOL_DIR=../../../include/master/protocol/
-IDLC = $(XMLSCRIPT_DIR)/generateCode.py --dir $(INSTALL_DIR)
-XML_DEFS = $(wildcard $(BGMASTER_PROTOCOL_DIR)*.xml)
-C_API_H  = $(wildcard $(BGQ_INSTALL_DIR)/xml/include/c_api/*.h)
+IDLC = $(XMLSCRIPT_DIR)/generateCode.py --dir .
+XML_DEFS = $(wildcard *.xml)
+C_API_H  = $(addsuffix .h, $(basename $(notdir $(XML_DEFS))))
 C_API_CC = $(addsuffix .cc, $(basename $(notdir $(XML_DEFS))))
-LOCAL_H  = $(wildcard *h)
-INSTALL_TARGETS = $(addprefix $(BGQ_INSTALL_DIR)/xml/include/c_api/, $(LOCAL_H))
 
 compile-cmd = g++ $(CXXFLAGS) $1 -o $@ -c $<
 
@@ -66,28 +59,23 @@ endif
 SRCS=$(C_API_CC)
 OBJS64   = $(SRCS:%.cc=%.o)
 
-api:
-	@echo $(INSTALL_TARGETS)
-
 xml:
 	@echo $(XML_DEFS)
 
 $(INSTALL_DIR):
 	$(MKDIR) -p $(INSTALL_DIR)
 
-$(INSTALL_TARGETS): $(LOCAL_H)
-	$(CP) $(notdir $@) $@
-
-install: $(INSTALL_DIR) $(INSTALL_TARGETS)
+install: all
 
 all: $(C_API_CC) $(OBJS64) 
 
-TEST_LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
-
 $(C_API_CC): $(C_API_H) $(XML_DEFS)
 
-%.cc: $(BGMASTER_PROTOCOL_DIR)/%.xml
-	$(IDLC) --cimpl $(BGMASTER_PROTOCOL_DIR)/$(basename $@).xml
+%.h: %.xml
+	$(IDLC) --cheader $<
+
+%.cc: %.xml
+	$(IDLC) --cimpl $<
 
 clean:
 	rm -rf *o *o_64 *.d *~ BGMaster*[cch] \#* $(INSTALL_TARGETS)

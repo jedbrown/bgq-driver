@@ -40,7 +40,6 @@
 #include <errno.h>
 #include <stdio.h>
 
-#define EINTR_ENABLE
 //#define ENABLETIMERS
 
 using namespace bgcios::toolctl;
@@ -129,6 +128,10 @@ int ToolController::startup(uint32_t serviceId)
     sysiodPath << _workDirectory << bgcios::SysioCommandChannelName << "." << _serviceId;
     _sysiodCmdChannelPath = sysiodPath.str();
 
+    // Set path to the stiod command channel.
+    std::ostringstream stdiodPath;
+    stdiodPath << _workDirectory << bgcios::StdioCommandChannelName;
+    _stdiodCmdChannelPath = stdiodPath.str();
 
     // Create the command channel socket.
     try
@@ -362,13 +365,12 @@ void ToolController::eventMonitor(void)
         // There was no data. We timed out.
         if (rc == 0)
         {
-#ifdef EINTR_ENABLE
             // If we are waiting for an ACK, we could be in a situation where the compute node is stuck 
             // in a function shipping syscall.  Send a message to sysiod over the command channel to 
             // break the compute node out of  any blocking IO operation that is not completing. 
             if (_waitingForAck && ((int32_t)_waitingForAckRank >= 0) && !_interruptMsgSent)
             {
-                // Build and send the Interrupt message.
+                // Build and send the Interrupt message to sysiod
                 bgcios::iosctl::InterruptMessage interruptMsg;
                 interruptMsg.header.service = bgcios::ToolctlService;
                 interruptMsg.header.version = bgcios::toolctl::ProtocolVersion;
@@ -381,13 +383,21 @@ void ToolController::eventMonitor(void)
                 interruptMsg.header.jobId = _waitingForAckJobID;
                 interruptMsg.signo = 0;
                 int err = sendToCommandChannel(_sysiodCmdChannelPath, &interruptMsg);
-                _interruptMsgSent = true;
                 if (err != 0)
                 {
                     LOG_ERROR_MSG("Job " << _waitingForAckJobID << ": error sending Interrupt message to '" << _sysiodCmdChannelPath << "': " << bgcios::errorString(err));
                 }
+                // Send the Interrupt message to stiod. This is done to interrupt a potential stdin operation
+                interruptMsg.signo = 0;
+                err = sendToCommandChannel(_stdiodCmdChannelPath, &interruptMsg);
+                if (err != 0)
+                {
+                    LOG_ERROR_MSG("Job " << _waitingForAckJobID << ": error sending Interrupt message to '" << _sysiodCmdChannelPath << "': " << bgcios::errorString(err));
+                }
+
+                _interruptMsgSent = true;
+
             }
-#endif
             continue;
         }
 
@@ -800,7 +810,7 @@ void ToolController::completionChannelHandler(void)
                     }
                     else
                     {
-                        LOG_CIOS_WARN_MSG("Job " << inMsg->header.jobId << ": tool " << inMsg->toolId << " is not attached when handling " << toString(inMsg->header.type) <<
+                        LOG_CIOS_INFO_MSG("Job " << inMsg->header.jobId << ": tool " << inMsg->toolId << " is not attached when handling " << toString(inMsg->header.type) <<
                                           " message from rank " << inMsg->header.rank);
                         _waitingForAck = false;
 

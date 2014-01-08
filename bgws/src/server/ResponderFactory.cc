@@ -139,66 +139,66 @@ AbstractResponder::Ptr createResponder( AbstractResponder::CtorArgs& a )
 }
 
 
-static MatcherToCreators createMatcherToCreators()
-{
-    MatcherToCreators ret;
-
-    ret.push_back( MatcherToCreator( &responder::Alert::matchesUrl, &(createResponder<responder::Alert>) ) );
-    ret.push_back( MatcherToCreator( &responder::Alerts::matchesUrl, &(createResponder<responder::Alerts>) ) );
-    ret.push_back( MatcherToCreator( &responder::BgwsServer::matchesUrl, &(createResponder<responder::BgwsServer>) ) );
-    ret.push_back( MatcherToCreator( &responder::Block::matchesUrl, &(createResponder<responder::Block>) ) );
-    ret.push_back( MatcherToCreator( &responder::Blocks::matchesUrl, &(createResponder<responder::Blocks>) ) );
-    ret.push_back( MatcherToCreator( &responder::HardwareReplacements::matchesUrl, &(createResponder<responder::HardwareReplacements>) ) );
-    ret.push_back( MatcherToCreator( &responder::diagnostics::Block::matchesUrl, &(createResponder<responder::diagnostics::Block>) ) );
-    ret.push_back( MatcherToCreator( &responder::diagnostics::Blocks::matchesUrl, &(createResponder<responder::diagnostics::Blocks>) ) );
-    ret.push_back( MatcherToCreator( &responder::diagnostics::Locations::matchesUrl, &(createResponder<responder::diagnostics::Locations>) ) );
-    ret.push_back( MatcherToCreator( &responder::diagnostics::Run::matchesUrl, &(createResponder<responder::diagnostics::Run>) ) );
-    ret.push_back( MatcherToCreator( &responder::diagnostics::Runs::matchesUrl, &(createResponder<responder::diagnostics::Runs>) ) );
-    ret.push_back( MatcherToCreator( &responder::diagnostics::Testcases::matchesUrl, &(createResponder<responder::diagnostics::Testcases>) ) );
-    ret.push_back( MatcherToCreator( &responder::Job::matchesUrl, &(createResponder<responder::Job>) ) );
-    ret.push_back( MatcherToCreator( &responder::Jobs::matchesUrl, &(createResponder<responder::Jobs>) ) );
-    ret.push_back( MatcherToCreator( &responder::Logging::matchesUrl, &(createResponder<responder::Logging>) ) );
-    ret.push_back( MatcherToCreator( &responder::PerformanceMonitoring::matchesUrl, &(createResponder<responder::PerformanceMonitoring>) ) );
-    ret.push_back( MatcherToCreator( &responder::Ras::matchesUrl, &(createResponder<responder::Ras>) ) );
-    ret.push_back( MatcherToCreator( &responder::RasDetails::matchesUrl, &(createResponder<responder::RasDetails>) ) );
-    ret.push_back( MatcherToCreator( &responder::ServiceAction::matchesUrl, &(createResponder<responder::ServiceAction>) ) );
-    ret.push_back( MatcherToCreator( &responder::ServiceActions::matchesUrl, &(createResponder<responder::ServiceActions>) ) );
-    ret.push_back( MatcherToCreator( &responder::Session::matchesUrl, &(createResponder<responder::Session>) ) );
-    ret.push_back( MatcherToCreator( &responder::Sessions::matchesUrl, &(createResponder<responder::Sessions>) ) );
-    ret.push_back( MatcherToCreator( &responder::environmentals::BulkPower::matchesUrl, &(createResponder<responder::environmentals::BulkPower>) ) );
-    ret.push_back( MatcherToCreator( &responder::environmentals::Coolant::matchesUrl, &(createResponder<responder::environmentals::Coolant>) ) );
-    ret.push_back( MatcherToCreator( &responder::environmentals::Fan::matchesUrl, &(createResponder<responder::environmentals::Fan>) ) );
-    ret.push_back( MatcherToCreator( &responder::environmentals::IoCard::matchesUrl, &(createResponder<responder::environmentals::IoCard>) ) );
-    ret.push_back( MatcherToCreator( &responder::environmentals::LinkChip::matchesUrl, &(createResponder<responder::environmentals::LinkChip>) ) );
-    ret.push_back( MatcherToCreator( &responder::environmentals::Node::matchesUrl, &(createResponder<responder::environmentals::Node>) ) );
-    ret.push_back( MatcherToCreator( &responder::environmentals::NodeCard::matchesUrl, &(createResponder<responder::environmentals::NodeCard>) ) );
-    ret.push_back( MatcherToCreator( &responder::environmentals::Optical::matchesUrl, &(createResponder<responder::environmentals::Optical>) ) );
-    ret.push_back( MatcherToCreator( &responder::environmentals::ServiceCard::matchesUrl, &(createResponder<responder::environmentals::ServiceCard>) ) );
-    ret.push_back( MatcherToCreator( &responder::environmentals::ServiceCardTemp::matchesUrl, &(createResponder<responder::environmentals::ServiceCardTemp>) ) );
-    ret.push_back( MatcherToCreator( &responder::hardware::Machine::matchesUrl, &(createResponder<responder::hardware::Machine>) ) );
-    ret.push_back( MatcherToCreator( &responder::hardware::Hardware::matchesUrl, &(createResponder<responder::hardware::Hardware>) ) );
-    ret.push_back( MatcherToCreator( &responder::summary::Jobs::matchesUrl, &(createResponder<responder::summary::Jobs>) ) );
-    ret.push_back( MatcherToCreator( &responder::summary::Machine::matchesUrl, &(createResponder<responder::summary::Machine>) ) );
-    ret.push_back( MatcherToCreator( &responder::summary::Ras::matchesUrl, &(createResponder<responder::summary::Ras>) ) );
-    ret.push_back( MatcherToCreator( &responder::summary::System::matchesUrl, &(createResponder<responder::summary::System>) ) );
-    ret.push_back( MatcherToCreator( &responder::summary::Utilization::matchesUrl, &(createResponder<responder::summary::Utilization>) ) );
-
-    return ret;
-}
-
-
 static CreateResponderFn calcCreateResponderFn( const capena::http::uri::Path& requested_resource )
 {
-    static MatcherToCreators matcher_to_creator = createMatcherToCreators();
+    // This function returns a function to create the responder for the requested resource, if there is one, or a null function.
+
+    static const MatcherToCreators matcher_to_creator = MatcherToCreators {
+            MatcherToCreator( &responder::Alert::matchesUrl, &(createResponder<responder::Alert>) ),
+            MatcherToCreator( &responder::Alerts::matchesUrl, &(createResponder<responder::Alerts>) ),
+            MatcherToCreator( &responder::BgwsServer::matchesUrl, &(createResponder<responder::BgwsServer>) ),
+            MatcherToCreator( &responder::Block::matchesUrl, &(createResponder<responder::Block>) ),
+            MatcherToCreator( &responder::Blocks::matchesUrl, &(createResponder<responder::Blocks>) ),
+            MatcherToCreator( &responder::HardwareReplacements::matchesUrl, &(createResponder<responder::HardwareReplacements>) ),
+            MatcherToCreator( &responder::Job::matchesUrl, &(createResponder<responder::Job>) ),
+            MatcherToCreator( &responder::Jobs::matchesUrl, &(createResponder<responder::Jobs>) ),
+            MatcherToCreator( &responder::Logging::matchesUrl, &(createResponder<responder::Logging>) ),
+            MatcherToCreator( &responder::PerformanceMonitoring::matchesUrl, &(createResponder<responder::PerformanceMonitoring>) ),
+            MatcherToCreator( &responder::Ras::matchesUrl, &(createResponder<responder::Ras>) ),
+            MatcherToCreator( &responder::RasDetails::matchesUrl, &(createResponder<responder::RasDetails>) ),
+            MatcherToCreator( &responder::ServiceAction::matchesUrl, &(createResponder<responder::ServiceAction>) ),
+            MatcherToCreator( &responder::ServiceActions::matchesUrl, &(createResponder<responder::ServiceActions>) ),
+            MatcherToCreator( &responder::Session::matchesUrl, &(createResponder<responder::Session>) ),
+            MatcherToCreator( &responder::Sessions::matchesUrl, &(createResponder<responder::Sessions>) ),
+
+            MatcherToCreator( &responder::diagnostics::Block::matchesUrl, &(createResponder<responder::diagnostics::Block>) ),
+            MatcherToCreator( &responder::diagnostics::Blocks::matchesUrl, &(createResponder<responder::diagnostics::Blocks>) ),
+            MatcherToCreator( &responder::diagnostics::Locations::matchesUrl, &(createResponder<responder::diagnostics::Locations>) ),
+            MatcherToCreator( &responder::diagnostics::Run::matchesUrl, &(createResponder<responder::diagnostics::Run>) ),
+            MatcherToCreator( &responder::diagnostics::Runs::matchesUrl, &(createResponder<responder::diagnostics::Runs>) ),
+            MatcherToCreator( &responder::diagnostics::Testcases::matchesUrl, &(createResponder<responder::diagnostics::Testcases>) ),
+
+            MatcherToCreator( &responder::environmentals::BulkPower::matchesUrl, &(createResponder<responder::environmentals::BulkPower>) ),
+            MatcherToCreator( &responder::environmentals::Coolant::matchesUrl, &(createResponder<responder::environmentals::Coolant>) ),
+            MatcherToCreator( &responder::environmentals::Fan::matchesUrl, &(createResponder<responder::environmentals::Fan>) ),
+            MatcherToCreator( &responder::environmentals::IoCard::matchesUrl, &(createResponder<responder::environmentals::IoCard>) ),
+            MatcherToCreator( &responder::environmentals::LinkChip::matchesUrl, &(createResponder<responder::environmentals::LinkChip>) ),
+            MatcherToCreator( &responder::environmentals::Node::matchesUrl, &(createResponder<responder::environmentals::Node>) ),
+            MatcherToCreator( &responder::environmentals::NodeCard::matchesUrl, &(createResponder<responder::environmentals::NodeCard>) ),
+            MatcherToCreator( &responder::environmentals::Optical::matchesUrl, &(createResponder<responder::environmentals::Optical>) ),
+            MatcherToCreator( &responder::environmentals::ServiceCard::matchesUrl, &(createResponder<responder::environmentals::ServiceCard>) ),
+            MatcherToCreator( &responder::environmentals::ServiceCardTemp::matchesUrl, &(createResponder<responder::environmentals::ServiceCardTemp>) ),
+
+            MatcherToCreator( &responder::hardware::Machine::matchesUrl, &(createResponder<responder::hardware::Machine>) ),
+            MatcherToCreator( &responder::hardware::Hardware::matchesUrl, &(createResponder<responder::hardware::Hardware>) ),
+
+            MatcherToCreator( &responder::summary::Jobs::matchesUrl, &(createResponder<responder::summary::Jobs>) ),
+            MatcherToCreator( &responder::summary::Machine::matchesUrl, &(createResponder<responder::summary::Machine>) ),
+            MatcherToCreator( &responder::summary::Ras::matchesUrl, &(createResponder<responder::summary::Ras>) ),
+            MatcherToCreator( &responder::summary::System::matchesUrl, &(createResponder<responder::summary::System>) ),
+            MatcherToCreator( &responder::summary::Utilization::matchesUrl, &(createResponder<responder::summary::Utilization>) )
+        };
+
+    static const CreateResponderFn NO_CREATOR = CreateResponderFn();
 
 
-    for ( MatcherToCreators::iterator i(matcher_to_creator.begin()) ; i != matcher_to_creator.end() ; ++i ) {
-        MatchesUrlFn &muf(i->first);
+    for ( MatcherToCreators::const_iterator i(matcher_to_creator.begin()) ; i != matcher_to_creator.end() ; ++i ) {
+        const MatchesUrlFn &muf(i->first);
         if ( muf( requested_resource ) ) {
             return i->second;
         }
     }
-    return CreateResponderFn();
+    return NO_CREATOR;
 }
 
 }
@@ -238,7 +238,9 @@ capena::server::ResponderPtr ResponderFactory::createResponder(
 {
     LOG_DEBUG_MSG( "Creating responder for " << request_ptr->getUrl().getPath() << " conn_user_type=" << conn_user_type );
 
-    DynamicConfiguration::ConstPtr config_ptr(_dynamic_configuration_ptr);
+    DynamicConfiguration::ConstPtr config_ptr(_dynamic_configuration_ptr); // Make copy of current config for the request.
+
+    // Figure out which resource was requested, given the request path. e.g., /bg/blocks -> /blocks.
 
     capena::http::uri::Path requested_resource;
 
@@ -248,6 +250,8 @@ capena::server::ResponderPtr ResponderFactory::createResponder(
             &requested_resource
         );
 
+    // Figure out the requester's user info, e.g., if there's a session, the user for the session; anonymous administrator; etc.
+
     SessionPtr session_ptr;
 
     UserInfo user_info(_calcRequestUser(
@@ -255,6 +259,9 @@ capena::server::ResponderPtr ResponderFactory::createResponder(
             conn_user_type,
             &session_ptr
         ));
+
+
+    // This gathers up all the objects a responder might need. The responder can extract what it needs from here.
 
     AbstractResponder::CtorArgs responder_ctor_args(
             request_ptr,
@@ -273,6 +280,10 @@ capena::server::ResponderPtr ResponderFactory::createResponder(
             _teal
         );
 
+
+    // Now we create the responder! e.g., the responder::Blocks responder.
+    // (Or, if the path wasn't one we know about, we don't create one.)
+
     capena::server::ResponderPtr ret(
             _createResponderForResource(
                         requested_resource,
@@ -288,8 +299,7 @@ capena::server::ResponderPtr ResponderFactory::createResponder(
             ) );
     }
 
-    // Won't get here if ret is NULL!
-    return ret;
+    return ret; // Does not return NULL.
 }
 
 
@@ -299,12 +309,15 @@ void ResponderFactory::_calcRequestedResource(
         capena::http::uri::Path* requested_resource_out
     )
 {
-    // Check if path_base is start of request_path, if not, shouldn't have gotten here because apache or bgws are misconfigured.
+    // This function
+    // 1) Checks if request_path (/bg/blocks or whatever) is under path_base (/bg), if not, throws exception.
+    // 2) Calculates the resource path (the part of the request path not under path_base (/blocks or whatever).
+
 
     const capena::http::uri::Path &path_base(config_ptr->getPathBase());
 
     if ( ! request_path.isDescendantOf( path_base ) ) {
-        // The request isn't under /bg, return 404 Not Found.
+        // The request isn't under path_base (/bg), return 404 Not Found.
 
         BOOST_THROW_EXCEPTION( Error( string() +
                 "unexpected request path '" + request_path.toString() + "' not under " + path_base.toString(),
@@ -328,7 +341,7 @@ UserInfo ResponderFactory::_calcRequestUser(
     )
 {
     // If session is in header, check if is valid, if is valid then request user is the session user.
-    // If connected with command certificate then user is in X-Bgws-User-Id header.
+    // If connected with command certificate then user must be in X-Bgws-User-Id header, otherwise throws BadRequest.
     // If connected with administrative certificate, then X-Bgws-User-Id is optional, if present, use it, otherwise use root.
     // Otherwise, no user, so use Nobody.
 
@@ -426,6 +439,13 @@ bgq::utility::UserId::ConstPtr ResponderFactory::_getUserIdFromRequestHeader(
         capena::server::RequestPtr request_ptr
     ) const
 {
+    // The X-Bgws-User-Id header can be sent on the request and contains a UserId (serialized and base-64 encoded).
+    // The command clients (list_jobs, etc) use this to pass the user that called it.
+
+    // This function checks if there's a X-Bgws-User-Id header in the request;
+    // if there isn't, returns a NULL Ptr.
+    // Otherwise, does base 64 decode, returns UserId ptr.
+
     static const std::string USER_ID_HEADER_NAME_NORM("X-BGWS-USER-ID");
 
     capena::server::Headers::const_iterator user_id_header_i(request_ptr->getHeaders().find( USER_ID_HEADER_NAME_NORM ));
@@ -438,6 +458,7 @@ bgq::utility::UserId::ConstPtr ResponderFactory::_getUserIdFromRequestHeader(
 
     utility::Bytes user_id_bytes(utility::base64::decode( user_id_base64 ));
 
+    // Conversion because UserId class requires parameter in different container.
     std::vector<char> user_id_buf( user_id_bytes.begin(), user_id_bytes.end() );
 
     bgq::utility::UserId::Ptr user_id_ptr( new bgq::utility::UserId( user_id_buf ) );

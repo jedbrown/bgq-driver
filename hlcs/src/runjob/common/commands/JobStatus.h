@@ -127,6 +127,7 @@ public:
     public:
         IoConnection() :
             _location( 0 ),
+            _computes( 0 ),
             _drained( false ),
             _killed( false ),
             _ended( false ),

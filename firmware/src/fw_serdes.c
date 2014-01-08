@@ -130,16 +130,14 @@ typedef uint32_t dcr_addr_t;
 typedef uint16_t rcb_val_t;
 typedef uint32_t rcb_addr_t;
 
-static int rcb_debug_level = 0; // delete?
-
 static dcr_val_t dcr_rcconfig_l_shad     = 0;
 static dcr_val_t dcr_rcconfig_l_shad_act = 0;
 static dcr_val_t dcr_rcconfig_r_shad     = 0;
 static dcr_val_t dcr_rcconfig_r_shad_act = 0;
 
-static unsigned exclude_link = 99;
-static unsigned suppress_bcast_left  = 0;
-static unsigned suppress_bcast_right = 0;
+//static unsigned exclude_link = 99;
+//static unsigned suppress_bcast_left  = 0;
+//static unsigned suppress_bcast_right = 0;
 
 struct rc_init_addr_t {
 	dcr_addr_t combine;
@@ -303,57 +301,21 @@ void rcb_addr_write(rcb_addr_t addr, rcb_val_t value)
 	reg           = (dcr_addr_t) (addr & 0xff);
 	target_link   = (addr & 0x0fff0000) >> 16;
 	rcbus_config  = 0xffffff00 & addr;
-	rcb_debug_2("addr_write: addr=%xh target_link=%xh", addr, target_link);
 
 	/* determine and setup target links */
 	if (target_link == 0xfff) {
-		/* -----------Broadcast write----------- */
-		rcb_debug("addr_write: broadcast");
-
-		/* 
-		 * check left side, if bcast suppression then init
-		 * the links manually, links may be deleted later
-		 * based on exclude_link
-		 */
-		if (0 == suppress_bcast_left)  {
-			bcast_left = 1;
-		} else {
-			rcb_debug("addr_write: suppress_bcast_left");
-			ucast_left = 1; //switch to ucast writes
-			link[0]    = 1;
-			link[1]    = 1;
-			link[2]    = 1;
-		}
-
-		/* check right side */
-		if (0 == suppress_bcast_right) {
-			bcast_right = 1;
-		} else {
-			rcb_debug("addr_write: suppress_bcast_right");
-			ucast_right = 1; //switch to ucast writes
-			link[3]     = 1;
-			link[4]     = 1;
-			link[5]     = 1;
-		}
-
-		/* now check exclude_link, gets set in any case
-		 * only relevant if any suppressed links
-		 */
-		if (exclude_link < 6) {
-			rcb_debug_1("addr_write: excluded link=%d", exclude_link);
-			link[exclude_link] = 99;
-		}
-
+	    bcast_left = 1;
+	    bcast_right = 1;
 	} else if (target_link < 6) {
-		/* -----------Unicast write----------- */
-		if ((addr & 0x00ff0000) < 0x00030000) {
-			rcb_debug("addr_write: unicast left");
-			ucast_left  = 1;
-		} else {
-			rcb_debug("addr_write: unicast right");
-			ucast_right = 1;
-		}
-		link[target_link] = 1;
+	    /* -----------Unicast write----------- */
+	    if ((addr & 0x00ff0000) < 0x00030000) {
+		rcb_debug("addr_write: unicast left");
+		ucast_left  = 1;
+	    } else {
+		rcb_debug("addr_write: unicast right");
+		ucast_right = 1;
+	    }
+	    link[target_link] = 1;
 	} else {
 	    FW_Error("RCB Bug [%s:%d]", __func__, __LINE__);
 	    Terminate(-1);
@@ -361,8 +323,8 @@ void rcb_addr_write(rcb_addr_t addr, rcb_val_t value)
 
 	/* now process the writes */
 	if (bcast_left) {
-		rcb_set_config_left(99, rcbus_config);
-		DCRWritePriv(reg | SERDES_LEFT_DCR(RCBUS), value);
+	    rcb_set_config_left(99, rcbus_config);
+	    DCRWritePriv(reg | SERDES_LEFT_DCR(RCBUS), value);
 	}
 
 	if (bcast_right) {
@@ -401,46 +363,6 @@ void rcb_addr_write(rcb_addr_t addr, rcb_val_t value)
  ##############################################################################
  */
 
-/*-----------------------------------
- * rcb_set_debug_level 0, 1
- *-----------------------------------*/
-void rcb_set_debug_level(int level)
-{
-	if (level > 0) {
-		rcb_debug_level = 1;
-	} else {
-		rcb_debug_level = 0;
-	}
-}
-
-/*-----------------------------------
- * rcb_set_excluded_link
- *-----------------------------------*/
-void rcb_set_excluded_link(int link)
-{
-	exclude_link = link;
-
-	if (link > 2) {
-		suppress_bcast_left  = 0;
-		suppress_bcast_right = 1;
-	} else {
-		suppress_bcast_left  = 1;
-		suppress_bcast_right = 0;
-	}
-	rcb_debug_1("exclude link %d", link);
-}
-
-/*-----------------------------------
- * rcb_clear_excluded_link
- *-----------------------------------*/
-void rcb_clear_excluded_link(unsigned int link)
-{
-	/* only support one excluded link */
-	exclude_link = 99;
-	suppress_bcast_left  = 0;
-	suppress_bcast_right = 0;
-	return;
-}
 
 /*-----------------------------------
  * rcb_read

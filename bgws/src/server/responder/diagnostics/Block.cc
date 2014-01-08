@@ -145,11 +145,11 @@ capena::http::uri::Path Block::calcUri(
 }
 
 
-void Block::doGet()
+void Block::_doGet()
 {
 
     if ( ! _userHasHardwareRead() ) {
-        LOG_WARN_MSG( "Could not get diagnostics block because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not get diagnostics block because " << _getRequestUserInfo() << " doesn't have authority." );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get diagnostics block because the user doesn't have authority.",
@@ -160,7 +160,7 @@ void Block::doGet()
         return;
     }
 
-    const string &block_id(getRequestedResourcePath().back());
+    const string &block_id(_getRequestedResourcePath().back());
 
     LOG_DEBUG_MSG( "block id is '" << block_id << "'" );
 
@@ -366,7 +366,7 @@ void Block::doGet()
 
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();

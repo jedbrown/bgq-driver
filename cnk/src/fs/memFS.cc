@@ -101,6 +101,8 @@ int memFS::setupJob(int fs)
 uint64_t memFS::chdir(const char *path)
 {
     uint64_t rc;
+    AppProcess_t *app = GetMyProcess();
+    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
 
     // Allow a "change" to the same directory.
     if (strncmp(path, ".", MIN(APP_MAX_PATHNAME, sizeof("."))) == 0) {

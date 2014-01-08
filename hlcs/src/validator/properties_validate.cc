@@ -29,11 +29,13 @@
 #include <utility/include/LoggingProgramOptions.h>
 #include <utility/include/portConfiguration/PortConfiguration.h>
 #include <SocketTypes.h>
-#include "BGMaster.h"
+#include "../master/server/MasterController.h"
+#include "../master/server/LockFile.h"
+#include "../master/lib/exceptions.h"
 #include "../mmcs/MMCSProperties.h"
 
 // Bogus value to make BGMaster.o happy.
-volatile int signal_number = 0;
+LockFile* lock_file;
 bgq::utility::Properties::Ptr props;
 bool dynamic = false;
 
@@ -116,14 +118,13 @@ bool checkPorts(std::string section, std::string port_type, bool server = true) 
 bool doBGMaster() {
     std::cout << "Evaluating bgmaster properties...." << std::endl;
     std::string logger("master");
-    BGMasterController* bgm = 0;
-    bgm = new(BGMasterController);
-    bgm->setProps(props);
+    MasterController* bgm = 0;
+    bgm = new(MasterController);
 
     std::ostringstream failmsg;
     try {
         bgm->buildPolicies(failmsg);
-    } catch (BGMasterExceptions::ConfigError& e) {
+    } catch (exceptions::ConfigError& e) {
         std::cerr << "BGmaster Configuration error detected. " << e.errcode << " " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     } catch (std::runtime_error& e) {
@@ -279,9 +280,6 @@ int main(int argc, const char** argv) {
     if(servers.size() == 0) {
         servers = valid_server_names;
     }
-
-    // Initialize properties for everybody
-    CxxSockets::setProperties(props);
 
     BOOST_FOREACH(std::string curr_server, servers) {
         if(curr_server == "bgmaster_server") {

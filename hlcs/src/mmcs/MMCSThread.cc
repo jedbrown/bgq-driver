@@ -30,9 +30,12 @@
 #include <cerrno>
 #include <csignal>
 #include <cstdio>
+#include <cstring>
 #include "MMCSThread.h"
 
-using namespace std;
+#include <utility/include/Log.h>
+
+LOG_DECLARE_FILE( "mmcs" );
 
 // key for thread-specific pointer to the current thread's MMCSThread object
 static pthread_key_t mmcsThread_key;
@@ -118,7 +121,12 @@ MMCSThread::threadExecute(void* this_p)
     pthread_setspecific(mmcsThread_key, this_p);
 
     ((MMCSThread*)this_p)->thread_id = pthread_self();	// mark thread as started
-    returnVal = ((MMCSThread*)this_p)->threadStart();
+    try {
+        returnVal = ((MMCSThread*)this_p)->threadStart();
+    } catch ( const std::exception& e ) {
+        returnVal = 0;
+        LOG_WARN_MSG( e.what() );
+    }
     ((MMCSThread*)this_p)->thread_id = 0;	// mark thread as ended
     if (((MMCSThread*)this_p)->getDeleteOnExit())
 	delete (MMCSThread*)this_p;
@@ -149,8 +157,10 @@ MMCSThread::start()
 void MMCSThread::wait() {
     pthread_t id = thread_id;
     if(getJoinable() == true) {
-        if (pthread_join(id, 0)) {
-            perror("pthread_join");
+        const int rc = pthread_join(id, 0);
+        if (rc) {
+            char buf[256];
+            LOG_ERROR_MSG("pthread_join error:" << strerror_r(rc, buf, sizeof(buf)) );
         }
     }
 }
@@ -180,8 +190,10 @@ MMCSThread::stop(int signo)
         // join thread if we can
         if (getJoinable() == true) {
             // can't join if thread not joinable
-            if (pthread_join(id, 0)) {
-                perror("pthread_join");
+            const int rc = pthread_join(id, 0);
+            if (rc) {
+                char buf[256];
+                LOG_ERROR_MSG("pthread_join error:" << strerror_r(rc, buf, sizeof(buf)) );
             }
         }
     }

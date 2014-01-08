@@ -37,6 +37,10 @@ namespace blue_gene {
 namespace diagnostics {
 
 
+class Run;
+class Runs;
+
+
 typedef boost::int64_t RunId;
 
 typedef boost::function<void ( RunId run_id, const std::string& error_msg )> RunIdCallback;

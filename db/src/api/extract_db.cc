@@ -513,10 +513,15 @@ extract_compact_machine(
 
 
     // handle the compute to IO links
-    condition = " where  status = 'A' and ionstatus = 'A' order by 1,2";
+    condition = " where  ionstatus = 'A' order by 1,2";
     if ((result = retrieve_table(tx, cniolink, condition)) == DB_OK) {
         do {
             os << " <BGQIOLink computeNode='" << cniolink._source << "' ioNode='" << cniolink._ion << "' cnConnector='" << cniolink._cnconnector << "' ioConnector='" << &cniolink._destination[7] << "' ";
+            if (!strcmp(cniolink._status,"A")) {
+                os << "enabled='true' ";
+            } else {
+                os << "enabled='false' ";
+            }
             if (cniolink._badwires == 0)
                 os << " />" << endl;
             else {

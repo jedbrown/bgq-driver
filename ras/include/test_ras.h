@@ -193,6 +193,39 @@
   service_action="None"
  />
 
+<rasevent  id="0xFFFE0015"  component="TEST"
+  category="BQC"
+  severity="FATAL"
+  message="This is a test ras message."
+  description="This RAS is used for testing purpose only."
+  control_action="COMPUTE_IN_ERROR"
+  threshold_count="1"
+  threshold_period="1 HOUR"
+  service_action="None"
+ />
+
+<rasevent  id="0xFFFE0016"  component="TEST"
+  category="BQC"
+  severity="FATAL"
+  message="This is a test ras message."
+  description="This RAS is used for testing purpose only."
+  control_action="BOARD_IN_ERROR"
+  threshold_count="1"
+  threshold_period="1 HOUR"
+  service_action="None"
+ />
+
+<rasevent  id="0xFFFE0017"  component="TEST"
+  category="BQC"
+  severity="FATAL"
+  message="This is a test ras message."
+  description="This RAS is used for testing purpose only."
+  control_action="END_JOB"
+  threshold_count="1"
+  threshold_period="1 HOUR"
+  service_action="None"
+ />
+
 */
 
 #endif

@@ -119,7 +119,7 @@ ComputeNode::unavailable(
     if ( _job.lock() != job ) return;
 
     this->unavailable();
-    LOG_WARN_MSG( _location << " status: " << _status );
+    LOG_DEBUG_MSG( _location << " status: " << _status );
 }
 
 bool

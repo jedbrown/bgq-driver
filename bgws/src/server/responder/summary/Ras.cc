@@ -107,13 +107,13 @@ bool Ras::matchesUrl(
 }
 
 
-capena::http::Methods Ras::getAllowedMethods() const
+capena::http::Methods Ras::_getAllowedMethods() const
 {
     return { capena::http::Method::GET };
 }
 
 
-void Ras::doGet()
+void Ras::_doGet()
 {
 
     // The user must be authenticated.
@@ -154,7 +154,7 @@ void Ras::doGet()
         obj.set( "info", cols[string() + "i" + lexical_cast<string>(i)].as<uint64_t>() );
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();

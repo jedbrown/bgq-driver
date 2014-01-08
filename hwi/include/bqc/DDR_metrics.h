@@ -51,7 +51,8 @@ struct DDRINIT_metrics {
 	char		MEMCAL_ADDRCPC;
 	char		MEMCAL_DESKEW;
 	char		MEMCAL_RDDLY;
-	char		MRKCHIP[2][4];
+	unsigned	MRKCHIP[2][4];
+	char		FailDQ[2][4][18];
 	char		HIGH_PRIORITY_REFRESH;
 	char		RANK_MAP_MODE;
 	char		WRITE_QUEUE_PRIORITY;
@@ -64,6 +65,8 @@ struct DDRINIT_metrics {
 	char		SKIP_MEMCAL;
 	char		SKIP_MCZMRINT;
 	char		SKIP_SMBTEST;
+	char		SKIP_WRCAL;
+	char		SKIP_ADDRCAL;
 	char		SKIP_MEMBIST;
 	char		SKIP_FASTINIT;
 	char		SKIP_OT_SCRUB;

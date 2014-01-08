@@ -40,14 +40,14 @@
 #include "MMCSCommandReply.h"
 
 
-/*!
- * \brief
- */
-void mcServerInit(std::vector<std::string>& bringup_options, MMCSCommandReply& reply, bool blocks_are_booted);
+void mcServerInit(
+        const std::vector<std::string>& bringup_options, 
+        MMCSCommandReply& reply, 
+        const bool blocks_are_booted
+        );
 
-/*!
- * \brief
- */
-void mcServerTerm(MMCSCommandReply& reply);
+void mcServerTerm(
+        MMCSCommandReply& reply
+        );
 
 #endif

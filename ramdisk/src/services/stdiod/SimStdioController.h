@@ -29,6 +29,8 @@
 
 // Includes
 #include "StdioController.h"
+#include "Job.h"
+#include <ramdisk/include/services/common/PointerMap.h>
 #include <tr1/memory>
 
 namespace bgcios
@@ -134,6 +136,11 @@ private:
    //! Simulation id.
    uint16_t _simId;
 
+   //! Map of currently running jobs indexed by job id.
+   bgcios::PointerMap<uint64_t, JobPtr> _jobs;
+
+   //! Typedef for job list iterator.
+   typedef bgcios::PointerMap <uint64_t, JobPtr>::const_iterator job_list_iterator;
 };
 
 //! Smart pointer for SimStdioController object.

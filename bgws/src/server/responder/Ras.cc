@@ -178,18 +178,18 @@ bool Ras::matchesUrl(
 }
 
 
-capena::http::Methods Ras::getAllowedMethods() const
+capena::http::Methods Ras::_getAllowedMethods() const
 {
     return { capena::http::Method::GET };
 }
 
 
-void Ras::doGet()
+void Ras::_doGet()
 {
     _checkAuthority();
 
     const capena::server::Request &request(_getRequest());
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     static const unsigned DefaultRangeSize(50), MaxRangeSize(200);
     RequestRange req_range( request, DefaultRangeSize, MaxRangeSize );
@@ -237,7 +237,7 @@ void Ras::doGet()
         uint64_t recid(cols["recid"].as<int64_t>());
 
         js_obj.set( "id", recid );
-        js_obj.set( "URI", RasDetails::calcPath( getDynamicConfiguration().getPathBase(), recid ).toString() );
+        js_obj.set( "URI", RasDetails::calcPath( _getDynamicConfiguration().getPathBase(), recid ).toString() );
         if ( cols["msg_id"] )  js_obj.set( "msgId", cols["msg_id"].getString() );
         if ( cols["category"] )  js_obj.set( "category", cols["category"].getString() );
         if ( cols["component"] )  js_obj.set( "component", cols["component"].getString() );
@@ -269,7 +269,7 @@ void Ras::_checkAuthority() const
         return;
     }
 
-    LOG_WARN_MSG( "Could not get ras because " << getRequestUserInfo() << " doesn't have authority." );
+    LOG_WARN_MSG( "Could not get ras because " << _getRequestUserInfo() << " doesn't have authority." );
 
     BOOST_THROW_EXCEPTION( Error(
             "Could not get ras because the user doesn't have authority.",

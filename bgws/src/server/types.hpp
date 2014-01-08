@@ -25,17 +25,30 @@
 #define BGWS_TYPES_HPP_
 
 
+/*! \file
+ * \brief Contains forward declarations.
+ */
+
+
 #include <boost/shared_ptr.hpp>
 
 
 namespace bgws {
 
+    class BgwsServer;
+    class BlueGene;
+    class CheckUserAdminExecutor;
+    class PwauthExecutor;
+    class ResponderFactory;
+    class ServerStats;
 
-class Session;
+    class Session;
+    typedef boost::shared_ptr<Session> SessionPtr;
 
-typedef boost::shared_ptr<Session> SessionPtr;
+    class Sessions;
+    class UserInfo;
 
+} // namespace bgws
 
-}
 
 #endif

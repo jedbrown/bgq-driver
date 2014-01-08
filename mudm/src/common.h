@@ -365,6 +365,8 @@ struct my_context {
   uint64_t rget_memfifo_sent;
   uint32_t wakeupActive;
   uint32_t StuckState;
+  uint64_t RAS_pacing_timestamp; 
+  uint64_t RAS_pacing_count;
  
 
 } __attribute__ ((aligned (64)));

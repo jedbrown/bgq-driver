@@ -197,7 +197,15 @@ void __NORETURN   App_Exit(int phase)
                 if ((!pProc->coredump_kthread && isProcessLeader) ||
                     (pProc->coredump_kthread && (pProc->coredump_kthread->ProcessorID == processorID)))
                 {
-                    DumpCore();
+                    int pacingResult = App_DumpCorePacingBegin(pAppState->jobControlSIGKILLstart);
+                    if (pacingResult >= 0)
+                    {
+                        DumpCore();
+                        if (pacingResult > 0)
+                        {
+                            App_DumpCorePacingEnd();
+                        }
+                    }
                 }
             }
         }
@@ -627,18 +635,24 @@ void __NORETURN   App_AgentExit(int phase)
             uint32_t coredumpdisabled = 0;
             uint32_t coredumponerror = 0;
             uint32_t coredumpmaxnodes = CONFIG_COREDUMPMAXNODES_DEFAULT;
+            uint32_t coredumpagentenabled = 0;
             // See if we are configured to take a core dump on exit. If so do that here
             App_GetEnvValue("BG_COREDUMPONEXIT", &coredumponexit);
             App_GetEnvValue("BG_COREDUMPONERROR", &coredumponerror);
             App_GetEnvValue("BG_COREDUMPDISABLED", &coredumpdisabled);
             App_GetEnvValue("BG_COREDUMPMAXNODES", &coredumpmaxnodes);
+            App_GetEnvValue("BG_COREDUMPAGENTENABLED", &coredumpagentenabled);
             if (((pProc->coreDumpOnExit) && (coredumpdisabled == 0) && 
                  (GetParentAppState()->AbnormalTerminationSequenceNum <= coredumpmaxnodes)) || 
                  (coredumponexit != 0) || 
                  ((coredumponerror != 0) && ((EXITSTATUS_SIGNAL(pProc->ExitStatus)) != 0) &&
                   (GetParentAppState()->AbnormalTerminationSequenceNum <= coredumpmaxnodes)))
             {
-                DumpCore();
+                // Note that we do not call the pacing algorithm for app agents since these are not written to the file system
+                if (coredumpagentenabled)
+                {
+                    DumpCore();
+                }
             }
         }
         // First we must ensure that all kthreads in this hardware thread are blocked from running
@@ -676,6 +690,9 @@ void __NORETURN   App_AgentExit(int phase)
         if ((ProcessorThreadID() == 0) ||
             (popcnt64(NodeState.AppAgents) == 1))
         {
+            // Clear background scrub TLB location
+            vmm_clearScrubSlot();
+
             // Invalidate the icache. This must be done since the text segment was previously cleared. 
             ici();
             isync();
@@ -707,45 +724,47 @@ void App_ReportProcessExit(AppProcess_t *proc)
         if (exit_signal || (exit_rc == 1))
         {
 
-            // If we are not the job leader node, and if the control system has signaled the job with a SIGKILL,
-            // we do not need to register this abnormal process exit condition. We will let the job leader
-            // take care of this. We do this to avoid unnecessary torus traffic trying to determine if we are 
-            // the first process to encounter an exit.
             AppState_t *app = GetParentAppState();
-            if ( !(app->jobControlIssuedSIGKILL && (exit_signal == SIGKILL)) || App_IsJobLeaderNode())
+            // If at least one process has already reported an abnormal process exit from this node, we do not need to do it again.
+            volatile uint32_t *lockword = &app->processExitReported;
+            uint32_t zeroValue = 0;
+            if(Compare_and_Swap32(lockword, &zeroValue, 1))
             {
-                // If at least one process has already reported an abnormal process exit from this node, we do not need to do it again.
-                volatile uint32_t *lockword = &app->processExitReported;
-                uint32_t zeroValue = 0;
-                if(Compare_and_Swap32(lockword, &zeroValue, 1))
+                uint64_t prev_val = App_RegisterAbnormalProcessExit();
+                // Store the sequence number into the AppState structure so all processes can see it.
+                app->AbnormalTerminationSequenceNum =  prev_val + 1;
+                //printf("Rank: %d termination sequence num: %d\n", GetMyProcess()->Rank,app->AbnormalTerminationSequenceNum);
+                 
+                if (prev_val == 0) // if zero, then we were the first process to encounter an abnormal termination
                 {
-                    uint64_t prev_val = App_RegisterAbnormalProcessExit();
-                    // Store the sequence number into the AppState structure so all processes can see it.
-                    app->AbnormalTerminationSequenceNum =  prev_val + 1;
-                     
-                    if (prev_val == 0) // if zero, then we were the first process to encounter an abnormal termination
+                    // Are we running in stand-alone mode
+                    if (!Personality_ApplicationPreLoaded())
                     {
-                        // Are we running in stand-alone mode
-                        if (!Personality_ApplicationPreLoaded())
+                        // We are the first to report this category of error
+                        // Is this an application agent?
+                        uint32_t agentid = AppAgentIdentifier(proc);
+                        uint32_t rank;
+                        if (agentid)
                         {
-                            // We are the first to report this category of error
-                            // Is this an application agent?
-                            uint32_t agentid = AppAgentIdentifier(proc);
-                            uint32_t rank;
-                            if (agentid)
-                            {
-                                // Find the process object for the application leader on this node.
-                                AppProcess_t *appLeaderProcess= GetFirstProcess(((AppState_t*)proc->app->parentAppState));
-                                rank = appLeaderProcess->Rank;
-                            }
-                            else
-                            {
-                                rank = proc->Rank;
-                            }
-                            jobControl.exitProcess(proc->app->JobID, proc->Rank, proc->ExitStatus, agentid);
+                            // Find the process object for the application leader on this node.
+                            AppProcess_t *appLeaderProcess= GetFirstProcess(((AppState_t*)proc->app->parentAppState));
+                            rank = appLeaderProcess->Rank;
                         }
+                        else
+                        {
+                            rank = proc->Rank;
+                        }
+                        jobControl.exitProcess(proc->app->JobID, proc->Rank, proc->ExitStatus, agentid);
                     }
+                }
 
+            }
+            else
+            {
+                // We were not the first. We need to wait until the first abnormal terminator gets a sequence number
+                while (!app->AbnormalTerminationSequenceNum)
+                {
+                    Delay(100);
                 }
             }
         }
@@ -978,6 +997,68 @@ int App_CleanupJob(bgcios::jobctl::CleanupJobMessage *inMsg)
             }
         }
     }
+    return 0;
+}
+
+int App_DumpCorePacingBegin(uint64_t basetime)
+{
+    AppState_t *app = GetParentAppState();
+    uint64_t previous_value = 0x8000000000000000;
+    uint64_t cyclesPerMicro = GetPersonality()->Kernel_Config.FreqMHz;
+    uint64_t maxCoredumpTime = cyclesPerMicro * CONFIG_COREDUMP_WINDOW * 1000000ULL;
+    uint64_t delaytime = cyclesPerMicro * 100;  // 100 microseconds in processor cycles
+
+    // Is pacing enabled
+    if ((app->jobLeaderData.corepacesem[1] == 0) || (app->jobLeaderData.NodesInJob <= 1))
+    {
+        return 0; // Indicate that no pacing is active and to proceed with the core file generation.
+    }
+    do
+    {
+        if (basetime && ((GetTimeBase() - basetime) > maxCoredumpTime))
+        {
+            //printf("Timeout after %d seconds on rank %d\n", CONFIG_COREDUMP_WINDOW, GetMyProcess()->Rank);
+            return -1; // Indicate that no pacing is active and to NOT proceed with the core file generation.
+        }
+        Kernel_Lock(&mudm_atomic_lock);
+        // use MUDM to update the counter on the job leader node
+        NodeState.remoteget.atomic_op = MUHWI_ATOMIC_OPCODE_LOAD_DECREMENT_BOUNDED;
+        NodeState.remoteget.paddr_here = (uint64_t)(&NodeState.remoteget); // address of this structure
+        NodeState.remoteget.remote_paddr = (uint64_t)(&app->jobLeaderData.corepacesem[1]); // address of the counter
+        NodeState.remoteget.returned_val = 0; // initialize the return value
+        NodeState.remoteget.local_counter = 8; // this is an 8 byte operation
+        mudm_remoteget_load_atomic(NodeState.MUDM,  &NodeState.remoteget);        
+        while (NodeState.remoteget.local_counter)
+        {
+            ppc_msync();
+        }
+        previous_value = NodeState.remoteget.returned_val;
+        Kernel_Unlock(&mudm_atomic_lock);
+        if (previous_value == 0x8000000000000000)
+        {
+            Delay(delaytime); 
+        }
+
+    } while (previous_value == 0x8000000000000000);
+    return 1; // Indicate that pacing is active which requires a call to App_DumpCorePacingEnd() after the core file is generation is completed.
+}
+
+int App_DumpCorePacingEnd()
+{
+    AppState_t *app = GetParentAppState();
+    Kernel_Lock(&mudm_atomic_lock);
+    // use MUDM to update the counter on the job leader node
+    NodeState.remoteget.atomic_op = MUHWI_ATOMIC_OPCODE_LOAD_INCREMENT;
+    NodeState.remoteget.paddr_here = (uint64_t)(&NodeState.remoteget); // address of this structure
+    NodeState.remoteget.remote_paddr = (uint64_t)(&app->jobLeaderData.corepacesem[1]); // address of the counter
+    NodeState.remoteget.returned_val = 0; // initialize the return value
+    NodeState.remoteget.local_counter = 8; // this is an 8 byte operation
+    mudm_remoteget_load_atomic(NodeState.MUDM,  &NodeState.remoteget);        
+    while (NodeState.remoteget.local_counter)
+    {
+        ppc_msync();
+    }
+    Kernel_Unlock(&mudm_atomic_lock);
     return 0;
 }
 

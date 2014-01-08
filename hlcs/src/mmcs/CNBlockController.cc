@@ -210,7 +210,6 @@ CNBlockController::create_block(deque<string> args, MMCSCommandReply& reply, std
         return;
     }
 
-    _isblock	   = true;				// initialized by create_block
     _targetsetMode = WUAR; 	// default target set open mode
 
     // parse options
@@ -550,11 +549,6 @@ CNBlockController::boot_block(deque<string> args, MMCSCommandReply& reply, const
         reply << FAIL << "block is not connected" << DONE;
 	return;
     }
-    if (!isBlock())
-    {
-	reply << FAIL << "target sets are not bootable" << DONE;
-	return;
-    }
 
     // parse arguments
 
@@ -808,7 +802,7 @@ CNBlockController::boot_block(deque<string> args, MMCSCommandReply& reply, const
     //
 
     LOG_DEBUG_MSG("Sending boot request");
-    timer->stop();
+    if (timer) timer->stop();
 
     // send Boot command to mcMonitor
     MCServerMessageSpec::BootBlockReply   mcBootBlockReply;
@@ -1170,7 +1164,8 @@ CNBlockController::shutdown_block(MMCSCommandReply& reply, BlockControllerTarget
                     msg << "SubnetMc managing hardware for " << _blockName 
                         << " temporarily unavailable.";
                     LOG_ERROR_MSG(msg.str());
-                    reply << ABORT << msg.str();
+                    reply << FAIL << msg.str() << DONE;
+                    return;
                 }
             }
         catch (exception &e)

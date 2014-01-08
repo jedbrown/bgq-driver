@@ -237,6 +237,8 @@ uint64_t entrynum_WriteFlightLogx4(uint32_t ID,BG_FlightRecorderRegistry_t* logr
 #define MUDM_BAD_RECV_CONN_CALLBACK(logregistry,d0,d1,d2,d3) WriteFlightLogx4(CN_BDCALLBAK,logregistry,(uint64_t)d0,(uint64_t)d1,(uint64_t)d2,(uint64_t)d3)
 #define MUDM_CONN_LIST(logregistry,d0,d1,d2,d3) WriteFlightLogx4(CN_CONNLISTS,logregistry,(uint64_t)d0,(uint64_t)d1,(uint64_t)d2,(uint64_t)d3)
 #define MUDM_IO_LINKRESET(logregistry,d0,d1,d2,d3) entrynum_WriteFlightLogx4(IO_LINKRESET,logregistry,(uint64_t)d0,(uint64_t)d1,(uint64_t)d2,(uint64_t)d3)
+#define MUDM_IO_LINKSKIPPED(logregistry,d0,d1,d2,d3) entrynum_WriteFlightLogx4(IO_LINKSKIPD,logregistry,(uint64_t)d0,(uint64_t)d1,(uint64_t)d2,(uint64_t)d3)
+#define MUDM_IO_LINKFLUSHED(logregistry,d0,d1,d2,d3) entrynum_WriteFlightLogx4(IO_LINKFLUSH,logregistry,(uint64_t)d0,(uint64_t)d1,(uint64_t)d2,(uint64_t)d3)
 #define MUDM_IO_LINKRSETC(logregistry,d0,d1,d2,d3) entrynum_WriteFlightLogx4(IO_LINKRSETC,logregistry,(uint64_t)d0,(uint64_t)d1,(uint64_t)d2,(uint64_t)d3)
 
 #define MUDM_TERM_START(logregistry,d0,d1,d2,d3) Timestamped_WriteFlightLogx4(DM_TERMSTART,logregistry,(uint64_t)d0,(uint64_t)d1,(uint64_t)d2,(uint64_t)d3)

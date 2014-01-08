@@ -68,13 +68,13 @@ public:
             _session_ptr(args.session_ptr)
     { /* Nothing to do */ }
 
-    capena::http::Methods getAllowedMethods() const;
+    capena::http::Methods _getAllowedMethods() const;
 
     // override
-    void doDelete();
+    void _doDelete();
 
     // override
-    void doGet();
+    void _doGet();
 
 
 private:

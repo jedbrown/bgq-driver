@@ -309,6 +309,13 @@ The Navigator uses Blue Gene Web Services (BGWS), so make sure that's set up and
 </p>
 
 
+<h2>Debug</h2>
+
+A "debug" version of the Navigator is shipped as navigator-debug.html.
+This version doesn't use the compiled version of the Dojo and Navigator code,
+so you can see line numbers for error messages and set break points.
+
+
 <h2>Development</h2>
 
 <h3>Stuff to do every release</h3>
@@ -329,6 +336,37 @@ JSDoc links:
 <li><a href="http://code.google.com/p/jsdoc-toolkit/wiki/TagReference">Tags</a></li>
 <li><a href="http://code.google.com/p/jsdoc-toolkit/">Main page</a></li>
 </ul>
+
+
+<h3>Code Organization</h3>
+
+The main HTML file is WebContent/navigator.html.
+That file just displays the Navigator widget, bluegene/navigator/dijit/Navigator.
+The actual Navigator template is in bluegene/navigator/dijit/templates/Navigator.html.
+
+<p>
+The Navigator template includes other widgets, the header, main area, and footer.
+And those widgets may contain other widgets.
+Specifically, the main area widget contains the main tabs widget, which includes
+each of the tab dijits (Alerts, Blocks, Jobs, etc).
+
+<p>
+If you're changing how the Navigator looks,
+you'll be changing the widgets in the navigator/dijit/templates directory.
+
+<p>
+There's a parallel set of classes called the controllers.
+The main controller class is bluegene/navigator/Navigator.
+It creates all the other controller classes,
+for example Alerts, Blocks, Jobs, etc.,
+that "control" the dijits (tell them what to display or where to get their data from).
+
+<p>
+Another important class is bluegene/Bgws.
+This class knows how to use the BGWS.
+It has a method to start a BGWS session,
+knows the other types of request that can be made,
+and to put the session ID header on each request.
 
 
 <h3>Dojo</h3>

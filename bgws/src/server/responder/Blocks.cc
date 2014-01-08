@@ -288,13 +288,13 @@ bool Blocks::matchesUrl(
 }
 
 
-capena::http::Methods Blocks::getAllowedMethods() const
+capena::http::Methods Blocks::_getAllowedMethods() const
 {
     return { capena::http::Method::GET, capena::http::Method::POST };
 }
 
 
-void Blocks::doGet()
+void Blocks::_doGet()
 {
     namespace po = boost::program_options;
 
@@ -353,17 +353,17 @@ void Blocks::doGet()
 
         // Make sure the user has READ authority to the block.
         if ( ! (_isUserAdministrator() ||
-                _enforcer().validate(
+                _getEnforcer().validate(
                  hlcs::security::Object(
                         hlcs::security::Object::Block,
                         block_id
                  ),
                  hlcs::security::Action::Read,
-                 getRequestUserId()
+                 _getRequestUserId()
              )) )
         {
             // don't send this block because the user doesn't have authority.
-            LOG_DEBUG_MSG( "Not sending block '" << block_id << "' because " << getRequestUserInfo() << " doesn't have authority." );
+            LOG_DEBUG_MSG( "Not sending block '" << block_id << "' because " << _getRequestUserInfo() << " doesn't have authority." );
             continue;
         }
 
@@ -403,11 +403,11 @@ void Blocks::doGet()
             block_obj.set( "torus", torus_str );
         }
 
-        block_obj.set( "URI", Block::calcPath( getDynamicConfiguration().getPathBase(), block_id ).toString() );
+        block_obj.set( "URI", Block::calcPath( _getDynamicConfiguration().getPathBase(), block_id ).toString() );
     }
 
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();
@@ -416,7 +416,7 @@ void Blocks::doGet()
 }
 
 
-void Blocks::doPost( json::ConstValuePtr val_ptr )
+void Blocks::_doPost( json::ConstValuePtr val_ptr )
 {
     _checkCreateBlockAuthority(); // throws if failed.
 
@@ -426,7 +426,7 @@ void Blocks::doPost( json::ConstValuePtr val_ptr )
 
     _createBlock( params );
 
-    getResponse().setCreated( Block::calcPath( getDynamicConfiguration().getPathBase(), params.getBlockId() ) );
+    _getResponse().setCreated( Block::calcPath( _getDynamicConfiguration().getPathBase(), params.getBlockId() ) );
 }
 
 
@@ -450,22 +450,22 @@ void Blocks::_checkCreateBlockAuthority()
         return;
     }
 
-    if ( _enforcer().validate(
+    if ( _getEnforcer().validate(
              hlcs::security::Object(
                     hlcs::security::Object::Block,
                     string() // no block ID when creating block.
              ),
              hlcs::security::Action::Create,
-             getRequestUserId()
+             _getRequestUserId()
          ) )
     {
-        LOG_DEBUG_MSG( getRequestUserInfo() << " can create blocks." );
+        LOG_DEBUG_MSG( _getRequestUserInfo() << " can create blocks." );
         return;
     }
 
     // The user doesn't have authority.
 
-    LOG_WARN_MSG( getRequestUserInfo() << " tried to create block but doesn't have authority." );
+    LOG_WARN_MSG( _getRequestUserInfo() << " tried to create block but doesn't have authority." );
 
     Error::Data data;
     data["userName"] = getRequestUserName();

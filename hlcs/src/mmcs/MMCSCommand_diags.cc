@@ -30,7 +30,6 @@
 #include "MMCSCommandReply.h"
 #include "MMCSCommand_diags.h"
 #include "MMCSProperties.h"
-#include "McServerLocker.h"
 #include "HardwareBlockList.h"
 
 #include <control/include/mcServer/MCServerRef.h>

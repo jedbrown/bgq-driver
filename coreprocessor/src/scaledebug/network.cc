@@ -44,7 +44,7 @@ void findIPs(std::vector<string>& IPs)
     base_ifa = ifa;
     char buff[128];
     bool skip = false;
-    while (ifa->ifa_next) {
+    for (ifa = base_ifa; ifa != NULL; ifa = ifa->ifa_next) {
         bzero(buff, 128);
         if(ifa) {
             if((strncmp(ifa->ifa_name, "ib", 2) != 0) &&
@@ -72,7 +72,6 @@ void findIPs(std::vector<string>& IPs)
             }
             skip = false;
         }
-        ifa = ifa->ifa_next;
     }
     
     freeifaddrs(base_ifa);

@@ -229,41 +229,19 @@ int puts( const char *s )
 
 int printf( const char *fmt, ... )
 {
-    uint64_t currentTime = GetTimeBase();
     va_list args;
     char buffer[4096];
     char* buffp = buffer;
-    int  embeddedTimestampLength = 0;
-
-    if ( ( FWExtState.personality->Kernel_Config.NodeConfig & PERS_ENABLE_Timestamps ) != 0 ) {
-
-      char ts[16];
-      int  n = 0;
-
-      while ( currentTime != 0 ) {
-	ts[n++] = '0' + ( currentTime % 10 );
-	currentTime /= 10;
-      }
-
-      embeddedTimestampLength = n+1;
-      n--;
-
-      while (n >= 0) {
-	*(buffp++) = ts[n--];
-      }
-      
-      *(buffp++) = '|';
-    }
 
     va_start( args, fmt );
     
     //DELETEME int len = FWExtState.firmware->vprintf( fmt, args );
     int len = vsprintf( buffp, fmt, args );
-    FWExtState.firmware->putn( buffer, len + embeddedTimestampLength ); 
+    FWExtState.firmware->putn( buffer, len );
 
     va_end(args);
 
-    if ((len + embeddedTimestampLength) > sizeof(buffer))
+    if ( len > sizeof(buffer))
     {
       (void) FWExtState.firmware->putn( "PRINTF OVERFLOWED\n", 18 );
       Terminate(__LINE__);

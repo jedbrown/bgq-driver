@@ -20,6 +20,9 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+/*!
+ * \file utility/include/Inotify.h
+ */
 
 
 #ifndef BGQ_UTILITY_INOTIFY_H_

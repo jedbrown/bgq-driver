@@ -169,8 +169,6 @@ Files which are applied to a base RHEL6 image to create the BG/Q Linux Distro NF
 %dir %{_base_dir}/ramdisk/distrofs/rpm/etc/libibverbs.d
 %dir %{_base_dir}/ramdisk/distrofs/rpm/etc/profile.d
 %dir %{_base_dir}/ramdisk/distrofs/rpm/etc.mirror
-%dir %{_base_dir}/ramdisk/distrofs/rpm/lib
-%dir %{_base_dir}/ramdisk/distrofs/rpm/lib/modules.mirror
 %dir %{_base_dir}/ramdisk/distrofs/rpm/lib64
 %dir %{_base_dir}/ramdisk/distrofs/rpm/lib64/bgq
 %dir %{_base_dir}/ramdisk/distrofs/rpm/root.mirror

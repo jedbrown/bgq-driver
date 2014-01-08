@@ -48,9 +48,6 @@ namespace blue_gene {
 namespace diagnostics {
 
 
-class Run;
-
-
 class Runs : boost::noncopyable
 {
 public:

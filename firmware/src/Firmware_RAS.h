@@ -550,15 +550,19 @@
      category="BQC"
      component="FIRMWARE"
      severity="WARN"
-     message="Memory Controller Initialization Error: $(DETAILS)"
-     description="An error occurred during memory controller initialization."
+     message="Memory Controller Initialization Warning: $(DETAILS)"
+     description="A non-fatal error occurred during memory controller initialization.  It is recommended that this  node be replaced at the next maintenance opportunity."
      decoder="fw_DdrInit_Decoder"
      service_action="$(Diagnostics)"
      relevant_diags="processor"
+     threshold_count="10"
      />
  */
 
 #define FW_RAS_DDR_INIT_WARNING 0x00080020
+#define FW_RAS_DDR_INIT_ERROR   0x0008003D
+#define FW_RAS_DDR_INIT_INFO    0x0008003E
+
 #define FW_RAS_DDR_INIT_VTT_DD                   1
 #define FW_RAS_DDR_INIT_VTT_SB                   2
 #define FW_RAS_DDR_INIT_RANK_DETECTION_FAILED    3
@@ -567,6 +571,9 @@
 #define FW_RAS_DDR_INIT_IOM_CALIBRATION_RETRIED  6
 #define FW_RAS_DDR_INIT_DENSITY_DETECTION_FAILED 7
 #define FW_RAS_DDR_INIT_SMALL_BLOCK_TEST_FAILED  8
+#define FW_RAS_DDR_INIT_NARROW_WRITE_DATA_WINDOW 9
+#define FW_RAS_DDR_INIT_NARROW_ADDRESS_WINDOW    10
+
 /* 
    <rasevent 
      id="00080021"
@@ -750,6 +757,7 @@
      message="Bad DRAM was detected - $(DETAILS)"
      description="A bad memory module was detected on the chip."
      decoder="fw_DdrArbiter_badDramDecoder"
+     threshold_count="10"
      />
  */
 #define FW_RAS_BAD_DRAM_WARNING 0x0008002D
@@ -762,6 +770,7 @@
      severity="WARN"
      message="Bad PHY was detected - MC $(%d,$MC) Byte $(%d,BYTE)"
      description="A bad memory module was detected on the chip."
+     threshold_count="10"
      />
  */
 #define FW_RAS_BAD_PHY_WARNING 0x0008002E
@@ -969,7 +978,53 @@
      />
 */
 
+
 #define FW_RAS_A2_TLBPE_MACHINE_CHECK  0x0008003B
+
+/* 
+   <rasevent 
+     id="0008003C"
+     category="Software_Error"
+     component="FIRMWARE"
+     severity="INFO"
+     message="$(MSG)."
+     description="This message provides additional information that may be useful to IBM in a support capacity."
+     />
+ */
+
+#define FW_RAS_INFO 0x0008003C
+
+
+/* 
+   <rasevent 
+     id="0008003D"
+     category="BQC"
+     component="FIRMWARE"
+     severity="FATAL"
+     message="Memory Controller Initialization Error: $(DETAILS)"
+     description="An error occurred during memory controller initialization."
+     decoder="fw_DdrInit_Decoder"
+     service_action="$(Diagnostics)"
+     relevant_diags="memory"
+     control_action="END_JOB,COMPUTE_IN_ERROR,FREE_COMPUTE_BLOCK"
+     />
+ */
+
+// #defined above (FW_RAS_DDR_INIT_ERROR)
+
+/* 
+   <rasevent 
+     id="0008003E"
+     category="BQC"
+     component="FIRMWARE"
+     severity="INFO"
+     message="Memory Controller Initialization Information : $(DETAILS)"
+     description="Memory controller initialization encountered an unexpected but non-serious event."
+     decoder="fw_DdrInit_Decoder"
+     />
+ */
+
+// #defined above (FW_RAS_DDR_INIT_INFO)
 
 
 
@@ -999,6 +1054,7 @@
 
 extern void fw_machineCheckRas( fw_uint32_t rasMessageCode, fw_uint64_t details[], fw_uint16_t numDetails, const char* file, int lineNumber );
 
+extern void FW_RAS_printf( const uint32_t msg_id, const char* fmt, ... );
 extern void FW_Error( const char* fmt, ... );
 extern void FW_Warning( const char *fmt, ... );
 

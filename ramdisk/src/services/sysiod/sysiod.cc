@@ -29,7 +29,7 @@
 #include "SysioController.h"
 #include <ramdisk/include/services/common/logging.h>
 #include <ramdisk/include/services/common/SignalHandler.h>
-#include <ramdisk/include/services/common/PidFile.h>
+
 #include <ramdisk/include/services/common/RasEvent.h>
 #include <ramdisk/include/services/ServicesConstants.h>
 #include <stdlib.h>
@@ -73,6 +73,8 @@ int main(int argc, char *argv[])
       LOG_ERROR_MSG("error changing working directory to '/': " << bgcios::errorString(errno));
    }
 
+   setFlightLogSize(1024);
+
    // Create configuration from command-line arguments and properties.
    SysioConfigPtr config = SysioConfigPtr(new SysioConfig(argc, argv));
 
@@ -82,17 +84,11 @@ int main(int argc, char *argv[])
    // Create a SysioController object.
    SysioControllerPtr controller = SysioControllerPtr(new SysioController());
 
-   // Create a pid file for the daemon.
-   std::ostringstream name;
-   name << "sysiod." << config->getServiceId();
-   bgcios::PidFilePtr pidFile = bgcios::PidFilePtr(new bgcios::PidFile(name.str(), controller->isHardware()));
-   LOG_CIOS_INFO_MSG("started " << controller->getVersionString(name.str(), (int)ProtocolVersion) << " in process " << pidFile->getPid());
-
    // Start channels for handling messages.
    int err = controller->startup(config);
    if (err != 0) {
       LOG_FATAL_MSG("error starting channels for handling messages: " << bgcios::errorString(err));
-      pidFile.reset();
+
       bgcios::RasEvent rasEvent(bgcios::DaemonInitFailed);
       rasEvent << err;
       rasEvent.send();
@@ -108,10 +104,8 @@ int main(int argc, char *argv[])
    jobctldCmdChannelPath.str(),bgcios::SysioService);
    if (err != 0) {
       LOG_FATAL_MSG("error sending Ready message to jobctld: " << bgcios::errorString(err));
-      pidFile.reset();
       exit(EXIT_FAILURE);
    }
-   LOG_CIOS_DEBUG_MSG("initialization complete in pid " << pidFile->getPid());
 
    // Monitor for events on all of the channels until told to stop.
    LOG_CIOS_DEBUG_MSG("starting to monitor for events ...");
@@ -122,7 +116,6 @@ int main(int argc, char *argv[])
 
    // Finish cleaning up and exit.
    controller.reset();
-   pidFile.reset();
    LOG_CIOS_INFO_MSG("exited normally");
    exit(EXIT_SUCCESS);
 }

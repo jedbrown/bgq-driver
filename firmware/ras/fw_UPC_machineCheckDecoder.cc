@@ -44,10 +44,14 @@ extern "C" {
     // /*uint16_t  numArgs = */ getArgs( event, args );
     ostringstream details;
     
-    decode_UPC_C_INTERRUPT_STATE( details, mbox[0] );
-    decode_INTERNAL_ERROR(details, mbox[1] );
-    event.setDetail( "DETAILS", details.str() );
+    if ( mbox.size() >= 2 ) {
+	decode_UPC_C_INTERRUPT_STATE( details, mbox[0] );
+	decode_INTERNAL_ERROR(details, mbox[1] );
+	event.setDetail( "DETAILS", details.str() );
+    }
+    else {
+	event.setDetail("DETAILS", "INTERNAL ERROR: missing details.");
+    }
   }
-
 }
 

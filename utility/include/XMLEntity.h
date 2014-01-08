@@ -31,7 +31,6 @@
 #include <string>
 #include <stdexcept>
 
-using namespace std;
 class XMLEntity;
 
 class XMLException: public std::runtime_error
@@ -50,7 +49,7 @@ class XMLEntity
 public:
     static XMLEntity* readXML (const char* filename) throw(XMLException);
     static XMLEntity* readXML(std::istream& is) throw(XMLException);
-    static void dumpXML(const stringstream& os, const char* description, const bool force);
+    static void dumpXML(const std::stringstream& os, const char* description, const bool force);
 
     const std::string& name() const { return _name; }
     const std::string& cdata() const { return _cdata; }

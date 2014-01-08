@@ -29,6 +29,7 @@
 #include "server/Server.h"
 
 #include <boost/bind.hpp>
+#include <boost/foreach.hpp>
 #include <boost/make_shared.hpp>
 
 namespace runjob {
@@ -84,6 +85,9 @@ CommandListener::acceptHandler(
         connection->start();
     } else if ( args.status == bgq::utility::Acceptor::Status::NowAccepting ) {
         LOG_INFO_MSG( "accepting connections");
+        BOOST_FOREACH( const auto& i, args.endpoints ) {
+            LOG_INFO_MSG( "accepting on " << i );
+        }
     } else if (
             args.status == bgq::utility::Acceptor::Status::ListenError ||
             args.status == bgq::utility::Acceptor::Status::ResolveError ||

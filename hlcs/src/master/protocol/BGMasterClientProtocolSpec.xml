@@ -1,0 +1,286 @@
+<File filename="BGMasterClientProtocolSpec" type="xmlapi" namespace="BGMasterClientProtocolSpec" version="1" >
+  <!-- Protocol spoken between BGMaster and its control clients -->
+  <!-- Several optional files to generate -->
+  <!-- A special API header file name -->
+  <APIHeader filename="BGMasterClientProtocolAPI" /> 
+  <!-- An implementation file -->
+  <APIImplementation filename="BGMasterClientProtocol.stubs" /> 
+  <!-- A console -->
+  <APIConsole filename="BGMasterClientConsole" /> 
+  <!-- Our base reply object.  Also typeless. -->
+  <Method name="returnspec" comment="Specification of return message for a request" >
+    <Class name="BGMasterClientReply" superclass="true">
+      <DataMember type="int32" name="rc" comment="return error code" />
+      <DataMember type="text" name="rt" comment="return error text" />
+    </Class>
+  </Method>
+
+  <Method name="join" type="RequestReply" comment="Registration Message">
+    <!-- Create the classes that will be arguments for the method -->
+    <Class name="JoinRequest">
+      <DataMember type="text" name="ip_address" comment="initiator listener IP address" />
+      <DataMember type="int32" name="port" comment="initiator listener port" />
+      <DataMember type="text" name="initiator" comment="'client' or 'agent'" />
+      <DataMember type="text" name="host_name" comment="initiator listener host name" />
+    </Class>
+    <Class name="JoinReply" parent="BGMasterClientReply">
+      <DataMember type="text" name="agent_ip" comment="Initiator IP address" />
+      <DataMember type="text" name="master_ip" comment="Master IP address" />
+      <DataMember type="text" name="master_port" comment="Ephemeral port master is using for its requests." />
+    </Class>
+  </Method>
+
+  <Method name="start" type="RequestReply" comment="Start a managed binary message">
+    <Class name="StartRequest">
+      <DataMember type="text" name="alias" comment="short identifier for the binary"/>
+      <DataMember type="text" name="agent_id" comment="Optional Id of agent to start the binary"/>
+    </Class>
+
+    <Class name="StartReply" parent="BGMasterClientReply">
+      <DataMember type="text" name="binary_id" comment="binary ID generated from PID and IP address"/>
+    </Class>
+  </Method>
+
+  <Method name="wait" type="RequestReply" comment="wait for a managed binary to complete">
+    <Class name="WaitRequest">
+      <DataMember type="text" name="binary_id" comment="binaries to stop"/>
+    </Class>
+
+    <Class name="WaitReply" parent="BGMasterClientReply">
+      <Class name="BinaryStatus">
+        <DataMember type="text" name="binary_id" comment="ID of binary"/>
+        <DataMember type="uint32" name="status" comment="Status of the binary"/>
+      </Class>
+      <DataMember type="BinaryStatus" name="status" comment="Status object"/>
+    </Class>
+  </Method>
+
+  <Method name="alias_wait" type="RequestReply" comment="Wait for a binary associated with an alias to start">
+    <Class name="Alias_waitRequest">
+      <DataMember type="text" name="alias" comment="short identifier for the binary"/>
+      <DataMember type="uint32" name="timeout" comment="wait timeout in seconds"/>
+    </Class>
+
+    <Class name="Alias_waitReply" parent="BGMasterClientReply">
+      <DataMember type="text" name="binary_id" comment="binary ID generated from PID and IP address"/>
+    </Class>
+  </Method>
+
+  <Method name="stop" type="RequestReply" comment="Stop a managed binary message">
+    <Class name="StopRequest">
+      <DataMember type="text" name="binary_ids" occurrences="many" comment="binaries to stop"/>
+      <DataMember type="uint32" name="signal" comment="initial signal number"/>
+      <DataMember type="text" name="aliases" occurrences="many" comment="Alias name for binary(ies) to stop"/>
+    </Class>
+
+    <Class name="StopReply" parent="BGMasterClientReply">
+      <Class name="BinaryStatus">
+        <DataMember type="text" name="binary_id" comment="ID of binary"/>
+        <DataMember type="uint32" name="status" comment="Status of the binary"/>
+      </Class>
+      <DataMember type="BinaryStatus" name="statuses" occurrences="many" comment="Status objects"/>
+    </Class>
+  </Method>
+
+  <Method name="get_errors" type="RequestReply" comment="Get server error ring buffer contents.">
+    <Class name="Get_errorsRequest">
+    </Class>
+
+    <Class name="Get_errorsReply" parent="BGMasterClientReply">
+      <DataMember type="text" name="errors" occurrences="many" comment="Error messages"/>
+    </Class>
+  </Method>
+
+  <Method name="get_history" type="RequestReply" comment="Get server history ring buffer contents.">
+    <Class name="Get_historyRequest">
+    </Class>
+
+    <Class name="Get_historyReply" parent="BGMasterClientReply">
+      <DataMember type="text" name="history" occurrences="many" comment="master events"/>
+    </Class>
+  </Method>
+
+  <Method name="status" type="RequestReply" comment="Status of managed binaries">
+    <Class name="StatusRequest">
+      <DataMember type="text" name="binary_ids" occurrences="many" comment="ID of binary"/>
+    </Class>
+
+    <Class name="StatusReply" parent="BGMasterClientReply">
+      <Class name="BinaryController">
+        <DataMember type="uint32" name="exit_status" comment="exit status of binary"/>
+        <DataMember type="text" name="binary_id" comment="ID of binary"/>
+        <DataMember type="text" name="binary_name" comment="path and arguments of binary"/>
+        <DataMember type="text" name="alias" comment="alias of binary"/>
+        <DataMember type="text" name="user" comment="user id under which the binary is running"/>
+        <DataMember type="uint32" name="status" comment="Status of the binary"/>
+        <DataMember type="text" name="start_time" comment="When the binary started"/>
+      </Class>
+      <DataMember type="BinaryController" name="binaries" occurrences="many" comment="Status objects"/>
+    </Class>
+  </Method>
+
+  <Method name="exit_status" type="RequestReply" comment="Status of managed binaries">
+    <Class name="ExitStatusRequest">
+      <DataMember type="text" name="agent_id" occurrences="many" comment="Optional Ids of agents to query"/>
+    </Class>
+
+    <Class name="ExitStatusReply" parent="BGMasterClientReply">
+      <Class name="Agent">
+        <Class name="Binary">
+          <DataMember type="text" name="status" comment="status of this binary"/>
+          <DataMember type="uint32" name="exit_status" comment="exit status of the last binary"/>
+          <DataMember type="text" name="name" comment="path/args of the binary"/>
+          <DataMember type="text" name="alias" comment="alias name of the binary"/>
+          <DataMember type="text" name="user" comment="user id under which the binary is running"/>
+          <DataMember type="text" name="binary_id" comment="unique identifier for this binary"/>
+        </Class>
+        <DataMember type="Binary" name="binary" comment="last binary to run on this agent"/>
+        <DataMember type="text" name="agent_id" comment="id of this agent"/>
+      </Class>
+      <DataMember type="Agent" name="agent" occurrences="many" comment="this agent"/>
+    </Class>
+  </Method>
+
+  <Method name="failover" type="RequestReply" comment="Failover a managed binary message">
+    <Class name="FailoverRequest">
+      <DataMember type="text" name="binary_ids" occurrences="many" comment="binaries to stop"/>
+      <DataMember type="text" name="trigger" comment="Trigger to use for policy selection."/>
+    </Class>
+
+    <Class name="FailoverReply" parent="BGMasterClientReply">
+      <Class name="BinaryStatus">
+        <DataMember type="text" name="binary_id" comment="ID of binary"/>
+        <DataMember type="uint32" name="status" comment="Status of the binary"/>
+      </Class>
+      <DataMember type="BinaryStatus" name="statuses" occurrences="many" comment="Status objects"/>
+    </Class>
+  </Method>
+
+  <Method name="end_agent" type="RequestReply" comment="Tell agents to end">
+    <Class name="End_agentRequest">
+      <DataMember type="text" name="agent_ids" occurrences="many" comment="agents to die"/>
+    </Class>
+
+    <Class name="End_agentReply" parent="BGMasterClientReply">
+      <DataMember type="text" name="agent_ids" occurrences="many" comment="agents killed"/>
+    </Class>
+  </Method>
+
+  <Method name="terminate" type="RequestReply" comment="Tell bgmaster_server to end">
+    <Class name="TerminateRequest">
+      <DataMember type="bool" name="master_only" comment="only kill bgmaster_server"/>
+      <DataMember type="uint32" name="signal" comment="Signal to use to terminate managed binaries."/>
+    </Class>
+
+    <Class name="TerminateReply" parent="BGMasterClientReply">
+    </Class>
+  </Method>
+
+  <Method name="clients" type="RequestReply" comment="Get a list of the ids of connected clients">
+    <Class name="ClientsRequest">
+    </Class>
+
+    <Class name="ClientsReply" parent="BGMasterClientReply">
+      <Class name="Client">
+	<DataMember type="text" name="client_id" comment="clients connected to the server"/>
+	<DataMember type="text" name="user_id" comment="ID of user owning client"/>
+      </Class>
+      <DataMember type="Client" name="clients" occurrences="many"/>
+    </Class>
+  </Method>
+
+  <Method name="agentlist" type="RequestReply" comment="get list of agents and their binaries">
+    <Class name="AgentlistRequest">
+    </Class>
+
+    <Class name="AgentlistReply" parent="BGMasterClientReply">
+      <Class name="Agent">
+        <Class name="Binary">
+          <DataMember type="uint32" name="status" comment="status of this binary"/>
+          <DataMember type="uint32" name="exit_status" comment="exit status of this binary"/>
+          <DataMember type="text" name="name" comment="path/args of the binary"/>
+          <DataMember type="text" name="alias" comment="alias name of the binary"/>
+          <DataMember type="text" name="user" comment="user id under which the binary is running"/>
+          <DataMember type="text" name="binary_id" comment="unique identifier for this binary"/>
+          <DataMember type="text" name="start_time" comment="time the binary started"/>
+        </Class>
+        <DataMember type="Binary" name="binaries" occurrences="many" comment="list of binaries associated with this agent"/>
+        <DataMember type="text" name="agent_id" comment="id of this agent"/>
+      </Class>
+      <DataMember type="Agent" name="agent" occurrences="many" comment="this agent"/>
+    </Class>
+
+  </Method>
+  
+  <Method name="getidle" type="RequestReply" comment="Get the aliases that are configured but not running.">
+    <Class name="GetidleRequest">
+    </Class>
+
+    <Class name="GetidleReply" parent="BGMasterClientReply">
+      <DataMember type="text" name="aliases" occurrences="many" comment="list of aliases configured but not running."/>
+    </Class>
+  </Method>
+
+  <Method name="reload" type="RequestReply" comment="reload the config file">
+    <Class name="ReloadRequest">
+      <DataMember type="text" name="config_file" comment="config file to load (optional)"/>
+    </Class>
+    
+    <Class name="ReloadReply" parent="BGMasterClientReply">
+    </Class>
+  </Method>
+
+  <Method name="masterstat" type="RequestReply" comment="Return the status of bgmaster_server">
+    <Class name="MasterstatRequest">
+    </Class>
+    
+    <Class name="MasterstatReply" parent="BGMasterClientReply">
+      <DataMember type="uint32" name="pid" comment="bgmaster_server process id"/>
+      <DataMember type="text" name="master_start_time" comment="Time bgmaster_server started"/>
+      <DataMember type="text" name="version" comment="The version string for bgmaster_server"/>
+    </Class>
+  </Method>
+  <Method name="monitor" type="RequestReply" comment="Start a monitor of bgmaster_server for new events and errors.">
+    <Class name="MonitorRequest">
+    </Class>
+    <Class name="MonitorReply" parent="BGMasterClientReply">
+      <Class name="ErrorMessage">
+	<DataMember type="text" name="errormsg" comment="Error message text"/>
+      </Class>
+      <Class name="EventMessage">
+	<DataMember type="text" name="eventmsg" comment="Event message text"/>
+      </Class>
+      <DataMember type="ErrorMessage" name="errormessages" comment="Contents of error buffer" occurrences="many"/>
+      <DataMember type="EventMessage" name="eventmessages" comment="Contents of event buffer" occurrences="many"/>
+    </Class>
+  </Method>
+  <Method name="endmonitor" type="RequestReply" comment="Stop a monitor of bgmaster_server for new events and errors.">
+    <Class name="EndmonitorRequest">
+    </Class>
+    <Class name="EndmonitorReply" parent="BGMasterClientReply">
+    </Class>
+  </Method>
+  <Method name="sendevent" comment="Send an event message to a monitoring client.">
+    <Class name="EventMessage">
+      <DataMember type="text" name="eventmsg" comment="Event message text"/>
+    </Class>
+  </Method>
+  <Method name="senderror" comment="Send an error message to a monitoring client.">
+    <Class name="ErrorMessage">
+      <DataMember type="text" name="errormsg" comment="Error message text"/>
+    </Class>
+  </Method>
+  <Method name="loglevel" type="RequestReply" comment="Change the logging levels of bgmaster_server.">
+    <Class name="Logger">
+      <DataMember type="text" name="name" comment="logger name"/>
+      <DataMember type="text" name="level" comment="logger level"/>
+    </Class>
+    <Class name="LoglevelRequest">
+      <DataMember type="Logger" name="loggers" occurrences="many" comment="loggers to change and new level"/>
+    </Class>
+    <Class name="LoglevelReply" parent="BGMasterClientReply">
+      <DataMember type="Logger" name="loggers" occurrences="many" comment="loggers and their level"/>
+    </Class>
+  </Method>
+
+</File>

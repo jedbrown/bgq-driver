@@ -56,13 +56,13 @@ public:
             AbstractResponder( args )
     { /* Nothing to do */ }
 
-    capena::http::Methods getAllowedMethods() const;
+    capena::http::Methods _getAllowedMethods() const;
 
     // override
-    void doGet();
+    void _doGet();
 
     // override
-   void doPut( json::ConstValuePtr val_ptr );
+   void _doPut( json::ConstValuePtr val_ptr );
 
 
 private:

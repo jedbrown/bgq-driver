@@ -114,7 +114,7 @@ Insert::execute(
     try {
         BGQDB::job::Id id;
         _operations->insert( db_info, &id );
-        job->_id = id ;
+        job->_id = id;
     } catch ( const std::exception& e ) {
         job->setError(
                 e.what(),

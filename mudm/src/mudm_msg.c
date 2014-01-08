@@ -226,7 +226,10 @@ int mudm_rdma_read_on_torus(       void* mudm_context ,
                                              (uint64_t)(sizeof(MUHWI_Descriptor_t)), //sending directput to remote
                                              &mcontext->rget_memfifo_sent,
                                              &mcontext->mudm_hi_wrap_flight_recorder);
-    release_pkt_to_poll(pktd, desc_count);
+    while( MUSPI_CheckDescComplete(mcontext->injfifo_ctls[0].injfifo, desc_count) == 0)
+    {        
+    }
+    release_pkt_to_free(pktd,0);
   }
 
 

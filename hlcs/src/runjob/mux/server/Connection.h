@@ -165,6 +165,10 @@ private:
             error_code::rc error,
             const Timer::SocketPtr& socket
             );
+
+    void keepAlive(
+            const Timer::SocketPtr& socket
+            );
 private:
     boost::asio::strand _strand;                                //!< protects _socket and _outbox
     Timer::SocketPtr _socket;                                   //!<

@@ -20,4 +20,5 @@ This package contains BlueGene TEAL.
 /opt/teal/ibm
 %config /etc/teal/bgq.conf
 %config /etc/teal/bgq.conf.v1r1m0
+%config /etc/teal/bgq.conf.v1r1m1
 

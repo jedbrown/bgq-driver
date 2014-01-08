@@ -38,6 +38,7 @@
 #include <sys/time.h>
 #include <sys/utsname.h>
 #include <iomanip>
+#include <queue>
 #include <ramdisk/include/services/common/Cioslog.h>
 #include <ramdisk/include/services/common/SignalHandler.h>
 
@@ -228,7 +229,7 @@ HwJobController::eventMonitor(void)
    pollInfo[pipeForSig].fd = SigWritePipe._pipe_descriptor[0];
    pollInfo[pipeForSig].events = POLLIN;
    pollInfo[pipeForSig].revents = 0;
-   LOG_CIOS_TRACE_MSG("added data channel listener using fd " << pollInfo[dataListener].fd << " to descriptor list");
+   LOG_CIOS_TRACE_MSG("added signal pipe listener using fd " << pollInfo[pipeForSig].fd << " to descriptor list");
 
 
    // Process events until told to stop.
@@ -292,7 +293,9 @@ HwJobController::eventMonitor(void)
       if (pollInfo[dataChannel].revents & POLLIN) {
          LOG_CIOS_TRACE_MSG("input event available on data channel");
          pollInfo[dataChannel].revents = 0;
-         dataChannelHandler();
+         if (dataChannelHandler() == EPIPE) {
+             pollInfo[dataChannel].fd = -1;
+         }
       }
 
       // Check for an event on the completion channel.
@@ -309,7 +312,7 @@ HwJobController::eventMonitor(void)
          eventChannelHandler();
       }
 
-      // Check for an event on the event channel.
+      // Check for an event on the pipe for signal.
       if (pollInfo[pipeForSig].revents & POLLIN) {
          LOG_INFO_MSG_FORCED("input event available pipe from signal handler");
          pollInfo[pipeForSig].revents = 0;
@@ -450,6 +453,10 @@ HwJobController::dataChannelHandler(InetSocketPtr authOnly)
 
       case ChangeConfig:
          err = changeConfig();
+         break;
+
+      case Reconnect:
+         err = reconnect();
          break;
 
       default:
@@ -1573,6 +1580,9 @@ HwJobController::reconnect(void)
    outMsg->header.length = sizeof(ReconnectAckMessage);
    outMsg->header.returnCode = Success;
 
+   // remember jobs to remove after iterating through our container
+   std::queue<uint64_t> jobsToRemove;
+
    // Run the list of jobs and resend any accumulated messages that are ready.
    for (job_list_iterator iter = _jobs.begin(); iter != _jobs.end(); ++iter) {
       JobPtr job = iter->second;
@@ -1626,15 +1636,17 @@ HwJobController::reconnect(void)
          LOG_CIOS_DEBUG_MSG("Job " << job->getJobId() << ": CleanupJobAck message sent on data channel when handling Reconnect message (" <<
                        job->cleanupJobAckAccumulator.getLimit() << " compute nodes)");
 
-         // Remove the job from the map and destroy the Job object.
          if (err == 0) {
             job->cleanupJobAckAccumulator.resetCount();
-            LOG_CIOS_INFO_MSG("Job " << inMsg->header.jobId << ": removed job (" << *job << ") from list when handling Reconnect message");
-            _jobs.remove(job->getJobId());
-            job.reset();
+            jobsToRemove.push( job->getJobId() );
          }
       }
+   }
 
+   while ( !jobsToRemove.empty() ) {
+       LOG_INFO_MSG("Job " << jobsToRemove.front() << ": removed job from list when handling Reconnect message");
+       _jobs.remove( jobsToRemove.front() );
+       jobsToRemove.pop();
    }
 
    // Send ReconnectAck message on data channel.

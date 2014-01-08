@@ -53,6 +53,7 @@ class DBConsoleController: public ConsoleController
 {
     friend class MMCSCommand_list_blocks;
     friend class MMCSCommand_list_users;
+    friend class MMCSCommand_status;
 public:
     /*!
      * \brief ctor.
@@ -77,22 +78,14 @@ private:
     // Block selection and deselection
     //
 public:
-    DBBlockPtr selectBlock(std::deque<std::string> args, MMCSCommandReply& reply, bool allocated, bool trustme = false);
+    DBBlockPtr selectBlock(std::deque<std::string> args, MMCSCommandReply& reply, bool allocated);
     void deselectBlock();
-
-    //
-    // Target set selection and deselection
-    //
-public:
-    const DBBlockPtr selectTargetset(std::deque<std::string> args, MMCSCommandReply& reply, bool exists);
-    void deselectTargetset() { deselectBlock(); }
 
 public:
     MMCSThread* getMMCSThread() { return _mmcsThread; }
     void setMMCSThread(MMCSThread* mmcsThread) { _mmcsThread = mmcsThread; }
     static bool setAllocating(const std::string& blockName);
     static void doneAllocating(const std::string& blockName);
-    static void printAllocMap();
 
 private:
     MMCSThread* _mmcsThread;	// for debugging mmcs_server - thread using this DBConsoleController

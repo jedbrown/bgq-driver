@@ -51,7 +51,7 @@ Timer::Timer(
 
 void
 Timer::start(
-        Callback callback
+        const Callback& callback
         )
 {
     // start timer, we want it to trigger immediately since this
@@ -113,7 +113,7 @@ Timer::getInterval() const
 void
 Timer::timerHandler(
         const boost::system::error_code& error,
-        Callback callback
+        const Callback& callback
         )
 {
     if ( error == boost::asio::error::operation_aborted ) {
@@ -139,7 +139,7 @@ Timer::timerHandler(
 void
 Timer::connectHandler(
         const bgq::utility::Connector::ConnectResult& res,
-        Callback callback
+        const Callback& callback
         )
 {
     LOG_TRACE_MSG( "connect handler" );

@@ -643,7 +643,7 @@ int Bgpm_GetEventIdFromLabel(const char *evtLabel)
             idx++;
         }
     }
-    else if ((strncasecmp(evtLabel, "PEVT_CNK_", 9) == 0) ||
+    else if ((strncasecmp(evtLabel, "PEVT_CNK", 8) == 0) || 
              (strncasecmp(evtLabel, "PEVT_CNKHWT_", 12) == 0)) {
         while (idx < PEVT_CNKUNIT_LAST_EVENT-PEVT_NWUNIT_LAST_EVENT) {
             if (strcasecmp(evtLabel, CNKunitEvtTbl[idx].label) == 0) {
@@ -654,7 +654,7 @@ int Bgpm_GetEventIdFromLabel(const char *evtLabel)
         }
     }
     else if ((strncasecmp(evtLabel, "PEVT_", 5) == 0)) {
-        while (idx < PEVT_PUNIT_LAST_EVENT-PEVT_UNDEF) {
+        while (idx <= PEVT_PUNIT_LAST_EVENT-PEVT_UNDEF) {
             if (strcasecmp(evtLabel, punitEvtTbl[idx].label) == 0) {
                 ret = punitEvtTbl[idx].evtId;
                 break;

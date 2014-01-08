@@ -67,6 +67,8 @@ sub readcore
 {
     my($CORE, $filename) = @_;
     $id = $filename;
+    $filecnt++;
+    print "filename: $filename   (filecount $filecnt)\n";
     
     $oldmode = 0;
     $mode = 0;
@@ -87,6 +89,13 @@ sub readcore
 	    $id =~ s/\s+/_/og;
 	    $id =~ s/,//og;
 	    $id = "core_$id";
+	    $corerawdata = $line;
+	    $idcount++;
+	    if($idcount % 1000 == 0)
+	    {
+		print "processing id $id   (count=$idcount)\n";
+	    }
+ 	    
 	    push(@ids, $id);
 	    
 	    ($CORE->{$id}{"personality"}{"mpirank"}) = $MPIRank;
@@ -139,6 +148,7 @@ sub readcore
 	{
 	    $line =~ s/^\s*\S+\s+//;
 	    unshift(@{$CORE->{$id}{"stacktrace"}}, "0x" . $line) if($line !~ /Address/i);
+	    $CORE->{$id}{"corerawdata"}  = $corerawdata;
 	}
 	if($mode == 4)
 	{
@@ -162,10 +172,8 @@ sub readcore
 	}
     }
     die "Invalid corefile format: $filename"  if($validCore == 0);
-    foreach $id (@ids)
-    {
-	$CORE->{$id}{"corerawdata"}  = $corerawdata;
-    }
+    
+    print "done reading cores\n";
 }
 
 
@@ -182,19 +190,27 @@ sub start_refresh
     
     foreach $coredir (@{$CORE->{"searchpaths"}})
     {
-	opendir(DIR, $coredir) or die "Unable to open corefile directory \"$coredir\"";
-	my @files = readdir(DIR);
-	closedir(DIR);
-	
-	foreach $file (@files)
+	if(-f $coredir)
 	{
-	    if($file =~ /^$coreprefix\.\d+$/)
+	    push(@{$CORE->{"files"}}, $coredir);
+	    $numcorefiles++;
+	}
+	else
+	{
+	    opendir(DIR, $coredir) or die "Unable to open corefile directory \"$coredir\"";
+	    my @files = readdir(DIR);
+	    closedir(DIR);
+	    
+	    foreach $file (@files)
 	    {
-		($tag) = $file =~ /^$coreprefix\.(\d+)$/;
-		if(($tag >= $CORE->{"mincore"})&&($tag <= $CORE->{"maxcore"}))
+		if($file =~ /^$coreprefix\.\d+$/)
 		{
-		    $numcorefiles++;
-		    push(@{$CORE->{"files"}}, "$coredir/$file");
+		    ($tag) = $file =~ /^$coreprefix\.(\d+)$/;
+		    if(($tag >= $CORE->{"mincore"})&&($tag <= $CORE->{"maxcore"}))
+		    {
+			$numcorefiles++;
+			push(@{$CORE->{"files"}}, "$coredir/$file");
+		    }
 		}
 	    }
 	}

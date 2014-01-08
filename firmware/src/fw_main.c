@@ -28,7 +28,8 @@
 #include "Firmware_internals.h"
 #include "Firmware_RAS.h"
 #include "fw_regs.h"
-
+#include <hwi/include/bqc/dr_arb_dcr.h>
+#include <hwi/include/bqc/ddr.h>
 
 FW_State_t FW_STATE FW_State = { 0, };
 
@@ -47,7 +48,9 @@ FW_InternalState_t FW_InternalState = {
   .nodeState = {
     .domain = { 
 	    { 0x1FFFF, 0, -1, 0x10ul, 0 },  
+#ifndef FW_SINGLE_DOMAIN
 	    { 0x00000, 0, -1, 0x10ul, 0 },  
+#endif
      },
   },
 };
@@ -106,7 +109,11 @@ int fw_getDomainDescriptor( Firmware_DomainDescriptor_t* buffer ) {
 }
 
 int fw_sendMessageToDomain( unsigned targetDomain, void* message, unsigned length ) {
-  
+
+#ifdef FW_SINGLE_DOMAIN
+    return FW_ERROR;
+#else
+
   int rc = FW_OK; // assume
 
   if ( targetDomain >= FW_MAX_DOMAINS ) {
@@ -137,10 +144,14 @@ int fw_sendMessageToDomain( unsigned targetDomain, void* message, unsigned lengt
  sendMessageDone:
   fw_semaphore_up( BeDRAM_LOCKNUM_MSG_BOX );
   return rc;
+#endif
 }
 
 int fw_retrieveMessage( unsigned* sourceDomain, void* message, unsigned* length ) {
 
+#ifdef FW_SINGLE_DOMAIN
+    return FW_ERROR;
+#else
     int rc = FW_OK;
 
     FW_MessageBox_t* messageBox = &( FW_InternalState.nodeState.messageBox[ fw_getThisDomainID() ] );
@@ -163,6 +174,7 @@ int fw_retrieveMessage( unsigned* sourceDomain, void* message, unsigned* length 
 retrieveMessageDone:
     fw_semaphore_up( BeDRAM_LOCKNUM_MSG_BOX );
     return rc;
+#endif
 }
 
 inline int fw_SPI_init() {
@@ -318,6 +330,10 @@ int fw_takeCPU( unsigned coreNumber, unsigned threadMask, void (*entryPoint)(voi
     if ( fw_semaphore_down_w_timeout(BeDRAM_LOCKNUM_TAKECPU, 200ul) != 0 ) {
 	return FW_EAGAIN;
     }
+
+    // We have arrived at the point where correctable errors may be enabled:
+
+    fw_ddr_unmaskCorrectableErrors();
 
     int rc = 0;
 
@@ -559,6 +575,17 @@ int fw_mailbox_barrierWrapper( fw_uint64_t timeout ) {
     return fw_mailbox_barrier( timeout, 0 );
 }
 
+int fw_ThreadPriority_VeryHigh() {
+    ThreadPriority_VeryHigh();
+    return FW_OK;
+}
+
+int fw_ThreadPriority_MediumHigh() {
+    ThreadPriority_MediumHigh();
+    return FW_OK;
+}
+
+
 Firmware_Interface_t FW_Interface = 
   {
     .Crc                    = 0,                     // Crc via crc32n()
@@ -599,6 +626,48 @@ uint16_t threadStatus[68];
 #ifdef MEASURE_FW_BOOT_TIMES
 FW_StopWatch_t _fw_stopwatch;
 #endif
+typedef struct _FW_InitEntry_t {
+    int (*init)(void);
+    fw_uint64_t mask;
+} FW_InitEntry_t;
+
+#define PRIMORDIAL_THREAD PERS_ENABLE__RESRVD_59
+#define CORE_THREAD_ZERO  PERS_ENABLE__RESRVD_60
+
+FW_InitEntry_t INIT_TABLE[] = {
+    { fw_ThreadPriority_VeryHigh,      CORE_THREAD_ZERO | 0 },
+    { fw_dcr_arbiter_init,             CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_DrArbiter },
+    { fw_mailbox_init_on_core_0,       CORE_THREAD_ZERO | PERS_ENABLE_Mailbox },
+    { fw_A2_init,                      CORE_THREAD_ZERO | 0 },
+    { fw_testint_init ,                CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_TestInt },
+    { fw_interrupts_init,              CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_BIC }, 
+    { fw_devbus_init,                  CORE_THREAD_ZERO | PERS_ENABLE_DevBus },
+    { fw_bedram_init,                  CORE_THREAD_ZERO | PRIMORDIAL_THREAD },
+    { fw_ddr_init,                     CORE_THREAD_ZERO | PERS_ENABLE_DDR },
+    { fw_l1p_init,                     CORE_THREAD_ZERO | PERS_ENABLE_L1P },
+    { fw_l2_init,                      CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_L2 },
+    { fw_l2_central_init,              CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_L2 },
+    { fw_l2_counter_init,              CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_L2 },
+    { fw_l2_preload ,                  CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_L2Only },
+    { fw_serdes_init,                  CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_SerDes },
+    { fw_mu_resetRelease,              CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_MU },
+    { fw_nd_resetRelease,              CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_ND },
+    { fw_nd_init_global_barrier,       CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_ND },
+    { fw_pcie_init,                    CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_PCIe },
+    { fw_ms_genct_init,                CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_MSGC },
+    { fw_envmon_init,                  CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_EnvMon },
+    { fw_upc_init,                     CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_UPC },
+    { fw_wu_init,                      CORE_THREAD_ZERO | PRIMORDIAL_THREAD | PERS_ENABLE_Wakeup },
+    { fw_takeCPU_init,                 CORE_THREAD_ZERO | PRIMORDIAL_THREAD },
+    { fw_ThreadPriority_MediumHigh,    CORE_THREAD_ZERO | 0 },
+    { fw_A2thread_init,                0 },
+    { fw_mmu_init,                     0 },
+    { fw_fpu_init,                     PERS_ENABLE_FPU },
+    { fw_SPI_init,                     0 },
+    { fw_sync_timebase,                PERS_ENABLE_TimeSync },
+    { fw_ddr_flush_fifos,              PERS_ENABLE_DDR }
+};
+
 
 // if ( TESTINT_DCR_PRIV_PTR->ti_interrupt_state__state != 0 ) { while (1); }
 
@@ -610,6 +679,7 @@ FW_StopWatch_t _fw_stopwatch;
 void __NORETURN fw_main( void ) {
 
   int rc = 0;
+  int processorThreadId = ProcessorThreadID(); // 0..3
   int primordialThread = ( (ProcessorCoreID() == 0) && (ProcessorThreadID() == 0) );
   uint64_t config = FW_Personality.Kernel_Config.NodeConfig;
   uint64_t repropass = 0;
@@ -679,58 +749,35 @@ void __NORETURN fw_main( void ) {
      BeDRAM_ReadIncSat(BeDRAM_LOCKNUM_FW_THREADS_PRESENT);
   }
 
+  {
+      int i;
 
-  // Phase II : Perform per-core initialization
+      for ( i = 0; i < sizeof(INIT_TABLE)/sizeof(INIT_TABLE[0]); i++ ) {
+  
 
-  if ( ProcessorThreadID() == 0 ) {
+	  if ( ( ( INIT_TABLE[i].mask & CORE_THREAD_ZERO ) != 0 ) && ( processorThreadId != 0 ) ) {
+	      continue;
+	  }
 
-    // We (potentially) have a lot of code to get through on this path, so crank
-    // up the priority of this thread:
+	  if ( ( ( INIT_TABLE[i].mask & PRIMORDIAL_THREAD ) != 0 ) && ( primordialThread == 0 ) ) {
+	      continue;
+	  }
 
-    ThreadPriority_VeryHigh();
+	  fw_uint64_t mask = INIT_TABLE[i].mask & ~( PRIMORDIAL_THREAD | CORE_THREAD_ZERO );
 
-    // We could try putting extraneous threads to sleep like this:
-    //
-    //   mtspr( SPRN_TENC, 0xE );
-    //
-    // but that does not seem to make much of an impact.
+	  if ( ( mask != 0 ) && (  ( config & mask ) != mask ) ) {
+	      continue;
+	  }
+	  
+	  threadStatus[ProcessorID()] = __LINE__;
+	  rc = INIT_TABLE[i].init();
 
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_DrArbiter,config), fw_dcr_arbiter_init             ); // Do this early since it tweaks DCR arbiter write timeout
-    FW_INIT( _PERS_ENABLED(PERS_ENABLE_Mailbox,config),                       fw_mailbox_init_on_core_0       ); // Do this early so we have error reporting capabilities.
-    FW_INIT( TRUE,                                                            fw_A2_init                      );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_TestInt,config),   fw_testint_init                 ); // Do this early so that I/O node bits etc. are set
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_BIC,config),       fw_interrupts_init              ); 
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_DevBus,config),    fw_devbus_init                  );
-    FW_INIT( primordialThread,                                                fw_bedram_init                  ); // Note:  part of this is unconditional (hence no personality check here)
-    FW_INIT( _PERS_ENABLED(PERS_ENABLE_DDR,config),                           fw_ddr_init                     );
-    FW_INIT( _PERS_ENABLED(PERS_ENABLE_L1P,config),                           fw_l1p_init                     ); // Note: performed on all cores
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_L2,config),        fw_l2_init                      );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_L2,config),        fw_l2_central_init              );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_L2,config),        fw_l2_counter_init              );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_L2Only,config),    fw_l2_preload                   );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_SerDes,config),    fw_serdes_init                  );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_MU,config),        fw_mu_resetRelease              );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_ND,config),        fw_nd_resetRelease              );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_ND,config),        fw_nd_init_global_barrier       );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_PCIe,config),      fw_pcie_init                    );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_MSGC,config),      fw_ms_genct_init                );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_EnvMon,config),    fw_envmon_init                  );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_UPC,config),       fw_upc_init                     );
-    FW_INIT( primordialThread && _PERS_ENABLED(PERS_ENABLE_Wakeup,config),    fw_wu_init                      );
-    FW_INIT( primordialThread,                                                fw_takeCPU_init                 );
-
-    // mtspr( SPRN_TENS, 0xF );
-    ThreadPriority_MediumHigh(); // restore priority
+	  if (rc) {
+	      FW_Error("FW: Initialization failed in entry %d.  rc=0x%x\n", i, rc); 
+	      crash(-__LINE__);
+	  }
+      }
   }
-
-  // Phase III:  Perform per thread initialization
-
-  FW_INIT( TRUE,                                                        fw_A2thread_init          );
-  FW_INIT( TRUE,                                                        fw_mmu_init );
-  FW_INIT( _PERS_ENABLED(PERS_ENABLE_FPU,config),                       fw_fpu_init               );
-  FW_INIT( TRUE,                                                        fw_SPI_init               );
-  FW_INIT( _PERS_ENABLED(PERS_ENABLE_TimeSync, config),                 fw_sync_timebase          );
-  FW_INIT( _PERS_ENABLED(PERS_ENABLE_DDR, config),                      fw_ddr_flush_fifos        );// DD1 workaround
 
   repropass = BeDRAM_Read(BeDRAM_LOCKNUM_REPROCOUNTER);
   if(repropass <= 1)    // first pass only

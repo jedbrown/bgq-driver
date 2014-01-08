@@ -36,6 +36,15 @@ namespace capena {
 namespace server {
 
 
+/** \brief Responder creates an HTTP response for an exception.
+ *
+ *  This is used internally when, for example, can't get a responder from the application.
+ *
+ *  For example, if the client requests a resource that doesn't exist, the application
+ *  might throw a capena::server::exception::NotFound exception.
+ *  To generate the response for the request, the Connection creates an ErrorResponder.
+ *
+ */
 class ErrorResponder : public AbstractResponder
 {
 public:

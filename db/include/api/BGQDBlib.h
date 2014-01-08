@@ -150,12 +150,19 @@ struct Dimension {
     static const std::string& toString( Value dim );
 };
 
+
+/*
+ * Dynamic wire sparing information used by the postProcessRAS method to process
+ * the BQL_SPARE event generated for a specific RX link chip.
+ */
 struct SparingInfo {
-    std::string fromLoc;
-    std::string fromReg;
-    std::string toLoc;
-    std::string toReg;
-    int    wireMask;
+    std::string txLoc;     // TX link chip location (Rxx-Mx-Nxx-Lxx, Rxx-Ix-Uxx, or Qxx-Ix-Uxx)
+    std::string txReg;     // TX link chip register (D01 or D23)
+    std::string rxLoc;     // RX link chip location (Rxx-Mx-Nxx-Lxx, Rxx-Ix-Uxx, or Qxx-Ix-Uxx)
+    std::string rxReg;     // RX link chip register (C01 or C23)
+    int         wireMask;  // Aggregated bad wire mask for BGQCable table (48 bits)
+    uint16_t    txMask;    // Bad fiber mask for the TX register (12 bits)
+    uint16_t    rxMask;    // Bad fiber mask for the RX register (12 bits)
 };
 
 typedef boost::array<uint32_t,Dimension::Count> DimensionSizes; //!< Size in each dimension
@@ -193,6 +200,19 @@ struct SwitchConfig {
         In
     };
 };
+
+typedef std::vector<std::string>  ConnectedIONodes;
+
+typedef struct midplaneIOInfo
+{
+    int              IOLinkCount;
+    ConnectedIONodes IONodes;
+    midplaneIOInfo()
+    {
+        IOLinkCount = 0;
+    }
+
+} MidplaneIOInfo;
 
 
 /*! \brief Values in the Replacement_history table type column. See create_trigger_bgq.sql. */

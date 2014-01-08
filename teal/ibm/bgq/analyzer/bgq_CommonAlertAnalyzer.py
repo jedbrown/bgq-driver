@@ -62,8 +62,15 @@ class bgqCommonAlertAnalyzer(AlertAnalyzer):
         # Alert table query
         schema = str(db_interface.TABLE_TEMPLATE).split('.')
         alertTable = schema[0] + '.x_tealalertlog'
-        self.query = "select \"event_loc\" from " + alertTable + " where \"event_loc\" like 'PLOC%' and \"event_loc\" not like 'LOCATION' and \"creation_time\" >= current timestamp - WINDOW"
-        self.dup_query = "select \"event_loc\" from " + alertTable + " where \"event_loc\" like 'LOC' and \"creation_time\" >= current timestamp - WINDOW"
+        alert2eventTable = schema[0] + '.x_tealalert2event'
+        eventTable = schema[0] + '.tbgqeventlog'
+        query_time_window = "\"creation_time\" >= (timestamp('ALERT_TIME') - WINDOW) and \"creation_time\" < timestamp('ALERT_TIME')"
+        self.query = "select \"event_loc\" from " + alertTable + " where \"state\" = 1 and \"event_loc\" like 'PLOC%' and \"event_loc\" not like 'LOCATION' and " + query_time_window
+        self.dup_query = "select \"event_loc\" from " + alertTable + " where \"state\" = 1 and \"alert_id\" = 'COMMON01' and " + query_time_window + " and "
+        self.alert_recid_query1 = "select \"rec_id\" from " + alertTable + " where \"state\" = 1 and (\"alert_id\" = 'COMMON01' or \"alert_id\" = 'HWERR01') and " + query_time_window
+        self.alert_recid_query2 = "select \"rec_id\" from " + alertTable + " where \"state\" = 1 and (\"alert_id\" = 'COMMON01' or \"alert_id\" = 'HWERR01' or \"alert_id\" = 'ENDJOB01') and " + query_time_window
+        self.event_recid_query = "select \"t_event_recid\" from " + alert2eventTable + " where \"alert_recid\" = ?"
+        self.event_block_id_query = "select block from " + eventTable + " where recid = ?"
 
         return
     
@@ -106,10 +113,11 @@ class bgqCommonAlertAnalyzer(AlertAnalyzer):
         '''Analyze an alert
         '''
         alert_recId = alert.get_rec_id()
+        alert_id = alert.get_incident_id()
         loc_type = alert.event_loc.get_id()
         location = alert.event_loc.get_location()
         #alert_msgId = alert.get_incident_id()
-        registry.get_logger().info('Analyzing alert id ' +  str(alert_recId) + ', location ' + loc_type + ':' + location)
+        registry.get_logger().info('Analyzing alert id ' +  str(alert_recId) + ' ' + alert_id + ', location ' + loc_type + ':' + location)
 
         # There should only be one condition event associated with the alert.  
         events = alert.condition_events
@@ -129,18 +137,69 @@ class bgqCommonAlertAnalyzer(AlertAnalyzer):
         locName = self.get_loc_name(loc)
 
         # No need to analyze alert with rack location
+        alert_time = str(alert.get_time_occurred())
         if locName == 'rack':
             registry.get_logger().info('Nothing to analyze for alert recid ' + str(alert_recId) + ' with rack location')
             registry.get_service(SERVICE_ALERT_DELIVERY_Q).put(alert)
             return
 
+        # Find out if there are other alerts with the same block id (for ENDJOB01 and THRES01)
+        dup_qry = ''
+        if (alert_id == 'ENDJOB01' or alert_id == 'THRES01'):
+            same_block = False
+            if (alert_id == 'ENDJOB01'):
+                # For ENDJOB01, look for alert id HWERR01 or COMMON01 with the same block id
+                same_block = self.has_same_blockId(event, alert_time, self.alert_recid_query1, self.event_recid_query, self.event_block_id_query, cursor)
+            else:
+                # For THRES0101, look for alert id HWERR01 or COMMON01 or ENDJOB01 with the same block id
+                same_block = self.has_same_blockId(event, alert_time, self.alert_recid_query2, self.event_recid_query, self.event_block_id_query, cursor)
+
+            if same_block:
+                # Found prior alert with the same block id, close current alert
+                registry.get_logger().info('Closing current alert recid ' + str(alert_recId) + ' due to prior alert with the same block id')
+                registry.get_service(SERVICE_ALERT_MGR).close(alert_recId)
+            else:
+                # Found no prior alert with the same block id, pass current alert to the delivery queue
+                registry.get_logger().info('No common block id found for alert id ' + str(alert_recId) + ' within the last ' + self.window_time)
+                registry.get_service(SERVICE_ALERT_DELIVERY_Q).put(alert)
+
+            return
+
+        elif (alert_id == 'BQL01'):
+            # No need to analyze BQL01 alerts, just pass it to the delivery queue
+            registry.get_logger().info('Nothing to analyze for alert id ' + alert_id + '.')
+            registry.get_service(SERVICE_ALERT_DELIVERY_Q).put(alert)
+            return
+
+        # The following will handle the rest of the alert ids (HWERR01 or COMMON01).
+        # Find out if there is common mode alert already exist for the same location or higher hierarchy 
+        loc_parent, loc_parent_list = self.get_loc_parent(loc)
+        loc_qry = '('
+        idx = 0
+        for pLoc in loc_parent_list:
+            if idx != 0: 
+                loc_qry += " or "
+            loc_qry +=  " \"event_loc\" like '" + pLoc + "'"
+            idx += 1
+
+        dup_qry2 = self.dup_query + loc_qry + ")"
+        loc_qry += " or \"event_loc\" like '" + location + "')"
+        dup_qry = self.dup_query + loc_qry
+        dup = self.has_duplicate(alert_time, dup_qry, cursor)
+        if dup == True:
+            # Found prior alert with the same block id, close current alert
+            registry.get_logger().info('Closing current alert recid ' + str(alert_recId) + ' due to prior alert with same common location')
+            registry.get_service(SERVICE_ALERT_MGR).close(alert_recId)
+            return
+
         # Look for a common hardware problem if there are multiple alerts for different location
         # on the same hardware.
-        sendAlert = self.has_common_location(loc, self.query, cursor)
+        sendAlert = self.has_common_location(loc, alert_time, self.query, cursor)
         if sendAlert == True:
-            # Send alert
-            self.send_common_alert(loc, alert_recId, event, cursor)
+            # Send commmon alert
+            self.send_common_alert(loc, alert_recId, event, alert_time, dup_qry2, cursor)
         else:
+            # Pass current alert to the delivery queue
             registry.get_logger().info('No common location for ' + location + ' found for alert id ' + str(alert_recId) + ' within the last ' + self.window_time)
             registry.get_service(SERVICE_ALERT_DELIVERY_Q).put(alert)
 
@@ -203,16 +262,19 @@ class bgqCommonAlertAnalyzer(AlertAnalyzer):
         if parent_index < 0:
             return None
         parent_loc = ''
+        parent_loc_list = list()
         for i in range(parent_index):
             if i == 0:
                 parent_loc = loc.location_code[i]
             else:
                 parent_loc += '-' + loc.location_code[i]
 
-        return parent_loc
+            parent_loc_list.append(parent_loc)
+
+        return parent_loc, parent_loc_list
 
 
-    def send_common_alert(self, loc, cur_alert_recid, event, cursor):
+    def send_common_alert(self, loc, cur_alert_recid, event, alert_time, dup_query, cursor):
         ''' Send an alert for the common location.
         '''
         # Close current alert prior to creating a new common alert
@@ -222,12 +284,12 @@ class bgqCommonAlertAnalyzer(AlertAnalyzer):
         # Get the location 
         loc_name = self.get_loc_name(loc)
         loc_type = loc.get_id()
-        loc_parent = self.get_loc_parent(loc)
+        loc_parent, loc_parent_list = self.get_loc_parent(loc)
         loc_parent_object = Location(loc_type, loc_parent)
 
         # Check if there is already an existing alert with the same location.
         # If found, no need to create the same alert, just return
-        dup = self.has_duplicate(loc_parent, self.dup_query, cursor)
+        dup = self.has_duplicate(alert_time, dup_query, cursor)
         if dup == True:
             registry.get_logger().info('Not creating a common alert as there is one or more alerts with the same location ' + loc_parent)
             return
@@ -256,37 +318,44 @@ class bgqCommonAlertAnalyzer(AlertAnalyzer):
         # through the pipeline right away)
         registry.get_logger().info("Put alertId = " + self.alertId + "  with event recid = " + str(event.get_rec_id()) + " on the alert analyzer queue")
         registry.get_service(SERVICE_ALERT_ANALYZER_Q).put(bg_alert) 
-        #self.send_alert(bg_alert)
+
         return    
 
 
-    def has_common_location(self, loc, query, cursor):
+    def has_common_location(self, loc, alert_time, query, cursor):
         ''' Query alerts for the common location to indicate whether or not to send an alert.
         '''
-        locParent = self.get_loc_parent(loc)
+        locParent, locParent_list = self.get_loc_parent(loc)
 
         # Query for the number of alerts for the same parent's location
         query = query.replace('LOCATION',loc.get_location())
         query = query.replace('PLOC',locParent)
+        query = query.replace('ALERT_TIME', alert_time)
         query = query.replace('WINDOW', self.window_time)
         cursor.execute(query)
 
         # Send a common alert if ther are alerts with common location
         # Start counting from the current alert (include current alert)
+        loc_type = loc.get_id()
         count = 1
-        while cursor.fetchone():
-            count += 1
-            if count == self.threshold:
-                return True
+        rows = cursor.fetchall()
+        for r in rows:
+            r_loc = r[0].strip()
+            r_loc_object = Location(loc_type, r_loc)
+            r_loc_parent, r_loc_parent_list = self.get_loc_parent(r_loc_object)
+            if r_loc_parent == locParent:
+                count += 1
+                if count == self.threshold:
+                    return True
 
         return False
 
 
-    def has_duplicate(self, loc, query, cursor):
+    def has_duplicate(self, alert_time, query, cursor):
         ''' Query alerts for the same location.
         '''
         # Query for the number of alerts for the same location
-        query = query.replace('LOC',loc)
+        query = query.replace('ALERT_TIME', alert_time)
         query = query.replace('WINDOW', self.window_time)
         cursor.execute(query)
 
@@ -294,6 +363,41 @@ class bgqCommonAlertAnalyzer(AlertAnalyzer):
         row = cursor.fetchone()
         if row:
             return True
+
+        return False
+
+
+    def has_same_blockId(self, event, alert_time, alert_recid_query, event_recid_query, block_id_query, cursor):
+        ''' Query alerts for the associated event with the same block id
+        '''
+        # Get the block id from the associated event for the current alert
+        # Return if no block id.
+        block_id = ''
+        cursor.execute(block_id_query, event.get_rec_id())
+        row = cursor.fetchone()
+        if row is not None and len(row) > 0:
+            block_id = row[0].strip()
+            registry.get_logger().debug('Block id for the current alert = ' + block_id)
+        else:
+            registry.get_logger().debug('The current alert has no block id associated with it')
+            return False
+        
+        # Get rec_id for all alerts within the time window
+        alert_recid_query = alert_recid_query.replace('ALERT_TIME', alert_time)
+        alert_recid_query = alert_recid_query.replace('WINDOW', self.window_time)
+        cursor.execute(alert_recid_query)
+        rows = cursor.fetchall()
+        for r in rows:
+            alert_recid = r[0]
+            cursor.execute(event_recid_query, alert_recid)
+            row1 = cursor.fetchone()
+            if row1:
+                event_recid = row1[0]
+                cursor.execute(block_id_query, event_recid)
+                row2 = cursor.fetchone()
+                if row2:
+                    if row2[0].strip() == block_id:
+                        return True
 
         return False
     

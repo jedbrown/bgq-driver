@@ -100,5 +100,11 @@ uint32_t Kernel_EnableFastSpeculationPaths()
     return (uint32_t) CNK_SPI_SYSCALL_0(ENABLEFASTSPECULATIONPATHS);
 }
 
+__INLINE__
+uint32_t Kernel_GetSpeculationIDSelf(uint64_t* specid)
+{
+    return (uint32_t) CNK_SPI_SYSCALL_1(GETSPECIDSELF, specid);
+}
+
 
 #endif /* _KERNEL_CNK_SPEC_IMPL_H_ */

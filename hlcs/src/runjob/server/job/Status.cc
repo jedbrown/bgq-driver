@@ -68,6 +68,7 @@ Status::set(
     // reset performance counter measuring this transition
     switch ( _status ) {
         case Running:
+        case Terminating:
             // don't time this transition, just reset the counter
             _counter.reset();
             break;

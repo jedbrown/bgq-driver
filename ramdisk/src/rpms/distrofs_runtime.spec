@@ -26,7 +26,6 @@ rm -rf %{_topdir}/BUILDROOT/bgq-distrofs_runtime-%{_rpm_ver_rel}.%{_os_arch} ; l
 /bin/
 /etc/
 /etc.mirror/
-/lib/
 /lib64/
 /root.mirror/
 /usr/

@@ -189,6 +189,10 @@ private:
 
     void completionHandler();
 
+    void keepAlive(
+            const SocketPtr& socket
+            );
+
 private:
     typedef std::deque< boost::shared_ptr<Message> > Outbox;
 

@@ -139,6 +139,7 @@ std::ostream& operator<<( std::ostream& os, Status s );
 inline StatusClass codeToClass( Status s )  { return StatusClass( unsigned(s) / 100 ); }
 
 
+/*! \brief HTTP header field names */
 namespace header {
 
 // general
@@ -198,6 +199,7 @@ const std::string LAST_MODIFIED( "Last-Modified" );
 }
 
 
+/*! \brief HTTP header field names normalized to uppercase. */
 namespace header_norm {
 
 // general
@@ -257,6 +259,7 @@ const std::string LAST_MODIFIED( "LAST-MODIFIED" );
 }
 
 
+/*! \brief HTTP Media type strings. */
 namespace media_type {
 
 const std::string JSON( "application/json" );

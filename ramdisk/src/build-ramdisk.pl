@@ -171,7 +171,7 @@ if ( $classicRamdisk == 0 ) {
 		"/bin/clear -> busybox",
 		"/bin/cp -> busybox",
 		"/bin/cut -> busybox",
-		"/bin/date -> busybox",
+		#"/bin/date -> busybox",
 		"/bin/dd -> busybox",
 		"/bin/df -> busybox",
 		"/bin/diff -> busybox",

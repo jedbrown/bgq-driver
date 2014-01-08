@@ -53,14 +53,11 @@ HTTP status: 415 Unsupported Media Type
 #include <utility/include/Log.h>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/make_shared.hpp>
 #include <boost/program_options.hpp>
 #include <boost/throw_exception.hpp>
 
 #include <stdexcept>
 #include <string>
-
-#include <stdlib.h>
 
 
 using boost::lexical_cast;
@@ -90,7 +87,7 @@ AbstractResponder::AbstractResponder(
 }
 
 
-void AbstractResponder::checkContentType()
+void AbstractResponder::_checkContentType()
 {
     const capena::server::Request &request(_getRequest());
 
@@ -113,7 +110,7 @@ void AbstractResponder::checkContentType()
 }
 
 
-void AbstractResponder::handleError( std::exception& e )
+void AbstractResponder::_handleError( std::exception& e )
 {
     {
         Error *error_p(dynamic_cast<Error*>( &e ));
@@ -148,7 +145,7 @@ void AbstractResponder::_processRequest()
             " [" << _user_info.getUserId().getUser() << "]"
         );
 
-    handle();
+    _handle();
 }
 
 
@@ -164,10 +161,10 @@ bool AbstractResponder::_userHasHardwareRead() const
         return false;
     }
 
-    if ( _enforcer().validate(
+    if ( _getEnforcer().validate(
                  hlcs::security::Object( hlcs::security::Object::Hardware, string() ),
                  hlcs::security::Action::Read,
-                 getRequestUserId()
+                 _getRequestUserId()
              )
        )
     {
@@ -180,19 +177,19 @@ bool AbstractResponder::_userHasHardwareRead() const
 }
 
 
-void AbstractResponder::handle()
+void AbstractResponder::_handle()
 {
     const capena::server::Request &request(_getRequest());
 
     if ( request.getMethod() == capena::http::Method::DELETE ) {
 
-        doDelete();
+        _doDelete();
 
     } else if ( request.getMethod() == capena::http::Method::GET ) {
 
         try {
 
-            doGet();
+            _doGet();
 
         } catch ( boost::program_options::multiple_occurrences& me ) {
 
@@ -202,7 +199,7 @@ void AbstractResponder::handle()
 
     } else if ( request.getMethod() == capena::http::Method::HEAD ) {
 
-        doHead();
+        _doHead();
 
     } else if ( request.getMethod() == capena::http::Method::PUT || request.getMethod() == capena::http::Method::POST ) {
 
@@ -218,7 +215,7 @@ void AbstractResponder::handle()
 
         }
 
-        checkContentType(); // Throws if the content type is not application/json.
+        _checkContentType(); // Throws if the content type is not application/json.
 
         const std::string &req_body(*req_body_opt);
 
@@ -241,13 +238,13 @@ void AbstractResponder::handle()
         }
 
         if ( request.getMethod() == capena::http::Method::PUT ) {
-            doPut( val_ptr );
+            _doPut( val_ptr );
         } else {
-            doPost( val_ptr );
+            _doPost( val_ptr );
         }
 
     } else {
-        BOOST_THROW_EXCEPTION( capena::server::exception::MethodNotAllowed( getAllowedMethods() ) );
+        BOOST_THROW_EXCEPTION( capena::server::exception::MethodNotAllowed( _getAllowedMethods() ) );
     }
 }
 
@@ -280,7 +277,7 @@ AbstractResponder::~AbstractResponder()
 
 void AbstractResponder::_throwMethodNotAllowed()
 {
-    BOOST_THROW_EXCEPTION( capena::server::exception::MethodNotAllowed( getAllowedMethods() ) );
+    BOOST_THROW_EXCEPTION( capena::server::exception::MethodNotAllowed( _getAllowedMethods() ) );
 }
 
 

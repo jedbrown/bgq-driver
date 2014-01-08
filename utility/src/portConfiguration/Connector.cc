@@ -241,11 +241,8 @@ Connector::_handleHandshake(
 {
     if ( !socket_ptr ) {
         Error::Type connector_err(Error::HandshakeError);
-        string error_str( "handshake failed" );
 
-        LOG_ERROR_MSG( error_str );
-
-        connect_handler( ConnectResult( socket_ptr, connector_err, error_str, server_cn ) );
+        connect_handler( ConnectResult( socket_ptr, connector_err, message, server_cn ) );
     } else {
         connect_handler( ConnectResult( socket_ptr, Error::Success, std::string(), server_cn ) );
     }

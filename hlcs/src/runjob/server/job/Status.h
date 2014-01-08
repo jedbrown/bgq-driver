@@ -62,6 +62,7 @@ public:
         OutputStarting,
         Running,
         Setup,
+        Terminating,
         NumStatuses
     };
 
@@ -83,6 +84,7 @@ public:
             "OUTPUT STARTING",
             "RUNNING",
             "SETUP",
+            "TERMINATING"
         };
 
         if (s >= Cleanup && s < NumStatuses) {

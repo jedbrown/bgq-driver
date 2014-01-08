@@ -164,6 +164,9 @@ DefaultControlEventListener::processRASMessage(RasEvent& rasEvent)
     // short circuit if we already have a block ID provided
     if ( !rasEvent.getDetail(RasEvent::BLOCKID).empty() ) return DBBlockController::processRASMessage(rasEvent);
 
+    // no need to handle empty locations
+    if ( rasEvent.getDetail(RasEvent::LOCATION).empty() ) return DBBlockController::processRASMessage(rasEvent);
+
     try {
         const bgq::util::Location location( rasEvent.getDetail(RasEvent::LOCATION) );
         switch ( location.getType() ) {

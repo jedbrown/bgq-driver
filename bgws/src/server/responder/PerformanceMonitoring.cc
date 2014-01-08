@@ -159,7 +159,7 @@ PerformanceMonitoring::_Grouping PerformanceMonitoring::_parseGroupingCode( cons
 }
 
 
-void PerformanceMonitoring::doGet()
+void PerformanceMonitoring::_doGet()
 {
     namespace po = boost::program_options;
 
@@ -239,7 +239,7 @@ void PerformanceMonitoring::_checkAuthority()
         return;
     }
 
-    LOG_WARN_MSG( "Could not get control system performance data because " << getRequestUserInfo() << " doesn't have authority." );
+    LOG_WARN_MSG( "Could not get control system performance data because " << _getRequestUserInfo() << " doesn't have authority." );
 
     BOOST_THROW_EXCEPTION( Error(
             "Could not get control system performance data because the user doesn't have authority.",
@@ -303,7 +303,7 @@ void PerformanceMonitoring::_getSingle(
         obj.set( function, cols["duration"].as<double>() );
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
     response.setContentTypeJson();
     response.headersComplete();
 
@@ -362,7 +362,7 @@ void PerformanceMonitoring::_getMultiDetails(
     LOG_DEBUG_MSG( "total_count=" << total_count );
 
     if ( total_count == 0 ) {
-        capena::server::Response &response(getResponse());
+        capena::server::Response &response(_getResponse());
 
         response.setContentTypeJson();
         response.headersComplete();
@@ -465,7 +465,7 @@ void PerformanceMonitoring::_getMultiDetails(
         }
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     req_range.updateResponse( response, arr.size(), total_count );
 
@@ -555,7 +555,7 @@ void PerformanceMonitoring::_getGrouped(
     LOG_DEBUG_MSG( "total_count=" << total_count );
 
     if ( total_count == 0 ) {
-        capena::server::Response &response(getResponse());
+        capena::server::Response &response(_getResponse());
 
         response.setContentTypeJson();
         response.headersComplete();
@@ -709,7 +709,7 @@ void PerformanceMonitoring::_getGrouped(
         }
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     req_range.updateResponse( response, arr.size(), total_count );
 

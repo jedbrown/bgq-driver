@@ -197,17 +197,34 @@ TableInfos::TableInfos( const Configuration& configuration )
     }
     sql_handle_closer_t hdbc_closer( SQL_HANDLE_DBC, hdbc, SQL_HANDLE_ENV, henv );
 
+
     LOG_INFO_MSG( "Connecting to database " << db_name << "..." );
 
-    sqlrc = SQLConnect(
-            hdbc,
-            (SQLCHAR*) db_name.c_str(), SQL_NTS,
-            NULL, SQL_NTS,
-            NULL, SQL_NTS
-        );
+    while ( true ) {
 
-    if ( sqlrc != SQL_SUCCESS ) {
-        throwSqlError( "SQLConnect", SQL_HANDLE_DBC, hdbc );
+        try {
+
+            sqlrc = SQLConnect(
+                    hdbc,
+                    (SQLCHAR*) db_name.c_str(), SQL_NTS,
+                    NULL, SQL_NTS,
+                    NULL, SQL_NTS
+                );
+
+            if ( sqlrc != SQL_SUCCESS ) {
+                throwSqlError( "SQLConnect", SQL_HANDLE_DBC, hdbc );
+            }
+
+            break;
+
+        } catch ( std::exception& e ) {
+
+            LOG_WARN_MSG( "Failed to connect to database, will try again in a few seconds." );
+
+            sleep( 5 );
+
+        }
+
     }
 
     LOG_INFO_MSG( "Connected to database" << (db_user_p ? string() + " as '" + *db_user_p + "'" : "" ) );

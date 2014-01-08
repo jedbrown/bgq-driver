@@ -28,26 +28,24 @@
 #include <grp.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <pwd.h>
 #include <sys/wait.h>
-#include <boost/bind.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread.hpp>
 #include <boost/tokenizer.hpp>
 #include <Log.h>
 #include "Exec.h"
-#include "ScopeGuard.h"
 
 LOG_DECLARE_FILE("utility");
 
-void dupfds(int logfd) {
+void
+dupfds(
+        const int logfd
+        )
+{
     ::close( STDOUT_FILENO );
     if ( dup2( logfd, STDOUT_FILENO ) != STDOUT_FILENO ) {
         std::ostringstream error;
         error << "dup2 failed to set STDOUT to the log file: " << strerror(errno);
-        //        throw Exec::ExecException(errno, error.str());
     }
 
     // setup stderr to write to log
@@ -55,11 +53,15 @@ void dupfds(int logfd) {
     if ( dup2( logfd, STDERR_FILENO) != STDERR_FILENO ) {
         std::ostringstream error;
         error << "dup2 failed to set STDERR to the log file: " << strerror(errno);
-        //        throw Exec::ExecException(errno, error.str());
     }
 }
 
-int logoutput(std::string logfilename, int errorfd) {
+int
+logoutput(
+        const std::string& logfilename,
+        const int errorfd
+        )
+{
     int logfd = open(logfilename.c_str(), O_RDWR|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP);
     if(logfd < 0) {
         std::ostringstream msg;
@@ -83,13 +85,18 @@ int logoutput(std::string logfilename, int errorfd) {
     return logfd;
 }
 
-pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
-                  std::string& errorstring,
-                  const bool managed, const std::string logfilename, 
-                  const std::string propfile, const std::string userid) {
-
+pid_t
+Exec::fexec(
+        int& pipefd,
+        const std::string& path_and_args,
+        std::string& errorstring,
+        const bool managed,
+        const std::string& logfilename, 
+        const std::string& propfile,
+        const std::string& userid
+        )
+{
     LOG_TRACE_MSG("path and args=" << path_and_args);
-    std::ostringstream errorstream;
 
     char* arg_array[128];
     // Guarantee the last argument is NULL
@@ -189,23 +196,6 @@ pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
         } else isroot = true;
     }
     
-    // Get a shared memory segment.  We use this for a flag
-    // to indicate when we are about to exec the child.  This way,
-    // we can be assured that any error strings are returned.
-    const int exec_shmid = shmget(IPC_PRIVATE, sizeof(int), (IPC_CREAT|S_IRWXO|S_IRWXU|S_IRWXG));
-    if(exec_shmid < 0) {
-        LOG_ERROR_MSG("could not get shared memory segment: " << strerror(errno));
-        return -1;;
-    }
-    LOG_TRACE_MSG( "got shared memory segment with id: " << exec_shmid );
-
-    // remove shared memory segment when it goes out of scope
-    bgq::utility::ScopeGuard shmid_remove_guard(
-            boost::bind(
-                &shmctl, exec_shmid, IPC_RMID, static_cast<struct shmid_ds*>(NULL)
-                )
-            );
-
     // Fork the new process.
     pid_t pid = fork();
 
@@ -219,16 +209,6 @@ pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
         // Don't need the read side.  We only write errors.
         close(errorPipe[0]);
 
-        // Attach the shared memory segment to a local int.
-        void* exec_flag_buff = 0;
-        exec_flag_buff = shmat(exec_shmid, (char *)0,0);
-        if(exec_flag_buff == (void*)-1) {
-            errorstream << "Could not attach shared memory segment in child " << strerror(errno);
-            ::write(errorPipe[1], errorstream.str().c_str(), errorstream.str().length());
-        }
-
-        *((char*)(exec_flag_buff)) = 0;
-
         // Set the bg.properties file if we have one
         if(propfile.length() != 0)
             setenv("BG_PROPERTIES_FILE", propfile.c_str(), true);
@@ -239,20 +219,22 @@ pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
             struct passwd* my_entry;
             my_entry = getpwnam(userid.c_str());
             if(my_entry == NULL) {
-                *((char*)(exec_flag_buff)) = -1;
+                std::ostringstream errorstream;
                 errorstream << "Could not get password entry for " << userid 
                             << ". Check that " << userid << " is a valid user on this system. "
                             << strerror(errno);
                 LOG_ERROR_MSG(errorstream.str());
                 ::write(errorPipe[1], errorstream.str().c_str(), errorstream.str().length());
+                _exit(EXIT_FAILURE);
             }
 
             int rc = setregid(my_entry->pw_gid, my_entry->pw_gid);
             if(rc != 0) {
-                *((char*)(exec_flag_buff)) = -1;
+                std::ostringstream errorstream;
                 errorstream << "Could not set real and effective gids of this process: " << strerror(errno);
                 LOG_ERROR_MSG(errorstream.str());
                 ::write(errorPipe[1], errorstream.str().c_str(), errorstream.str().length());
+                _exit(EXIT_FAILURE);
             }
 
             // Now, find all of the groups for the user (up to 25) and set them:
@@ -264,10 +246,11 @@ pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
             }
             rc = setgroups(groupcount, groups);
             if(rc < 0) {
-                *((char*)(exec_flag_buff)) = -1;
+                std::ostringstream errorstream;
                 errorstream << "Could not set secondary groups of this process: " << strerror(errno);
                 LOG_ERROR_MSG(errorstream.str());
                 ::write(errorPipe[1], errorstream.str().c_str(), errorstream.str().length());
+                _exit(EXIT_FAILURE);
             }
 
             std::ostringstream groupmsg;
@@ -278,26 +261,29 @@ pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
             // Finally, set the user id.
             rc = setreuid(my_entry->pw_uid, my_entry->pw_uid);
             if(rc != 0) {
-                *((char*)(exec_flag_buff)) = -1;
+                std::ostringstream errorstream;
                 errorstream << "Could not set real and effective uids of this process" << strerror(errno);
                 LOG_ERROR_MSG(errorstream.str());
                 ::write(errorPipe[1], errorstream.str().c_str(), errorstream.str().length());
+                _exit(EXIT_FAILURE);
             }
         } else {
             int rc = setregid(my_egid, my_egid);
             if(rc != 0) {
-                *((char*)(exec_flag_buff)) = -1;
+                std::ostringstream errorstream;
                 errorstream << "Could not set real and effective gids of this process to " << my_egid << ": " << strerror(errno);
                 LOG_ERROR_MSG(errorstream.str());
                 ::write(errorPipe[1], errorstream.str().c_str(), errorstream.str().length());
+                _exit(EXIT_FAILURE);
             }
 
             rc = setreuid(my_euid, my_euid);
             if(rc != 0) {
-                *((char*)(exec_flag_buff)) = -1;
+                std::ostringstream errorstream;
                 errorstream << "Could not set real and effective uids of this process to " << my_euid << ": " << strerror(errno);
                 LOG_ERROR_MSG(errorstream.str());
                 ::write(errorPipe[1], errorstream.str().c_str(), errorstream.str().length());
+                _exit(EXIT_FAILURE);
             }
         }
 
@@ -318,8 +304,9 @@ pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
                 ::close(pipeFromChild[1]);
             } else {
                 int logfd = logoutput(logfilename, errorPipe[1]);
-                if(logfd <= 0) {
-                    *((char*)(exec_flag_buff)) = -1;
+                if(!logfd) {
+                    // already wrote into error pipe
+                    _exit(EXIT_FAILURE);
                 } else {
                     dupfds(logfd);
                     // close the pipefds
@@ -331,7 +318,8 @@ pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
             if(logfilename.length() != 0) {
                 int logfd = logoutput(logfilename, errorPipe[1]);
                 if(!logfd) {
-                    *((char*)(exec_flag_buff)) = -1;
+                    // already wrote into error pipe
+                    _exit(EXIT_FAILURE);
                 } else {
                     LOG_DEBUG_MSG("Logging output to file descriptor " << logfd);
                     // setup stdout to write to log
@@ -361,7 +349,6 @@ pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
         // ignore SIGALRM, SIGHUP
         for (unsigned int j = 0; j < num_ignore_signals; ++j)
             signal(ignore_signals[j], SIG_IGN);
-        int exec_flag = (unsigned char)*((unsigned char*)(exec_flag_buff));
         if(managed) {
             // If the parent dies, kill the child
             int ret = prctl(PR_SET_PDEATHSIG, SIGKILL);
@@ -369,10 +356,11 @@ pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
                 LOG_WARN_MSG("Could not set process death signal " << strerror(errno));
             }
         }
-        if(exec_flag == 0) {
-            *((char*)(exec_flag_buff)) = 1;
-            execv((char*)path.c_str(), arg_array);
-        }
+
+        // close write end of pipe to indicate we have started
+        close(errorPipe[1]);
+
+        execv((char*)path.c_str(), arg_array);
         _exit(errno);
     } else {
         // Parent process.
@@ -382,42 +370,31 @@ pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
         // Set uid back to non-privileged user.
         int rc = seteuid(my_euid);
         if(rc != 0) {
-            errorstream << "Cannot reset effective uid to " << my_euid << ". " << strerror(errno);
-            ::write(errorPipe[1], errorstream.str().c_str(), errorstream.str().length());
-            LOG_ERROR_MSG(errorstream.str());
+            LOG_ERROR_MSG("Cannot reset effective uid to " << my_euid << ". " << strerror(errno));
         } else {
             LOG_DEBUG_MSG("successfully reset euid to " << my_euid);
         }
 
-        void* exec_flag_buff = 0;
-        exec_flag_buff = shmat(exec_shmid, (char *)0,0);
-        if(exec_flag_buff == (void*)-1) {
-            errorstream << "Failed to attached shared memory segment in parent." << strerror(errno);
-            ::write(errorPipe[1], errorstream.str().c_str(), errorstream.str().length());
+        char buf[1024];
+        bzero(buf, 1024);
+        while ( 1 ) {
+            rc = ::read( errorPipe[0], buf, sizeof(buf) );
+            if ( rc == -1 && errno == EINTR ) continue;
+            break;
         }
 
-        int exec_flag = 0;
-        while(exec_flag == 0) {
-            exec_flag = (unsigned char)*((unsigned char*)(exec_flag_buff));
-            usleep(1000);
-        }
-
-        if(exec_flag != 1) {
-            // Read the error pipe for error string.
-            char buff[1024]; // error message length max is 1024 for convenience
-            bzero(buff, 1024);
-            int bytes_read = ::read(errorPipe[0], &buff, sizeof(buff));
-            LOG_TRACE_MSG(bytes_read << " of error data found.");
-            std::string es(buff);
-            errorstring = es;
+        LOG_TRACE_MSG(rc << " bytes of error data found.");
+        if ( rc > 0 ) {
+            errorstring = buf;
             int zero = 0;
             LOG_DEBUG_MSG("waiting for " << pid);
             if(waitpid(pid, &zero, zero) < 0) {
                 LOG_ERROR_MSG("waitpid failed " << strerror(errno));
             }
             pid = -1;
+        } else {
+            // pipe was closed means success
         }
-
     }
 
     if(logfilename.length() == 0) {
@@ -432,17 +409,15 @@ pid_t Exec::fexec(int& pipefd, const std::string& path_and_args,
         ::close(pipeFromChild[1]);
     }
     ::close(errorPipe[0]);
-    //    errorstring = errorstream.str();
     return pid;
 }
 
-void Exec::ChildMonitor::monitor_child_once(int& child_fd, std::ostream* outstream) {
-    _stopping = true;
-    monitor_child(child_fd, outstream);
-}
-
-void Exec::ChildMonitor::monitor_child(int& child_fd, std::ostream* outstream) {
-
+void
+Exec::ChildMonitor::monitor_child(
+        int& child_fd,
+        std::ostream* outstream
+        )
+{
     _my_tid = pthread_self();
     LOG_INFO_MSG("monitoring thread " << _my_tid);
 
@@ -480,7 +455,9 @@ void Exec::ChildMonitor::monitor_child(int& child_fd, std::ostream* outstream) {
     outstream->flush();
 }
 
-void Exec::ChildMonitor::end() {
+void
+Exec::ChildMonitor::end()
+{
     LOG_INFO_MSG("Killing thread " << _my_tid);
     _stopping = true;
     pthread_kill(_my_tid, SIGUSR1);

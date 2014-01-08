@@ -27,13 +27,15 @@ define(
     "./topic",
     "dojo/_base/declare",
     "dojo/_base/lang",
-    "dijit/registry"
+    "dijit/registry",
+    "module"
 ],
 function(
         l_topic,
         d_declare,
         d_lang,
-        j_registry
+        j_registry,
+        module
     )
 {
 
@@ -63,7 +65,15 @@ var b_navigator_Machine = d_declare( null,
     {
         if ( ! this._machine_dij )  return;
 
-        this._machine_dij.setHighlighting( data );
+        console.log( module.id + ": highlight hardware notification with data=", data );
+
+        if ( data ) {
+            this._machine_dij.set( "loading", data.loading );
+            this._machine_dij.setHighlighting( data.highlighting );
+        } else {
+            this._machine_dij.set( "loading", false );
+            this._machine_dij.setHighlighting( null );
+        }
     }
 
 } );

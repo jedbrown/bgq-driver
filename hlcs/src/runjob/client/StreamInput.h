@@ -64,9 +64,10 @@ public:
 private:
     void __attribute__ ((visibility("hidden"))) readHandler(
             uint32_t rank,
+            uint32_t length,
             const Uci& location,
             const boost::system::error_code& error,
-            size_t length
+            size_t bytes_transferred
             );
 
 private:

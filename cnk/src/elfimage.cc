@@ -413,7 +413,7 @@ ElfImage::hasAuthority(void)
         }
     }
 
-#if 0
+#if 1
     // See if one of the secondary groups has authority.
     for (uint32_t index = 0; index < app->NumSecondaryGroups; ++index) {
         if (app->SecondaryGroups[index] == _fileInfo.st_gid) {

@@ -276,9 +276,7 @@ MMCSConsolePortClient::MMCSConsolePortClient(bgq::utility::PortConfiguration::Pa
                 CxxSockets::SockAddrList remote_list(AF_UNSPEC, connected_host, connected_port);
                 BOOST_FOREACH(CxxSockets::SockAddr& remote, remote_list) {
                     CxxSockets::SecureTCPSocketPtr
-                        sock(new CxxSockets::SecureTCPSocket(remote.family(), 0,
-                                                             CxxSockets::SECURE,
-                                                             CxxSockets::CRYPTALL));
+                        sock(new CxxSockets::SecureTCPSocket(remote.family(), 0));
 
                     try {
                         ++attempts;
@@ -308,7 +306,7 @@ MMCSConsolePortClient::MMCSConsolePortClient(bgq::utility::PortConfiguration::Pa
             }
         } else {
             LOG_WARN_MSG("Using insecure socket for communication.");
-            CxxSockets::TCPSocketPtr sock(new CxxSockets::TCPSocket(CxxSockets::INSECURE));
+            CxxSockets::TCPSocketPtr sock(new CxxSockets::TCPSocket);
 
             try {
                 CxxSockets::SockAddr remote(AF_UNSPEC, connected_host, connected_port);
@@ -347,7 +345,7 @@ MMCSConsolePortServer::MMCSConsolePortServer(bgq::utility::PortConfiguration::Pa
 
     try {
         LOG_INFO_MSG("Attempting to bind and listen on " << masterlist.size() << " port pairs.");
-        PollingListenerSetPtr ln(new PollingListenerSet(masterlist, SOMAXCONN, SECURE));
+        PollingListenerSetPtr ln(new PollingListenerSet(masterlist, SOMAXCONN));
         _listener = ln;
     } catch (CxxError& e) {
         LOG_ERROR_MSG(e.what());
@@ -362,9 +360,7 @@ MMCSConsolePortServer::accept()
     CxxSockets::SocketPtr newsockptr;
     if(MMCSProperties::getProperty(SECURE_CONSOLE) == "true") {
         CxxSockets::SecureTCPSocketPtr
-            newsock(new CxxSockets::SecureTCPSocket(
-                                                    CxxSockets::SECURE,
-                                                    CxxSockets::CRYPTALL));
+            newsock(new CxxSockets::SecureTCPSocket);
         bool accepted = false;
         while(!accepted) {
             try {
@@ -385,8 +381,7 @@ MMCSConsolePortServer::accept()
         newsockptr = newsock;
     } else {
         CxxSockets::TCPSocketPtr
-            newsock(new CxxSockets::TCPSocket(
-                                              CxxSockets::INSECURE));
+            newsock(new CxxSockets::TCPSocket);
         bool accepted = false;
         while(!accepted) {
             try {

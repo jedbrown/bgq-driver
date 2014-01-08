@@ -525,16 +525,15 @@ sub dumpFlightRecorder
 	my @fetchnodes = splice(@flnodes, 0, 24);
 	gatherFlightLog($blockid, @fetchnodes);
 	$curtime = time();
-	if($curtime - $starttime > (10*60))
-	{
-	    foreach $node (@flnodes)
-	    {
-		open(TMP, ">$outputdir/flightlogs/$blockid.rank$node.log");
-		print TMP "Node not fetched - timeout\n";
-		close(TMP);
-	    }
-	    last;
-	}
+	last if($curtime - $starttime > (10*60))
+    }
+    foreach $node (@flnodes)
+    {
+	next if(exists $FLIGHTLOG_ACQUIRED{"$blockid.rank$node"});
+	
+	open(TMP, ">$outputdir/flightlogs/$blockid.rank$node.log");
+	print TMP "Node not fetched - timeout\n";
+	close(TMP);
     }
 }
 
@@ -587,6 +586,7 @@ sub gatherFlightLog
     
     open(TMP, ">$outputdir/bgconsole.script");
     print TMP "select_block $blockid\n";
+    print TMP "connect\n";
     print TMP "redirect_block on\n";
     
     my $dofork = "";
@@ -644,6 +644,7 @@ sub gatherFlightLog
     foreach $node (@qualids)
     {
 	print captureLog "Writing flightlog for $blockid, rank $node\n";
+	$FLIGHTLOG_ACQUIRED{"$blockid.rank$node"} = 1;
 	open(TMP, ">$outputdir/flightlogs/$blockid.rank$node.log");
 	print TMP $OUTPUT{$node} . "\n";
 	if($evalrc =~ /error/i)

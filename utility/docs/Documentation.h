@@ -54,3 +54,9 @@
  *
  *  \brief Blue Gene utilities.
  */
+
+/*!
+ * \directory cxxsockets
+ * \directory performance
+ * \directory portConfiguration
+ */

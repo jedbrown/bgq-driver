@@ -107,8 +107,13 @@ Handshaker::_handleClientHandshake(
 {
     LOG_TRACE_MSG( __FUNCTION__ );
     if ( error ) {
+        const string error_str(
+                "handshake with " + 
+                boost::lexical_cast<std::string>(socket_ptr->next_layer().remote_endpoint()) + 
+                " failed with " +
+                error.message()
+                );
         socket_ptr.reset();
-        string error_str( string() + "handshake failed with " + error.message() );
 
         LOG_ERROR_MSG( error_str );
 

@@ -52,6 +52,7 @@
 #define APP_FLAGS_NONSPECULATIVE    0x040
 #define APP_FLAGS_GUARDEDINHIBITED  0x080
 #define APP_FLAGS_LISTENABLE        0x100
+#define APP_FLAGS_FLUSHSTORES       0x200
 #define APP_FLAGS_ESEL(x)           ((x)<<16)
 
 
@@ -98,6 +99,7 @@ typedef struct JobLeaderData_t {
         volatile uint64_t JobExitStatus; // largest exit status across all tasks in the job
         CollectiveLoadStatus_t collectiveLoadStatus;
         volatile uint64_t AbnormalExitCountBroadcastStatus; // indicator that broadcast of exit status to all nodes is complete 
+        volatile uint64_t corepacesem[2];  // Semphore used for concurrent coredump control
 } 
 JobLeaderData_t;
 
@@ -166,7 +168,7 @@ typedef struct AppState_t
     uint32_t TBSS_Size; 
 
     // The sequence number of this node when reporting abnormal process exit conditions to the job leader
-    uint32_t AbnormalTerminationSequenceNum; 
+    volatile uint32_t AbnormalTerminationSequenceNum; 
     
     // Executable path and name taken from first argument in the argument list
 
@@ -229,8 +231,10 @@ typedef struct AppState_t
     uint16_t closedStdio;
 
     // Exit processing
-    uint8_t jobControlIssuedSIGKILL;  // Job Controller issued sigkill
+    uint8_t jobControlIssuedSIGKILL;  // Job Controller issued kill
     uint8_t pad;                      // pad
+
+    uint64_t jobControlSIGKILLstart;  // timebase when Job Controller requested kill
 }
 AppState_t;
 

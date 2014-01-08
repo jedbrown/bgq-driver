@@ -161,7 +161,7 @@ Connection::stopImpl(
 {
     LOGGING_DECLARE_LOCATION_MDC( _location );
     LOGGING_DECLARE_BLOCK_MDC( _service == bgcios::JobctlService ? "jobctl" : "stdio" );
-    LOG_TRACE_MSG( "stopImpl" );
+    LOG_TRACE_MSG( __FUNCTION__ );
 
     // stop timer
     if ( _interval ) {
@@ -303,6 +303,8 @@ Connection::connectHandler(
         LOG_WARN_MSG( "could not enable TCP no delay: " << boost::system::system_error(error).what() );
     }
 
+    this->keepAlive( socket );
+
     // done with connection interval
     _interval.reset();
 
@@ -346,6 +348,8 @@ Connection::authenticateHandler(
 
         return;
     }
+
+    LOG_INFO_MSG( "authenticated" );
 
     _socket = socket;
     _authenticate.reset();
@@ -476,19 +480,30 @@ Connection::findJobHandler(
     LOG_TRACE_MSG( __FUNCTION__ );
 
     if ( !job ) {
-        // special case for change config ack
+        // special case for change config and reconnect ack due to no job ID
         if (
                 _header.type == bgcios::jobctl::ChangeConfigAck ||
-                _header.type == bgcios::stdio::ChangeConfigAck
+                _header.type == bgcios::stdio::ChangeConfigAck ||
+                _header.type == bgcios::jobctl::ReconnectAck ||
+                _header.type == bgcios::stdio::ReconnectAck
            )
         {
             if ( _header.returnCode != bgcios::Success ) {
                 LOG_WARN_MSG( 
-                        "ChangeConfig failed with rc " << _header.returnCode << ": " <<
+                        (
+                        _service == bgcios::JobctlService ? 
+                        bgcios::jobctl::toString(_header.type) : bgcios::stdio::toString(_header.type)
+                        ) << 
+                        " failed with rc " << _header.returnCode << ": " <<
                         bgcios::returnCodeToString( _header.returnCode )
                         );
             } else {
-                LOG_DEBUG_MSG( "ChangeConfig success" );
+                LOG_DEBUG_MSG(
+                        (
+                        _service == bgcios::JobctlService ? 
+                        bgcios::jobctl::toString(_header.type) : bgcios::stdio::toString(_header.type)
+                        ) << " success"
+                        );
             }
         } else if ( _header.service == bgcios::StdioService ) {
             // we don't need to log stdout/stderr messages not found at a high severity
@@ -538,6 +553,105 @@ Connection::completionHandler()
 {
     LOG_TRACE_MSG( __FUNCTION__ );
     this->read();
+}
+
+void
+Connection::keepAlive(
+        const SocketPtr& socket
+        )
+{
+    const std::string keep_alive_key( "tcp_keep_alive" );
+    bool enabled = true;
+    try {
+        const std::string value = _options.getProperties()->getValue(
+                runjob::server::PropertiesSection,
+                keep_alive_key
+                );
+        std::istringstream is( value );
+        is >> std::boolalpha >> enabled;
+        if ( !enabled ) {
+            LOG_TRACE_MSG( "TCP keep alive disabled" );
+            return;
+        }
+    } catch ( const std::exception& e ) {
+        // key not found, assume enabled and fall through
+    }
+
+    boost::system::error_code error;
+    socket->set_option(
+            boost::asio::socket_base::keep_alive( true ),
+            error
+            );
+    if ( error ) {
+        LOG_WARN_MSG( "could not enable TCP keep alive: " << boost::system::system_error(error).what() );
+        return;
+    }
+
+    int wait = 300; // 5 minutes
+    const std::string probe_wait_key( "tcp_keep_alive_probe_wait" );
+    try {
+        wait = boost::lexical_cast<int>(
+                _options.getProperties()->getValue(
+                    runjob::server::PropertiesSection,
+                    probe_wait_key
+                    )
+                );
+    } catch ( const std::exception& e ) {
+        // not found, fall through
+        LOG_TRACE_MSG( probe_wait_key << ": " << e.what() );
+    }
+    typedef boost::asio::detail::socket_option::integer<SOL_TCP, TCP_KEEPIDLE> TcpWait;
+    socket->set_option(
+            TcpWait(wait),
+            error
+            );
+    if ( error ) {
+        LOG_WARN_MSG( "could not enable TCP keep alive first probe wait: " << boost::system::system_error(error).what() );
+    }
+
+    int interval = 15; // seconds
+    const std::string probe_interval_key( "tcp_keep_alive_probe_interval" );
+    try {
+        interval = boost::lexical_cast<int>(
+                _options.getProperties()->getValue(
+                    runjob::server::PropertiesSection,
+                    probe_interval_key
+                    )
+                );
+    } catch ( const std::exception& e ) {
+        // not found, fall through
+        LOG_TRACE_MSG( probe_interval_key << ": " << e.what() );
+    }
+    typedef boost::asio::detail::socket_option::integer<SOL_TCP, TCP_KEEPINTVL> TcpInterval;
+    socket->set_option(
+            TcpInterval(interval),
+            error
+            );
+    if ( error ) {
+        LOG_WARN_MSG( "could not enable TCP keep alive probe interval: " << boost::system::system_error(error).what() );
+    }
+
+    int count = 4;
+    const std::string probe_count_key( "tcp_keep_alive_probe_count" );
+    try {
+        count = boost::lexical_cast<int>(
+                _options.getProperties()->getValue(
+                    runjob::server::PropertiesSection,
+                    probe_count_key
+                    )
+                );
+    } catch ( const std::exception& e ) {
+        // not found, fall through
+        LOG_TRACE_MSG( probe_count_key << ": " << e.what() );
+    }
+    typedef boost::asio::detail::socket_option::integer<SOL_TCP, TCP_KEEPCNT> TcpCount;
+    socket->set_option(
+            TcpCount(count),
+            error
+            );
+    if ( error ) {
+        LOG_WARN_MSG( "could not enable TCP keep alive probe count: " << boost::system::system_error(error).what() );
+    }
 }
 
 } // cios

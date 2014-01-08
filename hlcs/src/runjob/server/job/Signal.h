@@ -81,6 +81,11 @@ private:
             size_t timeout
             );
 
+    bool startTimer( 
+            int number,
+            size_t timeout
+            );
+
 private:
     boost::shared_ptr<Job> _job;
     const Callback _callback;

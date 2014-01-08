@@ -166,6 +166,61 @@ const string PosToStr[36] = {
 			"30", "31", "32", "33", "34", "35"
 };
 
+/**
+ * Bit mask to be used to get the RX register (C01 or C23) from the least significant (right most)
+ * 12 bits of bad wire mask for the IO drawer port.
+ */
+const int IoIoRxBitMask[24] = {
+		0xfc0, 0x03f, 0xfc0, 0x03f, 0x03f, 0xfc0, 0x03f, 0xfc0,	// T00-T07
+		0xfc0, 0x03f, 0xfc0, 0x03f, 0x03f, 0xfc0, 0x03f, 0xfc0,	// T08-T15
+		0xfc0, 0x03f, 0x03f, 0x03f, 0x03f, 0xfc0, 0x03f, 0x03f	// T16-T23
+};
+
+/**
+ * Bit mask to be used to get the TX register (D01 or D23) from the least significant (right most)
+ * 12 bits of bad wire mask for the IO drawer port.
+ */
+const int IoIoTxBitMask[24] = {
+		0x03f, 0xfc0, 0x03f, 0xfc0, 0xfc0, 0x03f, 0xfc0, 0x03f,	// T00-T07
+		0x03f, 0xfc0, 0x03f, 0xfc0, 0xfc0, 0x03f, 0xfc0, 0x03f,	// T08-T15
+		0x03f, 0xfc0, 0xfc0, 0xfc0, 0xfc0, 0x03f, 0xfc0, 0xfc0	// T16-T23
+};
+
+/**
+ * Indicates how to restore the RX value for each IO port location on an IO drawer:
+ * -1 = shift left 6 bits, 0 = no shift, 1= shift right 6 bits.
+ */
+const int IoIoRxShift[24] = {
+		0, -1, 1, 0, -1, 0, 0, 1,	// T00-T07
+		0, -1, 1, 0, -1, 0, 0, 1,	// T08-T15
+		0, -1, 0, 0, -1, 0, 0, 0	// T00-T23
+};
+
+/**
+ * Indicates how to restore the TX value for each IO port location on an IO drawer:
+ * -1 = shift left 6 bits, 0 = no shift, 1= shift right 6 bits.
+ */
+const int IoIoTxShift[24] = {
+		-1 ,0, 0, 1, 0, -1, 1, 0,	// T00-T07
+		-1, 0, 0, 1, 0, -1, 1, 0,	// T08-T15
+		-1, 0 ,1, 1, 0, -1, 1, 1	// T00-T23
+};
+
+/**
+ * Indicates how to restore the TX value for each IO port location on a node board:
+ * -1 = shift left 6 bits, 0 = no shift, 1= shift right 6 bits.
+ */
+const int NodeIoTxShift[12] = {
+		-1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0	// T00-T11
+};
+/**
+ * Indicates how to restore the RX value for each IO port location on a node board:
+ * -1 = shift left 6 bits, 0 = no shift, 1= shift right 6 bits.
+ */
+const int NodeIoRxShift[12] = {
+		0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0	// T00-T11
+};
+
 namespace bgq {
 namespace utility {
 
@@ -174,12 +229,15 @@ CableBadWires::CableBadWires(const string& location, const string& reg, int badF
   _rxIsIoDrawer(false),
   _isTorusCable(false),
   _rxLinkChipPos(-1),
+  _portPos(-1),
   _txIsNodeBoard(false),
   _txIsIoDrawer(false),
   _txPortPos(-1),
-  _txbadfibers(0)
+  _badfibermask(0),
+  _rxRegValue(0),
+  _txRegValue(0)
 {
-	_badfibers = badFiberMask & 0xfff; // Copy the least significatn 12 bits only
+	_badfibers = badFiberMask & 0xfff; // Copy the least significant 12 bits only
 	// Get the link chip index (0-based) and the node/IO board location from the location.
 	string boardLocation;
 	if (true == (_rxIsNodeBoard = isNodeBoardLinkChipLocation(location))) {
@@ -237,10 +295,12 @@ CableBadWires::CableBadWires(const string& location, const string& reg, int badF
 		else {
 			processNodeBoardIoCable(boardLocation, _rxLinkChipPos);
 		}
+		_portPos = atoi(_port.substr(12,14).c_str());
 	}
 	// Process the IO cable in the IO drawer.
 	else {
 		processIoDrawerIoCable(boardLocation, _rxLinkChipPos);
+		_portPos = atoi(_port.substr(8,10).c_str());
 	}
 	LOG_DEBUG_MSG( "_port=" << _port << " _badwiremask=" << hex << _badwiremask );
 
@@ -318,21 +378,87 @@ void CableBadWires::setTxPortAndBadWireMask(const string& location, uint64_t bad
 	// Determine the aggregated bad fiber mask based on the aggregated bad wire mask.
 	if (_txIsNodeBoard) { // Rxx-Mx-Nxx-Txx
 		if (_isTorusCable) {
-			_txbadfibers = getFibersFromWiresForTorusCable(_rxLinkChipPos, badWireMask);
+			_badfibermask = getFibersFromWiresForTorusCable(_rxLinkChipPos, badWireMask);
 		}
 		else {
-			_txbadfibers = getFibersFromWiresForIoCable(_rxLinkChipPos, badWireMask);
+			_badfibermask = getFibersFromWiresForIoCable(_rxLinkChipPos, badWireMask);
 		}
 	}
 	else { // Rxx-Ix-Txx
-		_txbadfibers = getFibersFromWiresForIoCable(_rxLinkChipPos, badWireMask);
+		_badfibermask = getFibersFromWiresForIoCable(_rxLinkChipPos, badWireMask);
+	}
+
+	// Determine the TX register value.
+	_txRegValue = _badfibermask;
+	if (_txIsNodeBoard) { // Rxx-Mx-Nxx-Txx
+		// Torus cable is one-directional and TX is always the same as RX.
+		if (_isTorusCable)
+		{}
+		// For IO cable on a node board, only bits 5-0 apply to TX.
+		else {
+			_txRegValue &= 0x3f;
+			switch(NodeIoTxShift[_txPortPos]) {
+				case -1:
+					_txRegValue <<= 6;
+					break;
+				case 1:
+					_txRegValue >>= 6;
+					break;
+			}
+		}
+	}
+	// For IO cable on an IO drawer, use the table in BG/Q Issue 2417.
+	else { // Rxx-Ix-Txx
+		_txRegValue &= IoIoTxBitMask[_txPortPos];
+		switch(IoIoTxShift[_txPortPos]) {
+			case -1:
+				_txRegValue <<= 6;
+				break;
+			case 1:
+				_txRegValue >>= 6;
+				break;
+		}
+	}
+
+	// Determine the RX register bad filer bits.
+	_rxRegValue = _badfibermask;
+	if (_rxIsNodeBoard) { // Rxx-Mx-Nxx-Txx
+		// Already got the bad fiber mask for Torus cable.
+		if (_isTorusCable)
+		{}
+		// For IO cable on a node board, only bits 11-6 apply to RX.
+		else {	// IO cable on the node board.
+			_rxRegValue &= 0xfc0;
+			switch(NodeIoRxShift[_portPos]) {
+				case -1:
+					_rxRegValue <<= 6;
+					break;
+				case 1:
+					_rxRegValue >>= 6;
+					break;
+			}
+		}
+	}
+	// For IO cable on an IO drawer, use the table in BG/Q Issue 2417.
+	else { // Rxx-Ix-Txx
+		_rxRegValue &= IoIoRxBitMask[_portPos];
+		switch(IoIoRxShift[_portPos]) {
+			case -1:
+				_rxRegValue <<= 6;
+				break;
+			case 1:
+				_rxRegValue >>= 6;
+				break;
+		}
 	}
 
 	LOG_DEBUG_MSG( 
                 "setTxPortAndBadWireMask(): fromport=" << _fromport << "(" << dec << _txPortPos
                 << ") node/IO=" << _txIsNodeBoard << "/" << _txIsIoDrawer
                 << " TxLinkChip=" << _txlinkchip << "(" << _txregister << ")"
-                << " AggFiberMask=" << hex << _txbadfibers
+                << " AggFiberMask=" << hex << _badfibermask
+                << " TxMask=" << hex << _txRegValue
+                << " RxMask=" << hex << _rxRegValue
                 );
 
 } // End setTxPortAndBadWireMask(...)
@@ -354,9 +480,23 @@ string CableBadWires::getTxRegister() const
 
 long int CableBadWires::getAggregatedBadFiberMask() const
 {
-	return _txbadfibers;
+	return _badfibermask;
 
 } // End getAggregatedBadFiberMask(...)
+
+
+int CableBadWires::getRxFiberMask() const
+{
+	return _rxRegValue;
+
+} // End getRxFiberMask(...)
+
+
+int CableBadWires::getTxFiberMask() const
+{
+	return _txRegValue;
+
+} // End getTxFiberMask(...)
 
 
 //

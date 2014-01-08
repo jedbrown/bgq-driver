@@ -138,6 +138,7 @@ mlxFwUpdate: ${SUBDIRS} build-ramdisk $(TOOLSDIR) ../tools/mlxFwUpdate $(BGQ_INS
 	cp -a /lib64/libz.so.1 ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/lib64/
 	cp -a /usr/lib64/libstdc++.so.6* ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/usr/lib64
 	cp /usr/bin/mstflint ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/usr/bin
+	find ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate/* -type f | xargs /usr/sbin/prelink -u &> /dev/null ; exit 0
 	if [ ! -e ${INSTALL_RAMDISK}/$@ ] ; then cp -a $(BGQ_INSTALL_DIR)/baremetal/firmware/mlxFwUpdate/* $(BGQ_BUILD_DIR)/ramdisk/tools/mlxFwUpdate/bin/ ; ./build-ramdisk --saveimg --verbose --rootfs ${BGQ_INITRAMFS_PATH} --addtree ${BGQ_BUILD_DIR}/ramdisk/tools/mlxFwUpdate ${RDOPTS} -o $@ ; cp $@ ${INSTALL_RAMDISK} ; fi
 #	@${CP} $@ ${INSTALL_RAMDISK}
 #	@${LN} -sf ${INSTALL_RAMDISK}/$@ ${INSTALL_RAMDISK}/ramdisk

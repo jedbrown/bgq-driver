@@ -271,7 +271,7 @@ uint64_t sc_GETSPECCONFLICTINFO(SYSCALL_FCN_ARGS)
             uint64_t paddr = _G33(r, 63) << 3;
             uint64_t vaddr = 0;
 
-#define INRANGE(pabase, start, end, startp) if(((uint64_t)pabase>=proc->startp) && ((uint64_t)pabase<=proc->startp + (proc->start - proc->end))) { vaddr = pabase + proc->start - proc->startp; found_vaddr = true; }
+#define INRANGE(pabase, start, end, startp) if(((uint64_t)pabase>=proc->startp) && ((uint64_t)pabase<=proc->startp + (proc->end - proc->start))) { vaddr = pabase + proc->start - proc->startp; found_vaddr = true; }
             INRANGE(paddr, Text_VStart,   Text_VEnd,   Text_PStart);
             INRANGE(paddr, Data_VStart,   Data_VEnd,   Data_PStart);
             INRANGE(paddr, Heap_VStart,   Heap_VEnd,   Heap_PStart);
@@ -294,5 +294,17 @@ uint64_t sc_ENABLEFASTSPECULATIONPATHS(SYSCALL_FCN_ARGS)
 	return CNK_RC_SPI(ENOSYS);
     }
     Speculation_EnableFastSpeculationPaths();
+    return CNK_RC_SPI(0);
+}
+
+uint64_t sc_GETSPECIDSELF(SYSCALL_FCN_ARGS)
+{
+    uint64_t* specid = (uint64_t*)r3;
+    if(!VMM_IsAppAddress(specid, sizeof(uint64_t)))
+    {
+        return CNK_RC_SPI(EFAULT);
+    }
+    
+    *specid = SPEC_GetSpeculationIDSelf_priv();
     return CNK_RC_SPI(0);
 }

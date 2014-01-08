@@ -201,13 +201,13 @@ capena::http::uri::Path Block::calcPath(
 }
 
 
-capena::http::Methods Block::getAllowedMethods() const
+capena::http::Methods Block::_getAllowedMethods() const
 {
     return { capena::http::Method::GET, capena::http::Method::DELETE };
 }
 
 
-void Block::doGet()
+void Block::_doGet()
 {
     // The user must be authenticated.
     if ( ! _isUserAuthenticated() ) {
@@ -239,7 +239,7 @@ void Block::doGet()
 }
 
 
-void Block::doDelete()
+void Block::_doDelete()
 {
     bool is_block_id_valid;
     string block_id(_calcBlockId( &is_block_id_valid ));
@@ -262,7 +262,7 @@ void Block::doDelete()
 
 std::string Block::_calcBlockId( bool* is_valid_out ) const
 {
-    const string &block_id(getRequestedResourcePath().back());
+    const string &block_id(_getRequestedResourcePath().back());
     *is_valid_out = BGQDB::isBlockIdValid( block_id, __FUNCTION__ );
     return block_id;
 }
@@ -274,7 +274,7 @@ void Block::_getBlockDetails(
 {
     json::ValuePtr obj_val_ptr(_queryBlock( block_id ));
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();
@@ -341,13 +341,13 @@ json::ValuePtr Block::_queryBlock( const std::string& block_id )
 
     // Make sure the user has READ authority to the block.
     if ( ! (_isUserAdministrator() ||
-            _enforcer().validate(
+            _getEnforcer().validate(
              hlcs::security::Object(
                     hlcs::security::Object::Block,
                     block_id
              ),
              hlcs::security::Action::Read,
-             getRequestUserId()
+             _getRequestUserId()
          )) )
     {
         // don't send this block because the user doesn't have authority.
@@ -668,7 +668,7 @@ void Block::_deleteBlock(
     // If the block exists and the user does not have DELETE authority and the user does not have READ authority then return 404 Not Found.
     // If the block doesn't exist then return 404 Not Found.
 
-    LOG_DEBUG_MSG( getRequestUserInfo() << " attempting to delete block '" << block_id << "'" );
+    LOG_DEBUG_MSG( _getRequestUserInfo() << " attempting to delete block '" << block_id << "'" );
 
     Error::Data error_data;
     error_data["blockId"] = block_id;
@@ -695,28 +695,28 @@ void Block::_deleteBlock(
     try {
 
         if ( ! user_has_read ) {
-            user_has_read = _enforcer().validate(
+            user_has_read = _getEnforcer().validate(
                     hlcs::security::Object(
                             hlcs::security::Object::Block,
                             block_id
                         ),
                     hlcs::security::Action::Read,
-                    getRequestUserId()
+                    _getRequestUserId()
                 );
         }
 
-        bool user_has_delete(_isUserAdministrator() || _enforcer().validate(
+        bool user_has_delete(_isUserAdministrator() || _getEnforcer().validate(
                 hlcs::security::Object(
                         hlcs::security::Object::Block,
                         block_id
                     ),
                 hlcs::security::Action::Delete,
-                getRequestUserId()
+                _getRequestUserId()
             ));
 
         if ( ! user_has_delete ) {
 
-            LOG_WARN_MSG( getRequestUserInfo() << " doesn't have authority to delete block '" << block_id << "'" );
+            LOG_WARN_MSG( _getRequestUserInfo() << " doesn't have authority to delete block '" << block_id << "'" );
 
             // If the user has READ authority to the block then say 403 Forbidden.
             // The user doesn't have READ authority to the block then report 404 Not Found.
@@ -753,9 +753,9 @@ void Block::_deleteBlock(
 
         if ( db_status == BGQDB::OK ) {
 
-            LOG_INFO_MSG( getRequestUserInfo() << " deleted block '" << block_id << "'" );
+            LOG_INFO_MSG( _getRequestUserInfo() << " deleted block '" << block_id << "'" );
 
-            capena::server::Response &response(getResponse());
+            capena::server::Response &response(_getResponse());
 
             response.setStatus( capena::http::Status::NoContent );
             response.headersComplete();

@@ -186,6 +186,14 @@ sub parseProperties
     my $fileName = shift();
     my $db       = shift();
     my $prop = new Config::IniFiles( -file => $fileName );
+    if (!defined($prop))
+    {
+       print "Could not read $fileName\n";
+       foreach (@Config::IniFiles::errors) {
+          print "$_\n";
+       }
+       exit(1);
+    }
 
     # get database section
     my @section = $prop->Parameters( "database" );

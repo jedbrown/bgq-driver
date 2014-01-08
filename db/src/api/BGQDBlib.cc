@@ -60,8 +60,7 @@
 
 #include <execinfo.h>
 
-using std::string;
-using std::ostringstream;
+using namespace std;
 
 LOG_DECLARE_FILE( "database" );
 
@@ -1529,13 +1528,13 @@ checkBlockIO(
 )
 {
     bool isLargeBlock = true;
-    std::map<std::string, int> midplaneMap; // Map with midplane to connected I/O links count
-    std::map<std::string, int>::iterator mapIter;
+    std::map<std::string, MidplaneIOInfo> midplaneMap; // Midplane to connected I/O node mapping
+    std::map<std::string, MidplaneIOInfo>::iterator mapIter;
 
     std::map<std::string, int> availableIONMap; // Map with list of 'Available' but unconnected I/O nodes for the block
     std::map<std::string, int>::iterator IONIter;
 
-    deque<string> unconnectedION;
+    deque<std::string> unconnectedION;
 
     STATUS result;
     BGQDB::DBTBlock dbo;
@@ -1634,7 +1633,7 @@ checkBlockIO(
     SQLBindCol(hstmt, 3, SQL_C_CHAR, ion, sizeof(ion), &ind3);
     SQLBindCol(hstmt, 4, SQL_C_CHAR, ionstatus, sizeof(ionstatus), &ind4);
 
-    // Get all the I/O links and buildup the count of available I/O links for each midplane
+    // Get all the I/O links and buildup the available I/O links for each midplane
     sqlrc =  SQLFetch(hstmt);
     for (;sqlrc == SQL_SUCCESS;) {
         string IOLink = source;
@@ -1642,14 +1641,13 @@ checkBlockIO(
         string IOLinkStatus = status;
         string IONode = ion;
         string IONodeStatus = ionstatus;
-        // LOG_INFO_MSG("IO link: " << IOLink << " Mp: " << midplane << " IO node: " << IONode << " IO link status: " << IOLinkStatus << " IO node status: " << IONodeStatus);
-        bool IONodeConnected = true;
+        //LOG_INFO_MSG("IO link: " << IOLink << " Mp: " << midplane << " IO node: " << IONode << " IO link status: " << IOLinkStatus << " IO node status: " << IONodeStatus);
 
         // Lookup the midplane in the map
         mapIter = midplaneMap.find(midplane);
         if (mapIter == midplaneMap.end()) {
             // Didn't find one in the map so add a new midplane key
-            midplaneMap.insert(pair<string, int>(midplane, 0));
+            midplaneMap.insert(pair<std::string, MidplaneIOInfo>(midplane, midplaneIOInfo()));
             mapIter = midplaneMap.find(midplane);
         }
 
@@ -1669,7 +1667,7 @@ checkBlockIO(
                 // status we need to stop the compute block from booting.
                 if ((IOLinkStatus.compare(0,1,"A") == 0) && (IONodeStatus.compare(0,1,"A") == 0)) {
                     // Force the midplane link count negative so the midplane fails the I/O rules
-                    mapIter->second = -9999;
+                    (mapIter->second).IOLinkCount = -9999;
                     // Add the I/O node location to unconnected but 'Available' I/O node map - ignore dup return code
                     availableIONMap.insert(pair<string, int>(IONode, 0));
                 }
@@ -1681,7 +1679,9 @@ checkBlockIO(
         // The I/O node is connected so now check that the I/O link and I/O node status are both Available
         if ((IOLinkStatus.compare(0,1,"A") == 0) && (IONodeStatus.compare(0,1,"A") == 0)) {
             // All the conditions pass so increment the I/O link count for the midplane
-            mapIter->second = mapIter->second + 1;
+            (mapIter->second).IOLinkCount = (mapIter->second).IOLinkCount + 1;
+            // Associate the I/O node to the midplane
+            (mapIter->second).IONodes.push_back(IONode);
         }
 
         // Get the next I/O link
@@ -1700,16 +1700,32 @@ checkBlockIO(
 
     // Iterate thru the midplane map and check I/O links for each midplane
     for (mapIter = midplaneMap.begin(); mapIter != midplaneMap.end(); mapIter++) {
-        // LOG_INFO_MSG("Midplane " << mapIter->first << " has " << mapIter->second << " connected I/O links");
-        if (mapIter->second < requiredIOLinks) {
+        //LOG_TRACE_MSG("Midplane " << mapIter->first << " has " << (mapIter->second).IOLinkCount << " connected I/O links");
+        //for (std::vector<std::string>::iterator it = (mapIter->second).IONodes.begin(); it != (mapIter->second).IONodes.end(); ++it) {
+        //    LOG_INFO_MSG("Midplane " << mapIter->first << " connected to I/O node " << *it);
+        //}
+
+        if ((mapIter->second).IOLinkCount < requiredIOLinks) {
             // Add this to list of midplanes failing the I/O rule
             midplanesFailingIORules->push_back(mapIter->first);
+        } else {
+            // Need to perform one last check for large blocks to make sure that if only 2 I/O links that they
+            // are connected to two different I/O nodes. Two I/O links to same I/O node would be 1:512 I/O ratio
+            // that is not supported.
+            if (isLargeBlock && (mapIter->second).IOLinkCount == requiredIOLinks) {
+                // Only 2 I/O links so compare I/O node names
+                //LOG_INFO_MSG("Midplane " << mapIter->first << " has connected I/O links to I/O node " << (mapIter->second).IONodes[0] << " and " << (mapIter->second).IONodes[1]);
+                if ((mapIter->second).IONodes[0].compare((mapIter->second).IONodes[1]) == 0) {
+                    // Add this to list of midplanes failing the I/O rule
+                    midplanesFailingIORules->push_back(mapIter->first);
+                }
+            }
         }
     }
 
     // Iterate thru the unconnected but 'Available' I/O node map and return locations in vector
     for (IONIter = availableIONMap.begin(); IONIter != availableIONMap.end(); IONIter++) {
-        // LOG_INFO_MSG("I/O node " << IONIter->first << " is 'Available' but is not booted");
+        //LOG_INFO_MSG("I/O node " << IONIter->first << " is 'Available' but is not booted");
         unconnectedAvailableIONodes->push_back(IONIter->first);
     }
 
@@ -3367,6 +3383,8 @@ postProcessRAS(
 
     // initialize mask for wire sparing
     sInfo.wireMask = 0;
+    sInfo.txMask = 0;
+    sInfo.rxMask = 0;
 
     ColumnsBitmap colBitmap;
     colBitmap.set(dbe.JOBID);
@@ -3598,7 +3616,7 @@ postProcessRAS(
             sqlstr = "update bgqnodecard set status = 'E' where substr(location,1,3) = '" + string(dbe._location).substr(0,3) + string("' ");
             ctl_rc = tx.execStmt(sqlstr.c_str());
             sqlstr = "update bgqiodrawer set status = 'E' where substr(location,1,3) = '" + string(dbe._location).substr(0,3) + string("' ");
-            ctl_rc = tx.execStmt(sqlstr.c_str());
+            (void)tx.execStmt(sqlstr.c_str()); // rack may not have top hat drawers, so ignore the return code
         }
 
         if (strstr(dbe._ctlaction, "CABLE_IN_ERROR")) {
@@ -3655,7 +3673,7 @@ postProcessRAS(
                     const bgq::util::Location location( dbe._location );
 
                     long int newMask = badWires.getBadWireMask();
-                    const string portLoc = badWires.getPortLocation();
+                    const string portLoc = badWires.getRxPortLocation();
 
                     std::ostringstream selectClause;
                     std::ostringstream updateClause;
@@ -3711,11 +3729,13 @@ postProcessRAS(
                         }
 
                         // return the information to the caller so it can send a message to mcServer
-                        sInfo.fromReg = badWires.getTxRegister();
-                        sInfo.toReg = string(regFromEvent).substr(0,3);
-                        sInfo.fromLoc = badWires.getTxLinkChipLocation();
-                        sInfo.toLoc = string(dbe._location);
+                        sInfo.txReg = badWires.getTxRegister();
+                        sInfo.rxReg = string(regFromEvent).substr(0,3);
+                        sInfo.txLoc = badWires.getTxLinkChipLocation();
+                        sInfo.rxLoc = string(dbe._location);
                         sInfo.wireMask = badWires.getAggregatedBadFiberMask();
+                        sInfo.txMask = badWires.getTxFiberMask();
+                        sInfo.rxMask = badWires.getRxFiberMask();
                     } else {
                         ctl_rc = SQL_ERROR;
                     }

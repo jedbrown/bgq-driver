@@ -65,7 +65,7 @@ Server::Server(
     _acceptor_ptr.reset( new bgq::utility::Acceptor(
             _io_service,
             port_config,
-            bgq::utility::portConfig::UserIdHandling::Skip
+            bgq::utility::portConfig::UserIdHandling::Skip // HTTP doesn't allow sending user ID info so don't try to read it.
         ) );
 }
 

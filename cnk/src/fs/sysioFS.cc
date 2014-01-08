@@ -78,7 +78,7 @@ sysioFS::init(void)
 
    // Create a completion queue.
    if (  ( err = cnv_create_cq(&_completionQ, _context, CNV_MAX_WC) )  ) return err;
-   if (  ( err = cnv_modify_cq_character(&_completionQ,CNVERBS_SEQUENCEID_CQ_CHAR) ) ) return err;
+   cnv_modify_cq_character(&_completionQ,CNVERBS_SEQUENCEID_CQ_CHAR); 
 
    // Create queue pair.
    cnv_qp_init_attr attr;
@@ -749,6 +749,7 @@ uint64_t
 sysioFS::chdir(const char *pathname)
 {
    AppProcess_t *process = GetMyProcess();
+   CNK_Descriptors_t *pFD = &(process->App_Descriptors);
 
    // Obtain the lock to serialize message exchange with sysiod.
    Kernel_Lock(&_lock);
@@ -1769,13 +1770,11 @@ sysioFS::poll(struct pollfd *fds, nfds_t nfds, int timeout)
    }
    //printf(" returnCode=%d errorCode=%d \n", replyMsg->header.returnCode,replyMsg->header.errorCode);
 
-   if (replyMsg->header.returnCode >= 0){
+   if (replyMsg->header.returnCode==uint32_t(-1))
+     rc = CNK_RC_FAILURE(replyMsg->header.errorCode);
+   else {
      rc = CNK_RC_SUCCESS(replyMsg->header.returnCode);    
    }
-   else{
-     rc = CNK_RC_FAILURE(replyMsg->header.errorCode);
-   }
-
 
    // Release the lock.
    Kernel_Unlock(&_lock);
@@ -2587,6 +2586,7 @@ sysioFS::utime(const char *pathname, const struct utimbuf *buf)
 }
 
 uint64_t
+//sysioFS::writeRdmaVirt(int fd, const void *buffer, size_t length)
 sysioFS::write(int fd, const void *buffer, size_t length)
 {
    // Make sure file descriptor is valid.
@@ -2651,6 +2651,9 @@ sysioFS::writev(int fd, const struct iovec *iov, int iovcnt)
    // Make this simple -- write each vector individually.
    int bytesWritten = 0;
    for ( int index = 0 ; index < iovcnt ; ++index ) {
+      if((iov[index].iov_base == NULL) && (iov[index].iov_len == 0))
+          continue;
+
       uint64_t rc = write(fd, iov[index].iov_base, iov[index].iov_len);
       if (CNK_RC_IS_FAILURE(rc)) {
          return rc;
@@ -2661,8 +2664,10 @@ sysioFS::writev(int fd, const struct iovec *iov, int iovcnt)
    return CNK_RC_SUCCESS(bytesWritten);
 }
 
+
 uint64_t
 sysioFS::writeRdmaVirt(int fd, const void *buffer, size_t length)
+//sysioFS::write(int fd, const void *buffer, size_t length)
 {
    // Make sure file descriptor is valid.
    int rfd = File_GetRemoteFD(fd);
@@ -2690,10 +2695,11 @@ sysioFS::writeRdmaVirt(int fd, const void *buffer, size_t length)
      fillHeader(&(requestMsg->header), WriteRdmaVirt, sizeof(WriteMessage));
    }
    requestMsg->fd = rfd;
-   if (length <  _rdmaBufferLength)
+   if (length <= _rdmaBufferLength)
      requestMsg->data_length = length;
    else 
      requestMsg->data_length = _rdmaBufferLength;
+
    requestMsg->bufferRdmaVirtaddress=_rdmaBufferVirtAddr;
    requestMsg->offset = 0;  //offset into buffer;
    
@@ -2734,8 +2740,10 @@ sysioFS::writeRdmaVirt(int fd, const void *buffer, size_t length)
       Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVDRGMRE, (uint64_t)userRegion.addr, userRegion.length, userRegion.lkey, err);
    }
 
-   TRACE( TRACE_SysioFS, ("(I) sysioFS::write%s: fd=%d buffer=%p length=%ld rc=%s\n",
-                          whoami(), fd, buffer, length, CNK_RC_STRING(rc)) );
+   if ( (length >_rdmaBufferLength) & (rc==_rdmaBufferLength) ){
+     char * nextBuffer= (char *)buffer + _rdmaBufferLength;
+     rc = writeRdmaVirt(fd, nextBuffer, length - _rdmaBufferLength);
+   }
    return rc;
 }
 

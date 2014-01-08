@@ -94,21 +94,6 @@ Setup::validateMapping() const
 
     LOG_DEBUG_MSG( mapping.value() );
 
-    std::ifstream file( mapping.value() );
-    if ( !file ) {
-        boost::system::system_error error(
-                boost::system::error_code(
-                    errno,
-                    boost::system::get_system_category()
-                    )
-            );
-
-        LOG_RUNJOB_EXCEPTION( 
-                error_code::mapping_file_invalid,
-                "Could not open mapping file: " << mapping.value() << ". " << error.what()
-                );
-    }
-
     BG_JobCoords_t jobSize;
     jobSize.corner.a = 0;
     jobSize.corner.b = 0;
@@ -130,7 +115,7 @@ Setup::validateMapping() const
         jobSize.shape.e = boost::numeric_cast<uint8_t>(_job->block()->e());
     }
 
-    ValidateMappingFile( _job->id(), _job->info(), file, jobSize );
+    ValidateMappingFile( _job->id(), _job->info(), jobSize );
 }
 
 void

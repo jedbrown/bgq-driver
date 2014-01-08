@@ -34,6 +34,7 @@ int generateCoordinates(const char *mapping, BG_CoordinateMapping_t* map, uint32
 int getMyRank(uint32_t* myrank);
 int configureJobClassroutes(struct bgcios::jobctl::SetupJobMessage* jobinfo);
 int deconfigureUserGI(void);
+int setupMapFile();
 
 extern "C"
 {

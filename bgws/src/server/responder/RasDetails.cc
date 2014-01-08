@@ -129,9 +129,9 @@ capena::http::uri::Path RasDetails::calcPath( const capena::http::uri::Path& pat
 }
 
 
-void RasDetails::doGet()
+void RasDetails::_doGet()
 {
-    const string &recid_str(getRequestedResourcePath().back());
+    const string &recid_str(_getRequestedResourcePath().back());
 
     Error::Data error_data;
     error_data["id"] = recid_str;
@@ -236,7 +236,7 @@ void RasDetails::doGet()
     if ( cols[DBTMsgtypes::THRESHOLDPERIOD_COL] )  obj.set( "thresholdPeriod", cols[DBTMsgtypes::THRESHOLDPERIOD_COL].getString() );
     if ( cols[DBTMsgtypes::RELEVANTDIAGS_COL] )  obj.set( "relevantDiags", cols[DBTMsgtypes::RELEVANTDIAGS_COL].getString() );
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();
@@ -255,7 +255,7 @@ void RasDetails::_checkAuthority(
         return;
     }
 
-    LOG_WARN_MSG( "Could not get ras details because " << getRequestUserInfo() << " doesn't have authority." );
+    LOG_WARN_MSG( "Could not get ras details because " << _getRequestUserInfo() << " doesn't have authority." );
 
     BOOST_THROW_EXCEPTION( Error(
             "Could not get ras details because the user doesn't have authority.",

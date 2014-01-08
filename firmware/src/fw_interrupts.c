@@ -29,7 +29,10 @@
 FW_Regs_t FW_MachineCheckContexts[ NUM_HW_THREADS ];
 
 extern uint64_t  _fw_Vec0_MCHK;
+
+#ifndef FW_SINGLE_DOMAIN
 extern uint64_t  _fw_Vec1_MCHK;
+#endif
 
 int fw_recoverTLBParityError();
 
@@ -55,7 +58,11 @@ int fw_installInterruptVector( void* vec, unsigned size ) {
 
   if ( BeDRAM_ReadIncSat( lock ) == 0 ) {
 
+#ifdef FW_SINGLE_DOMAIN
+      uint64_t* to = &_fw_Vec0_MCHK ;
+#else
     uint64_t* to = (domain == 0) ? &_fw_Vec0_MCHK : &_fw_Vec1_MCHK;
+#endif
     uint64_t* from = (uint64_t*)vec;
     unsigned  i;
 
@@ -95,7 +102,11 @@ int fw_installInterruptVector( void* vec, unsigned size ) {
 
 
   // Activate the vector:
+#ifdef FW_SINGLE_DOMAIN
+  mtspr( SPRN_IVPR,  &_fw_Vec0_MCHK );
+#else
   mtspr( SPRN_IVPR, (domain == 0) ? &_fw_Vec0_MCHK : &_fw_Vec1_MCHK );
+#endif
   isync();
   
   return FW_OK;
@@ -215,19 +226,24 @@ void fw_machineCheckHandler( void ) {
     FW_Regs_t* regs = &( FW_MachineCheckContexts[ProcessorID()] );
 
     int tracing = TRACE_ENABLED(TRACE_MChk);
-    int i;
 
-    if ( tracing ) {
+
+    unsigned n;
+    uint64_t pueaSummary = BIC_ReadMachineCheckIntSummary(ProcessorThreadID());
+
+    if (tracing) {
 
 	printf(
-	    "MachineCheck IAR:%lX LR:%lX MSR:%0lX MCSR=%lX time=%lX\n",
+	    "MachineCheck IAR:%lX LR:%lX MSR:%0lX MCSR=%lX sum:%lX\n",
 	    regs->ip,
 	    regs->lr,
 	    regs->msr,
 	    mfspr(SPRN_MCSR),
-	    GetTimeBase()
+	    pueaSummary
 	    );
 
+#if 0
+	int i;
 	for ( i=0; i < 32; i += 4 ) {
 	    printf("  G%d:%lX G%d:%lX G%d:%lX G%d:%lX \n",
 		   i + 0, regs->gpr[i+0],
@@ -236,14 +252,9 @@ void fw_machineCheckHandler( void ) {
 		   i + 3, regs->gpr[i+3]
 		);
 	}
+#endif
+
     }
-
-  unsigned n;
-  uint64_t pueaSummary = BIC_ReadMachineCheckIntSummary(ProcessorThreadID());
-
-  if (tracing) {
-    printf("PUEA Machine Check Summary : %lX\n", pueaSummary );
-  }
 
   for ( n = 0; ( n < sizeof(FW_PUEA_Handlers)/sizeof(FW_PUEA_Handlers[0]) ) && ( pueaSummary != 0 ); n++ ) {
     if ( ( pueaSummary & FW_PUEA_Handlers[n].mask ) != 0 ) {

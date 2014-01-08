@@ -108,6 +108,7 @@ Release: 0
 %{_base_dir}/hlcs/sbin/bgagentd
 %{_base_dir}/hlcs/etc/init/bgagent
 %{_base_dir}/hlcs/etc/init/bgagent.v1r1m0
+%{_base_dir}/hlcs/etc/init/bgagent.v1r1m1
 %{_base_dir}/sbin/bgagentd
 
 
@@ -164,31 +165,6 @@ Master commands
 %{_base_dir}/sbin/master_stop
 %{_base_dir}/bin/monitor_master
 %{_base_dir}/sbin/bgmaster_server_log_level
-
-
-####################################
-%package bgmaster-devel
-
-Summary: Master development headers and libraries
-Group: %{product_group}
-Release: 0
-
-%description bgmaster-devel
-%{bgq_package_description}
-
-Master development headers and libraries
-
-%files bgmaster-devel
-%defattr(-,root,root,755)
-%dir %{_parent_dir}
-%dir %{_base_dir}
-%dir %{_base_dir}/hlcs
-%dir %{_base_dir}/hlcs/include
-%dir %{_base_dir}/hlcs/lib
-
-%{_base_dir}/hlcs/include/c_api
-%{_base_dir}/hlcs/include/master
-%{_base_dir}/hlcs/lib/libbgmasterclient.so
 
 
 ####################################
@@ -291,9 +267,12 @@ Real time server.
 %dir %{_parent_dir}
 %dir %{_base_dir}
 %dir %{_base_dir}/hlcs
+%dir %{_base_dir}/hlcs/etc
+%dir %{_base_dir}/hlcs/etc/init
 %dir %{_base_dir}/hlcs/sbin
 %dir %{_base_dir}/sbin
 
+%{_base_dir}/hlcs/etc/init/realtime_server
 %{_base_dir}/hlcs/sbin/bg_realtime_server
 %{_base_dir}/sbin/bg_realtime_server
 
@@ -519,7 +498,6 @@ Job submission commands.
 %{_base_dir}/hlcs/sbin/runjob_mux_log_level
 %{_base_dir}/hlcs/sbin/runjob_mux_refresh_config
 %{_base_dir}/hlcs/sbin/runjob_mux_status
-%{_base_dir}/hlcs/sbin/runjob_server
 %{_base_dir}/hlcs/sbin/runjob_server_log_level
 %{_base_dir}/hlcs/sbin/runjob_server_refresh_config
 %{_base_dir}/hlcs/sbin/runjob_server_status
@@ -528,7 +506,6 @@ Job submission commands.
 %{_base_dir}/sbin/runjob_mux_log_level
 %{_base_dir}/sbin/runjob_mux_refresh_config
 %{_base_dir}/sbin/runjob_mux_status
-%{_base_dir}/sbin/runjob_server
 %{_base_dir}/sbin/runjob_server_log_level
 %{_base_dir}/sbin/runjob_server_refresh_config
 %{_base_dir}/sbin/runjob_server_status

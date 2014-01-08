@@ -112,5 +112,25 @@ Security::executeBlockImpl(
     }
 }
 
+bool
+Security::validate(
+        const bgq::utility::UserId::ConstPtr& user,
+        const hlcs::security::Action::Type action,
+        const BGQDB::job::Id job
+        )
+{
+    try {
+        return _commandEnforcer.validate(
+                hlcs::security::Object( hlcs::security::Object::Job, boost::lexical_cast<std::string>(job) ),
+                action,
+                *user
+                );
+    } catch ( const std::exception& e ) {
+        LOG_ERROR_MSG( e.what() );
+        return false;
+    }
+}
+
+
 } // server
 } // runjob

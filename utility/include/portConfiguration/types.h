@@ -20,6 +20,9 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+/*!
+ * \file utility/include/portConfiguration/types.h
+ */
 
 
 #ifndef BGQ_UTILITY_PC_TYPES_H_

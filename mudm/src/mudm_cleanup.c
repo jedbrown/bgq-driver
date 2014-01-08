@@ -132,7 +132,7 @@ int mudm_resetIOlink(void* mudm_context , uint32_t BlockID){
   uint64_t entry_num;
   struct my_context * mcontext = (struct my_context *)mudm_context; 
   uint64_t num_uninjected_descriptors = 0;
-  uint64_t cycles_per_msec = microsec2cycles(mcontext->personality,1000); 
+  uint64_t cycles_per_msec = 1600;
   uint64_t time_diff = 0;
   uint64_t timestamp_begin = GetTimeBase2(); 
   uint64_t timestamp_end = timestamp_begin;
@@ -156,7 +156,6 @@ int mudm_resetIOlink(void* mudm_context , uint32_t BlockID){
       MUDM_IO_LINKRESET(&mcontext->mudm_no_wrap_flight_recorder,i,BlockID,mcontext->remote_BlockID[i],mcontext->link4reset[i]);
       // set state of connection and reject requests that lead to injection
       mcontext->injfifo_ctls[i].state = 0;  //INACTIVE injection FIFO 
-      //! \todo  TODO Consider disabling injection FIFO here!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
       num_uninjected_descriptors = log_injfifo_info (&mcontext->injfifo_ctls[i],&mcontext->mudm_hi_wrap_flight_recorder,MUDMRAS_STUCK_INJ_AT_LINKRESET);
           
       if (num_uninjected_descriptors){
@@ -164,6 +163,9 @@ int mudm_resetIOlink(void* mudm_context , uint32_t BlockID){
         if (0==mcontext->StuckState) dump_flightlog_leadup(&mcontext->mudm_hi_wrap_flight_recorder, entry_num,1); 
       }
     }
+    else {
+      MUDM_IO_LINKSKIPPED(&mcontext->mudm_no_wrap_flight_recorder,i,BlockID,mcontext->remote_BlockID[i],mcontext->link4reset[i]);
+   }
 
   }
 
@@ -184,7 +186,7 @@ int mudm_resetIOlink(void* mudm_context , uint32_t BlockID){
       if (rc) MPRINT("rc = %d flush_pkt_reqid(mcontext,mcontext->smallpa_obj_ctls[i]); line=%d \n",rc,__LINE__);
       rc = flush_rdma_counter_reqid(mcontext,mcontext->rdma_obj_ctls[i]);
       if (rc) MPRINT("rc = %d flush_rdma_counter_reqid(mcontext,mcontext->rdma_obj_ctls[i]) line=%d \n",rc,__LINE__);
-
+      MUDM_IO_LINKFLUSHED(&mcontext->mudm_no_wrap_flight_recorder,i,BlockID,mcontext->remote_BlockID[i],mcontext->link4reset[i]);
       //link in reset:
       
       rc = MUSPI_InitResetHold(&mureset, mcontext->MU_subgroup_mem[i]->subgroupID, mcontext->link4reset[i]);
@@ -209,6 +211,7 @@ int mudm_resetIOlink(void* mudm_context , uint32_t BlockID){
       if (rc) MPRINT("rc = %d flush_pkt_reqid(mcontext,mcontext->smallpa_obj_ctls[i]); line=%d \n",rc,__LINE__);
       rc = flush_rdma_counter_reqid(mcontext,mcontext->rdma_obj_ctls[i]);
       if (rc) MPRINT("rc = %d flush_rdma_counter_reqid(mcontext,mcontext->rdma_obj_ctls[i]) line=%d \n",rc,__LINE__);
+      MUDM_IO_LINKFLUSHED(&mcontext->mudm_no_wrap_flight_recorder,i,BlockID,mcontext->remote_BlockID[i],mcontext->link4reset[i]);
 
       //when done with the reset, release the IO link from reset:
 
@@ -236,6 +239,7 @@ int mudm_resetIOlink(void* mudm_context , uint32_t BlockID){
       //MH;
 
       rc = flush_iolink_connection_list(mcontext, &mcontext->conn_activelist[i]);
+      MUDM_IO_LINKFLUSHED(&mcontext->mudm_no_wrap_flight_recorder,i,BlockID,mcontext->remote_BlockID[i],mcontext->link4reset[i]);
 
    }
    //MH;

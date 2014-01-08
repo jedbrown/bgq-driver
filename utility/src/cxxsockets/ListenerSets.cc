@@ -20,9 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#ifndef _SOCKETTYPES_H
-#include "SocketTypes.h"
-#endif
+#include "cxxsockets/SocketTypes.h"
 
 // We need a way to modify the timeout from the client side... ctor parm?
 const unsigned int DEFAULT_TIMEOUT = 50;
@@ -31,7 +29,7 @@ LOG_DECLARE_FILE( "utility.cxxsockets" );
 
 using namespace CxxSockets;
 
-ListenerSet::ListenerSet(SockAddrList& sal, int backlog, Policy p) {
+ListenerSet::ListenerSet(SockAddrList& sal, int backlog) {
     LOG_DEBUG_MSG(__FUNCTION__);
     // Fill this in by binding to all of them in the list.
     // We only fail if we are unable to bind to ANY of the addresses.
@@ -45,7 +43,7 @@ ListenerSet::ListenerSet(SockAddrList& sal, int backlog, Policy p) {
     LOG_TRACE_MSG("Building listener set from sock addr list of size " << sal.size());
     for (SockAddrList::iterator it = sal.begin(); it != sal.end(); ++it) {
         try {
-            ListeningSocketPtr ls(new ListeningSocket(*it, backlog, p));
+            ListeningSocketPtr ls(new ListeningSocket(*it, backlog));
             AddFile(ls);
             LOG_TRACE_MSG("Adding a socket to listener set.");
         } catch (CxxSockets::SockHardError& e) {
@@ -76,7 +74,7 @@ bool ListenerSet::AcceptNew(TCPSocketPtr& sock) {
     return true;
 }
 
-bool ListenerSet::AcceptNew(SecureTCPSocketPtr& sock, bgq::utility::ServerPortConfiguration& port_config) {
+bool ListenerSet::AcceptNew(SecureTCPSocketPtr& sock, const bgq::utility::ServerPortConfiguration& port_config) {
     LOG_DEBUG_MSG(__FUNCTION__ << ":secure");
     // This is the serially blocked non-polled version.
     PthreadMutexHolder mutex; LockSet(mutex);
@@ -87,7 +85,7 @@ bool ListenerSet::AcceptNew(SecureTCPSocketPtr& sock, bgq::utility::ServerPortCo
     return true;
 }
 
-PollingListenerSet::PollingListenerSet(SockAddrList& sal, int backlog, Policy p) {
+PollingListenerSet::PollingListenerSet(SockAddrList& sal, int backlog) {
     // Fill this in by binding to all of them in the list.
     // We only fail if we are unable to bind to ANY of the addresses.
 
@@ -97,7 +95,7 @@ PollingListenerSet::PollingListenerSet(SockAddrList& sal, int backlog, Policy p)
 
     for (SockAddrList::iterator it = sal.begin(); it != sal.end(); ++it) {
         try {
-            ListeningSocketPtr ls(new ListeningSocket(*it, backlog, p));
+            ListeningSocketPtr ls(new ListeningSocket(*it, backlog));
             PollingSocketSet::AddSock(ls, RECV);
             LOG_TRACE_MSG("Added socket to listener set.");
         } catch (CxxSockets::SockHardError& e) {
@@ -135,7 +133,7 @@ bool PollingListenerSet::AcceptNew(TCPSocketPtr& sock) {
     return AcceptNewCommon(null_ptr, sock, port_config, false);
 }
 
-bool PollingListenerSet::AcceptNew(SecureTCPSocketPtr& sock, bgq::utility::ServerPortConfiguration& port_config) {
+bool PollingListenerSet::AcceptNew(SecureTCPSocketPtr& sock, const bgq::utility::ServerPortConfiguration& port_config) {
     LOG_TRACE_MSG(__FUNCTION__ << ":polling,secure");
     // Check to see if a socket is "ready" from a previous poll, return
     // that instead of polling again.
@@ -143,87 +141,7 @@ bool PollingListenerSet::AcceptNew(SecureTCPSocketPtr& sock, bgq::utility::Serve
     return AcceptNewCommon(sock, null_ptr, port_config, true);
 }
 
-EpollingListenerSet::EpollingListenerSet(SockAddrList& sal, int backlog, Policy p) {
-    LOG_TRACE_MSG(__FUNCTION__);
-    // Fill this in by binding to all of them in the list.
-    // We only fail if we are unable to bind to ANY of the addresses.
-
-    unsigned int inuse = 0;
-    unsigned int fail = 0;
-    std::string last_error;
-
-    for (SockAddrList::iterator it = sal.begin(); it != sal.end(); ++it) {
-        try {
-            ListeningSocketPtr ls(new ListeningSocket(*it, backlog, p));
-            AddSock(ls, RECV);
-        } catch (CxxSockets::SockHardError& e) {
-            if(e.errcode == EADDRINUSE) {
-                ++inuse;
-            } else {
-                ++fail;
-                last_error = e.what();
-            }
-        }
-        if(inuse >= sal.size()) {
-            std::ostringstream msg;
-            msg << "Unable to start any listeners. All addresses in use.";
-            throw CxxSockets::SockHardError(errno, msg.str());
-        }
-    }
-
-    if(fail >= sal.size()) {
-        std::ostringstream msg;
-        msg << "Unable to start any listeners. " << last_error;
-        throw CxxSockets::SockHardError(0, msg.str());
-    } else if(0 < fail && fail  < sal.size()) {
-        // In this case we got a successful listen but not to ALL addresses
-        // available to us.
-        LOG_WARN_MSG("Failed " << fail << " out of " << sal.size() << " sockets.");
-    }
-}
-
-bool EpollingListenerSet::AcceptNew(TCPSocketPtr& sock) {
-    LOG_TRACE_MSG(__FUNCTION__);
-    // Check to see if a socket is "ready" from a previous poll, return
-    // that instead of polling again.
-    if(_readySockets.size() != 0) {
-        ListeningSocketPtr p = std::tr1::static_pointer_cast<ListeningSocket>(_readySockets.front());
-        _readySockets.pop_front();
-        p->AcceptNew(sock);
-    } else {
-        if(Epoll(DEFAULT_TIMEOUT) > 0) {
-            // We have stuff to do.  Find all of the fds with work to do and return the 
-            // first, marking the rest.
-            bool first = true;
-            // Loop through all of the poll-returned sockets
-            for(unsigned int i = 0; i < _events.size() ; ++i) {
-                if(_events[i].events & (POLLIN|POLLERR|POLLHUP|POLLNVAL)) {
-                    // Got one!
-                    // This will be the one to return.  Need to find it in
-                    // our socket object list and call accept().
-                    for (PollingListenerSet::iterator it = begin(); it != end(); ++it) {
-                        if((*it)->_fileDescriptor == _events[i].data.fd) {
-                            // Found one.  If it's the first, we accept() it.
-                            if(first) {
-                                ListeningSocketPtr p = std::tr1::static_pointer_cast<ListeningSocket>(*it);
-                                first = false;
-                                return p->AcceptNew(sock);
-                            } else {
-                                // Not first.  Stick it in the list of sockets
-                                // ready for action.  Next time, we'll get it 
-                                // instead of polling again.
-                                _readySockets.push_back(*it);
-                            }
-                        } // Other side of poll event check
-                    } // end search loop
-                } 
-            } // end loop through poll descriptors 
-        } // other side of poll check
-    }
-    return false;
-}
-
-bool PollingListenerSet::AcceptNewCommon(SecureTCPSocketPtr& secure_sock, TCPSocketPtr& sock, bgq::utility::ServerPortConfiguration& port_config, bool secure) {
+bool PollingListenerSet::AcceptNewCommon(SecureTCPSocketPtr& secure_sock, TCPSocketPtr& sock, const bgq::utility::ServerPortConfiguration& port_config, bool secure) {
     LOG_TRACE_MSG(__FUNCTION__);
     // Check to see if a socket is "ready" from a previous poll, return
     // that instead of polling again.

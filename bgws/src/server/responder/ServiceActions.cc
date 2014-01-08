@@ -232,12 +232,12 @@ void ServiceActions::setCommonFields(
 }
 
 
-void ServiceActions::doGet()
+void ServiceActions::_doGet()
 {
 
     if ( ! _userHasHardwareRead() ) {
 
-        LOG_WARN_MSG( "Could not get service actions because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not get service actions because " << _getRequestUserInfo() << " doesn't have authority." );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get service actions because the user doesn't have authority.",
@@ -268,7 +268,7 @@ void ServiceActions::doGet()
     if ( row_count == 0 ) {
         // No matches for the filter options, return empty array.
 
-        auto &response(getResponse());
+        auto &response(_getResponse());
 
         response.setContentTypeJson();
         response.headersComplete();
@@ -289,10 +289,10 @@ void ServiceActions::doGet()
         setCommonFields( obj, cols );
 
         uint64_t id(cols[DBTServiceaction::ID_COL].as<uint64_t>());
-        obj.set( "URI", ServiceAction::calcPath( getDynamicConfiguration().getPathBase(), id ).toString() );
+        obj.set( "URI", ServiceAction::calcPath( _getDynamicConfiguration().getPathBase(), id ).toString() );
     }
 
-    auto &response(getResponse());
+    auto &response(_getResponse());
 
     req_range.updateResponse( response, arr.size(), row_count );
 
@@ -303,12 +303,12 @@ void ServiceActions::doGet()
 }
 
 
-void ServiceActions::doPost( json::ConstValuePtr val_ptr )
+void ServiceActions::_doPost( json::ConstValuePtr val_ptr )
 {
     if ( ! _isUserAdministrator() ) {
-        LOG_WARN_MSG( "Could not start service action because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not start service action because " << _getRequestUserInfo() << " doesn't have authority." );
 
-        ras::postAdminAuthorityFailure( getRequestUserInfo(), "start service action" );
+        ras::postAdminAuthorityFailure( _getRequestUserInfo(), "start service action" );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not start service action because the user doesn't have authority.",
@@ -342,7 +342,7 @@ void ServiceActions::doPost( json::ConstValuePtr val_ptr )
     _service_actions.start(
             location,
             getRequestUserName(),
-            strand().wrap( boost::bind( &ServiceActions::_started, this, capena::server::AbstractResponder::shared_from_this(), location, _1, _2 ) )
+            _getStrand().wrap( boost::bind( &ServiceActions::_started, this, capena::server::AbstractResponder::shared_from_this(), location, _1, _2 ) )
         );
 }
 
@@ -549,7 +549,7 @@ void ServiceActions::_started(
 
             if ( exc_ptr != 0 )  std::rethrow_exception( exc_ptr );
 
-            getResponse().setCreated( ServiceAction::calcPath( getDynamicConfiguration().getPathBase(), lexical_cast<uint64_t>(service_action_id) ) );
+            _getResponse().setCreated( ServiceAction::calcPath( _getDynamicConfiguration().getPathBase(), lexical_cast<uint64_t>(service_action_id) ) );
 
         } catch ( blue_gene::service_actions::InvalidLocationError& ile ) {
 
@@ -597,7 +597,7 @@ void ServiceActions::_started(
 
     } catch ( std::exception& e ) {
 
-        handleError( e );
+        _handleError( e );
 
     }
 }

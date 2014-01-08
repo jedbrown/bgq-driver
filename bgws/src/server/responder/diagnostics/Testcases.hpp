@@ -55,10 +55,10 @@ public:
             AbstractResponder( args )
     { /* Nothing to do */ }
 
-    capena::http::Methods getAllowedMethods() const  { return { capena::http::Method::GET }; }
+    capena::http::Methods _getAllowedMethods() const  { return { capena::http::Method::GET }; }
 
     // override
-    void doGet();
+    void _doGet();
 
 };
 

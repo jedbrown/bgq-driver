@@ -46,6 +46,7 @@
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/scoped_array.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -77,7 +78,6 @@
 #include "MMCSCommandReply.h"
 #include "MMCSProperties.h"
 #include "HardwareBlockList.h"
-#include "MMCSMasterMonitor.h"
 
 LOG_DECLARE_FILE( "mmcs" );
 
@@ -118,7 +118,6 @@ BlockControllerBase::BlockControllerBase(
     _last_ras_event_time(0),
     _shutdown_sent_time(0),
     _isstarted(false),
-    _isblock(false),
     _isIOblock(false),
     _isshared(false),
     _boot_block_start(0),
@@ -677,9 +676,6 @@ BlockControllerBase::delete_block()
     // delete BlockControllerBase targets
     deleteTargets();
 
-    // reset BlockControllerBase status
-    _isblock		    = false;
-
     if (_blockXML)
     {
 	delete _blockXML;
@@ -875,20 +871,6 @@ BlockControllerBase::setDisconnecting(bool disconnectOption, string disconnectRe
     mutex.Unlock();
 }
 
-void
-BlockControllerBase::setIsBlock(bool isBlock)
-{
-    LOGGING_DECLARE_BLOCK_ID_MDC;
-    LOGGING_DECLARE_BLOCK_USER_MDC;
-    LOG_TRACE_MSG(__FUNCTION__);
-    PthreadMutexHolder mutex;
-
-    mutex.Lock(&_mutex);
-    if (!isCreated())
-	_isblock = isBlock;
-    mutex.Unlock();
-}
-
 BCNodeInfo *
 BlockControllerBase::findNodeInfo(unsigned a, unsigned b, unsigned c, unsigned d, unsigned e)
 {
@@ -976,9 +958,6 @@ BlockControllerBase::printConsoleMessage(unsigned nodeIndex, unsigned cpuNum, un
     LOGGING_DECLARE_BLOCK_USER_MDC;
     LOG_TRACE_MSG(__FUNCTION__);
     bool consoleMessagePrinted = false;
-    bool replaceChars = false;
-    char buf[1024];
-    char* buf_ptr = buf;
     unsigned chars_written;
     const char* format = "{%u}.%u.%u: %s\n";
 
@@ -987,6 +966,8 @@ BlockControllerBase::printConsoleMessage(unsigned nodeIndex, unsigned cpuNum, un
     if (message.length() == 0)
         return;  // nothing to do.
 
+    const size_t buffer_size = message.size() + 100; // overhead for format string
+    boost::scoped_array<char> buf(new char[buffer_size]);
 
     char *source;
     char *source2;
@@ -1005,9 +986,9 @@ BlockControllerBase::printConsoleMessage(unsigned nodeIndex, unsigned cpuNum, un
 	(source[4] == '^') &&
 	(source[5] == '~') ) {
 
-        replaceChars = true;
         source[0] = '\0';
-        chars_written = sprintf(buf, format2, nodeIndex, cpuNum, threadId, message.c_str());
+        chars_written = snprintf(buf.get(), buffer_size, format2, nodeIndex, cpuNum, threadId, message.c_str());
+        char* buf_ptr = buf.get();
         buf_ptr += chars_written;
 
         convunit[0] = source[2];
@@ -1031,7 +1012,7 @@ BlockControllerBase::printConsoleMessage(unsigned nodeIndex, unsigned cpuNum, un
 
                 source2[0] = '\0';
                 if (source != source2)
-                    strcat(buf,source);
+                    strcat(buf.get(),source);
 
                 midlen = strlen(source);
                 buf_ptr += midlen;
@@ -1047,29 +1028,15 @@ BlockControllerBase::printConsoleMessage(unsigned nodeIndex, unsigned cpuNum, un
 
                 source += 6;
             } else {
-                strcat(buf,source);
-                strcat(buf,"\n");
-                chars_written = strlen(buf);
+                strcat(buf.get(),source);
+                strcat(buf.get(),"\n");
+                chars_written = strlen(buf.get());
                 break;
             }
-
-
         }
-
     }  else {
-
-
         // format the output into a buffer
-        chars_written = snprintf(buf, sizeof(buf), format, nodeIndex, cpuNum, threadId, message.c_str());
-       if (chars_written >= sizeof(buf))
-            {
-                //	buf_ptr = (char*) malloc(chars_written + 1);
-                buf_ptr = new char[chars_written + 1];
-                snprintf(buf_ptr, chars_written+1, "%s", message.c_str());
-            }
-        for (int buflen = chars_written; buflen && buf[buflen-1] == '\n'; --buflen)
-            buf[buflen] = '\0'; // leave one trailing newline /*accessing beyond memory*/
-
+        chars_written = snprintf(buf.get(), buffer_size, format, nodeIndex, cpuNum, threadId, message.c_str());
     }
 
     if ((message.find("Software Test PASS") != string::npos)||(message.find("SoftwareTestPASS") != string::npos)) {
@@ -1114,7 +1081,7 @@ BlockControllerBase::printConsoleMessage(unsigned nodeIndex, unsigned cpuNum, un
     if (_mailboxOutput)
         {
             fprintf(_mailboxOutput, "%s", logprefix.str().c_str());
-            fprintf(_mailboxOutput, "%s", buf);
+            fprintf(_mailboxOutput, "%s", buf.get());
             fflush(_mailboxOutput);
             consoleMessagePrinted = true;
         }
@@ -1126,7 +1093,7 @@ BlockControllerBase::printConsoleMessage(unsigned nodeIndex, unsigned cpuNum, un
             if (nodeInfo->_mailboxOutput)
                 {
                     fprintf(nodeInfo->_mailboxOutput, "%s", logprefix.str().c_str());
-                    fprintf(nodeInfo->_mailboxOutput, "%s", buf);
+                    fprintf(nodeInfo->_mailboxOutput, "%s", buf.get());
                     fflush(nodeInfo->_mailboxOutput);
                     consoleMessagePrinted = true;
                 }
@@ -1142,7 +1109,7 @@ BlockControllerBase::printConsoleMessage(unsigned nodeIndex, unsigned cpuNum, un
     if (_redirectSock != 0)
         {
             CxxSockets::Message msg;
-            msg << buf;
+            msg << buf.get();
             try {
                 _redirectSock->Send(msg);
             } catch (CxxSockets::CxxError& e)
@@ -1151,8 +1118,6 @@ BlockControllerBase::printConsoleMessage(unsigned nodeIndex, unsigned cpuNum, un
                     _redirectSock.reset();
                 }
         }
-    if ((buf_ptr != buf) && (replaceChars == false))
-	delete [] buf_ptr;
 }
 
 void
@@ -1598,7 +1563,7 @@ std::vector<std::string> BlockControllerBase::checkShutdownComplete(BlockControl
 
 bool BlockControllerBase::checkComplete(MMCSCommandReply& reply,
                                         std::vector<std::string>& bad_node_locs,
-                                        std::vector<std::string>& good_nodes,
+                                        std::set<std::string>& good_nodes,
                                         MCServerMessageSpec::VerifyKernelReadyRequest& bootreq,
                                         unsigned nodecount) {
     LOG_TRACE_MSG(__FUNCTION__);
@@ -1626,7 +1591,7 @@ bool BlockControllerBase::checkComplete(MMCSCommandReply& reply,
                 // Also, don't put it in the good list if it was marked in error.
                 BCNodeInfo* node = dynamic_cast<BCNodeInfo*>(_targetLocationMap[curr_node]);
                 node->_initialized = true;
-                good_nodes.push_back(curr_node);
+                good_nodes.insert(curr_node);
             }
         }
     }

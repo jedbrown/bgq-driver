@@ -37,22 +37,13 @@ namespace capena {
 namespace server {
 
 
-/*! \brief Override to generate your response.
+/*! \brief The application implements this class to generate a response for a request.
  *
- * _processRequest() is called to process the request and generate the response.
- * The application must not call _getRequest() until _processRequest is called
- * (in short, don't call _getRequest() in the constructor).
+ * The response for the request, when the response has a body,
+ * is complete only when the AbstractResponder goes away,
+ * so don't keep a reference to the AbstractResponder longer than necessary.
  *
- * _processRequest() may be called multiple times.
- * The first time it's called, the Request has the headers complete,
- * but it may not have the data.
- * After _processRequest() is called when the Request is complete
- * it will not be called again.
- *
- * The response is complete only when the AbstractResponder goes away,
- * so don't keep it around.
- *
- * Each Responder has a strand, which you can get using _getStrand().
+ * Each Responder has its own strand, which you can get using _getStrand().
  * Applications that want to use callbacks must wrap them in this strand.
  *
  */
@@ -92,13 +83,41 @@ protected:
     /*! \brief Get the strand for the responder. */
     boost::asio::strand& _getStrand()  { return *_strand_ptr; }
 
-    /*! \brief Get the request info (method, URI, headers, and body). */
+    /*! \brief Get the request info (method, URI, headers, and body).
+     *
+     * Note that the application must wait until _processRequest() is called because
+     * the request is not available until after the library calls initialize().
+     */
     const Request& _getRequest() const  { return *_request_ptr; }
 
     /*! \brief Get the response to be filled in. */
     Response& _getResponse() { return *_response_ptr; }
 
-    /*! \brief Called to process the request. */
+
+    /*! \brief Called to process the request.
+     *
+     * This library will call _processRequest() to process the request and generate the response.
+     *
+     * _processRequest() may be called once or twice, depending on the request and the response.
+     *
+     * The first time _processRequest() is called,
+     * the Request has the headers filled in, but it may not have the body.
+     * If _getRequest().isComplete() returns true then the request is complete
+     * and _processRequest will not be called again.
+     *
+     * If the application is able to generate a complete response from the headers
+     * then _processRequest() will not be called again even if there is a body.
+     *
+     * If the application throws an exception when _processRequest is called then
+     * then _processRequest() will not be called again even if there is a body.
+     *
+     * Otherwise, _processRequest() will be called again when the full body contents have been received.
+     *
+     * This function can throw an exception.
+     * Any exception will be converted to an HTTP response.
+     * If the exception is a capena::server::exception:Error it can respond with an HTTP error with a specific code.
+     * If the exception is anything else then the HTTP error is 500 Internal Server Error.
+     */
     virtual void _processRequest() =0;
 
 

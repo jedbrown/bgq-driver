@@ -25,6 +25,7 @@
 #include <fstream>
 #include <stdexcept>
 #include "MMCSProperties.h"
+#include "MMCSSubnet.h"
 
 #include <control/include/mcServer/MCServerPorts.h>
 
@@ -60,9 +61,6 @@ MMCSProperties::init(const std::string& filename, object mmcs)
     mclogger->setLevel(mclevel);
     mcreflogger->setLevel(mclevel);
 
-    // Initialize cxxsockets
-    CxxSockets::setProperties(boost::const_pointer_cast<bgq::utility::Properties>(_properties));
-
     // Initialize RAS
     RasEventHandlerChain::setProperties(_properties);
     try {
@@ -91,7 +89,7 @@ int MMCSProperties::buildSubnets() {
             prop_key += boost::lexical_cast<std::string>(i);
             MMCSSubnet mmcs_subnet(_properties, subnet);
             _subnets.push_back(mmcs_subnet);
-            LOG_DEBUG_MSG(mmcs_subnet);
+            mmcs_subnet.output();
             ++i;
         }
     } catch (const std::invalid_argument& e) {

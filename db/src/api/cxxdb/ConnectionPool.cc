@@ -36,7 +36,8 @@ ConnectionPool::ConnectionPool(
         unsigned size
     ) :
         _size(size),
-        _conns_in_use(0)
+        _conns_in_use(0),
+        _high_water_mark(0)
 {
     LOG_DEBUG_MSG(
             "Initializing database connection pool"
@@ -71,6 +72,9 @@ ConnectionPtr ConnectionPool::getConnection()
     PooledConnection::Ptr pooled_connection_ptr( new PooledConnection( conn_ptr, *this ) );
 
     ++_conns_in_use;
+    if ( _conns_in_use > _high_water_mark ) {
+        _high_water_mark = _conns_in_use;
+    }
 
     LOG_DEBUG_MSG( "Got a connection from the connection pool. in_use=" << _conns_in_use << " available=" << _pooled_conns.size() );
 
@@ -86,6 +90,7 @@ ConnectionPool::Status ConnectionPool::getStatus() const
 
     ret.connsAvailable = _pooled_conns.size();
     ret.connsInUse = _conns_in_use;
+    ret.connsMax = _high_water_mark;;
 
     return ret;
 }

@@ -87,7 +87,7 @@ namespace responder {
 namespace summary {
 
 
-void Machine::doGet()
+void Machine::_doGet()
 {
     // The user must be authenticated.
     if ( ! _isUserAuthenticated() ) {
@@ -105,7 +105,7 @@ void Machine::doGet()
 
     const BlueGene::MachineInfo &machine_info(_blue_gene.getMachineInfo());
 
-    const DynamicConfiguration &config(getDynamicConfiguration());
+    const DynamicConfiguration &config(_getDynamicConfiguration());
 
     obj.set( "name", config.getMachineName() );
     if ( ! config.getMeasurementSystem().empty() ) {
@@ -137,7 +137,7 @@ void Machine::doGet()
         io_drawers_arr.add( io_drawer_location );
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();

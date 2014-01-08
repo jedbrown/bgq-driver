@@ -20,6 +20,9 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+/*!
+ * \file utility/include/Symlink.h
+ */
 #ifndef BGQ_UTILITY_SYMLINK
 #define BGQ_UTILITY_SYMLINK
 

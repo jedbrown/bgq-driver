@@ -197,11 +197,11 @@ void
 Status::pluginCallback(
         const CommandConnection::Ptr& connection,
         const runjob::commands::response::MuxStatus::Ptr& response,
-        const Plugin::HandlePtr& plugin
+        const Plugin::WeakPtr& plugin
         )
 {
-    if ( plugin ) {
-        response->setPlugin( plugin->getPath() );
+    if ( Plugin::Ptr p = plugin.lock() ) {
+        response->setPlugin( p->getPath() );
     }
 
     response->_bgschedMajor = bgsched::version::major;

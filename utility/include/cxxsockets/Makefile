@@ -41,7 +41,4 @@ clean:
 
 distclean:	clean
 
-doxygen:
-	mkdir docs; doxygen doxyconf
-
 none:

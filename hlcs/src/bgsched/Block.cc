@@ -996,13 +996,13 @@ Block::initiateBoot(
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::BlockBootError,
-                "Block boot request failed because block " << blockName << " has pending action."
+                "Block boot request failed because block " << blockName << " has pending action"
         );
     case BGQDB::FAILED: // Block is not Free or hardware unavailable
         THROW_EXCEPTION(
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::BlockBootError,
-                "Block boot request failed because either block " << blockName << " is not Free or dependent hardware resources are unavailable."
+                "Block boot request failed because either block " << blockName << " is not Free or dependent hardware resources are unavailable"
         );
     default :
         THROW_EXCEPTION(
@@ -1069,7 +1069,7 @@ Block::initiateFree(
                 bgsched::InputErrors::BlockNotFound,
                 "Block " << blockName << " was not found"
         );
-    case BGQDB::FAILED:
+    case BGQDB::DUPLICATE:
         if (BGQDB::OK == BGQDB::getBlockStatus(blockName, state)) {
             if (state == BGQDB::FREE) {
                 LOG_WARN_MSG("Block free request ignored, " << blockName << " is already Free");
@@ -1079,7 +1079,19 @@ Block::initiateFree(
         THROW_EXCEPTION( // Block already has action pending
                 bgsched::RuntimeException,
                 bgsched::RuntimeErrors::BlockFreeError,
-                "Block free request failed because block " << blockName << " has pending action."
+                "Block free request failed because block " << blockName << " has pending action"
+        );
+    case BGQDB::FAILED:
+        if (BGQDB::OK == BGQDB::getBlockStatus(blockName, state)) {
+            if (state == BGQDB::FREE) {
+                LOG_WARN_MSG("Block free request ignored, " << blockName << " is already Free");
+                return;
+            }
+        }
+        THROW_EXCEPTION( // Block Free request is invalid or wrong status
+                bgsched::RuntimeException,
+                bgsched::RuntimeErrors::BlockFreeError,
+                "Block free request failed because block " << blockName << " received invalid block action request"
         );
     default :
         THROW_EXCEPTION(

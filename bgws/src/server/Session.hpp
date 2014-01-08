@@ -25,6 +25,7 @@
 #define BGWS_SESSION_HPP_
 
 
+#include "types.hpp"
 #include "UserInfo.hpp"
 
 #include <boost/asio.hpp>
@@ -36,9 +37,6 @@
 
 
 namespace bgws {
-
-
-class Sessions;
 
 
 class Session : boost::noncopyable

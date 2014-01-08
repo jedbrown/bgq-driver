@@ -345,6 +345,8 @@ private:
    //! Path to sysiod command channel socket.
    std::string _sysiodCmdChannelPath;
 
+   //! Path to stdiod command channel socket.
+   std::string _stdiodCmdChannelPath;
 
 };
 

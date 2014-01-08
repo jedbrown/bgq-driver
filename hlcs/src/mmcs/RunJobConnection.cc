@@ -60,7 +60,7 @@ bool RunJobConnection::Connect() {
 
     bool success = false;
     BOOST_FOREACH(CxxSockets::SockAddr& addr, masterlist) {
-        CxxSockets::SecureTCPSocketPtr sock(new CxxSockets::SecureTCPSocket(addr.family(), 0, CxxSockets::SECURE, CxxSockets::CERTIFICATE));
+        CxxSockets::SecureTCPSocketPtr sock(new CxxSockets::SecureTCPSocket(addr.family(), 0));
         try {
             bgq::utility::ClientPortConfiguration port_config(0, bgq::utility::ClientPortConfiguration::ConnectionType::Administrative);
             port_config.setProperties(MMCSProperties::getProperties(), "");
@@ -255,7 +255,6 @@ void* RunJobConnectionMonitor::threadStart() {
     const int init_wait = 250; // This is where we start.
     const int max_wait = 3000000; // Three second max wait time.
     int curr_wait = init_wait; // When backing off, this is the current timeout.
-    bool first_start = true;
     while(isThreadStopping() == false) {
         // As long as we think we're connected, we'll keep checking to see if we stay that way.
         // We make reconnection attempts until we get connected or we are killed.  To be
@@ -281,10 +280,6 @@ void* RunJobConnectionMonitor::threadStart() {
             if(RunJobConnection::Connect() == true) {  // Try to connect.
                 DBBlockController::sendPending();  // Success, send the old stuff.
                 curr_wait = max_wait;  // Connection is now good, poll slow.
-                if(first_start == true) {
-                    _runjob_start_barrier.wait();
-                    first_start = false;
-                }
             } else {  // Connection failed, try again in a bit. 
                 curr_wait *= 3;
                 if(curr_wait > max_wait)

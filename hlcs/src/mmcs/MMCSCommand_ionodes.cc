@@ -32,13 +32,6 @@
 #include "MMCSProperties.h"
 #include <control/include/mcServer/MCServerRef.h>
 
-/*!
-** sysrq
-** [<target>] sysrq [option]
-** Sends a sysrq command to the I/O node
-** Options:
-** loglevel0-8 reBoot tErm Halt kIll showMem showPc unRaw Sync showTasks Unmount Xmon
-*/
 MMCSCommand_sysrq*
 MMCSCommand_sysrq::build()
 {
@@ -144,12 +137,6 @@ MMCSCommand_sysrq::help(deque<string> args,
 
 }
 
-/*!
-** write_con
-** [<target>] write_con <console-command>
-** Send <console-command> to target node for execution.
-** Output will be returned to mailbox (either console or I/O node log).
-*/
 MMCSCommand_write_con*
 MMCSCommand_write_con::build()
 {
@@ -189,7 +176,7 @@ MMCSCommand_write_con::execute(deque<string> args,
     BlockPtr pBlock = pTarget->getBlockController();	// get selected block
 
     bool wasconnected = true;
-    if(pBlock->isConnected() == false) {
+    if(!pBlock->isConnected()) {
         wasconnected = false;
         // Need to connect
         std::deque<string> pargs;
@@ -202,20 +189,17 @@ MMCSCommand_write_con::execute(deque<string> args,
         BCNodeInfo *nodeInfo = pTarget->getNodes()[i];
 
         if (!nodeInfo->_iopos.trainOnly()) {
-
-            //
             // Send a MailboxRequest to the node
-            //
             MCServerMessageSpec::MailboxRequest mcMailboxRequest;
             mcMailboxRequest._text = text;
             mcMailboxRequest._location.push_back(nodeInfo->location());
-            MCServerMessageSpec::MailboxReply   mcMailboxReply;
+            MCServerMessageSpec::MailboxReply mcMailboxReply;
             pBlock->getMCServer()->mailbox(mcMailboxRequest, mcMailboxReply);
             if (mcMailboxReply._rc)
-                {
-                    reply << FAIL << mcMailboxReply._rt << DONE;
-                    return;
-                }
+            {
+                reply << FAIL << mcMailboxReply._rt << DONE;
+                return;
+            }
         }
     }
     if(!wasconnected) {
@@ -235,6 +219,7 @@ MMCSCommand_write_con::help(deque<string> args,
     reply << OK << description()
 	  << ";Send <console-command> to target node for execution."
 	  << ";Output will be returned asynchronously to mailbox (either console or I/O node log)."
+	  << ";Requires write access to the target set, use connect to obtain write access."
 	  << DONE;
 
 }
@@ -244,7 +229,7 @@ MMCSCommand_wc::build()
 {
     MMCSCommandAttributes commandAttributes;
     commandAttributes.requiresBlock(true);             // does require a BlockController object
-    commandAttributes.requiresConnection(true);        // does require  mc_server connections
+    commandAttributes.requiresConnection(false);       // does require  mc_server connections
     commandAttributes.requiresTarget(true);            // does require a BlockControllerTarget object
     commandAttributes.mmcsServerCommand(true);
     commandAttributes.mmcsLiteCommand(true);

@@ -119,6 +119,7 @@ FLIGHTFUNCT(FL_SCHEDUNBL, Flight_SchedUnBlockDecoder)
 FLIGHTFUNCT(FL_SCHEDUNBR, Flight_SchedUnBlockRemoteDecoder)
 FLIGHTFUNCT(FL_SCHEDDISP, Flight_SchedDispatchDecoder)
 FLIGHTPRINT(FL_TLBADDSEG, "Static TLB Mapper.  Add segment.  Type=%ld   Vaddr=0x%016lx for %ld bytes  ProcessMask=%016lx")
+FLIGHTPRINT(FL_TLBSEGOVL, "Static TLB Mapper.  Attempted to add a overlapping segments.  Segment %ld  address=%ld  low=%ld  high=%ld")
 FLIGHTPRINT(FL_VMMInited, "CNK virtual memory subsystem initialized.  TextStart=0x%016lx  KernelSize=%ld bytes  TextSize=%ld bytes  AtomicSize=%ld bytes")
 FLIGHTPRINT(FL_TLBMAPRST, "Static TLB Mapper.  Reset.  Number of processes=%ld   Number of appagents=%ld")
 FLIGHTPRINT(FL_TLBMAPCMP, "Static TLB Mapper.  Complete.  Wasted=%ld  TotalHeapSize=%ld  BestWaste=%ld  BestMode=%ld")
@@ -239,6 +240,18 @@ FLIGHTFUNCT(FL_IPIORPHAN, Flight_IPIDecoder)
 FLIGHTFUNCT(FL_FLUSHTCMD, Flight_IPIDecoder) 
 
 FLIGHTPRINT(FL_MALLCFRFL, "Memory deallocation failed. No free chunk available for address 0x%p for %ld bytes.")
+
+FLIGHTPRINT(FL_SCRUBSETP, "Setting up background scrub.  Virtual Address at 0x%p, size %ld bytes, using TLB slot %ld")
+FLIGHTPRINT(FL_SCRUBSTRT, "Performing background DDR CE scrub at physical address 0x%p for %ld bytes.")
+FLIGHTPRINT(FL_SCRUBSTOP, "Finished background scrub.")
+
+FLIGHTPRINT(FL_MAPFILEOP, "Mapfile opened, track %ld")
+FLIGHTPRINT(FL_MAPFILECL, "Mapfile closed, track %ld")
+FLIGHTPRINT(FL_MAPFILEWR, "Mapfile write chunk %ld for %ld bytes to node %lx, track %ld")
+FLIGHTPRINT(FL_MAPFILERD, "Mapfile read chunk %ld for %ld bytes to node %lx, track %ld")
+FLIGHTPRINT(FL_MAPFILESM, "Mapfile read semaphore busy, node %lx while reading offset %lx via track %ld")
+
+FLIGHTFUNCT(FL_ADLOCKIPI, Flight_IPIDecoder)
 
 #undef FLIGHTPRINT
 #undef FLIGHTFUNCT

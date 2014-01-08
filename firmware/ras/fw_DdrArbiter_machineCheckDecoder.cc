@@ -46,30 +46,35 @@ extern "C" {
     walkDetails( DDR_ARB_DECODERS, sizeof(DDR_ARB_DECODERS)/sizeof(DDR_ARB_DECODERS[0]), mbox, event, "DETAILS" );
   }
 
-  void fw_DdrArbiter_correctableSummaryDecoder( RasEvent& event, const vector<uint64_t>& mbox ) {
+    void fw_DdrArbiter_correctableSummaryDecoder( RasEvent& event, const vector<uint64_t>& mbox ) {
 
-    ostringstream details;
+	if ( mbox.size() < 2 ) {
+	    event.setDetail( "DETAILS", "INTERNAL ERROR: details missing.");
+	    return;
+	}
 
-    uint64_t count = mbox[0];
-    uint64_t error_bits = mbox[1];
+	ostringstream details;
 
-    details << "count=" << count;
+	uint64_t count = mbox[0];
+	uint64_t error_bits = mbox[1];
 
-    details << " ";
-    //decode_DR_ARB_L2_INTERRUPT_STATE( details, error_bits );
-    decode_MCFIR( details, error_bits );
+	details << "count=" << count;
 
-    if ( mbox.size() > 2 ) {
-	details << " threshold=" << mbox[2];
-    }
+	details << " ";
+	//decode_DR_ARB_L2_INTERRUPT_STATE( details, error_bits );
+	decode_MCFIR( details, error_bits );
+
+	if ( mbox.size() > 2 ) {
+	    details << " threshold=" << mbox[2];
+	}
     
-    event.setDetail( "DETAILS", details.str() );
+	event.setDetail( "DETAILS", details.str() );
 
 
-    ostringstream countStr;
-    countStr << count;
-    event.setDetail( "BG_COUNT", countStr.str() );
-  }
+	ostringstream countStr;
+	countStr << count;
+	event.setDetail( "BG_COUNT", countStr.str() );
+    }
 
 }
 

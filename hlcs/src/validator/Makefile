@@ -44,7 +44,7 @@ DIR_TARGS += $(DIR_TARGS_INSTALL)
 CXXFLAGS += -O2
 CXXFLAGS += -Wall
 CXXFLAGS += -MD
-CXXFLAGS += -I $(BGQ_BUILD_DIR)/hlcs/include/master
+CXXFLAGS += -I $(BGQ_BUILD_DIR)/hlcs/src/master
 CXXFLAGS += -I $(BGQ_INSTALL_DIR)
 CXXFLAGS += -I $(BGQ_INSTALL_DIR)/bgq_util/include
 CXXFLAGS += -I $(BGQ_INSTALL_DIR)/utility/include
@@ -67,27 +67,27 @@ LDFLAGS  += -L $(BGQ_INSTALL_DIR)/db/lib -lbgdb
 LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib
 LDFLAGS  += -Wl,-rpath,$(BGQ_LIB_INSTALL_DIR)
 
-BGM_OBJS  = ../master/protocol/BGMasterAgentProtocolSpec.o
+BGM_OBJS =
+BGM_OBJS += ../master/common/AgentBase.o
+BGM_OBJS += ../master/server/AgentManager.o
+BGM_OBJS += ../master/server/AgentRep.o
+BGM_OBJS += ../master/server/Alias.o
+BGM_OBJS += ../master/server/AliasList.o
+BGM_OBJS += ../master/server/Behavior.o
+BGM_OBJS += ../master/server/ClientController.o
+BGM_OBJS += ../master/server/ClientManager.o
+BGM_OBJS += ../master/server/DBUpdater.o
+BGM_OBJS += ../master/common/Ids.o
+BGM_OBJS += ../master/server/MasterController.o
+BGM_OBJS += ../master/common/Protocol.o
+BGM_OBJS += ../master/server/Registrar.o
+BGM_OBJS += ../master/common/ThreadLog.o
+
+BGM_OBJS += ../master/protocol/BGMasterAgentProtocolSpec.o
 BGM_OBJS += ../master/protocol/BGMasterClientProtocolSpec.o
 
-BGM_OBJS += ../master/BGMasterProtocol.o
-BGM_OBJS += ../master/BGAgentBase.o
-BGM_OBJS += ../master/Ids.o
-BGM_OBJS += ../master/Thread.o
-
-BGM_OBJS += ../master/BGAgentRep.o
-BGM_OBJS += ../master/ClientManager.o
-BGM_OBJS += ../master/Registrar.o
-BGM_OBJS += ../master/BGAgentManager.o
-BGM_OBJS += ../master/Alias.o
-BGM_OBJS += ../master/Policy.o
-BGM_OBJS += ../master/BGMaster.o
-BGM_OBJS += ../master/ListAgents.o
-BGM_OBJS += ../master/BGMasterClientApi.o
-BGM_OBJS += ../master/ArgParse.o
-BGM_OBJS += ../master/DBUpdater.o
-
-MMCS_OBJS = ../mmcs/MMCSProperties.o
+MMCS_OBJS  = ../mmcs/MMCSProperties.o
+MMCS_OBJS += ../mmcs/MMCSSubnet.o
 
 INSTALL_LIST += $(call INSTALL_BIN_TARGET, properties_validate)
 

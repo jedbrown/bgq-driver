@@ -99,6 +99,7 @@ ServiceController::sendReady(uint32_t serviceId, in_port_t port, std::string cmd
 
    // Send Ready message to the specified command channel.
    try {
+     CIOSLOGMSG(CMD_SEND_MSG,&ready);
       _cmdChannel->sendTo(cmdChannelPath, &ready, ready.header.length);
    }
    catch (SocketError& e) {
@@ -343,7 +344,7 @@ ServiceController::getEncryptionKey(BF_KEY *bfkey)
 
    std::ostringstream os;
    for ( unsigned i = 0; i < PERSONALITY_LEN_SECKEY; ++i ) {
-       os << std::hex << std::setw(2) << std::hex << personality.Ethernet_Config.SecurityKey[i];
+       os << std::setfill('0') << std::setw(2) << std::hex << static_cast<unsigned>(personality.Ethernet_Config.SecurityKey[i]);
    }
    LOG_INFO_MSG( "key: " << os.str() );
 

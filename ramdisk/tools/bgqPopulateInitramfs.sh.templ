@@ -108,8 +108,10 @@ CURRDIR=`pwd`
 
 if [ "$RHEL6" == "yes" ] && [ "$OS_ARCH" == "ppc64" ] ; then
 	cp /bin/bash BGQ_INITRAMFS_PATH/bin
+	cp /bin/date BGQ_INITRAMFS_PATH/bin
 	cp /bin/mount BGQ_INITRAMFS_PATH/bin
 	cp /etc/init.d/rpcidmapd BGQ_INITRAMFS_PATH/etc/init.d
+	cp /etc/localtime BGQ_INITRAMFS_PATH/etc/
 	cp /sbin/busybox BGQ_INITRAMFS_PATH/bin
 	cp /sbin/switch_root BGQ_INITRAMFS_PATH/sbin
 	cp /lib64/ld-2.12.so BGQ_INITRAMFS_PATH/lib64
@@ -124,6 +126,7 @@ if [ "$RHEL6" == "yes" ] && [ "$OS_ARCH" == "ppc64" ] ; then
 	cp /lib64/libpci.so.3.1.4 BGQ_INITRAMFS_PATH/lib64
 	cp /lib64/libpthread-2.12.so BGQ_INITRAMFS_PATH/lib64
 	cp /lib64/libresolv-2.12.so BGQ_INITRAMFS_PATH/lib64
+	cp /lib64/librt.so.1 BGQ_INITRAMFS_PATH/lib64
 	cp /lib64/libselinux.so.1 BGQ_INITRAMFS_PATH/lib64
 	cp /lib64/libsepol.so.1 BGQ_INITRAMFS_PATH/lib64
 	cp /lib64/libtinfo.so.5.7 BGQ_INITRAMFS_PATH/lib64

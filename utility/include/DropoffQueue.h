@@ -20,6 +20,9 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+/*!
+ * \file utility/include/DropoffQueue.h
+ */
 
 //! \brief A container class for nonblocking thread communications.
 //! Multiple threads may send but only a single receiver is supported.  
@@ -51,8 +54,8 @@
 #include <boost/thread.hpp>
 #include <boost/detail/atomic_count.hpp>
 
-#ifndef _DROPOFFQUEUE_H
-#define _DROPOFFQUEUE_H
+#ifndef BGQ_UTILITY_DROPOFFQUEUE_H
+#define BGQ_UTILITY_DROPOFFQUEUE_H
 
 template<class Type> class DropoffQueue {
 

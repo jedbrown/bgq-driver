@@ -101,7 +101,7 @@ private:
     void pluginCallback(
             const boost::shared_ptr<CommandConnection>& connection,
             const runjob::commands::response::MuxStatus::Ptr& response,
-            const Plugin::HandlePtr& plugin
+            const Plugin::WeakPtr& plugin
             );
 
 private:

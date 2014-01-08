@@ -27,6 +27,17 @@
  * This page will communicate development design changes which may effect usage,
  * and known issues.
  *
+ * - \b 19/07/2012 V1R1M2 BGPM fixes.
+ * - Documentation change: Bgpm- Documnetation change for AddEvent&AddEventList
+ *   The return code for Bgpm_AddEvent  and Bgpm_AddEventList has been corrected in the documentation.
+ * - Fixed Bgpm-Missing Event Attribute preservation while cloning
+ *   Observed an issue with Event attribute preservation when adding a new event to the existing event set. 
+ *   Two missing event attribute tracking for PEVT_INST_XU_GRP_MASK and PEVT_INST_QFPU_GRP_MASK has been added. 
+ * - Fixed - Bgpm_GetEventIdFromLabel fais to create PEVT_INST_ALL eventid 
+ *   Bgpm_GetEventIdFromLabel() converts an event name into an event ID. I  works fine for all native events, 
+ *   except for PEVT_INST_ALL. Although  PEVT_INST_ALL is a valid event.This is because of the boundary issue of the loop varient used to extract event ids from the table. 
+ *
+ *
  * - \b 12/04/16 - Efix V1R1M0-bgpm-io-mux-overflows
  * - Fix problem with I/O Overflow interrupts not working.
  * - Fix problem with A2 overflows intermittently firing too early when multiplexing active.  That is, instead of always

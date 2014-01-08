@@ -97,6 +97,14 @@ class bgqBqlEventAnalyzer(bgqBaseAnalyzer):
         #    parameter 2 = event time
         eventTable = self.appendSchema('tbgqeventlog')
         self.period_query = "select count(*) from " + eventTable + " where location = ? and event_time <=  (timestamp('MYTIME') + PERIOD) and event_time > (timestamp('MYTIME') - PERIOD)"
+
+        # define query for count of open alerts at this location
+        # within a day from the event time
+        #    parameter 1 = location
+        #    parameter 2 = event time
+        alertTable = self.appendSchema('x_tealalertlog')
+        self.alert_period = '1 day'
+        self.alert_query = "select count(*) from " + alertTable + " where \"alert_id\"='BQL01' and \"event_loc\"= ? and \"creation_time\" >= (timestamp('MYTIME') - PERIOD) and \"state\"=1"
         return
 
     def rasRawDataQuery(self, cursor, recid):
@@ -166,6 +174,17 @@ class bgqBqlEventAnalyzer(bgqBaseAnalyzer):
                 # perform the BQL sparing action
                 self.perform_sparing(rec_id, location, rawdata)
                 return
+
+        aquery = self.alert_query.replace('PERIOD',self.alert_period)
+        aquery = aquery.replace('MYTIME', str(event_time))
+        registry.get_logger().debug(aquery + " xmsgId=" + msg_id + " loc=" + location.strip() + " ev_time=" + str(event_time))
+        cursor.execute(aquery, location.strip())
+        row = cursor.fetchone()
+        msgCount = row[0]
+        # do not log more than one BQL alert per day for the same location 
+        if msgCount > 0:
+            registry.get_logger().debug("An active BQL01 alert for location " + location.strip() + " exist within a period of " + self.alert_period + ". Skip logging a duplicate.")
+            return
 
         tmsg = tmsg + str(msgCount) + xmsg;
         reason = tmsg + "\nRAS event details:" \

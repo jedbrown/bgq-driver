@@ -59,7 +59,7 @@
 #include "MMCSSocketList.h"
 #include "MMCSServerParms.h"
 #include "ReconnectBlocks.h"
-#include "MMCSMasterMonitor.h"
+#include "master/Monitor.h"
 #include "RunJobConnection.h"
 #include "ras.h"
 
@@ -71,7 +71,7 @@ LOG_DECLARE_FILE( "mmcs" );
 MMCSConsolePortServer*          consolePort = NULL;         // server side console port for listening for consoles and scripts
 DatabaseMonitorThread*          databaseMonitor = NULL;     // background thread for handling commands via database
 EnvMonitorThread*               envMonitor = NULL;          // background thread for handling environmentals
-MasterMonitor*                  master_mon = NULL;          // background thread for handling bgmaster monitoring
+mmcs::master::Monitor*          master_mon = NULL;          // background thread for handling bgmaster monitoring
 MMCSConsoleListener*            consoleListener = NULL;     // background thread for handling commands from console processes
 MMCSSocketList*                 clientSockets = NULL;       // list of client sockets
 MMCSCommandMap*                 mmcsCommands = NULL;        // map of mmcs commands to MMCSCommand objects
@@ -87,66 +87,29 @@ boost::condition_variable       reconnect_notifier;
 MCServerMessageType             message_type;
 bool                            subnets_home = true;
 
-static int signals[] = { SIGHUP, SIGINT, SIGQUIT, SIGUSR1, SIGTERM, SIGPIPE, SIGXFSZ, 
+static int signals[] = { SIGHUP, SIGINT, SIGQUIT, SIGUSR1, SIGTERM, SIGPIPE,
                          SIGSEGV, SIGILL, SIGFPE, SIGTERM, SIGBUS };
 static int num_signals = sizeof(signals) / sizeof(signals[0]);
 
-void
-mmcs_sigxfsz_handler(int signal_number)
-{
-    // This signal occurs when a write to the MMCS log or an I/O log
-    // would cause the file size limit to be exceeded.
-    static int signalCount = 0;
-
-    if (--signalCount < 0) // limit the number of log messages written
-    {
-        signalCount = 1000;
-
-        // generate a RAS event
-        const char* rasMessage = "insert into tbgqeventlog (component,errcode,severity,message) values('MMCS','0','ERROR','mmcs or I/O log file size limit exceeded')";
-        BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
-        if (!tx.getConnection()) {
-            LOG_ERROR_MSG("Unable to obtain database connection");
-            return;
-        }
-        tx.execStmt(rasMessage);
-
-        LOG_ERROR_MSG("MMCS log or I/O log file size limit exceeded");
-    }
-}
+int signal_fd = 0;
 
 void
 mmcs_signal_handler(int signum, siginfo_t* siginfo, void*)
 {
-    if (signum == SIGUSR1 || signum == SIGPIPE || signum == SIGHUP)
-    {
+    if ( signal_fd ) {
+        (void)write( signal_fd, siginfo, sizeof(siginfo_t) );
         return;
     }
-    else if (signum == SIGXFSZ)
-    {
-        mmcs_sigxfsz_handler(signum);
+
+    if (signum == SIGUSR1 || signum == SIGPIPE || signum == SIGHUP) {
+        return;
     }
-    else
-    {
-        //  print some useful information
-        std::cerr << "mmcs_server halting due to signal " << signum << " in thread "
-                  << pthread_self() << " from " << siginfo->si_pid << "." << std::endl;
-        if (signal_number == 0)
-        {
-            signal_number = signum;
-        }
-        // Reset to default action for our signal
-        struct sigaction sigact;
-        sigact.sa_handler = SIG_DFL;
-        int rc = sigaction(signum, &sigact, 0);
-        if (rc < 0)
-            {
-                std::cerr << "mmcs_server signal: " << strerror(errno) << std::endl;
-                exit(1);
-            }
-        // now raise it again
-        raise(signum);
-    }
+
+    // otherwise restore default handler and re-raise
+    struct sigaction sigact;
+    sigact.sa_handler = SIG_DFL;
+    (void)sigaction(signum, &sigact, 0);
+    raise(signum);
 }
 
 void
@@ -404,7 +367,6 @@ main(int argc, char **argv)
         runjob_connection = new RunJobConnection;
         runjob_mon = new RunJobConnectionMonitor;
         runjob_mon->start();
-        runjob_mon->_runjob_start_barrier.wait();
     }
 
     // Initialize mcServer.  This has to come after the master monitor starts and
@@ -428,14 +390,14 @@ main(int argc, char **argv)
     // Start the master monitor before reconnecting.
     if (MMCSProperties::getProperty(MASTER_MON) == "true")
     {
-        master_mon = new MasterMonitor;
+        master_mon = new mmcs::master::Monitor;
         master_mon->setOptions(bringup_options);
         master_mon->start();
 
         // Wait for the master monitor to complete its initialization.
-        boost::unique_lock<boost::mutex> ulock(MasterMonitor::_startup_lock);
-        while(MasterMonitor::_started == false) {
-            MasterMonitor::_startup_notifier.wait(ulock);
+        boost::unique_lock<boost::mutex> ulock(mmcs::master::Monitor::_startup_lock);
+        while(mmcs::master::Monitor::_started == false) {
+            mmcs::master::Monitor::_startup_notifier.wait(ulock);
         }
     } else {
         // we can't reconnect blocks when master_mon is disabled
@@ -456,7 +418,7 @@ main(int argc, char **argv)
             reconnectBlocks(&mmcsParms, reply, commandProcessor);
         } catch ( const std::exception& e ) {
             LOG_FATAL_MSG( "reconnect blocks: " << e.what() );
-            exit( EXIT_FAILURE );
+            _exit( EXIT_FAILURE );
         }
 
         // Start the database monitor thread
@@ -498,14 +460,14 @@ main(int argc, char **argv)
         result = BGQDB::checkRack(racks, &invalidHW);
         if (result != BGQDB::OK) {
             LOG_ERROR_MSG("Error on BGQDB::checkRacks; exiting.");
-            exit(1);
+            _exit( EXIT_FAILURE );
         }
         if (!invalidHW.empty()) {
             for (unsigned i=0; i < invalidHW.size(); ++i) {
                 LOG_FATAL_MSG("HardwareToManage: rack " << invalidHW[i] << " in properties file, but not found in database");
             }
             LOG_FATAL_MSG("exiting");
-            exit(1);
+            _exit( EXIT_FAILURE );
         }
         
         envMonitor = new EnvMonitorThread;
@@ -520,25 +482,65 @@ main(int argc, char **argv)
 
     LOG_INFO_MSG("MMCS started");
 
-    while (signal_number == 0)
-    {
-        sleep(5);
+    // create pipe for signal handler
+    int signal_descriptors[2];
+    if ( pipe(signal_descriptors) != 0 ) {
+        LOG_ERROR_MSG( "could not create pipe for signal handler" );
+        exit( EXIT_FAILURE );
+    }
+    signal_fd = signal_descriptors[1];
 
-        if (test_mode == false && (DefaultControlEventListener::getDefaultControlEventListener()->getBase()->isMailboxStarted() == false))
-        {
-            LOG_WARN_MSG("MCServer has terminated. MMCS must now terminate.");
-            signal_number = EXIT_FAILURE;
-            break;
+    while ( !signal_number ) {
+        struct pollfd pollfd;
+        pollfd.fd = signal_descriptors[0];
+        pollfd.events = POLLIN;
+        pollfd.revents = 0;
+        const int seconds = 5;
+        const int rc = poll( &pollfd, 1, seconds );
+
+        if ( rc == -1 ) {
+            if ( errno != EINTR) LOG_ERROR_MSG( "could not poll: " << strerror(errno) );
+        } else if ( rc ) {
+            // read siginfo from pipe
+            siginfo_t siginfo;
+            while ( 1 ) {
+                const int rc = read( signal_descriptors[0], &siginfo, sizeof(siginfo) );
+                if ( rc > 0 ) break;
+                if ( rc == -1 && errno == EINTR ) continue;
+                LOG_FATAL_MSG( "could not read: " << strerror(errno) );
+                exit(1);
+            }
+            if ( siginfo.si_signo == SIGUSR1 || siginfo.si_signo == SIGPIPE || siginfo.si_signo == SIGHUP) {
+                LOG_DEBUG_MSG( "received signal " << siginfo.si_signo << " from " << siginfo.si_pid );
+            } else if ( !signal_number ) {
+                // restore default signal handler
+                struct sigaction act;
+                memset(&act, 0, sizeof(act));
+                act.sa_handler = SIG_DFL;
+                sigaction(siginfo.si_signo, &act, NULL);
+
+                signal_number = siginfo.si_signo;
+                LOG_WARN_MSG( "mmcs_server halting due to signal " << siginfo.si_signo );
+                LOG_WARN_MSG( "sent from pid " << siginfo.si_pid );
+                LOG_WARN_MSG( "sent from uid " << siginfo.si_uid );
+                raise( siginfo.si_signo );
+            } else {
+                // signal already set
+            }
+        } else if ( !rc ) {
+            if (!test_mode && !DefaultControlEventListener::getDefaultControlEventListener()->getBase()->isMailboxStarted())
+            {
+                LOG_WARN_MSG("MCServer has terminated. MMCS must now terminate.");
+                signal_number = EXIT_FAILURE;
+            }
         }
     }
 
     // end the various mmcs threads
     mmcs_terminate();
 
-    if (signal_number != 0)
-    {
-        LOG_ERROR_MSG("MMCS[" << getpid() << "]: exiting due to signal " << signal_number);
-    }
-
-    exit(signal_number);
+    // use _exit to avoid calling destructors for objects with static storage duration.
+    // we need this because mmcs_server does not join all of its threads, so they can
+    // persist when the main thread falls below main here.
+    _exit(signal_number);
 }

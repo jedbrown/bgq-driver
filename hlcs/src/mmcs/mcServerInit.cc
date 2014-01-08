@@ -94,6 +94,7 @@
 #include "mcServerInit.h"
 #include "ReconnectBlocks.h"
 #include "DefaultControlEventListener.h"
+#include "MMCSSubnet.h"
 
 #include <control/include/mcServer/MCServer_errno.h>
 #include <control/include/mcServer/MCServerRef.h>
@@ -106,7 +107,11 @@ extern MCServerMessageType message_type;
 extern bool subnets_home;
 
 void
-mcServerInit(vector<string>& bringup_options, MMCSCommandReply& reply, bool blocks_are_active)
+mcServerInit(
+        const vector<string>& bringup_options, 
+        MMCSCommandReply& reply, 
+        const bool blocks_are_active
+        )
 {
     DefaultControlEventListener* defaultRasListener = DefaultControlEventListener::getDefaultControlEventListener();
 
@@ -200,16 +205,17 @@ mcServerInit(vector<string>& bringup_options, MMCSCommandReply& reply, bool bloc
     // Send a bringup message to mcServer
     //
     BringupRequest mcBringupRequest;
+    mcBringupRequest._killMcServerIfHwStarted = true;
     BringupReply   mcBringupReply;
     if(message_type == BRINGUP_MSG) {
         // Don't send a bringup message if it has been done automatically by mc
         // add bringup options
-        for (vector<string>::iterator it = bringup_options.begin(); it != bringup_options.end(); ++it)
-            {
-                if (!mcBringupRequest._bringupOptions.empty())
-                    mcBringupRequest._bringupOptions.append(",");
-                mcBringupRequest._bringupOptions.append(*it);
-            }
+        for (vector<string>::const_iterator it = bringup_options.begin(); it != bringup_options.end(); ++it)
+        {
+            if (!mcBringupRequest._bringupOptions.empty())
+                mcBringupRequest._bringupOptions.append(",");
+            mcBringupRequest._bringupOptions.append(*it);
+        }
         // send a BringupRequest to mcserver
         try
             {
@@ -234,7 +240,9 @@ mcServerInit(vector<string>& bringup_options, MMCSCommandReply& reply, bool bloc
 }
 
 void
-mcServerTerm(MMCSCommandReply& reply)
+mcServerTerm(
+        MMCSCommandReply& reply
+        )
 {
     DefaultControlEventListener* defaultRasListener = DefaultControlEventListener::getDefaultControlEventListener();
     defaultRasListener->disconnect();

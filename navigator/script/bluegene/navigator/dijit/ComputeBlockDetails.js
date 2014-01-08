@@ -126,7 +126,11 @@ var b_navigator_dijit_ComputeBlockDetails = d_declare(
 
     getMachineHighlighting : function()
     {
-        return this._machine_highlighting;
+        var ret = {
+                loading: this._fetch_details_deferred,
+                highlighting: this._machine_highlighting
+            };
+        return ret;
     },
 
 
@@ -172,6 +176,8 @@ var b_navigator_dijit_ComputeBlockDetails = d_declare(
         this._fetch_details_deferred = this._block_fetch_fn( this._block_id );
         this._detailsLoadingFmt.set( "value", { name: this._block_id } );
         this._detailsStack.selectChild( this._detailsLoadingPane );
+
+        this.onMachineHighlightingChanged();
 
         d_Deferred.when(
                 this._fetch_details_deferred,

@@ -24,6 +24,9 @@
 #include "Kernel.h"
 #include <spi/include/l2/atomic.h>
 #include <hwi/include/bqc/mu_dcr.h>
+#include "hwi/include/bqc/BIC_inlines.h"
+#include "hwi/include/bqc/gea_dcr.h"
+#include "hwi/include/bqc/l2_central_inlines.h"
 
 void IntHandler_Debug( Regs_t *context, int code  );
 
@@ -221,6 +224,8 @@ int vmm_MapUserSpace(uint64_t flags, void* physicaladdress, void* virtualaddress
         mas3 |= MAS3_UX(1);
     if(flags & APP_FLAGS_NONSPECULATIVE)
         mas3 |= MAS3_U0(1);
+    if(flags & APP_FLAGS_FLUSHSTORES)
+        mas3 |= MAS3_U1(1);
     if(flags & APP_FLAGS_LISTENABLE)
         mas3 |= MAS3_U3(1);
     if(flags & APP_FLAGS_GUARDEDINHIBITED)
@@ -355,15 +360,6 @@ void VMM_Init()
                    );
     }
     
-    // Add user space MMIO mapping
-    vmm_tlbwe_slot(3,
-          MAS1_V(1) | MAS1_TID(0) | MAS1_TS(0) | MAS1_TSIZE_1GB,
-          MAS2_EPN(  PHYMAP_MINADDR_MMIO >> 12) | MAS2_W(0) | MAS2_I(1) |	MAS2_M(1) | MAS2_G(1) | MAS2_E(0),
-	  MAS7_3_RPN(PHYMAP_MINADDR_MMIO >> 12) | MAS3_SR(1) | MAS3_SW(1) | MAS3_SX(0) | MAS3_UR(1) | MAS3_UW(1) | MAS3_UX(0) | MAS3_U1(1),
-          MAS8_TGS(0) | MAS8_VF(0) | MAS8_TLPID(0),
-          MMUCR3_X(0) | MMUCR3_R(1) |	MMUCR3_C(1) | MMUCR3_ECL(0) | MMUCR3_CLASS(1) |MMUCR3_ThdID(0xF)
-         );
-
     // Add non-guarded user space L1p and L2 MMIO mappings
     vmm_tlbwe_slot(3,
           MAS1_V(1) | MAS1_TID(0) | MAS1_TS(0) | MAS1_TSIZE_1MB,
@@ -400,4 +396,79 @@ void VMM_Init()
     
     // re-enable the other hardware threads on this core
     mtspr(SPRN_TENS,((mask) & 0xf));
+}
+
+int vmm_SetupBackgroundScrub()
+{
+    uint64_t memory_on_node   = NodeState.Personality.DDR_Config.DDRSizeMB * 1024ull;      // total memory in kB
+    uint64_t memory_per_scrub = 32768;                                                     // kB scrubbed per timer event
+    uint64_t clockrate        = 1600ull * 1000 * 1000 / 2;                                 // gea timers are on the 2x domain
+    uint64_t rate             = 2 * 3600;                                                  // number of seconds to scrub entire memory
+    uint64_t period           = clockrate * rate / (memory_on_node / memory_per_scrub);    // gea clocks per second
+    
+    BIC_WriteGeaInterruptControlRegisterHigh(GEA_DCR__GEA_INTERRUPT_STATE_CONTROL_HIGH__TIMER2_INT_set(2));
+    DCRWritePriv(GEA_DCR(TIMER2_CONFIG), GEA_DCR__TIMER2_CONFIG__RELOAD_VAL_set(period) | GEA_DCR__TIMER2_CONFIG__IE_set(1) | GEA_DCR__TIMER2_CONFIG__ARE_set(1));
+    DCRWritePriv(GEA_DCR(TIMER2), GEA_DCR__TIMER2__COUNT_set(period));
+    ppc_msync();
+    return 0;
+}
+
+Lock_Atomic_t backgroundScrubLock;
+uint64_t backgroundScrubVA   = 0;
+uint64_t backgroundScrubPA   = 0;
+uint64_t backgroundScrubSize = 0;
+uint64_t backgroundScrubSlot = ~0;
+int vmm_setScrubSlot()
+{
+    size_t   size;
+    uint64_t paddr;
+    Kernel_Lock(&backgroundScrubLock);
+    vmm_getSegment(CONFIG_MAX_APP_PROCESSES, IS_SCRUBWINDOW, &backgroundScrubVA, &paddr, &backgroundScrubSize);
+    vmm_getSegmentEntry(CONFIG_MAX_APP_PROCESSES, backgroundScrubVA, &paddr, &size, &backgroundScrubSlot);
+    Kernel_WriteFlightLog(FLIGHTLOG, FL_SCRUBSETP, backgroundScrubVA, backgroundScrubSize, backgroundScrubSlot, 0);
+    
+    Kernel_Unlock(&backgroundScrubLock);
+    return 0;
+}
+
+int vmm_clearScrubSlot()
+{
+    Kernel_Lock(&backgroundScrubLock);
+    backgroundScrubVA   = 0;
+    backgroundScrubSize = 0;
+    Kernel_Unlock(&backgroundScrubLock);
+    return 0;
+}
+
+void IntHandler_MemoryScrub(int status_reg, int bitnum)
+{
+    size_t index;
+    Kernel_Lock(&backgroundScrubLock);
+    
+    if(backgroundScrubVA != 0)
+    {
+        Kernel_WriteFlightLog(FLIGHTLOG, FL_SCRUBSTRT, backgroundScrubPA, (backgroundScrubSize>>5), 0, 0);
+        vmm_tlbwe_slot( 3 - (backgroundScrubSlot%4),
+                        MAS1_V(1) | MAS1_TID(0) | MAS1_TS(0) | MAS1_TSIZE_1GB,
+                        MAS2_EPN(((uint64_t)backgroundScrubVA)>>12)   | MAS2_W(0) | MAS2_M(1) | MAS2_E(0) | MAS2_I(1) | MAS2_G(1),
+                        MAS7_3_RPN(((uint64_t)0x10000000000ull | (backgroundScrubPA<<5))>>12) | MAS3_SR(1) | MAS3_SW(1) | MAS3_SX(1) | MAS3_U0(1),
+                        MAS8_TGS(0) | MAS8_VF(0) | MAS8_TLPID(0),
+                        MMUCR3_X(0) | MMUCR3_R(1) | MMUCR3_C(1) | MMUCR3_ECL(0) | MMUCR3_CLASS(1) | MMUCR3_ThdID(0xF)
+            );
+        isync();
+        uint64_t* l2atomicbase = (uint64_t*)((backgroundScrubVA - Kernel_L2AtomicsBaseAddress())>>5);
+        for(index=0; index < (backgroundScrubSize>>5) / sizeof(uint64_t); index += 128 / sizeof(uint64_t))
+            L2_AtomicStoreAdd(&l2atomicbase[index], 0);
+        
+        backgroundScrubPA += (backgroundScrubSize>>5);
+        if(backgroundScrubPA >= NodeState.Personality.DDR_Config.DDRSizeMB * 1024ull * 1024ull)
+            backgroundScrubPA = 0;
+        
+        Kernel_WriteFlightLog(FLIGHTLOG, FL_SCRUBSTOP, backgroundScrubPA, backgroundScrubSize, 0, 0);
+    }
+    
+    Kernel_Unlock(&backgroundScrubLock);
+    
+    GEA_DCR_PRIV_PTR->gea_interrupt_state__noncritical = GEA_DCR__GEA_INTERRUPT_STATE__TIMER2_INT_set(1);
+    BIC_WriteGeaInterruptState(GEA_DCR__GEA_INTERRUPT_STATE__TIMER2_INT_set(1));
 }

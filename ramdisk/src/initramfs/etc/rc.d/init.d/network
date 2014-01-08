@@ -428,7 +428,7 @@ case "$1" in
 		    fi
 
 		    # Customers may want an IPv4 and IPv6 address configured.  So, add the IPv6 here if configged.
-		    if [ ! -z $BG_INTF1_IPV6 ] && [ $BG_INTF1_IPV6 != "0:0:0:0:0:0:0:0" ; then
+		    if [ ! -z $BG_INTF1_IPV6 ] && [ $BG_INTF1_IPV6 != "0:0:0:0:0:0:0:0" ] ; then
 
 			# If no prefix is specified then 64 bits is the default, otherwise use the prefix defined.
 			if [ -z $BG_INTF1_IPV6_PREFIX ] ; then

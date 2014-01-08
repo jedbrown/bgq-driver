@@ -156,6 +156,12 @@ Message::create(
         case bgcios::stdio::Authenticate: 
             message = init<bgcios::stdio::AuthenticateMessage>( job, rank, type, bgcios::StdioService );
             break;
+        case bgcios::stdio::Reconnect: 
+            message = init<bgcios::stdio::ReconnectMessage>( job, rank, type, bgcios::StdioService );
+            break;
+        case bgcios::jobctl::Reconnect: 
+            message = init<bgcios::jobctl::ReconnectMessage>( job, rank, type, bgcios::JobctlService );
+            break;
         default:
             BOOST_ASSERT( !"unhandled type" );
     }
@@ -220,6 +226,9 @@ Message::prepare(
             case bgcios::jobctl::AuthenticateAck:
                 _message = boost::make_shared<bgcios::jobctl::AuthenticateAckMessage>();
                 break;
+            case bgcios::jobctl::ReconnectAck:
+                _message = boost::make_shared<bgcios::jobctl::ReconnectAckMessage>();
+                break;
         }
     } else if ( header.service == bgcios::StdioService ) {
         LOG_TRACE_MSG(bgcios::stdio::toString( header.type ) );
@@ -249,6 +258,9 @@ Message::prepare(
                 break;
             case bgcios::stdio::AuthenticateAck:
                 _message = boost::make_shared<bgcios::stdio::AuthenticateAckMessage>();
+                break;
+            case bgcios::stdio::ReconnectAck:
+                _message = boost::make_shared<bgcios::stdio::ReconnectAckMessage>();
                 break;
         }
     } else {

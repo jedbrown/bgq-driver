@@ -1,0 +1,129 @@
+<File filename="BGMasterAgentProtocolSpec" type="xmlapi" namespace="BGMasterAgentProtocolSpec" version="1" >
+<!-- Protocol spoken between BGMaster and its BGAgents -->
+<!-- Several optional files to generate -->
+<!-- A special API header file name -->
+	<APIHeader filename="BGMasterAgentProtocolAPI" /> 
+<!-- An implementation file -->
+	<APIImplementation filename="BGMasterAgentProtocol.stubs" /> 
+	
+<!-- Our base reply object.  Also typeless. -->
+<Method name="returnspec" comment="Specification of return message for a request" >
+    <Class name="BGMasterAgentReply" superclass="true">
+      <DataMember type="int32" name="rc" comment="return error code" />
+      <DataMember type="text" name="rt" comment="return error text" />
+    </Class>
+</Method>
+	
+<!-- A specific protocol message -->
+<!-- If no 'type' is specified, just the related classes will be created, no methods -->
+<!-- Note, the naming conventions of the classes are critical and should be of the form -->
+<!-- MethodnameRequest and MethodnameReply -->
+<Method name="join" type="RequestReply" comment="Registration Message">
+<!-- Create the classes that will be arguments for the method -->
+    <Class name="JoinRequest">
+       <Class name="WorkingBins">
+         <DataMember type="text" name="binary_id" comment="ID of binary"/>
+         <DataMember type="text" name="name" comment="path/args for the binary"/>
+         <DataMember type="text" name="alias" comment="Standard alias for the binary"/>
+         <DataMember type="text" name="status" comment="Status of the binary"/>
+         <DataMember type="text" name="user" comment="User under which binary is running."/>
+       </Class>
+         <DataMember type="text" name="ip_address" comment="initiator listener IP address" />
+         <DataMember type="int32" name="port" comment="initiator listener port" />
+         <DataMember type="text" name="initiator" comment="'client' or 'agent'" />
+         <DataMember type="text" name="host_name" comment="initiator listener host name" />
+         <DataMember type="WorkingBins" name="running_binaries" occurrences="many" comment="binaries running on this agent" />
+    </Class>
+    <Class name="JoinReply" parent="BGMasterAgentReply">
+         <DataMember type="text" name="agent_ip" comment="Initiator IP address" />
+         <DataMember type="text" name="master_ip" comment="Master IP address" />
+         <DataMember type="text" name="master_port" comment="Ephemeral port master is using for its requests." />
+         <DataMember type="text" name="bad_bins" occurrences="many" comment="Invalid binary ids that must die" />
+    </Class>
+</Method>
+
+<Method name="start" type="RequestReply" comment="Start a managed binary message">
+     <Class name="StartRequest">
+      <DataMember type="text" name="path" comment="Full path to binary to execute"/>
+      <DataMember type="text" name="arguments" comment="Argument string"/>
+      <DataMember type="text" name="logdir" comment="Base log directory"/>
+      <DataMember type="text" name="alias" comment="Alias name for the binary"/>
+      <DataMember type="text" name="user" comment="User ID for the binary"/>
+     </Class>
+
+     <Class name="StartReply" parent="BGMasterAgentReply">
+        <Class name="BinaryStatus">
+            <DataMember type="text" name="binary_id" comment="ID of binary"/>
+            <DataMember type="uint32" name="exit_status" comment="Exit status of binary"/>
+        </Class>
+       <DataMember type="BinaryStatus" name="status" comment="Status object"/>
+     </Class>
+</Method>
+
+<Method name="stop" type="RequestReply" comment="Stop a managed binary message">
+     <Class name="StopRequest">
+      <DataMember type="text" name="binary_id" comment="binary to stop"/>
+      <DataMember type="uint32" name="signal" comment="initial signal number"/>
+     </Class>
+
+     <Class name="StopReply" parent="BGMasterAgentReply">
+        <Class name="BinaryStatus">
+            <DataMember type="text" name="binary_id" comment="ID of binary"/>
+            <DataMember type="uint32" name="exit_status" comment="Exit status of the binary if available"/>
+        </Class>
+       <DataMember type="BinaryStatus" name="status" comment="Status of stopped binary"/>
+     </Class>
+</Method>
+
+<Method name="status" type="RequestReply" comment="Status of managed binaries">
+     <Class name="StatusRequest">
+        <Class name="BinaryStatus">
+            <DataMember type="text" name="binary_id" comment="ID of binary"/>
+            <DataMember type="text" name="status" comment="Status of the binary"/>
+        </Class>
+       <DataMember type="BinaryStatus" name="statuses" occurrences="many" comment="Status objects"/>
+     </Class>
+
+     <Class name="StatusReply" parent="BGMasterAgentReply">
+        <Class name="BinaryStatus">
+            <DataMember type="text" name="binary_id" comment="ID of binary"/>
+            <DataMember type="text" name="status" comment="Status of the binary"/>
+        </Class>
+       <DataMember type="BinaryStatus" name="statuses" occurrences="many" comment="Status objects"/>
+     </Class>
+</Method>
+
+<Method name="end_agent" type="RequestReply" comment="Tell BGAgent to end and take its binaries with it.">
+     <Class name="End_agentRequest">
+     </Class>
+     <Class name="End_agentReply" parent="BGMasterAgentReply">
+     </Class>
+</Method>
+
+<Method name="complete" type="RequestReply" comment="Tell BGMaster that binary(ies) completed">
+     <Class name="CompleteRequest">
+        <Class name="BinaryStatus">
+            <DataMember type="text" name="binary_id" comment="ID of binary"/>
+            <DataMember type="text" name="status" comment="Status of the binary"/>
+        </Class>
+       <DataMember type="BinaryStatus" name="status" comment="Status object"/>
+       <DataMember type="uint32" name="exit_status" comment="exit status of binary"/>
+     </Class>
+     <Class name="CompleteReply" parent="BGMasterAgentReply">
+     </Class>
+</Method>
+
+
+<Method name="failed" type="RequestReply" comment="Tell BGMaster that binary(ies) failed">
+     <Class name="FailedRequest">
+        <Class name="BinaryStatus">
+            <DataMember type="text" name="binary_id" comment="ID of binary"/>
+            <DataMember type="uint32" name="exit_status" comment="Exit status of binary"/>
+        </Class>
+       <DataMember type="BinaryStatus" name="status" comment="Status object"/>
+     </Class>
+     <Class name="FailedReply" parent="BGMasterAgentReply">
+     </Class>
+</Method>
+
+</File>

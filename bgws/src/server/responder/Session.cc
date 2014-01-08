@@ -193,15 +193,15 @@ json::ValuePtr Session::calcUserJson(
 
 
 
-capena::http::Methods Session::getAllowedMethods() const
+capena::http::Methods Session::_getAllowedMethods() const
 {
     return { capena::http::Method::GET, capena::http::Method::DELETE };
 }
 
 
-void Session::doDelete()
+void Session::_doDelete()
 {
-    const string &session_id(getRequestedResourcePath().back());
+    const string &session_id(_getRequestedResourcePath().back());
 
     _deleteSession(
             session_id
@@ -209,9 +209,9 @@ void Session::doDelete()
 }
 
 
-void Session::doGet()
+void Session::_doGet()
 {
-    const string &session_id(getRequestedResourcePath().back());
+    const string &session_id(_getRequestedResourcePath().back());
 
     Error::Data error_data;
     error_data["sessionId"] = session_id;
@@ -241,11 +241,11 @@ void Session::doGet()
 
             if ( _isUserAdministrator() ) {
                 LOG_DEBUG_MSG( "User is administrator so can look at this session." );
-            } else if ( getRequestUserId().getUid() == session_ptr->getUserId().getUid() ) {
+            } else if ( _getRequestUserId().getUid() == session_ptr->getUserId().getUid() ) {
                 LOG_DEBUG_MSG( "User is administrator so can look at this session." );
             } else {
 
-                LOG_WARN_MSG( "User " << getRequestUserInfo() << " tried to get " << session_ptr->getUserInfo() << " session info!" );
+                LOG_WARN_MSG( "User " << _getRequestUserInfo() << " tried to get " << session_ptr->getUserInfo() << " session info!" );
 
                 BOOST_THROW_EXCEPTION( Error(
                         "Could get session detaions for '" + session_id + " because the session does not exist.",
@@ -267,15 +267,15 @@ void Session::doGet()
 
     }
 
-    const UserInfo &user_info(session_ptr ? session_ptr->getUserInfo() : getRequestUserInfo());
+    const UserInfo &user_info(session_ptr ? session_ptr->getUserInfo() : _getRequestUserInfo());
 
     json::ValuePtr val_ptr(calcUserJson(
             user_info,
             session_ptr ? session_ptr->getId() : string(),
-            _enforcer()
+            _getEnforcer()
         ));
 
-    auto &response(getResponse());
+    auto &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();
@@ -292,7 +292,7 @@ void Session::_deleteSession(
     Error::Data error_data;
     error_data["sessionId"] = session_id;
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
 
     if ( session_id == "current" ) {
@@ -312,7 +312,7 @@ void Session::_deleteSession(
 
     _sessions.end(
             session_id,
-            getRequestUserInfo(),
+            _getRequestUserInfo(),
             &result
         );
 
@@ -324,7 +324,7 @@ void Session::_deleteSession(
     }
 
     if ( result == bgws::Sessions::Result::NotAuthorized ) {
-        LOG_WARN_MSG( "Requested to delete session " << session_id << " " << " by " << getRequestUserInfo() << " but the session is not owned by the user." );
+        LOG_WARN_MSG( "Requested to delete session " << session_id << " " << " by " << _getRequestUserInfo() << " but the session is not owned by the user." );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not end session '" + session_id + " because the session does not exist.",

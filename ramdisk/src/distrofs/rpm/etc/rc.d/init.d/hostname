@@ -83,6 +83,16 @@ function start
 		BG_HOSTNAME=$BG_LOCATION
 	fi
 
+	# If we have an infiniband device configured on the node, add the hostname to the node_desc.
+	if [ -e /sys/class/infiniband/mlx4_0/node_desc ] ; then
+		echo -n "$(cat /sys/class/infiniband/mlx4_0/node_desc)-$BG_HOSTNAME" >> \
+			/sys/class/infiniband/mlx4_0/node_desc
+		if [ $? -ne 0 ] ; then
+			bgras $BGRAS_ID_SCRIPT_FAILURE \
+				"hostname - failure adding hostname: $BG_HOSTNAME to /sys/class/infiniband/mlx4_0/node_desc"
+		fi
+	fi
+
 	hostname $BG_HOSTNAME
 	echo "HOSTNAME=$BG_HOSTNAME" >> /etc/sysconfig/network
 	RETVAL=$?

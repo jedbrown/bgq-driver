@@ -312,13 +312,13 @@ bool Hardware::matchesUrl(
 }
 
 
-capena::http::Methods Hardware::getAllowedMethods() const
+capena::http::Methods Hardware::_getAllowedMethods() const
 {
     return { capena::http::Method::GET };
 }
 
 
-void Hardware::doGet()
+void Hardware::_doGet()
 {
 
     if ( ! _isUserAuthenticated() ) {
@@ -334,7 +334,7 @@ void Hardware::doGet()
     }
 
 
-    const string &location_str(getRequestedResourcePath().back());
+    const string &location_str(_getRequestedResourcePath().back());
 
     try {
 
@@ -365,7 +365,7 @@ void Hardware::doGet()
 
         if ( val_ptr ) {
 
-            capena::server::Response &response(getResponse());
+            capena::server::Response &response(_getResponse());
 
             response.setContentTypeJson();
             response.headersComplete();

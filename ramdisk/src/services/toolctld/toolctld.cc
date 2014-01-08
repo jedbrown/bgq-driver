@@ -40,8 +40,6 @@ LOG_DECLARE_FILE("cios.toolctld");
 
 int main(int argc, char *argv[])
 {
-   // Set actions for signals.
-   signal(SIGPIPE, SIG_IGN);
 
    bgcios::SignalHandler sigsegvHandler(SIGSEGV);
    bgcios::SignalHandler sigfpeHandler(SIGFPE);
@@ -55,6 +53,20 @@ int main(int argc, char *argv[])
    if (chdir("/") != 0) {
       LOG_ERROR_MSG("error changing working directory to '/': " << bgcios::errorString(errno));
    }
+
+       // Ignore these signals
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    const int signals_ignored[] = { SIGHUP, SIGUSR1, SIGPIPE, SIGTRAP };
+    const int num_signals_ignored = sizeof(signals_ignored) / sizeof(signals_ignored[0]);
+    sa.sa_handler=SIG_IGN;
+    for (int i = 0; i < num_signals_ignored; i++)
+    {
+        if (sigaction(signals_ignored[i], &sa, NULL))
+        {
+            LOG_ERROR_MSG( "cios toolctld sigaction ignored: " << strerror(errno) );
+        }
+    }
 
    // Create configuration from command-line arguments and properties.
    ToolctlConfig config(argc, argv);

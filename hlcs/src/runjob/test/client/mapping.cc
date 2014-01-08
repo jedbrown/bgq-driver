@@ -62,49 +62,15 @@ BOOST_AUTO_TEST_CASE( arg_permutation )
     }
 }
 
-BOOST_AUTO_TEST_CASE( arg_file )
-{
-    _argv = make_argv( "--mapping /path/to/my/file", _argc);
-    const Parser options(_argc, _argv);
-    BOOST_CHECK_EQUAL(
-            options.getJobInfo().getMapping().type(),
-            runjob::Mapping::Type::File
-            );
-    BOOST_CHECK_EQUAL(
-            options.getJobInfo().getMapping().value(),
-            "/path/to/my/file"
-            );
-}
-
 BOOST_AUTO_TEST_CASE( arg_relative_file )
 {
-    _argv = make_argv( "--mapping relative/path/to/my/file", _argc);
+    _argv = make_argv( "--mapping mapping_file", _argc);
     const Parser options(_argc, _argv);
     char buf[ 512 ];
     (void)getcwd( buf, sizeof(buf) );
     BOOST_CHECK_EQUAL(
             options.getJobInfo().getMapping().value(),
-            std::string(buf) + "/relative/path/to/my/file"
-            );
-}
-
-BOOST_AUTO_TEST_CASE( arg_relative_file_explicit )
-{
-    _argv = make_argv( "--cwd /working/dir/ --mapping mapping", _argc);
-    const Parser options(_argc, _argv);
-    BOOST_CHECK_EQUAL(
-            options.getJobInfo().getMapping().value(),
-            "/working/dir/mapping"
-            );
-}
-
-BOOST_AUTO_TEST_CASE( arg_relative_file_explicit_no_slash )
-{
-    _argv = make_argv( "--cwd /working/dir --mapping mapping", _argc);
-    const Parser options(_argc, _argv);
-    BOOST_CHECK_EQUAL(
-            options.getJobInfo().getMapping().value(),
-            "/working/dir/mapping"
+            std::string(buf) + "/mapping_file"
             );
 }
 

@@ -89,7 +89,12 @@ var b_navigator_dijit_diagnostics_ConfigureComputeRun = d_declare(
 
     getMachineHighlightData : function()
     {
-        return this._midplanes;
+        var ret = {
+                loading: false,
+                highlighting: this._midplanes
+            };
+
+        return ret;
     },
 
 

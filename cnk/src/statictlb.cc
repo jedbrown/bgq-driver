@@ -90,7 +90,8 @@ extern "C"
 #define APPAGENT_COREID                16
 
 const unsigned TLBsizes[NUMTLBSIZES] = {1024, 16, 1};
-const char typexlate[12][32]          = {"NULL", "TEXT", "DATA", "HEAP", "SHARED", "PROCWIN", "DYNAM", "ATOMIC", "KERNEL", "MMIO", "SPEC", "RAMDISK"};
+const char typexlate[14][32]          = {"NULL", "TEXT", "DATA", "HEAP", "SHARED", "PROCWIN", "DYNAM", "ATOMIC", 
+                                         "KERNEL", "MMIO", "SPEC", "RAMDISK", "SCRUB", "USERMMIO"};
 
 #if USE_EXCLUSION
 #define NUMTLBSIZES_EXCL               11
@@ -104,7 +105,7 @@ const unsigned TLBsizes_excl[NUMTLBSIZES_EXCL] = {1024, 512, 256, 128, 64, 32, 1
  ** Tuning Parameters
  *****************************************************/
 #define WASTE_START                     0
-#define WASTE_LIMIT                     MAX_MEMORY_PER_NODE
+#define WASTE_LIMIT                     MAX(MAX_MEMORY_PER_NODE, numsegs*1024)
 #define HEAP_DELTA_THRESHOLD            8  //!< Allowed imbalance factor between heap allocations across processes    
 
 
@@ -116,13 +117,7 @@ const unsigned TLBsizes_excl[NUMTLBSIZES_EXCL] = {1024, 512, 256, 128, 64, 32, 1
 #define NUMPROCESSES          64         //!< Number of processes to map. 
 #define TEXTLIMIT             32
 #define DATALIMIT             32
-#define MKSHMSEGMENT        true         //!< Boolean.  Whether to generate a shared memory segment or not.
-
-#if MKSHMSEGMENT
-#define SHMLIMIT              64
-#else
 #define SHMLIMIT               1
-#endif
 
 #define CONTIGUOUS_TEXT     true
 #define CONTIGUOUS_DATA     true
@@ -130,18 +125,20 @@ const unsigned TLBsizes_excl[NUMTLBSIZES_EXCL] = {1024, 512, 256, 128, 64, 32, 1
 #define EXIT_ON_FAILURE     true
 
 #define SA_KERNEL_START        0x0000000
-uint64_t SA_KERNEL_END       = 0x0c00000;
+uint64_t SA_KERNEL_END       = 0x0d00000;
 #define SA_KERNEL_ATOMIC_START 0x0100000
 #define SA_KERNEL_ATOMIC_END   0x0180000
 
 #define MAX_ITERATIONS         100000000
 #define INITIAL_TEXTSIZE       1
 #define INITIAL_DATASIZE       1
-#define INITIAL_SHMSIZE        32
+#define INITIAL_SHMSIZE        0
 
 #define NUMPROCESSGROUPS       1        //!< HTC mode
 /*************************************************************/
 
+
+#define MTRACE if(lastIteration) printf
 
 /******************************************************
  ** Handy macros
@@ -278,6 +275,22 @@ class TLBstate
 
         unsigned int GetActive(int bucket) { return index[bucket]; }
         void ToNetworkEndian() { }
+        
+        uint64_t calculateScore(TLBstate& original)
+        {
+            int bucket;
+            int hitcount;
+            const uint32_t score[] = { 1, 10, 20, 30 };
+            for(bucket=0, hitcount=0; bucket<MAX_TLBSLOTS / MMU_ASSOCIATIVITY; bucket++)
+            {
+                if(GetActive(bucket) != original.GetActive(bucket))
+                {
+                    hitcount += score[ GetActive(bucket) ];
+                }
+            }
+            return hitcount;
+        }
+
     };
 
 class MMU
@@ -357,17 +370,8 @@ class MMU
                 }
             }
 
+            // Reserve slot for privileged MMIO
             kernel.type  = IS_MMIO;
-            
-            slot = AcquireSlot(0, VA_MINADDR_MMIO/CONFIG_CNK_PAGE_SIZE, 0);
-            if(slot != -1)
-            {
-                tlbarray[slot].vaddr = kernel.origvaddr = kernel.vaddr = VA_MINADDR_MMIO/CONFIG_CNK_PAGE_SIZE;
-                tlbarray[slot].paddr = kernel.source_paddr             = PHYMAP_MINADDR_MMIO/CONFIG_CNK_PAGE_SIZE;
-                tlbarray[slot].size  = kernel.origsize= kernel.size    = 1024;
-                tlbarray[slot].exclsize = 0;
-                tlbarray[slot].setSegment(&kernel);
-            }            
             slot = AcquireSlot(0, ((VA_MINADDR_MMIO | VA_PRIVILEGEDOFFSET)/CONFIG_CNK_PAGE_SIZE), 0);
             if(slot != -1)
             {
@@ -379,6 +383,7 @@ class MMU
             }
 
 	    // Reserve slots for "fast" L1P and L2 MMIO mappings
+            kernel.type  = IS_MMIO;
             slot = AcquireSlot(0, CONFIG_FAST_L1P_BASE/CONFIG_CNK_PAGE_SIZE, 2);
             if(slot != -1)
             {
@@ -429,34 +434,41 @@ class MMU
         {
             int x;
             int pid;
+            int set;
+            int way;
+            int maxway;
             int slot;
             char hit[MAX_TLBSLOTS/MMU_ASSOCIATIVITY];
             int min;
             int pidcount[MAX_TLBSLOTS / MMU_ASSOCIATIVITY];
+            int tmppid;
+            int tmphitcount;
             
             origpid &= 0x7f;
             for(pid=0; pid<MAX_TLBSLOTS / MMU_ASSOCIATIVITY; pid++)
             {
                 pidcount[pid] = 0;
                 memset(hit, 0, sizeof(hit));
-
-                for(slot=0; slot<MAX_TLBSLOTS; slot++)
+		
+                tmppid = pid ^ origpid;
+                for(set=0; set<MAX_TLBSLOTS/MMU_ASSOCIATIVITY; set++)
                 {
-                    if(tlbstate.GetActive(slot/MMU_ASSOCIATIVITY) > (unsigned)slot%MMU_ASSOCIATIVITY)
+                    maxway = tlbstate.GetActive(set);
+                    for(way=0, tmphitcount=0; way<maxway; way++)
                     {
+                        slot = set*MMU_ASSOCIATIVITY + way;
                         if((tlbarray[slot].getType() != IS_DATA) &&
                            (tlbarray[slot].getType() != IS_HEAP) &&
                            (tlbarray[slot].getType() != IS_SHAR))
                             continue;
-                        if(tlbarray[slot].getType() == IS_SHAR)
-                        {
-                            hit[(slot/MMU_ASSOCIATIVITY) ^ pid]++;
-                        }
+                        
                         if((tlbarray[slot].pid&0x7f) == origpid)
                         {
-                            hit[(slot/MMU_ASSOCIATIVITY) ^ pid ^ origpid]++;
+                            tmphitcount++;
                         }
-                    }                    
+                    }
+                    if(tmphitcount)
+                        hit[tmppid ^ set] += tmphitcount;
                 }
                 for(slot=0; slot<MAX_TLBSLOTS/MMU_ASSOCIATIVITY; slot++)
                 {
@@ -603,7 +615,7 @@ struct TLBMapperSharedData {
         unsigned char  *eraselock;
 
 
-        uint32_t numagentproc;
+        int      numagentproc;
         int      numproc;
         Process  proc[MAX_PROCESS_COUNT];
         
@@ -622,6 +634,8 @@ struct TLBMapperSharedData {
         /* Do not worry about Endian Convert variables below this comment */
         
         uint32_t extraprocess;
+        uint32_t extraprocessMemory;
+        uint32_t lastIteration;
         unsigned int     maxWaste;
         unsigned int     curWaste;
         unsigned int     PHASE;
@@ -652,6 +666,8 @@ struct TLBMapperSharedData {
         void preprocessSegments();
         int getSegmentRoundoff(Segment* ptr, uint32_t roundoff_allocation);
         int allocateAppTLBs();
+        int mapPinnedSegments();
+
         uint32_t allocateHeapTLBs(Process* p, bool& madeprogress);
         int partition_without_hole(uint32_t* heap);
         int partition_with_hole(uint32_t* heap);
@@ -662,7 +678,10 @@ struct TLBMapperSharedData {
         bool isHeapBalanced(uint32_t minHeap, uint32_t maxHeap);
         int createSpeculativeAliases(int proc);
         int MapAtomics(int proc, SegmentType);
+        int MapScrubWindow(int proc);
+        int MapUserMMIO();
         void CalculatePID();
+        void calculatePinnedAddress(Segment* ptr, int selproc);
         void CalculateMaxHeapVaddr(int x, int tlbsize, int tlbentries);
                 
             
@@ -673,9 +692,13 @@ struct TLBMapperSharedData {
         int partitioned_mapper(_BGP_VMM_RasData*);
         int installStaticEntry(int pindex, unsigned x);
         int installStaticTLBMap(int pindex);
+        int installStaticTLBMapPartial(int pindex, uint32_t pid);
         int uninstallStaticTLBMap(int pindex);
+        int copyProcessToOtherMMU(int sp, int dp, uint32_t* destpid);
         int resetStaticMap(int, int, int);
         int getSegment(uint32_t, SegmentType, uint64_t*, uint64_t*, size_t*);
+        int getSegmentEntry(uint32_t pindex, uint64_t vaddr, uint64_t* paddr, size_t* vsize, uint64_t* tlbslot);
+        int getSegmentEntryBySlot(uint32_t pindex, uint64_t slot, enum SegmentType* type, uint64_t* vaddr, uint64_t* paddr, size_t* vsize);
         int copySegments();
         void dotest(int numprocessgroups, int processgroup);
         int getMaxVAWindow(int pid, unsigned int* vaddrmin, unsigned int* vaddrmax);
@@ -688,7 +711,8 @@ struct TLBMapperSharedData {
         int allocateAtomic(unsigned pindex, uint64_t vaddr, size_t* sizeMapped);
         
         bool isPreCalculated() { return precalculated; };
-        int CalculateCopymap();
+        int  CalculateCopymap();
+        void GetCopymap(uint64_t **reloc, uint32_t *numreloc) {*reloc = relocate; *numreloc = numrelocations; };
         int translate2pindex(int process)
         {
             uint32_t x;
@@ -751,6 +775,7 @@ static MMU*       activemmu;
 static TLBMapper  tlbmapper[MAX_TLBMAPPERS];
 static TLBMapper* tlbmapper_precalculated;
 static TLBMapper* core2mapinstance[MAX_CORE_COUNT];
+static uint64_t mapperFlags[MAPPERFLAGS_COUNT];
 #if STANDALONE
 static unsigned long STANDALONE_MEMSIZE = STANDALONE_MEMSIZE_DEFAULT;
 static unsigned long STANDALONE_MAPOFFSET = STANDALONE_MAPOFFSET_DEFAULT;
@@ -915,7 +940,7 @@ int TLBMapper::MakeTLB(Segment* ptr, unsigned int vaddr, unsigned int paddr, uns
             if(((  (1 << proc[x].mmu->getMMUIndex()) & (~mmuset) & ptr->coremask) != 0) ||
                (ptr->sharedPID == 0))
             {
-                slot = proc[x].mmu->AcquireSlot(  ((ptr->sharedPID != 0)?0:proc[x].PID)  , vaddr, tlbsize);
+                slot = proc[x].mmu->AcquireSlot(  ((ptr->sharedPID != 0)?0:proc[x].PID)  , vaddr, tlbsize);                
                 if(slot == -1)
                     return -1;
 
@@ -1017,7 +1042,6 @@ int TLBMapper::MapRange(Segment* ptr, unsigned int vaddr, unsigned int paddr, un
     int x;
     int y;
     unsigned int exclsize;
-    
     for(x=0; x<numproc; x++)
     {
         proc[x].mmu->SnapshotState(tmp_oldstate[x]);
@@ -1095,14 +1119,10 @@ int TLBMapper::addSegment(enum SegmentType type, unsigned vaddr, unsigned paddr_
     if(pinned)
     {
         // TLB overlap detection    
-#define INRANGE(low,high) if(((vaddr >= low)&&(vaddr < high)) || ((vaddr+size > low)&&(vaddr+size <= high))) { printf("segment overlap %d  overlaps %d to %d\n", vaddr, low, high); return -1; }
+#define INRANGE(low,high) if(((vaddr >= low)&&(vaddr < high)) || ((vaddr+size > low)&&(vaddr+size <= high))) {         Kernel_WriteFlightLog(FLIGHTLOG_high, FL_TLBSEGOVL, x, vaddr, low, high);  return -1; }
 #if !STANDALONE
-
-#if 0 /// \todo Range Checks
-        INRANGE( ((uint32_t)__KERNEL_TEXT_START)/CONFIG_CNK_PAGE_SIZE, (((uint32_t)__KERNEL_BSS_END) + CONFIG_CNK_PAGE_SIZE - 1)/CONFIG_CNK_PAGE_SIZE);
+        INRANGE( ((uint64_t)&__KERNEL_TEXT_START)/CONFIG_CNK_PAGE_SIZE, (((uint64_t)&__KERNEL_END) + CONFIG_CNK_PAGE_SIZE - 1)/CONFIG_CNK_PAGE_SIZE);
         INRANGE(VA_MINADDR_MMIO, VA_MAXADDR_MMIO);
-#endif
-
 #endif
         for(x=0; x<numsegs; x++)
         {
@@ -1113,6 +1133,13 @@ int TLBMapper::addSegment(enum SegmentType type, unsigned vaddr, unsigned paddr_
         }
 #undef INRANGE    
     }
+    
+#if !STANDALONE
+    if((loaded) && (paddr_source < ((uint64_t)&__KERNEL_END)/CONFIG_CNK_PAGE_SIZE))
+    {
+        return -1;
+    }
+#endif
     
     segs[x].valid = 1;
     segs[x].origorder = numsegs;
@@ -1254,12 +1281,12 @@ int TLBMapper::mapSegment(Segment* ptr, int tlbsize, int selproc)
 #endif
     if(ptr->contiguous)
     {
-        if(ptr->pinned_vaddr == false)
-        {
-            ptr->origvaddr = ptr->vaddr = maxva + proc[selproc].paddr_cur;
-        }
         if(proc[selproc].paddr_max - proc[selproc].paddr_cur < ptr->size)
             return -1;
+        if(ptr->pinned_vaddr == false)
+        {
+            calculatePinnedAddress(ptr, selproc);
+        }
         if(MapRange(ptr, ptr->vaddr, proc[selproc].paddr_cur, ptr->size) != 0)
             return -1;
         proc[selproc].paddr_cur += ptr->size;
@@ -1408,12 +1435,13 @@ void TLBMapper::preprocessSegments()
         }
     }
     
+    uint64_t proratedWaste = (maxWaste-curWaste+numsegs)/numsegs;
     for(x=0; x<numsegs; x++)
     {  
         //  check last TLB...  it may be possible to round up to the next largest and save 15 TLB entries!!!
         if(segs[x].roundable)
         {
-            trailer = getSegmentRoundoff(&segs[x], (maxWaste-curWaste+numsegs)/numsegs);
+            trailer = getSegmentRoundoff(&segs[x], proratedWaste);
             if(maxWaste > curWaste + trailer)
             {
                 segs[x].size += trailer;
@@ -1534,6 +1562,155 @@ void TLBMapper::CalculateMaxHeapVaddr(int x, int tlbsize, int tlbentries)
     }
 }
 
+int TLBMapper::copyProcessToOtherMMU(int sp, int dp, uint32_t* destpid)
+{
+    int x;
+    int y;
+    int slot;
+    uint32_t tmppid;
+    bool failure = false;
+    uint32_t sourcepid = proc[sp].PID;
+    uint32_t maxpid = 1024+128;
+    
+    for(x=0; x<MAX_TLBSLOTS; x++)
+    {
+        if(proc[sp].mmu->tlbstate.GetActive(x/MMU_ASSOCIATIVITY) > (unsigned)x%MMU_ASSOCIATIVITY)
+        {
+            if((proc[sp].mmu->tlbarray[x].pid == sourcepid) && (proc[sp].mmu->tlbarray[x].getType() == IS_DATA))            
+            {
+                // we found a TLB entry that should be mapped on the remote MMU,
+                // there should be an entry over there that has the same paddr (if previously copied).
+                for(y=0; y<MAX_TLBSLOTS; y++)
+                {
+                    if(proc[dp].mmu->tlbstate.GetActive(y/MMU_ASSOCIATIVITY) > (unsigned)y%MMU_ASSOCIATIVITY)
+                    {
+                        if(proc[sp].mmu->tlbarray[x].paddr + proc[sp].mmu->tlbarray[x].exclsize == proc[dp].mmu->tlbarray[y].paddr + proc[dp].mmu->tlbarray[y].exclsize)
+                        {
+                            if ( proc[dp].mmu->tlbarray[y].getType() == IS_DATA)
+                            {
+                                // So we already have a PID-specific mapping for this physical address
+                                // Therefore, this must be a PID that correponds to the process
+                                // (otherwise there was an earlier error in mapping). 
+                                // 
+                                //printf("Match found. paddr %016x pid %d. SOURCE type:%d exclsize:%d virt:%d slot:%d DEST type:%d exclsize:%d virt:%d slot:%d \n", proc[sp].mmu->tlbarray[x].paddr,proc[dp].mmu->tlbarray[y].pid, proc[sp].mmu->tlbarray[x].getType(), proc[sp].mmu->tlbarray[x].exclsize, proc[sp].mmu->tlbarray[x].vaddr, x, proc[dp].mmu->tlbarray[y].getType(), proc[dp].mmu->tlbarray[y].exclsize, proc[dp].mmu->tlbarray[y].vaddr, y); 
+                                *destpid = proc[dp].mmu->tlbarray[y].pid;
+                                return 0;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
+    // If a process was already copied to this MMU, fail the request. We only allow one.
+    for(x=0; x<MAX_TLBSLOTS; x++)
+    {
+        if(proc[dp].mmu->tlbstate.GetActive(x/MMU_ASSOCIATIVITY) > (unsigned)x%MMU_ASSOCIATIVITY)
+        {
+            if((proc[dp].mmu->tlbarray[x].pid >= maxpid) && proc[dp].mmu->tlbarray[x].pid < (maxpid + MAX_TLBSLOTS / MMU_ASSOCIATIVITY))
+            {
+                // A copy of some other process to this MMU has already been done. 
+                printf("Another process has already been mapped to this MMU. pid %d\n", proc[dp].mmu->tlbarray[x].pid);
+                return -1;
+            }
+        }
+    }
+    for(tmppid = maxpid; tmppid < maxpid + MAX_TLBSLOTS / MMU_ASSOCIATIVITY; tmppid++)
+    {
+        failure = false;
+        proc[dp].mmu->SnapshotState(tmp_mmustate[dp]);
+        
+        for(x=0; x<MAX_TLBSLOTS; x++)
+        {
+            if(proc[sp].mmu->tlbstate.GetActive(x/MMU_ASSOCIATIVITY) > (unsigned)x%MMU_ASSOCIATIVITY)
+            {
+                if(proc[sp].mmu->tlbarray[x].pid == sourcepid) // pid==0 is already accessible and other pids are not accessible and therefore do not need to be copied.  
+                {
+                    int tlbsize = 3;
+                    switch(proc[sp].mmu->tlbarray[x].size)
+                    {
+                        case 1:
+                            tlbsize = 2;
+                            break;
+                        case 16:
+                            tlbsize = 1;
+                            break;
+                        case 1024:
+                            tlbsize = 0;
+                            break;
+                    }
+                    
+                    slot = proc[dp].mmu->AcquireSlot(tmppid, proc[sp].mmu->tlbarray[x].vaddr, tlbsize);
+                    if(slot == -1)
+                    {
+                        failure = true;
+                        break;
+                    }
+                    proc[dp].mmu->tlbarray[slot] = proc[sp].mmu->tlbarray[x];
+                    proc[dp].mmu->tlbarray[slot].pid = tmppid;
+               }
+            }
+        }
+        if(failure == false)
+        {
+            *destpid = tmppid;
+            return 0;
+        }
+        
+        proc[dp].mmu->RestoreState(tmp_mmustate[dp]);
+    }
+    return -1;
+}
+
+void TLBMapper::calculatePinnedAddress(Segment* ptr, int selproc)
+{
+    int rc;
+    int gb;
+    int bestgb = 0;
+    unsigned int besthit = (~0);
+    unsigned int hitcount= (~0);
+    int x;
+    for(x=0; x<numproc; x++)
+    {
+        proc[x].mmu->SnapshotState(tmp_mmustate[x]);
+    }
+    
+    for(gb=0; gb<16; gb++)
+    {
+        for(x=0; x<numproc; x++)
+        {
+            proc[x].mmu->RestoreState(tmp_mmustate[x]);
+        }
+        ptr->vaddr = ptr->origvaddr = maxva + proc[selproc].paddr_cur + gb*1024;
+        if(MapRange(ptr, ptr->vaddr, proc[selproc].paddr_cur, ptr->size) != 0)
+        {
+            continue;
+        }
+        if(ptr->type == IS_SHAR)
+        {
+            rc = MapAtomics(0, IS_SHAR);
+            if(rc)
+                continue;
+        }
+        for(x=0, hitcount=0; x<numproc; x++)
+        {
+            hitcount += proc[x].mmu->tlbstate.calculateScore(tmp_mmustate[x]);
+        }
+        if(hitcount < besthit)
+        {
+            bestgb = gb;
+            besthit = hitcount;
+        }
+    }
+    ptr->vaddr = ptr->origvaddr = maxva + proc[selproc].paddr_cur + bestgb*1024;
+    
+    for(x=0; x<numproc; x++)
+    {
+        proc[x].mmu->RestoreState(tmp_mmustate[x]);
+    }
+}
+
 void TLBMapper::CalculatePID()
 {
     int x;
@@ -1544,12 +1721,19 @@ void TLBMapper::CalculatePID()
     }
 #else
     int seg;
-    int bucket;
     int rc;
-    uint32_t besthit = MAX_TLBSLOTS;
     int bestpid = -1;
-    const uint32_t score[] = { 1, 10, 100, 10000 };
+    const uint32_t score[] = { 1, 10, 20, 30 };
+    uint32_t besthit = (MAX_TLBSLOTS / MMU_ASSOCIATIVITY) * score[3];
     uint32_t hitcount;
+    int contention = 1;
+    switch(threadsperprocess)
+    {
+        case 1: contention=4; break;
+        case 2: contention=2; break;
+        default:
+            contention=1; break;
+    }
     for(x=0; x<numproc; x++)
     {
         proc[x].mmu->SnapshotState(tmp_mmustate[x]);
@@ -1557,34 +1741,35 @@ void TLBMapper::CalculatePID()
     for(seg=0; seg<numsegs; seg++)
     {
         // map pinned shared memory first
-        if((segs[seg].pinned_vaddr) && (segs[seg].process == -1))
+        if((segs[seg].pinned_vaddr) && (segs[seg].process == -1) && (segs[seg].sharedPID == true))
         {
             MapRange(&segs[seg], segs[seg].vaddr, segs[seg].vaddr, segs[seg].size);
         }
     }
     for(x=0; x<numproc; x++)
     {
+        int pid;
         bestpid = -1;
-        besthit = MAX_TLBSLOTS;
+        besthit = (MAX_TLBSLOTS / MMU_ASSOCIATIVITY) * score[3];
+        
         proc[x].mmu->SnapshotState(tmp_mmustate2[x]);
-        for(int pid=0; pid<MAX_TLBSLOTS / MMU_ASSOCIATIVITY; pid++)
+        for(pid=0, rc=0; pid<MAX_TLBSLOTS / MMU_ASSOCIATIVITY; pid++)
         {
             proc[x].mmu->RestoreState(tmp_mmustate2[x]);
-            proc[x].PID = pid + (MAX_TLBSLOTS / MMU_ASSOCIATIVITY) * (x%4 + 1);
+            proc[x].PID = (pid + (MAX_TLBSLOTS / MMU_ASSOCIATIVITY / contention) * (x%contention))%(MAX_TLBSLOTS / MMU_ASSOCIATIVITY) + 
+                (MAX_TLBSLOTS / MMU_ASSOCIATIVITY) * (x%4 + 1);
             for(seg=0; seg<numsegs; seg++)
             {
                 if((segs[seg].pinned_vaddr) && (segs[seg].process == x))
                 {
-                    rc = MapRange(&segs[seg], segs[seg].vaddr, segs[seg].vaddr, segs[seg].size);
+                    rc |= MapRange(&segs[seg], segs[seg].vaddr, segs[seg].vaddr, segs[seg].size);
                 }
             }
-            MapAtomics(x, IS_DATA);
+            rc |= MapAtomics(x, IS_DATA);
+            if(rc)
+                continue;
             
-            for(bucket=0, hitcount=0; bucket<MAX_TLBSLOTS / MMU_ASSOCIATIVITY; bucket++)
-            {
-                if(tmp_mmustate2[x].GetActive(bucket) != proc[x].mmu->tlbstate.GetActive(bucket))
-                    hitcount += score[ proc[x].mmu->tlbstate.GetActive(bucket) ];
-            }
+            hitcount = proc[x].mmu->tlbstate.calculateScore(tmp_mmustate2[x]);
             if(hitcount < besthit)
             {
                 bestpid = pid;
@@ -1592,7 +1777,9 @@ void TLBMapper::CalculatePID()
             }
         }
         proc[x].mmu->RestoreState(tmp_mmustate2[x]);
-        proc[x].PID = bestpid + (MAX_TLBSLOTS / MMU_ASSOCIATIVITY) * (x%4 + 1);
+        
+        proc[x].PID = (bestpid + (MAX_TLBSLOTS / MMU_ASSOCIATIVITY / contention) * (x%contention))%(MAX_TLBSLOTS / MMU_ASSOCIATIVITY) + 
+            (MAX_TLBSLOTS / MMU_ASSOCIATIVITY) * (x%4 + 1);
         for(seg=0; seg<numsegs; seg++)
         {
             if((segs[seg].pinned_vaddr) && (segs[seg].process == x))
@@ -1631,6 +1818,21 @@ int TLBMapper::initializeProcesses()
       mmusperprocess = 1; break;
     }
     
+    extraprocessMemory = totalmem - (totalmem >> extraprocess);
+
+    if((extraprocess == 0) && (numproc >= 16) && (mapperFlags[MAPPERFLAGS_ALIGN16]))
+    {
+        extraprocessMemory = 0;
+        for(x=0; x<numsegs; x++)
+        {
+            if((segs[x].process == -1) || (segs[x].coremask == VMM_SEGMENTCOREMASK_16))
+            {
+                extraprocessMemory += segs[x].size;
+            }
+        }
+        extraprocessMemory += 32;
+    }
+    
     for(x=0; x<numproc; x++)
     {
 #if STANDALONE
@@ -1648,8 +1850,11 @@ int TLBMapper::initializeProcesses()
         if(x==0)
             proc[x].paddr_min = kernelsize;
         else
-            proc[x].paddr_min = x * totalmem /  (numproc * (1<<extraprocess));
-        proc[x].paddr_max = (x+1) * totalmem / (numproc * (1<<extraprocess));
+        {
+            proc[x].paddr_min = proc[x-1].paddr_max;
+        }
+        proc[x].paddr_max = (x+1) * (totalmem - extraprocessMemory) / numproc;
+        proc[x].paddr_max &= ~0xf; // always end on 16MB alignment
         proc[x].paddr_cur = proc[x].paddr_min;
         proc[x].mmu->ClearMMU();
         proc[x].maxva     = maxva;
@@ -1675,7 +1880,7 @@ int TLBMapper::initializeProcesses()
     MapRange(&procwin, 7*64*1024 + kernelsize, kernelsize, totalmem - kernelsize);
 #endif    
     
-    for(unsigned xx=0; xx<numagentproc; xx++)
+    for(int xx=0; xx<numagentproc; xx++)
     {
         proc[numproc].mmu = &activemmu[APPAGENT_COREID];
         proc[numproc].paddr_min = totalmem;         // no memory allocation
@@ -1692,10 +1897,10 @@ int TLBMapper::initializeProcesses()
         numproc++;
     }
     
-    if(extraprocess)
+    if(extraprocessMemory)
     {
         proc[numproc].mmu = &activemmu[MAX_CORE_COUNT];
-        proc[numproc].paddr_min = totalmem >> extraprocess;
+        proc[numproc].paddr_min = (proc[orignumproc-1].paddr_max + 31) & (~0x1f);
         proc[numproc].paddr_cur = proc[numproc].paddr_min;
         proc[numproc].paddr_max = totalmem;
         proc[numproc].mmu->ClearMMU();
@@ -1735,7 +1940,6 @@ int TLBMapper::getSegmentRoundoff(Segment* ptr, uint32_t roundoff_allocation)
     unsigned cost;
     int      cnttlbs;
 #endif
-    
     if(ptr->pinned_vaddr)
         vaddr = ptr->vaddr;
     else
@@ -1776,6 +1980,108 @@ int TLBMapper::getSegmentRoundoff(Segment* ptr, uint32_t roundoff_allocation)
     return bestskew;
 }
 
+int TLBMapper::mapPinnedSegments()
+{
+    int x;
+    int skew;
+    int rc = 0;
+    uint32_t roundup;
+    uint32_t skewup;
+    
+    if(mapperFlags[MAPPERFLAGS_ALIGN16])
+    {
+        if(orignumproc + numagentproc != numproc)
+        {
+            for(x=0; x<numsegs; x++)
+            {
+                if(((segs[x].process == -1) || (segs[x].coremask == VMM_SEGMENTCOREMASK_16)) && (segs[x].type == IS_SHAR)) // map this first, due to L2 atomics alignment
+                {
+                    rc |= mapSegment(&segs[x], 2, numproc - 1);
+                    rc |= MapAtomics(0, IS_SHAR);
+                }
+            }
+            
+            for(x=0; x<numsegs; x++)
+            {
+                if(isMapped(&segs[x]))
+                    continue;
+                
+                if((segs[x].process == -1) || (segs[x].coremask == VMM_SEGMENTCOREMASK_16))
+                {
+                    if(segs[x].pinned_vaddr == false)
+                    {
+                        skewup = segs[x].vaddr % 16;
+                        if(proc[numproc - 1].paddr_cur % 16 != segs[x].vaddr % 16)
+                        {
+                            skewup = (16 + (segs[x].vaddr % 16) - (proc[numproc - 1].paddr_cur % 16)) % 16;
+                            proc[numproc - 1].paddr_cur += skewup;
+                        }
+                    }
+                    rc |= mapSegment(&segs[x], 2, numproc - 1);
+                }
+            }
+        }
+    }
+    
+    if(orignumproc > 1)
+    {
+        for(x=0; x<numsegs; x++)
+        {
+            if(isMapped(&segs[x]))
+                continue;
+            if(segs[x].coremask == VMM_SEGMENTCOREMASK_16)
+            {
+                rc |= mapSegment(&segs[x], 2, (segs[x].process - orignumproc + 1) % orignumproc);
+            }
+        }
+    }
+    for(x=0; x<numsegs; x++)
+    {
+        if(isMapped(&segs[x]))
+            continue;
+        if(segs[x].coremask == VMM_SEGMENTCOREMASK_16)
+            continue;
+        
+        if(segs[x].type == IS_TEXT)
+        {
+            rc |= mapSegment(&segs[x], 2, 0);
+            break;
+        }
+    }
+    for(x=0; x<numsegs; x++)
+    {
+        if(isMapped(&segs[x]))
+            continue;
+        if(segs[x].coremask == VMM_SEGMENTCOREMASK_16)
+            continue;
+
+        if((segs[x].type == IS_DATA) && (segs[x].process >= 0))
+        {
+            skewup = 0;
+            if(proc[segs[x].process].paddr_cur % 16 != segs[x].vaddr % 16)
+            {
+                skewup = (16 + (segs[x].vaddr % 16) - (proc[segs[x].process].paddr_cur % 16)) % 16;
+            }
+            
+            skew = (proc[segs[x].process].paddr_cur + segs[x].size + skewup) % 16;
+            roundup = 0;
+            if((skew > 0) && (segs[x].roundable))
+            {
+                roundup = 16 - skew;
+            }
+            if((maxWaste - curWaste)/1 >= roundup + skewup)
+            {
+                segs[x].size += roundup;
+                proc[segs[x].process].paddr_cur += skewup;
+                curWaste += roundup + skewup;
+            }
+
+            rc |= mapSegment(&segs[x], 2, segs[x].process % orignumproc);
+        }
+    }
+    return rc;
+}
+
 /*! \brief Allocates all the application's segments on all processes into physical memory
  */
 int TLBMapper::allocateAppTLBs()
@@ -1784,7 +2090,6 @@ int TLBMapper::allocateAppTLBs()
     int optimal;
     int selproc;
     bool mapped;
-    bool retry;
     int x;
     int tlbsize;
     int seg;
@@ -1821,7 +2126,7 @@ int TLBMapper::allocateAppTLBs()
             selproc = (selproc + idleloop) % numproc;
         }
         
-        retry = false;
+        // find segment to map on process 'selproc'
         for(tlbsize = maxtlbsize, mapped = false; (tlbsize<NUMTLBSIZES)&&(!mapped); tlbsize++)
         {
             for(seg=0; seg<numsegs; seg++)
@@ -1846,6 +2151,7 @@ int TLBMapper::allocateAppTLBs()
             int skew;
             int maxseg  = -1;
             
+            // find segment to map on process 'selproc', if a minimal skew can be applied.
             for(seg=0; seg<numsegs; seg++)
             {
                 if(isMapped(&segs[seg]))
@@ -1861,18 +2167,21 @@ int TLBMapper::allocateAppTLBs()
                     maxseg = seg;
                 }
             }
-            if((maxWaste > curWaste + maxskew)||(PHASE == 1))
+            if(maxseg >= 0)
             {
-                curWaste += maxskew;
-                proc[selproc].paddr_cur += maxskew;
-                
-                if((PHASE == 1)&&(segs[maxseg].type == IS_DATA))
+                if((maxWaste > curWaste + maxskew)||(PHASE == 1))
                 {
-                    expandDataSegment(&segs[maxseg], selproc);
+                    curWaste += maxskew;
+                    proc[selproc].paddr_cur += maxskew;
+                    
+                    if((PHASE == 1)&&(segs[maxseg].type == IS_DATA))
+                    {
+                        expandDataSegment(&segs[maxseg], selproc);
+                    }
+                    optimal = calculateTLBSize(proc[selproc].paddr_cur);
+                    if(mapSegment(&segs[maxseg], optimal, selproc) == 0)
+                        didwork = true;
                 }
-                optimal = calculateTLBSize(proc[selproc].paddr_cur);
-                if(mapSegment(&segs[maxseg], optimal, selproc) == 0)
-                    didwork = true;
             }
         }
         else
@@ -2012,6 +2321,9 @@ int TLBMapper::createSpeculativeAliases(int x)
 {
 #if MAP_SPECULATIVEALIASES
     unsigned pid;
+    unsigned set;
+    unsigned way;
+    unsigned maxway;
     unsigned slot;
     int newslot;
     int tlbsize;
@@ -2023,43 +2335,85 @@ int TLBMapper::createSpeculativeAliases(int x)
             return -1;
         pid += (MAX_TLBSLOTS/MMU_ASSOCIATIVITY) * (specalias + 4);
         proc[x].SpecPID[specalias-1] = pid;
-        for(slot=0; slot<MAX_TLBSLOTS; slot++)
+        for(set=0; set<MAX_TLBSLOTS/MMU_ASSOCIATIVITY; set++)
         {
-            if((proc[x].mmu->tlbstate.GetActive(slot/MMU_ASSOCIATIVITY) > slot%MMU_ASSOCIATIVITY) &&
-               ((proc[x].mmu->tlbarray[slot].getType() == IS_HEAP) || (proc[x].mmu->tlbarray[slot].getType() == IS_DATA) || (proc[x].mmu->tlbarray[slot].getType() == IS_SHAR)) &&
-               ((proc[x].PID == proc[x].mmu->tlbarray[slot].pid) || (proc[x].mmu->tlbarray[slot].pid == 0)))
+            maxway = proc[x].mmu->tlbstate.GetActive(set);
+            for(way=0; way<maxway; way++)
             {
-                for(tlbsize=0; tlbsize<NUMTLBSIZES; tlbsize++)
+                slot = set*MMU_ASSOCIATIVITY + way;
+                if(((proc[x].mmu->tlbarray[slot].getType() == IS_HEAP) || (proc[x].mmu->tlbarray[slot].getType() == IS_DATA) || (proc[x].mmu->tlbarray[slot].getType() == IS_SHAR)) &&
+                   (proc[x].PID == proc[x].mmu->tlbarray[slot].pid))
                 {
-                    if(TLBsizes[tlbsize] == proc[x].mmu->tlbarray[slot].size)
-                        break;
-                }
-                if(tlbsize == NUMTLBSIZES)
-                {
-                    printf("Invalid TLB array size found\n");
-                    return -1;
+                    for(tlbsize=0; tlbsize<NUMTLBSIZES; tlbsize++)
+                    {
+                        if(TLBsizes[tlbsize] == proc[x].mmu->tlbarray[slot].size)
+                            break;
+                    }
+                    if(tlbsize == NUMTLBSIZES)
+                    {
+                        printf("Invalid TLB array size found\n");
+                        return -1;
+                    }
+                    
+                    newslot = proc[x].mmu->tlbstate.AcquireSlot(pid, proc[x].mmu->tlbarray[slot].vaddr, tlbsize);
+                    if(newslot != -1)
+                    {
+                        memcpy(&proc[x].mmu->tlbarray[newslot], &proc[x].mmu->tlbarray[slot], sizeof(TLBslot));
+                        proc[x].mmu->tlbarray[newslot].setType(IS_SPEC);
+                        proc[x].mmu->tlbarray[newslot].pid = pid;
+                        proc[x].mmu->tlbarray[newslot].paddr += 64*1024*specalias;
+                    }
+                    else
+                    {
+                        //                        printf("Unable to create enough speculative aliases  (pid=%d  vaddr=%d  tlbsize=%d)\n", pid, proc[x].mmu->tlbarray[slot].vaddr, tlbsize);
+                        //                        proc[x].PrintTLBs(this);
+                        return -1;
+                    }
                 }
                 
-                newslot = proc[x].mmu->tlbstate.AcquireSlot(pid, proc[x].mmu->tlbarray[slot].vaddr, tlbsize);
-                if(newslot != -1)
-                {
-                    memcpy(&proc[x].mmu->tlbarray[newslot], &proc[x].mmu->tlbarray[slot], sizeof(TLBslot));
-                    proc[x].mmu->tlbarray[newslot].setType(IS_SPEC);
-                    proc[x].mmu->tlbarray[newslot].pid = pid;
-                    proc[x].mmu->tlbarray[newslot].paddr += 64*1024*specalias;
-                }
-                else
-                {
-//                        printf("Unable to create enough speculative aliases  (pid=%d  vaddr=%d  tlbsize=%d)\n", pid, proc[x].mmu->tlbarray[slot].vaddr, tlbsize);
-//                        proc[x].PrintTLBs(this);
-                    return -1;
-                }
             }
         }
     }
 #endif
     return 0;
 }
+
+int TLBMapper::MapUserMMIO()
+{
+    int x, slot;
+    Segment kernel;
+    kernel.valid = true;
+    kernel.process   = -1;
+    kernel.coremask  = VMM_SEGMENTCOREMASK_ALL;
+    kernel.contains_heap = false;
+    kernel.pinned_vaddr = true;
+    kernel.isMapped = true;
+    kernel.type  = IS_USERMMIO;
+    kernel.loaded  = true;
+    int pid = 0;
+    
+    for(x=0; x<numproc; x++)
+    {
+        pid = proc[x].PID;
+        if(numproc >= 64)
+        {
+            pid = 0;
+            if((x % 4 != 0) && (x != numproc))
+                continue;
+        }
+        slot = proc[x].mmu->AcquireSlot(pid, VA_MINADDR_MMIO/CONFIG_CNK_PAGE_SIZE, 0);
+        if(slot != -1)
+        {
+            proc[x].mmu->tlbarray[slot].vaddr = kernel.origvaddr = kernel.vaddr = VA_MINADDR_MMIO/CONFIG_CNK_PAGE_SIZE;
+            proc[x].mmu->tlbarray[slot].paddr = kernel.source_paddr             = PHYMAP_MINADDR_MMIO/CONFIG_CNK_PAGE_SIZE;
+            proc[x].mmu->tlbarray[slot].size  = kernel.origsize= kernel.size    = 1024;
+            proc[x].mmu->tlbarray[slot].exclsize = 0;
+            proc[x].mmu->tlbarray[slot].setSegment(&kernel);
+        }
+    }
+    return 0;
+}
+
 
 int TLBMapper::partition_without_hole(uint32_t* heap)
 {
@@ -2074,6 +2428,7 @@ int TLBMapper::partition_without_hole(uint32_t* heap)
     if(initializeProcesses())
         return -1;
     CalculatePID();
+    MapUserMMIO();
     
     // Allocate app segments
     if(allocateAppTLBs())
@@ -2134,7 +2489,10 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
     uint32_t maxHeapSize = 0;
     bool madeprogress; 
     bool mapfailure;
+    bool mappedShared;
     uint32_t tlbsize;
+    
+    PHASE = 2;
     
     curWaste = 0;
     
@@ -2142,10 +2500,20 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
     preprocessSegments();
     if(initializeProcesses())
         return -1;
-    
     CalculatePID();
+    MapUserMMIO();
     
-    PHASE = 2;
+    mapPinnedSegments();
+    
+    mappedShared = false;
+    for(x=0; x<numsegs; x++)
+    {
+        if(isMapped(&segs[x]) && segs[x].type == IS_SHAR)
+        {
+            mappedShared = true;
+        }
+    }
+    
     // Allocate app segments
     if(allocateAppTLBs())
         return -1;
@@ -2155,8 +2523,11 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
         if(MapAtomics(x, IS_DATA))
             return -1;
     }
-    if(MapAtomics(0, IS_SHAR))
-        return -1;
+    if(mappedShared == false)
+    {
+        if(MapAtomics(0, IS_SHAR))
+            return -1;
+    }
     
     for(x=0; x<numproc; x++)
     {
@@ -2286,6 +2657,18 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
         if (heap[x] > maxHeapSize)
             maxHeapSize = heap[x];
     }
+    if(minHeapSize == 0)
+        return -1;
+    
+    for(x=0; x<numproc; x++)
+    {
+        if(proc[x].isAgent)
+        {
+            if(MapScrubWindow(x))
+                return -1;
+            break;
+        }
+    }
     
     // If heap allocations between processes indicate a major imbalance, return unsuccessful indication
 #if 0
@@ -2298,6 +2681,7 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
 }
 
 int bestMode = -1;
+
 /*! \brief Performs the TLB mapping using the partitioned mapper algorithm
  */
 int TLBMapper::partitioned_mapper(_BGP_VMM_RasData* pRasData)
@@ -2307,7 +2691,6 @@ int TLBMapper::partitioned_mapper(_BGP_VMM_RasData* pRasData)
     int minappsize = 0;
     int minappsize2= 0 ;
     bool success   = false;
-    bool lastIteration = false;
     unsigned  waste;
     
     unsigned minwasted = UINT_MAX;
@@ -2365,6 +2748,10 @@ int TLBMapper::partitioned_mapper(_BGP_VMM_RasData* pRasData)
                             
                             if(minwasted == 0) // early exit since minwasted can't be less-than-zero (though its possible another mapping uses fewer TLBs)
                                 break;
+                            if(maxWaste*2 < minwasted)
+                            {
+                                maxWaste = minwasted / 3;
+                            }
                         }
                     }
                 }
@@ -2388,6 +2775,10 @@ int TLBMapper::partitioned_mapper(_BGP_VMM_RasData* pRasData)
                         
                         if(minwasted == 0) // early exit since minwasted can't be less-than-zero (though its possible another mapping uses fewer TLBs)
                             break;
+                        if(maxWaste*2 < minwasted)
+                        {
+                            maxWaste = minwasted / 3;
+                        }
                     }
                 }
             }
@@ -2411,20 +2802,21 @@ int TLBMapper::partitioned_mapper(_BGP_VMM_RasData* pRasData)
         numproc = orignumproc + numagentproc;
         extraprocess = 0;
     }
-
-
+    
     Kernel_WriteFlightLog(FLIGHTLOG_high, FL_TLBMAPCMP, totalmem-totalheap-minappsize-kernelsize,totalheap,bestwaste,bestMode);
     
     TRACE(TRACE_StaticMap, ("MAPPER%8p Wasted space: %d  (totalmem=%d  totalheap=%d  numproc=%d  minappsize=%d  kernelsize=%d  bestwaste=%d  minwasted=%d  bestmode=%d  mode0=%d  mode1=%d)\n", this, totalmem-totalheap-minappsize-kernelsize, totalmem, totalheap, numproc, minappsize, kernelsize, bestwaste, minwasted, bestMode, minwastedMode[0], minwastedMode[1]));
     for(x=0; x<numproc; x++)
     {
-        uint64_t vaddr, paddr, vsize;
+        uint64_t vaddr, paddr;
+        size_t vsize;
         vaddr=paddr=vsize=0;
         getSegment(x, IS_HEAP, &vaddr, &paddr, &vsize);
-//        printf("process %d (pid=%d).  vaddr=%lx paddr=%lx vsize=%ld  mmu=%p\n", x, proc[x].PID, vaddr, paddr, vsize, proc[x].mmu);
+        TRACE(TRACE_StaticMap, ("MAPPER%8p process %d (pid=%d) HEAP vaddr=%lx paddr=%lx vsize=%ld\n", this, x, proc[x].PID, vaddr, paddr, vsize/CONFIG_CNK_PAGE_SIZE));
         if( ((threadsperprocess==1) && ((x % 4) == 3)) ||
             ((threadsperprocess==2) && ((x % 2) == 1)) ||
-            ((threadsperprocess>2)))
+            ((threadsperprocess>2)) ||
+            (x >= orignumproc))
         {
             proc[x].PrintTLBs(this);
         }
@@ -2496,6 +2888,23 @@ int TLBMapper::allocateAtomic(unsigned pindex, uint64_t vaddr, size_t* sizeMappe
         }
         unsigned tst_vaddr = atomvaddr & ~(TLBsizes[x]-1);
         unsigned tst_paddr = paddr & ~(TLBsizes[x]-1);
+
+        if((tst_paddr + TLBsizes[x]) > (0x00100000 + (totalmem << 5)))
+        {
+            // mapping would extend beyond physical memory
+            continue;
+        }
+        
+        uint64_t exclsize = 0;
+        if(tst_paddr < (0x00100000 + (kernelsize << 5)))
+        {
+            if((kernelsize << 5) >= TLBsizes[x])  // exclude region is larger than TLB, bail.
+                continue;
+            
+            exclsize = (kernelsize << 5);
+            // mapping would overlap the kernel, exclude the kernel region
+        }
+        
         slot = proc[pindex].mmu->AcquireSlot(PID, tst_vaddr, x);
         if(slot != -1)
         {
@@ -2518,7 +2927,7 @@ int TLBMapper::allocateAtomic(unsigned pindex, uint64_t vaddr, size_t* sizeMappe
                 proc[y].mmu->SnapshotState(tmp_oldstate[y]);
             }
             
-            rc = MakeTLB(&atomic, tst_vaddr, tst_paddr, x, 0);
+            rc = MakeTLB(&atomic, tst_vaddr, tst_paddr, x, exclsize);
             if(rc == 0)
             {
                 rc = installStaticEntry(pindex, slot);
@@ -2572,6 +2981,35 @@ int TLBMapper::allocateAtomic(unsigned pindex, uint64_t vaddr, size_t* sizeMappe
 
 #endif
 
+int TLBMapper::MapScrubWindow(int p)
+{
+    int rc = 0;
+    int64_t minslot = -1;
+    uint64_t mincount= 999;
+    uint64_t slot;
+    unsigned int newindex;
+    for(slot=0; slot<NUMTLBSLOTS; slot++)
+    {
+        if(proc[p].mmu->tlbstate.GetActive(slot/MMU_ASSOCIATIVITY) < mincount)
+        {
+            mincount = proc[p].mmu->tlbstate.GetActive(slot/MMU_ASSOCIATIVITY);
+            minslot  = slot;
+        }                
+    }
+    if(minslot == -1)
+        return -1;
+    
+    uint64_t vaddr = 0x2000000000000ull | ((minslot/MMU_ASSOCIATIVITY)<<(63-33));
+    uint64_t paddr = 0;
+    uint64_t size  = 1024;
+    
+    addSegment(IS_SCRUBWINDOW, vaddr/CONFIG_CNK_PAGE_SIZE, 0, size, -1, VMM_SEGMENTCOREMASK_16, true, false, true, false, true, false, 1, newindex);
+    rc |= MapRange(&segs[newindex], vaddr/CONFIG_CNK_PAGE_SIZE, paddr, size);
+    segs[newindex].valid = false;
+    
+    return rc;
+}
+
 int TLBMapper::MapAtomics(int p, enum SegmentType type)
 {
     int rc = 0;
@@ -2603,7 +3041,7 @@ int TLBMapper::MapAtomics(int p, enum SegmentType type)
                     addSegment(IS_ATOMICRGN, vaddr, paddr, size, p, VMM_SEGMENTCOREMASK_ALL, true, false, true, false, false, false, 1, newindex); 
                     break;
                 case IS_SHAR:
-                    addSegment(IS_ATOMICRGN, vaddr, paddr, size, -1, VMM_SEGMENTCOREMASK_ALL, true, false, true, false, true, false, 1, newindex); 
+                    addSegment(IS_ATOMICRGN, vaddr, paddr, size, -1, VMM_SEGMENTCOREMASK_ALL, true, false, true, false, ((numproc>=64)?true:false), false, 1, newindex); 
                     break;
                 default:
                     printf("invalid type=%d\n", type);
@@ -2639,7 +3077,7 @@ int TLBMapper::MapAtomics(int p, enum SegmentType type)
             vaddr = 0x40000000 | (vaddr << 5);
             paddr = 0x00100000 + (paddr << 5); // addition required                                                                                                                                                                    
             size = size<<5;
-            addSegment(IS_ATOMICRGN, vaddr, paddr, size, -1, VMM_SEGMENTCOREMASK_ALL, true, false, true, false, true, false, 1, newindex);
+            addSegment(IS_ATOMICRGN, vaddr, paddr, size, -1, VMM_SEGMENTCOREMASK_ALL, true, false, true, false, ((numproc>=64)?true:false), false, 1, newindex);
             rc |= MapRange(&segs[newindex], vaddr, paddr, size);
             segs[newindex].valid = false;
         }
@@ -2901,7 +3339,7 @@ int TLBMapper::copySegments()
 
     for(x=0; x<numrelocations; x++)
     {
-//        printf("relocate[%d] = %lx\n", x, relocate[x]);
+//        printf("relocate[%d]:  opcode=%lx  src=%ld  dst=%ld\n", x, relocate[x]>>32, (relocate[x]>>16)&0xffff, (relocate[x]&0xffff));
         switch(relocate[x]>>32)
         {
             case 1:
@@ -2937,7 +3375,7 @@ int TLBMapper::installStaticEntry(int pindex, unsigned x)
             flags = APP_FLAGS_R | APP_FLAGS_X | APP_FLAGS_NONSPECULATIVE | APP_FLAGS_LISTENABLE;
             if(coremmu->tlbarray[x].loaded == false)
             {
-//                flags |= APP_FLAGS_W;  // dynamically linked application needs writable text
+//                flags |= APP_FLAGS_W;  // Note:  CNK writes the dynamically-loaded libraries, therefore do not need to make user-writable.
             }
             break;
         case IS_SHAR:
@@ -2949,6 +3387,9 @@ int TLBMapper::installStaticEntry(int pindex, unsigned x)
         case IS_KERNEL:
         case IS_MMIO:
             return 0;
+        case IS_USERMMIO:
+            flags = APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_GUARDEDINHIBITED | APP_FLAGS_FLUSHSTORES;
+            break;
         case IS_SPEC:
             flags = APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_X;
             break;
@@ -2956,6 +3397,9 @@ int TLBMapper::installStaticEntry(int pindex, unsigned x)
             flags = APP_FLAGS_R | APP_FLAGS_LISTENABLE;
             break;
         case IS_ATOMICRGN:
+            flags = APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_GUARDEDINHIBITED;
+            break;
+        case IS_SCRUBWINDOW:
             flags = APP_FLAGS_R | APP_FLAGS_W | APP_FLAGS_GUARDEDINHIBITED;
             break;
         case IS_RAMDISK:
@@ -2998,6 +3442,33 @@ int TLBMapper::installStaticTLBMap(int pindex)
     return 0;
 }
 
+int TLBMapper::installStaticTLBMapPartial(int pindex, uint32_t pid)
+{
+    unsigned int x;
+    int rc = 0;
+    vmm_tlb_touch_tlbs();
+    
+    TRACE(TRACE_StaticMap, ("MAPPER%8p installing static map for core %d\n", this, ProcessorCoreID()) );
+    MMU* coremmu = proc[pindex].mmu;
+    for(x=0; x<NUMTLBSLOTS; x++)
+    {
+        if((coremmu->tlbstate.GetActive(x/MMU_ASSOCIATIVITY) > x%MMU_ASSOCIATIVITY) &&
+           (coremmu->tlbarray[x].pid == pid))
+        {
+            rc = installStaticEntry(pindex, x);
+        }
+        else
+            rc = 0;
+        if(rc)
+        {
+            printf("MAPPER%8p Error installing TLB\n", this);
+            return rc;
+        }
+    }
+    
+    return 0;
+}
+
 int TLBMapper::uninstallStaticTLBMap(int pindex)
 {
     unsigned int x;
@@ -3021,6 +3492,8 @@ int TLBMapper::uninstallStaticTLBMap(int pindex)
                 case IS_PROCESSWINDOW:
                 case IS_ATOMICRGN:
                 case IS_RAMDISK:
+                case IS_SCRUBWINDOW:
+                case IS_USERMMIO:
                     break;
                 case IS_KERNEL:
                 case IS_MMIO:
@@ -3155,6 +3628,62 @@ int TLBMapper::getSegment(uint32_t pindex, enum SegmentType type, uint64_t* vadd
     return 0;
 }
 
+int TLBMapper::getSegmentEntry(uint32_t pindex, uint64_t vaddr, uint64_t* paddr, size_t* vsize, uint64_t* tlbslot)
+{
+    unsigned int slot;
+    uint32_t pid = proc[pindex].PID;
+    
+    vaddr /= CONFIG_CNK_PAGE_SIZE;
+    *tlbslot = 1024;
+    if(proc[pindex].mmu == NULL)
+    {
+       *paddr = 0;
+       *vsize = 0;
+       return -1;
+    }
+    for(slot=0; slot<NUMTLBSLOTS; slot++)
+    {
+        if(proc[pindex].mmu->tlbstate.GetActive(slot/MMU_ASSOCIATIVITY) > slot%MMU_ASSOCIATIVITY)
+        {   
+            if(((proc[pindex].mmu->tlbarray[slot].pid == pid) || (proc[pindex].mmu->tlbarray[slot].pid==0)) &&
+               (proc[pindex].mmu->tlbarray[slot].vaddr <= vaddr) && 
+               (proc[pindex].mmu->tlbarray[slot].vaddr + proc[pindex].mmu->tlbarray[slot].origsize > vaddr))
+            {
+                *paddr = proc[pindex].mmu->tlbarray[slot].paddr * CONFIG_CNK_PAGE_SIZE;
+                *vsize  = proc[pindex].mmu->tlbarray[slot].origsize * CONFIG_CNK_PAGE_SIZE;
+                *tlbslot  = slot;
+                return 0;
+            }
+        }
+    }
+    return -1;
+}
+
+int TLBMapper::getSegmentEntryBySlot(uint32_t pindex, uint64_t slot, enum SegmentType* type, uint64_t* vaddr, uint64_t* paddr, size_t* vsize)
+{
+    if(proc[pindex].mmu == NULL)
+    {
+        *type  = IS_INVALID;
+        *vaddr = 0;
+        *paddr = 0;
+        *vsize = 0;
+        return -1;
+    }
+    
+    if(slot >= NUMTLBSLOTS)
+        return -1;
+    
+    if(proc[pindex].mmu->tlbstate.GetActive(slot/MMU_ASSOCIATIVITY) > slot%MMU_ASSOCIATIVITY)
+    {   
+        *type  = proc[pindex].mmu->tlbarray[slot].getType();
+        *vaddr = (uint64_t)proc[pindex].mmu->tlbarray[slot].vaddr    * CONFIG_CNK_PAGE_SIZE;
+        *paddr = (uint64_t)proc[pindex].mmu->tlbarray[slot].paddr    * CONFIG_CNK_PAGE_SIZE;
+        *vsize = (uint64_t)proc[pindex].mmu->tlbarray[slot].origsize * CONFIG_CNK_PAGE_SIZE;
+        return 0;
+    }
+    return -1;
+}
+
 
 /************************************************************/
 
@@ -3222,10 +3751,20 @@ int vmm_setupTLBMapper()
     { 
         tlbmapper_precalculated->precalculated = true;
         activemmu = (MMU*)((uint64_t)tlbmapper_precalculated + sizeof(TLBMapper));
-
+        assert(tlbmapper_precalculated->copymapCalculated);
+        tlbmapper_precalculated->relocate = (uint64_t *) (((uint64_t) activemmu) + sizeof(mmuinstance));
+        tlbmapper_precalculated->copymap   = NULL;
+        tlbmapper_precalculated->eraselock = NULL;
+        tlbmapper_precalculated->srcdemand = NULL;
+        
 #if COPYPRECALCULATEDMAP
         memcpy(&tlbmapper[0], tlbmapper_precalculated, sizeof(tlbmapper[0]));
         memcpy(&mmuinstance[0], activemmu, sizeof(mmuinstance));
+        
+        tlbmapper[0].relocate = ((TLBMapperSharedData *)&NodeState.sharedWorkArea)->relocate;
+        memcpy(tlbmapper[0].relocate, tlbmapper_precalculated->relocate,
+               tlbmapper_precalculated->numrelocations * sizeof(uint64_t));
+        
         vmm_UnmapUserSpace((void*)(ROUND_DN_1M((uint64_t)tlbmapper_precalculated)), 1024*1024, 0);
         tlbmapper_precalculated = tlbmapper;
         activemmu = &mmuinstance[0];
@@ -3279,12 +3818,25 @@ int vmm_installStaticTLBMap(int process)
     int pindex = GetMapper()->translate2pindex(process);
     return GetMapper()->installStaticTLBMap(pindex);
 }
+int vmm_installStaticTLBMapPartial(int process, uint32_t pid)
+{
+    int pindex = GetMapper()->translate2pindex(process);
+    return GetMapper()->installStaticTLBMapPartial(pindex, pid);
+}
 
 int vmm_uninstallStaticTLBMap(int process)
 {
     int pindex = GetMapper()->translate2pindex(process);
     return GetMapper()->uninstallStaticTLBMap(pindex);
 }
+
+int vmm_copyProcessToOtherMMU(int sp, int dp, uint32_t* destpid)
+{
+    int spindex = GetMapper()->translate2pindex(sp);
+    int dpindex = GetMapper()->translate2pindex(dp);
+    return GetMapper()->copyProcessToOtherMMU(spindex, dpindex, destpid);
+}
+
 
 int vmm_calculateSlot(unsigned pid32, uint64_t va, uint64_t size)
 {
@@ -3340,6 +3892,22 @@ int vmm_getSegment(uint32_t process, enum SegmentType type, uint64_t* vaddr, uin
     return rc;
 }
 
+int vmm_getSegmentEntry(uint32_t process, uint64_t vaddr, uint64_t* paddr, size_t* vsize, uint64_t* slot)
+{
+    int rc;
+    int pindex = GetMapper()->translate2pindex(process);
+    rc = GetMapper()->getSegmentEntry(pindex, vaddr, paddr, vsize, slot);
+    return rc;
+}
+
+int vmm_getSegmentEntryBySlot(uint32_t process, uint64_t slot, enum SegmentType* type, uint64_t* vaddr, uint64_t* paddr, size_t* vsize)
+{
+    int rc;
+    int pindex = GetMapper()->translate2pindex(process);
+    rc = GetMapper()->getSegmentEntryBySlot(pindex, slot, type, vaddr, paddr, vsize);
+    return rc;
+}
+
 int vmm_getPID(int process, uint64_t* pid)
 {
     int pindex = GetMapper()->translate2pindex(process);
@@ -3352,6 +3920,12 @@ int vmm_getSpecPID(int process, int specindex, uint64_t* pid)
     return GetMapper()->getSpecPID(pindex, specindex, pid);
 }
 
+int vmm_setFlags(enum MapperFlags flagid, uint64_t newvalue)
+{
+    assert(flagid < MAPPERFLAGS_COUNT);
+    mapperFlags[flagid] = newvalue;
+    return 0;
+}
 
 int vmm_resetStaticMap(int numprocesses, int numagents, int core_index)
 {
@@ -3451,22 +4025,20 @@ void TLBMapper::dotest(int numprocessgroups, int processgroup)
     {
         for(datasize=DATALIMIT; datasize>=INITIAL_DATASIZE; datasize--)
         {
-            for(shmsize=SHMLIMIT; shmsize>=INITIAL_SHMSIZE; shmsize/=2, loop++)
+            for(shmsize=SHMLIMIT; shmsize>INITIAL_SHMSIZE; shmsize/=2, loop++)
             {
 #else
     for(textsize=INITIAL_TEXTSIZE, loop=0; textsize<=TEXTLIMIT; textsize++)
     {
         for(datasize=INITIAL_DATASIZE; datasize<=DATALIMIT; datasize++)
         {
-            for(shmsize=INITIAL_SHMSIZE; shmsize<=SHMLIMIT; shmsize+=((shmsize==0)?1:shmsize), loop++)
+            for(shmsize=SHMLIMIT; shmsize>INITIAL_SHMSIZE; shmsize/=2, loop++)
             {
 #endif
                 for(numprocesses=1; numprocesses<=NUMPROCESSES; numprocesses*=2, loop++)
                 {
-                if(MAX_ITERATIONS == loop)
-                    exit(0);
-                    if((numprocesses == 1) && (shmsize > 0)) continue;
-                    
+                    if(MAX_ITERATIONS == loop)
+                        exit(0);
 #else
                 for(loop=0; loop < MAX_ITERATIONS; loop++)
                 {
@@ -3491,7 +4063,7 @@ void TLBMapper::dotest(int numprocessgroups, int processgroup)
                 
                 mapper_paddr_offset = totalmem*processgroup;
                 
-                resetStaticMap(numprocesses, 0, -1); 
+                resetStaticMap(numprocesses, 1, -1);
                 
 #if (EXHAUSTIVE==0)
                 textsize = rand()%TEXTLIMIT + 1;
@@ -3499,19 +4071,26 @@ void TLBMapper::dotest(int numprocessgroups, int processgroup)
                 shmsize  = rand()%SHMLIMIT;
 #endif
                 
-                printf("MAPPER%8p numprocesses: %d  textsize: %d  datasize: %d  shmsize:%d\n", this, numprocesses, textsize, datasize, shmsize);
+                printf("MAPPER%8p \t \t numprocesses: %d  textsize: %d  datasize: %d  shmsize:%d\n", this, numprocesses, textsize, datasize, shmsize/2);
                 addSegment(IS_TEXT, kernelsize, kernelsize, textsize, -1, VMM_SEGMENTCOREMASK_APP, CONTIGUOUS_TEXT, false, true, true, true, false, 0, newindex);
                 addSegment(IS_DATA, segs[0].vaddr+segs[0].size, segs[0].vaddr+segs[0].size, datasize, 0, VMM_SEGMENTCOREMASK_APP, CONTIGUOUS_DATA, true, true, true, false, true, 0, newindex);
                 for(p=1; p<numproc; p++)
                 {
                     addSegment(IS_DATA, segs[0].vaddr+segs[0].size, segs[0].vaddr+segs[0].size, segs[1].size, p, VMM_SEGMENTCOREMASK_APP, CONTIGUOUS_DATA, true, true, true, false, true, 0, newindex);
                 }
-#if MKSHMSEGMENT
-                if(shmsize > 0)
+
+                int x;
+                size_t agenttextsize[4]   = {1,0,0,0};
+                size_t agentdatasize[4]   = {1,0,0,0};
+                size_t agentheapsize[4]   = {16-agenttextsize[0]-agentdatasize[0],0,0,0};
+                unsigned long agentbaseaddr[4] = {0x41000000/CONFIG_CNK_PAGE_SIZE,0,0,0};
+                for(x=0; x<1; x++)
                 {
-                    addSegment(IS_SHAR, 777, shmsize, shmsize, -1, VMM_SEGMENTCOREMASK_ALL, CONTIGUOUS_SHM, true, false, false, true, false, 0, newindex);
+                    addSegment(IS_TEXT, agentbaseaddr[x], agentbaseaddr[x], agenttextsize[x], numproc + x, VMM_SEGMENTCOREMASK_16, CONTIGUOUS_TEXT, false, true, true, true, false, 0, newindex);
+                    addSegment(IS_DATA, agenttextsize[x] + agentbaseaddr[x], agenttextsize[x] + agentbaseaddr[x], agentdatasize[x], numproc + x, VMM_SEGMENTCOREMASK_16, CONTIGUOUS_DATA, false, true, true, false, false, 0, newindex);
+                    addSegment(IS_HEAP, 0, 0, agentheapsize[x], numproc + x, VMM_SEGMENTCOREMASK_16, CONTIGUOUS_DATA, true, false, false, false, false, 0, newindex);
                 }
-#endif
+                addSegment(IS_SHAR, 777, ((numproc==1)?32:64) + shmsize/2, ((numproc==1)?32:64) + shmsize/2, -1, VMM_SEGMENTCOREMASK_ALL, CONTIGUOUS_SHM, true, false, false, ((numproc==64)?true:false), false, 0, newindex);
                 
                 rc = partitioned_mapper(&rasdata);
                 gettimeofday(&tvend, NULL);
@@ -3590,15 +4169,17 @@ int main(int argc, char** argv)
     unsigned long generate     = 0;
     size_t textsize   = CONFIG_CNK_PAGE_SIZE;
     size_t datasize   = CONFIG_CNK_PAGE_SIZE;
-    size_t agenttextsize[4]   = {0,0,0,0};
-    size_t agentdatasize[4]   = {0,0,0,0};
-    size_t agentheapsize[4]   = {0,0,0,0};
-    unsigned long agentbaseaddr[4] = {0,0,0,0};
-    size_t shmsize    = 0;
+    size_t agenttextsize[4]   = {CONFIG_CNK_PAGE_SIZE,0,0,0};
+    size_t agentdatasize[4]   = {CONFIG_CNK_PAGE_SIZE,0,0,0};
+    size_t agentheapsize[4]   = {16*CONFIG_CNK_PAGE_SIZE - agenttextsize[0] - agentdatasize[0],0,0,0};
+    unsigned long agentbaseaddr[4] = {0x41000000,0,0,0};
+    size_t shmsize    = 32*1024*1024;
     unsigned long numproc       = 1;
-    unsigned long numagentproc  = 0;
+    unsigned long numagentproc  = 1;
     bool showhelp     = false;
     char genstring[256];
+    bool sharedMBSet = false;
+    bool loopForProfiler = false;
     
     char* str = getenv("BG_DDRINIT");
     if(str)
@@ -3622,7 +4203,7 @@ int main(int argc, char** argv)
         }
         else if(KEYWORD("-text="))       sscanf(argv[x], "-text=%ld",     &textsize);
         else if(KEYWORD("-data="))       sscanf(argv[x], "-data=%ld",     &datasize);
-        else if(KEYWORD("-shared="))     sscanf(argv[x], "-shared=%ld",   &shmsize);
+        else if(KEYWORD("-shared="))     { sscanf(argv[x], "-shared=%ld",   &shmsize); sharedMBSet=true; }
         else if(KEYWORD("-agent0text="))  sscanf(argv[x], "-agent0text=%ld",   &agenttextsize[0]); 
         else if(KEYWORD("-agent0data="))  sscanf(argv[x], "-agent0data=%ld",   &agentdatasize[0]);
         else if(KEYWORD("-agent0heap="))  sscanf(argv[x], "-agent0heap=%ld",   &agentheapsize[0]);
@@ -3646,20 +4227,23 @@ int main(int argc, char** argv)
         
         else if(KEYWORD("-memsize="))    sscanf(argv[x], "-memsize=%ld",  &STANDALONE_MEMSIZE);
         else if(KEYWORD("-poffset="))    sscanf(argv[x], "-poffset=%ld",  &STANDALONE_MAPOFFSET);
-        
-        else if(KEYWORD("-textMB="))   { sscanf(argv[x], "-textMB=%ld",   &textsize); textsize *= 1024*1024; }
-        else if(KEYWORD("-dataMB="))   { sscanf(argv[x], "-dataMB=%ld",   &datasize); datasize *= 1024*1024; }
-        else if(KEYWORD("-sharedMB=")) { sscanf(argv[x], "-sharedMB=%ld", &shmsize);  shmsize  *= 1024*1024; }
-        else if(KEYWORD("-textmb="))   { sscanf(argv[x], "-textmb=%ld",   &textsize); textsize *= 1024*1024; }
-        else if(KEYWORD("-datamb="))   { sscanf(argv[x], "-datamb=%ld",   &datasize); datasize *= 1024*1024; }
-        else if(KEYWORD("-sharedmb=")) { sscanf(argv[x], "-sharedmb=%ld", &shmsize);  shmsize  *= 1024*1024; }
-        
-        else if(KEYWORD("-kernelsize=")) { sscanf(argv[x], "-kernelsize=%ld", &SA_KERNEL_END); SA_KERNEL_END = ROUND_UP_1M(SA_KERNEL_END); }
-        
+
         else if(KEYWORD("-numprocesses="))
         {
             sscanf(argv[x], "-numprocesses=%ld", &numproc);
         }
+        
+        else if(KEYWORD("-textMB="))   { sscanf(argv[x], "-textMB=%ld",   &textsize); textsize *= 1024*1024; }
+        else if(KEYWORD("-dataMB="))   { sscanf(argv[x], "-dataMB=%ld",   &datasize); datasize *= 1024*1024; }
+        else if(KEYWORD("-sharedMB=")) { sscanf(argv[x], "-sharedMB=%ld", &shmsize);  shmsize  *= 1024*1024; sharedMBSet=true; }
+        else if(KEYWORD("-textmb="))   { sscanf(argv[x], "-textmb=%ld",   &textsize); textsize *= 1024*1024; }
+        else if(KEYWORD("-datamb="))   { sscanf(argv[x], "-datamb=%ld",   &datasize); datasize *= 1024*1024; }
+        else if(KEYWORD("-sharedmb=")) { sscanf(argv[x], "-sharedmb=%ld", &shmsize);  shmsize  *= 1024*1024; sharedMBSet=true; }
+        
+        else if(KEYWORD("-kernelsize=")) { sscanf(argv[x], "-kernelsize=%ld", &SA_KERNEL_END); SA_KERNEL_END = ROUND_UP_1M(SA_KERNEL_END); }
+        
+        else if(KEYWORD("-loop")) { loopForProfiler = true; }
+        
         else if(KEYWORD("-h"))
         {
             showhelp = true;
@@ -3686,7 +4270,11 @@ int main(int argc, char** argv)
             exit(0);
         }
     }
-
+    if(!sharedMBSet && (numproc > 1))
+    {
+        shmsize = 64*1024*1024;
+    }
+    
     if(regress)
     {
         vmm_setupTLBMapper();   
@@ -3717,68 +4305,82 @@ int main(int argc, char** argv)
         vmm_setupTLBMapper();
         
         printf("BGQ Staticmapper textsize: %ld  datasize: %ld  shmsize:%ld\n", textsize, datasize, shmsize);
+        
+        do {
+            vmm_resetStaticMap(numproc, numagentproc, -1);
+            
+            
+            if(textsize)
+            {
+                vmm_addSegment(IS_TEXT, kernelsize, kernelsize, textsize, -1, VMM_SEGMENTCOREMASK_APP, CONTIGUOUS_TEXT, false, true, true, true, false);
+            }
+            else
+            {
+                printf("Text size must be greater than zero\n");
+                return -1;
+            }
+            if(datasize)
+            {
+                for(i=0; i<numproc; i++)
+                {
+                    vmm_addSegment(IS_DATA, kernelsize + textsize, kernelsize + textsize, datasize, i, VMM_SEGMENTCOREMASK_APP, CONTIGUOUS_DATA, true, true, true, false, true);
+                }
+            }
+            
+            for(x=0; x<4; x++)
+            {
+                if(agenttextsize[x])
+                {
+                    vmm_addSegment(IS_TEXT, agentbaseaddr[x], agentbaseaddr[x], agenttextsize[x], 64 + x, VMM_SEGMENTCOREMASK_16, CONTIGUOUS_TEXT, false, true, true, true, false);
+                }
+                if(agentdatasize[x])
+                {
+                    vmm_addSegment(IS_DATA, agenttextsize[x] + agentbaseaddr[x], agenttextsize[x] + agentbaseaddr[x], agentdatasize[x], 64 + x, VMM_SEGMENTCOREMASK_16, CONTIGUOUS_DATA, false, true, true, false, false);
+                }
+                if(agentheapsize[x])
+                {
+                    vmm_addSegment(IS_HEAP, 0, 0, agentheapsize[x], 64 + x, VMM_SEGMENTCOREMASK_16, CONTIGUOUS_DATA, true, false, false, false, false);
+                }
+            }
+            
+            if(shmsize)
+            {
+                vmm_addSegment(IS_SHAR, 777, shmsize, shmsize, -1, VMM_SEGMENTCOREMASK_ALL, CONTIGUOUS_SHM, true, false, false, ((numproc==64)?true:false), false);
+            }
+	    
+	    struct timeval start, end;
+	    gettimeofday(&start, NULL);
+            rc = vmm_partitionedMapper(&rasdata);
+	    gettimeofday(&end, NULL);
+	    printf("time delta = %g\n", (end.tv_sec + end.tv_usec/1000000.0) - (start.tv_sec + start.tv_usec/1000000.0));
+	    
+            if(rc)
+            {
+                printf("Unable to generate a mapping\n");
+                exit(-1);
+            }
+            
+            if(generate)
+            {
+                FILE* fp;
+                uint64_t *reloc;
+                uint32_t numreloc;
                 
-        vmm_resetStaticMap(numproc, numagentproc, -1);
-        
-        
-        if(textsize)
-        {
-            vmm_addSegment(IS_TEXT, kernelsize, kernelsize, textsize, -1, VMM_SEGMENTCOREMASK_APP, CONTIGUOUS_TEXT, false, true, true, true, false);
-        }
-        else
-        {
-            printf("Text size must be greater than zero\n");
-            return -1;
-        }
-        if(datasize)
-        {
-            for(i=0; i<numproc; i++)
-            {
-                vmm_addSegment(IS_DATA, kernelsize + textsize, kernelsize + textsize, datasize, i, VMM_SEGMENTCOREMASK_APP, CONTIGUOUS_DATA, true, true, true, false, true);
+                tlbmapper[0].CalculateCopymap();
+                tlbmapper[0].GetCopymap(&reloc, &numreloc);
+                tlbmapper[0].ToNetworkEndian();
+                for(x=0; x<MAX_CORE_COUNT; x++)
+                {
+                    mmuinstance[x].ToNetworkEndian();
+                }
+                fp = fopen(genstring, "w");
+                fwrite(&tlbmapper[0], 1, sizeof(tlbmapper[0]), fp);
+                fwrite(&mmuinstance[0], 1, sizeof(mmuinstance), fp);
+                fwrite(reloc, numreloc, sizeof(uint64_t), fp);
+                fclose(fp);
             }
-        }
-        
-        for(x=0; x<4; x++)
-        {
-            if(agenttextsize[x])
-            {
-                vmm_addSegment(IS_TEXT, agentbaseaddr[x], agentbaseaddr[x], agenttextsize[x], 64 + x, VMM_SEGMENTCOREMASK_16, CONTIGUOUS_TEXT, false, true, true, true, false);
-            }
-            if(agentdatasize[x])
-            {
-                vmm_addSegment(IS_DATA, agenttextsize[x] + agentbaseaddr[x], agenttextsize[x] + agentbaseaddr[x], agentdatasize[x], 64 + x, VMM_SEGMENTCOREMASK_16, CONTIGUOUS_DATA, false, true, true, false, false);
-            }
-            if(agentheapsize[x])
-            {
-                vmm_addSegment(IS_HEAP, 0, 0, agentheapsize[x], 64 + x, VMM_SEGMENTCOREMASK_16, CONTIGUOUS_DATA, true, false, false, false, false);
-            }
-        }
-        
-        if(shmsize)
-        {
-            vmm_addSegment(IS_SHAR, 777, shmsize, shmsize, -1, VMM_SEGMENTCOREMASK_ALL, CONTIGUOUS_SHM, true, false, false, true, false);
-        }
-        rc = vmm_partitionedMapper(&rasdata);
-        if(rc)
-        {
-            printf("Unable to generate a mapping\n");
-            exit(-1);
-        }
+        } while (loopForProfiler);
 
-        if(generate)
-        {
-            FILE* fp;            
-            tlbmapper[0].CalculateCopymap();
-            tlbmapper[0].ToNetworkEndian();
-            for(x=0; x<MAX_CORE_COUNT; x++)
-            {
-                mmuinstance[x].ToNetworkEndian();
-            }
-            fp = fopen(genstring, "w");
-            fwrite(&tlbmapper[0], 1, sizeof(tlbmapper[0]), fp);
-            fwrite(&mmuinstance[0], 1, sizeof(mmuinstance), fp);
-            fclose(fp);
-        }
     }
     
     return 0;

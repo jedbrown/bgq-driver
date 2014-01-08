@@ -39,6 +39,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/scope_exit.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/scoped_ptr.hpp>
 
 #include <hlcs/include/runjob/commands/KillJob.h>
 
@@ -222,7 +223,7 @@ void DBBlockController::Die()
     deque<string> dq;
     DBBlockController::disconnect(dq);
 
-    if (getBase()->isBlock() && disconnecting)
+    if (disconnecting)
     {
         result = setBlockStatus(getBase()->_blockName, BGQDB::FREE);
         if (result != BGQDB::OK)
@@ -238,9 +239,6 @@ void DBBlockController::Die()
     } else {
         if(!disconnecting) {
             LOG_DEBUG_MSG("Not disconnecting.  Will not free block.");
-        }
-        if(getBase()->isBlock() == false) {
-            LOG_DEBUG_MSG("Not a block.  Cannot free.");
         }
     }
 
@@ -335,9 +333,6 @@ DBBlockController::allocateBlock(deque<string> args, MMCSCommandReply& reply)
         reply << FAIL << "block is already allocated" << DONE;
         return;
     }
-
-    // BlockController represents a block, not a target set
-    getBase()->setIsBlock(true);
 
     // generate a boot cookie
     getBase()->getBootCookie();
@@ -652,11 +647,6 @@ DBBlockController::boot_block(deque<string> args, MMCSCommandReply& reply)
     } BOOST_SCOPE_EXIT_END;
 
 
-    if (!getBase()->isBlock())
-    {
-        reply << FAIL << "target sets are not bootable" << DONE;
-        return;
-    }
     // check for block in proper state
     if ((result = BGQDB::getBlockInfo(getBase()->_blockName, bInfo)) != BGQDB::OK)
     {
@@ -1116,18 +1106,6 @@ DBBlockController::waitBoot(deque<string> cmdargs, MMCSCommandReply& reply, bool
             reply << FAIL << getBase()->disconnectReason() << DONE;
             return;
         }
-    if ((result == BGQDB::OK) &&
-        strcmp(bInfo.status, BGQDB::BLOCK_DEALLOCATING) == 0) // this can occur if bgqblock record status is set to
-        {                                                  // 'D' directly, such as by runjob timeout
-            std::string blockErrorText;
-            result = BGQDB::getBlockErrorText(getBase()->_blockName, blockErrorText);
-            if (result != BGQDB::OK || blockErrorText[0] == '\0')
-                getBase()->setDisconnecting(true, "block has been freed by RAS event or runjob");
-            else
-                getBase()->setDisconnecting(true, blockErrorText);
-            reply << FAIL << getBase()->disconnectReason() << DONE;
-            return;
-        }
 
     if(rebooting) {
         if(getBase()->_rebooted) {
@@ -1210,7 +1188,7 @@ DBBlockController::waitBoot(deque<string> cmdargs, MMCSCommandReply& reply, bool
             RasEventImpl boot_fail(MMCSOps_000A);
             boot_fail.setDetail(RasEvent::BLOCKID, getBase()->_blockName);
             RasEventHandlerChain::handle(boot_fail);
-            boot_fail.setDetail( RasEvent::MESSAGE, reply.str() );
+            boot_fail.setDetail( RasEvent::MESSAGE, blockErrText.str() );
             BGQDB::putRAS(boot_fail, getBase()->_blockName, 0);
 
             return;
@@ -1225,13 +1203,6 @@ DBBlockController::freeBlock(deque<string> args, MMCSCommandReply& reply)
     BGQDB::STATUS result;
     BGQDB::BlockInfo bInfo;
     boost::mutex::scoped_lock scope_free(getBase()->_init_free_lock);
-    if(!getBase()->isBlock()) {
-        std::ostringstream msg;
-        msg << getBlockName() << " is not a valid block in this server instance.  Cannot free.";
-        LOG_INFO_MSG(msg.str());
-        reply << FAIL << msg.str() << DONE;
-        return;
-    }
 
     PerformanceCounters::Timer::Ptr timer = _counters.create()
         ->id( this->getBlockName() )
@@ -1276,15 +1247,14 @@ DBBlockController::freeBlock(deque<string> args, MMCSCommandReply& reply)
         if(compute_blocks.size() != 0) {
             // For each compute block, we have to find it in the map and see if it
             // is diags.
-            BlockMap& bmap = DBConsoleController::getBlockMap();
             std::vector<std::string> diags_blocks;
             for(std::vector<std::string>::iterator it = compute_blocks.begin();
                 it != compute_blocks.end(); ++it) {
-                BlockMap::iterator mapit = bmap.find(*it);
-                BlockHelperPtr helperp = mapit->second;
-                if(helperp) {
-                    BlockPtr blockp = helperp->getBase();
-                    if(blockp && blockp->_diags == true) {
+                const DBBlockPtr blockp = DBConsoleController::findBlock(*it);
+                if(blockp) {
+                    // The find incremented the block thread count so we have to decrement it again.
+                    blockp->getBase()->decrBlockThreads();
+                    if(blockp->getBase()->_diags) {
                         diags_blocks.push_back(*it);
                     }
                 }
@@ -1413,41 +1383,39 @@ DBBlockController::disconnect(deque<string>& args)
 
     getBase()->disconnect(args);
 
-    if (getBase()->isBlock()) {
-        BGQDB::BLOCK_STATUS blockState = BGQDB::INVALID_STATE;
-        BGQDB::getBlockStatus(getBase()->_blockName, blockState);
-        if (blockState != BGQDB::TERMINATING) {
-            result = setBlockStatus(getBase()->_blockName, BGQDB::TERMINATING);
-            if (result != BGQDB::OK) {
-                if (BGQDB::getBlockInfo(getBase()->_blockName, bInfo) == BGQDB::OK) {
-                    LOG_WARN_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", TERMINATING) failed, result=" << result << ", current block state=" << bInfo.status);
-                    BlockHelperPtr dbbc = DBConsoleController::findBlock(getBase()->_blockName);
-                    if(dbbc) {
-                        LOG_INFO_MSG("Block " << getBase()->_blockName << " found.");
-                        // The find incremented the block thread count so we have to decrement it again.
-                        dbbc->getBase()->decrBlockThreads();
-                    } else
-                        LOG_INFO_MSG("Block " << getBase()->_blockName << " not found.");
-
-                } else {
-                    LOG_WARN_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", TERMINATING) failed, result=" << result);
-                }
-            } else {
-                LOG_WARN_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", TERMINATING) successful");
-            }
-        }
-
-        result = setBlockStatus(getBase()->_blockName, BGQDB::ALLOCATED);
+    BGQDB::BLOCK_STATUS blockState = BGQDB::INVALID_STATE;
+    BGQDB::getBlockStatus(getBase()->_blockName, blockState);
+    if (blockState != BGQDB::TERMINATING) {
+        result = setBlockStatus(getBase()->_blockName, BGQDB::TERMINATING);
         if (result != BGQDB::OK) {
             if (BGQDB::getBlockInfo(getBase()->_blockName, bInfo) == BGQDB::OK) {
-                LOG_WARN_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", ALLOCATED) failed, result=" << result << ", current block state=" << bInfo.status);
+                LOG_WARN_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", TERMINATING) failed, result=" << result << ", current block state=" << bInfo.status);
+                BlockHelperPtr dbbc = DBConsoleController::findBlock(getBase()->_blockName);
+                if(dbbc) {
+                    LOG_INFO_MSG("Block " << getBase()->_blockName << " found.");
+                    // The find incremented the block thread count so we have to decrement it again.
+                    dbbc->getBase()->decrBlockThreads();
+                } else
+                    LOG_INFO_MSG("Block " << getBase()->_blockName << " not found.");
+
             } else {
-                LOG_WARN_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", ALLOCATED) failed, result=" << result);
+                LOG_WARN_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", TERMINATING) failed, result=" << result);
             }
         } else {
-            LOG_INFO_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", ALLOCATED) successful");
+            LOG_WARN_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", TERMINATING) successful");
         }
-    } else LOG_DEBUG_MSG("This is not a block.  Will not be changing state.");
+    }
+
+    result = setBlockStatus(getBase()->_blockName, BGQDB::ALLOCATED);
+    if (result != BGQDB::OK) {
+        if (BGQDB::getBlockInfo(getBase()->_blockName, bInfo) == BGQDB::OK) {
+            LOG_WARN_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", ALLOCATED) failed, result=" << result << ", current block state=" << bInfo.status);
+        } else {
+            LOG_WARN_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", ALLOCATED) failed, result=" << result);
+        }
+    } else {
+        LOG_INFO_MSG("DBBlockController::disconnect() setBlockStatus(" << getBase()->_blockName << ", ALLOCATED) successful");
+    }
 
     mutex.Unlock();
     //
@@ -1505,20 +1473,27 @@ DBBlockController::postProcessRASMessage(int recid) {
 
     if (sInfo.wireMask != 0) {
         // call the mcserver function for BQL sparing
-        const unsigned wire_mask = sInfo.wireMask;
-        MCServerMessageSpec::DynamicSparingRequest::LinkChipSpareXmtr fromlink(sInfo.fromLoc,
-									       sInfo.fromReg,
-									       wire_mask);
-        MCServerMessageSpec::DynamicSparingRequest::LinkChipSpareRcvr tolink(sInfo.toLoc,
-									     sInfo.toReg,
-									     wire_mask);
+        MCServerMessageSpec::DynamicSparingRequest::LinkChipSpareXmtr fromlink(sInfo.txLoc,
+									       sInfo.txReg,
+									       sInfo.txMask);
+        MCServerMessageSpec::DynamicSparingRequest::LinkChipSpareRcvr tolink(sInfo.rxLoc,
+									     sInfo.rxReg,
+									     sInfo.rxMask);
         MCServerMessageSpec::DynamicSparingRequest sparingreq(fromlink, tolink);
         MCServerMessageSpec::DynamicSparingReply sparingrep;
         try {
-            if(!getBase()->hardWareAccessBlocked())
-                getBase()->_mcServer->dynamicSparing(sparingreq, sparingrep);
-         }
-        catch (exception &e) {
+            MCServerRef* ref;
+            MMCSCommandReply reply;
+            BlockControllerBase::mcserver_connect(ref, getBase()->_userName, reply);
+            boost::scoped_ptr<MCServerRef> mc_server(ref);
+            if (reply.getStatus()) {
+                LOG_ERROR_MSG( reply.str() );
+                return;
+            }
+            LOG_DEBUG_MSG("connected to mcServer");
+
+            ref->dynamicSparing(sparingreq, sparingrep);
+        } catch (const std::exception &e) {
             LOG_ERROR_MSG(sparingrep._rc << " " << sparingrep._rt << " " << e.what());
         }
     }
@@ -1638,6 +1613,7 @@ DBBlockController::processRASMessage(RasEvent& rasEvent)
             _dbj._ind[_dbj.STARTTIME]=SQL_NTS;
             _dbj._ind[_dbj.ENTRYDATE]=SQL_NTS;
 
+            std::string rawdata;
             for (std::map<std::string,std::string>::iterator pos = rasEvent.getDetails().begin(); pos != rasEvent.getDetails().end(); ++pos)    {
                 if (pos->first == RasEvent::MSG_ID)  {
                     dbe._ind[dbe.MSG_ID]=SQL_NTS;
@@ -1658,7 +1634,7 @@ DBBlockController::processRASMessage(RasEvent& rasEvent)
                                 if (pos->first == RasEvent::MESSAGE)  {
                                     dbe._ind[dbe.MESSAGE]=SQL_NTS;
                                     if (pos->second.length() >= sizeof(dbe._message)) {
-                                        LOG_ERROR_MSG("processRASMessage message truncated, length " << pos->second.length() );
+                                        LOG_WARN_MSG("message truncated, length " << pos->second.length() );
                                         strncpy(dbe._message,pos->second.c_str(), sizeof(dbe._message)-1);
                                         dbe._message[sizeof(dbe._message)-1] = '\0';
                                     }
@@ -1701,15 +1677,21 @@ DBBlockController::processRASMessage(RasEvent& rasEvent)
                                                                     dbe._ind[dbe.SERIALNUMBER]=SQL_NTS;
                                                                     strcpy(dbe._serialnumber,pos->second.c_str());
                                                                 } else {
-                                                                    dbe._ind[dbe.RAWDATA]=SQL_NTS;
-                                                                    strcat(dbe._rawdata,pos->first.c_str());
-                                                                    strcat(dbe._rawdata,"=");
-                                                                    strcat(dbe._rawdata,pos->second.c_str());
-                                                                    strcat(dbe._rawdata,"; ");
+                                                                    rawdata.append( pos->first);
+                                                                    rawdata.append( "=" );
+                                                                    rawdata.append( pos->second );
+                                                                    rawdata.append( "; " );
                                                                 }
             }
 
-
+            if ( !rawdata.empty() ) {
+                dbe._ind[dbe.RAWDATA]=SQL_NTS;
+                if ( rawdata.size() > sizeof(dbe._rawdata) ) {
+                    LOG_WARN_MSG("raw data truncated, length " << rawdata.size() );
+                }
+                (void)strncpy(dbe._rawdata, rawdata.c_str(), sizeof(dbe._rawdata) - 1);
+                dbe._rawdata[sizeof(dbe._rawdata) - 1] = '\0';
+            }
 
             if ( NeighborInfo::MessageIds.find(rasEvent.msgId()) != NeighborInfo::MessageIds.end() ) {
                 NeighborInfo neighbor( getBase(), dbe._location, dbe._rawdata );

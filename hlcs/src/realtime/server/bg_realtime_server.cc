@@ -62,6 +62,32 @@ The server is configured as described in \ref serverConfiguration.
 If you have a problem, check out \ref problems.
 
 
+\section daemon Running as a daemon
+
+The real-time server is typically started by BGMaster, but
+can also be configured to be started as a daemon started by init.
+The real-time server is typically configured to be started by init when using failover.
+An init script is provided here: /bgsys/drivers/ppcfloor/hlcs/etc/init/realtime_server.
+To run the real-time server as a daemon, perform the following steps:
+
+1. Get the init script into /etc/init.d:
+
+<pre>
+ # ln -s /bgsys/drivers/ppcfloor/hlcs/etc/init/realtime_server /etc/init.d/
+ # chkconfig --add realtime_server
+</pre>
+
+2. Create a configuration file, /etc/sysconfig/bg_realtime_server:
+
+<pre>
+ DAEMON_ARGS="--user=bgqsysdb"
+ REALTIME_SERVER_ARGS="--log=/bgsys/logs/BGQ/$HOSTNAME-realtime_server.log"
+</pre>
+
+By default, the real-time server isn't started automatically at any runlevel.
+You can use chkconfig to override the defaults.
+
+
 \section clients Client handling
 
 There are two types of clients:
@@ -146,6 +172,9 @@ standard Blue Gene program options:
 - --properties
 - --verbose
 - --help,-h
+- --log <i>log-file-name</i>
+
+If the --log option is given, the server daemonizes itself, sending its log output to the given file.
 
 
 \section problems Common problems
@@ -242,7 +271,10 @@ int main( int argc, char* argv[] )
 
         logging_program_options.addTo( visible_options );
 
+        string log_file_name;
+
         visible_options.add_options()
+                ( "log", po::value( &log_file_name ), "daemonize and log file name" )
                 ( "help,h", "print help text" )
             ;
 
@@ -266,6 +298,39 @@ int main( int argc, char* argv[] )
             cout << argv[0] << ": failed parsing arguments, " << e.what() << ".\n"
                     "Try `" << argv[0] << " --help' for more information.\n";
             return 1;
+        }
+
+        if ( ! log_file_name.empty() ) {
+            int log_fd(open( log_file_name.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR |  S_IWUSR | S_IRGRP | S_IWGRP ));
+            if ( log_fd == -1 ) {
+                int open_errno(errno);
+                std::cerr << "Failed to open log file " << log_file_name << " error is " << strerror( open_errno ) << "\n";
+                exit( 1 );
+            }
+
+            int nochdir(0);
+            int noclose(0);
+            int rc = daemon( nochdir, noclose );
+
+            if ( rc == -1 ) {
+                int daemon_errno(errno);
+                std::cerr << "Failed to daemonize. errno=" << strerror( daemon_errno ) << "\n";
+                exit( 1 );
+            }
+
+            if ( log_fd != STDOUT_FILENO ) {
+                if ( dup2( log_fd, STDOUT_FILENO ) < 0 ) {
+                    exit( 1 );
+                }
+            }
+            if ( log_fd != STDERR_FILENO ) {
+                if ( dup2( log_fd, STDERR_FILENO ) < 0 ) {
+                    exit( 1 );
+                }
+            }
+            if ( log_fd != STDOUT_FILENO && log_fd != STDERR_FILENO ) {
+                close( log_fd );
+            }
         }
 
         Properties::Ptr properties_ptr( Properties::create( properties_program_options.getFilename() ) );

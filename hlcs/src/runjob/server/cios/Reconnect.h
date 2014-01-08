@@ -1,0 +1,77 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/* ================================================================ */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/*                                                                  */
+/* Blue Gene/Q                                                      */
+/*                                                                  */
+/* (C) Copyright IBM Corp.  2010, 2011                              */
+/*                                                                  */
+/* US Government Users Restricted Rights -                          */
+/* Use, duplication or disclosure restricted                        */
+/* by GSA ADP Schedule Contract with IBM Corp.                      */
+/*                                                                  */
+/* This software is available to you under the                      */
+/* Eclipse Public License (EPL).                                    */
+/*                                                                  */
+/* ================================================================ */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+#ifndef RUNJOB_SERVER_CIOS_RECONNECT_H
+#define RUNJOB_SERVER_CIOS_RECONNECT_H
+
+#include "server/block/Container.h"
+
+#include "server/fwd.h"
+
+#include <boost/enable_shared_from_this.hpp>
+
+namespace runjob {
+namespace server {
+namespace cios {
+
+/*!
+ * \brief
+ */
+class Reconnect : public boost::enable_shared_from_this<Reconnect>
+{
+public:
+    /*!
+     * \brief Pointer type.
+     */
+    typedef boost::shared_ptr<Reconnect> Ptr;
+
+public:
+    /*!
+     * \brief
+     */
+    static Ptr create(
+            const boost::shared_ptr<Server>& server //!< [in]
+            );
+
+    /*!
+     * \brief
+     */
+    ~Reconnect();
+
+private:
+    Reconnect(
+            const boost::shared_ptr<Server>& server
+            );
+
+    void blocksHandler(
+            const block::Container::Blocks& blocks
+            );
+
+private:
+    const boost::weak_ptr<Server> _server;
+};
+
+} // cios
+} // server
+} // runjob
+
+#endif

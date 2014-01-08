@@ -43,9 +43,6 @@ namespace blue_gene {
 namespace diagnostics {
 
 
-class Runs;
-
-
 class Run : public boost::enable_shared_from_this<Run>
 {
 public:

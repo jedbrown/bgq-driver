@@ -1160,7 +1160,12 @@ void App_Load()
         
         // Set the state of the Application to indicate that a Load is in progress
         App_SetLoadState(AppState_Loading, 0, 0);
-
+        
+        // set default allowing mapping processes aligned to 16MB boundaries (as opposed to 16GB)
+        uint32_t align16 = 0;
+        App_GetEnvValue("BG_MAPALIGN16", &align16);
+        vmm_setFlags(MAPPERFLAGS_ALIGN16, align16);
+        
         // Setup the path to the appropriate static mapper objects for this job and initialize it. 
         uint32_t numProcs = pAppState->Active_Processes;
         int      numAgents = popcnt64(NodeState.AppAgents);
@@ -1184,7 +1189,16 @@ void App_Load()
         {
             TRACE( TRACE_Jobctl, ("(E) Bad return code from File_ProcessSetup()\n") );
         }
-
+    }
+    Kernel_Barrier(Barrier_HwthreadsInApp);
+    if ( IsAppLeader() )
+    {
+        setupMapFile();
+    }
+    Kernel_Barrier(Barrier_HwthreadsInApp);
+    
+    if ( IsProcessLeader() )
+    {
         // Find the rank of this process.
         rc = getMyRank(&pProc->Rank);
         if(rc)
@@ -1620,6 +1634,7 @@ int App_SignalJob(uint32_t jobid, int signum)
     if (signum == SIGKILL)
     {
         appState->jobControlIssuedSIGKILL = 1;
+        appState->jobControlSIGKILLstart = GetTimeBase();
     }
     int i;
     uint64_t selectMask = _BN(0);
@@ -1693,6 +1708,9 @@ void App_LoadAgent()
     {
         // install the TLBs
         vmm_installStaticTLBMap(pAgentProc->Tcoord);
+
+        // Set background scrub TLB location
+        vmm_setScrubSlot();
     }
     mtspr(SPRN_PID, pAgentProc->PhysicalPID);
     isync();

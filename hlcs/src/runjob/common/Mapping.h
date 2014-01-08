@@ -26,6 +26,9 @@
 #include <boost/serialization/access.hpp>
 
 #include <iostream>
+#include <set>
+#include <utility>
+#include <vector>
 
 #include <stdint.h>
 
@@ -48,6 +51,21 @@ public:
         Permutation     // ABCDET permutation
     };
 
+    /*!
+     * \brief Contaienr of ranks
+     */
+    typedef std::set<uint32_t> Rank;
+
+    /*!
+     * \brief Size and line number
+     */
+    typedef std::pair<int, unsigned> Max;
+
+    /*!
+     * \brief
+     */
+    typedef std::vector<Max> Dimensions;
+
 public:
     /*!
      * \brief ctor.
@@ -60,8 +78,17 @@ public:
     Type type() const { return _type; }   //!< Get type.
     const std::string& value() const { return _value; } //!< Get value.
     operator const std::string&() const { return this->value(); }  //!< Conversion to const std::string&
+    const Dimensions& dimensions() const { return _maxDimensions; }
+    unsigned lineCount() const { return _lineCount; }
 
 private:
+    void validateFile();
+
+    void analyzeLine(
+            std::string& line,      //!< [in]
+            Rank& ranks             //!< [in]
+            );
+
     friend class boost::serialization::access;
     template<class Archive>
     void __attribute__ ((visibility("hidden"))) serialize(
@@ -71,11 +98,15 @@ private:
     {
         ar & _type;
         ar & _value;
+        ar & _maxDimensions;
+        ar & _lineCount;
     }
 
 private:
     Type _type;
     std::string _value;
+    Dimensions _maxDimensions; // mapping file specific
+    unsigned _lineCount; // mapping file specific 
 };
 
 /*!

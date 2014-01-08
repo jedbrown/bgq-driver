@@ -35,8 +35,6 @@
 #include <stdio.h>
 #include <vector>
 
-using std::ostringstream;
-
 class XML_ParserStruct;
 
 XMLEntity*
@@ -124,7 +122,7 @@ XMLEntity::readXML(std::istream& is) throw(XMLException)
 }
 
 void
-XMLEntity::dumpXML(const stringstream& os, const char* description, const bool force)
+XMLEntity::dumpXML(const std::stringstream& os, const char* description, const bool force)
 {
     if (force) {
         // Fall through since we should always dump XML if we're forced to
@@ -140,7 +138,7 @@ XMLEntity::dumpXML(const stringstream& os, const char* description, const bool f
 
     // Create filename in the form of "bg_pid.XXXXXX" where XXXXXX will be replaced by unique
     // characters in the mkstemp syscall
-    ostringstream filenameString;
+    std::ostringstream filenameString;
     filenameString << "/tmp/bg_";
     if (description != NULL) {
         filenameString << description << "_";
@@ -176,7 +174,7 @@ XMLEntity::dumpXML(const stringstream& os, const char* description, const bool f
     close(tempFileFd);
 
     // Rename the file
-    ostringstream newFilename;
+    std::ostringstream newFilename;
     newFilename << tempFilename << ".xml";
     rename(tempFilename, newFilename.str().c_str());
 
@@ -297,7 +295,7 @@ XMLEntity::_startXML (void* ud, const char* name, const char** atts)
 }
 
 void
-XMLEntity::_endXML (void* ud, const char* name)
+XMLEntity::_endXML (void* ud, const char*)
 {
     XMLEntity* root = (XMLEntity*)ud;
     assert (root != (XMLEntity*)NULL);

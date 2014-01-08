@@ -40,16 +40,20 @@ Personality_t* PERS = 0;
 #define EVENT(s)  printf s; 
 #define ERROR(s) printf s;
 
-#define DIAGS_HSS_STATIC_PATTERN_NO_SYNC   0x000202C0
-#define DIAGS_HSS_STATIC_PATTERN_BAD_EYE   0x000202C1
-#define DIAGS_HSS_STATIC_PATTERN_ERROR_BIT 0x000202C2
+#define DIAGS_HSS_STATIC_PATTERN_NO_SYNC      0x000202C0
+#define DIAGS_HSS_STATIC_PATTERN_BAD_EYE      0x000202C1
+#define DIAGS_HSS_STATIC_PATTERN_ERROR_BIT    0x000202C2
+#define DIAGS_HSS_STATIC_PATTERN_CSBARRIER    0x000202C3
+#define DIAGS_HSS_STATIC_PATTERN_PHASE_START  0x000202C4
+#define DIAGS_HSS_STATIC_PATTERN_PHASE_END    0x000202C5
 
 void barrier( void ) {
 
     const uint64_t BARRIER_TIMEOUT = 120ull * 1000ull * 1000ull; // 2 minutes
 
     if ( fwext_getFwInterface()->barrier( BARRIER_TIMEOUT ) != FW_OK ) {
-	ABORT(( "(E) Barrier timeout."));
+      fwext_getFwInterface()->writeRASEvent(DIAGS_HSS_STATIC_PATTERN_CSBARRIER, 0, 0);
+      ABORT(( "(E) Barrier timeout."));
     }
 }
 
@@ -320,6 +324,10 @@ void prbs_start( void ) {
 	    }
 
 	    default : {
+                fw_uint64_t details[2];
+                details[0] = phase;
+                details[1] = dimension;
+                fwext_getFwInterface()->writeRASEvent(DIAGS_HSS_STATIC_PATTERN_PHASE_START, 2, details);
 		ABORT(("(E) illegal phase (%d) at %s:%d\n", phase, __func__, __LINE__));
 	    }
 	    }
@@ -471,6 +479,10 @@ void prbs_shutdown( void ) {
 	    }
 
 	    default : {
+	        fw_uint64_t details[2];
+                details[0] = phase;
+                details[1] = dimension;
+                fwext_getFwInterface()->writeRASEvent(DIAGS_HSS_STATIC_PATTERN_PHASE_END, 2, details);
 		ABORT(("(E) illegal phase (%d) at %s:%d\n", phase, __func__, __LINE__));
 	    }
 	    }

@@ -79,8 +79,9 @@ public:
      */
     cxxdb::ConnectionPtr getConnection();
 
-    int availableCount() const { return _connection_pool_ptr->getStatus().connsAvailable; }
-    int usedCount() const      { return _connection_pool_ptr->getStatus().connsInUse; }
+    unsigned availableCount() const { return _connection_pool_ptr->getStatus().connsAvailable; }
+    unsigned usedCount() const      { return _connection_pool_ptr->getStatus().connsInUse; }
+    unsigned maxCount() const      { return _connection_pool_ptr->getStatus().connsMax; }
     unsigned size() const  { return _size;}
     bgq::utility::Properties::ConstPtr getProperties() const { return _properties; }
 

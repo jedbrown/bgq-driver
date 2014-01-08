@@ -58,6 +58,9 @@ void IPI_changepolicy(KThread_t *pKThr, int newPolicy, int newPriority);
 int Syscall_GetIpiControl();
 // Release IPI control for syscall usage. Returns 0:success, (-1):error.
 int Syscall_ReleaseIpiControl();
+// flush pending IPIs that require an Ack
+void IPI_DeadlockAvoidance();
+
 
 #ifndef IPIHANDLER
 #define IPIHANDLER(name) void name(uint64_t parm1, uint64_t parm2)

@@ -236,7 +236,7 @@ ClientContainer::signalImpl(
     }
 
     // deliver signal
-    job::Signal::create( job, SIGKILL );
+    job::Signal::create( job, message->_signal ? message->_signal : SIGKILL );
 }
 
 } // mux

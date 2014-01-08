@@ -28,16 +28,12 @@
 #include "../AbstractResponder.hpp"
 
 #include "../ServerStats.hpp"
+#include "../types.hpp"
 
 #include "capena-http/http/uri/Path.hpp"
 
 
 namespace bgws {
-
-
-class BgwsServer;
-
-
 namespace responder {
 
 
@@ -61,15 +57,15 @@ public:
     { /* Nothing to do */ }
 
     // override
-    capena::http::Methods getAllowedMethods() const  {
+    capena::http::Methods _getAllowedMethods() const  {
         return { capena::http::Method::GET, capena::http::Method::POST };
     }
 
     // override
-    void doGet();
+    void _doGet();
 
     // override
-    void doPost( json::ConstValuePtr val_ptr );
+    void _doPost( json::ConstValuePtr val_ptr );
 
 
 private:

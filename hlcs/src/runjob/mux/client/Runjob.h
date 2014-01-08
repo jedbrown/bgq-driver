@@ -75,7 +75,7 @@ public:
      */
     Runjob(
             const boost::shared_ptr<Multiplexer>& mux,  //!< [in]
-            const Id id                                 //!< [in]
+            const Id& id                                //!< [in]
             );
 
     /*!
@@ -119,7 +119,7 @@ private:
             );
 
     void handlePlugin(
-            const runjob::mux::Plugin::HandlePtr& plugin //!< [in]
+            const runjob::mux::Plugin::WeakPtr& plugin //!< [in]
             );
 
     void handleImpl(

@@ -67,6 +67,8 @@ const std::set<int> NeighborInfo::MessageIds = boost::assign::list_of
     (0x00090201)
     (0x00090202)
     (0x0009020D)
+    (0x00090210)
+    (0x00090211)
     ;
 
 NeighborInfo::NeighborInfo(
@@ -292,7 +294,6 @@ NeighborInfo::compute(
         strcat(rawdata,"N/A");
     }
     strcat(rawdata, linkInfo);
-
 }
 
 void
@@ -300,6 +301,23 @@ NeighborInfo::ioLink(
         char* rawdata
         )
 {
+    if ( _location.getType() == bgq::util::Location::ComputeCardOnNodeBoard ) { 
+        this->computeNodeIoLink( rawdata );
+    } else if ( _location.getType() == bgq::util::Location::ComputeCardOnIoBoard ) {
+        this->ioNodeIoLink( rawdata );
+    } else {
+        LOG_WARN_MSG( "unhandled I/O link location type: " << _location );
+    }
+}
+
+void
+NeighborInfo::computeNodeIoLink(
+        char* rawdata
+        )
+{
+    // this query only works for compute node locations
+    if ( _location.getType() != bgq::util::Location::ComputeCardOnNodeBoard ) return;
+
     // using the location that generated this event, get the port locations and I/O node
     // neighbor from the cniolink view and cable table
     const cxxdb::ConnectionPtr connection( BGQDB::DBConnectionPool::instance().getConnection() );
@@ -431,6 +449,42 @@ NeighborInfo::linkChip(
     } catch ( std::exception& e ) {
         LOG_ERROR_MSG( e.what() );
     }
+}
+
+void
+NeighborInfo::ioNodeIoLink(
+        char* rawdata
+        )
+{
+    // using the location that generated this event, get the port locations and I/O node
+    // neighbor from the cniolink view and cable table
+    const cxxdb::ConnectionPtr connection( BGQDB::DBConnectionPool::instance().getConnection() );
+    const cxxdb::ResultSetPtr result(
+            connection->query(
+                "SELECT " +
+                BGQDB::DBTCable::FROMLOCATION_COL + ", " +
+                BGQDB::DBTCable::TOLOCATION_COL + " " +
+                "FROM " + BGQDB::DBTCable().getTableName() + " WHERE " +
+                BGQDB::DBTCable::TOLOCATION_COL + " in " + "(" +
+                "SELECT " + 
+                BGQDB::DBVCniolink::DESTINATION_COL + " FROM " +
+                BGQDB::DBVCniolink().getTableName() + " WHERE " +
+                BGQDB::DBVCniolink::ION_COL + "='" + _location.getLocation() + "')"
+                )
+            );
+
+    // each I/O node will have two cables
+    if ( !result->fetch() ) return;
+    strcat(rawdata,"using cable from ");
+    strcat(rawdata, result->columns()[ BGQDB::DBTCable::FROMLOCATION_COL ].getString().c_str() );
+    strcat(rawdata, " to ");
+    strcat(rawdata, result->columns()[ BGQDB::DBTCable::TOLOCATION_COL ].getString().c_str() );
+
+    if ( !result->fetch() ) return;
+    strcat(rawdata," and cable from ");
+    strcat(rawdata, result->columns()[ BGQDB::DBTCable::FROMLOCATION_COL ].getString().c_str() );
+    strcat(rawdata, " to ");
+    strcat(rawdata, result->columns()[ BGQDB::DBTCable::TOLOCATION_COL ].getString().c_str() );
 }
 
 int

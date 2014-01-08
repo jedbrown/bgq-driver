@@ -22,6 +22,5 @@ tmpfs			/jobs			tmpfs	defaults	0 0
 tmpfs			/var.mirror		tmpfs	defaults	0 0
 tmpfs			/tmp			tmpfs	defaults	0 0
 tmpfs			/root.mirror		tmpfs	defaults	0 0
-tmpfs			/lib/modules.mirror	tmpfs	defaults	0 0
 devpts			/dev/pts		devpts	gid=5,mode=620  0 0
 tmpfs                   /dev/shm        	tmpfs   defaults        0 0

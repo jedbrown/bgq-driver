@@ -51,15 +51,9 @@ public:
     /*!
      * \brief
      */
-    typedef boost::function<void()> Callback;
-
-    /*!
-     * \brief
-     */
     static void create(
             const boost::shared_ptr<Server>& server,
-            const boost::shared_ptr<Connection>& mux,
-            const Callback& callback
+            const boost::shared_ptr<Connection>& mux
             );
 
     /*!
@@ -70,8 +64,7 @@ public:
 private:
     Reconnect(
             const boost::shared_ptr<Server>& server,
-            const boost::shared_ptr<Connection>& mux,
-            const Callback& callback
+            const boost::shared_ptr<Connection>& mux
             );
 
     void nextJob();
@@ -98,7 +91,6 @@ private:
     const cxxdb::ConnectionPtr _connection;
     cxxdb::QueryStatementPtr _query;
     cxxdb::ResultSetPtr _results;
-    const Callback _callback;
 };
 
 } // mux

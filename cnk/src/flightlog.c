@@ -542,6 +542,9 @@ void Flight_IPIDecoder(size_t bufsize, char* buffer, const BG_FlightRecorderLog_
         case FL_FLUSHTCMD:
             formatstr = "Tool deadlock avoidance. IPI from hwthread %ld to execute '%s' with parm1=%lx.  Interrupted IAR was 0x%016lx";
             break;
+        case FL_ADLOCKIPI:
+            formatstr = "Avoid Ack deadlock. Process IPI from hwthread %ld to execute '%s' with parm1=%lx.  Interrupted IAR was 0x%016lx";
+            break;
         default:
             formatstr = "Unknown IPI flow!!! %ld %s %ld %ld";
     }

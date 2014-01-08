@@ -38,6 +38,7 @@ DISTROFSTAR_LOC=BGQ_RAMDISK_PATH/bin/distrofs.tar
 DISTROFS_LOC="BGQ_LINUX_OS_PATH"
 DISTRO=`/bin/echo $DISTROFS_LOC | awk 'BEGIN{FS="/"} ; {print $NF}'`
 KERNEL_RPM_LOC="BGQ_LINUX_PATH/rpms"
+USER_KERNEL_RPM_LOC=0
 ADDPKGS_LOC="/bgsys/linux/addpkgs"
 DISTROFS_RPM_LOC=BGQ_RAMDISK_PATH/rpms
 ONLY_ADDPKGS=0
@@ -45,6 +46,7 @@ RHEL6_BASE_LOC=BGQ_DISTROFS_BASE_PATH
 IONFLOOR=0
 IGNORE_EXISTING=0
 LOGFILE=`hostname -s`-bgqDistrofsPostInstall-$DISTRO-`date +%Y-%m%d-%H:%M:%S`.log
+LOCKFILE=/bgsys/linux/.distrofsPostInstall.lock
 SUCCESS=1
 
 
@@ -65,17 +67,6 @@ fi
 
 #For sandbox builds
 export DISTROFS_LOC="$DISTROFS_LOC"
-
-# Need a list of the general RPM names we expect.
-# Check for the old naming format for backward compatibility.
-ls $KERNEL_RPM_LOC/kernel-2*.ppc64.rpm &> /dev/null
-if [ $? -eq 0 ] ; then
-	RPMFILES=( kernel-2*.ppc64.rpm kernel-bootwrapper* kernel-devel* kernel-firmware* kernel-headers* )
-	KERNEL_RPM_ARCH='ppc64'
-else
-	RPMFILES=( kernel-2*.ppc64bgq.rpm kernel-bootwrapper* kernel-devel* kernel-firmware* kernel-headers* )
-	KERNEL_RPM_ARCH='ppc64bgq'
-fi
 
 usage () {
 
@@ -101,6 +92,7 @@ while getopts "t:d:r:b:afhi" flags ; do
 	d) DISTROFS_LOC=$OPTARG
 	   ;;
 	r) KERNEL_RPM_LOC=$OPTARG
+	   USER_KERNEL_RPM_LOC=1
 	   ;;
 	b) RHEL6_BASE_LOC=$OPTARG
 	   ;;
@@ -151,6 +143,16 @@ fi
    echo -en "\n\tInstalling BG/Q Linux kernel RPMs from: $KERNEL_RPM_LOC ."
    echo -en "\n\tAdding packages from: $ADDPKGS_LOC ."
 
+#Ensure that there isn't another installation happening concurrently.  Having multiple installs
+#going results in unpredictable behavior.
+if [ -e /bgsys/linux/.distrofsPostInstall.lock ] ; then
+	OTHER_DISTRO=`cat /bgsys/linux/.distrofsPostInstall.lock`
+	echo -en "\n\n\tERROR! Found a .distrofsPostInstall.lock file in /bgsys/linux."
+	echo -en "\n\t       $OTHER_DISTRO is currently being installed."
+	echo -en "\n\n\t       Retry BG/Q Distrofs Installation after installation of $OTHER_DISTRO has completed.\n\n"
+	exit 1
+fi
+
 #Summary output to help with debug:
 if [ ! -f $DISTROFSTAR_LOC ] ; then
    echo -en "\n\tERROR: Unable to find distrofs tar file: $DISTROFSTAR_LOC .\n\n"
@@ -188,6 +190,19 @@ fi
 
 echo -en "\n\n\t-----------------------------------------------------------------------------------------\n"
 
+# Need a list of the general RPM names we expect.
+# If we are not using a user kernel RPM location, use the info from the build.
+# Otherwise use one of the expected arches. Check for the old naming format for backward compatibility.
+if [ $USER_KERNEL_RPM_LOC -eq 0 ] ; then
+	KERNEL_RPM_ARCH=BGQ_LINUX_KERNEL_VERSION
+else
+	ls $KERNEL_RPM_LOC/kernel-*.ppc64.rpm &> /dev/null
+	if [ $? -eq 0 ] ; then
+		KERNEL_RPM_ARCH='ppc64'
+	else
+		KERNEL_RPM_ARCH='ppc64bgq'
+	fi
+fi
 
 if [ ! -e $DISTROFS_LOC ] ; then 
 	# Special case for /bgsys/linux/ionfloor.  If the directory doesn't exist assume it is the
@@ -203,6 +218,8 @@ if [ ! -e $DISTROFS_LOC ] ; then
 			 # Try to create the requested distro if it doesn't exist and we have the base distro.
 			echo -en "\n\n\tCreating new distrofs $DISTROFS_LOC based on $RHEL6_BASE_LOC."
 
+			# Create a lock file so that our .distrofsInstallState file isn't removed incorrectly.
+			echo "$DISTROFS_LOC" >> $LOCKFILE 
 			
 			# Record the state of the system so that we can install/uninstall properly when doing eFixes.
 			if [ -e /bgsys/linux/ionfloor ] ; then
@@ -212,9 +229,27 @@ if [ ! -e $DISTROFS_LOC ] ; then
 			if [ -e /bgsys/linux/.distrofsInstallState ] ; then
 				rm -f /bgsys/linux/.distrofsInstallState
 			fi
-			/bin/echo "PREEXISTING_DISTRO=$PREEXISTING_DISTRO" >> /bgsys/linux/.distrofsInstallState
-			echo -en "\n\t\tFound pre-existing distro $PREEXISTING_DISTRO"
-			/bin/echo "INSTALLING_DISTRO=$DISTRO" >> /bgsys/linux/.distrofsInstallState
+                        if [ ! -z "$PREEXISTING_DISTRO" ] ; then
+                                /bin/echo "PREEXISTING_DISTRO=$PREEXISTING_DISTRO" >> /bgsys/linux/.distrofsInstallState
+                                echo -en "\n\t\tFound pre-existing distro $PREEXISTING_DISTRO"
+                                /bin/echo "INSTALLING_DISTRO=$DISTRO" >> /bgsys/linux/.distrofsInstallState
+                        else
+                                # If there is no ionfloor link that is ok for VXRXMX-0, but for any eFix installations
+                                # we need an ionfloor link so we know the old distro to remove during an RPM upgrade.
+                                # If we can't do that, we need to bail out.
+                                DISTRO_ARR=(`/bin/echo "$DISTRO" | tr "_" "\n"`)
+                                /bin/echo ${DISTRO_ARR[1] | grep "V[1-9]R[1-9]M[1-9]" >> /dev/null}
+                                if [ $? -eq 0 ] ; then
+                                        DISTRO_ARR=(`/bin/echo "${DISTRO_ARR[1]}" | tr "-" "\n"`)
+                                        if [ ${DISTRO_ARR[1]} -ne 0 ] ;then
+                                                echo -en "\n\n\tERROR: No /bgsys/linux/ionfloor link found!\n"
+                                                echo -en "\t       An ionfloor link is required for eFix installation.\n"
+                                                echo -en "\t       Link /bgsys/linux/ionfloor to the current BG/Q Linux Distro\n"
+                                                echo -en "\t       and execute BGQ_RAMDISK_PATH/tools/bgqDistrofsPostInstall.sh -f\n\n"
+                                                exit 1
+                                        fi
+                                fi
+                        fi
 
 			echo -en "\n\n\t\t(Please wait ... This may take some time ...)\n\n"
 			RC=$(cp -a $RHEL6_BASE_LOC $DISTROFS_LOC 2>&1 )
@@ -225,6 +260,7 @@ if [ ! -e $DISTROFS_LOC ] ; then
 				echo -en "\n\t       an error was encountered copying $RHEL6_BASE_LOC."
 				echo -en "\n\t       cp returned: $RC"
 				echo -en "\n\n\t       Skipping BG/Q Linux Distrofs Post Installation.\n\n"  
+				[ -e $LOCKFILE ] && rm -f $LOCKFILE
 				exit 1
 			fi
 		else
@@ -233,15 +269,13 @@ if [ ! -e $DISTROFS_LOC ] ; then
 			echo -en "\t       before running bgqDistrofsPostInstall.sh to create the\n"
 			echo -en "\t       base BG/Q Linux Distribution.\n\n"
 			echo -en "\t       Skipping BG/Q Linux Distrofs Post Installation.\n\n"
+			[ -e $LOCKFILE ] && rm -f $LOCKFILE
 			exit 1
 		fi
 	fi
 else  
 	if [ $IGNORE_EXISTING -eq 0 ] && [ $ONLY_ADDPKGS -eq 0 ] ; then
 		echo -en "\n\n\n\t$DISTROFS_LOC already exists.\n"
-		#echo -en "\n\tAttempting to upgrade cio_services_runtime RPM to the current driver level.\n\n"
-
-		#rpm -Uvh --root $DISTROFS_LOC $DISTROFS_RPM_LOC/bgq-cio_services_runtime*.rpm
 		
 		echo -en "\n\n\tSkipping further installation!  Use the '-i' option to override and install into an existing directory.\n\n"
 
@@ -252,6 +286,7 @@ else
 		   if [ ! -e BGQ_INITRAMFS_PATH/bin/busybox ] ; then
 		      echo -en "\n\n\tERROR: bgqPopulateInitramfs.sh encountered a failure.\n"
 		      echo -en "\t       Consult the logs above for further details.\n\n"
+		      [ -e $LOCKFILE ] && rm -f $LOCKFILE
 		      exit 1
 		   else
 		       if [ -e BGQ_RAMDISK_PATH/bin/build-ramdisk ] ; then
@@ -278,7 +313,7 @@ else
 	
 		   fi
 		fi
-
+		[ -e $LOCKFILE ] && rm -f $LOCKFILE
 		exit 0
 	else
 	    echo -en "\n\tUsing existing $DISTROFS_LOC\n\n"
@@ -290,20 +325,21 @@ if [ $ONLY_ADDPKGS -eq 0 ] ; then
    # Make sure we have the kernel RPMs we need.
    if [ ! -e $KERNEL_RPM_LOC ] ; then
        echo -en "\n\tERROR: Unable to find the requested BG/Q Linux Kernel RPM directory $KERNEL_RPM_LOC \n\n"
+       [ -e $LOCKFILE ] && rm -f $LOCKFILE
        exit 1
    else
-	# Make sure we have all the RPMs we need.
-        for I in {0..4} ; do
-	    if [ ! `ls $KERNEL_RPM_LOC/${RPMFILES[$I]} | wc -l` -ge 1 ] ; then
-		echo -en "\n\tERROR: Did not find all the necessary RPMs in $KERNEL_RPM_LOC \n\n"
+	# Make sure there are RPMs in the specified directory..
+	if [ ! `ls $KERNEL_RPM_LOC | wc -l` -ge 1 ] ; then
+		echo -en "\n\tERROR: Unable to find any BG/Q Linux Kernel RPMs in $KERNEL_RPM_LOC \n\n"
+		[ -e $LOCKFILE ] && rm -f $LOCKFILE
 		exit 1
-	    fi
-	done
+	fi
    fi
 
    # Make sure we can get to the rpms to install into the distro.
    if [ ! -e $DISTROFS_RPM_LOC ] || [ ! `ls $DISTROFS_RPM_LOC | wc -l` -gt 0 ] ; then
 	echo -en "\n\tERROR: Cannot find BG/Q rpms for the BG/Q Linux Distribution at $DISTROFS_RPM_LOC\n\n"
+	[ -e $LOCKFILE ] && rm -f $LOCKFILE
 	exit 1
    fi
 
@@ -319,7 +355,7 @@ if [ $ONLY_ADDPKGS -eq 0 ] ; then
       echo -en "\n\n\tERROR! Unable to find distrofs directory."
       echo -en "\n\t        Consult previous errors to determine why the BG/Q"
       echo -en "\n\t        Linux Distribution was not installed into $DISTROFS_LOC.\n\n"
-
+      [ -e $LOCKFILE ] && rm -f $LOCKFILE
       exit 1
    fi
 
@@ -361,6 +397,7 @@ if [ $ONLY_ADDPKGS -eq 0 ] ; then
 
   else
       echo -en "\n\n\tERROR!  Unable to find distrofs tar file: $DISTROFSTAR_LOC\n\n"
+      [ -e $LOCKFILE ] && rm -f $LOCKFILE
       exit 1
   fi
 
@@ -386,7 +423,7 @@ if [ $ONLY_ADDPKGS -eq 0 ] ; then
   INSTALL_RPMS=0
 
   echo -en "\n\n\tInstalling/updating BG/Q Kernel RPMs...\n\n"
-  for RPM in `ls $KERNEL_RPM_LOC/*.$KERNEL_RPM_ARCH.rpm` ; do
+  for RPM in `ls $KERNEL_RPM_LOC/*$KERNEL_RPM_ARCH.rpm` ; do
 	# Pull the RPM name off the end of the string.
 	RPM_ARR=(`/bin/echo $RPM | tr "/" "\n"`)
 	RPM=${RPM_ARR[`expr ${#RPM_ARR[@]} - 1`]}
@@ -403,8 +440,29 @@ if [ $ONLY_ADDPKGS -eq 0 ] ; then
   done
 
   if [ $INSTALL_RPMS -eq 1 ] ; then
-	rpm --root $DISTROFS_LOC --replacefiles --ignorearch -ivh /bgsys/linux/tmpinstallsrc/*.$KERNEL_RPM_ARCH.rpm 2>&1 | tee -a $LOG_DIR/$LOGFILE
+	rpm --root $DISTROFS_LOC --replacefiles --ignorearch -ivh /bgsys/linux/tmpinstallsrc/*$KERNEL_RPM_ARCH.rpm 2>&1 | tee -a $LOG_DIR/$LOGFILE
 	rm -rf /bgsys/linux/tmpinstallsrc
+
+	for RPM in `ls $KERNEL_RPM_LOC/*$KERNEL_RPM_ARCH.rpm` ; do
+		#Pull the RPM name off the end of the string.
+		RPM_ARR=(`/bin/echo $RPM | tr "/" "\n"`)
+		RPM=${RPM_ARR[`expr ${#RPM_ARR[@]} - 1`]}
+		# Remove .rpm from the string for checking if the RPM is installed.
+		LENGTH=${#RPM}
+		let LENGTH=$LENGTH-4
+		RPM=`/bin/echo $RPM | cut -c -$LENGTH`
+		rpm --root $DISTROFS_LOC -qa | grep $RPM &> /dev/null
+		if [ $? -ne 0 ] ; then
+			echo -en "\t\tERROR: A problem was encountered during BG/Q Linux Kernel RPM installation.\n"
+			echo -en "\t\t       Consult the log file above for details.  Once the problem has been corrected\n"
+			echo -en "\t\t       execute '/bgsys/drivers/ppcfloor/ramdisk/tools/bgqDistrofsPostInstall.sh -i -f -r $KERNEL_RPM_LOC'\n"
+			echo -en "\t\t       to complete installation.\n\n"
+			[ -e $LOCKFILE ] && rm -f $LOCKFILE
+			exit 1
+		else
+			echo -en "\n\tInstalled RPM: $RPM"
+		fi
+	done
   else
 	echo -en "\t\tKernel RPMs are already installed in $DISTROFS_LOC.\n"
 	echo -en "\t\t\tSkipping package install ...\n\n"
@@ -802,6 +860,12 @@ else
         cd /
 fi
 
+# It appears that YACI creates /dev/null in the distro.  This causes issues for GPFS if
+# the RPM is removed.  So, I am removing it here to avoid issues.
+if [ -e $DISTROFS_LOC/dev/null ] ; then
+	rm -f $DISTROFS_LOC/dev/null
+fi
+
 # Create tar files that facilitate a faster boot.
 
 #NOTE: Removed for the time being at LLNL's request.
@@ -825,11 +889,13 @@ if [ $SUCCESS -eq 1 ] ; then
     echo -en "\n\n#################################################################"
     echo -en "\n# BG/Q Linux Distribution $DISTRO successfully installed!"
     echo -en "\n#################################################################\n\n"
+    [ -e $LOCKFILE ] && rm -f $LOCKFILE
     exit 0
 else
     echo -en "\n\n#################################################################"
     echo -en "\n# WARNING! BG/Q Linux Distribution $DISTRO installation "
     echo -en "\n#          encountered a problem.  See above logs for details."
     echo -en "\n#################################################################\n\n"
+    [ -e $LOCKFILE ] && rm -f $LOCKFILE
     exit 1
 fi

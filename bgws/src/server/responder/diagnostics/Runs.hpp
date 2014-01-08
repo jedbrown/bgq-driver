@@ -59,16 +59,16 @@ public:
     { /* Nothing to do */ }
 
 
-    capena::http::Methods getAllowedMethods() const
+    capena::http::Methods _getAllowedMethods() const
     {
         return { capena::http::Method::GET, capena::http::Method::POST };
     }
 
     // override
-    void doGet();
+    void _doGet();
 
     // override
-    void doPost( json::ConstValuePtr val_ptr );
+    void _doPost( json::ConstValuePtr val_ptr );
 
 
 private:

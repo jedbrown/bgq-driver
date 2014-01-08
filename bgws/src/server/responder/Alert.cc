@@ -205,7 +205,7 @@ capena::http::uri::Path Alert::calcPath(
 }
 
 
-void Alert::doGet()
+void Alert::_doGet()
 {
     _checkGetAuthority();
 
@@ -282,7 +282,7 @@ void Alert::doGet()
         if ( rs_ptr->fetch() ) {
             const auto &cols(rs_ptr->columns());
 
-            obj.set( "duplicateOf", calcPath( getDynamicConfiguration().getPathBase(), cols["recId"].as<teal::Id>() ).toString() );
+            obj.set( "duplicateOf", calcPath( _getDynamicConfiguration().getPathBase(), cols["recId"].as<teal::Id>() ).toString() );
         }
     }
 
@@ -304,11 +304,11 @@ void Alert::doGet()
 
             const auto &cols(rs_ptr->columns());
 
-            dups_arr_p->add( calcPath( getDynamicConfiguration().getPathBase(), cols["recId"].as<teal::Id>() ).toString() );
+            dups_arr_p->add( calcPath( _getDynamicConfiguration().getPathBase(), cols["recId"].as<teal::Id>() ).toString() );
         }
     }
 
-    auto &response(getResponse());
+    auto &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();
@@ -317,7 +317,7 @@ void Alert::doGet()
 }
 
 
-void Alert::doPost( json::ConstValuePtr val_ptr )
+void Alert::_doPost( json::ConstValuePtr val_ptr )
 {
     _checkPostAuthority();
 
@@ -380,7 +380,7 @@ void Alert::doPost( json::ConstValuePtr val_ptr )
 
     _teal.closeAlert(
             record_id,
-            strand().wrap( boost::bind(
+            _getStrand().wrap( boost::bind(
                     &Alert::_closed,
                     this,
                     capena::server::AbstractResponder::shared_from_this(),
@@ -398,7 +398,7 @@ void Alert::_calcRecordId(
         teal::Id& record_id_out
     )
 {
-    record_id_str_out = getRequestedResourcePath().back();
+    record_id_str_out = _getRequestedResourcePath().back();
 
     error_data_in_out["id"] = record_id_str_out;
 
@@ -425,7 +425,7 @@ void Alert::_checkGetAuthority()
         return;
     }
 
-    LOG_WARN_MSG( "Could not get alerts because " << getRequestUserInfo() << " doesn't have authority." );
+    LOG_WARN_MSG( "Could not get alerts because " << _getRequestUserInfo() << " doesn't have authority." );
 
     BOOST_THROW_EXCEPTION( Error(
             "Could not get alert because the user doesn't have authority.",
@@ -442,9 +442,9 @@ void Alert::_checkPostAuthority()
         return;
     }
 
-    LOG_WARN_MSG( "Could not perform operation on alert because " << getRequestUserInfo() << " isn't an administrator." );
+    LOG_WARN_MSG( "Could not perform operation on alert because " << _getRequestUserInfo() << " isn't an administrator." );
 
-    ras::postAdminAuthorityFailure( getRequestUserInfo(), "close alert" );
+    ras::postAdminAuthorityFailure( _getRequestUserInfo(), "close alert" );
 
     BOOST_THROW_EXCEPTION( Error(
             "Could not perform operation on alert because the user doesn't have authority.",
@@ -461,9 +461,9 @@ void Alert::_checkDeleteAuthority()
         return;
     }
 
-    LOG_WARN_MSG( "Could not remove alert because " << getRequestUserInfo() << " isn't an administrator." );
+    LOG_WARN_MSG( "Could not remove alert because " << _getRequestUserInfo() << " isn't an administrator." );
 
-    ras::postAdminAuthorityFailure( getRequestUserInfo(), "remove alert" );
+    ras::postAdminAuthorityFailure( _getRequestUserInfo(), "remove alert" );
 
     BOOST_THROW_EXCEPTION( Error(
             "Could not remove alert because the user doesn't have authority.",
@@ -490,7 +490,7 @@ void Alert::_closed(
 
             // Closed OK.
 
-            auto &response(getResponse());
+            auto &response(_getResponse());
 
             response.setStatus( capena::http::Status::NoContent );
             response.headersComplete();
@@ -535,13 +535,13 @@ void Alert::_closed(
 
     } catch ( std::exception& e  ) {
 
-        handleError( e );
+        _handleError( e );
 
     }
 }
 
 
-void Alert::doDelete()
+void Alert::_doDelete()
 {
     _checkDeleteAuthority();
 
@@ -559,7 +559,7 @@ void Alert::doDelete()
 
     _teal.removeAlert(
             record_id,
-            strand().wrap( boost::bind(
+            _getStrand().wrap( boost::bind(
                     &Alert::_removed,
                     this,
                     capena::server::AbstractResponder::shared_from_this(),
@@ -590,7 +590,7 @@ void Alert::_removed(
 
             // The alert was removed.
 
-            auto &response(getResponse());
+            auto &response(_getResponse());
 
             response.setStatus( capena::http::Status::NoContent );
             response.headersComplete();
@@ -636,7 +636,7 @@ void Alert::_removed(
 
     } catch ( std::exception& e ) {
 
-        handleError( e );
+        _handleError( e );
 
     }
 }

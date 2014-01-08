@@ -21,13 +21,13 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 #include <utility/include/portConfiguration/SslConfiguration.h>
-#include "SocketTypes.h"
+#include "cxxsockets/SocketTypes.h"
 
 LOG_DECLARE_FILE( "utility.cxxsockets" );
 
 using namespace CxxSockets;
 
-ListeningSocket::ListeningSocket(SockAddr& addr, int backlog, Policy p) {
+ListeningSocket::ListeningSocket(SockAddr& addr, int backlog) {
     LOGGING_DECLARE_FD_MDC;
     FileLocker locker;
     LockFile(locker);
@@ -40,7 +40,7 @@ ListeningSocket::ListeningSocket(SockAddr& addr, int backlog, Policy p) {
     }
 
     CloseOnExec();
-    LOG_DEBUG_MSG("constructing listener with policy "<< p);
+    LOG_DEBUG_MSG("constructing listener");
         
     pBind(addr);
     if(listen(_fileDescriptor, backlog) == -1) {
@@ -118,7 +118,7 @@ bool ListeningSocket::AcceptNew(TCPSocketPtr& sock) {
     return true;
 }
 
-bool ListeningSocket::AcceptNew(SecureTCPSocketPtr& sock, bgq::utility::ServerPortConfiguration& port_config) {
+bool ListeningSocket::AcceptNew(SecureTCPSocketPtr& sock, const bgq::utility::ServerPortConfiguration& port_config) {
     LOGGING_DECLARE_FD_MDC;
     FileLocker locker;
     LockFile(locker);

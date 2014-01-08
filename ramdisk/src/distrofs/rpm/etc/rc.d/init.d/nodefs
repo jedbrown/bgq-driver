@@ -110,6 +110,13 @@ function start
 					      "nodefs - Failure initializing persistent nodefs file $NODEFS_LOC/$DIR. cp returned: $RC"
 				fi
 			fi
+
+			# Need to make sure that /var/spool/abrt has 1777 (sticky bit) permissions so that
+			# cios can dump core when running under a different user's ID.
+			if [ $DIR == "var/spool/abrt/" ] ; then
+				chmod 1777 $NODEFS_LOC/$DIR
+			fi
+
 			# Make the mount point if it doesn't already exist.
 			if [[ $DIR =~ /$ ]] && [ ! -d $DIR ] ; then
 				RC=$( mkdir -p $DIR 2>&1 )

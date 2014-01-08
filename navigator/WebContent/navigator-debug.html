@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!--                                                                  -->
+<!-- Blue Gene/Q                                                      -->
+<!--                                                                  -->
+<!-- (C) Copyright IBM Corp.  2010, 2011                              -->
+<!--                                                                  -->
+<!-- US Government Users Restricted Rights -                          -->
+<!-- Use, duplication or disclosure restricted                        -->
+<!-- by GSA ADP Schedule Contract with IBM Corp.                      -->
+<!--                                                                  -->
+<!-- This software is available to you under the                      -->
+<!-- Eclipse Public License (EPL).                                    -->
+<!--                                                                  -->
+<!-- ================================================================ -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+
+<html>
+<head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+<title>Blue Gene/Q Navigator</title>
+
+<style>
+    @import "resources/script/bg_navigator/dojo/resources/dojo.css";
+    @import "resources/script/bg_navigator/dijit/themes/claro/claro.css";
+    @import "resources/script/bg_navigator/dijit/themes/claro/document.css";
+    @import "resources/script/bg_navigator/dojox/grid/enhanced/resources/EnhancedGrid.css";
+    @import "resources/script/bg_navigator/dojox/grid/enhanced/resources/claro/EnhancedGrid.css";
+
+    @import "resources/style/bluegene.css";
+
+    html, body, #navigator { width: 100%; height: 100%; border: 0; margin: 0; padding: 0; }
+</style>
+
+<script src="resources/script/bg_navigator/dojo/dojo.js" data-dojo-config="async: 1, parseOnLoad: 1, isDebug: 1"></script>
+
+<script>
+
+g_b_layer = null;
+
+
+require(
+[
+    "bluegene/layer",
+    "dojo/ready",
+    "dojo/_base/unload"
+],
+
+function(
+        b_layer,
+        d_ready,
+        d_unload
+    )
+{
+    // Put symbols used in navigator.html into global space.
+
+    g_b_layer = b_layer; // Note: keep this around since might be useful when using debugger.
+
+
+    var ready_fn = function()
+        {
+	        setTimeout( "g_b_layer.bluegene.navigator.Navigator.onLoad();", 0 );
+        };
+
+	d_ready( ready_fn );
+	d_unload.addOnWindowUnload( b_layer.bluegene.navigator.Navigator.onUnload );
+} );
+
+</script>
+
+</head>
+
+<body class="claro">
+
+<div id="overlay" style="position: absolute; background-color: white; height: 100%; width: 100%; z-index: 100;">The Blue Gene Navigator is loading...</div>
+
+<div id="main-login" data-dojo-type="bluegene.navigator.dijit.Login"></div>
+
+<div id="navigator" data-dojo-type="bluegene.navigator.dijit.Navigator"></div>
+
+</body>
+</html>

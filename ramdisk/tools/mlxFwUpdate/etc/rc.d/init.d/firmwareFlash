@@ -82,17 +82,17 @@ function start {
 	    # Mellanox part number for ConnectX2 IB adapter
 	    MHQH19B-XTR )
 		DETAILS="ConnectX2 IB adapter (with Mellanox P/N)"
-		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1000_74Y9057.bin"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1200_74Y9057.bin"
 		;;
 	    # IBM part number for ConnectX2 IB adapter
 	    74Y9057 )
 	        DETAILS="ConnectX2 IB adapter"
-		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1000_74Y9057.bin"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1200_74Y9057.bin"
 		;;
 	    # Mellanox part number for ConnextX2 IB adapter
 	    MHQH19C-XTR )
 	        DETAILS="ConnectX2 IB adapter (with Mellanox P/N)"
-		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1000_74Y9057.bin"
+		FIRMWARE="/bin/fw-ConnectX2-rel-2_9_1200_74Y9057.bin"
 		;;
 	    # Mellanox part number for Combo adapter.
 	    MHZH29-XTR )

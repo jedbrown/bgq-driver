@@ -414,10 +414,12 @@ int Process_SetupJob(struct SetupJobMessage *setupJobMsg)
         appState->jobLeaderData.NodesInJob = 0; // zero value indicates that the job does not consume an entire node        
     }
 
-    // Initialize the job leader exit counters in each node, regardless of whether it is a job leader node.
+    // Initialize the job leader  counters in each node, regardless of whether it is a job leader node.
     appState->jobLeaderData.RdmaCounterForExit = appState->jobLeaderData.NodesInJob * 8; // This counter is used by the RDMA operations. 8 bytes per active node.
     appState->jobLeaderData.AbnormalProcessExitCount = 0;
     appState->jobLeaderData.JobExitStatus = 0;
+    appState->jobLeaderData.corepacesem[1] = CONFIG_COREDUMP_CONCURRENT; // set default number of concurrent coredumps
+    appState->jobLeaderData.corepacesem[0] = 0; // set lower bound
 
     // Initialize the MUDM structures in NodeState with job leader information
     NodeState.remoteget.torus_destination.Destination.A_Destination = setupJobMsg->jobLeader.aCoord;
@@ -460,6 +462,9 @@ int Process_SetupMap(struct LoadJobMessage *loadMsg, AppState_t **ppAppState)
     {
         return bgcios::CornerCoreError;
     }
+    // Override the number of allowed concurrent core dumps if env is specifed
+    GetEnvValue64(loadMsg, "BG_COREDUMPCONCURRENT", (uint64_t*)(&pAppState->jobLeaderData.corepacesem[1]));
+
     // Setup the application core id and the number of cores 
     int appLeaderCoreID = pAppState->corner.core;
     int numCores = MIN( (uint32_t)(pAppState->shape.core), (uint32_t)NodeState.NumCoresEnabled-1 ); 

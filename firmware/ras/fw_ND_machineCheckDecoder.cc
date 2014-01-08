@@ -134,6 +134,11 @@ extern "C" {
 
   void fw_ND_correctableDecoder( RasEvent& event, const vector<uint64_t>& mbox ) {
 
+      if ( mbox.size() < 2 ) {
+	  event.setDetail( "DETAILS", "INTERNAL ERROR: details missing");
+	  return;
+      }
+
       ostringstream details;
 
       uint64_t unit  = mbox[0];

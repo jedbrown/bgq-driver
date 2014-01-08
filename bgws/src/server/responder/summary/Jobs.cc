@@ -104,13 +104,13 @@ bool Jobs::matchesUrl(
 }
 
 
-capena::http::Methods Jobs::getAllowedMethods() const
+capena::http::Methods Jobs::_getAllowedMethods() const
 {
     return { capena::http::Method::GET };
 }
 
 
-void Jobs::doGet()
+void Jobs::_doGet()
 {
 
     // The user must be authenticated.
@@ -147,7 +147,7 @@ void Jobs::doGet()
         obj.set( "jobCount", rs_ptr->columns()[string() + "j" + lexical_cast<string>(i)].as<uint64_t>() );
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();

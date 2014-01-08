@@ -20,23 +20,22 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#ifndef _FILESET_H
-#define _FILESET_H
+/*!
+ * \file FileSet.h
+ */
+#ifndef FILESET_H
+#define FILESET_H
 
 #include <vector>
 #include <list>
-#ifndef _SOCKETTYPES_H
 #include "SocketTypes.h"
-#endif
-#ifndef _SOCKETADDRS_H
 #include "SocketAddrs.h"
-#endif
 
 #include <bgq_util/include/pthreadmutex.h>
 
 namespace CxxSockets {
     
-    class FileSet {
+class FileSet {
     protected:
         std::vector<FilePtr> _filevec;
         bool _blocking;
@@ -63,7 +62,8 @@ namespace CxxSockets {
         iterator erase ( iterator first, iterator last ) { return _filevec.erase(first, last); }
         const_iterator begin() const { return _filevec.begin(); }                            
         const_iterator end() const { return _filevec.end(); }        
-    };
+};
+
 }
 
 #endif

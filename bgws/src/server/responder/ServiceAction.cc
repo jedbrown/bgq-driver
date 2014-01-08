@@ -182,9 +182,9 @@ capena::http::uri::Path ServiceAction::calcPath(
 }
 
 
-void ServiceAction::doGet()
+void ServiceAction::_doGet()
 {
-    const string &id_str(getRequestedResourcePath().back());
+    const string &id_str(_getRequestedResourcePath().back());
 
     Error::Data error_data;
     error_data["id"] = id_str;
@@ -207,7 +207,7 @@ void ServiceAction::doGet()
 
     if ( ! _userHasHardwareRead() ) {
 
-        LOG_WARN_MSG( "Could not get service action details because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not get service action details because " << _getRequestUserInfo() << " doesn't have authority." );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get service action details because the user doesn't have authority.",
@@ -244,7 +244,7 @@ void ServiceAction::doGet()
     ServiceActions::setCommonFields( obj, cols );
     // Turns out there are no extra fields for service action details.
 
-    auto &response(getResponse());
+    auto &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();
@@ -253,9 +253,9 @@ void ServiceAction::doGet()
 }
 
 
-void ServiceAction::doPost( json::ConstValuePtr val_ptr )
+void ServiceAction::_doPost( json::ConstValuePtr val_ptr )
 {
-    const string &id_str(getRequestedResourcePath().back());
+    const string &id_str(_getRequestedResourcePath().back());
 
     Error::Data error_data;
     error_data["id"] = id_str;
@@ -277,9 +277,9 @@ void ServiceAction::doPost( json::ConstValuePtr val_ptr )
     }
 
     if ( ! _isUserAdministrator() ) {
-        LOG_WARN_MSG( "Could not perform operation on service action because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not perform operation on service action because " << _getRequestUserInfo() << " doesn't have authority." );
 
-        ras::postAdminAuthorityFailure( getRequestUserInfo(), "service action operation" );
+        ras::postAdminAuthorityFailure( _getRequestUserInfo(), "service action operation" );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not perform operation on service action because the user doesn't have authority.",
@@ -404,12 +404,12 @@ void ServiceAction::_end(
 
     }
 
-    LOG_INFO_MSG( getRequestUserInfo() << " ending service action " << id << " at " << location );
+    LOG_INFO_MSG( _getRequestUserInfo() << " ending service action " << id << " at " << location );
 
     _service_actions.end(
             location,
             getRequestUserName(),
-            strand().wrap( boost::bind( &ServiceAction::_ended, this, capena::server::AbstractResponder::shared_from_this(), _1, id, location, error_data_in_out ) )
+            _getStrand().wrap( boost::bind( &ServiceAction::_ended, this, capena::server::AbstractResponder::shared_from_this(), _1, id, location, error_data_in_out ) )
         );
 }
 
@@ -442,13 +442,13 @@ void ServiceAction::_ended(
 
         }
 
-        capena::server::Response &response(getResponse());
+        capena::server::Response &response(_getResponse());
         response.setStatus( capena::http::Status::NoContent );
         response.headersComplete();
 
     } catch ( std::exception& e ) {
 
-        handleError( e );
+        _handleError( e );
 
     }
 }
@@ -475,12 +475,12 @@ void ServiceAction::_close(
 
     }
 
-    LOG_INFO_MSG( getRequestUserInfo() << " closing service action " << id << " at " << location );
+    LOG_INFO_MSG( _getRequestUserInfo() << " closing service action " << id << " at " << location );
 
     _service_actions.close(
             location,
             getRequestUserName(),
-            strand().wrap( boost::bind( &ServiceAction::_closed, this, capena::server::AbstractResponder::shared_from_this(), _1, id, location, error_data_in_out ) )
+            _getStrand().wrap( boost::bind( &ServiceAction::_closed, this, capena::server::AbstractResponder::shared_from_this(), _1, id, location, error_data_in_out ) )
         );
 }
 
@@ -499,7 +499,7 @@ void ServiceAction::_closed(
 
             if ( exc_ptr != 0 )  std::rethrow_exception( exc_ptr );
 
-            capena::server::Response &response(getResponse());
+            capena::server::Response &response(_getResponse());
             response.setStatus( capena::http::Status::NoContent );
             response.headersComplete();
 
@@ -523,7 +523,7 @@ void ServiceAction::_closed(
 
     } catch ( std::exception& e ) {
 
-        handleError( e );
+        _handleError( e );
 
     }
 }

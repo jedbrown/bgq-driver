@@ -29,6 +29,7 @@
 #include "common/logging.h"
 
 #include <boost/bind.hpp>
+#include <boost/scoped_array.hpp>
 
 LOG_DECLARE_FILE( runjob::client::log );
 
@@ -44,29 +45,49 @@ StreamInput::StreamInput(
     _input( io_service, fd ),
     _buffer()
 {
-    LOG_DEBUG_MSG( "stdin " << fd );
+    LOG_DEBUG_MSG( "stdin  " << fd );
+    LOG_DEBUG_MSG( "isatty " << (isatty(fd) ? "true" : "false") );
 }
 
 void
 StreamInput::read(
-        uint32_t rank,
-        size_t length,
+        const uint32_t rank,
+        const size_t length,
         const Uci& location
         )
 {
-    LOG_TRACE_MSG( "reading " << length << " bytes" );
-    boost::asio::async_read(
-            _input,
-            _buffer.prepare( length ),
-            boost::bind(
-                &StreamInput::readHandler,
-                shared_from_this(),
-                rank,
-                location,
-                boost::asio::placeholders::error,
-                boost::asio::placeholders::bytes_transferred
-                )
-            );
+    if ( !isatty(_input.native()) ) {
+        LOG_TRACE_MSG( "reading " << length << " bytes" );
+        boost::asio::async_read(
+                _input,
+                _buffer.prepare( length ),
+                boost::bind(
+                    &StreamInput::readHandler,
+                    shared_from_this(),
+                    rank,
+                    length,
+                    location,
+                    boost::asio::placeholders::error,
+                    boost::asio::placeholders::bytes_transferred
+                    )
+                );
+    } else {
+        LOG_TRACE_MSG( "reading until newline" );
+        boost::asio::async_read_until(
+                _input,
+                _buffer,
+                '\n',
+                boost::bind(
+                    &StreamInput::readHandler,
+                    shared_from_this(),
+                    rank,
+                    length,
+                    location,
+                    boost::asio::placeholders::error,
+                    boost::asio::placeholders::bytes_transferred
+                    )
+                );
+    }
 }
 
 void
@@ -81,14 +102,17 @@ StreamInput::stop()
 
 void
 StreamInput::readHandler(
-        uint32_t rank,
+        const uint32_t rank,
+        const uint32_t length,
         const Uci& location,
         const boost::system::error_code& error,
-        size_t length
+        const size_t bytes_transferred
         )
 {
-    LOG_TRACE_MSG( "read " << length << " bytes" );
-    _buffer.commit( length );
+    LOG_TRACE_MSG( 
+            "read " << bytes_transferred << " bytes of requested " << length <<
+            ": " << boost::system::system_error(error).what()
+            );
 
     if ( error == boost::asio::error::operation_aborted ) {
         // asked to stop reading
@@ -112,12 +136,30 @@ StreamInput::readHandler(
 
     const message::StdIo::Ptr msg( new message::StdIo() );
     msg->setType( Message::StdIn );
-    if ( length > 0 ) {
+    if ( !bytes_transferred ) {
+        // no data, send an empty message
+    } else if ( !isatty(_input.native()) ) {
+        // block buffered input, send everything they asked for
+        _buffer.commit( bytes_transferred );
         msg->setData(
                 boost::asio::buffer_cast<const char*>( _buffer.data() ),
-                length
+                bytes_transferred
                 );
+    } else if ( bytes_transferred > length ) {
+        // line buffered input, but we read more than was requested
+        std::istream is( &_buffer );
+        boost::scoped_array<char> buf( new char[length] );
+        is.get( buf.get(), length );
+        msg->setData( buf.get(), length );
+    } else {
+        // line buffered input
+        std::istream is( &_buffer );
+        std::string line;
+        std::getline( is, line );
+        line.append( "\n" );
+        msg->setData( line.c_str(), line.size() );
     }
+    LOG_TRACE_MSG( msg->getData() );
     msg->setRank( rank );
     msg->setLocation( location );
     

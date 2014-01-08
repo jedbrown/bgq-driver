@@ -33,7 +33,8 @@
 #include <map>
 #include <boost/utility.hpp>
 #include <Properties.h>
-#include "MMCSSubnet.h"
+
+class MMCSSubnet;
 
 // various key values - case sensitive
 #define MMCS_LOGDIR                     "log_dir"               // name of the I/O node logging directory, from --log-ionodes option

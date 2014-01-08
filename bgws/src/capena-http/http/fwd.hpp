@@ -24,8 +24,13 @@
 #ifndef CAPENA_HTTP_FWD_HPP_
 #define CAPENA_HTTP_FWD_HPP_
 
+/*! \file
+ *  \brief Forward declarations.
+ */
 
 namespace capena {
+
+/*! \brief HTTP protocol constants, generally constants from the RFC and simple conversion to string. */
 namespace http {
 
 

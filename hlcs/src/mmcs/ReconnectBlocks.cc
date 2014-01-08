@@ -42,7 +42,8 @@
 #include "CNBlockController.h"
 #include "ReconnectBlocks.h"
 #include "RunJobConnection.h"
-#include "MMCSMasterMonitor.h"
+#include "master/AliasWaiter.h"
+#include "master/Monitor.h"
 #include "DBStatics.h"
 
 using namespace MCServerMessageSpec;
@@ -61,30 +62,39 @@ extern boost::condition_variable reconnect_notifier;
 extern MCServerMessageType message_type;
 extern bool subnets_home;
 
-void subnetRestartThread(const std::string& curr_subnet, 
-                         const std::vector<std::string>& all_blocks,
-                         boost::shared_ptr<boost::barrier> restart_barrier) {
+void
+subnetRestartThread(
+        const std::string& curr_subnet, 
+        const std::vector<std::string>& all_blocks,
+        boost::shared_ptr<boost::barrier> restart_barrier
+        )
+{
     LOG_INFO_MSG(__FUNCTION__ << " 0x" << std::hex << pthread_self());
     MCServerMessageSpec::FailoverRequest failreq;
     MCServerMessageSpec::FailoverReply failrep;
-    BinaryId b = MasterMonitor::_alias_binary_map.at(curr_subnet);
-    if(AliasWaiter::buildFailover(failreq, failrep, curr_subnet, b) == false) {
+    BinaryId b = mmcs::master::Monitor::_alias_binary_map.at(curr_subnet);
+    if(mmcs::master::AliasWaiter::buildFailover(failreq, curr_subnet, b) == false) {
         LOG_FATAL_MSG("Cannot build a proper failover message.  " 
                       << "Database state may be inconsistent.  "
                       << "mmcs_server ending.");
-        exit(EXIT_FAILURE);
+        _exit(EXIT_FAILURE);
     }
     MCServerRef* failref = 0;
     MMCSCommandReply failreply;
     BlockControllerBase::mcserver_connect(failref, curr_subnet, failreply);
     if(failref) {
         LOG_INFO_MSG("Sending failover request to mc_server for " << curr_subnet);
-        failref->failover(failreq, failrep);
+        try {
+            failref->failover(failreq, failrep);
+        } catch ( const std::exception& e ) {
+            LOG_FATAL_MSG( e.what() );
+            _exit(EXIT_FAILURE);
+        }
     } else if (!failref || failreply.getStatus() != 0) {
         // Could not connect to mc_server.  That's a termination condition.
         LOG_FATAL_MSG("Could not connect to mc_server to send a failover message.  " 
                       << "mmcs_server ending.");
-        exit(EXIT_FAILURE);
+        _exit(EXIT_FAILURE);
     } 
 
     bool good = true;
@@ -92,7 +102,7 @@ void subnetRestartThread(const std::string& curr_subnet,
 
     if(failrep._rc != 0) {
         MCServerRefPtr refp(failref);
-        good = AliasWaiter::sendInitialize(refp, hw_to_unmark, failrep);
+        good = mmcs::master::AliasWaiter::sendInitialize(refp, hw_to_unmark, failrep);
         // Anything that now has hardware in error needs to be freed.
         BOOST_FOREACH(std::string blockname, all_blocks) {
             std::vector<std::string> curr_errors;
@@ -151,7 +161,6 @@ void subnetRestartThread(const std::string& curr_subnet,
     restart_barrier->wait();
 }
 
-
 void
 reconnectBlocks(
         MMCSServerParms *mmcsParms,
@@ -169,10 +178,8 @@ reconnectBlocks(
     LOG_INFO_MSG("reconnecting/freeing blocks and target sets");
 
     BOOST_SCOPE_EXIT( (&reconnect_done) ) {
-#ifdef WITH_DB
         reconnect_done = true;
         reconnect_notifier.notify_all();
-#endif
     } BOOST_SCOPE_EXIT_END;
 
     // get a list of all blocks defined in the database
@@ -345,7 +352,6 @@ reconnectBlocks(
         curr_block->getBase()->setReconnected();
     }
 
-    //    bool blocks_active = areBlocksActive();
 
     // Finally, free blocks that will not be reconnected
     for (std::vector<string>::iterator it = freeBlocks.begin(); it != freeBlocks.end(); ++it)

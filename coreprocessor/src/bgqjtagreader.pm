@@ -54,6 +54,7 @@ sub new
   
   $self->{"options"}{"debugionode"}      = 0;
   $self->{"options"}{"debugcomputenode"} = 1;
+  $self->{"options"}{"stripframes"}      = 1;
   
   $driver = `cat $ENV{CODEPATH}/driver_path`;
   chomp($driver);

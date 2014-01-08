@@ -137,8 +137,11 @@ logEvent() {
     cat /proc/meminfo >> $LOG
 
     echo -en "\n\n\n#################################################################\n" >> $LOG
-    echo -en "Top output:\n\n" >> $LOG
-    top -b -n 1 >> $LOG
+    echo -en "Top output:\n" >> $LOG
+    echo -en "NOTE: The following system processes have been excluded to reduce output: \n" >> $LOG
+    echo -en "\tksoftirqd, migration, watchdog, events, kintegrityd, kblockd, md, md_misc, rpciod\n" >> $LOG
+    echo -en "\taio, crypto, infiniband, ib_cm, ktrotld\n\n" >> $LOG
+    top -b -n 1 | grep -v ksoftirqd | grep -v migration | grep -v watchdog | grep -v events | grep -v kintegrityd | grep -v kblockd | grep -v md | grep -v rpciod | grep -v aio | grep -v crypto | grep -v infiniband | grep -v ib_cm | grep -v grep | grep -v kthrotld  >> $LOG
 
     echo -en "\n\n\n#################################################################\n" >> $LOG
     echo -en "Current network status:\n\n" >> $LOG
@@ -304,59 +307,65 @@ if [ $ENABLED -eq 1 ] ; then
 				RX_BYTES_FIELD=23
 				RX_PACKETS_FIELD=24
 				RX_ERRORS_FIELD=25
+				RX_DROPPED_FIELD=26
 				TX_BYTES_FIELD=36
 				TX_PACKETS_FIELD=37
 				TX_ERRORS_FIELD=38
+				TX_DROPPED_FIELD=39
 			else
                                 RX_BYTES_FIELD=25
                                 RX_PACKETS_FIELD=26
                                 RX_ERRORS_FIELD=27
+				RX_DROPPED_FIELD=28
                                 TX_BYTES_FIELD=38
                                 TX_PACKETS_FIELD=39
                                 TX_ERRORS_FIELD=40
+				TX_DROPPED_FIELD=41
 			fi
 		else
 			RX_BYTES_FIELD=21
 			RX_PACKETS_FIELD=22
 			RX_ERRORS_FIELD=23
+			RX_DROPPED_FIELD=24
 			TX_BYTES_FIELD=34
 			TX_PACKETS_FIELD=35
 			TX_ERRORS_FIELD=36
+			TX_DROPPED_FIELD=37
 		fi
 
 		IPARR=( `ip -s link show ${ADAPTERS[$DEVICE]} | tr -s " " | tr "\n" " " ` )
-		if [ ${IPARR[$RX_PACKETS_FIELD]} -gt $NETERRTHRESHOLD ] ; then
-		   logEvent "Network RX error threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold: $NETERRTHRESHOLD, Actual: ${IPARR[$RX_PACKETS_FIELD]} "
+		if [ ${IPARR[$RX_ERRORS_FIELD]} -gt $NETERRTHRESHOLD ] ; then
+		   logEvent "Network RX error threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold: $NETERRTHRESHOLD, Actual: ${IPARR[$RX_ERRORS_FIELD]} "
 		   NETERRLOGGED=1
 		fi
 
 		# Need to calculate a percentage of the total packets RXd for the drop threshold.
-		if [ ${IPARR[$RX_ERRORS_FIELD]} -gt 0 ] && [ ${IPARR[$RX_BYTES_FIELD]} -gt 0 ] && [ $NOTBOOTED -eq 0 ] ; then
-		   let DROPPEDPERC=`echo "scale=0; ${IPARR[$RX_ERRORS_FIELD]}*100/${IPARR[$RX_BYTES_FIELD]}" | bc`
+		if [ ${IPARR[$RX_DROPPED_FIELD]} -gt 0 ] && [ ${IPARR[$RX_BYTES_FIELD]} -gt 0 ] && [ $NOTBOOTED -eq 0 ] ; then
+		   let DROPPEDPERC=`echo "scale=0; ${IPARR[$RX_DROPPED_FIELD]}*100/${IPARR[$RX_BYTES_FIELD]}" | bc`
 		   if [ $DROPPEDPERC -ge $NETDRPTHRESHOLD ] ; then
 		      logEvent "Network RX dropped packets threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold $NETDRPTHRESHOLD: %, Actual: $DROPPEDPERC %"
 		      NETERRLOGGED=1
 		   fi
-		elif [ ${IPARR[$RX_ERRORS_FIELD]} -gt 0 ] && [ ${IPARR[$RX_BYTES_FIELD]} -eq 0 ] ; then
-		   logEvent "All RX packets are being dropped on ${ADAPTERS[$DEVICE]} - Dropped: ${IPARR[$RX_ERRORS_FIELD]}, Received: ${IPARR[$RX_BYTES_FIELD]} "
+		elif [ ${IPARR[$RX_DROPPED_FIELD]} -gt 0 ] && [ ${IPARR[$RX_BYTES_FIELD]} -eq 0 ] ; then
+		   logEvent "All RX packets are being dropped on ${ADAPTERS[$DEVICE]} - Dropped: ${IPARR[$RX_DROPPED_FIELD]}, Received: ${IPARR[$RX_BYTES_FIELD]} "
 		   NETERRLOGGED=1
 		fi
 
-	        if [ ${IPARR[$TX_PACKETS_FIELD]} -gt $NETERRTHRESHOLD ] ; then
-		   logEvent "Network TX error threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold: $NETERRTHRESHOLD, Actual: ${IPARR[$TX_PACKETS_FIELD]} "
+	        if [ ${IPARR[$TX_ERRORS_FIELD]} -gt $NETERRTHRESHOLD ] ; then
+		   logEvent "Network TX error threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold: $NETERRTHRESHOLD, Actual: ${IPARR[$TX_ERRORS_FIELD]} "
 		   NETERRLOGGED=1
 		fi
 
 	        # Need to calculate a percentage of the total packets RXd for the drop threshold.
-		if [ ${IPARR[$TX_ERRORS_FIELD]} -gt 0 ] && [ ${IPARR[$TX_BYTES_FIELD]} -gt 0 ] && [ $NOTBOOTED -eq 0 ] ; then
-		   let DROPPEDPERC=`echo "scale=0; ${IPARR[$TX_ERRORS_FIELD]}*100/${IPARR[$TX_BYTES_FIELD]}" | bc`
+		if [ ${IPARR[$TX_DROPPED_FIELD]} -gt 0 ] && [ ${IPARR[$TX_BYTES_FIELD]} -gt 0 ] && [ $NOTBOOTED -eq 0 ] ; then
+		   let DROPPEDPERC=`echo "scale=0; ${IPARR[$TX_DROPPED_FIELD]}*100/${IPARR[$TX_BYTES_FIELD]}" | bc`
 		   if [ $DROPPEDPERC -ge $NETDRPTHRESHOLD ] ; then
 		      logEvent "Network TX dropped packets threshold exceeded on ${ADAPTERS[$DEVICE]} - Threshold: $NETDRPTHRESHOLD %, Actual: $DROPPEDPERC %"
 		      NETERRLOGGED=1
 		   fi
 		# If there are dropped packets but none transmitted we need to log an event.
-		elif [ ${IPARR[$TX_ERRORS_FIELD]} -gt 0 ] && [ ${IPARR[$TX_BYTES_FIELD]} -eq 0 ] ; then
-		    logEvent "All TX packets are being dropped on ${ADAPTERS[$DEVICE]} - Dropped: ${IPARR[$TX_ERRORS_FIELD]}, Transmitted: ${IPARR[$TX_BYTES_FIELD]} "
+		elif [ ${IPARR[$TX_DROPPED_FIELD]} -gt 0 ] && [ ${IPARR[$TX_BYTES_FIELD]} -eq 0 ] ; then
+		    logEvent "All TX packets are being dropped on ${ADAPTERS[$DEVICE]} - Dropped: ${IPARR[$TX_DROPPED_FIELD]}, Transmitted: ${IPARR[$TX_BYTES_FIELD]} "
 		    NETERRLOGGED=1
 		fi
 

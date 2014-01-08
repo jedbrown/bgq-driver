@@ -173,6 +173,28 @@ else
             echo -en "\n\n\tWARNING: Unable to find the BGQ_RAMDISK_PATH/bin/build-ramdisk utility\n"
         fi
     fi
+
+    # If there is a floor link but it doesn't point to the distro we are installing, move it out of the way
+
+    if [ -e /bgsys/linux/ionfloor ] && [ -L /bgsys/linux/ionfloor ] && [[ ! `readlink /bgsys/linux/ionfloor` =~ $INSTALLING_DISTRO ]] ; then
+
+	cd /bgsys/linux
+
+        if [ -e /bgsys/linux/ionfloor-1 ] || [ -L /bgsys/linux/ionfloor-1 ] ; then
+                rm -f /bgsys/linux/ionfloor-1
+        fi
+        mv /bgsys/linux/ionfloor /bgsys/linux/ionfloor-1
+    # Remove a dead link.
+    elif [ -L /bgsys/linux/ionfloor ] ; then
+        rm -f /bgsys/linux/ionfloor
+    fi
+
+    # Create new link if necessary.
+    if [ ! -e /bgsys/linux/ionfloor ] ; then
+	echo -en "\n\n\tLinking /bgsys/linux/ionfloor -> /bgsys/linux/$INSTALLING_DISTRO\n\n"
+    	ln -s ./$INSTALLING_DISTRO /bgsys/linux/ionfloor
+    fi
+
 fi
 
 if [ $SUCCESS -eq 1 ] ; then

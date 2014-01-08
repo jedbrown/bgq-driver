@@ -215,10 +215,10 @@ bool Runs::matchesUrl(
 }
 
 
-void Runs::doGet()
+void Runs::_doGet()
 {
     if ( ! _userHasHardwareRead() ) {
-        LOG_WARN_MSG( "Could not get diagnostics runs because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not get diagnostics runs because " << _getRequestUserInfo() << " doesn't have authority." );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get diagnostics runs because the user doesn't have authority.",
@@ -239,7 +239,7 @@ void Runs::doGet()
         LOG_DEBUG_MSG( "Query includes running, getting snapshot." );
 
         _diagnostics_runs.getSnapshot(
-                strand().wrap( boost::bind(
+                _getStrand().wrap( boost::bind(
                         &Runs::_gotSnapshot,
                         this,
                         capena::server::AbstractResponder::shared_from_this(),
@@ -262,12 +262,12 @@ void Runs::doGet()
 }
 
 
-void Runs::doPost( json::ConstValuePtr val_ptr )
+void Runs::_doPost( json::ConstValuePtr val_ptr )
 {
     if ( ! _isUserAdministrator() ) {
-        LOG_WARN_MSG( "Could not start diagnostics run because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not start diagnostics run because " << _getRequestUserInfo() << " doesn't have authority." );
 
-        ras::postAdminAuthorityFailure( getRequestUserInfo(), "start diagnostics run" );
+        ras::postAdminAuthorityFailure( _getRequestUserInfo(), "start diagnostics run" );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not start diagnostics run because the user doesn't have authority.",
@@ -388,10 +388,10 @@ void Runs::doPost( json::ConstValuePtr val_ptr )
     }
 
     run_args.push_back( "--properties" );
-    run_args.push_back( getDynamicConfiguration().getPropertiesFilename() );
+    run_args.push_back( _getDynamicConfiguration().getPropertiesFilename() );
 
 
-    LOG_INFO_MSG( "New diagnostics run requested by " << getRequestUserInfo() << " args: " << boost::algorithm::join( run_args, " " ) );
+    LOG_INFO_MSG( "New diagnostics run requested by " << _getRequestUserInfo() << " args: " << boost::algorithm::join( run_args, " " ) );
 
     blue_gene::diagnostics::RunOptions run_options;
     run_options.setUserName( getRequestUserName() );
@@ -399,7 +399,7 @@ void Runs::doPost( json::ConstValuePtr val_ptr )
 
     _diagnostics_runs.startNewRun(
             run_options,
-            strand().wrap(
+            _getStrand().wrap(
                     boost::bind(
                             &Runs::_handleGotNewDiagnosticsRunId,
                             this,
@@ -427,7 +427,7 @@ void Runs::_gotSnapshot(
 
     } catch ( std::exception& e ) {
 
-        handleError( e );
+        _handleError( e );
 
     }
 }
@@ -558,7 +558,7 @@ void Runs::_doQuery(
         }
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();
@@ -609,11 +609,11 @@ void Runs::_handleGotNewDiagnosticsRunId(
         }
 
         // Got a run ID, respond with Created with the location of the new diagnostics run.
-        getResponse().setCreated( Run::calcUri( getDynamicConfiguration().getPathBase(), run_id ) );
+        _getResponse().setCreated( Run::calcUri( _getDynamicConfiguration().getPathBase(), run_id ) );
 
     } catch ( std::exception& e ) {
 
-        handleError( e );
+        _handleError( e );
 
     }
 }

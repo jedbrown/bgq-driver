@@ -37,7 +37,7 @@ doxygen.out: Doxyfile ${wildcard ../*.cc ../*.hpp}
 
 install: doxygen.out
 	$(MKDIR) -p $(BGQ_INSTALL_DIR)/$(tld)/doc/chiron-json
-	$(CP) -r html $(BGQ_INSTALL_DIR)/$(tld)/doc/chiron-json/
+	$(CP) -r html chiron-json.tagfile $(BGQ_INSTALL_DIR)/$(tld)/doc/chiron-json/
 
 
 clean:

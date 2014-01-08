@@ -25,15 +25,12 @@
 #define BGWS_RAS_HPP_
 
 
+#include "types.hpp"
+
 #include <string>
 
 
 namespace bgws {
-
-
-class UserInfo;
-
-
 namespace ras {
 
 

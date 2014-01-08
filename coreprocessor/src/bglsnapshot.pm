@@ -72,6 +72,8 @@ sub mkthaw
   
   $self = restore($input);
   bless  ($self,$class);
+
+  $self->{"options"}{"stripframes"}      = 1;
   return ($self);    
 }
 
@@ -148,6 +150,7 @@ sub getnodenames
 #	print "getnodenames.  key=$key\n";
 	push(@list, $key) if(($key =~ /mmcsnode_\d+/) && ((!defined $accessible) || isaccessible($CORE, $key)));
 	push(@list, $key) if(($key =~ /^core/) && ((!defined $accessible) || isaccessible($CORE, $key)));
+	push(@list, $key) if(($key =~ /^rank/) && ((!defined $accessible) || isaccessible($CORE, $key)));
         if(($key =~ /^Q/) || ($key =~ /^R/))
 	{
             if((!defined $accessible) || isaccessible($CORE, $key))

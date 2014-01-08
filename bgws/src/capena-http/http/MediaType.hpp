@@ -34,7 +34,8 @@ namespace capena {
 namespace http {
 
 
-/**
+/*! \brief Handling media type strings, parsing, etc.
+ *
  *  See RFC 2616 section 3.7 for definition of Media Types. It's used in the Content-Type and Accept header fields.
  */
 class MediaType

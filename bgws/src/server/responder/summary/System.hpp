@@ -58,9 +58,9 @@ public:
     { /* Nothing to do */ }
 
 
-    capena::http::Methods getAllowedMethods() const;
+    capena::http::Methods _getAllowedMethods() const;
 
-    void doGet();
+    void _doGet();
 
 
 private:

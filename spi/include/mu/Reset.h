@@ -256,6 +256,33 @@ int32_t MUSPI_ResetEnableUserRmes(MUSPI_RESET_t* reset)
     return 0;
 }
 
+/**************************************************************
+2.2. Reset ND system IO tokens
+ **************************************************************/
+__INLINE__
+int32_t MUSPI_ResetNDTokens(MUSPI_RESET_t* reset)
+{
+    int x;
+    uint64_t nd_reset;
+    if(reset->clear_system)
+    {
+        for(x=0; x<ND_RESE_DCR_num; x++)
+        {
+            if(ND_RESE_DCR__RESET__DCRS_OUT_get(DCRReadPriv(ND_RESE_DCR(x, RESET))) == 0)
+            {
+                if((reset->nd_linkmask & (1<<x)) == 0)
+                    continue;
+                
+                nd_reset = DCRReadPriv(ND_RESE_DCR(x, RESET));
+                ND_RESE_DCR__RESET__SE_TOK3_insert(nd_reset, 1);
+                ND_RESE_DCR__RESET__SE_TOK4_insert(nd_reset, 1);
+                DCRWritePriv(ND_RESE_DCR(x, RESET),  nd_reset);
+            }
+        }
+    }
+    return 0;
+}
+
 
 /**************************************************************
   3.throw away user packets on ND senders
@@ -900,6 +927,7 @@ int32_t MUSPI_Reset(MUSPI_RESET_t* reset)
     CALL(2, MUSPI_ResetCleanupStuckRmes);
     CALL(2, MUSPI_ResetDisableUserReception);
     CALL(2, MUSPI_ResetEnableUserRmes);
+    CALL(2, MUSPI_ResetNDTokens);
     CALL(3, MUSPI_ResetDisableNDSenders);
     CALL(4, MUSPI_ResetCollectiveUnit);
     CALL(4, MUSPI_ResetCollectiveVC);

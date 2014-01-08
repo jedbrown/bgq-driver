@@ -20,17 +20,15 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#include "SocketTypes.h"
+#include "cxxsockets/SocketTypes.h"
 
 using namespace CxxSockets;
 
 LOG_DECLARE_FILE( "utility.cxxsockets" );
 
 CxxSockets::Socket::Socket(Socket& sock) : 
-    _secure_level(sock._secure_level)
-    
+    File()
 {
-    //    _fileLock = sock._fileLock;
     _fileDescriptor = sock._fileDescriptor;
     _receiver = sock._receiver;
     _sender = sock._sender;
@@ -103,31 +101,6 @@ void CxxSockets::Socket::pBind(SockAddr& addr) {
         throw CxxSockets::SockHardError(errno, msg.str());
     }
     LOG_DEBUG_MSG("Bound to " << addr.getHostAddr() << ":" << addr.getServicePort());
-}
-
-bool CxxSockets::Socket::setBlocking(bool blocking) {
-    FileLocker locker;
-    LockFile(locker);
-
-    // set file status flags to the correct NONBLOCK value
-    if (!blocking) {
-        if (!(_fcntlFlags & O_NONBLOCK))
-            {
-                _fcntlFlags |= O_NONBLOCK;
-                fcntl(_fileDescriptor, F_SETFL, _fcntlFlags);
-            } else return false;
-    }
-    else if (_fcntlFlags & O_NONBLOCK)
-        {
-            _fcntlFlags &= ~O_NONBLOCK;
-            fcntl(_fileDescriptor, F_SETFL, _fcntlFlags);
-        } else return false;
-
-    if (fcntl(_fileDescriptor, F_SETFL, _fcntlFlags)) {//fcntl(_fileDescriptor, F_GETFL) | block))
-        LOG_WARN_MSG("cannot set blocking/non-blocking");
-        throw CxxSockets::SockHardError(errno, "cannot set blocking/non-blocking");
-    }
-    return true;
 }
 
 bool CxxSockets::Socket::internal_getSockName(SockAddr& sa) {

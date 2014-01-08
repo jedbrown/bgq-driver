@@ -61,6 +61,7 @@ class Response : boost::noncopyable
 {
 public:
 
+    /*! \brief Container for enum, indicates whether the headers set by the application indicate that the response has a body or not. */
     struct BodyPresense {
         enum Value {
             EXPECT_BODY,

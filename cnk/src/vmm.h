@@ -90,7 +90,15 @@ enum SegmentType
     IS_MMIO,
     IS_SPEC,
     IS_RAMDISK,
+    IS_SCRUBWINDOW,
+    IS_USERMMIO,
     IS_SEGMENTTYPECOUNT // Add new types before this one
+};
+
+enum MapperFlags
+{
+    MAPPERFLAGS_ALIGN16,
+    MAPPERFLAGS_COUNT
 };
 
 #define VMM_SEGMENTCOREMASK_APP  0x0ffff
@@ -123,8 +131,12 @@ int vmm_partitionedMapper(_BGP_VMM_RasData *);
 int vmm_copySegments();
 int vmm_calculateSlot(uint32_t pid, uint64_t va, uint64_t size);
 int vmm_installStaticTLBMap(int process);
+int vmm_installStaticTLBMapPartial(int process, uint32_t pid);
 int vmm_uninstallStaticTLBMap(int process);
+int vmm_copyProcessToOtherMMU(int source_process, int dest_process, uint32_t* destpid);
 int vmm_getSegment(uint32_t process, enum SegmentType type, uint64_t* vaddr, uint64_t* paddr, size_t* size);
+int vmm_getSegmentEntry(uint32_t process, uint64_t vaddr, uint64_t* paddr, size_t* vsize, uint64_t* slot);
+int vmm_getSegmentEntryBySlot(uint32_t process, uint64_t slot, enum SegmentType* type, uint64_t* vaddr, uint64_t* paddr, size_t* vsize);
 int vmm_findSegment(int process, unsigned int req_vaddr, unsigned int* vaddr, unsigned long long* paddr, unsigned int* vsize);
 int vmm_addSegment(enum SegmentType type, unsigned vaddr, unsigned paddr_source, size_t size, int process, unsigned coremask, 
                    unsigned contiguous, unsigned roundable, unsigned pinned, unsigned loaded, unsigned sharedPID, unsigned allowHeap);
@@ -140,3 +152,8 @@ int vmm_allocateAtomic(int process, uint64_t vaddr, size_t* sizeMapped);
 int vmm_UpdateMMU(int process, unsigned slot);
 void vmm_tlb_inject_parity(uint64_t setway);
 void vmm_tlb_touch_tlbs();
+int vmm_SetupBackgroundScrub();
+int vmm_setScrubSlot();
+int vmm_clearScrubSlot();
+int VMM_IsAppAddressForProcess(const void* address, size_t size, struct AppProcess_t *proc);
+int vmm_setFlags(enum MapperFlags flagid, uint64_t newvalue);

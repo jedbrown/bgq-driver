@@ -135,6 +135,10 @@ test_mapping: mapping.o $(DEPENDENCIES)
 	@echo "link $@"
 	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS)
 
+test_mapping_file: mapping_file.o $(DEPENDENCIES)
+	@echo "link $@"
+	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS)
+
 test_misc: misc.o $(DEPENDENCIES)
 	@echo "link $@"
 	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS)

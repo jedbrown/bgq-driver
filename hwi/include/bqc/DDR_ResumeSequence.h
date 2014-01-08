@@ -58,9 +58,9 @@ int DDR_ResumeSequence(struct DDRINIT_metrics ddr)
 	void DDR_Init_CPC();
 	void DDR_Init_ADDR_Delay();
 	void DDR_Init_Read_Cal();
-	void DDR_Init_Detect_Ranks();
+	int DDR_Init_Detect_Ranks();
 	void DDR_Init_FWL();
-	void DDR_Init_Detect_Density();
+	int DDR_Init_Detect_Density();
 	int  DDR_Init_MasterCtrlErrReg();
 //	int  MEM_Alter_addr();
 //	int  MEM_Display_addr();
@@ -92,13 +92,13 @@ MC_DEBUG(("Step 5. Load MCA registers\n\n"));
 /*----------------------------------------------------------------------------------------------------------------------------------------*/
 MC_DEBUG(("Step 6. Load IOM registers\n\n"));
 
-	DDR_Init_IOM(&ddr, MC_IOM, 1);
+	DDR_Init_IOM(&ddr, MC_IOM);
 
 if(!ddr.FAST) {
 /*----------------------------------------------------------------------------------------------------------------------------------------*/ 
 MC_DEBUG(("Step 7.Adjust ADDR delay\n\n"));
 
-	DDR_Init_ADDR_Delay(MC_IOM, ddr.ADDR_DELAY, ddr.TIS_SHIFT, 1);
+	DDR_Init_ADDR_Delay(MC_IOM, ddr.ADDR_DELAY, ddr.TIS_SHIFT);
 }
 
 /*----------------------------------------------------------------------------------------------------------------------------------------*/

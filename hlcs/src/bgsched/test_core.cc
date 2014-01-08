@@ -492,8 +492,11 @@ int checkBlockIO(const string& block)
         if (unconnectedIONodes.empty()) {
             LOG_INFO_MSG("All I/O nodes are connected for block " << block);
         } else {
-                // Print the count of unconnected I/O nodes
+                // Print the count of unconnected I/O nodes and names of I/O nodes
                 LOG_INFO_MSG("Block " << block << " has " << unconnectedIONodes.size() << " unconnected I/O node(s)");
+                for (unsigned int it = 0; it < unconnectedIONodes.size(); it++) {
+                    LOG_INFO_MSG(unconnectedIONodes[it]);
+                }
         }
     } catch (...) { // Handle all exceptions
         LOG_ERROR_MSG("Unexpected error calling Block::checkIO");

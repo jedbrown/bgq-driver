@@ -609,6 +609,28 @@ int BreakpointController::trapHandler(Regs_t *context)
     else if (context->dbsr & TOOL_DBSR_DAC_MATCH)
     {
         //printf("TrapHandler processing a DAC match\n");
+
+        // Save the DACs in the critical reg save since we need a place outside of the active kthread context. These DACx fields are otherwise unused.
+        // This is needed when presenting deferred notify messages to a tool. We need to save these only if a match in indicated in the DBSR. 
+        // If we blindly save these fields we may loose information when we are processing the TrapAfter DAC semantics (step operation following
+        // the initial interrrupt.
+        HWThreadState_t *hwt = GetMyHWThreadState();
+        if (context->dbsr & (DBSR_DAC1R | DBSR_DAC1W))
+        {
+            hwt->CriticalState.dac1 = mfspr(SPRN_DAC1);
+        }
+        if (context->dbsr & (DBSR_DAC2R | DBSR_DAC2W))
+        {
+            hwt->CriticalState.dac2 = mfspr(SPRN_DAC2);
+        }
+        if (context->dbsr & (DBSR_DAC3R | DBSR_DAC3W))
+        {
+            hwt->CriticalState.dac3 = mfspr(SPRN_DAC3);
+        }
+        if (context->dbsr & (DBSR_DAC4R | DBSR_DAC4W))
+        {
+            hwt->CriticalState.dac4 = mfspr(SPRN_DAC4);
+        }
         // Are we in "trap-after" mode?
         if(trapAfterEnabled)
         {
@@ -1491,7 +1513,6 @@ CmdReturnCode WatchpointManager::resetWatchpoint(uint64_t addr, KThread_t *kthre
                     kthread->Reg_State.dac1 = 0;
                     kthread->Reg_State.dac2 = 0;
                     kthread->Reg_State.dbcr0 &= ~(DBCR0_DAC1(-1) | DBCR0_DAC2(-1));
-                    kthread->Reg_State.dbcr2 &= ~(DBCR2_DAC1US(-1) | DBCR2_DAC1ER(-1) | DBCR2_DAC2US(-1) | DBCR2_DAC2ER(-1) | DBCR2_DAC12M );
                     mtspr(SPRN_DBCR0, kthread->Reg_State.dbcr0); // Turn off enablement of DAC1/2 matches in the current DBCR0
                 }
                 break;
@@ -1511,7 +1532,6 @@ CmdReturnCode WatchpointManager::resetWatchpoint(uint64_t addr, KThread_t *kthre
                     kthread->Reg_State.dac3 = 0;
                     kthread->Reg_State.dac4 = 0;
                     kthread->Reg_State.dbcr0 &= ~(DBCR0_DAC3(-1) | DBCR0_DAC4(-1));
-                    kthread->Reg_State.dbcr3 &= ~(DBCR3_DAC3US(-1) | DBCR3_DAC3ER(-1) | DBCR3_DAC4US(-1) | DBCR3_DAC4ER(-1) | DBCR3_DAC34M);
                     mtspr(SPRN_DBCR0, kthread->Reg_State.dbcr0); // Turn off enablement of DAC3/4 matches in the curent DBCR0
                 }
                 break;
@@ -2841,7 +2861,7 @@ int ToolControl::notify(int toolId, KThread_t *kthread, int signal)
         if (kthread->Reg_State.dbsr & (DBSR_DAC1R | DBSR_DAC1W))
         {
             // dac1 contains our matching address. Store it.
-            msg->type.signal.dataAddress = kthread->Reg_State.dac1;
+            msg->type.signal.dataAddress = hwt->CriticalState.dac1;
         }
         // is the dac2 status indicator set for reads or writes.
         else if (kthread->Reg_State.dbsr & (DBSR_DAC2R | DBSR_DAC2W))
@@ -2850,7 +2870,7 @@ int ToolControl::notify(int toolId, KThread_t *kthread, int signal)
             if (!(kthread->Reg_State.dbcr2 & DBCR2_DAC12M))
             {
                 // dac2 contains our matching address.
-                msg->type.signal.dataAddress = kthread->Reg_State.dac2;
+                msg->type.signal.dataAddress = hwt->CriticalState.dac2;
             }
         }
         // Is the dac3 status indicator set for reads or writes.
@@ -2858,9 +2878,9 @@ int ToolControl::notify(int toolId, KThread_t *kthread, int signal)
         {
             // If both the DAC1 and DAC3 fired, store the match with the lower address
             // This can occur if one write operation touches both DAC ranges.
-            if (!((kthread->Reg_State.dbsr & (DBSR_DAC1R | DBSR_DAC1W)) && (kthread->Reg_State.dac1 < kthread->Reg_State.dac3)))
+            if (!((kthread->Reg_State.dbsr & (DBSR_DAC1R | DBSR_DAC1W)) && (hwt->CriticalState.dac1 < hwt->CriticalState.dac3)))
             {
-                msg->type.signal.dataAddress = kthread->Reg_State.dac3;
+                msg->type.signal.dataAddress = hwt->CriticalState.dac3;
             }
         }
         else if (kthread->Reg_State.dbsr & (DBSR_DAC4R | DBSR_DAC4W))
@@ -2868,7 +2888,7 @@ int ToolControl::notify(int toolId, KThread_t *kthread, int signal)
             // Are we in exact address mode with DAC3 and DAC4?
             if (!(kthread->Reg_State.dbcr3 & DBCR3_DAC34M))
             {
-                msg->type.signal.dataAddress = kthread->Reg_State.dac4;
+                msg->type.signal.dataAddress = hwt->CriticalState.dac4;
             }
         }
     }

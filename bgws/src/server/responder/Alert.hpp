@@ -66,20 +66,20 @@ public:
             _teal(args.teal)
     { /* Nothing to do */ }
 
-    capena::http::Methods getAllowedMethods() const
+    capena::http::Methods _getAllowedMethods() const
     {
         static const capena::http::Methods METHODS = { capena::http::Method::GET, capena::http::Method::POST, capena::http::Method::DELETE };
         return METHODS;
     }
 
     // override
-    void doGet();
+    void _doGet();
 
     // override
-    void doPost( json::ConstValuePtr val_ptr );
+    void _doPost( json::ConstValuePtr val_ptr );
 
     // override
-    void doDelete();
+    void _doDelete();
 
 
 private:

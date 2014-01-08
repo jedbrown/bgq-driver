@@ -43,6 +43,7 @@ public:
     struct Status {
         unsigned connsAvailable; //!< Connections waiting in the pool.
         unsigned connsInUse; //!< Number of connections in use.
+        unsigned connsMax; //!< Maximum number of connections in use.
     };
 
 
@@ -77,6 +78,7 @@ private:
 
     std::set<ConnectionPtr> _pooled_conns;
     unsigned _conns_in_use;
+    unsigned _high_water_mark;;
 
 
     /*! \brief This is called by PooledConnection to return the connection to the pool. */

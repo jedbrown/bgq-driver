@@ -32,8 +32,13 @@ extern "C" {
   void fw_A2_machineCheckDecoder(RasEvent& event, const vector<uint64_t>& mbox ) {
 
     ostringstream details;
-
-    decode_A2_MCSR( details, mbox[0], mbox[1] );
+    
+    if ( mbox.size() < 2 ) {
+	details << "INTERNAL ERROR: missing details.";
+    }
+    else {
+	decode_A2_MCSR( details, mbox[0], mbox[1] );
+    }
     event.setDetail( "DETAILS", details.str() );
   }
 

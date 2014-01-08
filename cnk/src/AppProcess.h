@@ -355,6 +355,8 @@ uint64_t        App_RegisterAbnormalProcessExit();
 void            App_SavePersistent();
 int             App_IsCollectiveLoadActive();
 void            App_ActivateCollectiveLoad();
+int             App_DumpCorePacingBegin(uint64_t);
+int             App_DumpCorePacingEnd();
 
 int             Guard_Adjust( uint64_t high_mark, MoveGuardDirection_t direction, int ipiRedrive );
 void            Guard_Prepare(void *original_guardbase, void *new_guardbase, int size);

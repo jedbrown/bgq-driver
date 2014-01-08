@@ -56,6 +56,7 @@ public:
       _shortCircuitFd = -1;
       _killed = false;
       _WaitingForJobCleanup = true;
+     _TimedOutForKernelInternalWrite = false;
    }
 
    //! \brief  Get the job identifier.
@@ -172,6 +173,8 @@ inline
    return ( r != _rankEINTRList.end() );
  }
 
+ void timedOutForKernelWrite(){_TimedOutForKernelInternalWrite=true;}
+ bool getTimedOutForKernelWrite(){return _TimedOutForKernelInternalWrite;}
 private:
 
    //! Job identifier.
@@ -194,6 +197,9 @@ private:
 
    //! True when job has been cleaned up
    volatile int _WaitingForJobCleanup;
+
+   //! True when job has "timed" out
+   volatile int _TimedOutForKernelInternalWrite;
 
    //! List of rank
    std::list <uint32_t>  _rankEINTRList;

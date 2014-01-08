@@ -35,7 +35,7 @@
 #include <utility/include/Log.h>
 #include <utility/include/Properties.h>
 
-#include <sstream>
+#include <fstream>
 
 using namespace runjob::server;
 
@@ -58,12 +58,14 @@ struct MyFixture
         _size.shape.e = 0;
 
         _info.setNp( 1 );
+
+        _mapping.open( "my_mapping_file", std::ios_base::trunc | std::ios_base::out );
     }
 
     BGQDB::job::Id _id;
     BG_JobCoords_t _size;
     runjob::JobInfo _info;
-    std::stringstream _mapping;
+    std::ofstream _mapping;
 };
 
 struct InitializeLoggingFixture {
@@ -75,38 +77,22 @@ struct InitializeLoggingFixture {
 
 BOOST_GLOBAL_FIXTURE( InitializeLoggingFixture );
 
-BOOST_FIXTURE_TEST_CASE( comment, MyFixture )
-{
-    _mapping <<
-        "# line one is a comment\n" <<
-        "0 0 0 0 0 0"
-        ;
-    _size.shape.a = _size.shape.b = _size.shape.c = _size.shape.d = _size.shape.e = 1;
-
-    BOOST_CHECK_NO_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size)
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( comment_end_of_line, MyFixture )
-{
-    _mapping <<
-        "0 0 0 0 0 0 # this is a comment"
-        ;
-    _size.shape.a = _size.shape.b = _size.shape.c = _size.shape.d = _size.shape.e = 1;
-
-    BOOST_CHECK_NO_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size)
-            );
-}
 
 BOOST_FIXTURE_TEST_CASE( a_coordinates_too_large_for_job, MyFixture )
 {
     _mapping << "1 0 0 0 0 0";
+    _mapping.flush();
     _size.shape.a = _size.shape.b = _size.shape.c = _size.shape.d = _size.shape.e = 1;
 
+    _info.setMapping(
+            runjob::Mapping(
+                runjob::Mapping::Type::File,
+                "my_mapping_file"
+                )
+            );
+
     BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
+            job::ValidateMappingFile(_id, _info, _size),
             runjob::Exception
             );
 }
@@ -114,10 +100,18 @@ BOOST_FIXTURE_TEST_CASE( a_coordinates_too_large_for_job, MyFixture )
 BOOST_FIXTURE_TEST_CASE( b_coordinates_too_large_for_job, MyFixture )
 {
     _mapping << "0 1 0 0 0 0";
+    _mapping.flush();
     _size.shape.a = _size.shape.b = _size.shape.c = _size.shape.d = _size.shape.e = 1;
 
+    _info.setMapping(
+            runjob::Mapping(
+                runjob::Mapping::Type::File,
+                "my_mapping_file"
+                )
+            );
+
     BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
+            job::ValidateMappingFile(_id, _info, _size),
             runjob::Exception
             );
 }
@@ -125,10 +119,18 @@ BOOST_FIXTURE_TEST_CASE( b_coordinates_too_large_for_job, MyFixture )
 BOOST_FIXTURE_TEST_CASE( c_coordinates_too_large_for_job, MyFixture )
 {
     _mapping << "0 0 1 0 0 0";
+    _mapping.flush();
     _size.shape.a = _size.shape.b = _size.shape.c = _size.shape.d = _size.shape.e = 1;
 
+    _info.setMapping(
+            runjob::Mapping(
+                runjob::Mapping::Type::File,
+                "my_mapping_file"
+                )
+            );
+
     BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
+            job::ValidateMappingFile(_id, _info, _size),
             runjob::Exception
             );
 }
@@ -136,10 +138,18 @@ BOOST_FIXTURE_TEST_CASE( c_coordinates_too_large_for_job, MyFixture )
 BOOST_FIXTURE_TEST_CASE( d_coordinates_too_large_for_job, MyFixture )
 {
     _mapping << "0 0 0 1 0 0";
+    _mapping.flush();
     _size.shape.a = _size.shape.b = _size.shape.c = _size.shape.d = _size.shape.e = 1;
 
+    _info.setMapping(
+            runjob::Mapping(
+                runjob::Mapping::Type::File,
+                "my_mapping_file"
+                )
+            );
+
     BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
+            job::ValidateMappingFile(_id, _info, _size),
             runjob::Exception
             );
 }
@@ -147,10 +157,18 @@ BOOST_FIXTURE_TEST_CASE( d_coordinates_too_large_for_job, MyFixture )
 BOOST_FIXTURE_TEST_CASE( e_coordinates_too_large_for_job, MyFixture )
 {
     _mapping << "0 0 0 0 1 0";
+    _mapping.flush();
     _size.shape.a = _size.shape.b = _size.shape.c = _size.shape.d = _size.shape.e = 1;
 
+    _info.setMapping(
+            runjob::Mapping(
+                runjob::Mapping::Type::File,
+                "my_mapping_file"
+                )
+            );
+
     BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
+            job::ValidateMappingFile(_id, _info, _size),
             runjob::Exception
             );
 }
@@ -158,71 +176,19 @@ BOOST_FIXTURE_TEST_CASE( e_coordinates_too_large_for_job, MyFixture )
 BOOST_FIXTURE_TEST_CASE( t_coordinates_too_large_for_job, MyFixture )
 {
     _mapping << "0 0 0 0 0 2";
+    _mapping.flush();
     _info.setRanksPerNode( 1 );
     _size.shape.a = _size.shape.b = _size.shape.c = _size.shape.d = _size.shape.e = 1;
 
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
+    _info.setMapping(
+            runjob::Mapping(
+                runjob::Mapping::Type::File,
+                "my_mapping_file"
+                )
             );
-}
-
-BOOST_FIXTURE_TEST_CASE( negative_a_coordinates, MyFixture )
-{
-    _mapping << "-1 0 0 0 0 0";
 
     BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( negative_b_coordinates, MyFixture )
-{
-    _mapping << "0 -1 0 0 0 0";
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( negative_c_coordinates, MyFixture )
-{
-    _mapping << "0 0 -1 0 0 0";
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( negative_d_coordinates, MyFixture )
-{
-    _mapping << "0 0 0 -1 0 0";
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( negative_e_coordinates, MyFixture )
-{
-    _mapping << "0 0 0 0 -1 0";
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( negative_t_coordinates, MyFixture )
-{
-    _mapping << "0 0 0 0 0 -1";
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
+            job::ValidateMappingFile(_id, _info, _size),
             runjob::Exception
             );
 }
@@ -235,14 +201,25 @@ BOOST_FIXTURE_TEST_CASE( ranks_per_node, MyFixture )
         _info.setRanksPerNode( i );
         _size.shape.a = _size.shape.b = _size.shape.c = _size.shape.d = _size.shape.e = 1;
 
+        _mapping.close();
+        _mapping.open( "my_mapping_file", std::ios_base::trunc | std::ios_base::out );
+
         // iterate through all possible T coordinates
-        _mapping.clear();
         for ( unsigned j = 0; j < i; ++j ) {
             _mapping << "0 0 0 0 0 " << j << std::endl;
         }
 
+        _mapping.flush();
+
+        _info.setMapping(
+                runjob::Mapping(
+                    runjob::Mapping::Type::File,
+                    "my_mapping_file"
+                    )
+                );
+
         BOOST_CHECK_NO_THROW(
-                job::ValidateMappingFile(_id, _info, _mapping, _size)
+                job::ValidateMappingFile(_id, _info, _size)
                 );
     }
 }
@@ -267,129 +244,17 @@ BOOST_FIXTURE_TEST_CASE( small_block_32_nodes, MyFixture )
         }
     }
 
+    _mapping.flush();
+
+    _info.setMapping(
+            runjob::Mapping(
+                runjob::Mapping::Type::File,
+                "my_mapping_file"
+                )
+            );
+
     BOOST_CHECK_NO_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size)
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( missing_a_coordinates, MyFixture )
-{
-    _size.shape.a = 1;
-    _size.shape.b = 2;
-    _size.shape.c = 2;
-    _size.shape.d = 1;
-    _size.shape.e = 1;
-    _mapping << "0 0 0 0 0 0\n";
-    _mapping << "\n";
-    _mapping << "0 0 1 0 0 0\n";
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( missing_b_coordinates, MyFixture )
-{
-    _size.shape.a = 1;
-    _size.shape.b = 2;
-    _size.shape.c = 2;
-    _size.shape.d = 1;
-    _size.shape.e = 1;
-    _mapping << "0 0 0 0 0 0\n";
-    _mapping << "0 \n";
-    _mapping << "0 0 1 0 0 0\n";
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( missing_c_coordinates, MyFixture )
-{
-    _size.shape.a = 1;
-    _size.shape.b = 2;
-    _size.shape.c = 2;
-    _size.shape.d = 1;
-    _size.shape.e = 1;
-    _mapping << "0 0 0 0 0 0\n";
-    _mapping << "0 1 \n";
-    _mapping << "0 0 1 0 0 0\n";
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( missing_d_coordinates, MyFixture )
-{
-    _size.shape.a = 1;
-    _size.shape.b = 2;
-    _size.shape.c = 2;
-    _size.shape.d = 1;
-    _size.shape.e = 1;
-    _mapping << "0 0 0 0 0 0\n";
-    _mapping << "0 1 0 \n";
-    _mapping << "0 0 1 0 0 0\n";
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( missing_e_coordinates, MyFixture )
-{
-    _size.shape.a = 1;
-    _size.shape.b = 2;
-    _size.shape.c = 2;
-    _size.shape.d = 1;
-    _size.shape.e = 1;
-    _mapping << "0 0 0 0 0 0\n";
-    _mapping << "0 1 0 0 \n";
-    _mapping << "0 0 1 0 0 0\n";
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( missing_t_coordinates, MyFixture )
-{
-    _size.shape.a = 1;
-    _size.shape.b = 2;
-    _size.shape.c = 2;
-    _size.shape.d = 1;
-    _size.shape.e = 1;
-    _mapping << "0 0 0 0 0 0\n";
-    _mapping << "0 1 0 0 0 \n";
-    _mapping << "0 0 1 0 0 0\n";
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
-            );
-}
-
-BOOST_FIXTURE_TEST_CASE( duplicate_coordinates, MyFixture )
-{
-    _size.shape.a = 2;
-    _size.shape.b = 2;
-    _size.shape.c = 1;
-    _size.shape.d = 1;
-    _size.shape.e = 1;
-    _mapping << "0 0 0 0 0 0\n";
-    _mapping << "0 1 0 0 0 0\n";
-    _mapping << "1 0 0 0 0 0\n";
-    _mapping << "1 1 0 0 0 0\n";
-    _mapping << "0 0 0 0 0 0\n"; // rank 4 duplicates rank 0
-
-    BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
-            runjob::Exception
+            job::ValidateMappingFile(_id, _info, _size)
             );
 }
 
@@ -402,9 +267,17 @@ BOOST_FIXTURE_TEST_CASE( np_greater_than_mapping, MyFixture )
     _size.shape.e = 1;
     _info.setNp( 2 );
     _mapping << "0 0 0 0 0 0\n";
+    _mapping.flush();
+
+    _info.setMapping(
+            runjob::Mapping(
+                runjob::Mapping::Type::File,
+                "my_mapping_file"
+                )
+            );
 
     BOOST_CHECK_THROW(
-            job::ValidateMappingFile(_id, _info, _mapping, _size),
+            job::ValidateMappingFile(_id, _info, _size),
             runjob::Exception
             );
 }

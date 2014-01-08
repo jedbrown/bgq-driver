@@ -459,6 +459,11 @@ __INLINE__ void SPEC_SetConflict(L2C_SPECID_t spec_id, uint64_t new_conflict)
    ((volatile L2Central_t *)L2_CENTRAL_USER_BASE_TLS_ADDRESS)->id[spec_id].conflict = new_conflict;
 }
 
+__INLINE__ void SPEC_SetConflict_priv(L2C_SPECID_t spec_id, uint64_t new_conflict)
+{ 
+   ((volatile L2Central_t *)L2_CENTRAL_PRIV_BASE_TLS_ADDRESS)->id[spec_id].conflict = new_conflict;
+}
+
 /*! 
  * \brief Atomically clears bits in the conflict bitvevctor for the specified speculative ID
  * \param[in] spec_id Speculative ID.  0-127

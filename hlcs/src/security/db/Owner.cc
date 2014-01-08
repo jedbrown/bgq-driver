@@ -128,8 +128,6 @@ Owner::execute(
                         )
                     );
         }
-    } catch ( exception::ObjectNotFound& e ) {
-        throw;
     } catch ( const boost::bad_lexical_cast& e ) {
         LOG_WARN_MSG( "Bad job ID: " << object.name() );
         BOOST_THROW_EXCEPTION(

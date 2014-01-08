@@ -143,13 +143,13 @@ namespace responder {
 const capena::http::uri::Path &BgwsServer::RESOURCE_PATH(::bgws::common::resource_path::BGWS_SERVER);
 
 
-void BgwsServer::doGet()
+void BgwsServer::_doGet()
 {
 
     if ( ! _isUserAdministrator() ) {
-        LOG_WARN_MSG( "Could not get BGWS server status because " << getRequestUserInfo() << " doesn't have authority (must be administrator)." );
+        LOG_WARN_MSG( "Could not get BGWS server status because " << _getRequestUserInfo() << " doesn't have authority (must be administrator)." );
 
-        ras::postAdminAuthorityFailure( getRequestUserInfo(), "get server status" );
+        ras::postAdminAuthorityFailure( _getRequestUserInfo(), "get server status" );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get BGWS server status because the user doesn't have authority.",
@@ -161,7 +161,7 @@ void BgwsServer::doGet()
     }
 
     _server_stats.getSnapshot(
-            strand().wrap( boost::bind(
+            _getStrand().wrap( boost::bind(
                     &BgwsServer::_gotStatistics,
                     this,
                     capena::server::AbstractResponder::shared_from_this(),
@@ -197,16 +197,16 @@ void BgwsServer::_gotStatistics(
 }
 
 
-void BgwsServer::doPost( json::ConstValuePtr val_ptr )
+void BgwsServer::_doPost( json::ConstValuePtr val_ptr )
 {
     Error::Data error_data;
 
     try {
 
         if ( ! _isUserAdministrator() ) {
-            LOG_WARN_MSG( "Could not perform operation on BGWS server because " << getRequestUserInfo() << " doesn't have authority (must be administrator)." );
+            LOG_WARN_MSG( "Could not perform operation on BGWS server because " << _getRequestUserInfo() << " doesn't have authority (must be administrator)." );
 
-            ras::postAdminAuthorityFailure( getRequestUserInfo(), "refresh server configuration" );
+            ras::postAdminAuthorityFailure( _getRequestUserInfo(), "refresh server configuration" );
 
             BOOST_THROW_EXCEPTION( Error(
                     "Could not perform operation on BGWS server because the user doesn't have authority.",
@@ -220,7 +220,7 @@ void BgwsServer::doPost( json::ConstValuePtr val_ptr )
 
         ::bgws::common::RefreshBgwsServerConfiguration refresh_config_data( *val_ptr );
 
-        LOG_INFO_MSG( getRequestUserInfo() << " requested refresh configuration." );
+        LOG_INFO_MSG( _getRequestUserInfo() << " requested refresh configuration." );
 
 
         error_data["operation"] = ::bgws::common::RefreshBgwsServerConfiguration::OPERATION_NAME;
@@ -235,7 +235,7 @@ void BgwsServer::doPost( json::ConstValuePtr val_ptr )
         _bgws_server.refreshConfiguration( refresh_config_data );
 
 
-        capena::server::Response &response(getResponse());
+        capena::server::Response &response(_getResponse());
 
         response.setStatus( capena::http::Status::NoContent );
         response.headersComplete();

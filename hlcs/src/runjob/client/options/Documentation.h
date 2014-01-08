@@ -171,11 +171,10 @@
  * \subsection mapping --mapping
  * Permutation of ABCDET or a path to a mapping file containing coordinates for each rank.
  * If the path is relative, the combination of --cwd and --mapping Must be less than MAPPING_SIZE characters. 
- * If the path is absolute, --mapping must be less than MAPPING_SIZE characters. When using a mapping file it must
- * be readable by the your uid and the bgqadmin uid, as well as located on a filesystem visible from the I/O 
- * nodes. The syntax of a mapping file is 6 columns separated by white space. The columns indicate the
- * A,B,C,D,E,T coordinates, and the line number is the rank. Comments can be used anywhere in the line with
- * the # character, any text after the # is ignored. An example
+ * If the path is absolute, --mapping must be less than MAPPING_SIZE characters.  The syntax of a mapping 
+ * file is 6 columns separated by white space. The columns indicate the A,B,C,D,E,T coordinates, and the 
+ * line number is the rank. Comments can be used anywhere in the line with the # character, any text after 
+ * the # is ignored. An example
  *
 \verbatim
 0 0 0 0 0 0 # rank 0
@@ -218,6 +217,9 @@ hello world
  * Fully qualified path to the tool daemon to launch before the job starts. The combination of
  * this value and --tool-args must be less than TOOL_ARGS_SIZE characters. Tools cannot be started
  * for sub-node jobs.
+ *
+ * \note When using a mapping file (see --mapping) this file must be readable by the runjob_server (typically
+ * the bgqadmin uid) to correctly calculate location to rank mappings.
  *
  * \subsection tool-args --tool-args
  *
@@ -274,7 +276,9 @@ hello world
  * read( STDIN_FILENO, buf, 1024 );
  *
  * by the rank specified using --stdinrank triggers a corresponding read system call by runjob. For
- * ranks other than --stdinrank, read will always return 0.
+ * ranks other than --stdinrank, a read system call will always return 0. Note that when runjob's
+ * standard input file descriptor is a tty, line buffering is enabled. Otherwise, block buffering 
+ * is used.
  *
  * \section signals SIGNAL HANDLING
  *

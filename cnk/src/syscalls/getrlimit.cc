@@ -30,7 +30,9 @@ uint64_t sc_ugetrlimit(SYSCALL_FCN_ARGS)
 {
     int resource = r3;
     struct rlimit *rlp = (struct rlimit *)r4;
-
+    AppProcess_t *app = GetMyProcess();
+    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
+    
     TRACESYSCALL(("(I) %s[%d]: resource=%d, rlp=0x%016lx\n", __func__, ProcessorID(), resource, (unsigned long)rlp));
 
     // Check for error conditions.
@@ -53,7 +55,7 @@ uint64_t sc_ugetrlimit(SYSCALL_FCN_ARGS)
             break;
 
         case RLIMIT_NOFILE:
-            rlp->rlim_cur = rlp->rlim_max = CNK_MAX_FDS - 1; // One fd is reserved for working directory
+            rlp->rlim_cur = rlp->rlim_max = CWD_FILENO; // CWD filenumber is the last file descriptor
             break;
 
         case RLIMIT_SIGPENDING:

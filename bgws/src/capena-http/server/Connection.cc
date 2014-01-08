@@ -96,6 +96,9 @@ void Connection::start()
 {
     LOG_DEBUG_MSG( "Starting new connection." );
 
+    // This class works by reading requests in a loop,
+    // start by reading the first request and when that one's complete it'll eventually start reading the next request by calling this _startReadingRequest.
+
     _startReadingRequest();
 }
 
@@ -142,6 +145,10 @@ std::size_t Connection::_checkStreambufContains(
         uint64_t bytes_required
     )
 {
+    // This helper function gets called during async_read_until
+    // to figure out if the streambuf contains at least bytes_required bytes,
+    // so that that many bytes can be read off the buffer and processed.
+
     if ( error )  return 0; // There was an error, don't need any more
     if ( streambuf.size() >= bytes_required )  return 0;  // Streambuf contains the bytes.
     return (bytes_required - streambuf.size()); // Return the number of bytes I want
@@ -158,6 +165,8 @@ void Connection::_startReadingRequest()
 
     LOG_TRACE_MSG( "Waiting for request #" << (_request_count+1) );
 
+    // The first thing on the request is the "request line", like "HTTP/1.1 GET /bg/blocks"
+
     _readLine(
             bind(
                     &Connection::_handleReadRequestLine,
@@ -173,6 +182,16 @@ void Connection::_handleReadRequestLine(
         const std::string& request_line
     )
 {
+    // Could have been an error reading, if so just drop the connection.
+
+    // If there wasn't actually a request line (just empty string from client)
+    // restart the process of reading the request.
+
+    // Create the current Request object to hold request info (headers, etc.) given the current request line.
+    // After the request line comes the header lines (like "Accept: application/json"), terminated by an empty line, so we
+    // wait for the header line.
+
+
     if ( error ) {
         if ( error == boost::asio::error::eof ) {
             LOG_DEBUG_MSG( "Client closed connection (got eof)" );
@@ -724,6 +743,9 @@ void Connection::_readLine(
         ReadLineCallback callback
     )
 {
+    // simply waits until get LF char (or error), then calls the callback with the line (or error).
+    // Note that wraps callback in the strand so caller doesn't need to.
+
     boost::asio::async_read_until(
             *_socket_ptr,
             _streambuf,
@@ -745,6 +767,9 @@ void Connection::_handleReadLine(
         std::size_t /*bytes_transferred*/
     )
 {
+    // if error, calls the callback fn with the error
+    // otherwise, reads the line from the stream and calls the cb fn with that line.
+
     if ( error ) {
         callback( error, string() );
         return;

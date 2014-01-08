@@ -102,11 +102,16 @@ bool refreshConfiguration()
 {
     // Reload properties set on bgsched::init()
     LOG_INFO_MSG("Refreshing Scheduler API configuration");
-    bool isRefresh = bgsched::getProperties()->reload(bgsched::getProperties()->getFilename());
-    if (!isRefresh) {
-        LOG_ERROR_MSG("Refreshing Scheduler API configuration failed.");
+    try {
+        const bool isRefresh = bgsched::getProperties()->reload(bgsched::getProperties()->getFilename());
+        if (!isRefresh) {
+            LOG_ERROR_MSG("Refreshing Scheduler API configuration failed.");
+        }
+        return isRefresh;
+    } catch (const std::exception& e ) {
+        LOG_ERROR_MSG("Refreshing Scheduler API configuration: " << e.what());
+        return false;
     }
-    return isRefresh;
 }
 
 unsigned getIOUsageLimit()

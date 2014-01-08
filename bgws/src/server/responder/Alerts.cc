@@ -177,7 +177,7 @@ namespace responder {
 const capena::http::uri::Path Alerts::RESOURCE_PATH(capena::http::uri::Path() / "alerts");
 
 
-void Alerts::doGet()
+void Alerts::_doGet()
 {
     namespace po = boost::program_options;
 
@@ -441,12 +441,12 @@ void Alerts::doGet()
             obj.set( "source", cols["src_name"].getString() );
             if ( cols["state"] )  obj.set( "state", cols["state"].as<teal::State>() );
             if ( cols["raw_data"] )  obj.set( "rawData", cols["raw_data"].getString() );
-            if ( cols["duplicateOf"] ) obj.set( "duplicateOf", Alert::calcPath( getDynamicConfiguration().getPathBase(), cols["duplicateOf"].as<teal::Id>() ).toString() );
-            obj.set( "URI", Alert::calcPath( getDynamicConfiguration().getPathBase(), rec_id ).toString() );
+            if ( cols["duplicateOf"] ) obj.set( "duplicateOf", Alert::calcPath( _getDynamicConfiguration().getPathBase(), cols["duplicateOf"].as<teal::Id>() ).toString() );
+            obj.set( "URI", Alert::calcPath( _getDynamicConfiguration().getPathBase(), rec_id ).toString() );
         }
     }
 
-    auto &response(getResponse());
+    auto &response(_getResponse());
 
     req_range.updateResponse(
             response,
@@ -467,7 +467,7 @@ void Alerts::_checkAuthority()
         return;
     }
 
-    LOG_WARN_MSG( "Could not get alerts because " << getRequestUserInfo() << " doesn't have authority." );
+    LOG_WARN_MSG( "Could not get alerts because " << _getRequestUserInfo() << " doesn't have authority." );
 
     BOOST_THROW_EXCEPTION( Error(
             "Could not get alerts because the user doesn't have authority.",

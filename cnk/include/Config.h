@@ -40,7 +40,7 @@
 // Application Agents
 #define CONFIG_MAX_APP_AGENTS               (2) // The max number of application agents allowed to run on the reserved core
 #define CONFIG_FIRST_AGENT_APPSTATE_INDEX   CONFIG_MAX_APP_APPSTATES
-#define CONFIG_AGENT_HEAPSIZE_DEFAULT       16  // MBytes allocated for the application agent's combined heap and stack
+#define CONFIG_AGENT_HEAPSIZE_DEFAULT       14  // MBytes allocated for the application agent's combined heap and stack
 
 // SCHEDULER 
 #define CONFIG_AFFIN_SLOTS_PER_HWTHREAD  (5)  // Number of affinitiy slots per hardware thread
@@ -140,8 +140,9 @@
 // Default value for CNK creating shared text regions (non-shared text is experimental)
 #define CNK_SHAREDTEXT_DEFAULT  (1)
 
-// TODO: adjust this higher once we are done running on simulators
-// Fortran runtime allows up to 2000 open files.
+// Number of file descriptors per hardware thread.  
+// Note:  CNK_MAX_FDS*CONFIG_MAX_APP_PROCESSES should match the ionode's sysio ulimit.
+// Note2: Fortran runtime allows up to 2000 open files.
 #define CNK_MAX_FDS           (128)
 
 #define MMAP_MAX_ALLOCS      (1096)
@@ -208,5 +209,26 @@
 
 // Default maximum number of abnormally terminating nodes that will generate core files
 #define CONFIG_COREDUMPMAXNODES_DEFAULT 2048
+
+// Default max time in seconds from SIGKILL to allow coredumps to proceed
+#define CONFIG_COREDUMP_WINDOW  50
+
+// Default number of concurrently writing coredumps with the job
+#define CONFIG_COREDUMP_CONCURRENT 100
+
+// Enable for using a distributed MPI mapfile
+#define CONFIG_DISTRO_MAPFILE 1
+
+// Default size of the MPI mapfile chunk storage on each node
+#define CONFIG_MAPFILECHUNKSIZE (64*1024)
+
+// Number of simultaneous mapping file reads
+#define CONFIG_MAPFILETRACKS  4
+
+// Size of the mapfile buffer used for processing
+#define CONFIG_MAPFILESTORAGE 65536
+
+// Number of concurrent readers of a chunk
+#define CONFIG_MAPFILEREMOTEPACING 2
 
 #endif // Add nothing below this line.

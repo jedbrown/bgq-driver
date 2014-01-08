@@ -69,7 +69,7 @@ function start
 		     "bin/mount" "usr/bin/wc" "bin/grep" "usr/bin/tr" "bin/rm" "bin/bgras" "bin/mknod" \
 		     "etc/sysconfig/bghealthmond" "etc/init.d/functions" "bin/cut" "sbin/consoletype" \
 		     "etc/init.d/bgsys" "bin/mkdir" "bin/ls" "usr/bin/tee" "bin/ln" "usr/sbin/lsof" \
-		     "bin/ping" ; do
+		     "bin/ping" "etc/localtime" ; do
 		cp $FILES $BGHEALTHMOND_DIR/$FILES
 	done
 

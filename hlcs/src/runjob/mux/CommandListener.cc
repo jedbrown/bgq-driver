@@ -32,6 +32,7 @@
 #include "mux/Options.h"
 
 #include <boost/bind.hpp>
+#include <boost/foreach.hpp>
 
 namespace runjob {
 namespace mux {
@@ -75,7 +76,7 @@ CommandListener::acceptHandler(
 
     if ( args.status == bgq::utility::Acceptor::Status::OK ) {
         // log remote user
-        LOG_DEBUG_MSG( 
+        LOG_INFO_MSG( 
                 "connection from " << args.user_id_ptr->getUser() <<
                 " (" <<
                 ( args.user_type == bgq::utility::portConfig::UserType::Administrator ? "administrator" : "normal" )
@@ -83,7 +84,7 @@ CommandListener::acceptHandler(
                 );
 
         // create new connection
-        boost::shared_ptr<CommandConnection> connection(
+        const boost::shared_ptr<CommandConnection> connection(
                 new CommandConnection(
                     args.socket_ptr,
                     args.user_id_ptr,
@@ -96,6 +97,9 @@ CommandListener::acceptHandler(
         connection->start();
     } else if ( args.status == bgq::utility::Acceptor::Status::NowAccepting ) {
         LOG_INFO_MSG( "accepting connections");
+        BOOST_FOREACH( const auto& i, args.endpoints ) {
+            LOG_INFO_MSG( "accepting on " << i );
+        }
     } else if (
             args.status == bgq::utility::Acceptor::Status::ListenError ||
             args.status == bgq::utility::Acceptor::Status::ResolveError ||

@@ -73,6 +73,7 @@ Handle::impl(
     const IoNode::Map::iterator iterator = _job->io().find( location );
     if ( iterator == _job->io().end() ) {
         LOG_WARN_MSG( "could not find I/O node" );
+        callback();
         return;
     }
     IoNode& node = iterator->second;

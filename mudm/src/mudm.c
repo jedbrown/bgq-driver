@@ -593,6 +593,16 @@ int multi_directput(struct my_context * mcontext, MUHWI_PacketHeader_t * hdr, ui
   return 0;
 };
 
+int ok2RAS_pacing(struct my_context * mcontext){
+  uint64_t now_timestamp=GetTimeBase2(); 
+  uint64_t cycles_per_sec = microsec2cycles(mcontext->personality,1000000);  
+  if ( (now_timestamp - mcontext->RAS_pacing_timestamp) >= (5 * cycles_per_sec) ){
+      mcontext->RAS_pacing_timestamp = now_timestamp;   
+      return 1;  
+  }
+  else return 0;
+}
+
 void reject_packet_ras(int return_code,void * hdr, uint32_t message_id){
      uint64_t * bytes8 = (uint64_t *)hdr;
      int i = 0;
@@ -625,7 +635,7 @@ int reject_packet(struct my_context * mcontext, MUHWI_PacketHeader_t * hdr, uint
       case -ENOTCONN:
       {
        sb.ionet_hdr.type = MUDM_PKT_ENOTCONN;
-       reject_packet_ras(return_code,(void *)hdr,MUDMRAS_PKT_RCV_ERR);     
+       if (ok2RAS_pacing(mcontext) ) reject_packet_ras(return_code,(void *)hdr,MUDMRAS_PKT_RCV_ERR);     
        break;
       }
       case -EPROTO:

@@ -118,6 +118,11 @@ inline int MUSPI_GenerateCoordinates(const char *mapFilename, const BG_JobCoords
                     {
                         value = 0;
                         comment = true;
+                        line[y++] = 0;
+                        while(buffer[offset++] != '\n')  // zoom ahead
+                        {
+                        }
+                        break;
                     }
                     else if((isalpha(value)) && (comment == false))
                     {

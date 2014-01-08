@@ -29,6 +29,23 @@
 
 extern virtFS *virtFSPtr[];
 
+/*
+ * Define a bit array large enough for the maximum descriptors supported for CNK.
+ * Take the maximum number of descriptors supported and divide by the number
+ * of bits per long for the compiled architecture.  This will result in the number
+ * of longs necessary for the bit set. 
+ */
+unsigned long FileAllocBits[ (CONFIG_MAX_PROCESSES * CNK_MAX_FDS / CNK_BITS_PER_LONG) ];
+
+/* Define an array of ints for the maximum fds that CNK will support.  
+ * The subscript will be the local allocated descriptor.  The value contained at the 
+ * subscript will be the IO node descriptor if one was allocated.
+ * NOTE: Currently the only local descriptors that would not contain an IO node descriptor
+ *       would be the shared memory support that is handled totally in CNK. 
+ */
+CNK_Descriptor_Info_t FileDescriptors[ CONFIG_MAX_PROCESSES * CNK_MAX_FDS ];
+
+
 // Calculate the word location of the bit
 #define CNK_BITLOC(bitnum) ( (bitnum) / CNK_BITS_PER_LONG )
 /*
@@ -143,7 +160,11 @@ int File_ProcessSetup(void)
 
    // Initialize the descriptor table.
    CNK_Descriptors_t *pFD = &(process->App_Descriptors);
-   int NumLongs =  CNK_MAX_FDS / CNK_BITS_PER_LONG;
+   pFD->maxfds          = process->HWThread_Count * CNK_MAX_FDS;
+   pFD->cnk_fd_bits     = &FileAllocBits[process->ProcessLeader_ProcessorID * CNK_MAX_FDS / CNK_BITS_PER_LONG];
+   pFD->cnk_local_fd    = &FileDescriptors[process->ProcessLeader_ProcessorID * CNK_MAX_FDS];
+   
+   int NumLongs =  pFD->maxfds / CNK_BITS_PER_LONG;
 
    // Initialize bit set so all descriptors are marked available.
    for ( int fd = 0; fd < NumLongs; ++fd )
@@ -152,7 +173,7 @@ int File_ProcessSetup(void)
    }
 
    // Set all descriptors to error file system.
-   for ( int fd = 0; fd < CNK_MAX_FDS; ++fd )
+   for ( int fd = 0; fd < pFD->maxfds; ++fd )
    {
        File_SetFD(fd, -1, FD_ERROR);
    }
@@ -267,8 +288,11 @@ int File_ProcessSetup(void)
 
 void File_ProcessCleanup(void)
 {
+   AppProcess_t *app = GetMyProcess();
+   CNK_Descriptors_t *pFD = &(app->App_Descriptors);
+   
    // Push the close() method on any open descriptors.
-   for ( int fd = 0; fd < CNK_MAX_FDS; ++fd )
+   for ( int fd = 0; fd < pFD->maxfds; ++fd )
    {
       if (File_IsFDAllocated(fd))
       {
@@ -287,7 +311,7 @@ int File_IsFDAllocated( int fd )
    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
 
    // Is this a valid descriptor passed in?
-   if ( (fd >= 0) && (fd < CNK_MAX_FDS) )
+   if ( (fd >= 0) && (fd < pFD->maxfds) )
    {
       Kernel_Lock(&app->DescriptorTableLock);
       
@@ -308,7 +332,7 @@ int File_AllocateFD( int remote_fd, int type )
 
    Kernel_Lock(&app->DescriptorTableLock);
 
-   fd = File_find_next_zero_bit( pFD->cnk_fd_bits, CNK_MAX_FDS );
+   fd = File_find_next_zero_bit( pFD->cnk_fd_bits, pFD->maxfds );
 
    // Any local descriptors available?
    if ( fd != -1 )
@@ -331,14 +355,14 @@ int File_GetFD( int offset )
    AppProcess_t *app = GetMyProcess();
    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
 
-   if ( offset > CNK_MAX_FDS )
+   if ( offset > pFD->maxfds )
    {
       return( -1 );
    }
 
    Kernel_Lock(&app->DescriptorTableLock);
 
-   fd = File_find_next_zero_bit_offset( pFD->cnk_fd_bits, CNK_MAX_FDS, offset );
+   fd = File_find_next_zero_bit_offset( pFD->cnk_fd_bits, pFD->maxfds, offset );
 
    // Any local descriptors available?
    if ( fd != -1 )
@@ -358,14 +382,14 @@ int File_SetFD(int fd, int remote_fd, int type)
    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
 
    // Is this a valid descriptor passed in?
-   if ( (fd >= 0) && (fd < CNK_MAX_FDS) )
+   if ( (fd >= 0) && (fd < pFD->maxfds) )
    {
       Kernel_Lock(&app->DescriptorTableLock);
       
       pFD->cnk_local_fd[ fd ].Remote_FD = remote_fd;
       pFD->cnk_local_fd[ fd ].Type = type;
       pFD->cnk_local_fd[ fd ].FileSysPtr = virtFSPtr[type];
-
+      
       Kernel_Unlock(&app->DescriptorTableLock);
 
    }
@@ -383,7 +407,7 @@ int File_FreeFD(int fd)
    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
 
    // Is this a valid descriptor passed in?
-   if ( (fd >= 0) && (fd < CNK_MAX_FDS) )
+   if ( (fd >= 0) && (fd < pFD->maxfds) )
    {
       Kernel_Lock(&app->DescriptorTableLock);
       
@@ -409,7 +433,7 @@ int File_GetFDType(int fd)
    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
 
    // Is this a valid descriptor passed in?
-   if ( (fd >= 0) && (fd < CNK_MAX_FDS) )
+   if ( (fd >= 0) && (fd < pFD->maxfds) )
    {
       Kernel_Lock(&app->DescriptorTableLock);
       
@@ -429,7 +453,7 @@ int File_GetRemoteFD(int fd)
    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
 
    // Is this a valid descriptor passed in?
-   if ( (fd >= 0) && (fd < CNK_MAX_FDS) )
+   if ( (fd >= 0) && (fd < pFD->maxfds) )
    {
       Kernel_Lock(&app->DescriptorTableLock);
       
@@ -449,7 +473,7 @@ virtFS* File_GetFSPtr( int fd )
     CNK_Descriptors_t *pFD = &(app->App_Descriptors);
 
     // Is this a valid descriptor passed in?
-    if ( (fd >= 0) && (fd < CNK_MAX_FDS) )
+    if ( (fd >= 0) && (fd < pFD->maxfds) )
     {
         Kernel_Lock(&app->DescriptorTableLock);
 
@@ -473,7 +497,7 @@ long File_GetCurrentOffset( int fd )
    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
    
    // Is this a valid descriptor passed in?
-   if ( (fd >= 0) && (fd < CNK_MAX_FDS) )
+   if ( (fd >= 0) && (fd < pFD->maxfds) )
    {
       Kernel_Lock(&app->DescriptorTableLock);
       
@@ -493,7 +517,7 @@ int File_SetCurrentOffset( int fd, long curOffset )
    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
    
    // Is this a valid descriptor passed in?
-   if ( (fd >= 0) && (fd < CNK_MAX_FDS) )
+   if ( (fd >= 0) && (fd < pFD->maxfds) )
    {
       Kernel_Lock(&app->DescriptorTableLock);
       
@@ -510,12 +534,16 @@ int File_SetCurrentOffset( int fd, long curOffset )
 
 int File_GetCurrentDirFD( void )
 {
-   return File_GetRemoteFD(CWD_FILENO);
+    AppProcess_t *app = GetMyProcess();
+    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
+    return File_GetRemoteFD(CWD_FILENO);
 }
 
 void *File_GetCurrentFSPtr( void )
 {
-   return File_GetFSPtr(CWD_FILENO);
+    AppProcess_t *app = GetMyProcess();
+    CNK_Descriptors_t *pFD = &(app->App_Descriptors);
+    return File_GetFSPtr(CWD_FILENO);
 }
 
 int printstrc( const char *fmt, ... )

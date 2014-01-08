@@ -58,18 +58,32 @@ StartTool::create(
             new StartTool( server, message, mux )
             );
 
-    const BGQDB::job::Id job = message->getJobId() ? message->getJobId() : result->lookupJob();
-    if ( !job ) return;
+    if ( !message->getJobId() ) {
+        const BGQDB::job::Id job = result->lookupJob();
+        if ( !job ) return;
+        message->setJobId( job );
+    }
 
     server->getJobs()->find(
-            job,
+            message->getJobId(),
             boost::bind(
                 &StartTool::findJobHandler,
                 result,
                 _1
                 )
             );
+}
 
+StartTool::~StartTool()
+{
+    LOG_TRACE_MSG( __FUNCTION__ );
+    if ( !_response ) return;
+    if ( !_mux ) return;
+
+    if ( _response->getError() ) {
+        LOG_WARN_MSG( _response->getMessage() );
+        _mux->write( _response );
+    }
 }
 
 StartTool::StartTool(
@@ -78,28 +92,26 @@ StartTool::StartTool(
         const Connection::Ptr& mux
         ) :
     _server( server ),
-    _message( boost::static_pointer_cast<message::StartTool>(message) ),
+    _request( boost::static_pointer_cast<message::StartTool>(message) ),
+    _response( new message::Result() ),
     _mux( mux )
 {
-
+    _response->setClientId( _request->getClientId() );
 }
 
 BGQDB::job::Id
 StartTool::lookupJob() const
 {
     LOGGING_DECLARE_LOCATION_MDC( _mux->hostname() );
-    LOG_TRACE_MSG( "looking up job associated with runjob pid " << _message->_pid );
+    LOG_INFO_MSG( "runjob pid " << _request->_pid );
 
     try {
         const cxxdb::ConnectionPtr connection(
                 BGQDB::DBConnectionPool::Instance().getConnection()
                 );
         if ( !connection ) {
-            const message::Result::Ptr msg( new message::Result() );
-            msg->setMessage( "could not get database connection to lookup job for pid " + boost::lexical_cast<std::string>(_message->_pid) );
-            msg->setError( error_code::database_error );
-            msg->setClientId( _message->getClientId() );
-            _mux->write( msg );
+            _response->setMessage( "could not get database connection to lookup job for pid " + boost::lexical_cast<std::string>(_request->_pid) );
+            _response->setError( error_code::database_error );
             return 0;
         }
 
@@ -113,16 +125,13 @@ StartTool::lookupJob() const
                 { BGQDB::DBTJob::PID_COL, BGQDB::DBTJob::HOSTNAME_COL }
                 );
 
-        statement->parameters()[ BGQDB::DBTJob::PID_COL ].set( _message->_pid );
+        statement->parameters()[ BGQDB::DBTJob::PID_COL ].set( _request->_pid );
         statement->parameters()[ BGQDB::DBTJob::HOSTNAME_COL ].set( _mux->hostname() );
 
         const cxxdb::ResultSetPtr results = statement->execute();
         if ( !results->fetch() ) {
-            const message::Result::Ptr msg( new message::Result() );
-            msg->setMessage( "could not find job associated with pid " + boost::lexical_cast<std::string>(_message->_pid) );
-            msg->setError( error_code::job_not_found);
-            msg->setClientId( _message->getClientId() );
-            _mux->write( msg );
+            _response->setMessage( "could not find job associated with pid " + boost::lexical_cast<std::string>(_request->_pid) );
+            _response->setError( error_code::job_not_found);
             return 0;
         }
 
@@ -130,15 +139,12 @@ StartTool::lookupJob() const
         return columns[ BGQDB::DBTJob::ID_COL ].getInt64();
     } catch ( const std::exception& e ) {
         LOG_WARN_MSG( e.what() );
-        const message::Result::Ptr msg( new message::Result() );
-        msg->setMessage(
+        _response->setMessage(
                 "could not find job associated with pid " + 
-                boost::lexical_cast<std::string>(_message->_pid) + " " +
+                boost::lexical_cast<std::string>(_request->_pid) + " " +
                 e.what()
                 );
-        msg->setError( error_code::database_error);
-        msg->setClientId( _message->getClientId() );
-        _mux->write( msg );
+        _response->setError( error_code::database_error);
         return 0;
     }
 }
@@ -148,35 +154,31 @@ StartTool::findJobHandler(
         const Job::Ptr& job
         )
 {
-    LOGGING_DECLARE_LOCATION_MDC( _message->getClientId() );
-    LOGGING_DECLARE_JOB_MDC( _message->getJobId() );
+    LOGGING_DECLARE_LOCATION_MDC( _request->getClientId() );
+    LOGGING_DECLARE_JOB_MDC( _request->getJobId() );
     if ( !job ) {
-        const message::Result::Ptr msg( new message::Result() );
-        msg->setMessage( "could not find job " + boost::lexical_cast<std::string>(_message->getJobId()) );
-        msg->setError( error_code::job_not_found );
-        msg->setClientId( _message->getClientId() );
-        _mux->write( msg );
+        _response->setMessage( "could not find job " + boost::lexical_cast<std::string>(_request->getJobId()) );
+        _response->setError( error_code::job_not_found );
         return;
     }
 
     const Server::Ptr server( _server.lock() );
     if ( !server ) return;
 
+    LOG_DEBUG_MSG( "validating job " << _request->getJobId() );
+
     const bool validate = server->getSecurity()->validate(
-            _message->_uid,
+            _request->_uid,
             hlcs::security::Action::Execute,
-            _message->getJobId()
+            _request->getJobId()
             );
     if ( !validate ) {
-        const message::Result::Ptr msg( new message::Result() );
-        msg->setMessage( "execute authority on job " + boost::lexical_cast<std::string>(_message->getJobId()) + " denied");
-        msg->setError( error_code::permission_denied );
-        msg->setClientId( _message->getClientId() );
-        _mux->write( msg );
+        _response->setMessage( "execute authority on job " + boost::lexical_cast<std::string>(_request->getJobId()) + " denied");
+        _response->setError( error_code::permission_denied );
         return;
     }
 
-    job::Debug::create( job, _message, _mux );
+    job::Debug::create( job, _request, _mux );
 }
 
 } // mux

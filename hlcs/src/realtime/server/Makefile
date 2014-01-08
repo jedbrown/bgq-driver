@@ -86,10 +86,13 @@ LDFLAGS += \
 default: all
 
 
-all: $(exe)
+all: $(exe) test_db2_mem_leak_1
 
 
 $(exe): $(objs)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+
+test_db2_mem_leak_1: test_db2_mem_leak_1.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 

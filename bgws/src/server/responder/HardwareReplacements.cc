@@ -169,7 +169,7 @@ namespace statics {
 }
 
 
-void HardwareReplacements::doGet()
+void HardwareReplacements::_doGet()
 {
     namespace po = boost::program_options;
 
@@ -361,7 +361,7 @@ void HardwareReplacements::doGet()
     }
 
 
-    auto &response(getResponse());
+    auto &response(_getResponse());
 
     req_range.updateResponse( response, arr.size(), total_count );
 
@@ -378,7 +378,7 @@ void HardwareReplacements::_checkAuthority()
         return;
     }
 
-    LOG_WARN_MSG( "Could not get replacement history because " << getRequestUserInfo() << " doesn't have authority." );
+    LOG_WARN_MSG( "Could not get replacement history because " << _getRequestUserInfo() << " doesn't have authority." );
 
     BOOST_THROW_EXCEPTION( Error(
             "Could not get replacement history because the user doesn't have authority.",

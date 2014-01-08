@@ -168,10 +168,10 @@ capena::http::uri::Path Run::calcUri(
 }
 
 
-void Run::doGet()
+void Run::_doGet()
 {
     if ( ! _userHasHardwareRead() ) {
-        LOG_WARN_MSG( "Could not get diagnostics run because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not get diagnostics run because " << _getRequestUserInfo() << " doesn't have authority." );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get diagnostics run because the user doesn't have authority.",
@@ -182,7 +182,7 @@ void Run::doGet()
         return;
     }
 
-    const string &run_id_str(getRequestedResourcePath().back());
+    const string &run_id_str(_getRequestedResourcePath().back());
 
     Error::Data error_data;
     error_data["runId"] = run_id_str;
@@ -308,7 +308,7 @@ void Run::doGet()
 
     _diagnostics_runs.getRunSnapshot(
             run_id,
-            strand().wrap( boost::bind(
+            _getStrand().wrap( boost::bind(
                     &Run::_gotRunSnapshot,
                     this,
                     capena::server::AbstractResponder::shared_from_this(),
@@ -319,9 +319,9 @@ void Run::doGet()
 }
 
 
-void Run::doPost( json::ConstValuePtr val_ptr )
+void Run::_doPost( json::ConstValuePtr val_ptr )
 {
-    const string &run_id_str(getRequestedResourcePath().back());
+    const string &run_id_str(_getRequestedResourcePath().back());
 
     Error::Data error_data;
     error_data["runId"] = run_id_str;
@@ -345,9 +345,9 @@ void Run::doPost( json::ConstValuePtr val_ptr )
 
 
     if ( ! _isUserAdministrator() ) {
-        LOG_WARN_MSG( "Could not end diagnostics run because " << getRequestUserInfo() << " doesn't have authority (must be administrator)." );
+        LOG_WARN_MSG( "Could not end diagnostics run because " << _getRequestUserInfo() << " doesn't have authority (must be administrator)." );
 
-        ras::postAdminAuthorityFailure( getRequestUserInfo(), "end diagnostics run" );
+        ras::postAdminAuthorityFailure( _getRequestUserInfo(), "end diagnostics run" );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not end diagnostics run because the user doesn't have authority.",
@@ -416,11 +416,11 @@ void Run::doPost( json::ConstValuePtr val_ptr )
             ) );
     }
 
-    LOG_INFO_MSG( "Request to end run " << run_id << " by " << getRequestUserInfo() );
+    LOG_INFO_MSG( "Request to end run " << run_id << " by " << _getRequestUserInfo() );
 
     _diagnostics_runs.cancelRun(
             run_id,
-            strand().wrap( boost::bind(
+            _getStrand().wrap( boost::bind(
                     &Run::_gotCancelResult,
                     this,
                     capena::server::AbstractResponder::shared_from_this(),
@@ -450,7 +450,7 @@ void Run::_gotRunSnapshot(
 
         }
 
-        capena::server::Response &response(getResponse());
+        capena::server::Response &response(_getResponse());
 
         response.setContentTypeJson();
         response.headersComplete();
@@ -459,7 +459,7 @@ void Run::_gotRunSnapshot(
 
     } catch ( std::exception& e ) {
 
-        handleError( e );
+        _handleError( e );
 
     }
 
@@ -491,14 +491,14 @@ void Run::_gotCancelResult(
 
         }
 
-        capena::server::Response &response(getResponse());
+        capena::server::Response &response(_getResponse());
 
         response.setStatus( capena::http::Status::NoContent );
         response.headersComplete();
 
     } catch ( std::exception& e ) {
 
-        handleError( e );
+        _handleError( e );
 
     }
 }

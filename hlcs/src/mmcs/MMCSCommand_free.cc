@@ -238,7 +238,7 @@ MMCSCommand_free_all::build()
     commandAttributes.requiresBlock(false);            // does not require a BlockController object
     commandAttributes.requiresConnection(false);       // does not require  mc_server connections
     commandAttributes.requiresTarget(false);           // does not require a BlockControllerTarget object
-    commandAttributes.requiresObjNames(true);
+    commandAttributes.requiresObjNames(false);
     commandAttributes.mmcsServerCommand(true);
     commandAttributes.helpCategory(USER);
     MMCSCommandAttributes::AuthPair blockexecute(hlcs::security::Object::Block, hlcs::security::Action::Execute);
@@ -292,7 +292,7 @@ MMCSCommand_free_all::execute(
 
     // send reply if we didn't have any failures
     if ( !failureCount ) {
-        reply << OK << "freed " << validnames->size() << (validnames->size() > 1 ? " blocks" : " block") << DONE;
+        reply << OK << "freed " << validnames->size() << " " << (validnames->size() == 1 ? "block" : "blocks") << DONE;
     } else {
         reply << FAIL << "freed " << validnames->size() - failureCount << " out of " << validnames->size() << " blocks" << DONE;
     }

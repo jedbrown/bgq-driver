@@ -49,8 +49,8 @@ LOGPATH=/dev/console
 MEMTHRESHOLD=256000
 
 # Number of of errors to tolerate on an interface before logging an event.
-#	Default: 0
-NETERRTHRESHOLD=0
+#	Default: 25
+NETERRTHRESHOLD=25
 
 # Percent of the total tranmitted/received packets to tolerate as dropped before logging an event.
 #	Default: 2
@@ -65,8 +65,8 @@ LOADAVGTHRESHOLD=500
 OFTHRESHOLD=90
 
 # Number of NFS retransmissions to tolerate before logging an event.
-#	Default: 0
-RETRANSTHRESHOLD=5
+#	Default: 30
+RETRANSTHRESHOLD=30
 
 # Number of times to try checking to see if a network link has recovered.
 # 	Default: 4

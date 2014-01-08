@@ -32,6 +32,9 @@
 #include "MMCSThread.h"
 #include "BlockControllerTarget.h"
 
+#include <set>
+#include <vector>
+
 class DBBlockController;
 
 class CheckBootComplete : public MMCSThread
@@ -44,8 +47,7 @@ public:
 private:
     PerformanceCounters::Container::Timer::Ptr startCounter();
     void markNodes(BlockPtr pBlock, MMCSCommandReply& reply,
-                   std::vector<std::string>& bad_node_locs,
-                   std::vector<std::string>& all_nodes);
+                   const std::set<std::string>& all_nodes);
 private:
     DBBlockController* const pBlock;
     BlockControllerTarget* _target;

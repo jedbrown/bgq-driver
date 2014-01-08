@@ -79,17 +79,16 @@ private:
 
    int commandChannelHandler(void);
 
-   //! \brief  Handle a Terminate message.
-   //! \param  source Path to source command channel.
-   //! \return 0 when successful, errno when unsuccessful.
-
-   int terminate(std::string source);
-
    //! \brief  Handle an Interrupt message from Job Control for job end
    //! \param  source Path to source command channel.
    //! \return 0 when successful, errno when unsuccessful.
 
    int interrupt(std::string source);
+
+   //! \brief  Continue on any Interrupt message from Job Control for job end
+   //! \return 0 when successful, errno when unsuccessful.
+
+   int interruptContinue();
 
    //! \brief  Handle an Interrupt message from Tool Control to interrupt blocking function call
    //! \param  source Path to source command channel.
@@ -103,8 +102,8 @@ private:
    //! Thread to monitor the client connection to the compute node.
    ClientMonitorPtr _clientMonitor;
 
-   //! Number of seconds to wait for a job to end when it is killed.
-   static const unsigned int KillJobTimeout = 5;
+   //! List of Interrupt messages queued waiting for final job cleanup
+   std::list <bgcios::iosctl::InterruptMessage *> _queuedInterruptMessages;
 };
 
 //! Smart pointer for SysioController object.

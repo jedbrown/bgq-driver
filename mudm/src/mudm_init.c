@@ -639,6 +639,11 @@ int  mudm_init(struct mudm_init_info* init_info,
 
   mcontext->rdma_EINVAL_source = -EINVAL;
   mcontext->rdma_GOOD_source = 0;
+
+
+  mcontext->RAS_pacing_timestamp = GetTimeBase2(); 
+  mcontext->RAS_pacing_count = 0;
+
   {
   SoftwareBytes_t  SoftwareBytes;
   SoftwareBytes.ionet_pkt.torus_source_node=mcontext->myTorusAddress.Destination.Destination; 

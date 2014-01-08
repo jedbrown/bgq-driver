@@ -54,11 +54,11 @@ CheckBootComplete::startCounter() {
 }
 
 void CheckBootComplete::markNodes(BlockPtr pBlock, MMCSCommandReply& reply,
-                                  std::vector<std::string>& bad_node_locs,
-                                  std::vector<std::string>& good_locs) {
+                                  const std::set<std::string>& good_locs) {
     LOG_INFO_MSG(__FUNCTION__);
     if(!pBlock->isIOBlock()) return;
-    DBStatics::setLocationStatus(good_locs, reply, DBStatics::AVAILABLE, DBStatics::ION);
+    std::vector<std::string> good( good_locs.begin(), good_locs.end() );
+    DBStatics::setLocationStatus(good, reply, DBStatics::AVAILABLE, DBStatics::ION);
 }
 
 void* CheckBootComplete::threadStart() {
@@ -86,7 +86,8 @@ void* CheckBootComplete::threadStart() {
     PerformanceCounters::Timer::Ptr counter = this->startCounter();
     counter->dismiss();
 
-    std::vector<std::string> bad_node_locs, good_nodes;
+    std::vector<std::string> bad_node_locs;
+    std::set<std::string> good_nodes;
     log4cxx::MDC _blockid_mdc_( "blockId", std::string("{") + block_p->_blockName + "} " );
     log4cxx::MDC _block_user_mdc_( "user", std::string("[") + block_p->_userName + "] " );
     LOG_INFO_MSG("Starting check complete thread");
@@ -145,7 +146,7 @@ void* CheckBootComplete::threadStart() {
             // leaving a block in a bad state.
             block_p->_init_free_lock.lock();
             i_locked_it = true;
-            markNodes(block_p, reply, bad_node_locs, good_nodes);
+            markNodes(block_p, reply, good_nodes);
             // If we were rebooting, note that we are now done.
             if(block_p->getRebooting()) block_p->_rebooted = true;
             if(strcmp(bInfo.status, BGQDB::BLOCK_INITIALIZED) != 0) {

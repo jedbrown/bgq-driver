@@ -107,7 +107,7 @@ AllocateEventHandler::handleBlockStateChangedRealtimeEvent(
                 );
 
             // Post block status event to listeners
-            string emptyErrorMessage;
+            std::string emptyErrorMessage;
             _model->notifyAllocateListeners(blockEvent, emptyErrorMessage);
 
             // Remove block from the tracking list

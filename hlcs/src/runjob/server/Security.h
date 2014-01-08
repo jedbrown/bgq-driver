@@ -79,14 +79,7 @@ public:
             const bgq::utility::UserId::ConstPtr& user, //!< [in]
             hlcs::security::Action::Type action,        //!< [in]
             BGQDB::job::Id job                          //!< [in]
-            )
-    {
-        return _commandEnforcer.validate(
-                hlcs::security::Object( hlcs::security::Object::Job, boost::lexical_cast<std::string>(job) ),
-                action,
-                *user
-                );
-    }
+            );
 
     /*!
      * \brief Validate an action on a block

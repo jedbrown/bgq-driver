@@ -21,8 +21,8 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 
-#ifndef _MASTER_RAS_METADATA_H
-#define _MASTER_RAS_METADATA_H
+#ifndef MASTER_RAS_METADATA_H
+#define MASTER_RAS_METADATA_H
 
 /**
 <rasevent

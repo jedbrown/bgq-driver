@@ -31,6 +31,7 @@
 #include <ramdisk/include/services/SysioMessages.h>
 #include <ramdisk/include/services/MessageUtility.h>
 #include <ramdisk/include/services/common/logging.h>
+#include <ramdisk/include/services/common/RasEvent.h>
 #include <poll.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -113,7 +114,7 @@ SysioController::cleanup(void)
 {
    return 0;
 }
-
+const uint64_t cycles_per_second = 1600000000;
 void
 SysioController::eventMonitor(void)
 {
@@ -121,7 +122,11 @@ SysioController::eventMonitor(void)
    const int numFds       = 1;
 
    pollfd pollInfo[numFds];
-   int timeout = 1000; // Wakeup every second
+   int timeout = 1000; // Wakeup every 1 seconds
+   int syscallCheckCycler=0;
+   const int oneMinute=60000; 
+
+   uint64_t hang_value = cycles_per_second * 60 * 5; // 5 minutes of cycles
 
    // Initialize the pollfd structure.
    pollInfo[cmdChannel].fd = _cmdChannel->getSd();
@@ -134,16 +139,61 @@ SysioController::eventMonitor(void)
 
       // Wait for an event on one of the descriptors.
       int rc = poll(pollInfo, numFds, timeout);
-
-      // Check on threads.
-      if (rc == 0) {
-         // When the client monitor thread ends, the connection closed.
-         if (_clientMonitor->isDone()) {
+      
+      if (_clientMonitor->isDone()) {
             LOG_CIOS_INFO_MSG("client monitor in thread 0x" << std::hex << _clientMonitor->getThreadId() << " has ended");
             _done = true;
             _terminated = true;
-            _clientMonitor.reset();
+            //_clientMonitor.reset();
+            _cmdChannel.reset();
+            _exit(EXIT_SUCCESS);
+      }
+
+      // Check on threads.
+      if (rc == 0) {
+         syscallCheckCycler += timeout;
+         // When the client monitor thread ends, the connection closed.
+
+         if (syscallCheckCycler >= oneMinute){
+            syscallCheckCycler = 0; //restart 
+            uint64_t sysCallStart = _clientMonitor->getSyscallStartTimeStamp();
+            if (sysCallStart){
+               uint64_t CurrentCycles = GetTimeBase();
+               uint64_t diff = CurrentCycles - sysCallStart;
+               if (diff >= hang_value) {
+                   char * temp = _clientMonitor->getSyscallFileString1();
+                   uint64_t seconds = diff/cycles_per_second; 
+
+                   bgcios::MessageHeader * msghdr = (bgcios::MessageHeader * )_clientMonitor->getSyscallMessageHdr();
+                   uint32_t entry = CIOSLOGMSG(BG_STUCK_MSG,msghdr);
+                   //printLogEntry(entry);
+                   //RAS here  
+                   RasEvent ras(SysiodSyscallHangNoSignal,RasEvent::charMode);
+                   char * buffer = ras.getRasBuff();
+                   size_t buffsize = (size_t)ras.getRasBuffSize();
+                   size_t length = snprintfLogEntry(buffsize, buffer, entry );
+                   int strlen = (int)length;
+                   buffer += length;
+                   buffsize -= length;
+                   strlen += (int)length;
+                   length = (size_t)snprintf(buffer, buffsize," PID=%d syscall seconds=%llu",getpid(), (long long unsigned int)seconds);
+                   buffer += length;
+                   buffsize -= length;
+                   strlen += (int)length;
+                   if (temp) {
+                      length = (size_t)snprintf(buffer, buffsize," involves file=%s",temp);
+                       buffer += length;
+                       buffsize -= length;
+                       strlen += (int)length;
+                   }
+                   ras.setLength(strlen);
+                   ras.send();
+                   //LOG_INFO_MSG_FORCED("SysiodSyscallHangNOSignal " <<ras.getRasBuff() );  
+              }                
+           } 
+
          }
+         interruptContinue();
          continue;
       } 
 
@@ -191,14 +241,11 @@ SysioController::commandChannelHandler(void)
 
    // Make sure the service field is correct.
    bgcios::MessageHeader *msghdr = (bgcios::MessageHeader *)_inboundMessage;
+   CIOSLOGMSG(CMD_RECV_MSG,msghdr);
 
    // Handle the message.
    LOG_CIOS_DEBUG_MSG("Job " << msghdr->jobId << ": " << bgcios::toString(msghdr) << " message is available on command channel");
    switch (msghdr->type) {
-
-      case bgcios::iosctl::Terminate:
-         err = terminate(source);
-         break;
 
       case bgcios::iosctl::Interrupt:
          if (msghdr->service == ToolctlService){
@@ -231,35 +278,6 @@ SysioController::commandChannelHandler(void)
    return 0;
 }
 
-int
-SysioController::terminate(std::string source)
-{
-   // Get pointer to Terminate message available from inbound buffer.
-   bgcios::iosctl::TerminateMessage *inMsg = (bgcios::iosctl::TerminateMessage *)_inboundMessage;
-
-   // Cleanup resources.
-   int err = cleanup();
-
-   // Set flags to stop processing messages.
-   _done = true;
-   _terminated = true;
-
-   // Build TerminateAck message in outbound buffer.
-   bgcios::iosctl::TerminateAckMessage *outMsg = (bgcios::iosctl::TerminateAckMessage *)_outboundMessage;
-   memcpy(&(outMsg->header), &(inMsg->header), sizeof(MessageHeader));
-   outMsg->header.type = bgcios::iosctl::TerminateAck;
-   outMsg->header.length = sizeof(bgcios::iosctl::TerminateAckMessage);
-   if (err == 0) {
-      outMsg->header.returnCode = bgcios::Success;
-   }
-   else {
-      outMsg->header.returnCode = bgcios::RequestFailed;
-      outMsg->header.errorCode = (uint32_t)err;
-   }
-
-   // Send TerminateAck message.
-   return sendToCommandChannel(source, outMsg);
-}
 
 int 
 SysioController::interruptForToolCtl(std::string source){
@@ -278,27 +296,91 @@ SysioController::interrupt(std::string source)
    (void)source;
    // Get pointer to Interrupt message available from inbound buffer.
    bgcios::iosctl::InterruptMessage *inMsg = (bgcios::iosctl::InterruptMessage *)_inboundMessage;
-   int err = 0;
-   unsigned int time = 0;
-   int do_once=1;
-   if (!_clientMonitor->isJobRunning(inMsg->header.jobId) ) return 0;
-    _clientMonitor->markJobKilled(inMsg->header.jobId);
-    LOG_CIOS_INFO_MSG("Job " << inMsg->header.jobId << " is running.  Interrupt source="<<source<< ": signal=" << inMsg->signo<<" Channel-name="<<_cmdChannel->getName() );
-    // If the job is still running, signal the client monitor thread to break out of any blocked system calls.
-    // Wait for the job to end.
-    while (_clientMonitor->isJobRunning(inMsg->header.jobId)) {       
-               sleep(KillJobTimeout);
-               if (do_once==1){
-                  time += KillJobTimeout;
-                  if (time>5){
-                    do_once=0;
-                    err = _clientMonitor->interrupt();
-                    LOG_INFO_MSG_FORCED("_serviceId="<<_serviceId<<" Jobid=" << inMsg->header.jobId << ": signal=" << inMsg->signo << " wait=" << time <<" thread 0x"<<
-                          std::hex << _clientMonitor->getThreadId()<<" Channel-name="<<_cmdChannel->getName() );
-                  }
-               }
-     }   
-     LOG_CIOS_INFO_MSG("Job " << inMsg->header.jobId << " clean for sysiod.");
+   _clientMonitor->markJobKilled(inMsg->header.jobId);
+    
+    if (_clientMonitor->isJobRunning(inMsg->header.jobId) ){
+       bgcios::iosctl::InterruptMessage *message = (bgcios::iosctl::InterruptMessage *)malloc(sizeof(bgcios::iosctl::InterruptMessage) );
+       memcpy(message,_inboundMessage,sizeof(bgcios::iosctl::InterruptMessage) );
+       _queuedInterruptMessages.push_back(message);
+       uint64_t * startCycles = (uint64_t *)&message->signo;
+       *startCycles=GetTimeBase();
+    }   
 
    return 0;
+}
+
+int
+SysioController::interruptContinue(){
+    if ( ! _queuedInterruptMessages.empty() ) { 
+        std::list<bgcios::iosctl::InterruptMessage *>::iterator it = _queuedInterruptMessages.begin();
+        while(it != _queuedInterruptMessages.end()){
+          bgcios::iosctl::InterruptMessage* imsg = *it;
+          if (_clientMonitor->isJobRunning(imsg->header.jobId) ){ 
+              uint64_t * startCycles = (uint64_t *)&imsg->signo;
+              uint64_t CurrentCycles = GetTimeBase();
+              uint64_t elapsedCycles = CurrentCycles - (*startCycles);
+              if (  (imsg->header.errorCode==0)
+                    &&
+                    ( elapsedCycles >= (50 * cycles_per_second) ) ) {
+                _clientMonitor->stopJobInternalKernel(imsg->header.jobId);
+                imsg->header.errorCode=SIGUSR2;
+                _clientMonitor->interrupt(SIGUSR2);  //interrupt
+                it++; 
+              }
+              else if (  (imsg->header.errorCode==SIGUSR2)&&
+                  ( elapsedCycles >= (60 * cycles_per_second) ) ) {
+                it = _queuedInterruptMessages.erase(it);  
+                free(imsg);
+                //_clientMonitor->interrupt(SIGUSR1);  //interrupt and get flight log
+                 
+                 uint64_t sysCallStart = _clientMonitor->getSyscallStartTimeStamp();
+                 if (sysCallStart){
+                   uint64_t CurrentCycles = GetTimeBase();
+                   uint64_t diff = CurrentCycles - sysCallStart;
+                   char * temp = _clientMonitor->getSyscallFileString1();
+                   uint64_t seconds = diff/cycles_per_second; 
+
+                   bgcios::MessageHeader * msghdr = (bgcios::MessageHeader * )_clientMonitor->getSyscallMessageHdr();
+                   uint32_t entry = CIOSLOGMSG(BG_STUCK_MSG,msghdr);
+                   //printLogEntry(entry);
+                   //RAS here  
+                   RasEvent ras(SysiodSyscallHangOnSignal,RasEvent::charMode);
+                   char * buffer = ras.getRasBuff();
+                   size_t buffsize = (size_t)ras.getRasBuffSize();
+                   size_t length = snprintfLogEntry(buffsize, buffer, entry );
+                   int strlen = (int)length;
+                   buffer += length;
+                   buffsize -= length;
+                   strlen += (int)length;
+                   length = (size_t)snprintf(buffer, buffsize," PID=%d syscall seconds=%llu",getpid(), (long long unsigned int)seconds);
+                   buffer += length;
+                   buffsize -= length;
+                   strlen += (int)length;
+                   if (temp) {
+                      length = (size_t)snprintf(buffer, buffsize," involves file=%s",temp);
+                       buffer += length;
+                       buffsize -= length;
+                       strlen += (int)length;
+                   }
+                   ras.setLength(strlen);
+                   ras.send();
+                   //LOG_INFO_MSG_FORCED(ras.getRasBuff() );
+                 } 
+#if 0
+                 else{ //no syscall hang, but timing out
+                   LOG_INFO_MSG_FORCED("tail of log entries for job timeout");
+                   printlastLogEntries(4);
+                 }
+#endif
+               }
+              
+            }
+            else {
+              it = _queuedInterruptMessages.erase(it); //remove element and advance to next one in list
+              free(imsg);
+            }
+ 
+        }//endwhile      
+     }
+return 0;    
 }

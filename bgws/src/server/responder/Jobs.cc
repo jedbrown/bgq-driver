@@ -193,7 +193,7 @@ const capena::http::uri::Path &Jobs::RESOURCE_PATH(::bgws::common::resource_path
 const capena::http::uri::Path Jobs::RESOURCE_PATH_EMPTY_CHILD(RESOURCE_PATH / "");
 
 
-void Jobs::doGet()
+void Jobs::_doGet()
 {
     // The user must be authenticated.
     if ( ! _isUserAuthenticated() ) {
@@ -220,7 +220,7 @@ void Jobs::doGet()
     bgq::utility::UserId::ConstPtr user_id_ptr;
 
     if ( ! _isUserAdministrator() ) {
-        user_id_ptr = getRequestUserInfo().getUserIdPtr();
+        user_id_ptr = _getRequestUserInfo().getUserIdPtr();
     }
 
     bool no_jobs(false);
@@ -236,7 +236,7 @@ void Jobs::doGet()
         );
 
     if ( no_jobs ) {
-        capena::server::Response &response(getResponse());
+        capena::server::Response &response(_getResponse());
 
         response.setContentTypeJson();
         response.headersComplete();
@@ -271,7 +271,7 @@ void Jobs::doGet()
     json::Array &arr(arr_val.get());
 
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     if ( all_count == 0 ) {
 
@@ -310,7 +310,7 @@ void Jobs::doGet()
         if ( cols[DBTJob_history::ERRTEXT_COL] ) {
             obj.set( "errorText", cols[DBTJob_history::ERRTEXT_COL].getString() );
         }
-        obj.set( "URI", Job::calcUri( getDynamicConfiguration().getPathBase(), id ).toString() );
+        obj.set( "URI", Job::calcUri( _getDynamicConfiguration().getPathBase(), id ).toString() );
     }
 
 
@@ -527,7 +527,7 @@ void Jobs::_getServiceJobs( const std::string& location )
     if ( ! _isUserAdministrator() ) {
         LOG_WARN_MSG( "Cannot get jobs affected by service action because the user isn't an administrator." );
 
-        ras::postAdminAuthorityFailure( getRequestUserInfo(), "get jobs affected by service action" );
+        ras::postAdminAuthorityFailure( _getRequestUserInfo(), "get jobs affected by service action" );
 
         BOOST_THROW_EXCEPTION( Error(
                 string() + "Cannot get jobs affected by service action because the user isn't an administrator.",
@@ -555,7 +555,7 @@ void Jobs::_getServiceJobs( const std::string& location )
     }
 
     json::ArrayValue arr_val;
-    auto &response(getResponse());
+    auto &response(_getResponse());
 
     if ( job_ids.empty() ) {
         response.setContentTypeJson();
@@ -602,7 +602,7 @@ void Jobs::_getServiceJobs( const std::string& location )
         obj.set( "nodesUsed", cols[DBTJob::NODESUSED_COL].as<uint64_t>() );
         obj.set( "processesPerNode", cols[DBTJob::PROCESSESPERNODE_COL].as<uint64_t>() );
         obj.set( "np", cols[DBTJob::NP_COL].as<uint64_t>() );
-        obj.set( "URI", Job::calcUri( getDynamicConfiguration().getPathBase(), id ).toString() );
+        obj.set( "URI", Job::calcUri( _getDynamicConfiguration().getPathBase(), id ).toString() );
     }
 
     response.setContentTypeJson();

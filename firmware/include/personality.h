@@ -107,6 +107,12 @@ typedef unsigned char  fw_uint8_t;
 #define PERS_ENABLE_DDRNoTerm       FW_BIT(27)  //! Infinite Ohm on termination resistor.
 #define PERS_ENABLE_DDRBackScrub    FW_BIT(28)  //! Background scrubbing
 #define PERS_ENABLE_DDRDirScrub     FW_BIT(29)  //! Directed scrubbing
+#define PERS_ENABLE__RESRVD_30      FW_BIT(30)
+#define PERS_ENABLE__RESRVD_31      FW_BIT(31)
+#define PERS_ENABLE__RESRVD_32      FW_BIT(32)
+#define PERS_ENABLE__RESRVD_33      FW_BIT(33)
+#define PERS_ENABLE__RESRVD_34      FW_BIT(34)
+#define PERS_ENABLE__RESRVD_35      FW_BIT(35)
 #define PERS_ENABLE_AppPreload      FW_BIT(36)  //! Indicates that application loading via CIOS is unecessary
 #define PERS_ENABLE_IOServices      FW_BIT(37)  //! Enables CIOS function shipping
 #define PERS_ENABLE_SpecCapDDR      FW_BIT(38)  //! DDR storage is speculation-capable
@@ -123,12 +129,17 @@ typedef unsigned char  fw_uint8_t;
 #define PERS_ENABLE_Wakeup          FW_BIT(49)  //! Enable the Wakeup Unit initialization
 #define PERS_ENABLE_BIC             FW_BIT(50)  //! Enable Blue Gene Interrupt Controller
 #define PERS_ENABLE_DDR             FW_BIT(51)  //! Enable DDR controllers
+#define PERS_ENABLE__RESRVD_52      FW_BIT(52)
+#define PERS_ENABLE__RESRVD_53      FW_BIT(53)
 #define PERS_ENABLE_GlobalInts      FW_BIT(54)  //! Enable global interrupts embedded in Network
 #define PERS_ENABLE_SerDes          FW_BIT(55)  //! Enable High-speed Serializer/Deserializer
 #define PERS_ENABLE_UPC             FW_BIT(56)  //! Enable Universal Performance Counter Unit initializaiton
 #define PERS_ENABLE_EnvMon          FW_BIT(57)  //! Enable Environmental Monitoring
 #define PERS_ENABLE_PCIe            FW_BIT(58)  //! Enable PCIExpress
+#define PERS_ENABLE__RESRVD_59      FW_BIT(59)
+#define PERS_ENABLE__RESRVD_60      FW_BIT(60)
 #define PERS_ENABLE_TimeSync        FW_BIT(61)  //! Enable A2 Timebase synchronization
+#define PERS_ENABLE__RESRVD_62      FW_BIT(62)
 #define PERS_ENABLE_DiagnosticsMode FW_BIT(63)  //! Enable diagnostics mode
 
 //! @brief The TRACE_* masks are used to selectively enable tracing code.  They describe bit positions in the 

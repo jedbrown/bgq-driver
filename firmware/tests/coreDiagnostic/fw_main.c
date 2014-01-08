@@ -43,7 +43,9 @@ FW_InternalState_t FW_InternalState = {
   .nodeState = {
     .domain = { 
        { 0x1FFFF, 0, -1, 0x10ul },  
+#ifndef FW_SINGLE_DOMAIN
        { 0x00000, 0, -1, 0x10ul },  
+#endif
      },
   },
 };

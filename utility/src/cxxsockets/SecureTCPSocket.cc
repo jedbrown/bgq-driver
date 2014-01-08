@@ -23,20 +23,49 @@
 #include <boost/throw_exception.hpp>
 #include <stdexcept>
 #include <boost/lexical_cast.hpp>
+#include <boost/thread/once.hpp>
+#include <boost/bind.hpp>
 #include <utility/include/UserId.h>
 #include <utility/include/portConfiguration/SslConfiguration.h>
-#include "SocketTypes.h"
+#include "cxxsockets/SocketTypes.h"
+#include "cxxsockets/CxxSocket.h"
 #include "CxxSocketInlines.h"
-#include "CxxSocket.h"
-// DEBUG INCLUDE
-#include <execinfo.h>
 
 using namespace CxxSockets;
 
 LOG_DECLARE_FILE( "utility.cxxsockets" );
 
-bool SecureTCPSocket::init_once = false;
-PthreadMutex SecureTCPSocket::_init_lock;
+namespace {
+
+boost::once_flag init_once_flag = BOOST_ONCE_INIT;
+
+void
+init_ssl()
+{
+    LOG_DEBUG_MSG( "initializing SSL library" );
+    SSL_library_init();
+}
+
+}
+
+SecureTCPSocket::SecureTCPSocket() :
+    TCPSocket()
+{
+    boost::call_once( &init_ssl, init_once_flag );
+    _ctx = 0;
+    _ssl = 0;
+}
+
+SecureTCPSocket::SecureTCPSocket(
+        int family, 
+        int fd
+        ) :
+    TCPSocket(family, fd)
+{
+    boost::call_once( &init_ssl, init_once_flag );
+    _ctx = 0;
+    _ssl = 0;
+}
 
 SecureTCPSocket::~SecureTCPSocket() {
     LOGGING_DECLARE_FD_MDC; LOGGING_DECLARE_FT_MDC;
@@ -128,7 +157,7 @@ std::string extract_peer_cn(SSL* ssl)
     return std::string(peer_cn);
 }
 
-int SecureTCPSocket::ServerHandshake(bgq::utility::ServerPortConfiguration& port_config) {
+int SecureTCPSocket::ServerHandshake(const bgq::utility::ServerPortConfiguration& port_config) {
     LOGGING_DECLARE_FD_MDC; LOGGING_DECLARE_FT_MDC;
     const std::string administrative_cn( port_config.getAdministrativeCn() );
     const std::string command_cn( port_config.getCommandCn() );
@@ -210,7 +239,7 @@ int SecureTCPSocket::ServerHandshake(bgq::utility::ServerPortConfiguration& port
     return 0;
 }
 
-int SecureTCPSocket::ClientHandshake(bgq::utility::ClientPortConfiguration& port_config) {
+int SecureTCPSocket::ClientHandshake(const bgq::utility::ClientPortConfiguration& port_config) {
     LOGGING_DECLARE_FD_MDC; LOGGING_DECLARE_FT_MDC;
     // Get the server's CN so can compare it vs the expected administrative certificate CN.
     std::string server_cn;
@@ -254,7 +283,7 @@ int SecureTCPSocket::ClientHandshake(bgq::utility::ClientPortConfiguration& port
     return 0;
 }
 
-void SecureTCPSocket::SetupCredentials(bgq::utility::SslConfiguration& sslconfig) {
+void SecureTCPSocket::SetupCredentials(const bgq::utility::SslConfiguration& sslconfig) {
     LOGGING_DECLARE_FD_MDC; LOGGING_DECLARE_FT_MDC;
     LOG_DEBUG_MSG("Using cert file=" << sslconfig.getMyCertFilename());
     int rc = SSL_CTX_use_certificate_chain_file(_ctx, sslconfig.getMyCertFilename().c_str());
@@ -308,7 +337,7 @@ void SecureTCPSocket::SetupCredentials(bgq::utility::SslConfiguration& sslconfig
     }
 }
 
-void SecureTCPSocket::SetupContext(bgq::utility::SslConfiguration& sslconf) {
+void SecureTCPSocket::SetupContext(const bgq::utility::SslConfiguration& sslconf) {
     LOGGING_DECLARE_FD_MDC; LOGGING_DECLARE_FT_MDC;
     LOG_TRACE_MSG(__FUNCTION__);
     if(_ssl || _ctx) return;
@@ -331,7 +360,7 @@ void SecureTCPSocket::SetupContext(bgq::utility::SslConfiguration& sslconf) {
     SSL_set_bio(_ssl, _cnnbio, _cnnbio);
 }
 
-void SecureTCPSocket::MakeSecure(bgq::utility::ClientPortConfiguration& port_config) {
+void SecureTCPSocket::MakeSecure(const bgq::utility::ClientPortConfiguration& port_config) {
     LOGGING_DECLARE_FD_MDC; LOGGING_DECLARE_FT_MDC;
     LOG_DEBUG_MSG("handshaking with remote host");
     try {
@@ -367,7 +396,7 @@ void SecureTCPSocket::MakeSecure(bgq::utility::ClientPortConfiguration& port_con
     LOG_DEBUG_MSG("authorization complete");
 }
 
-void SecureTCPSocket::MakeSecure(bgq::utility::ServerPortConfiguration& port_config) {
+void SecureTCPSocket::MakeSecure(const bgq::utility::ServerPortConfiguration& port_config) {
     try {
         bgq::utility::SslConfiguration sslconf = port_config.createSslConfiguration();
         SetupContext(sslconf);
@@ -388,7 +417,7 @@ void SecureTCPSocket::MakeSecure(bgq::utility::ServerPortConfiguration& port_con
     }
 }
 
-void SecureTCPSocket::Connect(SockAddr& remote_sa, bgq::utility::ClientPortConfiguration& port_config) {
+void SecureTCPSocket::Connect(SockAddr& remote_sa, const bgq::utility::ClientPortConfiguration& port_config) {
     LOGGING_DECLARE_FD_MDC; 
     FileLocker locker;
     LockFile(locker);
@@ -398,20 +427,6 @@ void SecureTCPSocket::Connect(SockAddr& remote_sa, bgq::utility::ClientPortConfi
     // Call the base unlocked, unsecured method and then
     // do our own security work.
     TCPSocket::mConnect(remote_sa);
-    LOGGING_DECLARE_FT_MDC;
-    MakeSecure(port_config);
-}
-
-void SecureTCPSocket::Connect(FourTuple& ft, bgq::utility::ClientPortConfiguration& port_config) {
-    LOGGING_DECLARE_FD_MDC;
-    FileLocker locker;
-    LockFile(locker);
-    
-    LOG_DEBUG_MSG("Connecting secure TCP socket level " << _secure_level);
-
-    // Call the base unlocked, unsecured method and then
-    // do our own security work.
-    TCPSocket::mConnect(ft);
     LOGGING_DECLARE_FT_MDC;
     MakeSecure(port_config);
 }

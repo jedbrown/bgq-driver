@@ -135,18 +135,18 @@ bool Logging::matchesUrl(
 }
 
 
-capena::http::Methods Logging::getAllowedMethods() const
+capena::http::Methods Logging::_getAllowedMethods() const
 {
     return { capena::http::Method::GET, capena::http::Method::PUT };
 }
 
 
-void Logging::doGet()
+void Logging::_doGet()
 {
     if ( ! _isUserAdministrator() ) {
-        LOG_WARN_MSG( "Could not get BGWS logging configuration because " << getRequestUserInfo() << " doesn't have authority (must be administrator)." );
+        LOG_WARN_MSG( "Could not get BGWS logging configuration because " << _getRequestUserInfo() << " doesn't have authority (must be administrator)." );
 
-        ras::postAdminAuthorityFailure( getRequestUserInfo(), "get logging configuration" );
+        ras::postAdminAuthorityFailure( _getRequestUserInfo(), "get logging configuration" );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get BGWS logging configuration because the user doesn't have authority.",
@@ -164,12 +164,12 @@ void Logging::doGet()
 }
 
 
-void Logging::doPut( json::ConstValuePtr val_ptr )
+void Logging::_doPut( json::ConstValuePtr val_ptr )
 {
     if ( ! _isUserAdministrator() ) {
-        LOG_WARN_MSG( "Could not set BGWS logging configuration because " << getRequestUserInfo() << " doesn't have authority (must be administrator)." );
+        LOG_WARN_MSG( "Could not set BGWS logging configuration because " << _getRequestUserInfo() << " doesn't have authority (must be administrator)." );
 
-        ras::postAdminAuthorityFailure( getRequestUserInfo(), "set logging configuration" );
+        ras::postAdminAuthorityFailure( _getRequestUserInfo(), "set logging configuration" );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not set BGWS logging configuration because the user doesn't have authority.",
@@ -181,7 +181,7 @@ void Logging::doPut( json::ConstValuePtr val_ptr )
     }
 
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     _LoggingInfo logging_info(_parseLoggingUpdate( val_ptr ));
 
@@ -204,7 +204,7 @@ void Logging::_formatLoggingConfiguration(
         const log4cxx::LoggerList& loggers
     )
 {
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();

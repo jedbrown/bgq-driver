@@ -138,7 +138,11 @@ Container::loadMachineImpl(
     // iterate through I/O links
     LOG_DEBUG_MSG( "machine has " << machine->_ioLinks.size() << " I/O links" );
     BOOST_FOREACH( BGQMachineIOLink* link, machine->_ioLinks ) {
-        LOG_TRACE_MSG( "link " << link->_computeNode << " <--> " << link->_ioNode );
+        if ( link->_enabled ) {
+            LOG_TRACE_MSG( "link " << link->_computeNode << " <--> " << link->_ioNode );
+        } else {
+            LOG_TRACE_MSG( "link " << link->_computeNode << " <--> " << link->_ioNode << " disabled" );
+        }
     }
 
     callback( machine, error_code::success );
@@ -451,6 +455,7 @@ Container::createCompute(
                     );
 
             BOOST_FOREACH( const BGQMachineIOLink* link, machine->_ioLinks ) {
+                if ( !link->_enabled ) continue;
                 if ( location != link->_computeNode ) continue;
 
                 LOG_DEBUG_MSG( location << " links to " << link->_ioNode );

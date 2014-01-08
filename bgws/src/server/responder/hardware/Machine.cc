@@ -136,7 +136,7 @@ namespace hardware {
 const capena::http::uri::Path Machine::RESOURCE_PATH( capena::http::uri::Path() / "machine" );
 
 
-void Machine::doGet()
+void Machine::_doGet()
 {
     if ( ! _isUserAuthenticated() ) {
 
@@ -156,7 +156,7 @@ void Machine::doGet()
 
 void Machine::_formatMachine()
 {
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();

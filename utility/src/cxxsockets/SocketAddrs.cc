@@ -20,7 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#include "SocketTypes.h"
+#include "cxxsockets/SocketTypes.h"
 
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
@@ -67,16 +67,65 @@ bool SockAddr::Addrinf(struct addrinfo*& addrinf, unsigned short family, std::st
     return true;
 };
 
-std::string SockAddr::getHostAddr()
+std::string
+SockAddr::getServiceName()
+{ 
+    char svc_buf[NI_MAXSERV];
+    int rc = getnameinfo((sockaddr*)(this), sizeof(sockaddr_storage), NULL, 0,
+            svc_buf, NI_MAXSERV, 0);
+    if(rc != 0) {
+        std::ostringstream msg;
+        msg << "getServiceName error: " << gai_strerror(rc);
+        throw CxxSocketInternalError(rc, msg.str());
+    }
+    std::string sname(svc_buf);
+    LOG_TRACE_MSG("Service Name " << sname);
+    return sname;
+}
+
+int
+SockAddr::getServicePort()
 {
-    char host_buf[NI_MAXSERV];
+    char svc_buf[NI_MAXSERV];
+    int rc = getnameinfo((sockaddr*)(this), sizeof(sockaddr_storage), NULL, 0,
+            svc_buf, NI_MAXSERV, NI_NUMERICSERV);
+    if(rc != 0) {
+        std::ostringstream msg;
+        msg << "getServiceName error: " << gai_strerror(rc);
+        throw CxxSocketInternalError(rc, msg.str());
+    }
+    LOG_TRACE_MSG("Service port " << svc_buf);
+    int retval = atoi(svc_buf);
+    return retval;
+}
+
+std::string
+SockAddr::getHostName()
+{
+    char host_buf[NI_MAXHOST];
+    int rc = getnameinfo((sockaddr*)(this), sizeof(sockaddr_storage), host_buf, sizeof(host_buf),
+            0, 0, 0);
+    if(rc != 0) {
+        std::ostringstream msg;
+        msg << "getHostName error: " << gai_strerror(rc);
+        throw SockSoftError(rc, msg.str());
+    }
+    std::string sname(host_buf);
+    LOG_TRACE_MSG("Host Name " << sname);
+    return sname;
+}
+
+std::string
+SockAddr::getHostAddr()
+{
+    char host_buf[NI_MAXHOST];
     int size = 0;
     if(family() == AF_INET)
         size = sizeof(sockaddr_in);
     else
         size = sizeof(sockaddr_in6);
 
-    int error = getnameinfo((sockaddr*)(this), size, host_buf, NI_MAXHOST,
+    int error = getnameinfo((sockaddr*)(this), size, host_buf, sizeof(host_buf),
                             0, 0, NI_NUMERICHOST);
     if(error != 0) {
         std::ostringstream msg;

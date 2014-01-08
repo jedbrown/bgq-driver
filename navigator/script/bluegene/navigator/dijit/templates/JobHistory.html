@@ -19,8 +19,8 @@
                                 </li>
                                 <li>
                                     <label for="${id}-fo-id">ID</label>
-                                    <input name="id" id="${id}-fo-id" data-dojo-type="dijit.form.NumberTextBox"
-                                            data-dojo-props="constraints: {min:0,places:0}, name: 'id', placeHolder: '1', promptMessage: 'Integer greater than 0'" />
+                                    <input name="id" id="${id}-fo-id" data-dojo-type="dijit.form.ValidationTextBox"
+                                            data-dojo-props="name: 'id', placeHolder: '1', invalidMessage: 'The value must be a number.', regExp: '\\d+'" />
                                 </li>
                                 <li>
                                     <label for="${id}-fo-user">User</label>

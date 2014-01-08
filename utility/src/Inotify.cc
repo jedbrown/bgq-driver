@@ -278,7 +278,7 @@ bool Inotify::_parseEvent(
 
 void Inotify::_readHandler(
         const boost::system::error_code& error,
-        std::size_t bytes_transferred,
+        std::size_t /* bytes_transferred */,
         Events& events_out,
         ReadHandler read_handler
     )

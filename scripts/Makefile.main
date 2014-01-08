@@ -5,7 +5,6 @@ include Make.rules
 OS := $(shell uname)
 OS_ARCH := $(shell uname -m)
 
-
 DIRS=
 
   DIRS+= agents  
@@ -97,6 +96,7 @@ ifeq ($(OS),AIX)
    DIRS += hwsim_fullchip
    DIRS += xml
    DIRS += scantools 
+   DIRS += firmware
    DIRS += ras
    DIRS += scantools
 endif
@@ -110,12 +110,9 @@ endif
 
 #.NOTPARALLEL: gnu gnu.install
 
-
 TARGETS_INSTALL	= $(addsuffix .install,$(DIRS))
 
 TARGETS_INC=$(addsuffix .install,$(foreach d,$(DIRS),$(subst /Makefile,,$(wildcard $(d)/include/Makefile))))
-
-
 
 TARGETS_CLEAN		= $(addsuffix .clean,$(DIRS))
 TARGETS_DISTCLEAN	= $(addsuffix .distclean,$(DIRS))
@@ -125,6 +122,10 @@ TARGETS_CLEAN += $(addsuffix .install,$(subst /Makefile,,$(wildcard linux/Makefi
 TARGETS_DISTCLEAN += $(addsuffix .install,$(subst /Makefile,,$(wildcard linux/Makefile)))
 endif
 
+TARGETS_INC_EXTRA=
+ifeq ($(OS_ARCH),x86_64)
+TARGETS_INC_EXTRA+=linux_headers
+endif
 
 
 TARGETS =$(TARGETS_INSTALL)   \
@@ -151,7 +152,7 @@ all:		install
 
 install:	includes this.install $(TOPLEVEL_FILES) $(TARGETS_INSTALL) build_ras_gen
 
-includes:       $(TARGETS_INC)
+includes:       $(TARGETS_INC) $(TARGETS_INC_EXTRA)
 
 clean:		$(TARGETS_CLEAN)      this.clean
 
@@ -160,7 +161,6 @@ distclean:	$(TARGETS_DISTCLEAN)  this.distclean
 $(BGQ_INSTALL_DIR)/Make.rules: Make.rules
 	@mkdir -p $(BGQ_INSTALL_DIR)
 	cp  $< $@
-
 
 print:
 	@echo DIRS        = $(DIRS)
@@ -227,17 +227,20 @@ mudm.install: spi.install
 hlcs/include.install: $(addsuffix .install,$(foreach d,xml,$(subst /Makefile,,$(wildcard $(d)/include/Makefile))))
 
 linux/include.install: $(addsuffix .install,$(foreach d,firmware mudm spi hwi,$(subst /Makefile,,$(wildcard $(d)/include/Makefile))))
+ifeq ($(OS_ARCH),x86_64)
+linux_headers: $(addsuffix .install,$(foreach d,firmware mudm spi hwi,$(subst /Makefile,,$(wildcard $(d)/include/Makefile))))
+	if [[ -d linux ]]; then \
+	make -C linux headers_install; \
+	fi
+endif
 
 $(BGQ_INSTALL_DIR)/bin:
 	mkdir -p $@
 
 $(BGQ_INSTALL_DIR)/include:
-	mkdir -p $@ \
-	
+	mkdir -p $@
 $(BGQ_INSTALL_DIR)/lib:
 	mkdir -p $@
-
-
 
 # +++
 #	Each element in "$TARGETS" is of the form:
@@ -318,7 +321,6 @@ this.distclean: this.clean
 	@echo "making distclean"
 	rm -rf ./autom4te.cache ./config.log ./config.status ./Makefile ./Make.rules ./scripts/hwsim_env.sh
 
-
 printmakerules:
 	@echo "BGQ_BUILD_DIR=${BGQ_BUILD_DIR}"
 	@echo "BGQ_INSTALL_DIR=${BGQ_INSTALL_DIR}"
@@ -340,7 +342,6 @@ printmakerules:
 	@echo "CTEPROJPATH=${CTEPROJPATH}"
 	@echo "CDS_INST_DIR=${CDS_INST_DIR}"
 	@echo "BGQ_CROSS_TARGET_NAME=${BGQ_CROSS_TARGET_NAME}"
-
 	@echo "BGQ_CROSS_TARGET_ARCH=${BGQ_CROSS_TARGET_ARCH}"
 	@echo "BGQ_GNU_MAKEFILE=${BGQ_GNU_MAKEFILE}"
 	@echo
@@ -351,6 +352,3 @@ printmakerules:
 	@echo "BGQ_RPMMODIFICATION=${BGQ_RPMMODIFICATION}"
 	@echo "BGQ_RPMDRIVER=${BGQ_RPMDRIVER}"
 	@echo "BGQ_RPMSUFFIX=${BGQ_RPMSUFFIX}"
-
-	
-

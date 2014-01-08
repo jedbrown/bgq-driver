@@ -85,7 +85,7 @@ SimJobController::startup(in_port_t dataChannelPort)
       LOG_ERROR_MSG("error creating command channel '" << cmdChannelPath.str() << "': " << e.what());
       return e.errcode();
    }
-   LOG_CIOS_DEBUG_MSG("[" << _cmdChannel->getSd() << "] created command channel at '" << _cmdChannel->getName() << "'");
+   LOG_DEBUG_MSG("[" << _cmdChannel->getSd() << "] created command channel at '" << _cmdChannel->getName() << "'");
 
    // Create listening socket for data channel.
    try {
@@ -96,14 +96,14 @@ SimJobController::startup(in_port_t dataChannelPort)
       _dataListener.reset();
       return e.errcode();
    }
-   LOG_CIOS_DEBUG_MSG("listening for new data channel connections on fd " << _dataListener->getSd() << " using address " << _dataListener->getName());
+   LOG_DEBUG_MSG("listening for new data channel connections on fd " << _dataListener->getSd() << " using address " << _dataListener->getName());
 
    // Get the address assigned by TCP and store port number in a file.
    std::ostringstream portFileName;
    portFileName << _workDirectory << "jobcontrol.port";
    std::ofstream portFile(portFileName.str().c_str(), std::ios_base::trunc);
    portFile << _dataListener->getPort() << std::endl;
-   LOG_CIOS_DEBUG_MSG("stored port number " << _dataListener->getPort() << " in file " << portFileName.str());
+   LOG_DEBUG_MSG("stored port number " << _dataListener->getPort() << " in file " << portFileName.str());
 
    // Prepare socket to listen for connections.
    try {
@@ -120,7 +120,7 @@ SimJobController::startup(in_port_t dataChannelPort)
 int
 SimJobController::cleanup(void)
 {
-   LOG_CIOS_INFO_MSG("running cleanup ...");
+   LOG_INFO_MSG("running cleanup ...");
 
    // Remove the port number file.
    std::ostringstream portFileName;
@@ -150,23 +150,24 @@ SimJobController::eventMonitor(void)
    pollInfo[cmdChannel].fd = _cmdChannel->getSd();
    pollInfo[cmdChannel].events = POLLIN;
    pollInfo[cmdChannel].revents = 0;
-   LOG_CIOS_TRACE_MSG("added command channel using fd " << pollInfo[cmdChannel].fd << " to descriptor list");
+   LOG_TRACE_MSG("added command channel using fd " << pollInfo[cmdChannel].fd << " to descriptor list");
 
    pollInfo[dataChannel].fd = _dataChannel == NULL ? -1 : _dataChannel->getSd();
    pollInfo[dataChannel].events = POLLIN;
    pollInfo[dataChannel].revents = 0;
-   LOG_CIOS_TRACE_MSG("added data channel using fd " << pollInfo[dataChannel].fd << " to descriptor list");
+   LOG_TRACE_MSG("added data channel using fd " << pollInfo[dataChannel].fd << " to descriptor list");
 
    pollInfo[dataListener].fd = _dataListener->getSd();
    pollInfo[dataListener].events = POLLIN;
    pollInfo[dataListener].revents = 0;
-   LOG_CIOS_TRACE_MSG("added data channel listener using fd " << pollInfo[dataListener].fd << " to descriptor list");
+   LOG_TRACE_MSG("added data channel listener using fd " << pollInfo[dataListener].fd << " to descriptor list");
 
    // Process events until told to stop.
    while (!_done) {
       // Wait for an event on one of the descriptors.
-      LOG_CIOS_DEBUG_MSG("polling for events with timeout " << timeout << "...")
-      int rc = poll(pollInfo, numFds, timeout);
+      LOG_DEBUG_MSG("polling for events with timeout " << timeout << "...")
+      const int rc = poll(pollInfo, numFds, timeout);
+      LOG_TRACE_MSG("poll rc=" << rc);
 
       // There was no data so try again.
       if (rc == 0) {
@@ -177,7 +178,7 @@ SimJobController::eventMonitor(void)
       if (rc == -1) {
          int err = errno;
          if (err == EINTR) {
-            LOG_CIOS_TRACE_MSG("poll returned EINTR, continuing ...");
+            LOG_TRACE_MSG("poll returned EINTR, continuing ...");
             continue;
          }
 
@@ -187,19 +188,21 @@ SimJobController::eventMonitor(void)
 
       // Check for an event on the command channel.
       if (pollInfo[cmdChannel].revents & POLLIN) {
-         LOG_CIOS_TRACE_MSG("input event available on command channel");
+         LOG_TRACE_MSG("input event available on command channel");
          commandChannelHandler();
       }
 
       // Check for an event on the data channel.
       if (pollInfo[dataChannel].revents & POLLIN) {
-         LOG_CIOS_TRACE_MSG("input event available on data channel");
-         dataChannelHandler();
+         LOG_TRACE_MSG("input event available on data channel");
+         if (dataChannelHandler() == EPIPE) {
+             pollInfo[dataChannel].fd = -1;
+         }
       }
 
       // Check for an event on the data channel listener.
       if (pollInfo[dataListener].revents & POLLIN) {
-         LOG_CIOS_TRACE_MSG("input event available on data channel listener");
+         LOG_TRACE_MSG("input event available on data channel listener");
          pollInfo[dataListener].revents = 0;
 
          // Make a new data channel connected to runjob.
@@ -210,12 +213,12 @@ SimJobController::eventMonitor(void)
          }
 
          // Continue monitoring the data channel listener for restarted connection Start monitoring the data channel.
-         LOG_INFO_MSG_FORCED("data channel is connected to " << incoming->getPeerName() << " using fd " << incoming->getSd());;
+         LOG_INFO_MSG("data channel is connected to " << incoming->getPeerName() << " using fd " << incoming->getSd());
 
          if (!dataChannelHandler(incoming)) {
              _dataChannel = incoming;
              pollInfo[dataChannel].fd = _dataChannel->getSd();
-             LOG_INFO_MSG_FORCED("data channel is authenticated with " << _dataChannel->getPeerName() << " using fd " << _dataChannel->getSd());;
+             LOG_INFO_MSG("data channel is authenticated with " << _dataChannel->getPeerName() << " using fd " << _dataChannel->getSd());
          }
       }
    }
@@ -236,7 +239,7 @@ SimJobController::dataChannelHandler(InetSocketPtr authOnly)
 
    // When data channel closes, stop handling events.
    if (err == EPIPE) {
-      LOG_CIOS_DEBUG_MSG("data channel connected to " << _dataChannel->getPeerName() << " is closed");
+      LOG_DEBUG_MSG("data channel connected to " << dataChannel->getPeerName() << " is closed");
       dataChannel.reset();
       return err;
    }
@@ -263,7 +266,7 @@ SimJobController::dataChannelHandler(InetSocketPtr authOnly)
    }
 
    // Handle the message.
-   LOG_CIOS_DEBUG_MSG("Job " << msghdr->jobId << ": " << toString(msghdr->type) << " message is available on data channel");
+   LOG_DEBUG_MSG("Job " << msghdr->jobId << ": " << toString(msghdr->type) << " message is available on data channel");
    switch (msghdr->type) {
       case SetupJob:
          err = setupJob();
@@ -356,7 +359,7 @@ SimJobController::commandChannelHandler(void)
    }
 
    // Handle the message.
-   LOG_CIOS_DEBUG_MSG("Job " << msghdr->jobId << ": " << bgcios::toString(msghdr) << " message is available on command channel");
+   LOG_DEBUG_MSG("Job " << msghdr->jobId << ": " << bgcios::toString(msghdr) << " message is available on command channel");
    switch (msghdr->type) {
       case ExitJob:
          err = exitJob();
@@ -373,7 +376,7 @@ SimJobController::commandChannelHandler(void)
    }
 
    if (err == 0) {
-      LOG_CIOS_DEBUG_MSG("Job " << msghdr->jobId << ": ack message sent successfully");
+      LOG_DEBUG_MSG("Job " << msghdr->jobId << ": ack message sent successfully");
    }
    else {
       LOG_ERROR_MSG("Job " << msghdr->jobId << ": error sending ack message: " << bgcios::errorString(err));
@@ -387,7 +390,7 @@ SimJobController::setupJob(void)
 {
    // Get pointer to inbound SetupJob message.
    SetupJobMessage *inMsg = (SetupJobMessage *)_inboundMessage;
-   LOG_CIOS_DEBUG_MSG( 
+   LOG_DEBUG_MSG( 
            "corner (" <<
            static_cast<unsigned>(inMsg->corner.aCoord) << "," <<
            static_cast<unsigned>(inMsg->corner.bCoord) << "," <<
@@ -396,7 +399,7 @@ SimJobController::setupJob(void)
            static_cast<unsigned>(inMsg->corner.eCoord) << ")"
            );
 
-   LOG_CIOS_DEBUG_MSG( 
+   LOG_DEBUG_MSG( 
            "shape " <<
            static_cast<unsigned>(inMsg->shape.aCoord) << "x" <<
            static_cast<unsigned>(inMsg->shape.bCoord) << "x" <<
@@ -404,7 +407,7 @@ SimJobController::setupJob(void)
            static_cast<unsigned>(inMsg->shape.dCoord) << "x" <<
            static_cast<unsigned>(inMsg->shape.eCoord)
            );
-
+   
    // Build SetupJobAck message in outbound buffer.
    SetupJobAckMessage *outMsg = (SetupJobAckMessage *)_outboundMessage;
    memcpy(&(outMsg->header), &(inMsg->header), sizeof(MessageHeader));
@@ -416,6 +419,15 @@ SimJobController::setupJob(void)
    const JobPtr job(new Job(inMsg->header.jobId, 0));
    _sim->setNp( inMsg->numRanks );
    _jobs.add(inMsg->header.jobId, job);
+   LOG_INFO_MSG("Job " << inMsg->header.jobId << " added with " << job->numComputeNodes() << " compute nodes" );
+
+   // Initialize accumulators for the job, they are always 1 for simulation
+   job->setupJobAckAccumulator.setLimit(1);
+   job->loadJobAckAccumulator.setLimit(1);
+   job->startJobAckAccumulator.setLimit(1);
+   job->cleanupJobAckAccumulator.setLimit(1);
+   job->exitProcessAccumulator.setLimit(1);
+   job->exitJobAccumulator.setLimit(1);
 
    // Send SetupJobAck message.
    return sendToDataChannel(outMsg);
@@ -445,7 +457,7 @@ SimJobController::loadJob(void)
    }
 
    // Start the simulated process.
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": starting process to run program '" << inMsg->arguments << "'");
+   LOG_DEBUG_MSG("Job " << inMsg->header.jobId << ": starting process to run program '" << inMsg->arguments << "'");
    const SimProcessPtr simProc = SimProcessPtr(new SimProcess(inMsg->arguments, inMsg->workingDirectoryPath, inMsg->umask, inMsg->header.jobId));
    char *ap = inMsg->arguments;
    for (uint16_t index = 0; index < inMsg->numArguments; ++index) {
@@ -459,7 +471,7 @@ SimJobController::loadJob(void)
    }
    bgcios::MessageResult result = simProc->start();
    if (result.isSuccess()) {
-      LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": started process " << simProc->getProcessId() << " to simulate " << _sim->getNumRanks() << " ranks");
+      LOG_DEBUG_MSG("Job " << inMsg->header.jobId << ": started process " << simProc->getProcessId() << " to simulate " << _sim->getNumRanks() << " ranks");
       SimJobMonitorPtr monitor = SimJobMonitorPtr(new SimJobMonitor(_sim, simProc)); // Note the simProc object is now owned by the monitor.
       job->setSimJobMonitor(monitor);
    }
@@ -478,7 +490,7 @@ SimJobController::startJob(void)
    // Get pointer to inbound StartJob message.
    StartJobMessage *inMsg = (StartJobMessage *)_inboundMessage;
 
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": starting with " << inMsg->numRanksForIONode << " ranks for IO node");
+   LOG_DEBUG_MSG("Job " << inMsg->header.jobId << ": starting with " << inMsg->numRanksForIONode << " ranks for IO node");
 
    // Build a StartJobAck message in outbound buffer.
    StartJobAckMessage *outMsg = (StartJobAckMessage *)_outboundMessage;
@@ -522,7 +534,7 @@ SimJobController::signalJob(void)
    // Get pointer to inbound SignalJob message.
    SignalJobMessage *inMsg = (SignalJobMessage *)_inboundMessage;
 
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": sending signal " << inMsg->signo);
+   LOG_DEBUG_MSG("Job " << inMsg->header.jobId << ": sending signal " << inMsg->signo);
 
    // Build SignalJobAck message in outbound buffer.
    SignalJobAckMessage *outMsg = (SignalJobAckMessage *)_outboundMessage;
@@ -609,7 +621,7 @@ SimJobController::exitJob(void)
    // Get pointer to ExitJob message available from inbound buffer.
    ExitJobMessage *inMsg = (ExitJobMessage *)_inboundMessage;
 
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": exited with status " << inMsg->status);
+   LOG_DEBUG_MSG("Job " << inMsg->header.jobId << ": exited with status " << inMsg->status);
 
    // Build ExitJobAck message in outbound buffer.
    ExitJobAckMessage *outMsg = (ExitJobAckMessage *)_outboundMessage;
@@ -637,6 +649,7 @@ SimJobController::exitJob(void)
    if (err != 0) {
       outMsg->header.returnCode = bgcios::SendError;
       outMsg->header.errorCode = (uint32_t)err;
+      job->exitJobAccumulator.add(inMsg);
    }
 
    // Send ExitJobAck message.
@@ -754,7 +767,7 @@ SimJobController::checkToolStatus(void)
    outMsg->activeTools = 0;
 
    // Send CheckToolStatusAck message on data channel.
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": CheckToolStatusAck message sent on data channel");
+   LOG_DEBUG_MSG("Job " << inMsg->header.jobId << ": CheckToolStatusAck message sent on data channel");
    return sendToDataChannel(outMsg); 
 }
 
@@ -784,12 +797,12 @@ SimJobController::authenticate(InetSocketPtr channel)
    // Get pointer to inbound Authenticate message.
    AuthenticateMessage *inMsg = (AuthenticateMessage *)_inboundMessage;
 
-   LOG_CIOS_TRACE_MSG( "plain: " << inMsg->plainData );
+   LOG_TRACE_MSG( "plain: " << inMsg->plainData );
    std::ostringstream os;
    BOOST_FOREACH( const unsigned char i, inMsg->encryptedData ) {
        os << std::setfill('0') << std::setw(2) << std::hex << static_cast<unsigned>(i);
    }
-   LOG_CIOS_TRACE_MSG( "encrypted: " << os.str() );
+   LOG_TRACE_MSG( "encrypted: " << os.str() );
 
    // Build AuthenticateAck message in outbound buffer.
    AuthenticateAckMessage *outMsg = (AuthenticateAckMessage *)_outboundMessage;
@@ -814,8 +827,22 @@ SimJobController::reconnect(void)
    outMsg->header.length = sizeof(ReconnectAckMessage);
    outMsg->header.returnCode = Success;
 
+   // Run the list of jobs and resend any accumulated messages that are ready.
+   for (job_list_iterator iter = _jobs.begin(); iter != _jobs.end(); ++iter) {
+      JobPtr job = iter->second;
+      int err = 0;
+
+      if (job->exitJobAccumulator.atLimit()) {
+         err = sendToDataChannel(const_cast<ExitJobMessage*>(job->exitJobAccumulator.get()));
+         LOG_DEBUG_MSG("Job " << job->getJobId() << ": ExitJob message sent on data channel when handling Reconnect message");
+         if (err == 0) {
+            job->exitJobAccumulator.resetCount();
+         }
+      }
+   }
+
    // Send ReconnectAck message on data channel.
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": Reconnect message sent on data channel");
+   LOG_DEBUG_MSG("Job " << inMsg->header.jobId << ": Reconnect message sent on data channel");
    return sendToDataChannel(outMsg); 
 }
 

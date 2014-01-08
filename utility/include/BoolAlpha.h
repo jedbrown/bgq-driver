@@ -20,6 +20,9 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+/*!
+ * \file utility/include/BoolAlpha.h
+ */
 #ifndef UTILITY_BOOL_ALPHA_H
 #define UTILITY_BOOL_ALPHA_H
 

@@ -256,27 +256,23 @@ var b_navigator_Navigator = d_declare( null,
         var user_tooltip_text = "";
 
 
-        if ( args.userName === "tbudnik" ) {
-            user_tooltip_text = "<img src='resources/image/user_info.jpeg' style='height: 78px; width: 78px;'/>";
+        if ( user_info.isAdministrator() ) {
+            user_tooltip_text = "User is Blue Gene Administrator";
         } else {
-            if ( user_info.isAdministrator() ) {
-                user_tooltip_text = "User is Blue Gene Administrator";
+
+            var authorities = [];
+
+            if ( user_info.hasHardwareRead() ) {
+                authorities.push( "hardware read" );
+            }
+            if ( user_info.hasBlockCreate() ) {
+                authorities.push( "block create" );
+            }
+
+            if ( authorities.length > 0 ) {
+                user_tooltip_text = "User has " + authorities.join( ", " );
             } else {
-
-                var authorities = [];
-
-                if ( user_info.hasHardwareRead() ) {
-                    authorities.push( "hardware read" );
-                }
-                if ( user_info.hasBlockCreate() ) {
-                    authorities.push( "block create" );
-                }
-
-                if ( authorities.length > 0 ) {
-                    user_tooltip_text = "User has " + authorities.join( ", " );
-                } else {
-                    user_tooltip_text = "User has no special authorities";
-                }
+                user_tooltip_text = "User has no special authorities";
             }
         }
 
@@ -396,11 +392,20 @@ var b_navigator_Navigator = d_declare( null,
 
         console.log( module.id + ": _tabChanged. widget=", widget.id, "controller=", this._current_controller );
 
-        var machine_highlighting = this._current_controller.getMachineHighlightData();
+        var machine_data = this._current_controller.getMachineHighlightData();
+
+        if ( machine_data && (! ("loading" in machine_data)) ) {
+            machine_data =
+                {
+                        loading: false,
+                        highlighting: machine_data
+                };
+        }
+
 
         l_topic.publish(
                 l_topic.highlightHardware,
-                machine_highlighting
+                machine_data
             );
     },
 
@@ -412,11 +417,19 @@ var b_navigator_Navigator = d_declare( null,
             return;
         }
 
-        var machine_highlighting = this._current_controller.getMachineHighlightData();
+        var machine_data = this._current_controller.getMachineHighlightData();
+
+        if ( machine_data && (! ("loading" in machine_data)) ) {
+            machine_data =
+                {
+                        loading: false,
+                        highlighting: machine_data
+                };
+        }
 
         l_topic.publish(
                 l_topic.highlightHardware,
-                machine_highlighting
+                machine_data
             );
     },
 

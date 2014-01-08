@@ -50,7 +50,6 @@ public:
     ValidateMappingFile(
             BGQDB::job::Id id,          //!< [in]
             const JobInfo& info,        //!< [in]
-            std::istream& file,         //!< [in] mapping file
             const BG_JobCoords_t& size  //!< [in] job size
             );
 
@@ -65,7 +64,6 @@ private:
 
 private:
     const JobInfo& _info;
-    Rank _ranks;
     const BG_JobCoords_t _size;
 };
 

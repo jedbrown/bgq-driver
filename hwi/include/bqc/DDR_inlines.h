@@ -24,13 +24,17 @@
 #define	Mem_Bank_Addr	0	// 0-7
 #define	Mem_Row_Addr	0	// 0-(2^15-1) for 2Gb [15/10/3 mode], 0-(2^14-1) for 1Gb [14/10/3 mode]	0x0000 - 0x3FFF
 #define	Mem_Col_Addr	0	// 0-(2^10-1) (*) lower 3 bits would not be picked up (tied to 0)	0x0000 - 0x03FF
+/*
 #define	Mem_Compare(x,y)	(x[0]==y[0]&&x[1]==y[1]&&x[2]==y[2]&&x[3]==y[3]&&x[4]==y[4]&&x[5]==y[5]&&x[6]==y[6]&&x[7]==y[7]&&x[8]==y[8]&& \
 				x[9]==y[9]&&x[10]==y[10]&&x[11]==y[11]&&x[12]==y[12]&&x[13]==y[13]&&x[14]==y[14]&&x[15]==y[15]&&x[16]==y[16])
 #define	Mem_Compare_8L(x,y)	((x[0]^y[0])|(x[2]^y[2])|(x[4]^y[4])|(x[6]^y[6])|(x[8]^y[8])|(x[10]^y[10])|(x[12]^y[12])|(x[14]^y[14]))
 #define	Mem_Compare_8H(x,y)	((x[1]^y[1])|(x[3]^y[3])|(x[5]^y[5])|(x[7]^y[7])|(x[9]^y[9])|(x[11]^y[11])|(x[13]^y[13])|(x[15]^y[15]))
-#define	MCMCC_TimeOut		1000
+*/
+#define	Mem_Compare_8L(x,y)	Mem_Compare_Bit(0,x,y,0)
+#define	Mem_Compare_8H(x,y)	Mem_Compare_Bit(1,x,y,0)
+#define	MCMCC_TimeOut		10
 #define	MEMTEST_TimeOut		200
-#define	DDRMNT_MCMODE		1
+#define	DDRMNT_MCMODE		0
 #define	MAX_NUM_UE_PRINT	10
 #define	MSG_NUM_UE_COUNT	1000
 #define	MAX_NUM_UE_COUNT	10000
@@ -41,223 +45,192 @@
 #define MAX_ROW_ADDR(x) (x==4096?0xFFFF:(x==2048?0x7FFF:(x==1024?0x3FFF:0x1FFF)))
 
 #define	FW_DEBUG	0
-#define	PRINTOUT	0
-
-#if	FW_DEBUG | PRINTOUT
-#define	MC_DEBUG(x)		printf x
-#else
 #define	MC_DEBUG(x)
-#endif
+#define	MC_DEBUG2(x)
 
 #ifndef FW_RAS_DDR_DRILLDOWN
 #define FW_RAS_DDR_DRILLDOWN  0x00080026
 #endif
 
-int MEM_Alter(char mc, unsigned rank, uint64_t *data)
+static int MEM_RAS_InfoTokens = 25;
+
+void Mem_ErrPatDecode(uint64_t *comp)
 {
-	uint64_t temp;
-	unsigned RRR;
-	int i=0;
-	EXTERN int Mem_wait_for_MC_idle(CHAR), Mem_reserve_readbuffer(CHAR);
-
-	Mem_wait_for_MC_idle(mc);
-
-	RRR = MC_RANK_MNT(rank);
-	DCRWritePriv(_DDR_MC_MCMACA(mc), _B3(3,RRR) | _B3(10,Mem_Bank_Addr) | _B16(26,Mem_Row_Addr) | _B9(35,Mem_Col_Addr>>3));
-
-	DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(2));
-	Mem_reserve_readbuffer(mc);
-	for(i=0;i<16;i++)
-	{
-		DCRWritePriv(_DDR_MC_MCDADR(mc), data[i]);
-		DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,i&0x3) | _B2(3,i>>2) | _BN(4));
-	}
-	DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(0) | _BN(4) | _BN(5) | _BN(6));
-	i=0;
-	do{
-		temp = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
-		if(i++>MCMCC_TimeOut)
-		{
-			MC_DEBUG(("Timeout: MCMCC2 = 0x%lx\n", temp));
-			return(1);
-		}
-	}
-	while(temp != 0x2);
-
-	return(0);
+	*comp |= *comp<<2;
+	*comp |= *comp<<4;
+	*comp &= 0xC0C0C0C0C0C0C0C0ull;
+	*comp |= *comp<<6;
+	*comp |= *comp<<6;
+	*comp |= *comp<<6;
+	*comp &= 0xFF000000FF000000ull;
+	*comp |= *comp<<24;
+	*comp &= 0xFFFF000000000000ull;
 }
 
-int MEM_Display(char mc, unsigned rank, uint64_t *data)
+unsigned Mem_IOM_Indirect_Read(char mc, char sat, uint64_t addr)
 {
-	uint64_t temp;
-	unsigned RRR;
-	int i=0;
-	EXTERN int Mem_wait_for_MC_idle(CHAR), Mem_reserve_readbuffer(CHAR);
-
-	Mem_wait_for_MC_idle(mc);
-
-	RRR = MC_RANK_MNT(rank);
-	DCRWritePriv(_DDR_MC_MCMACA(mc), _B3(3,RRR) | _B3(10,Mem_Bank_Addr) | _B16(26,Mem_Row_Addr) | _B9(35,Mem_Col_Addr>>3));
-
-	DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(1));
-	Mem_reserve_readbuffer(mc);
-	DCRWritePriv(_DDR_MC_MCECTL(mc), _B2(1,3) | _B1(2,1));
-	DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(0) | _BN(4) | _BN(5) | _BN(6));
-	i=0;
-	do{
-		temp = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
-		if(i++>MCMCC_TimeOut)
-		{
-			MC_DEBUG(("Timeout: MCMCC2 = 0x%lx\n", temp));
-			return(1);
-		}
-	}
-	while(temp != 0x2);
-	data[16] = DCRReadPriv(_DDR_MC_MCDADR(mc));
-	for(i=0;i<16;i++)
-	{
-		DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,i&0x3) | _B2(3,i>>2));
-		data[i] = DCRReadPriv(_DDR_MC_MCDADR(mc));
-	}
-
-	return(0);
+	unsigned mc_iom =(sat%2)*0x4000 + (sat/2)*0x40;
+	DCRWritePriv(_DDR_MC_IOM_PHYREAD(mc) + mc_iom, addr);
+	return(0xFFFF & DCRReadPriv(_DDR_MC_IOM_PHYREAD(mc) + mc_iom));
 }
 
-int MEM_Alter_addr(char mc, unsigned rank, unsigned bank, unsigned row, unsigned col, uint64_t *data)
+int Mem_Compare(uint64_t *x, uint64_t *y)
+{
+	int i;
+
+	for(i=0;i<17;i++)
+		if(x[i]!=y[i])
+			return(0);
+	return(1);
+}
+
+uint64_t Mem_Compare_Bit(int upper_lower, uint64_t *x, uint64_t *y, int inv)
+{
+	int i;
+	uint64_t comp=0;
+
+	for(i=upper_lower;i<16;i+=2)
+		comp |= x[i] ^ y[i];
+	if(inv)
+		return(~comp);
+	else
+		return(comp);
+}
+
+
+int MEM_Alter_addr_ECC_sel(char mc, unsigned rank, unsigned bank, unsigned row, unsigned col, uint64_t *data, char sel, char inv)
 {
 	uint64_t temp;
 	unsigned RRR;
 	int i=0;
 	EXTERN int Mem_wait_for_MC_idle(CHAR), Mem_reserve_readbuffer(CHAR);
+	uint64_t MEM_addr_plus_one(uint64_t);
 
 	Mem_wait_for_MC_idle(mc);
 
 	RRR = MC_RANK_MNT(rank);
 	DCRWritePriv(_DDR_MC_MCMACA(mc), _B3(3,RRR) | _B3(10,bank) | _B16(26,row) | _B9(35,col>>3));
+	DCRWritePriv(_DDR_MC_MCMEA(mc), MEM_addr_plus_one(_B3(3,RRR) | _B3(10,bank) | _B16(26,row) | _B9(35,col>>3)));
 
-	DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(2));
+	DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(2) | _B1(7,sel<2? 1:0));
+	DCRWritePriv(_DDR_MC_MCECTL(mc), _B2(1,3) | _B1(2,sel));
 	Mem_reserve_readbuffer(mc);
 	for(i=0;i<16;i++)
 	{
-		DCRWritePriv(_DDR_MC_MCDADR(mc), data[i]);
+		DCRWritePriv(_DDR_MC_MCDADR(mc), inv? ~data[i]:data[i]);
 		DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,i&0x3) | _B2(3,i>>2) | _BN(4));
 	}
+	if(sel<2)
+		DCRWritePriv(_DDR_MC_MCDADR(mc), inv? ~data[i]:data[i]);
 	DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(0) | _BN(4) | _BN(5) | _BN(6));
+	DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(4) | _BN(5) | _BN(6));
 	i=0;
 	do{
 		temp = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
 		if(i++>MCMCC_TimeOut)
 		{
-			MC_DEBUG(("Timeout: MCMCC2 = 0x%lx\n", temp));
-			return(1);
+		    if ( --MEM_RAS_InfoTokens >= 0 ) {
+				FW_RAS_printf(FW_RAS_INFO, "Timeout %s MCMCC=%X", __func__, DCRReadPriv(_DDR_MC_MCMCC(mc)));
+		    }
+		    MC_DEBUG(("Timeout: MCMCC2 = 0x%lx\n", temp));
+		    return(1);
+		}
+		if(temp != 0x0)
+		{
+			DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(4) | _BN(5) | _BN(6));
+			DelayTimeBase(1600);
 		}
 	}
-	while(temp != 0x2);
+	while(temp != 0x0);
 
-	return(0);
+	temp = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
+	if(temp != 0x0) {
+	    if ( --MEM_RAS_InfoTokens >= 0 ) {
+		FW_RAS_printf(FW_RAS_INFO, "%s Non-zero MCMCC=%X MCMCT=%X", __func__, DCRReadPriv(_DDR_MC_MCMCC(mc)), DCRReadPriv(_DDR_MC_MCMCT(mc)));
+	    }
+	}
+
+	return(i);
 }
 
 int MEM_Alter_addr_ECC(char mc, unsigned rank, unsigned bank, unsigned row, unsigned col, uint64_t *data)
 {
-	uint64_t temp;
-	unsigned RRR;
-	int i=0;
-	EXTERN int Mem_wait_for_MC_idle(CHAR), Mem_reserve_readbuffer(CHAR);
-
-	Mem_wait_for_MC_idle(mc);
-
-	RRR = MC_RANK_MNT(rank);
-	DCRWritePriv(_DDR_MC_MCMACA(mc), _B3(3,RRR) | _B3(10,bank) | _B16(26,row) | _B9(35,col>>3));
-
-	DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(2) | _BN(7));
-	DCRWritePriv(_DDR_MC_MCECTL(mc), _B2(1,3) | _B1(2,1));
-	Mem_reserve_readbuffer(mc);
-	for(i=0;i<16;i++)
-	{
-		DCRWritePriv(_DDR_MC_MCDADR(mc), data[i]);
-		DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,i&0x3) | _B2(3,i>>2) | _BN(4));
-	}
-	DCRWritePriv(_DDR_MC_MCDADR(mc), data[i]);
-	DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(0) | _BN(4) | _BN(5) | _BN(6));
-	i=0;
-	do{
-		temp = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
-		if(i++>MCMCC_TimeOut)
-		{
-			MC_DEBUG(("Timeout: MCMCC2 = 0x%lx\n", temp));
-			return(1);
-		}
-	}
-	while(temp != 0x2);
-
-	return(0);
+	return(MEM_Alter_addr_ECC_sel(mc, rank, bank, row, col, data, 1, 0));
 }
 
-/*
-int MEM_Alter_addr_short(char mc, unsigned rank, unsigned bank, unsigned row, unsigned col, uint64_t *data)
+int MEM_Alter_addr(char mc, unsigned rank, unsigned bank, unsigned row, unsigned col, uint64_t *data)
+{
+	return(MEM_Alter_addr_ECC_sel(mc, rank, bank, row, col, data, 2, 0));
+}
+
+int MEM_Alter(char mc, unsigned rank, uint64_t *data)
+{
+	return(MEM_Alter_addr(mc, rank, Mem_Bank_Addr, Mem_Row_Addr, Mem_Col_Addr, data));
+}
+
+int MEM_Display_addr_sel(char mc, unsigned rank, unsigned bank, unsigned row, unsigned col, uint64_t *data, char sel)
 {
 	uint64_t temp;
 	unsigned RRR;
 	int i=0;
 	EXTERN int Mem_wait_for_MC_idle(CHAR), Mem_reserve_readbuffer(CHAR);
+	uint64_t MEM_addr_plus_one(uint64_t);
 
 	Mem_wait_for_MC_idle(mc);
 
 	RRR = MC_RANK_MNT(rank);
 	DCRWritePriv(_DDR_MC_MCMACA(mc), _B3(3,RRR) | _B3(10,bank) | _B16(26,row) | _B9(35,col>>3));
-
-	DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(2));
-
-	DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(0) | _BN(4) | _BN(5) | _BN(6));
-	i=0;
-	do{
-		temp = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
-		if(i++>MCMCC_TimeOut)
-		{
-			MC_DEBUG(("Timeout: MCMCC2 = 0x%lx\n", temp));
-			return(1);
-		}
-	}
-	while(temp != 0x2);
-
-	return(0);
-}
-*/
-
-int MEM_Display_addr(char mc, unsigned rank, unsigned bank, unsigned row, unsigned col, uint64_t *data)
-{
-	uint64_t temp;
-	unsigned RRR;
-	int i=0;
-	EXTERN int Mem_wait_for_MC_idle(CHAR), Mem_reserve_readbuffer(CHAR);
-
-	Mem_wait_for_MC_idle(mc);
-
-	RRR = MC_RANK_MNT(rank);
-	DCRWritePriv(_DDR_MC_MCMACA(mc), _B3(3,RRR) | _B3(10,bank) | _B16(26,row) | _B9(35,col>>3));
+	DCRWritePriv(_DDR_MC_MCMEA(mc), MEM_addr_plus_one(_B3(3,RRR) | _B3(10,bank) | _B16(26,row) | _B9(35,col>>3)));
 
 	DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(1));
 	Mem_reserve_readbuffer(mc);
-	DCRWritePriv(_DDR_MC_MCECTL(mc), _B2(1,3) | _B1(2,1));
+	DCRWritePriv(_DDR_MC_MCECTL(mc), _B2(1,3) | _B1(2,sel));
 	DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(0) | _BN(4) | _BN(5) | _BN(6));
+	DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(4) | _BN(5) | _BN(6));
 	i=0;
 	do{
 		temp = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
 		if(i++>MCMCC_TimeOut)
 		{
-			MC_DEBUG(("Timeout: MCMCC2 = 0x%lx\n", temp));
-			return(1);
+		    if ( --MEM_RAS_InfoTokens >= 0 ) {
+				FW_RAS_printf(FW_RAS_INFO, "Timeout %s MCMCC=%X", __func__, DCRReadPriv(_DDR_MC_MCMCC(mc)));
+		    }
+		    MC_DEBUG(("Timeout: MCMCC2 = 0x%lx\n", temp));
+		    return(1);
+		}
+		if(temp != 0x0)
+		{
+			DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(4) | _BN(5) | _BN(6));
+			DelayTimeBase(1600);
 		}
 	}
-	while(temp != 0x2);
+	while(temp != 0x0);
 	data[16] = DCRReadPriv(_DDR_MC_MCDADR(mc));
+	int j=i;
 	for(i=0;i<16;i++)
 	{
 		DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,i&0x3) | _B2(3,i>>2));
 		data[i] = DCRReadPriv(_DDR_MC_MCDADR(mc));
 	}
 
-	return(0);
+	temp = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
+	if(temp != 0x0) {
+	    if ( --MEM_RAS_InfoTokens >= 0 ) {
+		FW_RAS_printf(FW_RAS_INFO, "%s : Non-zero MCMCC=%X MCMCT=%X", __func__, DCRReadPriv(_DDR_MC_MCMCC(mc)), DCRReadPriv(_DDR_MC_MCMCT(mc)));
+	    }
+	}
+
+	return(j);
+}
+
+int MEM_Display_addr(char mc, unsigned rank, unsigned bank, unsigned row, unsigned col, uint64_t *data)
+{
+	return(MEM_Display_addr_sel(mc, rank, bank, row, col, data, 1));
+}
+
+int MEM_Display(char mc, unsigned rank, uint64_t *data)
+{
+	return(MEM_Display_addr(mc, rank, Mem_Bank_Addr, Mem_Row_Addr, Mem_Col_Addr, data));
 }
 
 #if 0	// OLD
@@ -329,79 +302,41 @@ int MEM_Increment_addr(char mc)
 	return(0);
 }
 
-/*
-int MEM_FastInit(char mc, unsigned end_rank, unsigned end_bank, unsigned end_row, unsigned end_col, uint64_t *data)
-{
-	uint64_t temp;
-	unsigned RRR;
-	int i=0;
-	unsigned rank, bank;
-	EXTERN int Mem_wait_for_MC_idle(CHAR), Mem_reserve_readbuffer(CHAR);
-
-	Mem_wait_for_MC_idle(mc);
-
-	DCRWritePriv(_DDR_MC_MCMACA(mc), 0);
-
-	DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(2) | _BN(3));
-	Mem_reserve_readbuffer(mc);
-	for(i=0;i<16;i++)
-	{
-		DCRWritePriv(_DDR_MC_MCDADR(mc), data[i]);
-		DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,i&0x3) | _B2(3,i>>2) | _BN(4));
-	}
-
-//	switch(end_rank+1)
-//	{
-//		case 4: temp = _BN(3);
-//		case 2: temp = _BN(1);
-//		case 1: temp = _BN(0);
-//	}
-//	DCRWritePriv(_DDR_MC_MCACFG0(mc), temp);
-
-	for(rank=0;rank<=end_rank;rank++)
-	for(bank=0;bank<=end_bank;bank++)
-	{
-	MC_DEBUG(("Rank%u Bank%u\n",rank,bank));
-	
-		RRR = MC_RANK_MNT(rank);
-		DCRWritePriv(_DDR_MC_MCMEA(mc), _B3(3,RRR) | _B3(10,bank) | _B16(26,end_row) | _B9(35,end_col>>3));
-	
-		DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(0) | _BN(4) | _BN(5) | _BN(6));
-		i=0;
-		do{
-			DelayTimeBase(1600000000);
-			temp  = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
-			if(i++>MEMTEST_TimeOut)
-			{
-				MC_DEBUG(("Timeout: MCMCC_FastInit = 0x%lx\n", temp));
-				break;
-			}
-		}
-		while(temp != 0x2);
-	}
-
-	return(0);
-}
-*/
-
-/*
-int MEM_FW_Init(char mc, unsigned end_rank, unsigned end_bank, unsigned end_row, unsigned end_col, uint64_t *data)
+uint64_t MEM_addr_plus_one(uint64_t mcaddr_in)
 {
 	unsigned rank, bank, row, col;
+	unsigned max_rank, max_bank, max_row, max_col;
 
-	MEM_Alter(mc, 0, data);
-	for(rank=0;rank<=end_rank;rank++)
-		for(bank=0;bank<=end_bank;bank++)
-			for(row=0;row<=end_row;row+=0x1)
-			{
-				if(row%0xFF == 0)
-					MC_DEBUG(("Rank%u Bank%u Row:0x%4X\n",rank,bank,row));
-				for(col=0;col<=end_col;col+=0x1)
-					MEM_Alter_addr_short(mc, rank,bank, row, col,  data);
-			}
-	return(0);
+	// 0=DIMM 1:3=rank 8:10=bank 11:26=row 27:35=col
+
+	max_rank = 1;
+	max_bank = 7;
+	max_row  = 0x7FFF;
+	max_col  = 0x3FF>>3;
+
+	rank = (mcaddr_in >> 60) & 0xF;
+	bank = (mcaddr_in >> 53) & 0x7;
+	row  = (mcaddr_in >> 37) & 0xFFFF;
+	col  = (mcaddr_in >> 28) & 0x1FF;
+
+	if(col < max_col) {
+		col++;
+	}
+	else if(row < max_row) {
+		row++; col=0;
+	}
+	else if(bank < max_bank) {
+		bank++; row=0; col=0;
+	}
+	else if(rank < max_rank) {
+		rank++; bank=0; row=0; col=0;
+	}
+	else {
+		rank=0; bank=0; row=0; col=0;
+	}
+
+	return(_B4(3,rank) | _B3(10,bank) | _B16(26,row) | _B9(35,col));
 }
-*/
 
 int MEM_FastInit_allMC(unsigned end_rank, unsigned end_bank, unsigned end_row, unsigned end_col, uint64_t *data)
 {
@@ -409,6 +344,18 @@ int MEM_FastInit_allMC(unsigned end_rank, unsigned end_bank, unsigned end_row, u
 	unsigned RRR;
 	int i=0, mc;
 	EXTERN int Mem_wait_for_MC_idle(CHAR), Mem_reserve_readbuffer(CHAR);
+
+	for(mc=0;mc<2;mc++)
+	{
+		tmp[mc]  = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
+		if(tmp[mc] != 0x0) {
+		    if ( --MEM_RAS_InfoTokens >= 0 ) {
+			FW_RAS_printf(FW_RAS_INFO, "%s Begin: Non-zero MCMCC=%X MCMCT=%X", __func__, DCRReadPriv(_DDR_MC_MCMCC(mc)), DCRReadPriv(_DDR_MC_MCMCT(mc)));
+		    }
+		}
+	}
+	for(mc=0;mc<2;mc++)
+		DCRWritePriv(_DDR_MC_MCMCC(mc), 0);     // Start from scratch (release read buffer)
 
 	for(mc=0;mc<2;mc++)
 	{
@@ -447,8 +394,8 @@ int MEM_FastInit_allMC(unsigned end_rank, unsigned end_bank, unsigned end_row, u
 		DelayTimeBase(80000000);
 		for(mc=0;mc<2;mc++)
 			tmp[mc]  = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
-	//	if(i++>MEMTEST_TimeOut)
-	//		break;
+		if(i++>MEMTEST_TimeOut)
+			break;
 	//	MC_DEBUG(("%d seconds\n",i));
 	}
 	while(tmp[0] != 0x2 || tmp[1] != 0x2);
@@ -456,63 +403,26 @@ int MEM_FastInit_allMC(unsigned end_rank, unsigned end_bank, unsigned end_row, u
 		if(tmp[mc] != 0x2)
 		{
 			temp = DCRReadPriv(_DDR_MC_MCMACA(mc));
+			if ( --MEM_RAS_InfoTokens >= 0 ) {
+			FW_RAS_printf(FW_RAS_INFO, "Timeout %s MCMCC=%X MCMCT=%X", __func__, DCRReadPriv(_DDR_MC_MCMCC(mc)), DCRReadPriv(_DDR_MC_MCMCT(mc)));
+			}
 			MC_DEBUG(("Timeout: MC%d: Rank%d Bank%d Row=0x%4X Col=0x%4X\n",mc,(int)(temp>>60)&0x7,(int)(temp>>53)&0x7,(unsigned)(temp>>37)&0xFFFF,(unsigned)(temp>>(28-3))&0xFFF));
 		}
 
-	return(0);
-}
-
-/*
-int MEM_FastInit_1MC(char mc, unsigned end_rank, unsigned end_bank, unsigned end_row, unsigned end_col, uint64_t *data)
-{
-	uint64_t temp;
-	unsigned RRR;
-	int i=0;
-	EXTERN int Mem_wait_for_MC_idle(CHAR), Mem_reserve_readbuffer(CHAR);
-
-	Mem_wait_for_MC_idle(mc);
-
-	DCRWritePriv(_DDR_MC_MCMACA(mc), 0);
-
-	RRR = MC_RANK_MNT(end_rank);
-	DCRWritePriv(_DDR_MC_MCMEA(mc), _B3(3,RRR) | _B3(10,end_bank) | _B16(26,end_row) | _B9(35,end_col>>3));
-	DCRWritePriv(_DDR_MC_MCMCT(mc), _BN(0) | _BN(2) | _BN(3));
-	Mem_reserve_readbuffer(mc);
-
-//	switch(end_rank+1)
-//	{
-//		case 4: temp = _BN(3);
-//		case 2: temp = _BN(1);
-//		case 1: temp = _BN(0);
-//	}
-//	DCRWritePriv(_DDR_MC_MCACFG0(mc), temp);
-
-	for(i=0;i<16;i++)
+	for(mc=0;mc<2;mc++)
+		DCRWritePriv(_DDR_MC_MCMCC(mc), 0);     // Reset to zero
+	for(mc=0;mc<2;mc++)
 	{
-		DCRWritePriv(_DDR_MC_MCDADR(mc), data[i]);
-		DCRWritePriv(_DDR_MC_MCDACR(mc), _B2(1,i&0x3) | _B2(3,i>>2) | _BN(4));
+		tmp[mc]  = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
+		if(tmp[mc] != 0x0) {
+		    if ( --MEM_RAS_InfoTokens >= 0 ) {
+			FW_RAS_printf(FW_RAS_INFO, "%s End: Non-zero MCMCC=%X MCMCT=%X", __func__,DCRReadPriv(_DDR_MC_MCMCC(mc)), DCRReadPriv(_DDR_MC_MCMCT(mc)));
+		    }
+		}
 	}
 
-	DCRWritePriv(_DDR_MC_MCMCC(mc), _BN(0) | _BN(4) | _BN(5) | _BN(6));
-
-	i=0;
-	do{
-		DelayTimeBase(1600000000);
-		temp  = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
-		if(i++>MEMTEST_TimeOut)
-			break;
-		MC_DEBUG(("%d seconds\n",i));
-	}
-	while(temp != 0x2);
-	if(temp != 0x2)
-	{
-		temp = DCRReadPriv(_DDR_MC_MCMACA(mc));
-		MC_DEBUG(("Timeout: MC0: Rank%d Bank%d Row=0x%4X Col=0x%4X\n",(int)(temp>>60)&0x7,(int)(temp>>53)&0x7,(unsigned)(temp>>37)&0xFFFF,(unsigned)(temp>>(28-3))&0xFFF));
-	}
-
-	return(0);
+	return(0) ;
 }
-*/
 
 int MEM_Scrubbing_allMC(unsigned end_rank, unsigned end_bank, unsigned end_row, unsigned end_col)
 {
@@ -520,6 +430,18 @@ int MEM_Scrubbing_allMC(unsigned end_rank, unsigned end_bank, unsigned end_row, 
 	unsigned RRR, num_errors=0;
 	int	mc, done[2]={0,0};
 	EXTERN int Mem_wait_for_MC_idle(CHAR), Mem_reserve_readbuffer(CHAR);
+
+	for(mc=0;mc<2;mc++)
+	{
+		temp  = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
+		if(temp != 0x0) {
+		    if ( --MEM_RAS_InfoTokens >= 0 ) {
+			FW_RAS_printf(FW_RAS_INFO, "%s Begin: Non-zero MCMCC=%X MCMCT=%X", __func__, DCRReadPriv(_DDR_MC_MCMCC(mc)), DCRReadPriv(_DDR_MC_MCMCT(mc)));
+		    }
+		}
+	}
+	for(mc=0;mc<2;mc++)
+		DCRWritePriv(_DDR_MC_MCMCC(mc), 0);     // Start from scratch (release read buffer)
 
 	RRR = MC_RANK_MNT(end_rank);
 	mcmea = _B3(3,RRR) | _B3(10,end_bank) | _B16(26,end_row) | _B9(35,end_col>>3);
@@ -586,10 +508,23 @@ int MEM_Scrubbing_allMC(unsigned end_rank, unsigned end_bank, unsigned end_row, 
 	if(!TI_isDD1())
 		for(mc=0;mc<2;mc++)
 			DCRWritePriv(_DDR_MC_MCAMISC(mc), mcamisc);
-	
+
+	for(mc=0;mc<2;mc++)
+		DCRWritePriv(_DDR_MC_MCMCC(mc), 0);     // Reset to zero
+	for(mc=0;mc<2;mc++)
+	{
+		temp  = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
+		if(temp != 0x0) {
+		    if ( --MEM_RAS_InfoTokens >= 0 ) {
+			FW_RAS_printf(FW_RAS_INFO, "%s End: Non-zero MCMCC=%X MCMCT=%X", __func__,DCRReadPriv(_DDR_MC_MCMCC(mc)), DCRReadPriv(_DDR_MC_MCMCT(mc)));
+		    }
+		}
+	}
+
 	return(num_errors);
 }
 
+#if 0
 int MEM_Scrubbing(char mc, unsigned end_rank, unsigned end_bank, unsigned end_row, unsigned end_col, uint64_t *data, uint64_t *rddata, uint64_t *syndrome)
 {
 	uint64_t mcmea, mceccdis, temp=0x0;
@@ -624,12 +559,12 @@ int MEM_Scrubbing(char mc, unsigned end_rank, unsigned end_bank, unsigned end_ro
 			if(num_UE > MAX_NUM_UE_COUNT)
 			{
 				DelayTimeBase(80000000);
-#if 0
+		#if 0
 				temp = DCRReadPriv(_DDR_MC_MCMACA(mc));
 				rank = (int)(temp>>60)&0x7;
 				MC_DEBUG(("MC[%d] MCMACA: Rank%d Bank%d Row=0x%x Col=0x%x\n",
 					mc,rank,(int)(temp>>53)&0x7,(unsigned)(temp>>37)&0xFFFF,(unsigned)(temp>>(28-3))&0xFFF));
-#endif
+		#endif
 			}
 			temp  = DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 60;
 			if(temp == 0x2)
@@ -686,7 +621,7 @@ int MEM_Scrubbing(char mc, unsigned end_rank, unsigned end_bank, unsigned end_ro
 	if(num_UE > 0 || num_CE > 0)
 	{
 	//	printf("MC[%d]: UE_count %c %u    CE_count = %u    CE_syndrome_count = %u\n", mc, num_UE >= MAX_NUM_UE_COUNT? '>':'=', num_UE, num_CE, num_Syndrome);
-		printf("MC[%d]: UE + CE %c %u    CE_syndrome_count = %u\n", mc, num_UE >= MAX_NUM_UE_COUNT? '>':'=', num_UE, num_Syndrome);
+//		printf("MC[%d]: UE + CE %c %u    CE_syndrome_count = %u\n", mc, num_UE >= MAX_NUM_UE_COUNT? '>':'=', num_UE, num_Syndrome);
 
 		int	k, chip;
 
@@ -764,7 +699,9 @@ int MEM_Syndrome(char mc, unsigned end_rank, uint64_t *syndrome)
 	}
 	return(0);
 }
+#endif
 
+#if 0
 int MEM_BIST(char mc, unsigned num_ranks)
 {
 	uint64_t temp, temp2/*, mcamisc*/;
@@ -821,6 +758,7 @@ int MEM_BIST(char mc, unsigned num_ranks)
 
 	return(0);
 }
+#endif
 
 void Mem_print_vector(uint64_t *data, char *header, int size)
 {
@@ -856,8 +794,11 @@ int Mem_reserve_readbuffer(char mc)
 			temp = 0xF & (DCRReadPriv(_DDR_MC_MCMCC(mc)) >> 56);
 			if(i++>MCMCC_TimeOut)
 			{
-				MC_DEBUG(("Timeout: Reserve Read Buffer = 0x%lx\n", temp));
-				return(1);
+			    if ( --MEM_RAS_InfoTokens >= 0 ) {
+				FW_RAS_printf(FW_RAS_INFO, "Timeout %s MCMCC=%X", __func__, DCRReadPriv(_DDR_MC_MCMCC(mc)));
+			    }
+			    MC_DEBUG(("Timeout: Reserve Read Buffer = 0x%lx\n", temp));
+			    return(1);
 			}
 		}
 		while(temp != 0xC);
@@ -910,15 +851,15 @@ void Mem_Marking(int mc, int rank, int chip)
 		case  5:	mrkdata = 0xFC;	break;
 		case  6:	mrkdata = 0xA7;	break;
 		case  7:	mrkdata = 0xB4;	break;
-		case  8:	mrkdata = 0x13;	break;
-		case  9:	mrkdata = 0xED;	break;
-		case 10:	mrkdata = 0x8F;	break;
-		case 11:	mrkdata = 0x62;	break;
-		case 12:	mrkdata = 0x33;	break;
-		case 13:	mrkdata = 0x77;	break;
-		case 14:	mrkdata = 0x44;	break;
-		case 15:	mrkdata = 0x60;	break;
-		case 16:	mrkdata = 0xE0;	break;
+		case  9:	mrkdata = 0x13;	break;
+		case 10:	mrkdata = 0xED;	break;
+		case 11:	mrkdata = 0x8F;	break;
+		case 12:	mrkdata = 0x62;	break;
+		case 13:	mrkdata = 0x33;	break;
+		case 14:	mrkdata = 0x77;	break;
+		case 15:	mrkdata = 0x44;	break;
+		case 16:	mrkdata = 0x60;	break;
+		case  8:	mrkdata = 0xE0;	break;
 		case 17:	mrkdata = 0x80;	break;
 		default:	mrkdata = 0x00;
 	}
@@ -936,4 +877,180 @@ void Mem_Marking(int mc, int rank, int chip)
 #undef	EXTERN
 #undef	CHAR
 #undef	MC_RANK_MNT
-#undef	PRINTOUT
+
+#if 0
+uint64_t XOR_reduce(uint64_t in)
+{
+	int	i;
+	uint64_t	out=0;
+
+	for(i=0;i<64;i++)
+		out ^= in>>i;
+
+	return(out&0x1);
+}
+
+// MC address to Physical address decoder
+
+uint64_t MC_to_A2(uint64_t MC_addr, unsigned num_ranks, unsigned dram_density)
+{
+	uint64_t	A2_addr=0;
+	uint64_t	M2A[64];
+	int	i;
+
+	for(i=0;i<64;i++)
+		M2A[i] = 0;
+
+	M2A[7] = 0x8022222090000000ull;
+	M2A[8] = 0x0040444160000000ull;
+	M2A[9] = 0x0080888260000000ull;
+	M2A[10]= 0x00E5110410000000ull;
+	M2A[11]= 0x0020000010000000ull;
+	M2A[12]= 0x0040000020000000ull;
+	M2A[13]= 0x0080000040000000ull;
+	M2A[14]= 0x00E4000000000000ull;
+	M2A[15]= 0x0000000080000000ull;
+	M2A[16]= 0x0000000100000000ull;
+	M2A[17]= 0x0000000200000000ull;
+	M2A[18]= 0x0000000400000000ull;
+	M2A[19]= 0x0000002000000000ull;
+	M2A[20]= 0x0000004000000000ull;
+	M2A[21]= 0x0000008000000000ull;
+	M2A[22]= 0x0000010000000000ull;
+	M2A[23]= 0x0000020000000000ull;
+	M2A[24]= 0x0000040000000000ull;
+	M2A[25]= 0x0000080000000000ull;
+	M2A[26]= 0x0000100000000000ull;
+	M2A[27]= 0x0000200000000000ull;
+	M2A[28]= 0x0000400000000000ull;
+	M2A[29]= 0x0000800000000000ull;
+	M2A[30]= 0x0001000000000000ull;
+	M2A[31]= 0x0002000000000000ull;
+
+	if(num_ranks*dram_density == 16) {
+		M2A[7] = 0x9022222090000000ull;
+		M2A[35]= 0x1000000000000000ull;
+	}
+	if(num_ranks*dram_density != 1) {
+		M2A[8] = 0x0044444160000000ull;
+		M2A[32]= 0x0004000000000000ull;
+	}
+	if(num_ranks*dram_density >= 4) {
+		if(dram_density == 1) {
+			M2A[9] = 0x1080888260000000ull;
+			M2A[33]= 0x1000000000000000ull;
+		}
+		else {
+			M2A[9] = 0x0088888260000000ull;
+			M2A[33]= 0x0008000000000000ull;
+		}
+	}
+	if(num_ranks*dram_density >= 8) {
+		if(dram_density == 2)
+			M2A[34]= 0x1000000000000000ull;
+		else
+			M2A[34]= 0x0010000000000000ull;
+	}
+	if(num_ranks == 1) {
+		M2A[10]= 0x00E1110410000000ull | _B3(13,dram_density);
+		M2A[14]= 0x00E0000000000000ull | _B3(13,dram_density);
+	}
+	else {
+		M2A[10]= 0x00E1110410000000ull | _B3(4,num_ranks) | _B1(11,dram_density/4);
+		M2A[14]= 0x00E0000000000000ull | _B3(4,num_ranks);
+		if(num_ranks == 4 && dram_density == 2)
+			M2A[10] |= 0x1000000000000000ull;
+	}
+
+	for(i=0;i<64;i++)
+	{
+		A2_addr |= XOR_reduce(MC_addr & M2A[i]) << i;
+	}
+	return(A2_addr);
+}
+
+// Physical address to MC address decoder
+
+uint64_t A2_to_MC(uint64_t A2_addr, unsigned num_ranks, unsigned dram_density)
+{
+	uint64_t	MC_addr=0;
+	uint64_t	A2M[64];
+	int	i;
+
+	for(i=0;i<64;i++)
+		A2M[i] = 0;
+
+	A2M[28]= 0x0000000044444400ull;
+	A2M[29]= 0x0000000022222200ull;
+	A2M[30]= 0x0000000011111100ull;
+	A2M[31]= 0x0000000000008000ull;
+	A2M[32]= 0x0000000000010000ull;
+	A2M[33]= 0x0000000000020000ull;
+	A2M[34]= 0x0000000000040000ull;
+	A2M[37]= 0x0000000000080000ull;
+	A2M[38]= 0x0000000000100000ull;
+	A2M[39]= 0x0000000000200000ull;
+	A2M[40]= 0x0000000000400000ull;
+	A2M[41]= 0x0000000000800000ull;
+	A2M[42]= 0x0000000001000000ull;
+	A2M[43]= 0x0000000002000000ull;
+	A2M[44]= 0x0000000004000000ull;
+	A2M[45]= 0x0000000008000000ull;
+	A2M[46]= 0x0000000010000000ull;
+	A2M[47]= 0x0000000020000000ull;
+	A2M[48]= 0x0000000040000000ull;
+	A2M[49]= 0x0000000080000000ull;
+	A2M[50]= 0x0000000077770F00ull;
+	A2M[53]= 0x0000000044444C00ull;
+	A2M[54]= 0x0000000022223200ull;
+	A2M[55]= 0x0000000011113100ull;
+	A2M[63]= 0x0000000088888880ull;
+
+	if(num_ranks*dram_density >= 8) {
+		A2M[28]= 0x0000000444444400ull;
+		A2M[53]= 0x0000000444444C00ull;
+	}
+	if(num_ranks*dram_density >= 4) {
+		A2M[29]= 0x0000000222222200ull;
+		A2M[54]= 0x0000000222223200ull;
+	}
+	if(num_ranks*dram_density != 1) {
+		A2M[30]= 0x0000000111111100ull;
+		A2M[50]= 0x0000000100000000ull;
+		A2M[55]= 0x0000000111113100ull;
+	}
+	if(num_ranks == 1 && dram_density == 2) {
+		A2M[51]= 0x0000000177770f00ull;
+	}
+	else if(dram_density >= 2) {
+		A2M[51]= 0x0000000200000000ull;
+	}
+	if(dram_density == 4) {
+		if(num_ranks == 1)
+			A2M[52]= 0x0000000377770f00ull;
+		else
+			A2M[52]= 0x0000000400000000ull;
+	}
+	if(num_ranks == 2) {
+		A2M[60] = 0x0000000077770f00ull | _B3(31,(2*dram_density-1));
+	}
+	else if(num_ranks == 4) {
+		A2M[60] = _B3(30,dram_density);
+	}
+	if(num_ranks == 4) {
+		if(dram_density == 1)
+			A2M[61]= 0x0000000377770f00ull;
+		else
+			A2M[61]= 0x0000000777770f00ull;
+	}
+	if(num_ranks*dram_density == 16) {
+		A2M[63]= 0x0000000888888880ull;
+	}
+
+	for(i=0;i<64;i++)
+	{
+		MC_addr |= XOR_reduce(A2_addr & A2M[i]) << i;
+	}
+	return(MC_addr);
+}
+#endif

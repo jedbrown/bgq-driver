@@ -43,15 +43,12 @@ extern const unsigned       MuxPerfCounterInterval;
 // server stuff
 extern const std::string    ServerMuxService;
 extern const std::string    ServerCommandService;
-extern const size_t         ServerBufferSize;
 extern const bool           ServerJobSimulation;
 extern const size_t         ServerMaxUserProcesses;
 extern const unsigned       ServerPerfCounterInterval;
 extern const std::string    ServerIosdIdCounterName;
 extern const size_t         ServerIosdIdCounterSize;
 extern const unsigned       ServerKillJobTimeout;
-extern const unsigned       ServerIoNodeOutputThrottle;
-extern const unsigned       ServerIoNodeOutputDelay;
 extern const uint16_t       ServerJobctlPort;
 extern const uint16_t       ServerStdioPort;
 

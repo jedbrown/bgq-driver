@@ -36,6 +36,8 @@
 
 namespace capena {
 namespace server {
+
+/*! \brief Exceptions that result in HTTP responses. */
 namespace exception {
 
 

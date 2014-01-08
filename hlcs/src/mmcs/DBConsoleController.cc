@@ -161,7 +161,6 @@ DBConsoleController::setAllocating(const std::string& blockName)
         AllocateMap::iterator it = _allocateMap.find(blockName);
         if (it != _allocateMap.end()) {
             if(_allocateMap[blockName] != 0) {
-                // For debug only        printAllocMap();
                 return false;  // Can't allocate if we're already allocating
             }
         }
@@ -205,15 +204,6 @@ DBConsoleController::allocateBlocked(string blockName)
     return false;
 }
 
-void
-DBConsoleController::printAllocMap()
-{
-    for(AllocateMap::iterator it = _allocateMap.begin()
-            ; it != _allocateMap.end(); it++) {
-        LOG_INFO_MSG(it->first << " " << it->second);
-    }
-}
-
 DBConsoleController::DBConsoleController(
         MMCSCommandProcessor* commandProcessor,
         const bgq::utility::UserId& user,
@@ -255,130 +245,8 @@ DBConsoleController::~DBConsoleController()
     mutex.Unlock();
 }
 
-const DBBlockPtr
-DBConsoleController::selectTargetset(deque<string> args, MMCSCommandReply& reply, bool exists)
-{
-    LOGGING_DECLARE_USER_ID_MDC;
-    string targetsetName;
-    BGQDB::STATUS result;
-    BGQDB::BlockInfo bInfo;
-    DBBlockPtr blockControllerPtr;
-    PthreadMutexHolder mutex;
-
-    DBBlockPtr zeroptr;
-
-    if (args.size() == 0)
-    {
-        reply << FAIL << "args?" << DONE;
-        return zeroptr;
-    }
-
-    // do we already have the block selected?
-    targetsetName = args[0];
-    if (_blockController != 0 && _blockController->getBase()->getBlockName() == targetsetName)
-    {
-        reply << OK << DONE;
-        return boost::dynamic_pointer_cast<DBBlockController>(_blockController);
-    }
-
-
-    // make sure we don't already have a block with the same name as the targetset
-    if ((result = BGQDB::getBlockInfo(targetsetName.c_str(), bInfo)) == BGQDB::OK)
-    {
-        reply << FAIL << "block exists with the same name" << DONE;
-        return zeroptr;
-    }
-
-
-    // search for the block in our map
-    blockControllerPtr = DBConsoleController::findBlock(targetsetName);
-
-    // We didn't find the block in the map
-    if (blockControllerPtr == 0)
-    {
-        if (exists == true)        // caller only wants to select an existing targetset
-        {
-            reply << FAIL << "targetset does not exist" << DONE;
-            return zeroptr;
-        }
-
-        // create a new DBBlockController and add it to the map
-        if(bInfo.ionodes > 0) {
-            // create an io block pointer
-            IOBlockPtr iop(new IOBlockController(0, _user.getUser(), targetsetName, true));
-            // now create the db block pointer and initialize it with the io block ptr
-            DBBlockPtr p(new DBBlockController(iop));
-            blockControllerPtr = p;
-        }
-        else if(bInfo.cnodes > 0) {
-            // create an io block pointer
-            CNBlockPtr cnp(new CNBlockController(0, _user.getUser(), targetsetName, true));
-            // now create the db block pointer and initialize it with the cn block ptr
-            DBBlockPtr p(new DBBlockController(cnp));
-            blockControllerPtr = p;
-        }
-        else {
-            reply << FAIL << "Bogus block definition.  No compute or ionodes." << DONE;
-            return zeroptr;
-        }
-
-        DBBlockPtr temp_blockControllerPtr =
-            DBConsoleController::addBlock(targetsetName, blockControllerPtr);
-
-
-        // in a race, we may get a different block controller back from addBlock
-        if (temp_blockControllerPtr != blockControllerPtr)
-        {
-            blockControllerPtr = temp_blockControllerPtr;
-        }
-    }
-
-    // if we found a block controller in the map
-    // The block state may be 'free' or 'configuring' in an allocation race
-
-    else {            // we did find a block in the map
-        LOG_INFO_MSG("selectTargetset(): "
-                     << blockControllerPtr->getBase()->getBlockName()
-                     << "\t" << blockControllerPtr->getBase()->getUserName()
-                     << "("  << blockControllerPtr->getBase()->peekBlockThreads() << ")"
-                     << (blockControllerPtr->getBase()->isConnected() ? "\tconnected" : "")
-                     << (blockControllerPtr->getBase()->peekDisconnecting() ? "\tdisconnecting" : "")
-                     );
-    }
-
-    // Now we either found a block in the pool or created a new one
-
-    if ( blockControllerPtr->getBase()->getUserName() != _user.getUser() )    // this occurs in a race condition
-    {
-        reply << FAIL << "target set is allocated to another user" << DONE;
-        mutex.Lock(&_blockMapMutex);
-        blockControllerPtr->getBase()->decrBlockThreads();
-        mutex.Unlock();
-        return zeroptr;
-    }
-
-    if (blockControllerPtr->getBase()->isDisconnecting())
-    {
-
-        reply << FAIL << "disconnecting - " << blockControllerPtr->getBase()->disconnectReason() << DONE;
-        mutex.Lock(&_blockMapMutex);
-        blockControllerPtr->getBase()->decrBlockThreads();
-        mutex.Unlock();
-        return zeroptr;
-    }
-
-    // release any current block
-    if (_blockController != 0)
-        deselectBlock();
-
-    _blockController = blockControllerPtr;
-
-    reply << OK << DONE;
-    return blockControllerPtr;
-}
-
 DBBlockPtr
-DBConsoleController::selectBlock(deque<string> args, MMCSCommandReply& reply, bool allocated, bool trustme)
+DBConsoleController::selectBlock(deque<string> args, MMCSCommandReply& reply, bool allocated)
 {
     LOGGING_DECLARE_USER_ID_MDC;
     string blockName;
@@ -517,16 +385,6 @@ DBConsoleController::selectBlock(deque<string> args, MMCSCommandReply& reply, bo
     }
 
     // Now we either found a block in the pool or created a new one
-
-    if (blockControllerPtr->getBase()->getUserName() != _user.getUser()) { // this occurs in a race condition
-        if (!trustme) {
-            // reply << FAIL << "block is allocated to another user" << DONE;
-            // mutex.Lock(&_blockMapMutex);
-            // blockControllerPtr->getBase()->decrBlockThreads();
-            // mutex.Unlock();
-            // return zeroptr;
-        }
-    }
 
     if (blockControllerPtr->getBase()->isDisconnecting()) {
         reply << FAIL << "disconnecting - " << blockControllerPtr->getBase()->disconnectReason() << DONE;

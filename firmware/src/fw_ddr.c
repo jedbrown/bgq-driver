@@ -149,6 +149,12 @@ int fw_ddr_productionCorrectableHandler() {
 	
 	if ( ( mcfir & ~( MCFIR_MEMORY_CE | MCFIR_MAINTENANCE_CE ) ) != 0 ) {
 	    DCRWritePriv(_DDR_MC_MCMCC(unit), 0);	// If more than CE, then keep scrubbing disabled
+
+	    if ( ( mcfir & ( MCFIR_MEMORY_ECC_MARKING_STORE_UPDATED ) ) != 0 ) {
+		DDR_Marking_Handler(unit);
+	    }
+
+	    DDR_PHY_Recal(unit,200);	// If more than CE, perform dynamic recal
 	}
 	else if ( ( mcfir & ( MCFIR_MEMORY_CE | MCFIR_MAINTENANCE_CE ) ) != 0 ) {
 
@@ -181,7 +187,7 @@ int fw_ddr_productionCorrectableHandler() {
 	    }
 	    
 	    if ( PERS_ENABLED( PERS_ENABLE_DDRDynamicRecal ) ) {
-		DDR_PHY_Recal(unit);
+		DDR_PHY_Recal(unit,1000);
 	    }
 	}
 
@@ -235,8 +241,10 @@ int fw_ddr_legacyCorrectableHandler( fw_uint64_t details[] ) {
     int rc = 0; // assume that only correctables are present
     unsigned unit;
     unsigned n = 0;
-
+    int directedScrubbingEnabled =  PERS_ENABLED(PERS_ENABLE_DDRDirScrub);
+    int backgroundScrubbingEnabled =  PERS_ENABLED(PERS_ENABLE_DDRBackScrub);
     uint64_t correctableMask = FW_DDR_CORRECTABLE_MASK;
+
 
     for ( unit = 0; unit < DR_ARB_DCR_num; unit++ ) {
 
@@ -276,7 +284,7 @@ int fw_ddr_legacyCorrectableHandler( fw_uint64_t details[] ) {
 
 	// scrubbing handling
 
-	if ( ( mcfir & ~( MCFIR_MEMORY_CE | MCFIR_MAINTENANCE_CE ) ) != 0 ) {
+	if ( ( ( mcfir & ~( MCFIR_MEMORY_CE | MCFIR_MAINTENANCE_CE ) ) != 0 ) && ( backgroundScrubbingEnabled != 0 ) ) {
 	    DCRWritePriv(_DDR_MC_MCMCC(unit), 0);	// If more than CE, then keep scrubbing disabled
 	    FW_Warning( "Stopping Background Scrubbing Permanently unit=%d MCFIR=%X", unit, mcfir);
 	}
@@ -295,38 +303,34 @@ int fw_ddr_legacyCorrectableHandler( fw_uint64_t details[] ) {
 
 	    if ( ( DCRReadPriv(_DDR_MC_MCMCC(unit)) & mcmcc_mask ) == mcmcc_expected ) {
 
-		if ( mcfir & MCFIR_MAINTENANCE_CE ) {
+		if ( ( ( mcfir & MCFIR_MAINTENANCE_CE ) != 0 ) && ( directedScrubbingEnabled != 0 ) ) {
 
 		    // Increment scrubbing address by +1
 
 		    if ( MEM_Increment_addr(unit) != 0 ) {
 			FW_Warning("Could not increment scrubbing address.");
 		    }
-		    printf( "Background Scrubbing Resumed unit=%d MCMACA=%lx.", unit, DCRReadPriv(_DDR_MC_MCMACA(unit)) );
 		}
 
-		if ( mcfir & MCFIR_MEMORY_CE ) {
+		if ( ( mcfir & MCFIR_MEMORY_CE ) && ( directedScrubbingEnabled != 0 ) ) {
 
 		    // Rewind scrubbing address to the error location
 
 		    DCRWritePriv(_DDR_MC_MCMACA(unit), DCRReadPriv(_DDR_MC_MCRADR(unit)) ); 
-		    printf( "Rewinding Scrub Address... Background Scrubbing Resumed unit=%d MCMACA=%lx.", unit, DCRReadPriv(_DDR_MC_MCMACA(unit)) );
 		}
 
 		DCRWritePriv(_DDR_MC_MCMCC(unit), MCMCC_MAINTENANCE_COMMAND_VALID | MCMCC_RESERVE_READ_BUFFER_REQUEST | MCMCC_READ_BUFFERED_RESERVED );
 	    }
-	    else {
+	    else if ( ( directedScrubbingEnabled != 0 ) || ( backgroundScrubbingEnabled != 0 ) ) {
 
 		// NOTE: Changed to Warning because this could happen in some normal cases when one-time scrubbing (bit6==1) or any other maintenance command
 		//       is called by a test (e.g., ddr_bitfail, ddr_error_stress). This also could happen after background scrubbing is stopped permanently.
 
 	        FW_Warning( "Background Scrubbing Not Resumed unit=%d MCMCC=%X", unit, DCRReadPriv(_DDR_MC_MCMCC(unit)) );
-		//    FW_Error( "Illegal Memory Scrubbing State Change unit=%d MCMCC=%lx", unit, DCRReadPriv(_DDR_MC_MCMCC(unit)) );
-		//    rc = -1;
 	    }
 
 	    if ( PERS_ENABLED( PERS_ENABLE_DDRDynamicRecal ) ) {
-		DDR_PHY_Recal(unit);
+		DDR_PHY_Recal(unit,1000);
 	    }
 	}
 
@@ -426,6 +430,10 @@ int fw_ddr_machineCheckHandler( uint64_t status[] ) {
   details[n++] = DCRReadPriv( _DDR_MC_MCFIRM(1) );
 
   fw_machineCheckRas( FW_RAS_DR_ARB_MACHINE_CHECK, details, n, __FILE__, __LINE__ );
+
+  DDR_UE_Diagnose(0);		// Callout of UE diagnosing routine
+  DDR_UE_Diagnose(1);		// Callout of UE diagnosing routine
+
 
   return -1;
 }
@@ -538,7 +546,7 @@ int fw_ddr_init( void ) {
       // |                                                                                           |
       // |  DD1 NOTE: The read buffer underrun problem is being fixed on DD2. It is a false check    |
       // |        which may be set during the execution of a maintenance write operation.            |
-      // |        Recommended workaround is just to mask this checker if it is being experienced.    |                                                                              |
+      // |        Recommended workaround is just to mask this checker if it is being experienced.    |           
       // +-------------------------------------------------------------------------------------------+
 
       uint64_t fir = 0;
@@ -546,6 +554,27 @@ int fw_ddr_init( void ) {
       if ( FW_DD1_WORKAROUNDS_ENABLED() ) {
 	fir = 	  MCFIR_MEMORY_ECC_MARKING_STORE_PARITY_ERROR
 		| MCFIR_READ_BUFFER_UNDERRUN;
+      }
+
+ 
+      // +------------------------------------------------------------------------------------------+
+      // | NOTE: For production environments, we mask DDR correctables during the early part of the |
+      // |       boot.  The TakeCPU hook is what allows us to unmask.                               |
+      // +------------------------------------------------------------------------------------------+
+ 
+      if ( PERS_ENABLED(PERS_ENABLE_TakeCPU) ) {
+	  fir |= (
+	      MCFIR_MEMORY_CE |
+	      MCFIR_POWERBUS_WRITE_BUFFER_CE | 
+	      MCFIR_POWERBUS_READ_BUFFER_CE |  
+	      MCFIR_PACKET_COUNTER_DATA_CE |
+	      MCFIR_MEMORY_ECC_MARKING_STORE_UPDATED | 
+	      MCFIR_ECC_ERROR_COUNTER_THRESHOLD_REACHED |     
+	      MCFIR_MAINTENANCE_CE |		       
+	      MCFIR_MAINTENANCE_FAST_DECODER_UE | 
+	      MCFIR_MAINTENANCE_SUE | 
+	      MCFIR_POWERBUS_READ_BUFFER_SUE |
+	      0 );
       }
 
 
@@ -655,4 +684,36 @@ int fw_ddr_flush_fifos()
    }
    
    return 0;
+}
+
+void fw_ddr_unmaskCorrectableErrors() {
+
+      uint64_t fir = 0;
+
+      // +------------------------------------------------------------------------------------------+
+      // | NOTE: For production environments, we mask DDR correctables during the early part of the |
+      // |       boot.  The TakeCPU hook is what allows us to unmask.                               |
+      // +------------------------------------------------------------------------------------------+
+
+      if ( PERS_ENABLED(PERS_ENABLE_TakeCPU) ) {
+	  fir |= 
+	      MCFIR_MEMORY_CE |
+	      MCFIR_POWERBUS_WRITE_BUFFER_CE | 
+	      MCFIR_POWERBUS_READ_BUFFER_CE |  
+	      MCFIR_PACKET_COUNTER_DATA_CE |
+	      MCFIR_MEMORY_ECC_MARKING_STORE_UPDATED | 
+	      MCFIR_ECC_ERROR_COUNTER_THRESHOLD_REACHED |     
+	      MCFIR_MAINTENANCE_CE |		       
+	      MCFIR_MAINTENANCE_FAST_DECODER_UE | 
+	      MCFIR_MAINTENANCE_SUE | 
+	      MCFIR_POWERBUS_READ_BUFFER_SUE |
+	      0;
+      }
+
+      if ( FW_DD1_WORKAROUNDS_ENABLED() ) {
+	  fir = MCFIR_MEMORY_ECC_MARKING_STORE_PARITY_ERROR | MCFIR_READ_BUFFER_UNDERRUN;
+      }
+
+      DCRWritePriv( _DDR_MC_MCFIRMC(0), ~fir ); // Note polarity of FIRMC bits
+      DCRWritePriv( _DDR_MC_MCFIRMC(1), ~fir ); // Note polarity of FIRMC bits
 }

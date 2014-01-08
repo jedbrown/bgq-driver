@@ -34,9 +34,15 @@
 
 namespace capena {
 namespace http {
+
+/*! \brief HTTP URI handling */
 namespace uri {
 
 
+/*! \brief HTTP URI handling, parse and get the processed pieces.
+ *
+ * See RFC 2616, section 3.2.
+ */
 class Uri
 {
 public:
@@ -48,6 +54,7 @@ public:
     };
 
 
+    /*! \brief Parse an HTTP URL string to a Uri object. */
     static Uri parse( const std::string& uri_str );
 
 

@@ -46,19 +46,17 @@ namespace mux {
 void
 Reconnect::create(
         const Server::Ptr& server,
-        const Connection::Ptr& mux,
-        const Callback& callback
+        const Connection::Ptr& mux
         )
 {
     if ( server->getOptions().reconnect().scope() != runjob::server::Reconnect::Scope::Jobs ) {
         LOG_INFO_MSG( "skipping" );
-        callback();
         return;
     }
 
     try {
         const Ptr result(
-                new Reconnect( server, mux, callback )
+                new Reconnect( server, mux )
                 );
 
         result->nextJob();
@@ -69,15 +67,13 @@ Reconnect::create(
 
 Reconnect::Reconnect(
         const Server::Ptr& server,
-        const Connection::Ptr& mux,
-        const Callback& callback
+        const Connection::Ptr& mux
         ) :
     _server( server ),
     _mux( mux ),
     _connection( BGQDB::DBConnectionPool::instance().getConnection() ),
     _query(),
-    _results(),
-    _callback( callback )
+    _results()
 {
     LOGGING_DECLARE_LOCATION_MDC( mux->hostname() );
 
@@ -102,7 +98,7 @@ Reconnect::Reconnect(
 
 Reconnect::~Reconnect()
 {
-    _callback();
+    LOG_TRACE_MSG( __FUNCTION__ );
 }
 
 void
@@ -153,33 +149,7 @@ Reconnect::findJob(
         return;
     }
 
-    LOG_TRACE_MSG( "found job" );
-    job->strand().post(
-            boost::bind(
-                &Reconnect::setConnection,
-                shared_from_this(),
-                job
-                )
-            );
-}
-
-void
-Reconnect::setConnection(
-        const Job::Ptr& job
-        )
-{
-    const Connection::Ptr mux( _mux.lock() );
-    if ( !mux ) return;
-
-    const cxxdb::Columns& columns = _results->columns();
-
-    LOGGING_DECLARE_LOCATION_MDC( mux->hostname() );
-    LOGGING_DECLARE_JOB_MDC( columns[BGQDB::DBTJob::ID_COL].as<BGQDB::job::Id>() );
-
-    job->_mux = mux;
-    job->_queue._mux = mux;
-
-    LOG_TRACE_MSG( "set connection" );
+    LOG_TRACE_MSG( __FUNCTION__ );
 
     mux->clients()->add(
             job->client(),
@@ -202,7 +172,7 @@ Reconnect::addClient(
     LOGGING_DECLARE_LOCATION_MDC( mux->hostname() );
     LOGGING_DECLARE_JOB_MDC( job->id() );
 
-    LOG_TRACE_MSG( "added client " << job->client() );
+    LOG_TRACE_MSG( __FUNCTION__ << " " << job->client() );
 
     mux->clients()->update(
             job->client(),
@@ -226,7 +196,41 @@ Reconnect::updateClient(
     LOGGING_DECLARE_LOCATION_MDC( mux->hostname() );
     LOGGING_DECLARE_JOB_MDC( job->id() );
 
-    LOG_INFO_MSG( "reconnected" );
+    LOG_TRACE_MSG( __FUNCTION__ );
+
+    job->strand().post(
+            boost::bind(
+                &Reconnect::setConnection,
+                shared_from_this(),
+                job
+                )
+            );
+}
+
+void
+Reconnect::setConnection(
+        const Job::Ptr& job
+        )
+{
+    const Connection::Ptr mux( _mux.lock() );
+    if ( !mux ) return;
+
+    const Server::Ptr server( _server.lock() );
+    if ( !server ) return;
+
+    LOGGING_DECLARE_LOCATION_MDC( mux->hostname() );
+    LOGGING_DECLARE_JOB_MDC( job->id() );
+
+    job->_mux = mux;
+    job->_queue._mux = mux;
+
+    if ( job->status().get() == job::Status::Terminating ) {
+        // jobs that terminated during failover can be removed
+        server->getJobs()->remove( job->id() );
+        LOG_INFO_MSG( "removed" );
+    } else {
+        LOG_INFO_MSG( "reconnected" );
+    }
 
     this->nextJob();
 }

@@ -27,19 +27,14 @@
 
 #include "../AbstractResponder.hpp"
 
+#include "../types.hpp"
+
 #include "capena-http/http/uri/Path.hpp"
 
 #include <string>
 
 
 namespace bgws {
-
-
-class CheckUserAdminExecutor;
-class PwauthExecutor;
-class Sessions;
-
-
 namespace responder {
 
 
@@ -64,13 +59,13 @@ public:
     { /* Nothing to do */ }
 
 
-    capena::http::Methods getAllowedMethods() const;
+    capena::http::Methods _getAllowedMethods() const;
 
     // override
-    void doGet();
+    void _doGet();
 
     // override
-    void doPost( json::ConstValuePtr val_ptr );
+    void _doPost( json::ConstValuePtr val_ptr );
 
 
 private:

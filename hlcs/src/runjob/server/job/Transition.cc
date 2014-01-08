@@ -26,6 +26,8 @@
 
 #include "server/cios/Message.h"
 
+#include "server/job/KillTimer.h"
+#include "server/job/Signal.h"
 #include "server/job/SubNodePacing.h"
 
 #include "server/mux/Connection.h"
@@ -104,6 +106,8 @@ Transition::next(
             // do nothing
         } else if ( current == Status::ClientStarting ) {
             // do nothing
+        } else if ( current == Status::Terminating ) {
+            // do nothing
         } else {
             LOG_FATAL_MSG( "unhandled status: " << Status::toString(current) );
             BOOST_ASSERT( !"unhandled status" );
@@ -131,6 +135,12 @@ Transition::run() const
     mux->write( msg );
 
     _job->queue().drain();
+
+    if ( _job->killTimer().expires().is_not_a_date_time() ) {
+        // timer has not been started yet
+    } else {
+        Signal::create( _job, SIGKILL );
+    }
 
     // there is a timing window where a job can end prior to all the
     // jobctl daemons on the I/O nodes reporting a StartJobAck.

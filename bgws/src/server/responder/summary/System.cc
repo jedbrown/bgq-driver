@@ -132,13 +132,13 @@ bool System::matchesUrl(
 }
 
 
-capena::http::Methods System::getAllowedMethods() const
+capena::http::Methods System::_getAllowedMethods() const
 {
     return { capena::http::Method::GET };
 }
 
 
-void System::doGet()
+void System::_doGet()
 {
 
     // The user must be authenticated.
@@ -153,7 +153,7 @@ void System::doGet()
     }
 
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     auto conn_ptr(dbConnectionPool::getConnection());
 

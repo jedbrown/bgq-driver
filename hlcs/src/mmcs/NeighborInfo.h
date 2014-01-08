@@ -57,6 +57,14 @@ private:
             char* rawdata
             );
 
+    void computeNodeIoLink( 
+            char* rawdata
+            );
+    
+    void ioNodeIoLink( 
+            char* rawdata
+            );
+
     int next_coord(
             unsigned start,
             unsigned size,

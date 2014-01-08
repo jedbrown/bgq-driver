@@ -248,9 +248,9 @@ bgq_default_twinstar_dir=/gsa/yktgsa/projects/t/twinstar
 bgq_default_twinstar_dd1_dir=/gsa/yktgsa/projects/t/twinstar_dd1
 bgq_default_twinstar_dd2_dir=/gsa/yktgsa/projects/t/twinstar_dd2
 bgq_default_mambo=/auto/BGQ/releases/floor-mambo
-bgq_default_rpmversion=1
-bgq_default_rpmrelease=1
-bgq_default_rpmmodification=1
+bgq_default_rpmversion=0
+bgq_default_rpmrelease=0
+bgq_default_rpmmodification=0
 bgq_default_rpmdriver=0
 bgq_default_rpmsuffix=
 
@@ -293,7 +293,7 @@ case $bgq_location:$BGQ_HOST_OS in
     ;;
   rchland:ppc )
     if [[ `uname -r | grep el6 > /dev/null; echo $?` == 0 ]]; then
-      bgq_default_floor=/bgsys/drivers/V1R1M1/ppc64 ;
+      bgq_default_floor=/bgsys/drivers/ppcfloor ;
       bgq_default_gnu=/bgsys/drivers/ppctoolchain ;
     else
       bgq_default_floor=/bgsys/bgq/drivers/ppcfloor ;
@@ -352,7 +352,7 @@ AC_SUBST(BGQ_GNU_INSTALL_DIR)
 # Setup defaults for vhdl compile and simulation
 #
 
-bgq_fusion_release=R61_0
+bgq_fusion_release=R64_2
 bgq_fusion_subpath=tools/fusion
 bgq_ddx_version_default=dd2
 
@@ -690,7 +690,7 @@ if [[[ $INSTALL_SUBDIR == "work" ]]] ; then
 	bgq_linux_os_default=/bgsys/linux/RHEL6.2_$USER_DISTRO
 else
 	DRIVER=`/bin/echo $BGQ_INSTALL_DIR | awk 'BEGIN{FS="/"} ; {print $(NF-1)}'`
-	bgq_linux_os_default=/bgsys/linux/RHEL6.2_V1R1M1-0
+	bgq_linux_os_default=/bgsys/linux/RHEL6.2_$DRIVER
 fi
 AC_ARG_WITH(linux-os,
   AS_HELP_STRING([--with-linux-os=<path>], [path to linux OS root directory]),
@@ -727,9 +727,9 @@ AC_SUBST(BGQ_LINUX_HEADERS_PATH)
 AC_MSG_RESULT([  BGQ_LINUX_HEADERS_PATH=$BGQ_LINUX_HEADERS_PATH])
 
 # BGQ_LINUX_KERNEL_VERSION set-up
-bgq_linux_kernel_version_default=2.6.32-220.4.7.bgq.el6.ppc64
+bgq_linux_kernel_version_default=2.6.32-220.23.3.bgq.el6_V1R1M2_0.ppc64
 AC_ARG_WITH(linux-kernel-version,
-  AS_HELP_STRING([--with-linux-kernel-version=<version>], [Linux kernel version (e.g. 2.6.32-220.4.7.bgq.el6.ppc64)]),
+  AS_HELP_STRING([--with-linux-kernel-version=<version>], [Linux kernel version (e.g. 2.6.32-220.23.3.bgq.el6.ppc64)]),
   [ BGQ_LINUX_KERNEL_VERSION="$withval"; ],
   [ BGQ_LINUX_KERNEL_VERSION="$bgq_linux_kernel_version_default"])
 AC_SUBST(BGQ_LINUX_KERNEL_VERSION)
@@ -990,7 +990,7 @@ AC_SUBST(DEBUG_FLAGS)
 AC_ARG_WITH(db,
   AS_HELP_STRING([--with-db=yes|no>],[specify to use the DB code]),
   [ BGQDB="$withval" ],
-  [ BGQDB="yes" ])
+  [ BGQDB="no" ])
 AC_SUBST(BGQDB)
 
 AC_ARG_WITH(db2path,

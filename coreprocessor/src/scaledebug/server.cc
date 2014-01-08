@@ -100,6 +100,11 @@ int main(int argc, char** argv)
         string ipaddress_str(ipaddress);
         clientIPAddresses[ipaddress_str]++;
     }
+
+    if ( MyIPAddress.empty() ) {
+        printf("Could not find IP address of functional network!\n");
+        exit(-1);
+    }
     
     number_of_clients = clientIPAddresses.size();
     printf("Number of IO nodes = %d\n", number_of_clients);
@@ -110,7 +115,6 @@ int main(int argc, char** argv)
     snprintf(cmd, sizeof(cmd), "/bgsys/drivers/ppcfloor/bin/start_tool --id %d --tool %s --args %s", JOBID, TOOLNAME, MyIPAddress.c_str());
     system(cmd);
     
-    CxxSockets::setProperties(props);
     bgq::utility::initializeLogging(*props);
     CxxSockets::SockAddrList side_salist(AF_INET, "", "34543");
     CxxSockets::ListenerSetPtr side_listener(new CxxSockets::ListenerSet(side_salist));

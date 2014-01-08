@@ -23,6 +23,9 @@
 #include "Kernel.h"
 #include "flih.h"
 #include <sys/time.h>
+#include "hwi/include/bqc/BIC_inlines.h"
+#include "hwi/include/bqc/gea_dcr.h"
+#include "hwi/include/bqc/l2_central_inlines.h"
 
 #define CR_ERROR  (0x10000000)
 
@@ -408,4 +411,30 @@ void Timer_enableFutexTimeout(uint64_t current_timebase, uint64_t expiration)
     Timer_enableUDECRwakeup(current_timebase, expiration);
 }
 
+void IntHandler_GEATimerEvent(int status_reg, int bitnum)
+{
+    uint64_t nc_event = GEA_DCR_PRIV_PTR->gea_interrupt_state__state;
+    if(nc_event & GEA_DCR__GEA_INTERRUPT_STATE__TIMER0_INT_set(1))
+    {
+        // GEA Timer 0 - - rollback
+        IntHandler_RollbackSnapshot(status_reg, bitnum);
+    }
+    
+    if(nc_event & GEA_DCR__GEA_INTERRUPT_STATE__TIMER1_INT_set(1))
+    {
+        // GEA Timer 1 - - Power management
+        IntHandler_PowerMgmt(status_reg, bitnum);
+    }
 
+    if(nc_event & GEA_DCR__GEA_INTERRUPT_STATE__TIMER2_INT_set(1))
+    {
+        // GEA Timer 2 - - Background Scrub
+        IntHandler_MemoryScrub(status_reg, bitnum);
+    }
+
+    if(nc_event & GEA_DCR__GEA_INTERRUPT_STATE__TIMER3_INT_set(1))
+    {
+        // GEA Timer 3 - - undefined
+        assert(0);
+    }
+}

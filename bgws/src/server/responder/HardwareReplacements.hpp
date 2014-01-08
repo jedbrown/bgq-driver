@@ -53,14 +53,14 @@ public:
     { /* Nothing to do */ }
 
 
-    capena::http::Methods getAllowedMethods() const
+    capena::http::Methods _getAllowedMethods() const
     {
         static const capena::http::Methods METHODS = { capena::http::Method::GET };
         return METHODS;
     }
 
 
-    void doGet();
+    void _doGet();
 
 
 private:

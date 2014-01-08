@@ -29,6 +29,7 @@
   <Method name="bringup" type="RequestReply" comment="Ask MC to initialize the machine and fill up the skeleton bglmachine data structures with available hardware">
     <Class name="BringupRequest">
       <DataMember type="text" name="bringupOptions" comment="comma separated list of options to pass to bringup" />
+      <DataMember type="bool" name="killMcServerIfHwStarted" comment="kill MC" />
     </Class>
     <Class name="BringupReply" parent="Reply">
       <Class name="ServiceCard">

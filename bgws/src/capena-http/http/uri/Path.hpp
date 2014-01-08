@@ -35,6 +35,7 @@ namespace http {
 namespace uri {
 
 
+/*! \brief HTTP URI path handling, parsing and comparing. */
 class Path : public std::vector<std::string>
 {
 public:

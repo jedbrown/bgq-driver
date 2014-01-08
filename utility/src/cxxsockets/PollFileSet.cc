@@ -20,7 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#include "SocketTypes.h"
+#include "cxxsockets/SocketTypes.h"
 
 using namespace CxxSockets;
 
@@ -38,54 +38,6 @@ void PollingFileSet::RemoveFile(FilePtr file) {
         }
     }
     FileSet::RemoveFile(file);
-}
-
-// Polls the set of files.
-// NOTE:  This must acquire the locks of ALL
-// files in the set before it can poll any.
-// Consequently, polling should never be performed
-// from within a file object.  Furthermore, blocked
-// operations on a file object will hold up polling
-// on any others.
-int PollingFileSet::ProtectedPoll() {
-    PthreadMutexHolder mutex; LockSet(mutex);
-    // Acquire all of the locks
-    std::vector<FileLocker*> lockers;
-    for (FileSet::iterator it = begin(); it != end(); ++it) {
-        FileLocker locker;
-        (*it)->LockFile(locker);
-        lockers.push_back(&locker);
-    }
-
-    return Poll(POLL_TIME);
-}
-
-int PollingFileSet::ProtectedPoll(FileSetPtr fs) {
-    PthreadMutexHolder mutex; LockSet(mutex);
-    // Acquire all of the locks
-    std::vector<FileLocker*> lockers;
-    for (FileSet::iterator it = begin(); it != end(); ++it) {
-        FileLocker locker;
-        (*it)->LockFile(locker);
-        lockers.push_back(&locker);
-    }
-
-    return Poll(POLL_TIME, fs);
-}
-
-// Polls while locking the file set but not the 
-// individual files
-// Note the caveats for the ProtectedPoll operations
-// with the exception that blocked operations on a 
-// file in the set won't block the whole set.
-int PollingFileSet::UnprotectedPoll() {
-    PthreadMutexHolder mutex; LockSet(mutex);
-    return Poll(POLL_TIME);
-}
-
-int PollingFileSet::UnprotectedPoll(FileSetPtr fs) {
-    PthreadMutexHolder mutex; LockSet(mutex);
-    return Poll(POLL_TIME, fs);
 }
 
 int PollingFileSet::Poll(unsigned int timeout, FileSetPtr fs) {
@@ -155,7 +107,7 @@ void PollingFileSet::AddFile(FilePtr file, PollType p) {
     pAddFile(file, p);
 }
 
-void PollingFileSet::AddFiles(std::vector<FilePtr>& files, PollType p) {
+void PollingFileSet::AddFiles(std::vector<FilePtr>& files) {
     PthreadMutexHolder mutex; LockSet(mutex);
     for(std::vector<FilePtr>::iterator i = files.begin(); 
         i != files.end(); ++i) {

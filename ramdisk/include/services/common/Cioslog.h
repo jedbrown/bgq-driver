@@ -62,18 +62,23 @@ typedef union cios_connection {
 
 typedef struct BG_FlightRecorderLog
 {
+    uint64_t timeStamp;
     uint32_t entry_num;
     uint32_t id;
     cios_connection_t ci;
     uint64_t data[4];
 } BG_FlightRecorderLog_t;
 
-#define FlightLogSize         4096 
 
 uint32_t logMsg(uint32_t ID,bgcios::MessageHeader *mh);
 uint32_t logMsgWC(uint32_t ID,bgcios::MessageHeader *mh,struct ibv_wc *wc);
 uint32_t logMsgQpNum(uint32_t ID,bgcios::MessageHeader *mh,uint32_t qp_num);
 void printLogMsg(const char * pathname);
+void setFlightLogSize(unsigned int size);
+void printLogEntry(uint32_t entry);
+void printprevLogEntries(uint32_t entry,uint32_t quantity);
+void printlastLogEntries(uint32_t quantity);
+size_t snprintfLogEntry(size_t bufsize, char* buffer,uint32_t entry );
 
 #endif
 

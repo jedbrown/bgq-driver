@@ -423,7 +423,7 @@ var b_navigator_dijit_Table = d_declare(
 
     _setValueAttr : function( new_value )
     {
-        console.log( module.id + ": [" + this.id + "] setting value=", new_value );
+        // console.log( module.id + ": [" + this.id + "] setting value=", new_value );
 
         var vals = {};
         d_array.forEach( new_value, function( val ) { vals[val] = 1; } );

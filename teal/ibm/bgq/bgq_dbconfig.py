@@ -94,6 +94,14 @@ class BgqConfiguration(Configuration):
         except ConfigParser.NoOptionError:
             usr_schema = ''
 
+        pwless = False
+        try:
+            usr = cfg.get('database','user')
+            pw = cfg.get('database','password')
+        except ConfigParser.NoOptionError:
+            registry.get_logger().debug('Database user and/or password is not specified.')
+            pwless = True
+
         # Set the table names
         db_interface.TABLE_EVENT_LOG = usr_schema + 'x_tealeventlog'
         db_interface.TABLE_EVENT_LOG_EXT = usr_schema + 'x_tealeventlogext'
@@ -104,8 +112,10 @@ class BgqConfiguration(Configuration):
         db_interface.TABLE_ALERT2EVENT = usr_schema + 'x_tealalert2event'
         db_interface.TABLE_TEMPLATE = usr_schema + 'x_{0}'
 
-        #return SQLGeneratorDB2({'dsn':db, 'uid':usr, 'pwd':pw})
-        return SQLGeneratorDB2({'dsn':db})
+        if pwless:
+            return SQLGeneratorDB2({'dsn':db})
+        else:
+            return SQLGeneratorDB2({'dsn':db, 'uid':usr, 'pwd':pw})
         
         
 if __name__ == '__main__':   

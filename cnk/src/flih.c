@@ -111,11 +111,11 @@ PUEA_Table puea_table[ FLIH_PUEA_TABLE_SIZE ] =
 {  COREMSK(0), THDMSK(0), BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT44_MAPOFFSET, IntHandler_GEA_FLIH  },// 44: GEA 3 ND Software errors
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_GEA,  BIC_INT45_MAPOFFSET, IntHandler_GEA_FLIH  },// 45: GEA 4
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_GEA,  BIC_INT46_MAPOFFSET, IntHandler_GEA_FLIH  },// 46: GEA 5
-{  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_GEA,  BIC_INT47_MAPOFFSET, IntHandler_GEA_FLIH  },// 47: GEA 6
+{  COREMSK(16),THDMSK(1), BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT47_MAPOFFSET, IntHandler_GEA_FLIH  },// 47: GEA 6
 {  COREMSK(0), THDMSK(0), BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT48_MAPOFFSET, IntHandler_GEA_FLIH  },// 48: GEA 7
 {  COREMSK(16),THDMSK(1), BIC_CRITICAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT49_MAPOFFSET, IntHandler_GEA_FLIH  },// 49: GEA 8  Inbound Mailbox
 {  COREMSK(16),THDMSK(1), BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT50_MAPOFFSET, IntHandler_GEA_FLIH  },// 50: GEA 9  Power threshold
-{  CORES_ALL,  THDS_ALL,  BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT51_MAPOFFSET, IntHandler_GEA_FLIH  },// 51: GEA 10 Power management
+{  CORES_ALL,  THDS_ALL,  BIC_EXTERNAL_INTERRUPT, FLIH_GRP_GEA,  BIC_INT51_MAPOFFSET, IntHandler_GEA_FLIH  },// 51: GEA 10 GEA Timer Event
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_GEA,  BIC_INT52_MAPOFFSET, IntHandler_GEA_FLIH  },// 52: GEA 11 Nanosleep preempt timer
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_GEA,  BIC_INT53_MAPOFFSET, IntHandler_GEA_FLIH  },// 53: GEA 12 (also goes to wakeup unit)
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_GEA,  BIC_INT54_MAPOFFSET, IntHandler_GEA_FLIH  },// 54: GEA 13 (also goes to wakeup unit)
@@ -221,7 +221,7 @@ GEA_Table gea_stat_table[FLIH_GEA_NUM_STATUS_REGS][ FLIH_GEA_NUM_STATUS_BITS ] =
 {GEA_NOCFG, GEA_INT0_58_MAPOFFSET, IntHandler_GEA_Default       },// 0    58  l1p15_rt_int2   L1P15 interrupt bit 1
 {GEA_NOCFG, GEA_INT0_59_MAPOFFSET, IntHandler_GEA_Default       },// 0    59  l1p16_rt_int2   L1P16 interrupt bit 1
 {GEA_RESERVED_HARDWARE                                          },// 0    60  Undefined   
-{GEA_NOCFG, GEA_INT0_61_MAPOFFSET, IntHandler_GEA_Default       },// 0    61  gea_rt_int      GEA interrupt bit 0  
+{GEA_SCRUB, GEA_INT0_61_MAPOFFSET, IntHandler_GEATimerEvent     },// 0    61  gea_rt_int      GEA interrupt bit 0  
 {GEA_RESERVED_HARDWARE                                          },// 0    62  Undefined  
 {GEA_RESERVED_HARDWARE                                          } // 0    63  Undefined  
 },{
@@ -289,7 +289,7 @@ GEA_Table gea_stat_table[FLIH_GEA_NUM_STATUS_REGS][ FLIH_GEA_NUM_STATUS_BITS ] =
 {GEA_NOCFG, GEA_INT1_58_MAPOFFSET, IntHandler_GEA_Default       },// 1    58  l2s_int         L2 slice 15 interrupt bit  
 {GEA_RESERVED_HARDWARE                                          },// 1    59  Undefined
 {GEA_NOCFG, GEA_INT1_60_MAPOFFSET, IntHandler_GEA_Default       },// 1    60  l2c_int         L2 Central interrupt bit 0 asserted
-{GEA_PWRMG, GEA_INT1_61_MAPOFFSET, IntHandler_PowerMgmt         },// 1    61  gea_int         GEA interrupt bit 1       
+{GEA_PWRMG, GEA_INT1_61_MAPOFFSET, IntHandler_GEATimerEvent     },// 1    61  gea_int         GEA interrupt bit 1       
 {GEA_NOCFG, GEA_INT1_62_MAPOFFSET, IntHandler_GEA_Default       },// 1    62  nd_int          Network interrupt bit 0 is asserted
 {GEA_RESERVED_HARDWARE                                          } // 1    63  Undefined 
 },{

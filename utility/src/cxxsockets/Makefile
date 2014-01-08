@@ -25,12 +25,11 @@ include ../../../Make.rules
 
 # for optimization and debugging
 CXXFLAGS += -Wall
-CXXFLAGS += -O0
-CXXFLAGS += -iquote $(BGQ_BUILD_DIR)/utility/include
-CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)/bgq_util/include
-CXXFLAGS += -isystem $(include_install_dir)/cxxsockets
-CXXFLAGS += -MD
-CXXFLAGS += -fPIC
+CXXFLAGS += -W
+CXXFLAGS += -Wextra
+CXXFLAGS += -O2
+CXXFLAGS += -MD -MP
+CXXFLAGS += -fpic
 
 SHARED_LDFLAGS   = $(LDFLAGS)
 SHARED_LDFLAGS  += -L ../ -lbgutility
@@ -40,9 +39,6 @@ SHARED_LDFLAGS  += -shared
 SHARED_LDFLAGS  += -Wl,-soname,$(lib_vers)
 SHARED_LDFLAGS  += -Wl,-rpath,$(BGQ_LIB_INSTALL_DIR)
 SHARED_LDFLAGS  += -Wl,--enable-new-dtags # set DT_RUNPATH
-EXE_LDFLAGS     = $(LDFLAGS)
-EXE_LDFLAGS     += -L $(BGQ_LIB_INSTALL_DIR) -lcxxsockets
-EXE_LDFLAGS     += -Wl,-rpath,$(BGQ_LIB_INSTALL_DIR)
 
 lib_base:=cxxsockets
 lib_dev:=lib$(lib_base).so
@@ -58,15 +54,12 @@ SRCS += TCPSocket.cc
 SRCS += ListeningSocket.cc
 SRCS += SecureTCPSocket.cc
 SRCS += File.cc
-SRCS += LocalSocket.cc
 SRCS += SocketAddrs.cc
 SRCS += FileSet.cc
-SRCS += SocketSet.cc
 SRCS += ListenerSets.cc
 SRCS += PollSocketSet.cc
 SRCS += PollFileSet.cc
-SRCS += EpollingFileSet.cc
-SRCS += EpollingSocketSet.cc
+SRCS += Host.cc
 
 OBJS     = $(SRCS:%.cc=%.o)
 
@@ -89,36 +82,10 @@ install: $(install_list)
 uninstall:
 	$(RM) $(install_list)
 
-test: $(SHARED_LIB) test_client test_server hello hellod
-
-test_client: test_client.cc | install
-	$(CXX) $(CXXFLAGS) -o $@ $< $(EXE_LDFLAGS)
-
-test_server: test_server.cc | install
-	$(CXX) $(CXXFLAGS) -o $@ $< $(EXE_LDFLAGS)
-
-hello: $(SRC) hello.cc | install
-	$(CXX) $(CXXFLAGS) -o $@ $< $(EXE_LDFLAGS)
-
-hellod: $(SRC) hellod.cc | install
-	$(CXX) $(CXXFLAGS) -o $@ $< $(EXE_LDFLAGS)
-
-hello_nouid: $(SRC) hello_nouid.cc | install
-	$(CXX) $(CXXFLAGS) -o $@ $< $(EXE_LDFLAGS)
-
-hello_nouidd: $(SRC) hello_nouidd.cc | install
-	$(CXX) $(CXXFLAGS) -o $@ $< $(EXE_LDFLAGS)
-
-hello_insecure: hello_insecure.cc | install
-	$(CXX) $(CXXFLAGS) -o $@ $< $(EXE_LDFLAGS)
-
-hello_insecured: hello_insecured.cc | install
-	$(CXX) $(CXXFLAGS) -o $@ $< $(EXE_LDFLAGS)
-
 all: default
 
 clean: 
-	rm -rf test_client test_server hello hellod *o *o_64 $(STATIC_LIB) $(SHARED_LIB) *.d *~ \#*\# core
+	rm -rf *.o $(STATIC_LIB) $(lib_vers) $(lib_full) $(lib_dev) *.d *~ \#*\# core
 
 distclean: clean
 

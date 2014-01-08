@@ -42,13 +42,14 @@ void escTo(
     );
 
 
-    /* Does URL escaping. */
+    /*! Escape a part of a URL. */
 std::string escape( const std::string& part );
 
-    /* Does URL unescaping. */
+    /*! Unescape a URL part. */
 std::string unescape( const std::string& part );
 
 
+/*! \brief HTTP form encoding/decoding. */
 namespace form {
 
 

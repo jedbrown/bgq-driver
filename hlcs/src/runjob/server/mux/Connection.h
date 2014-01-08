@@ -103,8 +103,6 @@ public:
 private:
     runjob::server::Connection::Ptr getShared() { return this->shared_from_this(); }
     
-    void addComplete();
-    
     void writeImpl(
             const runjob::Message::Ptr& msg,
             const WriteCallback& callback

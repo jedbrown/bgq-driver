@@ -55,11 +55,11 @@
 #include "MMCSCommand_mcserver.h"
 #include "MMCSCommand_mmcs_server_cmd.h"
 #include "MMCSCommand_mmcs_server_connect.h"
-#include "MMCSCommand_read_kernel_status.h"
 #include "MMCSCommand_redirect.h"
 #include "MMCSCommand_replyformat.h"
 #include "MMCSCommand_select_block.h"
 #include "MMCSCommand_shell.h"
+#include "MMCSCommand_status.h"
 #include "MMCSCommand_username.h"
 #include "MMCSCommand_version.h"
 #include "MMCSCommand_reboot.h"
@@ -152,6 +152,7 @@ static vector<MMCSCommand*>* allCommands()
        commands->push_back(MMCSCommand_kill_midplane_jobs::build());
        commands->push_back(MMCSCommand_complete_io_service::build());
        commands->push_back(MMCSCommand_refresh_config::build());
+       commands->push_back(MMCSCommand_status::build());
 #endif // end WITH_DB
        commands->push_back(MMCSCommand_help::build());
        commands->push_back(MMCSCommand_show_barrier::build());

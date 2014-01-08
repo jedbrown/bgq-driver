@@ -88,6 +88,24 @@ IPIHANDLER_Fcn_t IPI_DeliverInterrupt(int processorID, IPIHANDLER_Fcn_t handler,
                     ThreadPriority_Medium();
                     return NULL;
                 }
+                // Is a process_exit message pending against this hwthread and is the kthread which is attempting this IPI delivery 
+                // in the same process as the target of the exit operation? Also, are we trying to send an IPI to the same hardware 
+                // thread that has sent the IPI exit message to us? If all of these are true, we need to get out of the way since the 
+                // sender of the process_exit IPI will be waiting in a barrier for all of the threads of it's process to arrive. 
+                // Just abort this IPI since at this point there is nothing more important than allowing the exit to proceed.
+                int i;
+                for (i=0; i<64; i++)
+                {
+                    IPI_Message_t* pIPImsg = (IPI_Message_t*)&(NodeState.CoreState[i/4].HWThreads[i%4].ipi_message[ProcessorID()]);
+                    if ((pIPImsg->fcn == IPI_handler_process_exit) &&  // Is there a process exit message pending to this hardare thread?
+                        (GetProcessByProcessorID(ProcessorID()) == GetMyKThread()->pAppProc) && // Are we running in a kthread that is part of this hardware thread's process?
+                        (i == processorID)) // Are we trying to send and IPI to the same hardware thread that has sent the IPI exit message to us?
+                    {
+                        // This is a situation that will not clear on its own. Toss the delivery of this IPI and allow the exit to proceed.
+                        ThreadPriority_Medium();
+                        return NULL;
+                    }
+                }
             }
             ThreadPriority_Medium();
         }
@@ -492,6 +510,7 @@ void IPI_update_MMU(int processorID, uint64_t slot)
     ThreadPriority_Low();
     while (!(*ackParm) && !IPI_AbortForProcessExit() )
     {
+        // avoid theoretical live lock
         asm volatile("nop;");
         asm volatile("nop;");
         asm volatile("nop;");
@@ -533,12 +552,7 @@ void IPI_tool_suspend(int processorID, AppProcess_t *proc)
     ThreadPriority_Low();
     while (!suspendAck)
     {
-        // Spin waiting for the ack.
-        asm volatile("nop;");
-        asm volatile("nop;");
-        asm volatile("nop;");
-        asm volatile("nop;");
-        asm volatile("nop;");
+        IPI_DeadlockAvoidance();
     }
     ThreadPriority_Medium();
 }
@@ -810,3 +824,49 @@ void IPI_invalidate_icache(int coreID)
     IPI_DeliverInterrupt(coreID*CONFIG_HWTHREADS_PER_CORE,
 			 IPI_handler_invalidate_icache, 0, 0);
 }
+
+// Calling an IPI that requires an Ack from the target should be using the Syscall_GetIpiControl() interface to obtain
+// a global IPI lock. This is done by UPC and L2 atomic operations. However, there is at least one IPI that also requires an
+// ack that cannot use this system lock interface. Any IPIs that require an ACK and cannot using the Syscall_GetIpiControl() lock will
+// need to execute this code in its loop that polls for the ack in order to eliminate a deadlock.
+void IPI_DeadlockAvoidance()
+{
+    int i;
+    int myProcessorID = ProcessorID();
+    int myProcessorThreadID = ProcessorThreadID();
+    uint64_t c2c_status = BIC_ReadStatusExternalRegister0(myProcessorThreadID);
+    // Are there any interrupts pending against this hardware thread
+    // Loop through all threads that may be sending an IPI to this thread
+    for (i=0; i<64; i++)
+    {
+        if (!c2c_status) break;
+        uint64_t mask = _BN(i);
+        // Is an interrupt pending from the selected hardware thread?
+        if ((myProcessorID != i) && (mask & c2c_status))
+        {
+            // We need to investigate this interrupt to see if it is one of the IPI requests that require an ack from its target
+            IPI_Message_t* pIPImsg = (IPI_Message_t*)&(NodeState.CoreState[i/4].HWThreads[i%4].ipi_message[myProcessorID]);
+            if ((pIPImsg->fcn == IPI_handler_update_MMU) ||
+                (pIPImsg->fcn == IPI_handler_upc_attach) ||
+                (pIPImsg->fcn == IPI_handler_upcp_disable) ||
+                (pIPImsg->fcn == IPI_handler_upcp_init) ||
+                (pIPImsg->fcn == IPI_handler_upc_attach))
+            {
+                IPI_Message_t IPImsg_local = *pIPImsg;
+                BIC_WriteClearExternalRegister0(myProcessorThreadID, mask);                    
+                // Reset fcn field in the IPI message data to enable subsequent IPIs
+                pIPImsg->fcn = NULL;
+                ppc_msync();
+                //printf("(W) IPI Deadlock avoidance. Flushing handler: %016lx\n", (uint64_t)IPImsg_local.fcn);
+                Kernel_WriteFlightLog(FLIGHTLOG, FL_ADLOCKIPI, i, (uint64_t)IPImsg_local.fcn, IPImsg_local.param1, mfspr(SPRN_SRR0));
+                // Call the handler
+                if (IPImsg_local.fcn)
+                {
+                    IPImsg_local.fcn(IPImsg_local.param1, IPImsg_local.param2);
+                }
+            }
+        }
+        c2c_status &= ~mask;
+    }
+}
+

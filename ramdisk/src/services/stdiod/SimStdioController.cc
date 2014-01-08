@@ -38,6 +38,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include <queue>
 
 using namespace bgcios::stdio;
 
@@ -100,7 +101,7 @@ SimStdioController::startup(in_port_t dataChannelPort)
    portFileName << _workDirectory << "standardio.port";
    std::ofstream portFile(portFileName.str().c_str(), std::ios_base::trunc);
    portFile << _dataListener->getPort() << std::endl;
-   LOG_CIOS_DEBUG_MSG("stored port number " << _dataListener->getPort() << " in file " << portFileName.str());
+   LOG_DEBUG_MSG("stored port number " << _dataListener->getPort() << " in file " << portFileName.str());
 
    // Prepare socket to listen for connections.
    try {
@@ -110,7 +111,7 @@ SimStdioController::startup(in_port_t dataChannelPort)
       LOG_ERROR_MSG("error listening for new connections: " << e.what());
       return e.errcode();
    }
-   LOG_CIOS_DEBUG_MSG("listening for new data channel connections on fd " << _dataListener->getSd() << " using address " << _dataListener->getName());
+   LOG_DEBUG_MSG("listening for new data channel connections on fd " << _dataListener->getSd() << " using address " << _dataListener->getName());
 
    return 0;
 }
@@ -118,7 +119,7 @@ SimStdioController::startup(in_port_t dataChannelPort)
 int
 SimStdioController::cleanup(void)
 {
-   LOG_CIOS_DEBUG_MSG("running cleanup ...");
+   LOG_DEBUG_MSG("running cleanup ...");
 
    // Remove the port number file.
    std::ostringstream portFileName;
@@ -148,23 +149,23 @@ SimStdioController::eventMonitor(void)
    pollInfo[cmdChannel].fd = _cmdChannel->getSd();
    pollInfo[cmdChannel].events = POLLIN;
    pollInfo[cmdChannel].revents = 0;
-   LOG_CIOS_TRACE_MSG("added command channel using fd " << pollInfo[cmdChannel].fd << " to descriptor list");
+   LOG_TRACE_MSG("added command channel using fd " << pollInfo[cmdChannel].fd << " to descriptor list");
 
    pollInfo[dataChannel].fd = _dataChannel == NULL ? -1 : _dataChannel->getSd();
    pollInfo[dataChannel].events = POLLIN;
    pollInfo[dataChannel].revents = 0;
-   LOG_CIOS_TRACE_MSG("added data channel using fd " << pollInfo[dataChannel].fd << " to descriptor list");
+   LOG_TRACE_MSG("added data channel using fd " << pollInfo[dataChannel].fd << " to descriptor list");
 
    pollInfo[dataListener].fd = _dataListener->getSd();
    pollInfo[dataListener].events = POLLIN;
    pollInfo[dataListener].revents = 0;
-   LOG_CIOS_TRACE_MSG("added data channel listener using fd " << pollInfo[dataListener].fd << " to descriptor list");
+   LOG_TRACE_MSG("added data channel listener using fd " << pollInfo[dataListener].fd << " to descriptor list");
 
    // Process events until told to stop.
    while (!_done) {
 
       // Wait for an event on one of the descriptors.
-      LOG_CIOS_DEBUG_MSG("polling for events with timeout " << timeout << "...")
+      LOG_DEBUG_MSG("polling for events with timeout " << timeout << "...")
       int rc = poll(pollInfo, numFds, timeout);
 
       // There was no data so try again.
@@ -176,7 +177,7 @@ SimStdioController::eventMonitor(void)
       if (rc == -1) {
          int err = errno;
          if (err == EINTR) {
-            LOG_CIOS_TRACE_MSG("poll returned EINTR, continuing ...");
+            LOG_TRACE_MSG("poll returned EINTR, continuing ...");
             continue;
          }
 
@@ -186,19 +187,21 @@ SimStdioController::eventMonitor(void)
 
       // Check for an event on the command channel.
       if (pollInfo[cmdChannel].revents & POLLIN) {
-         LOG_CIOS_TRACE_MSG("input event available on command channel");
+         LOG_TRACE_MSG("input event available on command channel");
          commandChannelHandler();
       }
 
       // Check for an event on the data channel.
       if (pollInfo[dataChannel].revents & POLLIN) {
-         LOG_CIOS_TRACE_MSG("input event available on data channel");
-         dataChannelHandler();
+         LOG_TRACE_MSG("input event available on data channel");
+         if (dataChannelHandler() == EPIPE) {
+             pollInfo[dataChannel].fd = -1;
+         }
       }
 
       // Check for an event on the data channel listener.
       if (pollInfo[dataListener].revents & POLLIN) {
-         LOG_CIOS_TRACE_MSG("input event available on data channel listener");
+         LOG_TRACE_MSG("input event available on data channel listener");
          pollInfo[dataListener].revents = 0;
          
          // Make a new data channel connected to runjob.
@@ -208,13 +211,13 @@ SimStdioController::eventMonitor(void)
             continue;
          }
 
-         LOG_INFO_MSG_FORCED("data channel is connected to " << incoming->getPeerName() << " using fd " << incoming->getSd());
+         LOG_INFO_MSG("data channel is connected to " << incoming->getPeerName() << " using fd " << incoming->getSd())
 
          // Handle the Authenticate message which must be sent first.
          if (!dataChannelHandler(incoming)) {
              _dataChannel = incoming;
              pollInfo[dataChannel].fd = _dataChannel->getSd();
-             LOG_INFO_MSG_FORCED("data channel is connected to " << _dataChannel->getPeerName() << " using fd " << _dataChannel->getSd());;
+             LOG_INFO_MSG("data channel is connected to " << _dataChannel->getPeerName() << " using fd " << _dataChannel->getSd());
          }
       }
    }
@@ -258,7 +261,7 @@ SimStdioController::commandChannelHandler(void)
    }
 
    // Handle the message.
-   LOG_CIOS_DEBUG_MSG("Job " << msghdr->jobId << ": " << bgcios::toString(msghdr) << " message is available on command channel");
+   LOG_DEBUG_MSG("Job " << msghdr->jobId << ": " << bgcios::toString(msghdr) << " message is available on command channel");
    switch (msghdr->type) {
 
       case WriteStdout:
@@ -284,7 +287,7 @@ SimStdioController::commandChannelHandler(void)
    }
 
    if (err == 0) {
-      LOG_CIOS_DEBUG_MSG("Job " << msghdr->jobId << ": ack message sent successfully");
+      LOG_DEBUG_MSG("Job " << msghdr->jobId << ": ack message sent successfully");
    }
    else {
       LOG_ERROR_MSG("Job " << msghdr->jobId << ": error sending ack message: " << bgcios::errorString(err));
@@ -303,7 +306,7 @@ SimStdioController::dataChannelHandler(InetSocketPtr authOnly)
 
    // When data channel closes, stop handling events.
    if (err == EPIPE) {
-      LOG_CIOS_DEBUG_MSG("data channel connected to " << dataChannel->getPeerName() << " is closed");
+      LOG_DEBUG_MSG("data channel connected to " << dataChannel->getPeerName() << " is closed");
       dataChannel.reset();
       return err;
    }
@@ -331,16 +334,16 @@ SimStdioController::dataChannelHandler(InetSocketPtr authOnly)
 
    // Make sure the Authenticate message is arriving when expected.
    if (authOnly && msghdr->type != Authenticate) {
-      LOG_CIOS_TRACE_MSG("Job " << msghdr->jobId << ": expected Authenticate message");
+      LOG_TRACE_MSG("Job " << msghdr->jobId << ": expected Authenticate message");
       return 1;
    } else if (!authOnly && msghdr->type == Authenticate) {
-      LOG_CIOS_TRACE_MSG("Job " << msghdr->jobId << ": unexpected Authenticate message");
+      LOG_TRACE_MSG("Job " << msghdr->jobId << ": unexpected Authenticate message");
       dataChannel.reset();
       return 1;
    }
 
    // Handle the message.
-   LOG_CIOS_DEBUG_MSG("Job " << msghdr->jobId << ": " << toString(msghdr->type) << " message is available");
+   LOG_DEBUG_MSG("Job " << msghdr->jobId << ": " << toString(msghdr->type) << " message is available");
    switch (msghdr->type) {
       case StartJob: 
           err = startJob();
@@ -419,21 +422,37 @@ SimStdioController::closeStdio(void)
 {
    // Get pointer to inbound CloseStdio message.
    CloseStdioMessage *inMsg = (CloseStdioMessage *)_inboundMessage;
-
-   // Forward message to the data channel.
-   int err = sendToDataChannel(inMsg);
-
-   // Send ack message to job monitor.
+   
+   // Build CloseStdioAck message in outbound message region.
    CloseStdioAckMessage *outMsg = (CloseStdioAckMessage *)_outboundMessage;
    memcpy(&(outMsg->header), &(inMsg->header), sizeof(MessageHeader));
    outMsg->header.type = CloseStdioAck;
    outMsg->header.length = sizeof(CloseStdioAckMessage);
    outMsg->header.returnCode = bgcios::Success;
+
+   // Validate the job id.
+   const JobPtr& job = _jobs.get(inMsg->header.jobId);
+   if (job == NULL) {
+      LOG_ERROR_MSG("Job " << inMsg->header.jobId << " not active when handling CloseStdio message from rank " << inMsg->header.rank);
+      outMsg->header.returnCode = bgcios::JobIdError;
+      outMsg->header.errorCode = ESRCH;
+      return 0;
+   }
+
+   // Forward message to the data channel.
+   int err = sendToDataChannel(inMsg);
    if (err != 0) {
       LOG_ERROR_MSG("error forwarding CloseStdio message to data channel: " << bgcios::errorString(err));
       outMsg->header.returnCode = bgcios::SendError;
       outMsg->header.errorCode = (uint32_t)err;
+      inMsg->header.rank = 1;
+      job->closeStdioAccumulator.add(inMsg);
+   } else {
+      _jobs.remove(job->getJobId());
    }
+
+
+   // Send ack message to job monitor.
    std::ostringstream monitorPath;
    monitorPath << bgcios::SimulationDirectory << _simId << "/job." << inMsg->header.jobId;
    return sendToCommandChannel(monitorPath.str(), outMsg);
@@ -444,6 +463,13 @@ SimStdioController::startJob(void)
 {
    // Get pointer to inbound StartJob message.
    StartJobMessage *inMsg = (StartJobMessage *)_inboundMessage;
+
+   // Construct Job object to track the job and add it to the list.
+   const JobPtr job(new Job(inMsg->header.jobId, inMsg->numRanksForIONode));
+   _jobs.add(inMsg->header.jobId, job);
+
+   job->closeStdioAccumulator.setLimit(1);
+   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": " << inMsg->numRanksForIONode << " ranks participating in job");
 
    // Build StartJobAck message in outbound buffer.
    StartJobAckMessage *outMsg = (StartJobAckMessage *)_outboundMessage;
@@ -504,12 +530,12 @@ SimStdioController::authenticate(InetSocketPtr channel)
    // Get pointer to inbound Authenticate message.
    AuthenticateMessage *inMsg = (AuthenticateMessage *)_inboundMessage;
 
-   LOG_CIOS_TRACE_MSG( "plain: " << inMsg->plainData );
+   LOG_TRACE_MSG( "plain: " << inMsg->plainData );
    std::ostringstream os;
    BOOST_FOREACH( const unsigned char i, inMsg->encryptedData ) {
        os << std::setfill('0') << std::setw(2) << std::hex << static_cast<unsigned>(i);
    }
-   LOG_CIOS_TRACE_MSG( "encrypted: " << os.str() );
+   LOG_TRACE_MSG( "encrypted: " << os.str() );
 
    // Build AuthenticateAckMessage message in outbound buffer.
    AuthenticateAckMessage *outMsg = (AuthenticateAckMessage *)_outboundMessage;
@@ -535,8 +561,44 @@ SimStdioController::reconnect(void)
    outMsg->header.length = sizeof(ReconnectAckMessage);
    outMsg->header.returnCode = Success;
 
+   // remember jobs to remove after iterating through our container
+   std::queue<uint64_t> jobsToRemove;
+
+   // Run the list of jobs and resend any CloseStdio messages.
+   for (job_list_iterator iter = _jobs.begin(); iter != _jobs.end(); ++iter) {
+      JobPtr job = iter->second;
+
+      // Forward the CloseStdio message to the data channel if it has been received from all of the compute nodes.
+      if (job->closeStdioAccumulator.atLimit()) {
+         int err = sendToDataChannel((void *)job->closeStdioAccumulator.get());
+         LOG_DEBUG_MSG("Job " << job->getJobId() << ": CloseStdio message sent on data channel when handling Reconnect message (" <<
+                       job->closeStdioAccumulator.getLimit() << " compute nodes)");
+
+         // Remove the job from the map and destroy the Job object.
+         if (err == 0) {
+            if (job->getNumDroppedStdioMsgs() > 0) {
+               LOG_WARN_MSG("Job " << inMsg->header.jobId << ": " << job->getNumDroppedStdioMsgs() << " messages with " << job->getNumDroppedStdioMsgs() <<
+                            " bytes of data were dropped while data channel was disconnected");
+            }
+            job->closeStdioAccumulator.resetCount();
+            jobsToRemove.push( job->getJobId() );
+         }
+
+         // Keep the Job object so CloseStdio message can be resent when the data channel is reconnected.
+         else {
+            LOG_INFO_MSG("Job " << inMsg->header.jobId << ": error sending CloseStdio mesage on data channel when handling Reconnect message: " << bgcios::errorString(err));
+         }
+      }
+   }
+
+   while ( !jobsToRemove.empty() ) {
+       LOG_INFO_MSG("Job " << jobsToRemove.front() << ": removed job from list when handling Reconnect message");
+       _jobs.remove( jobsToRemove.front() );
+       jobsToRemove.pop();
+   }
+
    // Send ReconnectAck message on data channel.
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": ReconnectAck message sent on data channel");
+   LOG_DEBUG_MSG("Job " << inMsg->header.jobId << ": ReconnectAck message sent on data channel");
    return sendToDataChannel(outMsg);
 }
 

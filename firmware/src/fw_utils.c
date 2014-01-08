@@ -112,7 +112,7 @@ int fw_semaphore_down_w_timeout( size_t lock_number, uint64_t microseconds ) {
     if (timeout == 0) {
       timeout =
 	GetTimeBase() +
-	(microseconds * FW_Personality.Kernel_Config.FreqMHz );
+	  (microseconds * (uint64_t)FW_Personality.Kernel_Config.FreqMHz );
     }
 
   } while ( GetTimeBase() < timeout );
@@ -252,6 +252,29 @@ void FW_Warning( const char *fmt, ... ) {
    buffer[len] = 0;
 
    fw_writeRASString( FW_RAS_WARNING, buffer);
+
+   if (len > sizeof(buffer)) {
+       fw_putn("PRINTF OVERFLOWED\n", 18);
+       asm volatile( "b 0"); //crash(__LINE__);
+   }
+
+}
+
+void FW_RAS_printf( const uint32_t msg_id, const char* fmt, ... ) {
+
+   va_list args;
+   va_start( args, fmt );
+
+   int len = 0;
+   char buffer[128];
+    
+
+   len = fw_vsprintf( buffer, fmt, args );
+   va_end( args );
+   buffer[len] = 0;
+
+   extern int _fw_writeRASString(uint32_t , const char*  );
+   _fw_writeRASString( msg_id, buffer);
 
    if (len > sizeof(buffer)) {
        fw_putn("PRINTF OVERFLOWED\n", 18);

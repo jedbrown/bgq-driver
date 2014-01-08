@@ -20,7 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#include "SocketTypes.h"
+#include "cxxsockets/SocketTypes.h"
 
 LOG_DECLARE_FILE("utility.cxxsockets");
 
@@ -52,7 +52,7 @@ int CxxSockets::TCPReceiveFunctor::operator() (
 }
 
 
-int CxxSockets::SecureTCPSendFunctor::operator() (int _fileDescriptor, const void* msg, int length, int flags) {
+int CxxSockets::SecureTCPSendFunctor::operator() (int, const void* msg, int length, int) {
     LOG_DEBUG_MSG("TCP Sending encrypted data");
     int rc = SSL_write(_ssl, msg, length);
     if(rc <= 0) {
@@ -61,7 +61,7 @@ int CxxSockets::SecureTCPSendFunctor::operator() (int _fileDescriptor, const voi
     return rc;
 }
 
-int CxxSockets::SecureTCPReceiveFunctor::operator() (int _fileDescriptor, const void* msg, int length, int flags) {
+int CxxSockets::SecureTCPReceiveFunctor::operator() (int, const void* msg, int length, int) {
     LOG_DEBUG_MSG("TCP Receiving encrypted data");
     int rc = SSL_read(_ssl, (void*)msg, length);
     if(rc < 0) {

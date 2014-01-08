@@ -94,20 +94,20 @@ Signal::impl(
     LOGGING_DECLARE_JOB_MDC( _job->id() );
     LOGGING_DECLARE_BLOCK_MDC( _job->info().getBlock() );
 
-    // for signals other than SIGKILL or the END_JOB control action, the job must be running
-    if ( 
-            (number != SIGKILL && number != bgcios::jobctl::SIGHARDWAREFAILURE) &&
-            _job->status().get() != Status::Running
-       )
-    {
-        LOG_WARN_MSG( "cannot deliver signal " << number << " when status is " << std::string(_job->status()) );
-        _error = runjob::commands::error::job_status_invalid;
-        _message << "status: " << Status::toString(_job->status().get() );
+    // special case for client starting since the job has not started
+    if ( _job->status().get() == Status::ClientStarting ) {
+        _message << "Client disconnected";
+        _job->setError( 
+                _message.str(),
+                error_code::job_failed_to_start
+                );
+
+        Transition( _job ).end();
+
         return;
     }
 
-    // special case for DEBUG since the job has not yet
-    // been started, there will be nothing to kill
+    // special case for DEBUG since the job has not yet started
     if ( _job->status().get() == Status::Debug ) {
         _error = runjob::commands::error::success;
         _message << "Tool setup aborted by signal " << number;
@@ -115,8 +115,28 @@ Signal::impl(
                 _message.str(),
                 error_code::job_failed_to_start
                 );
+
         Transition( _job ).end();
 
+        return;
+    }
+
+
+    // job has to be running to signal it
+    if ( _job->status().get() != Status::Running ) {
+        _error = runjob::commands::error::job_status_invalid;
+        switch( number ) {
+            case SIGKILL:
+            case bgcios::jobctl::SIGHARDWAREFAILURE:
+                _message << "waiting for job to begin " << Status::toString(Status::Running) << " before delivering signal " << number;
+                this->startTimer( number, timeout );
+                break;
+            default:
+                _message << "cannot deliver signal " << number << " when status is " << std::string(_job->status());
+                break;
+        }
+
+        LOG_WARN_MSG( _message.str() );
         return;
     }
 
@@ -152,22 +172,33 @@ Signal::impl(
         LOG_INFO_MSG( "sent signal " << number );
     }
 
+    if ( this->startTimer(number, timeout) ) {
+        _error = runjob::commands::error::success;
+        _message << "delivered signal " << number;
+    }
+}
+
+bool
+Signal::startTimer(
+        const int number,
+        const size_t timeout
+        )
+{
     try {
         if ( number == SIGKILL ) {
             _job->killTimer().start( timeout, _job );
         } else if ( number == bgcios::jobctl::SIGHARDWAREFAILURE ) {
             _job->heartbeat().start( _job );
         }
+
+        return true;
     } catch ( const std::logic_error& e ) {
         LOG_WARN_MSG( e.what() );
         _error = runjob::commands::error::job_already_dying;
         _message << e.what();
 
-        return;
+        return false;
     }
-
-    _error = runjob::commands::error::success;
-    _message << "delivered signal " << boost::lexical_cast<std::string>( number );
 }
 
 } // job

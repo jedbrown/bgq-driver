@@ -131,7 +131,7 @@ capena::http::uri::Path Job::calcUri(
 }
 
 
-void Job::doGet()
+void Job::_doGet()
 {
     const capena::server::Request &request(_getRequest());
 
@@ -176,7 +176,7 @@ void Job::doGet()
     bgq::utility::UserId::ConstPtr user_id_ptr;
 
     if ( ! _isUserAdministrator() ) {
-        user_id_ptr = getRequestUserInfo().getUserIdPtr();
+        user_id_ptr = _getRequestUserInfo().getUserIdPtr();
     }
 
 
@@ -270,7 +270,7 @@ void Job::doGet()
         obj.set( "errorText", cols[BGQDB::DBTJob_history::ERRTEXT_COL].getString() );
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();

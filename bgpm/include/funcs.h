@@ -137,7 +137,7 @@ int Bgpm_DeleteEventSet(unsigned hEvtSet);
  * @param[in]   eventId   eventId to add
  *
  * @return
- *    - >= 0 positive event index into hEvtSet
+ *    - = 0 returns 0 if even has been added successfully.
  *    - <0 negative error codes.  Some relevant errors:
  *      - \ref BGPM_EINV_SET_HANDLE
  *      - \ref BGPM_EINV_EVENT
@@ -161,7 +161,7 @@ int Bgpm_AddEvent(unsigned hEvtSet, unsigned eventId);
  * @param[in]   num         Number of entries in array
  *
  * @return
- *    - >0 - number of events added (= to num parm)
+ *    - =0 - returns 0 if the event set has been added successfully.
  *    - <0 - negative error code: Some relevant errors:
  *      - \ref BGPM_EINV_SET_HANDLE
  *      - \ref BGPM_EINV_EVENT

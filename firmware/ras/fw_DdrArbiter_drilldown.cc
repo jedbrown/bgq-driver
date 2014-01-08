@@ -1161,20 +1161,29 @@ extern "C" {
 
 	ostringstream details;
 
-	uint64_t unit    = mbox[0];
-	uint64_t erraddr = mbox[1];
-	uint64_t errsyn  = mbox[2];
+	if ( mbox.size() < 3 ) {
+	    details << "INTERNAL ERROR: missing details.";
+	}
+	else {
 
-	uint64_t rank = (unsigned)((erraddr>>60)&0x7);
 
-	details 
-	    << "DDR" << unit 
-	    << " Rank=" << rank
-	    << " Bank=" << (unsigned)((erraddr>>53)&0x7)
-	    << " Row="  << (unsigned)((erraddr>>37)&0xFFFF)
-	    << " Col="  << (unsigned)((erraddr>>28)&0x1FF);
 
-	ddr_drilldown( errsyn, unit, rank, details );
+	    uint64_t unit    = mbox[0];
+	    uint64_t erraddr = mbox[1];
+	    uint64_t errsyn  = mbox[2];
+
+	    uint64_t rank = (unsigned)((erraddr>>60)&0x7);
+
+	    details 
+		<< "DDR" << unit 
+		<< " Rank=" << rank
+		<< " Bank=" << (unsigned)((erraddr>>53)&0x7)
+		<< " Row="  << (unsigned)((erraddr>>37)&0xFFFF)
+		<< " Col="  << (unsigned)((erraddr>>28)&0x1FF);
+
+	    ddr_drilldown( errsyn, unit, rank, details );
+	}
+
 	event.setDetail( "DETAILS", details.str() );
     }
 

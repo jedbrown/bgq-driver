@@ -35,8 +35,15 @@ case "$1" in
 			/bin/bgras $BGRAS_ID_SCRIPT_FAILURE "bgvrnic - The bgvrnic module failed to load."
 			failure
 		else
-			RC=$( ifconfig $BG_TOR0_NAME $BG_TOR0_IPV4 netmask $BG_TOR0_NETMASK mtu 498 up 2>&1 )
-			if [ ! -z $RC ] ; then
+			# If the dimensions are 1 in the A, B, C, D and E directions we are an island.
+			# Don't need to bring up the tor0 interface, just configure it.
+			if [ $BG_NODE_DIMENSIONS == "<1,1,1,1,1>" ] ; then
+				RC=$( ifconfig $BG_TOR0_NAME $BG_TOR0_IPV4 netmask $BG_TOR0_NETMASK mtu $BG_TOR0_MTU down 2>&1 )
+			else
+				RC=$( ifconfig $BG_TOR0_NAME $BG_TOR0_IPV4 netmask $BG_TOR0_NETMASK mtu $BG_TOR0_MTU up 2>&1 )
+			fi
+
+			if [ ! -z "$RC" ] ; then
 				bgras $BGRAS_ID_SCRIPT_FAILURE \
 					"bgvrnic - Failure configuring device $BG_TOR0_NAME. ifconfig returned: '$RC' ."
 				failure

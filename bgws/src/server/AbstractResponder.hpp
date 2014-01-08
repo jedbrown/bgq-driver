@@ -31,6 +31,12 @@
 #include "types.hpp"
 #include "UserInfo.hpp"
 
+#include "blue_gene/diagnostics/types.hpp"
+
+#include "blue_gene/service_actions/fwd.hpp"
+
+#include "teal/fwd.hpp"
+
 #include "capena-http/http/http.hpp"
 #include "capena-http/http/uri/Path.hpp"
 
@@ -48,29 +54,33 @@
 namespace bgws {
 
 
-class CheckUserAdminExecutor;
-class BgwsServer;
-class BlueGene;
-class PwauthExecutor;
-class ServerStats;
-class Sessions;
-
-namespace blue_gene {
-    namespace diagnostics { class Runs; }
-    namespace service_actions { class ServiceActions; }
-}
-
-namespace teal { class Teal; }
-
-
+/*! \brief Base class for BGWS responders.
+ *
+ *  Contains some common behavior for responders
+ *  and handy functions for the responders.
+ *
+ *  Common behavior:
+ *  - Notifying server stats of responder stats (see constructor & destructor)
+ *  - Logs end of request & time to process (destructor)
+ *  - _processRequest handling
+ *     - Validates that the HTTP method for the request is allowed by the resource
+ *     - Validates content-type in request is application/json -- BGWS only allows JSON data in request.
+ *     - Parses JSON data in request -- BGWS only allows JSON data in request.
+ *     - Calls __doGet(), __doPost(), etc.
+ *
+ *  Derived classes override these methods:
+ *  - _getAllowedMethods() -- with the HTTP methods the resource allows.
+ *  - _doDelete(), _doGet(), _doPut(), _doPost() -- to generate the response, depending on which methods are allowed
+ *
+ */
 class AbstractResponder : public capena::server::AbstractResponder
 {
 public:
 
-
+    /*! \brief Groups the object references that get passed in on the constructor. */
     struct CtorArgs {
         capena::server::RequestPtr request_ptr;
-        const capena::http::uri::Path& requested_resource_path;
+        const capena::http::uri::Path &requested_resource_path;
         UserInfo user_info;
         SessionPtr session_ptr;
         DynamicConfiguration::ConstPtr dynamic_configuration_ptr;
@@ -120,68 +130,66 @@ public:
 
 
     typedef boost::shared_ptr<AbstractResponder> Ptr;
-    typedef boost::optional<std::string> OptionalString;
 
 
+    /*! \brief Constructor. */
     AbstractResponder(
             CtorArgs& args
         );
-
-
-    const DynamicConfiguration& getDynamicConfiguration() const  { return *_dynamic_configuration_ptr; }
-
-    const capena::http::uri::Path& getRequestedResourcePath() const  { return _requested_resource_path; }
-
-    const UserInfo& getRequestUserInfo() const  { return _user_info; }
-    const bgq::utility::UserId& getRequestUserId() const  { return _user_info.getUserId(); }
-    const std::string& getRequestUserName() const  { return _user_info.getUserId().getUser(); }
-
-    capena::server::Response& getResponse()  { return _getResponse(); }
-
-
-    boost::asio::strand& strand()  { return _getStrand(); }
-
-
-    /*! \brief Check that the content type in the request is valid.
-     *
-     *  \throws error if the content type is present and is not application/json.
-     */
-    void checkContentType();
-
-    void handleError( std::exception& e );
-
-
-    void handle();
-
-
-    virtual capena::http::Methods getAllowedMethods() const  { return capena::http::Methods(); }
-
-    virtual void doDelete()  { _throwMethodNotAllowed(); }
-    virtual void doGet()  { _throwMethodNotAllowed(); }
-    virtual void doHead()  { _throwMethodNotAllowed(); }
-
-    virtual void doPut( json::ConstValuePtr /*val_ptr*/ )  { _throwMethodNotAllowed(); }
-    virtual void doPost( json::ConstValuePtr /*val_ptr*/ )  { _throwMethodNotAllowed(); }
-
 
     ~AbstractResponder();
 
 
 protected:
 
-    // Override
-    void _processRequest();
+    /*! \brief Override to provide the list of methods this resource allows. */
+    virtual capena::http::Methods _getAllowedMethods() const  { return capena::http::Methods(); }
+
+    /*! \brief Override to implement the DELETE method for this resource. */
+    virtual void _doDelete()  { _throwMethodNotAllowed(); }
+
+    /*! \brief Override to implement the GET method for this resource. */
+    virtual void _doGet()  { _throwMethodNotAllowed(); }
+
+    /*! \brief Override to implement the HEAD method for this resource. */
+    virtual void _doHead()  { _throwMethodNotAllowed(); }
+
+    /*! \brief Override to implement the PUT method for this resource. */
+    virtual void _doPut( json::ConstValuePtr /*val_ptr*/ )  { _throwMethodNotAllowed(); }
+
+    /*! \brief Override to implement the POST method for this resource. */
+    virtual void _doPost( json::ConstValuePtr /*val_ptr*/ )  { _throwMethodNotAllowed(); }
 
 
-    // returns true iff the user is authenticated, i.e., not Nobody.
-    bool _isUserAuthenticated() const  { return (getRequestUserInfo().getUserType() != UserInfo::UserType::Nobody); }
+    const capena::http::uri::Path& _getRequestedResourcePath() const  { return _requested_resource_path; }
 
-    // returns true iff the user is an administrator.
-    bool _isUserAdministrator() const  { return (getRequestUserInfo().getUserType() == UserInfo::UserType::Administrator); }
 
+    const UserInfo& _getRequestUserInfo() const  { return _user_info; }
+
+    const std::string& getRequestUserName() const  { return _user_info.getUserId().getUser(); }
+
+    const bgq::utility::UserId& _getRequestUserId() const  { return _user_info.getUserId(); }
+
+    /*! \brief returns true iff the user is authenticated, i.e., not Nobody. */
+    bool _isUserAuthenticated() const  { return (_getRequestUserInfo().getUserType() != UserInfo::UserType::Nobody); }
+
+    /*! \brief returns true iff the user is an administrator. */
+    bool _isUserAdministrator() const  { return (_getRequestUserInfo().getUserType() == UserInfo::UserType::Administrator); }
+
+    /*! \brief returns true iff the user has hardware READ authority. */
     bool _userHasHardwareRead() const;
 
-    const hlcs::security::Enforcer& _enforcer() const  { return _security_enforcer; }
+
+    const DynamicConfiguration& _getDynamicConfiguration() const  { return *_dynamic_configuration_ptr; }
+    const hlcs::security::Enforcer& _getEnforcer() const  { return _security_enforcer; }
+
+
+    /*! \brief Call this to set the response to an error response. */
+    void _handleError( std::exception& e );
+
+
+    /*! \brief Overrides and implements, derived classes should not override. */
+    void _processRequest();
 
 
 private:
@@ -195,6 +203,15 @@ private:
 
     boost::posix_time::ptime _start_time;
 
+
+    /*! \brief Check that the content type in the request is valid.
+     *
+     *  \throws error if the content type is present and is not application/json.
+     */
+    void _checkContentType();
+
+
+    void _handle();
 
     void _throwMethodNotAllowed();
 };

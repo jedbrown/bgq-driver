@@ -712,9 +712,6 @@ start_servers=true
     # Option to start selected servers when bgmaster_server starts. Valid values
     # are true or false. If not specified, the default value is false.
 
-start_order=Subnet1,mc_server,realtime_server,mmcs_server,bgws_server,runjob_server,runjob_mux,teal_server,teal_bg
-    # Comma separated list of aliases to start serially.
-
 
 [performance]
 
@@ -927,41 +924,6 @@ log_function_ship_errors = false
     # Log information about a function shipped operation when the operation returns an error.
     # When true, the I/O node log file may become large if they are many errors from function shipped operations.
     # If log_function_ship_errors is invalid or not specified, the default value is used (false).
-
-
-
-[bghealthmond]
-
-bghealthmond_enabled=1
-        # Enables (1) or disables (0) the BG Health Monitor Daemon
-
-bghealthmond_verbose=0
-        # Enables (1) or disables (0) verbose output from the daemon
-
-bghealthmond_frequency=120
-        # Number of seconds to wait between samples of the system state.
-
-bghealthmond_log_path=/var/log
-        # Path to dump log files to.
-
-bghealthmond_memory_threshold=256000
-        # Nomber of kilobytes of memory to use as the minimum on the node before throwing a RAS event.
-
-bghealthmond_neterr_threshold=0
-        # Number of network errors that may occurr before registering an event.
-
-bghealthmond_netdrp_threshold=1
-        # Percent of total packets sent/received to tolerate before throwing an error.
-
-bghealthmond_loadavg_threshold=100
-        # Five minute load average threshold.
-
-bghealthmond_of_threshold=90
-        # Percent of the total possible open file descriptors to tolerate before throwing an error.
-
-bghealthmond_nfsretrans_threshold=0
-        # Number of retransmissions to tolerate before throwing an error.
-
 
 
 [ras]

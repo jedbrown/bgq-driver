@@ -82,15 +82,15 @@ public:
    }
 
    //! \brief  Interrupt the thread.
-   //! \note   A handler for SIGUSR2 should be installed in the process.
+   //! \note   A handler for signal (default SIGUSR2) should be installed in the process.
    //! \return 0 when successful, errno when unsuccessful.
 
-   int interrupt(void)
+   int interrupt(int signal=SIGUSR2)
    {
       if (!isStarted()) {
          return ESRCH;
       }
-      pthread_kill(_threadId, SIGUSR2); // Wakeup thread from a blocked system call.
+      pthread_kill(_threadId, signal); // Wakeup thread from a blocked system call.
       return 0;
    }
 

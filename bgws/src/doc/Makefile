@@ -34,8 +34,11 @@ man8_install_dir := $(bgq_tld_install_dir)/man/man8
 doc_dirs := \
   ../clients \
   ../command \
+  ../common \
   ../server \
   ../server/blue_gene \
+  ../server/blue_gene/diagnostics \
+  ../server/blue_gene/service_actions \
   ../server/query \
   ../server/query/env \
   ../server/responder \
@@ -95,7 +98,7 @@ doxygen.out: Doxyfile $(source_files)
 
 doxygen_internal.out: Doxyfile_internal ../server/documentation.hpp
 	$(MKDIR) -p $(internal_install_dir)
-	cat $< | sed -e "s^@INSTALL_DIR@^$(internal_install_dir)^" -e "s^@DOC_DIRS@^$(doc_dirs)^" | doxygen - > /dev/null
+	cat $< | sed -e "s^@INSTALL_DIR@^$(internal_install_dir)^g" -e "s^@DOC_DIRS@^$(doc_dirs)^" | doxygen - > /dev/null
 	touch $@
 
 $(man1_install_dir)/%.1 $(man8_install_dir)/%.8: %.xml

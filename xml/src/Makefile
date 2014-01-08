@@ -24,7 +24,7 @@ include ../../Make.rules
 
 DIRS = 
 DIRS += library
-DIRS += example
+DIRS += $(dir $(wildcard example/Makefile))
 #DIRS += scripts
 #DIRS += xidl
 

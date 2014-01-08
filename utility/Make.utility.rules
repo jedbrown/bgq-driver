@@ -64,7 +64,7 @@ BGQ_SBIN_INSTALL_DIR=$(install_base_dir)/sbin
 # include flags
 CXXFLAGS    += -isystem $(BGQ_BUILD_DIR)
 CXXFLAGS    += -isystem $(BGQ_INSTALL_DIR)
-CXXFLAGS    += -isystem $(install_base_dir)/include
+CXXFLAGS    += -isystem $(BGQ_BUILD_DIR)/utility/include
 
 # debugger flags
 ifneq ($(DEBUG_FLAGS),no)

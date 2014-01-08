@@ -26,6 +26,7 @@
 
 
 #include "DynamicConfiguration.hpp"
+#include "types.hpp"
 
 #include "utility/ChildProcesses.hpp"
 
@@ -37,9 +38,6 @@
 
 
 namespace bgws {
-
-
-class BgwsServer;
 
 
 class PwauthExecutor : boost::noncopyable

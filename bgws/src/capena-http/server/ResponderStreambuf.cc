@@ -25,16 +25,10 @@
 
 #include "Connection.hpp"
 
-#include <utility/include/Log.h>
-
-#include <iosfwd>
 #include <string>
 
 
 using std::string;
-
-
-LOG_DECLARE_FILE( "capena-http" );
 
 
 namespace capena {

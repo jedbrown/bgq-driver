@@ -47,6 +47,7 @@ define(
     "dijit/form/Form",
     "dijit/form/NumberTextBox",
     "dijit/form/TextBox",
+    "dijit/form/ValidationTextBox",
     "dijit/layout/BorderContainer",
     "dijit/layout/ContentPane",
     "dojox/grid/EnhancedGrid"

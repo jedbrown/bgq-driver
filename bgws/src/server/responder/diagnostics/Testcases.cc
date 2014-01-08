@@ -121,10 +121,10 @@ const capena::http::uri::Path Testcases::RESOURCE_PATH(common::getBaseUrlPath() 
 const capena::http::uri::Path Testcases::RESOURCE_PATH_EMPTY_CHILD(RESOURCE_PATH / "");
 
 
-void Testcases::doGet()
+void Testcases::_doGet()
 {
     if ( ! _userHasHardwareRead() ) {
-        LOG_WARN_MSG( "Could not get diagnostics testcases because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not get diagnostics testcases because " << _getRequestUserInfo() << " doesn't have authority." );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get diagnostics testcases because the user doesn't have authority.",
@@ -252,7 +252,7 @@ void Testcases::doGet()
         if ( cols["analysis"] )  obj.set( "analysis", cols["analysis"].getString() );
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();

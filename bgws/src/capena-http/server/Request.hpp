@@ -45,6 +45,11 @@ namespace capena {
 namespace server {
 
 
+/*! \brief Represents the HTTP request.
+ *
+ * The application can get the HTTP request from the AbstractResponder.
+ *
+ */
 class Request
 {
 public:
@@ -100,13 +105,13 @@ public:
     const std::string& getTransferCoding() const;
 
 
-    /*! \brief (internal) Post a new header to the request. */
+    /*! \brief (internal) Post a new request header, when read a header line. */
     void postHeader(
             const std::string& name_norm,
             const std::string& value
         );
 
-    /*! \brief (internal) Post more body data to the request. */
+    /*! \brief (internal) Post more body data to the request, when read body data. */
     void postData(
             const std::string& data,
             DataContinuesIndicator data_continues

@@ -30,14 +30,51 @@
 #include <ramdisk/include/services/JobctlMessages.h>
 #include "ctype.h"
 
+extern "C"
+{
+#include <mudm/include/mudm.h>
+}
+
+#if CONFIG_DISTRO_MAPFILE
+uint64_t mapfile_open(const char *path, int oflag, mode_t mode);
+uint64_t mapfile_read(int fd, void* buffer, size_t length);
+uint64_t mapfile_close(int fd);
+#define open mapfile_open
+#define read mapfile_read
+#define close mapfile_close
+#else
 #define open internal_open
 #define read internal_read
 #define close internal_close
+#endif
 #define strtoull strtoull_
 #include <spi/include/mu/RankMap.h>
 
 MUSPI_GIBarrier_t systemBlockGIBarrier;
 MUSPI_GIBarrier_t systemJobGIBarrier;
+
+// storage should be at least able to handle 64 * strlen("aa bb cc dd ee tt") + 1 = 1152 bytes
+
+typedef struct
+{
+    uint64_t chunkid;
+    size_t   length;
+    char     storage[CONFIG_MAPFILECHUNKSIZE];
+} MapFileData_t;
+
+uint32_t      mapfile_distromap = 0;
+uint64_t      mapfileData_unset[CONFIG_MAPFILETRACKS];
+MapFileData_t mapfileData[CONFIG_MAPFILETRACKS];
+MapFileData_t cachemapfileData[CONFIG_MAPFILETRACKS];
+size_t        MAPFILE_BYTE_OFFSET[CONFIG_MAPFILETRACKS];
+Lock_Atomic_t cacheMapLock[CONFIG_MAPFILETRACKS];
+
+Lock_Atomic_t mapping_storageLock[CONFIG_MAPFILETRACKS];
+char mapping_storage[CONFIG_MAPFILETRACKS][CONFIG_MAPFILESTORAGE/CONFIG_MAPFILETRACKS];
+
+struct remoteget_atomic_controls mapfile_remoteget;
+uint64_t mapfile_pacingsem[2] ALIGN_L2_CACHE = { 0, CONFIG_MAPFILEREMOTEPACING };
+
 
 
 // Perform a Barrier Using the System GI Barrier.
@@ -199,8 +236,13 @@ int verifyJobClassroute()
     return 0;
 }
 
-Lock_Atomic_t mapping_storageLock;;
-char mapping_storage[65536];
+int selectTrack()
+{
+    if(mapfile_distromap == 0)
+        return 0;
+    
+    return GetMyProcess()->Tcoord % CONFIG_MAPFILETRACKS;
+}
 
 int computeTaskCoordinates(uint32_t startEntry, size_t mapsize, BG_CoordinateMapping_t* map, uint64_t* numEntries)
 {
@@ -239,10 +281,11 @@ int computeTaskCoordinates(uint32_t startEntry, size_t mapsize, BG_CoordinateMap
     if(appState->mapFilePath[0] != 0)
         filename = appState->mapFilePath;
     
-    Kernel_Lock(&mapping_storageLock);
+    uint64_t thread = selectTrack();
+    Kernel_Lock(&mapping_storageLock[thread]);
     rc = MUSPI_GenerateCoordinates(filename, &jobcoord, &mycoord, appState->ranksPerNode, np,
-                                   sizeof(mapping_storage), mapping_storage, map, NULL);
-    Kernel_Unlock(&mapping_storageLock);
+                                   sizeof(mapping_storage[thread]), &mapping_storage[thread][0], map, NULL);
+    Kernel_Unlock(&mapping_storageLock[thread]);
     return rc;
 }
 
@@ -276,10 +319,243 @@ int getMyRank(uint32_t* rank)
     jobcoord.shape.d  = appState->shape.dCoord;
     jobcoord.shape.e  = appState->shape.eCoord;
     
-    Kernel_Lock(&mapping_storageLock);
+    uint64_t thread = selectTrack();
+    Kernel_Lock(&mapping_storageLock[thread]);
     rc = MUSPI_GenerateCoordinates(filename, &jobcoord, &mycoord, appState->ranksPerNode, appState->ranksActive,
-                                   sizeof(mapping_storage), mapping_storage, NULL, rank);
-    Kernel_Unlock(&mapping_storageLock);
-    
+                                   sizeof(mapping_storage[thread]), &mapping_storage[thread][0], NULL, rank);
+    Kernel_Unlock(&mapping_storageLock[thread]);
     return rc;
+}
+
+
+int calculateTorusNode(size_t byteOffset, uint32_t track, MUHWI_Destination_t* coord)
+{
+    AppState_t *appState = GetMyAppState();
+    uint64_t chunkID = byteOffset/CONFIG_MAPFILECHUNKSIZE;
+    uint64_t tmp = chunkID;
+    uint64_t index = (chunkID + track * appState->shape.aCoord * appState->shape.bCoord * appState->shape.cCoord * appState->shape.dCoord * appState->shape.eCoord / CONFIG_MAPFILETRACKS) % (appState->shape.aCoord * appState->shape.bCoord * appState->shape.cCoord * appState->shape.dCoord * appState->shape.eCoord);
+    
+    assert(chunkID < (uint64_t)appState->shape.aCoord * appState->shape.bCoord * appState->shape.cCoord * appState->shape.dCoord * appState->shape.eCoord);
+    
+    coord->Destination.Destination = 0;
+
+    tmp = appState->shape.bCoord * appState->shape.cCoord * appState->shape.dCoord * appState->shape.eCoord;
+    coord->Destination.A_Destination = index / tmp;
+    index -= coord->Destination.A_Destination * appState->shape.bCoord * appState->shape.cCoord * appState->shape.dCoord * appState->shape.eCoord;
+    
+    tmp = appState->shape.cCoord * appState->shape.dCoord * appState->shape.eCoord;
+    coord->Destination.B_Destination = index / tmp;
+    index -= coord->Destination.B_Destination * appState->shape.cCoord * appState->shape.dCoord * appState->shape.eCoord;
+    
+    tmp = appState->shape.dCoord * appState->shape.eCoord;
+    coord->Destination.C_Destination = index / tmp;
+    index -= coord->Destination.C_Destination * appState->shape.dCoord * appState->shape.eCoord;
+
+    tmp = appState->shape.eCoord;
+    coord->Destination.D_Destination = index / tmp;
+    index -= coord->Destination.D_Destination * appState->shape.eCoord;
+    
+    coord->Destination.E_Destination = index;
+    
+    coord->Destination.A_Destination += appState->corner.aCoord;    
+    coord->Destination.B_Destination += appState->corner.bCoord;    
+    coord->Destination.C_Destination += appState->corner.cCoord;    
+    coord->Destination.D_Destination += appState->corner.dCoord;
+    coord->Destination.E_Destination += appState->corner.eCoord;
+    return 0;
+}
+
+int setupMapFile()
+{
+#if CONFIG_DISTRO_MAPFILE
+    AppState_t *appState = GetMyAppState();
+    int fd;
+    int rc;
+    int64_t bytes;
+    int x;
+    uint64_t totalOffset = 0;
+    if(appState->mapFilePath[0] == 0)
+        return 0;
+
+    mapfile_distromap = 0;
+    App_GetEnvValue("BG_DISTRIBUTEDMAPFILE", &mapfile_distromap);
+    if(mapfile_distromap == 0)
+        return 0;
+    
+    for(x=0; x<CONFIG_MAPFILETRACKS; x++)
+    {
+        mapfileData[x].chunkid = (~0);
+        mapfileData_unset[x] = sizeof(MapFileData_t);
+        memset(&mapfileData[x], 0, sizeof(MapFileData_t));
+        cachemapfileData[x].chunkid = (~0);
+    }
+    ppc_msync();
+    
+    rc = MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+    if(App_IsJobLeaderNode())
+    {
+        memset(&cachemapfileData[0], 0, sizeof(cachemapfileData[0]));
+        
+        fd = internal_open(appState->mapFilePath, O_RDONLY | O_LARGEFILE, 0666);
+        while((bytes = internal_read(fd, &cachemapfileData[0].storage[0], CONFIG_MAPFILECHUNKSIZE)) > 0)
+        {
+            for(x=0; x<CONFIG_MAPFILETRACKS; x++)
+            {
+                MUHWI_Destination_t coord;
+                calculateTorusNode(totalOffset, x, &coord);
+                
+                cachemapfileData[0].chunkid= totalOffset / CONFIG_MAPFILECHUNKSIZE;
+                cachemapfileData[0].length = bytes;
+                
+                // \note msync not necessary; torus mmio write has implicit msync
+                Kernel_WriteFlightLog(FLIGHTLOG, FL_MAPFILEWR, cachemapfileData[0].chunkid, cachemapfileData[0].length, coord.Destination.Destination, x);
+                
+                rc = mudm_rdma_write_on_torus(NodeState.MUDM, coord, sizeof(MapFileData_t), &mapfileData_unset[x], &cachemapfileData[0], &mapfileData[x]);
+                volatile uint64_t remoteCounter = ~0;
+                do
+                {
+                    volatile uint64_t pollcounter = sizeof(remoteCounter);
+                    rc = mudm_rdma_read_on_torus(NodeState.MUDM, coord, sizeof(remoteCounter), (void*)&pollcounter, (void*)&remoteCounter, &mapfileData_unset[x]);
+                    while(pollcounter != 0)
+                    {
+                        Delay(100);
+                        ppc_msync();
+                    }
+                }
+                while(remoteCounter != 0);
+            }
+            
+            totalOffset += bytes;
+            memset(&cachemapfileData[0], 0, sizeof(cachemapfileData[0]));
+        }
+        internal_close(fd);
+        cachemapfileData[0].chunkid = (~0);
+    }
+    rc = MUSPI_GIBarrierEnterAndWait( &systemJobGIBarrier );
+#endif
+    return 0;
+}
+
+uint64_t mapfile_open(const char *path, int oflag, mode_t mode)
+{
+    if(mapfile_distromap == 0)
+        return internal_open(path, oflag, mode);
+    
+    uint64_t fd = selectTrack();
+    MAPFILE_BYTE_OFFSET[fd] = 0;    
+    Kernel_WriteFlightLog(FLIGHTLOG, FL_MAPFILEOP, fd,0,0,0);
+    return fd + 3;
+}
+
+uint64_t mapfile_read(int fd, void* ptr, size_t length)
+{
+    if(mapfile_distromap == 0)
+        return internal_read(fd, ptr, length);
+    
+    int rc;
+    char* buffer = (char*)ptr;
+    uint64_t read_bytes = 0;
+    size_t bytes = (~0);
+    Personality_t* pers = GetPersonality();
+    int track = selectTrack();
+    
+    MUHWI_Destination_t mycoord;
+    mycoord.Destination.Destination = 0;
+    mycoord.Destination.A_Destination = pers->Network_Config.Acoord;
+    mycoord.Destination.B_Destination = pers->Network_Config.Bcoord;
+    mycoord.Destination.C_Destination = pers->Network_Config.Ccoord;
+    mycoord.Destination.D_Destination = pers->Network_Config.Dcoord;
+    mycoord.Destination.E_Destination = pers->Network_Config.Ecoord;
+    while((length) && (bytes != 0))
+    {
+        uint64_t chunkid;
+        MUHWI_Destination_t coord;
+
+        chunkid = MAPFILE_BYTE_OFFSET[track] / CONFIG_MAPFILECHUNKSIZE;
+        while(chunkid != cachemapfileData[track].chunkid)
+        {
+            calculateTorusNode(MAPFILE_BYTE_OFFSET[track], track, &coord);
+            
+            if(mycoord.Destination.Destination == coord.Destination.Destination)
+            {
+                memcpy(&cachemapfileData[track], &mapfileData[track], sizeof(cachemapfileData[track]));
+            }
+            else
+            {
+                Kernel_Lock(&cacheMapLock[0]);
+                
+                do
+                {
+                    mapfile_remoteget.torus_destination = coord;
+                    mapfile_remoteget.atomic_op = MUHWI_ATOMIC_OPCODE_LOAD_DECREMENT_BOUNDED;
+                    mapfile_remoteget.paddr_here = (uint64_t)(&mapfile_remoteget);
+                    mapfile_remoteget.remote_paddr = (uint64_t)(&mapfile_pacingsem[1]);
+                    NodeState.remoteget.returned_val = 0;
+                    NodeState.remoteget.local_counter = 8;
+                    mudm_remoteget_load_atomic(NodeState.MUDM,  &mapfile_remoteget);
+                    while(mapfile_remoteget.local_counter)
+                    {
+                        ppc_msync();
+                    }
+                    
+                    if(mapfile_remoteget.returned_val != 0x8000000000000000)
+                        break;
+                    Kernel_WriteFlightLog(FLIGHTLOG, FL_MAPFILESM, coord.Destination.Destination, MAPFILE_BYTE_OFFSET[track], track, 0);
+                    Delay(1000000);
+                }
+                while(1);
+                
+                volatile uint64_t pollcounter = sizeof(cachemapfileData[track]);
+                Kernel_WriteFlightLog(FLIGHTLOG, FL_MAPFILERD, chunkid, pollcounter, coord.Destination.Destination, track);
+                do
+                {
+                    rc = mudm_rdma_read_on_torus(NodeState.MUDM, coord, sizeof(cachemapfileData[track]), (void*)&pollcounter, &cachemapfileData[track], &mapfileData[track]);
+                    if(rc == -EBUSY)
+                    {
+                        while(1) { }
+                    }
+                }
+                while(rc == -EBUSY);
+                
+                while(pollcounter != 0)
+                {
+                    Delay(100);
+                    ppc_msync();
+                }
+                ppc_msync();
+                
+                mapfile_remoteget.torus_destination = coord;
+                mapfile_remoteget.atomic_op = MUHWI_ATOMIC_OPCODE_LOAD_INCREMENT;
+                mapfile_remoteget.paddr_here = (uint64_t)(&mapfile_remoteget);
+                mapfile_remoteget.remote_paddr = (uint64_t)(&mapfile_pacingsem[1]);
+                NodeState.remoteget.returned_val = 0;
+                NodeState.remoteget.local_counter = 8;
+                mudm_remoteget_load_atomic(NodeState.MUDM,  &mapfile_remoteget);
+                while(mapfile_remoteget.local_counter)
+                {
+                    ppc_msync();
+                }
+                
+                Kernel_Unlock(&cacheMapLock[0]);
+            }
+        }
+        bytes = MIN( cachemapfileData[track].length + chunkid*CONFIG_MAPFILECHUNKSIZE - MAPFILE_BYTE_OFFSET[track], length);
+        memcpy(buffer, &cachemapfileData[track].storage[MAPFILE_BYTE_OFFSET[track] % CONFIG_MAPFILECHUNKSIZE], bytes);
+        
+        read_bytes              += bytes;
+        buffer                  += bytes;
+        length                  -= bytes;
+        MAPFILE_BYTE_OFFSET[track] += bytes;
+    }
+    return read_bytes;
+}
+
+uint64_t mapfile_close(int fd)
+{
+    if(mapfile_distromap == 0)
+        return internal_close(fd);
+    
+    fd -= 3;
+    Kernel_WriteFlightLog(FLIGHTLOG, FL_MAPFILECL, fd,0,0,0);
+    return 0;
 }

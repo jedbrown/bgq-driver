@@ -51,9 +51,7 @@ namespace SecureConnect {
                 CxxSockets::SockAddrList remote_list(AF_UNSPEC, connected_host, connected_port);
                 BOOST_FOREACH(CxxSockets::SockAddr& remote, remote_list) {
                     CxxSockets::SecureTCPSocketPtr
-                        sock(new CxxSockets::SecureTCPSocket(remote.family(), 0,
-                                                             CxxSockets::SECURE,
-                                                             CxxSockets::CRYPTALL));
+                        sock(new CxxSockets::SecureTCPSocket(remote.family(), 0));
 
                     try {
                         ++attempts;

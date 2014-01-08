@@ -79,7 +79,7 @@ public:
      * \brief Start connecting.
      */
     void start(
-            Callback callback                           //!< [in]
+            const Callback& callback    //!< [in]
             );
 
     /*!
@@ -100,7 +100,7 @@ private:
      */
     void timerHandler(
             const boost::system::error_code& error, //!< [in]
-            Callback callback                       //!< [in]
+            const Callback& callback                //!< [in]
             );
 
     /*!
@@ -108,7 +108,7 @@ private:
      */
     void connectHandler(
             const bgq::utility::Connector::ConnectResult& res, //!< [in]
-            Callback callback                               //!< [in]
+            const Callback& callback                           //!< [in]
             );
 
 private:

@@ -20,6 +20,9 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+/*!
+ * \file utility/include/CableBadWires.h
+ */
 
 #ifndef BGQ_UTILITY_CABLE_BAD_WIRES
 #define BGQ_UTILITY_CABLE_BAD_WIRES
@@ -102,6 +105,15 @@ public:
 	std::string getTxRegister() const;
 
 	/**
+	 * Get the 12-bit bad fiber mask in the transmitting register describing the position of
+	 * of the bad fibers according to the bad fiber to bad wire mask mapping specification
+	 * defined in BG/Q Issue 2417.
+	 *
+	 * @returns Bad fiber mask (the least significant or the right most 12 bits are used).
+	 */
+	int getTxRegContents() const;
+
+	/**
 	 * Get the aggregated bad fiber mask for the link chip with a bad fiber specified in the ctor.
 	 * The client must call the setTxPortAndBadWireMask method before calling this method.
 	 *
@@ -110,6 +122,22 @@ public:
 	 * The least significant (i.e., the right most) 12 bits contain the value.
 	 */
 	long int getAggregatedBadFiberMask() const;
+
+	/**
+	 * Get the bad fiber mask for the RX register (C01 or C23) on the receiving link chip.
+	 *
+	 * @returns Aggregated bad fiber mask for the RX register.
+	 * The least significant (i.e., the right most) 12 bits contain the value.
+	 */
+	int getRxFiberMask() const;
+
+	/**
+	 * Get the bad fiber mask for the TX register (D01 or D23) on the transmitting link chip.
+	 *
+	 * @returns Aggregated bad fiber mask for the TX register.
+	 * The least significant (i.e., the right most) 12 bits contain the value.
+	 */
+	int getTxFiberMask() const;
 
 	/**
 	 * Get the text describing the error detected.  A null string (0-length string) is returned
@@ -144,6 +172,7 @@ private:
 	bool				_isTorusCable;
 	int					_rxLinkChipPos;
 	std::string			_port;			// Output: Receiver node board or IO drawer port location (Rxx-Mx-Nxx-Txx, Qxx-Ix-Uxx)
+	int					_portPos;
 	uint64_t			_badwiremask;	// Output: Receiver bad wire mask (12 bits for IO cable, 48 bits for Torus cable)
 
 	// SET BY setTxPortAndAggregatedBadWireMask():
@@ -152,7 +181,15 @@ private:
 	int					_txPortPos;
 	std::string			_txlinkchip;	// Output: Transmitter link chip location (Rxx-Mx-Nxx-U0x, Rxx/Qxx-Ix-U0x)
 	std::string			_txregister;	// Output: Transmitter link chip register ("D01" or "D23")
-	int					_txbadfibers;	// Output: Transmitter bad filer bits (12 bits[0:11] where 0=ok, 1=bad)
+	int					_badfibermask;	// Output: Bad fiber bits (12 bits)
+	int					_rxRegValue;	// Output: RX register value on the receiver (12 bits)
+	int					_txRegValue;	// Output: TX register value on the transmitter (12 bits)
+	// *******************************************************************************************
+	// NOTE: A CableBadWires object is constructed by the BGQDBlib::postProcessRAS method to
+	//       process a BQL_SPARE RAS event for a specific link chip receiver register (C01 or C23)
+	//       on a node board or IO drawer.
+	// *******************************************************************************************
+
 
 	// GENERAL OUTPUT:
 	std::string			_errormessage;	// Output: Text describing the error condition detected

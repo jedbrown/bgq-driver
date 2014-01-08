@@ -268,7 +268,7 @@ public:
      */
     void notifyAllocateListeners(
             const realtime::ClientEventListener::BlockStateChangedEventInfo::Impl& blockStatusEvent, //!< [in] Compute block status event
-            const string& error_msg   //!< [in] Error message (if any)
+            const std::string& error_msg   //!< [in] Error message (if any)
             );
 
     /*!
@@ -276,7 +276,7 @@ public:
      */
     void notifyDeallocateListeners(
             const realtime::ClientEventListener::BlockStateChangedEventInfo::Impl& blockStatusEvent, //!< [in] Compute block status event
-            const string& error_msg   //!< [in] Error message (if any)
+            const std::string& error_msg   //!< [in] Error message (if any)
             );
 
     /*!

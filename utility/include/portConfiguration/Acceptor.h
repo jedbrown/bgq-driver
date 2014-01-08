@@ -76,6 +76,10 @@ public:
 
     /*! \brief Arguments to AcceptHandler.
      *
+     * If the status is NowAccepting,
+     * endpoints will be set to the endpoints that the
+     * server is accepting connections on.
+     *
      * If OK, the user_id will always be set.
      * The client usually sends its user info.
      * If the client uses the administrative certificate
@@ -98,7 +102,6 @@ public:
         static const AcceptArguments ResolveError;
         static const AcceptArguments ListenError;
         static const AcceptArguments NoAcceptors;
-        static const AcceptArguments NowAccepting;
         static const AcceptArguments AcceptError;
 
         Status::Value status;
@@ -107,8 +110,16 @@ public:
         portConfig::UserType::Value user_type;
         std::string client_cn;
 
+        typedef std::vector<boost::asio::ip::tcp::endpoint> Endpoints;
+        Endpoints endpoints;
+
         explicit AcceptArguments(
                 Status::Value status
+            );
+
+        // status will be NowAccepting
+        explicit AcceptArguments(
+                const Endpoints& endpoints
             );
 
         AcceptArguments(
@@ -173,6 +184,9 @@ public:
             AcceptHandler accept_handler //!< [copied]
         );
 
+    /*! \brief Stop accepting connections. */
+    void stop();
+
 
 private:
 
@@ -220,6 +234,9 @@ private:
             portConfig::UserType::Value user_type,
             const std::string& client_cn
         );
+
+
+    void _stopImpl();
 };
 
 

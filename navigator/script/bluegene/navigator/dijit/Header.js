@@ -29,6 +29,7 @@ define(
     "dojo/_base/lang",
     "dijit/Tooltip",
     "dojo/text!./templates/Header.html",
+    "module",
 
     // Used only in template.
     "../../dijit/ActionLink",
@@ -40,7 +41,8 @@ function(
         d_declare,
         d_lang,
         j_Tooltip,
-        template
+        template,
+        module
     )
 {
 
@@ -72,6 +74,7 @@ var b_navigator_dijit_Header = d_declare(
 
     setUserName : function( new_name )
     {
+        console.log( module.id + ": [" + this.id + "] Setting user name to '" + new_name + "'" );
         this._userNameText.set( "value", new_name );
     },
 

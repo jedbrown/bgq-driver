@@ -104,7 +104,6 @@ Start::~Start()
 
     // only invoke callback if we were not successful starting the tool
     if ( _status ) {
-        LOG_WARN_MSG( _message.str() );
         _callback( _id, _status, _message.str() );
     }
 }

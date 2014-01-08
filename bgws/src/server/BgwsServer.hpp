@@ -30,6 +30,12 @@
 #include "ServerStats.hpp"
 #include "types.hpp"
 
+#include "blue_gene/diagnostics/types.hpp"
+
+#include "blue_gene/service_actions/fwd.hpp"
+
+#include "teal/fwd.hpp"
+
 #include "utility/ChildProcesses.hpp"
 
 #include "common/RefreshBgwsServerConfiguration.hpp"
@@ -60,30 +66,7 @@
 namespace bgws {
 
 
-class CheckUserAdminExecutor;
-class PwauthExecutor;
-class ResponderFactory;
-class Sessions;
-
-namespace blue_gene {
-namespace diagnostics {
-
-class Runs;
-
-}
-
-namespace service_actions {
-
-class ServiceActions;
-
-}
-
-}
-
-
-namespace teal { class Teal; }
-
-
+/*! \brief A BGWS Server. */
 class BgwsServer : boost::noncopyable
 {
 public:
@@ -98,6 +81,7 @@ public:
     typedef boost::optional<boost::filesystem::path> OptionalPath;
 
 
+    /*! \brief Constructor */
     BgwsServer(
             const bgq::utility::Properties::Ptr& bg_properties_ptr, //!< [in]
             const bgq::utility::ServerPortConfiguration& port_configuration, //!< [ref]

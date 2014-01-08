@@ -41,6 +41,7 @@ namespace http {
 namespace uri {
 
 
+/*! \brief (Internal static stuff used in URI parsing, generation) */
 namespace statics {
 
 static const char SCHEME_SEPARATOR(':');

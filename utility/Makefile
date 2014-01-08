@@ -25,6 +25,12 @@ include ../Make.rules
 
 DIRS  = $(subst /Makefile,,$(wildcard */Makefile))
 
+ifeq ($(BGQ_HOST_OS),x86_64)
+# test directory has a dependency on boost not installed on x86 processors
+DIRS    := $(filter-out test,$(DIRS))
+endif
+
+
 TARGETS_ALL		= $(addsuffix .all,$(DIRS))
 TARGETS_INSTALL		= $(addsuffix .install,$(DIRS))
 TARGETS_CLEAN		= $(addsuffix .clean,$(DIRS))

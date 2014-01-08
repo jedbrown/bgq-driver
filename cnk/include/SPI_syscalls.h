@@ -144,6 +144,7 @@ __END_DECLS
     SYSCALL(GETPVR)                         // 1089
     SYSCALL(ENABLEFASTSPECULATIONPATHS)     // 1090
     SYSCALL(SETPOWERCONSUMPTIONPARAM)       // 1091
+    SYSCALL(GETSPECIDSELF)                  // 1092
 
     // IMPORTANT!!!  Place new syscalls at the end of this list to avoid binary incompatibility breakage.  
 

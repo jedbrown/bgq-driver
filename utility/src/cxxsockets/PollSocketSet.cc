@@ -20,7 +20,7 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
-#include "SocketTypes.h"
+#include "cxxsockets/SocketTypes.h"
 #include <boost/thread.hpp>
 
 using namespace CxxSockets;
@@ -40,7 +40,7 @@ void PollingSocketSet::AddSock(SocketPtr sock, PollType p) {
     pAddSock(sock, p);
 }
 
-void PollingSocketSet::AddSocks(std::vector<SocketPtr>& socks, PollType p) {
+void PollingSocketSet::AddSocks(std::vector<SocketPtr>& socks) {
     PthreadMutexHolder mutex; LockSet(mutex);
     for(std::vector<SocketPtr>::iterator i = socks.begin(); 
         i != socks.end(); ++i) {
@@ -48,11 +48,7 @@ void PollingSocketSet::AddSocks(std::vector<SocketPtr>& socks, PollType p) {
     }
 }
 
-void PollingTCPSocketSet::PolledSend(Message& msg, int flags) {
-
-}
-
-int PollingTCPSocketSet::PolledReceive(CxxSockets::MsgMap& msgmap, int flags) {
+int PollingTCPSocketSet::PolledReceive(CxxSockets::MsgMap& msgmap) {
     PthreadMutexHolder mutex; LockSet(mutex);
     // Before we poll, we have to acquire the receive side locks on ALL sockets in the set.
     // Then, go through the sockets that return and do a receive on each, putting data
@@ -102,11 +98,7 @@ int PollingTCPSocketSet::PolledReceive(CxxSockets::MsgMap& msgmap, int flags) {
     return pollrc;
 }
 
-void PollingSecureTCPSocketSet::PolledSend(Message& msg, int flags) {
-
-}
-
-int PollingSecureTCPSocketSet::PolledReceive(CxxSockets::MsgMap& msgmap, int flags) {
+int PollingSecureTCPSocketSet::PolledReceive(CxxSockets::MsgMap& msgmap) {
     PthreadMutexHolder mutex; LockSet(mutex);
     // Before we poll, we have to acquire the receive side locks on ALL sockets in the set.
     // Then, go through the sockets that return and do a receive on each, putting data

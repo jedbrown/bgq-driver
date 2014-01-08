@@ -23,7 +23,7 @@
 include ../../Make.teal.rules
 include ../../../Make.rules
 
-DIRS=analyzer
+DIRS=analyzer init.d
 
 TARGETS_ALL		= $(addsuffix .all,$(DIRS))
 TARGETS_INSTALL		= $(addsuffix .install,$(DIRS))

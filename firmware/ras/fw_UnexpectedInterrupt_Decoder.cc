@@ -131,6 +131,11 @@ extern "C" {
 
     void fw_UnexpectedInterrupt_Decoder( RasEvent& event, const vector<uint64_t>& mbox ) {
 
+	if ( mbox.size() == 0 ) {
+	    event.setDetail( "DETAILS", "INTERNAL ERROR: syndrome details are missing." );
+	    return;
+	}
+
 	ostringstream details;
 
 	int category = INT_CATEGORY_STANDARD;

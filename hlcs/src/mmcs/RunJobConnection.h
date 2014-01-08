@@ -22,7 +22,6 @@
 /* end_generated_IBM_copyright_prolog                               */
 
 #include <boost/thread.hpp>
-#include <boost/thread/barrier.hpp>
 #include <utility/include/cxxsockets/SocketTypes.h>
 #include <hlcs/include/runjob/commands/KillJob.h>
 #include <db/include/api/job/types.h>
@@ -47,6 +46,5 @@ private:
 class RunJobConnectionMonitor : public MMCSThread {
 public:
     void* threadStart();
-    RunJobConnectionMonitor() : _runjob_start_barrier(2) {}
-    boost::barrier _runjob_start_barrier;
+    RunJobConnectionMonitor() {}
 };

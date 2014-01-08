@@ -105,7 +105,7 @@ DeallocateEventHandler::handleBlockStateChangedRealtimeEvent(
                     eventInfo.getPreviousSequenceId()
             );
             // Post block status event to listeners
-            string emptyErrorMessage;
+            std::string emptyErrorMessage;
             _model->notifyDeallocateListeners(blockEvent, emptyErrorMessage);
 
             // Remove block from the tracking list

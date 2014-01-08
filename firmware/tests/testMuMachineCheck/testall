@@ -73,7 +73,7 @@ runtest() {
 #  RESPONSE=`xmessage -print -buttons Continue:0,Wait:1 "Please check the LL queue and tell me how to proceed."`
 #done
 
-make runmmcslite parms="--svchost tmp.svchost --envvar TEST=$1 --envvar L2SLICE=$2 --timelimit 15 --location Q00-I0-J00 --svchost_option +$SVCOPT"
+make runmmcslite parms="--svchost tmp.svchost --envvar TEST=$1 --envvar L2SLICE=$2 --timelimit 15 --location Q00-I2-J07 --svchost_option +$SVCOPT"
 }
 
 
@@ -88,7 +88,10 @@ for OPT in BeDRAM ClkStopUnit DrArbiter DDR DevBus EnvMon GEA L1P L2Central Msgc
   # Wakeup
   echo '---' $OPT '---'
   runtest $OPT 0
+
 done
+
+  exit 0
 
 for SLICE in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 ; do
   echo "--- L2 SLICE "$SLICE" ---"

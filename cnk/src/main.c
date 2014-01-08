@@ -104,6 +104,9 @@ void Kernel_Begin( void )
         
         // Initialize mailbox stdin
         mbox_init();
+        
+        // Setup background scrub
+        vmm_SetupBackgroundScrub();
     }
     
     // hold all threads until we get through initialization

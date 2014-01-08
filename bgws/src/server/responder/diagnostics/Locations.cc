@@ -124,10 +124,10 @@ const capena::http::uri::Path Locations::RESOURCE_PATH(common::getBaseUrlPath() 
 const capena::http::uri::Path Locations::RESOURCE_PATH_EMPTY_CHILD(RESOURCE_PATH / "");
 
 
-void Locations::doGet()
+void Locations::_doGet()
 {
     if ( ! _userHasHardwareRead() ) {
-        LOG_WARN_MSG( "Could not get diagnostics locations because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not get diagnostics locations because " << _getRequestUserInfo() << " doesn't have authority." );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get diagnostics locations because the user doesn't have authority.",
@@ -158,7 +158,7 @@ void Locations::doGet()
     json::ArrayValue arr_val;
     json::Array &arr(arr_val.get());
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     if ( all_count != 0 && rs_ptr ) {
 

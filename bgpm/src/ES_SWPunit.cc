@@ -179,6 +179,24 @@ int ES_SWPunit::MergeEventCfg(const ES_SWPunit &s, unsigned targHwThdId, unsigne
                     assert(chk == invert);
                     #endif
                 }
+               //Check Overrides of default XuGroup mask
+                 if (IsAttribSet(trgRec.evtAttrMask, EvtAttr_XuGrpMask)) {
+                    uint64_t XuGrpMask = UPC_P__COUNTER_CFG__XU_OPGROUP_SEL_get(Upci_Punit_Get_OpcodeGrpMask(srcRec.pPunit, srcRec.puEvtIdx));
+                    Upci_Punit_Set_OpcodeGrpMask(trgRec.pPunit, trgRec.puEvtIdx,UPC_P__COUNTER_CFG__XU_OPGROUP_SEL_set(XuGrpMask));
+                    #ifndef NDEBUG    // let's check that punit really has same value as sanity check (overkill??)
+                    uint64_t chk = UPC_P__COUNTER_CFG__XU_OPGROUP_SEL_get(Upci_Punit_Get_OpcodeGrpMask(trgRec.pPunit, trgRec.puEvtIdx));
+                    assert(chk == XuGrpMask);
+                    #endif
+                }
+               //Check Overrides of default QfpuGrpMask  mask
+               if (IsAttribSet(trgRec.evtAttrMask, EvtAttr_QfpuGrpMask)) {
+                    uint64_t QfpuGrpMask = UPC_P__COUNTER_CFG__AXU_OPGROUP_SEL_get(Upci_Punit_Get_OpcodeGrpMask(srcRec.pPunit, srcRec.puEvtIdx));
+                    Upci_Punit_Set_OpcodeGrpMask(trgRec.pPunit, trgRec.puEvtIdx,UPC_P__COUNTER_CFG__AXU_OPGROUP_SEL_set(QfpuGrpMask));
+                    #ifndef NDEBUG    // let's check that punit really has same value as sanity check (overkill??)
+                    uint64_t chk = UPC_P__COUNTER_CFG__AXU_OPGROUP_SEL_get(Upci_Punit_Get_OpcodeGrpMask(trgRec.pPunit, trgRec.puEvtIdx));
+                    assert(chk == QfpuGrpMask);
+                    #endif
+                }
 
                 BGPM_TRACE_DATA_L2(
                         fprintf(stderr, "%s" _AT_ " evtIdx=%02d, evtId=%03d, srcAttrMask=0x%08x, trgAttrMask=0x%08x\n",
@@ -1404,6 +1422,8 @@ int ES_SWPunit::SetQfpuGrpMask(unsigned idx, uint64_t mask)
     if (UNLIKELY(evtId != PEVT_INST_QFPU_GRP_MASK)) return lastErr.PrintOrExit(BGPM_EUNSUP_ATTRIB, BGPM_ERRLOC);
 
     Upci_Punit_Set_OpcodeGrpMask(pPunit, puEvtIdx, UPC_P__COUNTER_CFG__AXU_OPGROUP_SEL_set(mask));
+   
+    evtRecs[idx].evtAttrMask = Or_EvtAttribs(evtRecs[idx].evtAttrMask, EvtAttr_QfpuGrpMask);
 
     return 0;
 }
@@ -1443,6 +1463,8 @@ int ES_SWPunit::SetXuGrpMask(unsigned idx, uint64_t mask)
     if (UNLIKELY(evtId != PEVT_INST_XU_GRP_MASK)) return lastErr.PrintOrExit(BGPM_EUNSUP_ATTRIB, BGPM_ERRLOC);
 
     Upci_Punit_Set_OpcodeGrpMask(pPunit, puEvtIdx, UPC_P__COUNTER_CFG__XU_OPGROUP_SEL_set(mask));
+    
+    evtRecs[idx].evtAttrMask = Or_EvtAttribs(evtRecs[idx].evtAttrMask, EvtAttr_XuGrpMask); // flag that overridden 
 
     return 0;
 }

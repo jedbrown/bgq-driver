@@ -80,7 +80,12 @@ var b_navigator_BlockBuilder = d_declare(
             return;
         }
 
-        return this._block_builder_dijit.getMachineHighlightData();
+        var ret = {
+                loading: false,
+                highlighting: this._block_builder_dijit.getMachineHighlightData()
+            };
+
+        return ret;
     },
 
 

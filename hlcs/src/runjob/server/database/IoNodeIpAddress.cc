@@ -109,9 +109,7 @@ IoNodeIpAddress::get(
         LOG_RUNJOB_EXCEPTION( error_code::database_error, "ip address for '" << location << "' not found" );
     }
 
-    const boost::asio::ip::address& result = i->second;
-
-    return  result;
+    return i->second;
 }
 
 void

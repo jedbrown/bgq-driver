@@ -104,8 +104,14 @@ var b_navigator_dijit_SystemSummary = d_declare(
 
     getMachineHighlightData : function()
     {
-        return this._current_hw;
+        var ret = {
+                loading: this._promise,
+                highlighting: this._current_hw
+            };
+
+        return ret;
     },
+
 
     onMachineHighlightDataChanged : function()  {},
 
@@ -244,6 +250,7 @@ var b_navigator_dijit_SystemSummary = d_declare(
                 d_lang.hitch( this, this._handleSummaryData ),
                 d_lang.hitch( this, function() { this._promise = null; } )
             );
+        this.onMachineHighlightDataChanged();
     },
 
 
@@ -344,8 +351,10 @@ var b_navigator_dijit_SystemSummary = d_declare(
 
         this._hwLoading.hide();
         if ( (! ("hardwareNotifications" in result)) || (result.hardwareNotifications.length == 0) ) {
+            this._hwProblems.hide();
             this._hwAllAvailable.show();
         } else {
+            this._hwAllAvailable.hide();
             this._hwProblems.show();
         }
     },

@@ -111,11 +111,11 @@ namespace environmentals {
 const capena::http::uri::Path Optical::RESOURCE_PATH(capena::http::uri::Path() / "environmentals" / "optical");
 
 
-void Optical::doGet()
+void Optical::_doGet()
 {
 
     if ( ! _userHasHardwareRead() ) {
-        LOG_WARN_MSG( "Could not get environmentals because " << getRequestUserInfo() << " doesn't have authority." );
+        LOG_WARN_MSG( "Could not get environmentals because " << _getRequestUserInfo() << " doesn't have authority." );
 
         BOOST_THROW_EXCEPTION( Error(
                 "Could not get environmentals because the user doesn't have authority.",

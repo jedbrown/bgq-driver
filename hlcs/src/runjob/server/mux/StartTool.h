@@ -23,6 +23,7 @@
 #ifndef RUNTOOL_SERVER_MUX_START_TOOL_H
 #define RUNTOOL_SERVER_MUX_START_TOOL_H
 
+#include "common/message/Result.h"
 #include "common/message/StartTool.h"
 
 #include "server/mux/fwd.h"
@@ -57,6 +58,11 @@ public:
             const boost::shared_ptr<Connection>& mux            //!< [in]
             );
 
+    /*!
+     * \brief dtor.
+     */
+    ~StartTool();
+
 private:
     StartTool(
             const boost::shared_ptr<Server>& server,
@@ -72,7 +78,8 @@ private:
 
 private:
     const boost::weak_ptr<Server> _server;
-    const boost::shared_ptr<runjob::message::StartTool> _message;
+    const message::StartTool::Ptr _request;
+    const message::Result::Ptr _response;
     const boost::shared_ptr<Connection> _mux;
 };
 

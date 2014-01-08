@@ -42,12 +42,9 @@ CXXFLAGS += -Wall
 CXXFLAGS += -iquote .
 CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)
 CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)/utility/include
-CXXFLAGS += -I$(BGQ_INSTALL_DIR)/control/include/mc
-CXXFLAGS += -I$(BGQ_INSTALL_DIR)/hlcs/include
+CXXFLAGS += -I../master
 CXXFLAGS += -MD
 CXXFLAGS += -MP
-CXXFLAGS += -D_FILE_OFFSET_BITS=64
-CXXFLAGS += -D_LARGEFILE64_SOURCE
 CXXFLAGS += -O2
 
 PYTHON_INC=$(shell ls -d /usr/include/python[23].[0-9])
@@ -104,6 +101,7 @@ LITE_SRC       += fakeDb.cc
 LITE_SRC       += MMCSExternalCommand.cc
 LITE_SRC       += HardwareBlockList.cc
 LITE_SRC       += RackBitset.cc
+LITE_SRC       += MMCSSubnet.cc
 LITE_SRC       += lite/ClassRoute.cc
 LITE_SRC       += lite/Database.cc
 LITE_SRC       += lite/Job.cc
@@ -125,7 +123,6 @@ LITE_CMD_SRC   += MMCSCommand_ionodes.cc
 LITE_CMD_SRC   += MMCSCommand_locate.cc
 LITE_CMD_SRC   += MMCSCommand_log_level.cc
 LITE_CMD_SRC   += MMCSCommand_mcserver.cc
-LITE_CMD_SRC   += MMCSCommand_read_kernel_status.cc
 LITE_CMD_SRC   += MMCSCommand_replyformat.cc
 LITE_CMD_SRC   += MMCSCommand_shell.cc
 LITE_CMD_SRC   += MMCSCommand_version.cc
@@ -136,15 +133,9 @@ LITE_CMD_OBJ    = $(LITE_CMD_SRC:%.cc=%.o)
 LITE_LDFLAGS    = $(LDFLAGS)
 LITE_LDFLAGS   += -lsqlite3
 
-ifeq ($(BGQDB), yes)
-#LITE_LDFLAGS    += fakeDb.o
-endif
-
 TARGETS        += mmcs_lite
 INSTALL_LIST   += $(call INSTALL_SBIN_TARGET, mmcs_lite)
 INSTALL_LIST   += $(call INSTALL_LIB_TARGET,$(console_lib_full) $(console_lib_vers) $(console_lib_dev))
-SERVER_LIBRARY  = libmmcsservercmds_s.a
-CONSOLE_LIBRARY = libmmcsconsolecmds_s.a
 
 console_lib_base:=consolecmds
 console_lib_dev:=lib$(console_lib_base).so
@@ -152,7 +143,6 @@ console_lib_vers:=$(console_lib_dev).1
 console_lib_full:=$(console_lib_vers).0.0
 
 # check if we have configured it for DB2
-ifeq ($(BGQDB), yes)
 CONSOLE_SRC      += BlockHelper.cc
 CONSOLE_SRC      += BlockControllerBase.cc
 CONSOLE_SRC      += BlockControllerNodeInfo.cc
@@ -164,8 +154,8 @@ CONSOLE_SRC      += MMCSProperties.cc
 CONSOLE_SRC      += MMCSConsolePort.cc
 CONSOLE_SRC      += MMCSCommandReply.cc
 CONSOLE_SRC      += MMCSThread.cc
-CONSOLE_SRC      += MMCSServerParms.cc
 CONSOLE_SRC      += MMCSExternalCommand.cc
+CONSOLE_SRC      += MMCSSubnet.cc
 
 # Need to share these with the server because
 # other shared components, Block Controllers,
@@ -183,15 +173,19 @@ SERVER_SRC      += MMCSConsoleMonitor.cc
 SERVER_SRC      += MMCSDBMonitor.cc
 SERVER_SRC      += MMCSEnvMonitor.cc
 SERVER_SRC      += MMCSExcludeList.cc
+SERVER_SRC      += MMCSServerParms.cc
 SERVER_SRC      += MMCSSocketList.cc
 SERVER_SRC      += mcServerInit.cc
 SERVER_SRC      += ReconnectBlocks.cc
-SERVER_SRC 	+= MMCSMasterMonitor.cc
 SERVER_SRC      += RunJobConnection.cc
 SERVER_SRC      += CheckBootCompleteThread.cc
 SERVER_SRC      += PerformanceCounters.cc
 SERVER_SRC      += DBStatics.cc
 SERVER_SRC      += NeighborInfo.cc
+SERVER_SRC 	+= master/AliasWaiter.cc
+SERVER_SRC 	+= master/Monitor.cc
+SERVER_SRC 	+= master/SubnetWaiter.cc
+SERVER_SRC 	+= master/WaiterList.cc
 
 SERVER_OBJ       = $(SERVER_SRC:%.cc=%.o)
 
@@ -205,7 +199,7 @@ SERVER_LDFLAGS 	  += -Wl,-rpath $(BGQ_INSTALL_DIR)/hlcs/lib
 SERVER_LDFLAGS    += -L$(BGQ_INSTALL_DIR)/hlcs/lib -lsecurity -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib
 
 CONSOLE_LDFLAGS    = $(LDFLAGS)
-CONSOLE_LDFLAGS    += -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib
+CONSOLE_LDFLAGS   += -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib
 CONSOLE_LDFLAGS   += -Wl,-rpath $(BGQ_INSTALL_DIR)/hlcs/lib
 CONSOLE_LDFLAGS   += -L$(BGQ_INSTALL_DIR)/hlcs/lib -lsecurity -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib
 
@@ -219,7 +213,6 @@ CONSOLE_CMD_SRC    += MMCSCommand_mmcs_server_connect.cc
 CONSOLE_CMD_SRC    += MMCSCommand_shell.cc
 CONSOLE_CMD_SRC    += MMCSCommand_help.cc
 
-#SERVER_CMD_SRC    += $(CONSOLE_CMD_SRC)
 SERVER_CMD_SRC    += MMCSCommand_allocate.cc
 SERVER_CMD_SRC    += MMCSCommand_authority.cc
 SERVER_CMD_SRC    += MMCSCommand_envs.cc
@@ -232,6 +225,7 @@ SERVER_CMD_SRC    += MMCSCommand_reboot.cc
 #SERVER_CMD_SRC    += MMCSCommand_shutdown_hardware.cc
 SERVER_CMD_SRC    += MMCSCommand_db.cc
 SERVER_CMD_SRC    += MMCSCommand_redirect.cc
+SERVER_CMD_SRC    += MMCSCommand_status.cc
 SERVER_CMD_SRC    += MMCSServerCommand_block.cc
 SERVER_CMD_SRC    += MMCSServerCommand_xml.cc
 SERVER_CMD_SRC    += MMCSServerCommand_disconnect.cc
@@ -239,6 +233,7 @@ SERVER_CMD_SRC    += MMCSServerCommand_disconnect.cc
 
 ifeq ($(MMCS_PROHIBITED), yes)
 SERVER_CMD_SRC    += MMCSCommand_inject_ras.cc
+LITE_CMD_SRC      += MMCSCommand_inject_ras.cc
 CXXFLAGS          += -D MMCS_PROHIBITED
 endif
 SERVER_CMD_OBJ     = $(SERVER_CMD_SRC:%.cc=%.o)
@@ -253,10 +248,6 @@ INSTALL_LIST  += $(call INSTALL_BIN_TARGET, bg_console)
 
 TARGETS	      += bg_consolepy
 INSTALL_LIST  += $(call INSTALL_BIN_TARGET, bg_consolepy)
-
-else
-CXXFLAGS  += -UWITH_DB
-endif
 
 ifeq ($(SECURITY), yes)
 CXXFLAGS += -DWITH_SECURITY
@@ -278,20 +269,12 @@ $(console_lib_dev): $(console_lib_vers)
 $(console_lib_vers): $(console_lib_full)
 	ln -sf $< $@
 
-$(SERVER_CMD_OBJ) $(LITE_CMD_OBJ) $(CONSOLE_CMD_OBJ) MMCSCommandProcessor_console.o $(CONSOLE_OBJ) ConsoleOptions.o MMCSConnectionMonitor.o: CXXFLAGS += -fPIC
-
-$(SERVER_LIBRARY): $(LITE_CMD_OBJ) $(SERVER_CMD_OBJ)
-	$(AR) rcs $@ $^
+$(CONSOLE_CMD_OBJ): CXXFLAGS += -fPIC
 
 $(console_lib_full): LDFLAGS += -Wl,-soname,$(console_lib_vers)
 
-
 $(console_lib_full): $(CONSOLE_CMD_OBJ)
 	$(CXX) $(LDFLAGS) -shared -o $@ $^
-
-# static lib
-$(CONSOLE_LIBRARY): $(LITE_CMD_OBJ) $(CONSOLE_CMD_OBJ)
-	$(AR) rcs $@ $^
 
 MMCSCommandProcessor_db.o: MMCSCommandProcessor.cc
 	$(CXX) -o $@ $(CXXFLAGS) -DWITH_DB -DMMCS_SERVER -c $<
@@ -302,10 +285,10 @@ MMCSCommandProcessor_no_db.o: MMCSCommandProcessor.cc
 MMCSCommandProcessor_console.o: MMCSCommandProcessor.cc
 	$(CXX) -o $@ $(CXXFLAGS) -DBG_CONSOLE -c $<
 
-mmcs_lite: mmcs_lite.o  MMCSCommandProcessor_no_db.o $(SERVER_LIBRARY) $(LITE_OBJ) Makefile
+mmcs_lite: mmcs_lite.o  MMCSCommandProcessor_no_db.o $(LITE_CMD_OBJ) $(LITE_OBJ) Makefile
 	$(CXX) -o $@ $(LITE_LDFLAGS) $(filter-out Makefile, $^)
 
-mmcs_server: mmcs_server.o MMCSCommandProcessor_db.o $(SERVER_LIBRARY) $(SERVER_OBJ) Makefile
+mmcs_server: mmcs_server.o MMCSCommandProcessor_db.o $(LITE_CMD_OBJ) $(SERVER_CMD_OBJ) $(SERVER_OBJ) Makefile
 	$(CXX) -o $@ $(SERVER_LDFLAGS) $(filter-out Makefile, $^)
 
 bg_console: bg_console.o MMCSCommandProcessor_console.o $(console_lib_full) $(CONSOLE_OBJ) ConsoleOptions.o MMCSConnectionMonitor.o Makefile
@@ -314,9 +297,6 @@ bg_console: bg_console.o MMCSCommandProcessor_console.o $(console_lib_full) $(CO
 bg_consolepy.o: CXXFLAGS += -I$(PYTHON_INC) -fPIC
 bg_consolepy: bg_consolepy.o MMCSCommandProcessor_console.o $(console_lib_full) $(CONSOLE_OBJ) ConsoleOptions.o MMCSConnectionMonitor.o Makefile
 	$(CXX) -o $@ $(CONSOLE_LDFLAGS) $(PYTHON_LDFLAGS) $(filter-out Makefile, $^)
-
-list_blocks: MMCSCommandProcessor_small.o list_blocks.o MMCSCommand_list.o MMCSCommand_mmcs_server_connect.o MMCSCommand_username.o $(LITE_OBJ) DBConsoleController.o DBBlockController.o MMCSCommand_mmcs_server_cmd.o MMCSCommand_replyformat.o
-	$(CXX) -o $@ $^ $(SERVER_LDFLAGS)
 
 test_bitset: test_bitset.o RackBitset.o
 	$(CXX) -o $@ $^
@@ -329,7 +309,7 @@ bg_sbin_links := mmcs_lite mmcs_server
 bg_bin_links := bg_console bg_consolepy
 
 
-ras_scan: $(wildcard *.cc) $(wildcard *.h)
+ras_scan: $(wildcard *.cc) $(wildcard *.h) $(wildcard */*.h) $(wildcard */*.cc)
 	$(BGQ_BUILD_DIR)/scripts/rasScan.py '$(BGQ_BUILD_DIR)/hlcs/src/mmcs' '$(BGQ_INSTALL_DIR)/hlcs/ras/metadata' 'mmcs_ras.xml' '$(BGQ_INSTALL_DIR)/ras/include/ras.xml'
 	@touch $@
 
@@ -339,16 +319,17 @@ install: $(INSTALL_LIST) $(bg_links_targets) ras_scan $(DIR_TARGETS_INSTALL)
 
 clean:  $(DIR_TARGETS_CLEAN)
 	$(RM) $(TARGETS) $(LIBRARY)
-	$(RM) *.o *.o_64
+	$(RM) *.o 
 	$(RM) *.d
+	$(RM) master/*.o 
+	$(RM) master/*.d
 	$(RM) lite/*.d
-	$(RM) lite/*.o lite/*.o_64
+	$(RM) lite/*.o
 	$(RM) ras_scan
-	$(RM) *_s.a
 	$(RM) $(console_lib_vers)
 	$(RM) $(console_lib_full)
 	$(RM) $(console_lib_dev)
-	$(RM) $(BGQ__LIB_INSTALL_DIR)/$(console_lib_vers)
+	$(RM) $(BGQ_LIB_INSTALL_DIR)/$(console_lib_vers)
 	$(RM) $(BGQ_LIB_INSTALL_DIR)/$(console_lib_full)
 	$(RM) $(BGQ_LIB_INSTALL_DIR)/$(console_lib_dev)
 
@@ -362,4 +343,5 @@ uninstall:
 
 -include *.d
 -include lite/*.d
+-include master/*.d
 

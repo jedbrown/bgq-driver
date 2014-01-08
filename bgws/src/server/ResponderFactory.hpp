@@ -42,21 +42,7 @@
 namespace bgws {
 
 
-class BgwsServer;
-class BlueGene;
-class CheckUserAdminExecutor;
-class PwauthExecutor;
-class ServerStats;
-class Sessions;
-
-namespace blue_gene {
-    namespace diagnostics { class Runs; }
-    namespace service_actions { class ServiceActions; }
-}
-
-namespace teal { class Teal; }
-
-
+/*! \brief Creates Responder for the request. */
 class ResponderFactory
 {
 public:
@@ -75,9 +61,11 @@ public:
         );
 
 
+    /*! \brief Called during refresh config. */
     void setNewDynamicConfiguration( DynamicConfiguration::ConstPtr dynamic_configuration_ptr )  { _dynamic_configuration_ptr = dynamic_configuration_ptr; }
 
 
+    /*! \brief This function is called by the capena-http library when a request comes in, it checks some things in the request and returns the responder for the request, or exception. */
     capena::server::ResponderPtr createResponder(
             capena::server::RequestPtr request_ptr,
             bgq::utility::portConfig::UserType::Value conn_user_type

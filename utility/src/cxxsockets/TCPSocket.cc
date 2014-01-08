@@ -21,7 +21,7 @@
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
 #include <netinet/tcp.h>
-#include "SocketTypes.h"
+#include "cxxsockets/SocketTypes.h"
 #include "CxxSocketInlines.h"
 
 using namespace CxxSockets;
@@ -74,12 +74,6 @@ void TCPSocket::mConnect(SockAddr& remote_sa) {
     _connection_data = 
         local.getHostAddr() + ":" + boost::lexical_cast<std::string>(local.getServicePort()) + "::" + 
         remote_sa.getHostAddr() + ":" + boost::lexical_cast<std::string>(remote_sa.getServicePort()); 
-}
-
-void TCPSocket::mConnect(FourTuple& ft) {
-    LOGGING_DECLARE_FD_MDC;
-    performConnect(std::tr1::get<LOCAL>(ft), std::tr1::get<REMOTE>(ft));
-    LOGGING_DECLARE_FT_MDC;
 }
 
 void TCPSocket::setProbe(bool onoff, int firstprobe, int probeint, int probecount ){
@@ -151,14 +145,6 @@ bool TCPSocket::toggleNoDelay() {
         _nonagle = true;
     }
     return !_nonagle;
-}
-
-void TCPSocket::Connect(FourTuple& ft) {
-    LOGGING_DECLARE_FD_MDC; LOGGING_DECLARE_FT_MDC;
-    FileLocker locker;
-    LockFile(locker);
-    LOG_INFO_MSG("Connected socket");
-    mConnect(ft);
 }
 
 void TCPSocket::Connect(SockAddr& remote_sa) {

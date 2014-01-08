@@ -179,7 +179,7 @@ public:
         if ( handle == NULL) {
             UTILITY_THROW_EXCEPTION( InvalidPath, "Could not load plug-in: " << error  << " Path is: " << path );
         }
-        LOG_DEBUG_MSG( "opened plugin '" << _path << "' successfully" );
+        LOG_DEBUG_MSG( "opened plugin '" << _path << "' successfully at " << handle );
         _dlHandle.reset(
                 handle,
                 boost::bind( &dlclose, handle )

@@ -44,7 +44,9 @@
 #include <ramdisk/include/services/SysioMessages.h>
 #include <poll.h>
 #include <boost/dynamic_bitset.hpp>
+#include <boost/signals2/mutex.hpp>
 #include <list>
+
 
 namespace bgcios
 {
@@ -76,6 +78,9 @@ public:
       _currentDirFd = -1;
       _freePollSetSlots.resize(MaxPollSetSize, true);
       _lastResidentSetSize = 0;
+       _syscall_mh=NULL;
+       _syscallStartTimestamp=0;
+       _syscallFileString1 = NULL;
    }
 
    //! \brief  Default destructor.
@@ -92,12 +97,24 @@ public:
    //! \return True if job is running, otherwise false.
 
    bool isJobRunning(uint64_t jobId) 
+ {
+    _mutexActiveJobIdlist.lock();
+    const std::list<uint64_t>::iterator r = std::find(_activeJobId.begin(),_activeJobId.end(),jobId);
+    bool state = ( r != _activeJobId.end() );
+    _mutexActiveJobIdlist.unlock();
+    return state;
+ }
+
+   //! \brief  Mark job as NOT running.
+   //! \param  jobId Job identifier.
+   //! \return True if job is running, otherwise false.
+
+   void stopJobInternalKernel(uint64_t jobId) 
    {
       JobPtr job = _jobs.get(jobId);
       if (job != NULL) {
-         return job->getWaitingForJobCleanup();
+        job->timedOutForKernelWrite();
       }
-      return false;
    }
 
    //! \brief  Mark the specified job as killed so subsequent messages do not start an I/O operation.
@@ -532,13 +549,16 @@ private:
    static const nfds_t MaxPollSetSize = 66;
 
    //! Number of fixed entries in poll set.
-   static const nfds_t FixedPollSetSize = 2;
+   static const nfds_t FixedPollSetSize = 3;
 
    //! Index of completion channel descriptor in poll set.
    static const int CompChannel = 0;
 
    //! Index of event channel descriptor in poll set.
    static const int EventChannel = 1;
+
+   //! Index of signaling pipe in poll set.
+   static const int pipeForSig = 2;
 
    //! Set of descriptors to poll.
    struct pollfd _pollSet[MaxPollSetSize];
@@ -624,6 +644,10 @@ private:
    //! Map of currently active jobs indexed by job id.
    bgcios::PointerMap<uint64_t, JobPtr> _jobs;
 
+   //! List for tracking job IDs shared by threads with an accompanying lock
+    std::list <uint64_t> _activeJobId;  
+    boost::mutex _mutexActiveJobIdlist;
+
    //! Stopwatch for timing a function ship operation.
    bgcios::StopWatch _operationTimer;
 
@@ -632,6 +656,41 @@ private:
 
    //! Resident set size after last job ended.
    long _lastResidentSetSize;
+
+   volatile struct MessageHeader * _syscall_mh;
+   volatile uint64_t _syscallStartTimestamp;
+   volatile char *   _syscallFileString1;
+
+public:
+uint64_t getSyscallStartTimeStamp(){
+  return (_syscallStartTimestamp);
+}
+
+uint16_t getSyscallMessageType(){
+  return (_syscall_mh->type);
+}
+
+volatile struct MessageHeader * getSyscallMessageHdr(){
+  return (_syscall_mh);
+}
+
+char * getSyscallFileString1(){
+  return (char *)(_syscallFileString1);
+}
+
+private:
+uint64_t setSyscallStart(MessageHeader * mh, char * pathname=NULL){
+    _syscall_mh = mh;
+    _syscallStartTimestamp = GetTimeBase();
+    _syscallFileString1 = pathname;
+  return _syscallStartTimestamp;
+}
+
+void clearSyscallStart(void){
+  _syscall_mh=NULL;
+  _syscallStartTimestamp=0;
+  _syscallFileString1 = NULL;
+}
 
 };
 

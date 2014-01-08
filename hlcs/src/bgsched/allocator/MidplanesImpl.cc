@@ -35,7 +35,7 @@ using namespace bgsched::allocator;
 
 namespace {
     // Message strings
-    const string InvalidMidplaneCoordinates_Str("Invalid midplane coordinates.");
+    const std::string InvalidMidplaneCoordinates_Str("Invalid midplane coordinates.");
 } // anonymous namespace
 
 LOG_DECLARE_FILE("bgsched");

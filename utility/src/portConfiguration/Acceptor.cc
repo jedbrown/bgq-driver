@@ -68,7 +68,6 @@ namespace utility {
 const Acceptor::AcceptArguments Acceptor::AcceptArguments::ResolveError( Status::ResolveError );
 const Acceptor::AcceptArguments Acceptor::AcceptArguments::ListenError( Status::ListenError );
 const Acceptor::AcceptArguments Acceptor::AcceptArguments::NoAcceptors( Status::NoAcceptors );
-const Acceptor::AcceptArguments Acceptor::AcceptArguments::NowAccepting( Status::NowAccepting );
 const Acceptor::AcceptArguments Acceptor::AcceptArguments::AcceptError( Status::AcceptError );
 
 
@@ -77,6 +76,16 @@ Acceptor::AcceptArguments::AcceptArguments(
     ) :
         status(status),
         user_type(portConfig::UserType::Normal)
+{
+    // Nothing to do.
+}
+
+
+Acceptor::AcceptArguments::AcceptArguments(
+        const Acceptor::AcceptArguments::Endpoints& endpoints
+    ) :
+        status(Status::NowAccepting),
+        endpoints(endpoints)
 {
     // Nothing to do.
 }
@@ -136,6 +145,14 @@ void Acceptor::start(
     }
 
     _startResolve( pi );
+}
+
+
+void Acceptor::stop()
+{
+    LOG_DEBUG_MSG( "Requested to stop..." );
+
+    _strand.post( boost::bind( &Acceptor::_stopImpl, this ) );
 }
 
 
@@ -233,12 +250,15 @@ void Acceptor::_handleResolve(
                 return;
             }
 
+            AcceptArguments::Endpoints endpoints;
+
             // Start accepting on all the acceptors.
             for ( _Acceptors::iterator i(_acceptors.begin()) ; i != _acceptors.end() ; ++i ) {
+                endpoints.push_back((*i)->local_endpoint());
                 _startAccept( *i );
             }
 
-            _accept_handler( AcceptArguments::NowAccepting ); // notify the app.
+            _accept_handler( AcceptArguments( endpoints ) ); // notify the app.
 
             return;
         }
@@ -315,6 +335,18 @@ void Acceptor::_handshakeComplete(
 {
     _accept_handler( AcceptArguments( socket_ptr, user_id_ptr, user_type, client_cn ) );
 }
+
+
+void Acceptor::_stopImpl()
+{
+    LOG_DEBUG_MSG( "In _stopImpl" );
+
+    for ( _Acceptors::iterator i(_acceptors.begin()) ; i != _acceptors.end() ; ++i ) {
+        (*i)->close();
+    }
+    _acceptors.clear();
+}
+
 
 } // namespace bgq::utility
 } // namespace bgq

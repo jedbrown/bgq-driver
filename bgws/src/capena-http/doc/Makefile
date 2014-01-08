@@ -33,7 +33,7 @@ generated_file := $(install_dir)/html/index.html
 default: all
 
 
-$(generated_file): Doxyfile ../http/*.cc ../http/*.hpp ../server/*.cc ../server/*.hpp
+$(generated_file): Doxyfile ../http/*.cc ../http/*.hpp ../http/uri/*.cc ../http/uri/*.hpp ../server/*.cc ../server/*.hpp
 	$(MKDIR) -p $(install_dir)
 	cat $< | sed -e "s^@INSTALL_DIR@^$(install_dir)^" | doxygen - > /dev/null 2>&1
 

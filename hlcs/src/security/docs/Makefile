@@ -53,7 +53,7 @@ doxygen.out: Doxyfile | $(FILTER)
 ifeq ($(doxygen_version),$(required_doxygen_version))
 	@echo "generating documentation"
 	@mkdir -p $(BGQ_INSTALL_DIR)/hlcs/docs
-	-cd ../../../../ && cat hlcs/src/security/docs/$^ | sed 's:BGQ_INSTALL_DIR:$(BGQ_INSTALL_DIR):g' | doxygen - > hlcs/src/security/docs/doxygen.out
+	-cd ../../../../ && cat hlcs/src/security/docs/$^ | sed 's:BGQ_INSTALL_DIR:$(BGQ_INSTALL_DIR):g' | doxygen - 2>&1 | grep -v bgqdb > hlcs/src/security/docs/doxygen.out
 else
 	@echo "Will not generate docs because doxygen version is" $(shell doxygen --version) "and required version is" $(required_doxygen_version)
 	@touch $@

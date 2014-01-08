@@ -28,6 +28,8 @@
 #include "server/block/Compute.h"
 #include "server/block/Container.h"
 
+#include "server/cios/Reconnect.h"
+
 #include "server/database/Delete.h"
 #include "server/database/Init.h"
 
@@ -73,6 +75,8 @@ Reconnect::~Reconnect()
     LOG_TRACE_MSG( __FUNCTION__ );
     const Server::Ptr server( _server.lock() );
     if ( !server ) return;
+
+    cios::Reconnect::create( server );
 
     server->getMuxListener()->start();
 }

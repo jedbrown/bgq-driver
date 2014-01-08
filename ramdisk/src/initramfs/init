@@ -43,7 +43,6 @@ mkdir /dev
 mount -t tmpfs tmpfs /dev
 mv /dev.old/* /dev
 
-chown root:root /
 export LD_LIBRARY_PATH=/lib64:/lib:/usr/lib64:/usr/lib
 
 if [ -e /etc/sysconfig/sysinit ] ; then
@@ -99,6 +98,13 @@ echo -en "--> BlueGene/Q Linux Init Starting"
 echo -en "\n--> Node type: $BG_NODE_TYPE"
 echo -en "\n--> PCIe"
 if [ $BG_NODE_ENABLE_PCIE -eq 1 ] ; then echo -n "+" ; else echo -n "-" ; fi
+# Initialize the time to the time sent by the control system where possible:
+if [ ! -z "$BOOT_TIME" ] ; then
+        # Bash needs the quotes but date doesn't like them so we have to remove them.
+        BOOT_TIME2=`echo $BOOT_TIME | tr -d \"`
+        echo -en "\n--> Initializing time to: "
+        date -s "$BOOT_TIME2"
+fi
 echo -en "\n--> LOCATION:$BG_LOCATION:UCI:$BG_UCI"
 echo -en "\n--> GATEWAY:$BG_GATEWAY:FS_IP:$BG_BGSYS_IPV4:SN_IP:$BG_IPV4_SN:EXPORT_DIR:$BG_BGSYS_EXPORT_DIR"
 echo -en "\n--> BG_DISTRO_EXPORT_DIR:$BG_OSDIR"

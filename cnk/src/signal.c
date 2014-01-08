@@ -104,6 +104,7 @@ static SignalAction_t DefaultSignalAction(int sig)
 static void ExceptionSigInfo(KThread_t *kthr)
 {
     Regs_t *regs = &kthr->Reg_State;
+    HWThreadState_t *hwt = GetMyHWThreadState();
 
     switch (kthr->ExceptionCode)
     {
@@ -198,7 +199,7 @@ static void ExceptionSigInfo(KThread_t *kthr)
             if (regs->dbsr & (DBSR_DAC1R | DBSR_DAC1W))
             {
                 kthr->SigInfoCode = TRAP_HWBKPT;
-                kthr->SigInfoAddr = (void *) regs->dac1;
+                kthr->SigInfoAddr = (void *) hwt->CriticalState.dac1;
             }
             else if (regs->dbsr & (DBSR_DAC2R | DBSR_DAC2W))
             {
@@ -206,7 +207,7 @@ static void ExceptionSigInfo(KThread_t *kthr)
                 // Are we in exact address mode with DAC1 and DAC2?
                 if (!(kthr->Reg_State.dbcr2 & DBCR2_DAC12M))
                 {
-                    kthr->SigInfoAddr = (void *) regs->dac2;
+                    kthr->SigInfoAddr = (void *) hwt->CriticalState.dac2;
                 }
             }
             if (regs->dbsr & (DBSR_DAC3R | DBSR_DAC3W))
@@ -214,9 +215,9 @@ static void ExceptionSigInfo(KThread_t *kthr)
                 kthr->SigInfoCode = TRAP_HWBKPT;
                 // If both the DAC1 and DAC3 fired, store the match with the lower address
                 // This can occur if one write operation touches both DAC ranges.
-                if (!((regs->dbsr & (DBSR_DAC1R | DBSR_DAC1W)) && (regs->dac1 < regs->dac3)))
+                if (!((regs->dbsr & (DBSR_DAC1R | DBSR_DAC1W)) && (hwt->CriticalState.dac1 < hwt->CriticalState.dac3)))
                 {
-                    kthr->SigInfoAddr = (void *) regs->dac3;
+                    kthr->SigInfoAddr = (void *) hwt->CriticalState.dac3;
                 }
             }
             else if (regs->dbsr & (DBSR_DAC4R | DBSR_DAC4W))
@@ -225,7 +226,7 @@ static void ExceptionSigInfo(KThread_t *kthr)
                 // Are we in exact address mode with DAC3 and DAC4?
                 if (!(kthr->Reg_State.dbcr3 & DBCR3_DAC34M))
                 {
-                    kthr->SigInfoAddr = (void *) regs->dac4;
+                    kthr->SigInfoAddr = (void *) hwt->CriticalState.dac4;
                 }
             }
 	    break;

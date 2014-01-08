@@ -20,6 +20,9 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+/*!
+ * \file utility/include/version.h
+ */
 #ifndef BGQ_UTILITY_VERSION_H
 #define BGQ_UTILITY_VERSION_H
 

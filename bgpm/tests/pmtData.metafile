@@ -1,2 +1,0 @@
-#CONFIGURATION            UNITS         DECISION     BASE             %AGE     COMMENT
-bgpm.perf.bgpm-opts1     "AvgCycles"        =       "20111205-105802"    3     "Average Cycles for operation"

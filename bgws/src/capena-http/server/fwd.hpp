@@ -68,7 +68,10 @@ Also look at capena::server::exception::Error for a way to generate responses wh
 #include <stdint.h>
 
 
+/*! \brief Capena-HTTP library namespace */
 namespace capena {
+
+/*! \brief HTTP server. */
 namespace server {
 
 

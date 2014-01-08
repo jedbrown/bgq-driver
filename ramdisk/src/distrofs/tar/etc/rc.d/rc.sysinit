@@ -87,16 +87,6 @@ mount --bind /var.mirror /var
 mount --bind /root.mirror /root
 chmod 550 /root
 
-# For depmod to work properly /lib/modules needs to be r/w .  Set that up here.
-if [ -e /lib/modules/modules.tar.gz ] ; then
-	cd /lib/modules.mirror
-	tar -xzvf /lib/modules/modules.tar.gz &> /dev/null
-	cd /
-else
-	cp -a /lib/modules/* /lib/modules.mirror
-fi
-mount --bind /lib/modules.mirror /lib/modules
-
 touch /var/log/lastlog
 export LD_LIBRARY_PATH=/lib64:/lib:/usr/lib64:/usr/lib
 

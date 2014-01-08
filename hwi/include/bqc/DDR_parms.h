@@ -88,9 +88,9 @@
 	ddr.WR_S	= ddr.AL + ddr.CWL + 4 + ddr.TWR;	// This is the optimum value for Wr:Rd=1:1
 	ddr.WR_D	= ddrMAX(ddr.CWL - ddr.CL + 6, 4 + 1);	// Adding 1 more clk to optimize performance
 
-	ddr.IMPEDANCE	= 0x0121;	// Default
+	ddr.IMPEDANCE	= 0x0021;	// Default
 	ddr.IMP_A[0]	= 0x0333;	// 1333 1-rank
-	ddr.IMP_A[1]	= 0x0273;	// 1333 2-rank
+	ddr.IMP_A[1]	= 0x0073;	// 1333 2-rank
 	ddr.IMP_A[2]	= 0x0172;	// 1333 4-rank
 	ddr.IMP_A[3]	= 0x0271;	// 1600 1-rank
 	ddr.IMP_A[4]	= 0x0161;	// 1600 2-rank
@@ -110,9 +110,7 @@
 	ddr.RON_A[4]	= 34;		// 1600 2-rank
 
 	ddr.RTT_WR	= 0;
-	ddr.ADDR_DELAY	= 0x80;
-	ddr.ADDR_DELAY_START	= 0x80;
-	ddr.TIS_SHIFT	= 0x0;
+	ddr.TIS_SHIFT	= 0x20;
 
 	ddr.DQSGATE_DELAY	= 0x0005;
 	ddr.DQSGATE_GB	= 1;
@@ -129,7 +127,7 @@
 	ddr.RDCAL_CNTLB	= 0x0781;	// 6FFB
 	ddr.RDCAL_CNTLD	= 0x0080;	// 6FFD
 
-	ddr.VREF_CA	= (ddr.VDD==1.5 || TI_isDD1())? 0x18:0x18;
+	ddr.VREF_CA	= (ddr.VDD==1.5 || TI_isDD1())? 0x10:0x10;
 	ddr.VREF_DQ	= (ddr.VDD==1.5 || TI_isDD1())? 0x18:0x18;
 	ddr.VREF_INT	= (ddr.VDD==1.5 || TI_isDD1())?  0x1: 0x0;
 	ddr.RANK_MAP_MODE	= TI_isDD1()?2:0;
@@ -156,6 +154,10 @@
 	ddr.SKIP_MEMCAL		= ddr.PD_DISABLE?0:1;
 	ddr.SKIP_MCZMRINT	= 0;
 	ddr.SKIP_SMBTEST	= 0;
+	ddr.SKIP_WRCAL		= TI_isDD1()?1:(PERS_ENABLED(PERS_ENABLE_DiagnosticsMode)?1:0);
+	ddr.SKIP_ADDRCAL	= TI_isDD1()?1:(PERS_ENABLED(PERS_ENABLE_DiagnosticsMode)?1:0);
+	ddr.ADDR_DELAY		= ddr.SKIP_ADDRCAL? 0x80:0x100;
+	ddr.ADDR_DELAY_START	= ddr.SKIP_ADDRCAL? 0x80:0x100;
 	ddr.SKIP_MEMBIST	= 1;
 	ddr.SKIP_FASTINIT	= 0;
 	ddr.SKIP_OT_SCRUB	= PERS_ENABLED(PERS_ENABLE_DDRCellTest)?0:1;

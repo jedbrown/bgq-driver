@@ -34,6 +34,7 @@ uint64_t sc_sched_setaffinity(SYSCALL_FCN_ARGS)
     // Get the Kthread associated with this tid. Function will return a NULL if this is an invalid tid
     // printf("set_affinity tid from app: %d\n",pid_or_tid);
     KThread_t* targetKThread = GetKThreadFromTid(tid);
+    AppProcess_t *proc = GetMyProcess();
 
     // Did we find a valid KThread
     if (!targetKThread)
@@ -73,10 +74,16 @@ uint64_t sc_sched_setaffinity(SYSCALL_FCN_ARGS)
     // Is the target kthread already assigned to the target hardware thread?
     if ((uint32_t)(targetKThread->ProcessorID) == hwthread_index)
     {
-        // Nothing more to do.
+        // Unfortunately we need to do some un-natural things here to deal with comm threads.
+        if (proc->HWThread_Count == 2)
+        {
+            // Reinitialize the layout counter at its starting position so that a user pthread can be placed
+            // on top of a comm thread before it is placed on the main thread.
+            proc->HwtRecycleListMgr.threadLayout_count = 1;
+        }
+       // Nothing more to do.
         return CNK_RC_SUCCESS(0);
     }
-
     // See if we can reserve a kthread on the target hardware thread. If we can, there should be nothing stopping us from proceeding with the migration
     int reserved_slot = KThread_ReserveForMigration(hwthread_index);
     // if no slot was available on the target hardware thread, fail the request.

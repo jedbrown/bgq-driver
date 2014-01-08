@@ -31,6 +31,7 @@ class Authenticate;
 class Connection;
 class ConnectionInterval;
 class Message;
+class Reconnect;
 
 } // cios
 } // server

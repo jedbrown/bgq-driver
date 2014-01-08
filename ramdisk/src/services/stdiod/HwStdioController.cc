@@ -36,6 +36,7 @@
 #include <errno.h>
 #include <iomanip>
 #include <sstream>
+#include <queue>
 
 using namespace bgcios::stdio;
 
@@ -227,8 +228,10 @@ HwStdioController::eventMonitor(void)
       // Check for an event on the data channel.
       if (pollInfo[dataChannel].revents & POLLIN) {
          LOG_CIOS_TRACE_MSG("input event available on data channel");
-         dataChannelHandler();
          pollInfo[dataChannel].revents = 0;
+         if (dataChannelHandler() == EPIPE) {
+             pollInfo[dataChannel].fd = -1;
+         }
       }
 
       // Check for an event on the completion channel.
@@ -313,7 +316,7 @@ HwStdioController::commandChannelHandler(void)
 
    // Make sure the service field is correct.
    bgcios::MessageHeader *msghdr = (bgcios::MessageHeader *)_inboundMessage;
-   if ((msghdr->service != bgcios::StdioService) && (msghdr->service != bgcios::IosctlService)) {
+   if ((msghdr->service != bgcios::StdioService) && (msghdr->service != bgcios::IosctlService) && (msghdr->service != bgcios::ToolctlService)) {
       LOG_ERROR_MSG("Job " << msghdr->jobId << ": message service " << (int)msghdr->service << " is wrong, header: " << bgcios::printHeader(*msghdr));
       sendErrorAckToCommandChannel(source, bgcios::WrongService, 0);
       return 0;
@@ -766,6 +769,21 @@ HwStdioController::readStdin(const RdmaClientPtr& client)
    }
    LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << "." << inMsg->header.rank << ": ReadStdin message is requesting " << inMsg->length << " bytes");
 
+   if (job->isKilled())
+   {
+       LOG_CIOS_INFO_MSG("Read stdin attempted after a job has begun termination. Job " << inMsg->header.jobId << "Rank " << inMsg->header.rank);
+
+       // Build ReadStdinAck message in outbound message region.
+       ReadStdinAckMessage *outMsg = (ReadStdinAckMessage *)client->getOutboundMessagePtr();
+       memcpy(&(outMsg->header), &(inMsg->header), sizeof(bgcios::MessageHeader));
+       outMsg->header.type = ReadStdinAck;
+       outMsg->header.length = sizeof(MessageHeader);
+       outMsg->header.returnCode = bgcios::RequestFailed;
+       outMsg->header.errorCode = EINTR;
+       client->setOutboundMessageLength(outMsg->header.length);
+       return;
+   }
+
    // Forward message to the data channel.
    int err = sendToDataChannel(inMsg);
    LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << "." << inMsg->header.rank << ": ReadStdin message sent on data channel");
@@ -845,12 +863,15 @@ HwStdioController::interrupt(const std::string source)
    // Get pointer to inbound Interrupt message.
    bgcios::iosctl::InterruptMessage *inMsg = (bgcios::iosctl::InterruptMessage *)_inboundMessage;
 
+   // Is this message coming from the tool control daemon
+   bool fromToolCtld = (inMsg->header.service == ToolctlService) ? true : false;
+
    // Validate the job id.
    const JobPtr& job = _jobs.get(inMsg->header.jobId);
    if (job == NULL) {
       // Note that this is not a big deal.  The job could still be running but all of the ranks being serviced
       // by this I/O node could have already ended.
-      LOG_INFO_MSG_FORCED("Job " << inMsg->header.jobId << " not active when handling Interrupt message source="<<source);
+      LOG_INFO_MSG("Job " << inMsg->header.jobId << " not active when handling Interrupt message source="<<source);
 
       return 0;
    }
@@ -887,8 +908,11 @@ HwStdioController::interrupt(const std::string source)
    }
 
    // Mark the job as killed to stop subsequent I/O operations.
-   job->markKilled();
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << "." << inMsg->header.rank << ": marked job as killed");
+   if (!fromToolCtld)
+   {
+       job->markKilled();
+       LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << "." << inMsg->header.rank << ": marked job as killed");
+   }
 
    return 0;;
 }
@@ -929,7 +953,7 @@ HwStdioController::writeStdio(const RdmaClientPtr& client)
          LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << "." << inMsg->header.rank << ": " << toString(inMsg->header.type) <<
                  " message sent on data channel (" << bgcios::dataLength(&(inMsg->header)) << " bytes)");
          if (outMsg->header.errorCode) {
-             LOG_CIOS_INFO_MSG_FORCED("outMsg->header.errorCode="<<outMsg->header.errorCode<<" outMsg->header.jobId="<<outMsg->header.jobId);
+             LOG_CIOS_INFO_MSG("outMsg->header.errorCode="<<outMsg->header.errorCode<<" outMsg->header.jobId="<<outMsg->header.jobId);
              outMsg->header.returnCode = bgcios::SendError;
              job->dropStdioMessage(bgcios::dataLength(&(inMsg->header)));        
          }
@@ -1038,7 +1062,7 @@ HwStdioController::closeStdio(const RdmaClientPtr& client)
          }
          job->closeStdioAccumulator.resetCount();
          if (job->writeTimer.getNumOperations() > 0) {
-              LOG_INFO_MSG_FORCED("Job " << inMsg->header.jobId << ": stats for write: " << job->writeTimer);
+              LOG_INFO_MSG("Job " << inMsg->header.jobId << ": stats for write: " << job->writeTimer);
          }
          _jobs.remove(job->getJobId());
          LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": removed job from list");
@@ -1076,11 +1100,11 @@ HwStdioController::changeConfig(void)
    // Update logging levels for the specified trace types.
    setLoggingLevel("ibm.cios.common", inMsg->commonTraceLevel);
    if (inMsg->commonTraceLevel != 0) {
-      LOG_INFO_MSG_FORCED("Changed ibm.cios.common log level to '" << inMsg->commonTraceLevel << "'"); 
+      LOG_INFO_MSG("Changed ibm.cios.common log level to '" << inMsg->commonTraceLevel << "'"); 
    }
    setLoggingLevel("ibm.cios.stdiod", inMsg->stdiodTraceLevel);
    if (inMsg->stdiodTraceLevel != 0) {
-      LOG_INFO_MSG_FORCED("Changed ibm.cios.stdiod log level to '" << inMsg->stdiodTraceLevel << "'");  
+      LOG_INFO_MSG("Changed ibm.cios.stdiod log level to '" << inMsg->stdiodTraceLevel << "'");  
    }
 
    LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ": ChangeConfigAck message sent on data channel");
@@ -1100,6 +1124,9 @@ HwStdioController::reconnect(void)
    outMsg->header.length = sizeof(ReconnectAckMessage);
    outMsg->header.returnCode = Success;
 
+   // remember jobs to remove after iterating through our container
+   std::queue<uint64_t> jobsToRemove;
+
    // Run the list of jobs and resend any CloseStdio messages.
    for (job_list_iterator iter = _jobs.begin(); iter != _jobs.end(); ++iter) {
       JobPtr job = iter->second;
@@ -1117,9 +1144,7 @@ HwStdioController::reconnect(void)
                             " bytes of data were dropped while data channel was disconnected");
             }
             job->closeStdioAccumulator.resetCount();
-            _jobs.remove(job->getJobId());
-            job.reset();
-            LOG_CIOS_INFO_MSG("Job " << inMsg->header.jobId << ": removed job from list when handling Reconnect message");
+            jobsToRemove.push( job->getJobId() );
          }
 
          // Keep the Job object so CloseStdio message can be resent when the data channel is reconnected.
@@ -1127,6 +1152,12 @@ HwStdioController::reconnect(void)
             LOG_CIOS_INFO_MSG("Job " << inMsg->header.jobId << ": error sending CloseStdio mesage on data channel when handling Reconnect message: " << bgcios::errorString(err));
          }
       }
+   }
+
+   while ( !jobsToRemove.empty() ) {
+       LOG_INFO_MSG("Job " << jobsToRemove.front() << ": removed job from list when handling Reconnect message");
+       _jobs.remove( jobsToRemove.front() );
+       jobsToRemove.pop();
    }
 
    // Send ReconnectAck message on data channel.

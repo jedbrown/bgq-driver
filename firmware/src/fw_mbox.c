@@ -34,6 +34,10 @@ uint8_t /* FW_MAILBOX_TO_CORE */  fw_MBox2Core[FW_INBOX_SIZE] ALIGN_L1D_CACHE = 
 uint8_t /* FW_MAILBOX_TO_HOST */  fw_MBox2Host[FW_OUTBOX_SIZE] ALIGN_L1D_CACHE = { 0, };
 
 volatile uint64_t fw_mailbox_pointer = 0;
+volatile uint64_t fw_mailbox_full_start_time = 0;
+volatile uint64_t fw_mailbox_full_end_time = 0;
+volatile unsigned fw_mailbox_full_length = 0;
+
 
 #define USERCODE(h,l) ( (((uint64_t)(h))<<32) | ((l)&0xFFFFFFFF) )
 
@@ -116,6 +120,8 @@ int fw_mailbox_init( unsigned leader ) {
     fw_semaphore_init( BeDRAM_LOCKNUM_RAS_HISTORY, 1 );
     fw_semaphore_init( BeDRAM_LOCKNUM_RAS_FLUSH_LOCK, 1 );
     fw_semaphore_init( BeDRAM_LOCKNUM_CS_BARRIER, 1 );
+    fw_semaphore_init( BeDRAM_LOCKNUM_MBOX_FULL, 1);
+    fw_semaphore_init( BeDRAM_LOCKNUM_MBOX_OPEN_AGAIN, 1 );
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // Plug in mailbox implementations of certain functions:
@@ -164,7 +170,7 @@ uint64_t fw_mailbox_reserve(unsigned length, int* errno) {
 
   uint64_t result = 0;
   int done = 0;
-
+  int reportedMailboxFull = 0;
   
   while ( ! done ) {
     
@@ -187,6 +193,21 @@ uint64_t fw_mailbox_reserve(unsigned length, int* errno) {
       fw_mailbox_pointer += length;
       done = 1;
     }
+    else {
+
+	// The mailbox is full.  If we are the first thread to detect this condition (as
+	// determined by the MBOX_FULL semaphore), note the current time and set the 
+	// flag to indicate that we are in this mode.
+
+	if (reportedMailboxFull == 0 ) {
+
+	    if ( fw_semaphore_down_w_timeout( BeDRAM_LOCKNUM_MBOX_FULL, 10000 ) == 0 ) {
+		reportedMailboxFull = 1;
+		fw_mailbox_full_start_time = GetTimeBase();
+		fw_mailbox_full_length = length;
+	    }
+	}
+    }
 
 #if USESEMAPHORE
     // Release the mailbox pointer lock:
@@ -194,7 +215,20 @@ uint64_t fw_mailbox_reserve(unsigned length, int* errno) {
 #else
     fw_ticket_post(BeDRAM_LOCKNUM_MBOX_SERVE);
 #endif
+
+
   }
+
+  // If this thread encountered a full mailbox and is reponsible for reporting it, then note the
+  // time and lower the semaphore to indicate that the delay has ended.  Some thread will 
+  // detect and handle this situation in the release method.
+
+  if ( reportedMailboxFull != 0 ) {
+      fw_mailbox_full_end_time = GetTimeBase();
+      ppc_msync();
+      fw_semaphore_down(BeDRAM_LOCKNUM_MBOX_OPEN_AGAIN);
+  }
+
 
   return result;
 }
@@ -227,6 +261,29 @@ int64_t fw_mailbox_release(uint64_t reserve, unsigned length) {
 
   TI_DCR->mailbox_reg0[0] = current + (uint64_t)length;
 
+  // If the semaphore indicating a full mailbox condition is lowered, then
+  // attempt to raise it.  In the event that this is successful, report the
+  // condition via a RAS event.
+
+  if ( BeDRAM_Read( BeDRAM_LOCKNUM_MBOX_OPEN_AGAIN ) == 0 ) {
+
+      if ( BeDRAM_ReadIncSat(BeDRAM_LOCKNUM_MBOX_OPEN_AGAIN) == 0 ) {
+	  uint64_t start = fw_mailbox_full_start_time;
+	  uint64_t end   = fw_mailbox_full_end_time;
+	  uint64_t delayInMillis = (end - start) / 1000 / (uint64_t)FW_Personality.Kernel_Config.FreqMHz;
+	  ppc_msync();
+	  fw_semaphore_up(BeDRAM_LOCKNUM_MBOX_FULL);
+	  // If the mailbox has been full for more than 10 seconds, issue a message.
+	  if ( delayInMillis >= ( 10ull * 1000ull ) ) {
+	      FW_RAS_printf( FW_RAS_INFO, "The mailbox has been full for %ld milliseconds.  Original request was %d bytes.", delayInMillis, fw_mailbox_full_length  );
+	  }
+      }
+      else {
+	  BeDRAM_ReadDecSat(BeDRAM_LOCKNUM_MBOX_OPEN_AGAIN);
+      }
+      
+  }
+
   return 0;
 }
 
@@ -253,8 +310,6 @@ __INLINE__ void fw_mailbox_restore_interrupts(uint64_t msr) {
 
 int fw_mailbox_putstring(const char* str, size_t len, int add_new_line) {
 
-  uint64_t timestamp = GetTimeBase();
-
   // Immediately ignore null requests:
 
   if (len == 0) {
@@ -264,9 +319,7 @@ int fw_mailbox_putstring(const char* str, size_t len, int add_new_line) {
 
   unsigned length = sizeof(MailBoxHeader_t) + len ;
 
-  int embeddedTimestampLength = PERS_ENABLED( PERS_ENABLE_Timestamps ) ? 16 : 0;
-
-  if ( ( length + embeddedTimestampLength ) > FW_OUTBOX_SIZE) {
+  if ( length  > FW_OUTBOX_SIZE) {
     return FW_TOO_BIG;
   }
 
@@ -277,45 +330,22 @@ int fw_mailbox_putstring(const char* str, size_t len, int add_new_line) {
 
   uint64_t original_msr = fw_mailbox_mask_interrupts();
   int      errno = 0;
-  uint64_t reserve  = fw_mailbox_reserve(ROUND_2_QW_BOUNDARY(length + embeddedTimestampLength), &errno);
+  uint64_t reserve  = fw_mailbox_reserve(ROUND_2_QW_BOUNDARY(length), &errno);
 
   if ( reserve != FW_MBOX_ERROR ) {
 
     uint8_t* mbox_ptr = fw_MBox2Host + (reserve & (FW_OUTBOX_SIZE-1));
 
-    fw_mailbox_set_header( (MailBoxHeader_t*)mbox_ptr, JMB_CMD2HOST_STDOUT, len + embeddedTimestampLength );
+    fw_mailbox_set_header( (MailBoxHeader_t*)mbox_ptr, JMB_CMD2HOST_STDOUT, len );
 
     mbox_ptr += sizeof(MailBoxHeader_t);
-
-    // NOTE: We support a mode in which a decimal encoded timestamp is automatically preprended
-    //       to every mailbox output.  This is achieved by first constructing the string
-    //       and then inserting into the mailbox output.
-
-    if ( embeddedTimestampLength > 0 ) {
-
-
-      char     ts[16];
-      int      tsi = sizeof(ts)-1;
-
-      ts[tsi--] = ' ';
-
-      while ( tsi >= 0 ) {
-	ts[tsi--] = (timestamp > 0) ? ( '0' + (timestamp % 10) ) : ' ';
-	timestamp /= 10;
-      }
-      
-      for ( tsi = 0; tsi < sizeof(ts); tsi++ ) {
-	*mbox_ptr = ts[tsi];
-	INCREMENT_AND_WRAP( mbox_ptr, 1, fw_MBox2Host, FW_OUTBOX_SIZE );
-      }
-    }
 
 
     // Can the payload be written in one piece or two?
 
     uint8_t* tailptr = 0;
 
-    if ( ( ( ( reserve + embeddedTimestampLength ) & (FW_OUTBOX_SIZE-1) ) + length ) > FW_OUTBOX_SIZE ) {
+    if ( ( ( ( reserve ) & (FW_OUTBOX_SIZE-1) ) + length ) > FW_OUTBOX_SIZE ) {
     
       size_t length1 = FW_OUTBOX_SIZE - (mbox_ptr - fw_MBox2Host);
 
@@ -325,7 +355,7 @@ int fw_mailbox_putstring(const char* str, size_t len, int add_new_line) {
     }
     else {
       memcpy( mbox_ptr, str, len );
-      tailptr = mbox_ptr + embeddedTimestampLength + len - 1;
+      tailptr = mbox_ptr + len - 1;
     }
 
 
@@ -345,7 +375,7 @@ int fw_mailbox_putstring(const char* str, size_t len, int add_new_line) {
       len++;
     }
 
-    fw_mailbox_release(reserve, ROUND_2_QW_BOUNDARY(length + embeddedTimestampLength ));
+    fw_mailbox_release(reserve, ROUND_2_QW_BOUNDARY(length));
 
     rc = len;
   }
@@ -819,46 +849,54 @@ int fw_mailbox_process_inbound_msg( void ) {
 
 	for ( d = 0; d < JMB_MAX_DOMAINS; d++ ) {
 
-	  uint32_t coreMask  = *((uint32_t*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint32_t), fw_MBox2Core, FW_INBOX_SIZE);
-	  /* _reserved */                               INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint32_t), fw_MBox2Core, FW_INBOX_SIZE);
-	  uint64_t ddrStart  = *((uint64_t*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint64_t), fw_MBox2Core, FW_INBOX_SIZE);
-	  uint64_t ddrEnd    = *((uint64_t*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint64_t), fw_MBox2Core, FW_INBOX_SIZE);
-	  uint64_t configPtr = *((uint64_t*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint64_t), fw_MBox2Core, FW_INBOX_SIZE);
-	  uint32_t configLen = *((uint32_t*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint32_t), fw_MBox2Core, FW_INBOX_SIZE);
+	    uint32_t coreMask  = *((uint32_t*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint32_t), fw_MBox2Core, FW_INBOX_SIZE);
+	    /* _reserved */                               INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint32_t), fw_MBox2Core, FW_INBOX_SIZE);
+	    uint64_t ddrStart  = *((uint64_t*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint64_t), fw_MBox2Core, FW_INBOX_SIZE);
+	    uint64_t ddrEnd    = *((uint64_t*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint64_t), fw_MBox2Core, FW_INBOX_SIZE);
+	    uint64_t configPtr = *((uint64_t*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint64_t), fw_MBox2Core, FW_INBOX_SIZE);
+	    uint32_t configLen = *((uint32_t*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint32_t), fw_MBox2Core, FW_INBOX_SIZE);
 
-	  _MBTRACE(( "JMB_CMD2CORE_CONFIGURE_DOMAINS domain=%d coreMask=%X ddrStart=%lX ddrEnd=%lX\n",d, coreMask, ddrStart, ddrEnd));
-	  _MBTRACE(( "JMB_CMD2CORE_CONFIGURE_DOMAINS cfgPtr=%lX cfgLen=%d\n",                            configPtr, configLen      ));
+	    _MBTRACE(( "JMB_CMD2CORE_CONFIGURE_DOMAINS domain=%d coreMask=%X ddrStart=%lX ddrEnd=%lX\n",d, coreMask, ddrStart, ddrEnd));
+	    _MBTRACE(( "JMB_CMD2CORE_CONFIGURE_DOMAINS cfgPtr=%lX cfgLen=%d\n",                            configPtr, configLen      ));
 
-	  int i;
+	    int i;
 
-	  char* option = FW_InternalState.nodeState.domain[d].options;
 
-	  for ( i = 0; i < sizeof(FW_InternalState.nodeState.domain[d].options); i++ ) {
-	      option[i] = *((char*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(char), fw_MBox2Core, FW_INBOX_SIZE);
-	  }
+	    // There is an extra word of padding in each domain descriptor:
 
-	  // There is an extra word of padding in each domain descriptor:
+	    /* padding */   INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint32_t), fw_MBox2Core, FW_INBOX_SIZE);
 
-	  /* padding */   INCREMENT_AND_WRAP(mbox_ptr, sizeof(uint32_t), fw_MBox2Core, FW_INBOX_SIZE);
+	    if ( d < num_domains ) {
 
-	  if ( d < num_domains ) {
-	    FW_InternalState.nodeState.domain[d].coreMask      = coreMask & FW_InternalState.nodeState.coreMask;
-	    FW_InternalState.nodeState.domain[d].ddrOrigin     = ddrStart;
-	    FW_InternalState.nodeState.domain[d].configAddress = configPtr;
-	    FW_InternalState.nodeState.domain[d].configLength  = configLen;
-	    if ( ddrEnd == -1 ) {
-	      FW_InternalState.nodeState.domain[d].ddrEnd = (uint64_t)FW_Personality.DDR_Config.DDRSizeMB * 1024ull * 1024ull  -  1;
-	    }
-	    else {
+		char* option = FW_InternalState.nodeState.domain[d].options;
 
-		if ( ddrEnd > ( (uint64_t)FW_Personality.DDR_Config.DDRSizeMB * 1024ull * 1024ull ) ) {
-		    FW_Error( "End of memory for domain %d (%lX) exceeds configured end of memory (%lX)", d, ddrEnd, (uint64_t)FW_Personality.DDR_Config.DDRSizeMB * 1024ull * 1024ull );
-		    //rc = - __LINE__;
+		for ( i = 0; i < sizeof(FW_InternalState.nodeState.domain[d].options); i++ ) {
+		    option[i] = *((char*)mbox_ptr);  INCREMENT_AND_WRAP(mbox_ptr, sizeof(char), fw_MBox2Core, FW_INBOX_SIZE);
 		}
 
-	      FW_InternalState.nodeState.domain[d].ddrEnd = ddrEnd;
+		FW_InternalState.nodeState.domain[d].coreMask      = coreMask & FW_InternalState.nodeState.coreMask;
+		FW_InternalState.nodeState.domain[d].ddrOrigin     = ddrStart;
+		FW_InternalState.nodeState.domain[d].configAddress = configPtr;
+		FW_InternalState.nodeState.domain[d].configLength  = configLen;
+		if ( ddrEnd == -1 ) {
+		    FW_InternalState.nodeState.domain[d].ddrEnd = (uint64_t)FW_Personality.DDR_Config.DDRSizeMB * 1024ull * 1024ull  -  1;
+		}
+		else {
+
+		    if ( ddrEnd > ( (uint64_t)FW_Personality.DDR_Config.DDRSizeMB * 1024ull * 1024ull ) ) {
+			FW_Error( "End of memory for domain %d (%lX) exceeds configured end of memory (%lX)", d, ddrEnd, (uint64_t)FW_Personality.DDR_Config.DDRSizeMB * 1024ull * 1024ull );
+			//rc = - __LINE__;
+		    }
+
+		    FW_InternalState.nodeState.domain[d].ddrEnd = ddrEnd;
+		}
 	    }
-	  }
+	    else {
+		for ( i = 0; i < sizeof(FW_InternalState.nodeState.domain[0].options); i++ ) {
+		    INCREMENT_AND_WRAP(mbox_ptr, sizeof(char), fw_MBox2Core, FW_INBOX_SIZE);
+		}
+	    }
+
 	}
 
 	break;

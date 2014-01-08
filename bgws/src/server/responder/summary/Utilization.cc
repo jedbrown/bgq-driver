@@ -102,7 +102,7 @@ Utilization::Utilization(
 { /* Nothing to do */ }
 
 
-void Utilization::doGet()
+void Utilization::_doGet()
 {
 
     // The user must be authenticated.
@@ -158,7 +158,7 @@ void Utilization::doGet()
         obj.set( "utilization", UTILIZATION );
     }
 
-    capena::server::Response &response(getResponse());
+    capena::server::Response &response(_getResponse());
 
     response.setContentTypeJson();
     response.headersComplete();

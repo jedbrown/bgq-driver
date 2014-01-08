@@ -56,7 +56,7 @@ public:
     Plugin(
             const Id& id,                                       //!< [in]
             Timers& timers,                                     //!< [in]
-            const runjob::mux::Plugin::HandlePtr& plugin        //!< [in]
+            const runjob::mux::Plugin::WeakPtr& plugin          //!< [in]
           );
 
     /*!
@@ -103,7 +103,7 @@ private:
 private:
     const Id& _id;                                          //!<
     Timers& _timers;                                        //!<
-    const runjob::mux::Plugin::HandlePtr _plugin;           //!<
+    const runjob::mux::Plugin::WeakPtr _plugin;             //!<
 };
 
 } // client

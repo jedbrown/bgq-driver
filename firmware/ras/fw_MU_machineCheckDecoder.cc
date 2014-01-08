@@ -316,6 +316,11 @@ MU_Decoder MU_TERMCHECKS[] = {
 
   void fw_MU_termCheckDecoder( RasEvent& event, const vector<uint64_t>& mbox ) {
 
+      if ( mbox.size() < 4 ) {
+	  event.setDetail( "DETAILS", "INTERNAL ERROR: missing details" );
+	  return;
+      }
+
       uint64_t dcrAddress = mbox[0];
       uint64_t actual = mbox[1];
       uint64_t expected = mbox[2];

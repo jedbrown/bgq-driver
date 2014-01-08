@@ -20,6 +20,9 @@
 /* ================================================================ */
 /*                                                                  */
 /* end_generated_IBM_copyright_prolog                               */
+/*!
+ * \file utility/include/ExitStatus.h
+ */
 
 #ifndef BGQ_UTILITY_EXIT_STATUS_HPP_
 #define BGQ_UTILITY_EXIT_STATUS_HPP_

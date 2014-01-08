@@ -132,6 +132,15 @@ Connection::readHeaderHandler(
         } else {
             _handshakeComplete = true;
             LOG_INFO_MSG( "version handshake (" << bgq::utility::Revision << ") passed" );
+
+            const Server::Ptr server( _server.lock() );
+            if ( !server ) return;
+
+            Reconnect::create(
+                    server,
+                    shared_from_this()
+                    );
+            
             this->readHeader();
         }
 
@@ -232,22 +241,6 @@ Connection::write(
                 shared_from_this(),
                 msg,
                 callback
-                )
-            );
-}
-
-void
-Connection::addComplete()
-{
-    const Server::Ptr server( _server.lock() );
-    if ( !server ) return;
-
-    Reconnect::create(
-            server,
-            shared_from_this(),
-            boost::bind(
-                &Connection::readHeader,
-                shared_from_this()
                 )
             );
 }
