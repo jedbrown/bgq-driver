@@ -88,7 +88,7 @@ Switch::Impl::Impl(
 
     // Set switch settings
     vector<SwitchSettings::Pimpl> switchSettingsPimpls = fromSwitch->getSwitchSettings();
-    for (vector<SwitchSettings::Pimpl>::const_iterator iter = switchSettingsPimpls.begin(); iter != switchSettingsPimpls.end(); iter++) {
+    for (vector<SwitchSettings::Pimpl>::const_iterator iter = switchSettingsPimpls.begin(); iter != switchSettingsPimpls.end(); ++iter) {
         _switchSettings.push_back(SwitchSettings::Pimpl(new SwitchSettings::Impl(*iter)));
     }
 
@@ -230,7 +230,7 @@ Switch::Impl::dump(
     if (_switchSettings.size() == 0) {
         os << "     Switch settings . . . . . . : No switch settings" << endl;
     } else {
-        for (vector<SwitchSettings::Pimpl>::const_iterator iter = _switchSettings.begin(); iter != _switchSettings.end(); iter++) {
+        for (vector<SwitchSettings::Pimpl>::const_iterator iter = _switchSettings.begin(); iter != _switchSettings.end(); ++iter) {
            (*iter)->dump(os);
         }
     }

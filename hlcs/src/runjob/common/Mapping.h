@@ -27,6 +27,7 @@
 
 #include <iostream>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -42,6 +43,10 @@ namespace runjob {
  * are packed into a 32 bit unsigned integer per rank. This container is then serialized
  * with the rest of the job description and sent to the runjob_server as part of the job
  * launch process where it is used for additional validation.
+ *
+ * Note (2/20/14): For calculating number of ranks to include in runjob_server and for mpmd
+ * the entire contents of the mapping file is now packaged up in a vector of strings and
+ * serialized over to runjob_server.
  */
 class Mapping
 {
@@ -60,6 +65,11 @@ public:
      * \brief Container of ranks
      */
     typedef std::vector<uint32_t> Rank;
+
+    /*!
+     * \brief Container representing full mapping file contents
+     */
+    typedef std::vector<std::string> FullMapFileContents;
 
 public:
     /*!
@@ -82,6 +92,7 @@ public:
     const std::string& value() const { return _value; } //!< Get value.
     operator const std::string&() const { return this->value(); }  //!< Conversion to const std::string&
     const std::vector<uint32_t>& fileContents() const { return _fileContents; }
+    const std::vector<std::string>& fullMapFileContents() const { return _fullMapFileContents; }
 
 private:
     void validateFile();
@@ -102,12 +113,14 @@ private:
         ar & _type;
         ar & _value;
         ar & _fileContents;
+        ar & _fullMapFileContents;
     }
 
 private:
     Type _type;
     std::string _value;
     std::vector<uint32_t> _fileContents; // encoded mapping file contents
+    std::vector<std::string> _fullMapFileContents; // full mapping file contents
 };
 
 /*!

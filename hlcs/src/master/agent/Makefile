@@ -88,7 +88,7 @@ default: all
 
 all: $(exe)
 
-install: $(call INSTALL_SBIN_TARGET, $(exe)) $(bg_links_targets) $(MODULE_INIT_DIR)/bgagent $(MODULE_INIT_DIR)/bgagent.v1r1m0 $(MODULE_INIT_DIR)/bgagent.v1r1m1 $(MODULE_INIT_DIR)/bgagent.v1r1m2 $(MODULE_INIT_DIR)/bgagent.v1r2m0
+install: $(call INSTALL_SBIN_TARGET, $(exe)) $(bg_links_targets) $(MODULE_INIT_DIR)/bgagent $(MODULE_INIT_DIR)/bgagent.v1r1m0 $(MODULE_INIT_DIR)/bgagent.v1r1m1 $(MODULE_INIT_DIR)/bgagent.v1r1m2 $(MODULE_INIT_DIR)/bgagent.v1r2m0 $(MODULE_INIT_DIR)/bgagent.v1r2m1
 
 
 $(exe): $(objs) $(common_objs) $(protocol_objs)

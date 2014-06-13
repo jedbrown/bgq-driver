@@ -201,6 +201,7 @@ DBConsoleController::DBConsoleController(
         ) :
     ConsoleController(commandProcessor, user, utype),
     _mmcsThread(0),
+    _peerName(),
     _blockMdc()
 {
     setConsolePort(connection);

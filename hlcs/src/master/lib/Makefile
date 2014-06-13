@@ -35,7 +35,7 @@ CXXFLAGS += \
  -isystem $(BGQ_INSTALL_DIR) \
  -iquote .. \
  -Wall \
- -Wall \
+ -Wextra \
  -Wconversion \
  -O2 \
  -MP -MD \

@@ -27,8 +27,7 @@ from ibm.teal.analyzer.analyzer import EventAnalyzer
 from ibm.teal.registry import get_logger, get_service, SERVICE_DB_INTERFACE
 from ibm.bgq.analyzer.bgq_BaseAnalyzer import bgqBaseAnalyzer
 from ibm.teal.database import db_interface
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime,timedelta
 import time
 import re
 import subprocess
@@ -249,9 +248,9 @@ class BqcSerdesEvent:
         self.nodeBoardDimMap = { 'N00': ['N04', 'N08', 'N01', 'N02'], 'N01': ['N05', 'N09', 'N00', 'N03'], 'N02': ['N06', 'N10', 'N03', 'N00'], 'N03': ['N07', 'N11', 'N02', 'N01'], 'N04': ['N00', 'N12', 'N05', 'N06'], 'N05': ['N01', 'N13', 'N04', 'N07'], 'N06': ['N02', 'N14', 'N07', 'N04'], 'N07': ['N03', 'N15', 'N06', 'N05'], 'N08': ['N12', 'N00', 'N09', 'N10'], 'N09': ['N13', 'N01', 'N08', 'N11'], 'N10': ['N14', 'N02', 'N11', 'N08'], 'N11': ['N15', 'N03', 'N10', 'N09'], 'N12': ['N08', 'N04', 'N13', 'N14'], 'N13': ['N09', 'N05', 'N12', 'N15'], 'N14': ['N10', 'N06', 'N15', 'N12'], 'N15': ['N11', 'N07', 'N14', 'N13'] }
 
         self.nodesWithIoLinks = ['J04', 'J05', 'J06', 'J07', 'J08', 'J09', 'J10', 'J11']
-        self.nodeBoadConnectorMap = {'T00': ['J06','J11'],'T01': ['J07','J10'],'T02': ['J08','J05'],'T03': ['J09','J04']}
-        self.ioBoadConnectorMap = {'T19': ['J05','J07'],'T23': ['J04','J06'],'T18': ['J00','J02'],'T22': ['J01','J03'],'T04': ['J02','J03'],'T06': ['J00','J01'],'T12': ['J06','J07'],'T14': ['J04','J05']}
-        self.ioBoadReverseConnectorMap = {'J00': ['T06','T18'],'J01': ['T06','T22'],'J02': ['T04','T18'],'J03': ['T04','T22'],'J04': ['T14','T23'],'J05': ['T14','T19'],'J06': ['T12','T23'],'J07': ['T12','T19']}
+        self.nodeBoardConnectorMap = {'T00': ['J06','J11'],'T01': ['J07','J10'],'T02': ['J08','J05'],'T03': ['J09','J04']}
+        self.ioBoardConnectorMap = {'T19': ['J05','J07'],'T23': ['J04','J06'],'T18': ['J00','J02'],'T22': ['J01','J03'],'T04': ['J02','J03'],'T06': ['J00','J01'],'T12': ['J06','J07'],'T14': ['J04','J05']}
+        self.ioBoardReverseConnectorMap = {'J00': ['T06','T18'],'J01': ['T06','T22'],'J02': ['T04','T18'],'J03': ['T04','T22'],'J04': ['T14','T23'],'J05': ['T14','T19'],'J06': ['T12','T23'],'J07': ['T12','T19']}
  
         return
 
@@ -467,7 +466,7 @@ class BqcSerdesEvent:
                 # extract the T0x port from the node board cable
                 nodeBoardConnector = self.ioCable[11:14]
                 # lookup the list of two nodes associated with the connector
-                computes = self.nodeBoadConnectorMap[nodeBoardConnector]
+                computes = self.nodeBoardConnectorMap[nodeBoardConnector]
                 self.jxxneighbor = computes[0]
                 self.neighbor = self.neighborboard + '-' + self.jxxneighbor
                 self.jxxextraIoNeighbor = computes[1]
@@ -788,16 +787,14 @@ class BqcSerdesEvent:
     def determineComputeComputeSwapsForNodes(self):
         index = self.linkIndex(self.link)
         if index < 0 or index > 9:
-            raise Exception("Error - invalid index " + index + " for location " + self.location + " and link " + self.link )
+            raise Exception("Error - invalid index " + str(index) + " for location " + self.location + " and link " + self.link )
         if (self.link_type == 'receiver'):
             # move the node so that failing link remains on-board
             keys = self.rcvrLinkMap.keys()
             # remove this location from the list of keys
             keys.remove(self.jxxloc)
             # if the neighbor is on the same board, remove its key too
-            sameBoard = False
             if self.board == self.neighborboard:
-                sameBoard = True
                 keys.remove(self.jxxneighbor)
             found = False
             for key in keys:
@@ -837,9 +834,7 @@ class BqcSerdesEvent:
             # remove this location from the list of keys
             keys.remove(self.jxxloc)
             # if the neighbor is on the same board, remove its key too
-            sameBoard = False
             if self.board == self.neighborboard:
-                sameBoard = True
                 keys.remove(self.jxxneighbor)
             found = False
             for key in keys:
@@ -981,9 +976,6 @@ class BqcSerdesEvent:
                     self.neighborRasEnabled = False
 
     def determineComputeIoSwaps(self):
-        index = self.linkIndex(self.link)
-        if index < 0 or index > 9:
-            raise Exception("Error - invalid index " + index + " for location " + self.location + " and link " + self.link )
         # move the node to a non-Io link position on the node board
         keys = self.rcvrLinkMap.keys()
         iokeys = self.ioXmitLinkMap.keys()
@@ -1010,12 +1002,12 @@ class BqcSerdesEvent:
     def determineIoComputeSwaps(self):
         # exchange the I/O node so it is no longer connected to  
         # either of the two compute nodes
-        tconns = self.ioBoadReverseConnectorMap[self.jxxloc]
-        tkeys = self.ioBoadConnectorMap.keys()
+        tconns = self.ioBoardReverseConnectorMap[self.jxxloc]
+        tkeys = self.ioBoardConnectorMap.keys()
         tkeys.remove(tconns[0])
         tkeys.remove(tconns[1])
         tkey = tkeys[0]
-        nodes = self.ioBoadConnectorMap[tkey]
+        nodes = self.ioBoardConnectorMap[tkey]
         self.newlocation = self.location[0:7] + nodes[0]
         status, self.newserialnumber = self.queryEngine.nodeStatusAndSnQuery(self.newlocation, self.locationIsCompute)
         self.nodeAction = 'Swap nodes ' + self.location + ' (S/N ' + self.serialnumber + ') <-> ' + self.newlocation + ' (S/N ' + self.newserialnumber + ')'
@@ -1048,13 +1040,13 @@ class BqcSerdesEvent:
             # extract the T0x port from the node board cable
             nodeBoardConnector = self.ioCable2[11:14]
             # lookup the list of two nodes associated with the connector
-            computes = self.nodeBoadConnectorMap[nodeBoardConnector]
+            computes = self.nodeBoardConnectorMap[nodeBoardConnector]
             jxxneighbor = computes[0]
-            neighbor = nodeBoard + '-' + self.jxxneighbor
-            status, neighbor_sn = self.queryEngine.nodeStatusAndSnQuery(self.newneighbor, self.neighborIsCompute)
-            self.jxxextraIoNeighbor = computes[1]
-            self.extraIoNeighbor = nodeBoard + '-' + self.jxxextraIoNeighbor
-            status, self.extraIoNeighbor_sn = self.queryEngine.nodeStatusAndSnQuery(self.newneighbor, self.neighborIsCompute)
+            neighbor = nodeBoard + '-' + jxxneighbor
+            status, neighbor_sn = self.queryEngine.nodeStatusAndSnQuery(neighbor, self.neighborIsCompute)
+            jxxextraIoNeighbor = computes[1]
+            extraIoNeighbor = nodeBoard + '-' + jxxextraIoNeighbor
+            status, extraIoNeighbor_sn = self.queryEngine.nodeStatusAndSnQuery(extraIoNeighbor, self.neighborIsCompute)
 
             # neighbors are compute nodes, swap them with non-I/O linked nodes
             keys = self.xmitLinkMap.keys()
@@ -1071,21 +1063,21 @@ class BqcSerdesEvent:
             status, sn = self.queryEngine.nodeStatusAndSnQuery(newneighbor, self.neighborIsCompute)
             self.neighborAction += ', and Swap nodes ' + neighbor + ' (S/N ' + neighbor_sn + ') <-> ' + newneighbor + ' (S/N ' + sn + ')'
             status, sn = self.queryEngine.nodeStatusAndSnQuery(extra_newneighbor, self.neighborIsCompute)
-            self.neighborAction += ', and Swap nodes ' + self.extraIoNeighbor + ' (S/N ' + self.extraIoNeighbor_sn + ') <-> ' + extra_newneighbor + ' (S/N ' + sn + ')' 
+            self.neighborAction += ', and Swap nodes ' + extraIoNeighbor + ' (S/N ' + extraIoNeighbor_sn + ') <-> ' + extra_newneighbor + ' (S/N ' + sn + ')' 
 
         registry.get_logger().debug(self.neighborAction)
         return
 
     def determineIoIoSwaps(self):
         # handle primary node
-        nodes = self.ioBoadReverseConnectorMap.keys()
+        nodes = self.ioBoardReverseConnectorMap.keys()
         nodes.remove(self.jxxloc)
         self.newlocation = self.location[0:7] + nodes[0]
         status, self.newserialnumber = self.queryEngine.nodeStatusAndSnQuery(self.newlocation, self.locationIsCompute)
         self.nodeAction = 'Swap nodes ' + self.location + ' (S/N ' + self.serialnumber + ') <-> ' + self.newlocation + ' (S/N ' + self.newserialnumber + ')'
         registry.get_logger().debug(self.nodeAction)
         # handle neighbor node
-        nodes = self.ioBoadReverseConnectorMap.keys()
+        nodes = self.ioBoardReverseConnectorMap.keys()
         nodes.remove(self.jxxneighbor)
         self.newneighbor = self.neighbor[0:7] + nodes[0]
         status, self.newneighbor_sn = self.queryEngine.nodeStatusAndSnQuery(self.newneighbor, self.locationIsCompute)
@@ -1685,11 +1677,11 @@ class bgqBqcSerdesAnalyzer(bgqBaseAnalyzer):
                             for row in rows:
                                 nrec_id = row[0]
                                 nrawdata = row[1].strip()
-                                index = rawdata.find('DIM_DIR=')
+                                index = nrawdata.find('DIM_DIR=')
                                 if index >= 0:
-                                    index = rawdata.find(dimstr)
+                                    index = nrawdata.find(dimstr)
                                     if index >= 0:
-                                        return rec_id
+                                        return nrec_id
                                     else:
                                         registry.get_logger().info("The neighbor node at " + neighbor_location + " with S/N " + neighbor_serialnumber + "  was associated with a previous serdes link error (recid=" + str(nrec_id) + " but in a different dimension, thus board replacement is not recommended at this time.") 
                                         return None
@@ -1882,7 +1874,7 @@ class bgqBqcSerdesAnalyzer(bgqBaseAnalyzer):
             handled_time = self.handledQualifiers[qualifier]
             if (datetime.now() - timedelta(hours=24)) > handled_time:
                 # remove the qualifier from the map
-                self.handledJobs.pop(qualifier)
+                self.handledQualifiers.pop(qualifier)
         return
 
     def addHandledQualifier(self, qualifier):

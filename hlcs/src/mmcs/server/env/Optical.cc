@@ -410,7 +410,6 @@ Optical::closeTargetHandler(
                 token
                 )
             );
-
 }
 
 void
@@ -567,18 +566,22 @@ Optical::insertData(
     LOG_TRACE_MSG( __FUNCTION__ << " begin " << name );
     BOOST_ASSERT( reply );
 
-    if ( io ) {
-        this->processIo(
-                *boost::dynamic_pointer_cast<MCServerMessageSpec::ReadIoCardEnvReply>( reply )
-                );
-    } else {
-        this->processNodeCard(
-                *boost::dynamic_pointer_cast<MCServerMessageSpec::ReadNodeCardEnvReply>( reply )
-                );
+    try {
+        if ( io ) {
+            this->processIo(
+                    *boost::dynamic_pointer_cast<MCServerMessageSpec::ReadIoCardEnvReply>( reply )
+                    );
+        } else {
+            this->processNodeCard(
+                    *boost::dynamic_pointer_cast<MCServerMessageSpec::ReadNodeCardEnvReply>( reply )
+                    );
+        }
+        _insertion_time += boost::posix_time::microsec_clock::local_time() - start;
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( e.what() );
     }
 
     LOG_TRACE_MSG( __FUNCTION__ << " end " << name );
-    _insertion_time += boost::posix_time::microsec_clock::local_time() - start;
 }
 
 void

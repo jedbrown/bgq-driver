@@ -225,7 +225,7 @@ db2LSN DbChangesMonitor::_initCurLsn( const std::string& db_name )
       read_log_input.iFilterOption = DB2READLOG_FILTER_ON;
 
       struct db2ReadLogInfoStruct read_log_info;
-      memset( &read_log_info, sizeof ( read_log_info ), '\0' );
+      memset( &read_log_info, '\0', sizeof ( read_log_info ) );
 
       read_log_input.poReadLogInfo = &read_log_info;
 
@@ -274,7 +274,7 @@ db2LSN DbChangesMonitor::_initCurLsn( const std::string& db_name )
         read_log_input.iFilterOption = DB2READLOG_FILTER_ON;
 
         struct db2ReadLogInfoStruct read_log_info;
-        memset( &read_log_info, sizeof ( read_log_info ), '\0' );
+        memset( &read_log_info, '\0', sizeof ( read_log_info ) );
 
         read_log_input.poReadLogInfo = &read_log_info;
 
@@ -330,7 +330,7 @@ void DbChangesMonitor::_processChanges()
     read_log_input.iFilterOption = DB2READLOG_FILTER_ON;
 
     struct db2ReadLogInfoStruct read_log_info;
-    memset( &read_log_info, sizeof ( read_log_info ), '\0' );
+    memset( &read_log_info, '\0', sizeof ( read_log_info ));
 
     read_log_input.poReadLogInfo = &read_log_info;
 

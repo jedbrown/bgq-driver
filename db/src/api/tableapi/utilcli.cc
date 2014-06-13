@@ -128,7 +128,7 @@ StmtResourcesFree(
         SQLHANDLE hstmt
 )
 {
-    SQLRETURN cliRC = SQL_SUCCESS;
+    SQLRETURN cliRC;
 
     // Unbind the statement handle
     // SQLFreeStmt can return the following:
@@ -162,9 +162,9 @@ TransRollback(
         SQLHANDLE hdbc
 )
 {
-    SQLRETURN cliRC = SQL_SUCCESS;
     LOG_TRACE_MSG("  Rolling back the transaction ...");
 
+    SQLRETURN cliRC;
     // End transactions on the connection
     cliRC = SQLEndTran(SQL_HANDLE_DBC, hdbc, SQL_ROLLBACK);
     HandleInfoPrint(SQL_HANDLE_DBC, hdbc, cliRC, __LINE__, __FILE__);
@@ -179,10 +179,9 @@ MultiConnTransRollback(
         SQLHANDLE henv
 )
 {
-    SQLRETURN cliRC = SQL_SUCCESS;
-
     LOG_TRACE_MSG("  Rolling back the transactions...");
 
+    SQLRETURN cliRC;
     // End transactions on the connection
     cliRC = SQLEndTran(SQL_HANDLE_ENV, henv, SQL_ROLLBACK);
     HandleInfoPrint(SQL_HANDLE_ENV, henv, cliRC, __LINE__, __FILE__);

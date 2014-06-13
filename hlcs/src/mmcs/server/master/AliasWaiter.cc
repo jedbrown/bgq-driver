@@ -498,7 +498,6 @@ AliasWaiter::buildFailover(
     LOG_DEBUG_MSG("There are " << DBConsoleController::getBlockMap().size() << " blocks in map.");
 
     std::vector<std::string> booted_compute_nodecards;
-    std::vector<std::string> booted_compute_blocks;
     std::vector<std::string> io_nodecards;
     std::vector<std::string> loaded_cards;
 
@@ -526,8 +525,6 @@ AliasWaiter::buildFailover(
                 }
             }
 
-            std::vector<std::string> io_nodes;
-            std::vector<std::string> linkchips;
             for (
                     std::vector<BCIconInfo*>::const_iterator iter = curr_block->getBase()->getIcons().begin();
                     iter != curr_block->getBase()->getIcons().end();

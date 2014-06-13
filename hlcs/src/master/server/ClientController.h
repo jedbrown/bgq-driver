@@ -118,7 +118,7 @@ public:
 
     void processRequest();
 
-    std::string getUserId() const { return _prot->getResponder()->getUserId().getUser(); }
+    const std::string& getUserId() const { return _prot->getResponder()->getUserId().getUser(); }
     const ClientId& get_client_id() const { return _client_id; }
 };
 

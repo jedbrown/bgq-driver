@@ -168,6 +168,7 @@ private:
     friend class job::Setup;
     friend class job::Signal;
     friend class job::Handle;
+    friend class job::RankMapping;
     friend class mux::Reconnect;
 
     job::Status _status;                                            //!<

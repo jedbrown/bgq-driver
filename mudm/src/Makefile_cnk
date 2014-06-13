@@ -17,11 +17,24 @@ include ../../Make.rules
 SILENT=
 
 MUDM_TARGET  = cnk
-MUDM_CFLAGS  = -m64 -D__KERNEL__ -Wall -m64 -g -O2 -Werror 
+MUDM_CFLAGS  = -m64 -D__KERNEL__ -Wall -Werror -m64 -g -O2
 #-fno-strict-aliasing
 
 MUDM_INCLUDES += -I$(BGQ_INSTALL_DIR)
 MUDM_INCLUDES += -I$(BGQ_INSTALL_DIR)/spi/include/kernel/firmware
+
+ifeq ($(notdir $(BGQ_CROSS_CC)),bgclang)
+MUDM_CFLAGS += -fno-builtin
+endif
+
+ifeq ($(USE_CLANG), 1)
+BGQ_CROSS_CC      = /bgsys/drivers/toolchain/llvm/bin/bgclang
+BGQ_CROSS_CXX     = /bgsys/drivers/toolchain/llvm/bin/bgclang++
+endif
+
+ifeq ($(CLANG_ANALYZER), 1)
+MUDM_CFLAGS += --analyze -Qunused-arguments
+endif
 
 #
 #	Definitions

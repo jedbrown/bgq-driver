@@ -236,7 +236,6 @@ IOBlockController::create_block(
     // Populate the BCNodeInfo and BCNodecardInfo lists
     {
         BCNodeInfo *nodeInfo;
-        BCNodecardInfo *nodecardInfo;
         map<string, BCNodeInfo*> nodesByLocation; // for ordering pset nodes by location within pset
 
         // iterate over IO boards
@@ -262,6 +261,7 @@ IOBlockController::create_block(
 
             nodesByLocation.clear();
 
+            BCNodecardInfo *nodecardInfo;
             nodecardInfo = new BCNodecardInfo();
             nodecardInfo->_block = _block;
             nodecardInfo->_ioboard = true;
@@ -380,6 +380,9 @@ IOBlockController::connect(
         const BlockControllerTarget* pTarget
         )
 {
+    PthreadMutexHolder mutex;
+    mutex.Lock(&_mutex);
+
     BlockControllerBase::connect(args, reply, pTarget);
     if (reply.getStatus() != mmcs_client::CommandReply::STATUS_OK) {
         return;  // connecting to mcserver failed
@@ -832,13 +835,12 @@ IOBlockController::reboot_nodes(
 
     // Parse arguments
     string uload;
-    string ioLoad;
     bool tolerateFaults = true;
 
     deque<string>::const_iterator arg;
 
     // Parse arguments
-    for (arg = args.begin(); arg != args.end(); arg++) {
+    for (arg = args.begin(); arg != args.end(); ++arg) {
         bool valid = true;                      // valid argument
         vector<string> tokens;
         tokens = Tokenize(*arg, "=");           // split based on the equal sign.
@@ -885,14 +887,15 @@ IOBlockController::reboot_nodes(
         LOG_WARN_MSG("Could not determine I/O nodes in error.");
     }
 
-    // Ccreate the BootIoBlockRequest
+    // Create the BootIoBlockRequest
     MCServerMessageSpec::BootBlockRequest mcBootIoBlockRequest(
-            _blockName, _userName,
+            _blockName,
+            _userName,
             tolerateFaults,
             uload,
             _bootCookie,
             _bootOptions,
-            reboot_start
+            0 /* boot start time */
             );
     // Initialize the node board vector in the BootIoBlockRequest
     for (vector<BCIconInfo*>::const_iterator nciter = getIcons().begin(); nciter != getIcons().end(); ++nciter) {
@@ -966,7 +969,10 @@ IOBlockController::reboot_nodes(
     // Send Boot command to mcServer
     MCServerMessageSpec::BootBlockReply   mcBootIoBlockReply;
     try {
+        static const boost::posix_time::ptime epoch1(boost::gregorian::date(1970,1,1));
+        boost::posix_time::ptime reboot_block_start = boost::posix_time::microsec_clock::local_time();
         if (!hardWareAccessBlocked()) {
+            mcBootIoBlockRequest._startTime = (reboot_block_start - epoch1).total_seconds();
             _mcServer->bootBlock(mcBootIoBlockRequest, mcBootIoBlockReply);
         } else {
             std::ostringstream msg;
@@ -1025,7 +1031,7 @@ IOBlockController::shutdown_block(
     MCServerMessageSpec::ShutdownBlockRequest mcShutdownBlockRequest(_blockName, _bootCookie, _block->blockId(), _diags, "");
     MCServerMessageSpec::ShutdownBlockReply mcShutdownBlockReply;
     build_shutdown_req(mcShutdownBlockRequest);
-   
+
     if ( !_diags ) {
         // skip kernel verification if abnormal was requested
         mcShutdownBlockRequest._skipKernel = (std::find(args.begin(), args.end(), "abnormal") != args.end());
@@ -1045,9 +1051,7 @@ IOBlockController::shutdown_block(
                 disconnect(args, reply);
                 std::deque<std::string> a;
                 a.push_back("mode=control");
-                std::string targspec = "{*}";
-                BlockPtr self_ptr = shared_from_this();
-                BlockControllerTarget target(self_ptr, targspec, reply);
+                const BlockControllerTarget target(shared_from_this(), "{*}", reply);
                 connect(a, reply, &target);
             }
             if (_mcServer) {
@@ -1164,10 +1168,27 @@ IOBlockController::calculateRatios()
     const BGQMachineXML* machine = _machineXML;
     BOOST_ASSERT( machine );
 
+    // Check if bgas keyword in [mmcs] section exists
+    bool bgas = false;
+    try {
+        std::string bgasValue = Properties::getProperties()->getValue( "mmcs", "bgas" );
+        if ( bgasValue.compare("true") == 0 || bgasValue.compare("TRUE") == 0 ) {
+            bgas = true;
+        }
+    } catch ( const std::exception& e ) {
+        LOG_TRACE_MSG( "Could not find key bgas in [mmcs] section. Using default value of false" );
+    }
+    if (bgas) {
+        LOG_TRACE_MSG( "Calculating ATTACHED_COMPUTE_NODES on a BGAS system" );
+    } else {
+        LOG_TRACE_MSG( "Calculating ATTACHED_COMPUTE_NODES on a standard system" );
+    }
+
     // Midplane location is key, I/O node location is value
     typedef std::multimap<std::string,std::string> Midplanes;
     Midplanes linkedMidplanes;
 
+    bool firstIOLinkInserted = false;
     // Iterate through all I/O nodes in the machine
     BOOST_FOREACH( const BGQMachineIOBoard* board, machine->_ioBoards ) {
         BOOST_FOREACH( const BGQMachineNode* i, board->_nodes ) {
@@ -1183,11 +1204,24 @@ IOBlockController::calculateRatios()
                         ) == location
                     );
             if ( firstLink == machine->_ioLinks.end() ) continue;
-            LOG_TRACE_MSG( location << " <--> " << (*firstLink)->_computeNode );
-
             // Remember the first midplane location attached to this I/O node
             const std::string firstMidplane( (*firstLink)->_computeNode.substr(0,6) );
-            linkedMidplanes.insert( Midplanes::value_type(firstMidplane, location) );
+            // Check if BGAS environment
+            if (bgas) {
+                // In BGAS environment the I/O link can be marked "Missing" so use this as indicator to ignore this I/O node when calculating ratio
+                if ((*firstLink)->_ioLinkMissing == false) {
+                    LOG_TRACE_MSG( "I/O node " <<  location << " <--> compute node " << (*firstLink)->_computeNode << " (1st link present)" );
+                    linkedMidplanes.insert( Midplanes::value_type(firstMidplane, location) );
+                    firstIOLinkInserted = true;
+                } else {
+                    LOG_TRACE_MSG( "I/O node " <<  location << " <--> compute node " << (*firstLink)->_computeNode << " (1st link missing)" );
+                    firstIOLinkInserted = false;
+                }
+            } else {
+                LOG_TRACE_MSG( "I/O node " <<  location << " <--> compute node " << (*firstLink)->_computeNode << " (1st link)" );
+                linkedMidplanes.insert( Midplanes::value_type(firstMidplane, location) );
+                firstIOLinkInserted = true;
+            }
 
             // Find the second I/O link for this I/O node
             std::vector<BGQMachineIOLink*>::const_iterator start(firstLink);
@@ -1201,13 +1235,29 @@ IOBlockController::calculateRatios()
                         ) == location
                     );
             if ( secondLink == machine->_ioLinks.end() ) continue;
-            LOG_TRACE_MSG( location << " <--> " << (*secondLink)->_computeNode );
-
-            // Remember the second midplane location attached to this I/O node, if
-            // it is different from the first
+            // Remember the second midplane location attached to this I/O node, if it is different from the first
             const std::string secondMidplane( (*secondLink)->_computeNode.substr(0,6) );
-            if ( secondMidplane != firstMidplane ) {
-                linkedMidplanes.insert( Midplanes::value_type(secondMidplane, location) );
+            // Check if BGAS environment
+            if (bgas) {
+                if ((*secondLink)->_ioLinkMissing == false) {
+                    LOG_TRACE_MSG( "I/O node " <<  location << " <--> compute node " << (*secondLink)->_computeNode << " (2nd link present)" );
+                    // This is just a safety check and should never happen in real world but we account for it
+                    if ( firstIOLinkInserted == false) {
+                        // The first link was not added to the map since it was "missing" but second link is present so add it to map
+                        linkedMidplanes.insert( Midplanes::value_type(secondMidplane, location) );
+                    } else {
+                        if ( secondMidplane != firstMidplane ) {
+                            linkedMidplanes.insert( Midplanes::value_type(secondMidplane, location) );
+                        }
+                    }
+                } else {
+                    LOG_TRACE_MSG( "I/O node " <<  location << " <--> compute node " << (*secondLink)->_computeNode << " (2nd link missing)" );
+                }
+            } else {
+                LOG_TRACE_MSG( "I/O node " <<  location << " <--> compute node " << (*secondLink)->_computeNode << " (2nd link)" );
+                if ( secondMidplane != firstMidplane ) {
+                    linkedMidplanes.insert( Midplanes::value_type(secondMidplane, location) );
+                }
             }
         }
     }
@@ -1235,6 +1285,29 @@ IOBlockController::calculateRatios()
         const std::string firstMidplane( (*firstLink)->_computeNode.substr(0,6) );
         if ( unsigned ioNodes = linkedMidplanes.count(firstMidplane) ) {
             ratio = (bgq::util::Location::NodeBoardsOnMidplane * bgq::util::Location::ComputeCardsOnNodeBoard) / ioNodes;
+            LOG_TRACE_MSG("Ratio after 1st link " << ratio << ". I/O nodes = " << ioNodes );
+            // Handle non-uniform I/O on midplane (typically development systems) Normal is 8,16,32,64,128,256 or 512 compute to I/O
+            if (ratio == 8 || ratio == 16 || ratio == 32 || ratio == 64 || ratio == 128 || ratio == 256 || ratio == 512) {
+                LOG_TRACE_MSG("Uniform I/O found for midplane " << firstMidplane);
+            } else {
+                // Special case by increasing to next calculated ratio boundry
+                if (ratio > 256) {
+                    ratio = 512;
+                } else if (ratio > 128) {
+                    ratio = 256;
+                } else if (ratio > 64) {
+                    ratio = 128;
+                } else if (ratio > 32) {
+                    ratio = 64;
+                } else if (ratio > 16) {
+                    ratio = 32;
+                } else if (ratio > 8) {
+                    ratio = 16;
+                } else if (ratio > 0) {
+                    ratio = 8;
+                }
+                LOG_WARN_MSG("Non-uniform I/O found for midplane " << firstMidplane << " changing ratio to " << ratio);
+            }
         } else {
             LOG_WARN_MSG( "Could not find connected I/O node for " << (*firstLink)->_computeNode );
         }

@@ -253,11 +253,14 @@ ServiceCard::readHandler(
     const Timer::Ptr database_timer = this->time()->subFunction("database insertion");
     database_timer->dismiss();
 
-    cxxdb::Transaction tx( *connection );
-    processSC(&reply, insert);
-    connection->commit();
-
-    database_timer->dismiss( false );
+    try {
+        cxxdb::Transaction tx( *connection );
+        processSC(&reply, insert);
+        connection->commit();
+        database_timer->dismiss( false );
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( e.what() );
+    }
 
     this->closeTarget(
             mc_server,

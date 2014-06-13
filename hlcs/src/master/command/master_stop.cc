@@ -74,15 +74,13 @@ doStop(
         break;
     case BGAGENT:
         std::cerr << "\n\nStopping bgagent via master_stop is no longer supported. " << std::endl;
-	std::cerr << "\tUse '/etc/init.d/bgagent stop' to stop bgagentd. \n" << std::endl; 
+        std::cerr << "\tUse '/etc/init.d/bgagent stop' to stop bgagentd. \n" << std::endl; 
         return EXIT_FAILURE;
-        if (stoptype == BGAGENT)
-            break;  // If it's just the agent, then break.  Otherwise, fall through.
     default:
         // Default behavior is BGMASTER and BINARIES
     case BGMASTER:
         try {
-	    errormsg = "Stopping bgmaster (bgmaster_server)";
+            errormsg = "Stopping bgmaster (bgmaster_server)";
             client.end_master(false, signal);
         } catch (const exceptions::BGMasterError& e) {
             std::cerr << "Stopping bgmaster (bgmaster_server) failed, error is: " << e.what() << std::endl;

@@ -50,7 +50,7 @@ Alias::Alias(
         const Policy& p, 
         const std::string& user,
         const std::string& logdir,
-	const int preferredHostWait
+        const int preferredHostWait
         ) :
     _name(name),
     _path(path),
@@ -175,7 +175,7 @@ Alias::runPolicy(
                 // Now we need to find out if we care whether it's a preferred host.
                 if (curr_host.get_primary() == false) {
                     if ( _preferred_start_time.is_not_a_date_time() ) {
-		      LOG_INFO_MSG( "waiting " << _preferredHostWait << " seconds for primary host" );
+                        LOG_INFO_MSG( "waiting " << _preferredHostWait << " seconds for primary host" );
                         _preferred_start_time = boost::posix_time::microsec_clock::local_time();
                     }
 

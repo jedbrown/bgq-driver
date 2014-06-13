@@ -283,6 +283,21 @@ jobctl_heartbeat = 60
     # node to be placed in a Software Failure status. If not specified, this value is 60.
     # A value of zero disables the heartbeat, a negative value defaults to 60.
     # This value can be updated by the runjob_server_refresh_config command.
+    
+# mapping_file_archive = /path/to/archive/directory
+    # This keyword  is optional if mapping files are not used and required if mapping files are used.
+    # Specify the path to the directory for archiving mapping files. Jobs using mapping files will cause
+    # the mapping file to be copied into this directory during job launch. The copied mapping file will 
+    # have a file name of the job ID, the permissions of the file will be created using the umask of the
+    # bgqadmin user. A single comment in the first line of the copied mapping file will contain the full
+    # path of the original mapping file. Enabling this feature will allow the locate_rank command to properly
+    # function against jobs where mapping files were used but the file is not readable by the bgqadmin user id.
+    
+retain_mapping_files = true
+    # Set to 'true' to retain mapping files in the archive directory. 
+    # If set to 'false' and mapping files are used, temporary files created by runjob_server will be deleted.
+    # In order to use the locate_rank command the value must be set to 'true'.
+    # If not specified the default setting is 'true'.
 
 [runjob.server.commands]
 

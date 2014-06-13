@@ -377,7 +377,7 @@ reconnectBlocks(
         // Clear any pending actions for blocks we are not reconnecting
         result = BGQDB::clearBlockAction(blockName);
         if ( result != BGQDB::OK ) {
-            LOG_ERROR_MSG("clearBlockAction(" << blockName << ") failed with return code= " << result);
+            LOG_ERROR_MSG("clearBlockAction(" << blockName << ") failed with return code=" << result);
         }
     }
 
@@ -454,7 +454,7 @@ freeBlock(
     } else {
         BGQDB::BLOCK_STATUS blockState;
         BGQDB::getBlockStatus(blockName, blockState);
-        LOG_ERROR_MSG("Setting block status to FREE for block " << blockName << " failed with return code= " << result
+        LOG_ERROR_MSG("Setting block status to FREE for block " << blockName << " failed with return code=" << result
                 << ", current block status is " << BGQDB::blockStatusToString(blockState));
     }
 }

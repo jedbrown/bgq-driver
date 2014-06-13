@@ -134,7 +134,6 @@ public:
     void execute( const Args& args ) {
 
         std::stringstream xmlStream;
-        std::vector<string> invalid_memory_locations;
         TempFile tmpFile("__DBTester_tmp_getBPs.XXXXXX");
         tmpFile.keep = true;
 
@@ -1138,7 +1137,7 @@ public:
         uint32_t recid;
 
         BGQDB::STATUS db_status(
-                BGQDB::putRAS( 
+                BGQDB::putRAS(
                     event,
                     block,
                     job,

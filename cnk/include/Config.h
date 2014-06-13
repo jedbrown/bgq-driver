@@ -252,9 +252,12 @@
 #define CONFIG_ALLOWPRINTF 0
 
 // MUDM connect timeout in seconds
-#define CONFIG_MUDMCONNECTTIMEOUT (3*60)
+#define CONFIG_MUDMCONNECTTIMEOUT (10*60)
 
 // Enable implicit side-effect for shared filename "l2atomic", triggers file to be L2 atomic capable w/o ioctl call.
 #define CONFIG_SHMFILEIMPLICITL2ATOMIC  0
+
+// Number of simultaneous file locks that can be active on a node.  (FLM=file lock manager)
+#define CONFIG_FLMSIZE 1024
 
 #endif // Add nothing below this line.

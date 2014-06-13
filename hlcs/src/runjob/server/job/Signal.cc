@@ -208,7 +208,9 @@ Signal::startTimer(
 {
     try {
         if ( number == SIGKILL ) {
-            _job->killTimer().start( timeout, _job );
+            // callback as the second parameter converts to a boolean since we only
+            // want to allow timeout reductions for user initiated signals with kill_job
+            _job->killTimer().start( timeout, _callback, _job );
         } else if ( number == bgcios::jobctl::SIGHARDWAREFAILURE ) {
             _job->heartbeat().start( _job );
         }

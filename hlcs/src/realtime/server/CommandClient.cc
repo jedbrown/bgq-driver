@@ -62,7 +62,8 @@ CommandClient::CommandClient(
         _socket_ptr(socket_ptr),
         _status(status),
         _strand(_socket_ptr->get_io_service()),
-        _error(false)
+        _error(false),
+        _writing(false)
 {
     // Nothing to do.
 }

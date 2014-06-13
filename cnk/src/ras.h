@@ -264,5 +264,20 @@ enum { RAS_CNKRASID = 0x00010000,
 />
 */
 
+    RAS_MAPFILEOPENFAIL,
+/*
+   <rasevent
+  id="00010012"
+  category="Software_Error"
+  component="CNK"
+  severity="WARN"
+  message="CNK could not open the specified mapfile"
+  description="The compute node kernel was unable to open the mapfile specified by the control system.  This is an ASCII RAS message containing the path that was specified to CNK.  It should be accessible from all ionodes used by the compute block.  To protect against a RAS storm, this RAS message will only originate from the compute node with torus coordinates 0,0,0,0,0."
+  control_action=""
+  service_action="$(Diagnostics)"
+  relevant_diags="processor"
+/>
+*/
+
 
 };

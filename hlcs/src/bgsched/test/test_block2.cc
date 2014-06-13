@@ -90,7 +90,7 @@ void printBlockInfo(const Block::Ptr blockPtr)
     if (jobIdVector.empty()) {
         LOG_INFO_MSG("    Job id  . . . . . . . . . . . : ");
     } else { // Print any job IDs
-        for (vector<Job::Id>::iterator jobIdVectorIter = jobIdVector.begin(); jobIdVectorIter != jobIdVector.end(); jobIdVectorIter++) {
+        for (vector<Job::Id>::iterator jobIdVectorIter = jobIdVector.begin(); jobIdVectorIter != jobIdVector.end(); ++jobIdVectorIter) {
             LOG_INFO_MSG("    Job id  . . . . . . . . . . . : " << *(jobIdVectorIter));
         }
     }
@@ -184,8 +184,7 @@ printBlocks()
                 printBlockInfo(block);
             }
         }
-    } catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Unexpected error getting compute blocks");
         return;
     }
@@ -287,9 +286,7 @@ main(int argc, const char** argv)
 
                 BlockPtr->add(owner);
                 LOG_INFO_MSG("Block " << BlockPtr->getName() << " was added");
-            }
-            catch(...)
-            {
+            } catch(...) {
                 LOG_ERROR_MSG("Block " << BlockPtr->getName() << " was not added");
                 return -1;
             }
@@ -301,8 +298,7 @@ main(int argc, const char** argv)
             LOG_INFO_MSG("Booting compute block " << bootBlock << ".");
             try {
                 Block::initiateBoot(bootBlock, &unavailableResources);
-            } catch(...)
-            {
+            } catch(...) {
                 if (unavailableResources.size() > 0) {
                     // Print the unavailable compute resources
                     LOG_INFO_MSG("Compute block " << bootBlock << " has " << unavailableResources.size() << " unavailable resources:");
@@ -324,8 +320,7 @@ main(int argc, const char** argv)
 
         LOG_INFO_MSG( "=== test_block2 Completed ===" );
         return(0);
-    } catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Exception caught");
         exit(-1);
     }

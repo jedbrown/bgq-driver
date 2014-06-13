@@ -52,4 +52,10 @@
 #define MUSPI_assert(x) assert(x)
 #endif
 
+#ifndef __INLINE__
+#ifdef __llvm__
+#define __INLINE__ static inline
+#endif
+#endif
+
 #endif /* _KERNEL_FIRMWARE_KERNEL_IMPL_H_ */

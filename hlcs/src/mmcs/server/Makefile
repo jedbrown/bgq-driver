@@ -63,8 +63,8 @@ LDFLAGS += \
  -lboost_serialization-mt \
  -lboost_system-mt \
  -lboost_thread-mt \
- -lboost_filesystem-mt
-
+ -lboost_filesystem-mt \
+ -lboost_program_options-mt
 
 command_parts := \
  AddBootOption \

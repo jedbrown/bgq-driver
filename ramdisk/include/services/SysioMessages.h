@@ -252,10 +252,10 @@ struct PathSetXattrMessage
 const uint16_t BaseRdmaPort = 7102;
 
 //! Current version of protocol.
-const uint8_t ProtocolVersion = 10;
+const uint8_t ProtocolVersion = 11;
 
 //! Maximum number of secondary groups.
-const int MaxGroups = 64;
+const int MaxGroups = 112;
 
 //! Maximum length of a socket address.
 const socklen_t MaxAddrLength = 128;

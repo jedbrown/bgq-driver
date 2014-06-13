@@ -73,11 +73,11 @@ switchBackUID(
     LOG_DEBUG_MSG("Current uid: " << geteuid() << " Current gid: " << getegid());
 }
 
-BinaryController::BinaryController() : 
-    _status(UNINITIALIZED), 
-    _exit_status(0), 
+BinaryController::BinaryController() :
+    _status(UNINITIALIZED),
+    _exit_status(0),
     _binary_bin_path(""),
-    _alias_name(""), 
+    _alias_name(""),
     _stop_requested(false)
 {
     _start_time = boost::posix_time::second_clock::local_time();
@@ -85,20 +85,20 @@ BinaryController::BinaryController() :
 }
 
 BinaryController::BinaryController(
-        const BinaryId& id, 
-        const std::string& bin_path, 
+        const BinaryId& id,
+        const std::string& bin_path,
         const std::string& alias,
-        const std::string& user, 
+        const std::string& user,
         int exit_status,
         Status stat,
         const std::string& start_time
         ) :
     _status(stat),
     _exit_status(exit_status),
-    _binary_bin_path(bin_path), 
-    _alias_name(alias), 
-    _host(), 
-    _binid(id), 
+    _binary_bin_path(bin_path),
+    _alias_name(alias),
+    _host(),
+    _binid(id),
     _user(user)
 {
     _stop_requested = false;
@@ -110,11 +110,11 @@ BinaryController::BinaryController(
 }
 
 BinaryController::BinaryController(
-        const std::string& path, 
-        const std::string& arguments, 
+        const std::string& path,
+        const std::string& arguments,
         const std::string& logfile,
-        const std::string& alias, 
-        const CxxSockets::Host& host, 
+        const std::string& alias,
+        const CxxSockets::Host& host,
         const std::string& user
         )
 {
@@ -125,20 +125,21 @@ BinaryController::BinaryController(
     _start_time = boost::posix_time::second_clock::local_time();
     _stop_requested = false;
     _user = user;
+    _status = UNINITIALIZED;
     _exit_status = 0;
 }
 
 BinaryController::BinaryController(
-        const std::string& id, 
-        const std::string& bin_path, 
+        const std::string& id,
+        const std::string& bin_path,
         const std::string& alias,
-        const std::string& user, 
-        int exit_status, 
-        int stat, 
+        const std::string& user,
+        int exit_status,
+        int stat,
         const std::string& start_time
         ) :
-    _binary_bin_path(bin_path), 
-    _alias_name(alias), 
+    _binary_bin_path(bin_path),
+    _alias_name(alias),
     _user(user)
 {
     _exit_status = exit_status;
@@ -185,10 +186,10 @@ BinaryController::startBinary(
     std::string error;
     int pipefd = 0;
     const pid_t pid = Exec::fexec(
-            pipefd, 
-            _binary_bin_path, 
-            error, 
-            true, 
+            pipefd,
+            _binary_bin_path,
+            error,
+            true,
             _logfile.c_str(),
             properties,
             _user
@@ -219,11 +220,11 @@ isRunning(
     LOG_TRACE_MSG(__FUNCTION__);
     bool retval = false;
     if (pid != 0) {
-        const int rc = kill(pid, 0);	// send a 0 signal just to test the pid
-        if (rc == 0) {			// normal return implies process is running
+        const int rc = kill(pid, 0); // send a 0 signal just to test the pid
+        if (rc == 0) {               // normal return implies process is running
             retval = true;
         } else {
-            if (errno != ESRCH) {		// ESRCH is normal for a terminated process
+            if (errno != ESRCH) { // ESRCH is normal for a terminated process
                 char errorText[256];
                 LOG_INFO_MSG("isRunning() failed, assuming process still running. " << std::string(strerror_r(errno, errorText, 256)));
                 retval = true;
@@ -251,9 +252,8 @@ BinaryController::stop(
     const uid_t my_euid = geteuid();
     const gid_t my_egid = getegid();
 
-    bool isroot = false;
-
     if (pid != 0) {
+        bool isroot = false;
         // Switch back to root so we can switch to assigned user.
         if (_user.length() != 0) {
             int rc = seteuid(0); // Go back to root while we do this.
@@ -295,24 +295,24 @@ BinaryController::stop(
         unsigned timeout = 25000;
         bool signalSent = false;
         while (isRunning(pid)) {
-	    if (signalSent == false) {
-	        if (signal == 0) {
-	            signal = SIGTERM;
-		    LOG_DEBUG_MSG("Killing " << pid << " with a SIGTERM");
-		    const int killrc = ::kill(pid, SIGTERM);
-		    if (killrc < 0) {
-		        LOG_WARN_MSG("Failed to kill " << pid << " with SIGTERM.");
-		    }
-		    signalSent = true;
-		} else {
-		    LOG_DEBUG_MSG("Killing " << pid << " with signal " << signal);
-		    const int killrc = ::kill(pid, signal);
-		    if (killrc < 0) {
-		        LOG_WARN_MSG("Failed to kill " << pid << " with signal " << signal);
-		    }
-		    signalSent = true;
-		}
-	    }
+            if (signalSent == false) {
+                if (signal == 0) {
+                    signal = SIGTERM;
+                    LOG_DEBUG_MSG("Killing " << pid << " with a SIGTERM");
+                    const int killrc = ::kill(pid, SIGTERM);
+                    if (killrc < 0) {
+                        LOG_WARN_MSG("Failed to kill " << pid << " with SIGTERM.");
+                    }
+                    signalSent = true;
+                } else {
+                    LOG_DEBUG_MSG("Killing " << pid << " with signal " << signal);
+                    const int killrc = ::kill(pid, signal);
+                    if (killrc < 0) {
+                        LOG_WARN_MSG("Failed to kill " << pid << " with signal " << signal);
+                    }
+                    signalSent = true;
+                }
+            }
 
             const boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
             const boost::posix_time::time_duration td = now - kill_sent_time;

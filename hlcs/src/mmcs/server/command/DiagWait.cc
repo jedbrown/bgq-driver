@@ -119,7 +119,7 @@ DiagWait::execute(
 
     time_t starttime, now;
     time(&starttime);
-    double elapsed_time;
+
     for (
             unsigned slept = 0;
             (abs(pBlock->terminatedNodes()) != static_cast<int>(pBlock->numNodesStarted())) && (waitall || (pBlock->terminatedNodes() >= 0));
@@ -133,7 +133,7 @@ DiagWait::execute(
         }
         sleep(1);
         time(&now);
-        elapsed_time = difftime(now, starttime);
+        double elapsed_time = difftime(now, starttime);
         if (elapsed_time >= timeout) {
             break;
         }

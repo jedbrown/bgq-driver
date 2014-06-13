@@ -239,8 +239,19 @@ IoNode::handleControl(
         job->exitStatus().set( exitProcess->status, header->rank );
 
         const bgq::utility::ExitStatus exit_status( exitProcess->status );
-
-        if ( exit_status.exited() && exit_status.getExitStatus() == 1 ) {
+	
+	const JobInfo::EnvironmentVector& envs = job->info().getEnvs();
+	bool exitimm = false;
+	BOOST_FOREACH( const Environment& i, envs ) 
+	{
+	   if(i.getKey() == "BG_EXITIMMEDIATELYONRC")
+	   {
+	       exitimm = atoi(i.getValue().c_str());
+	       break;
+	   }
+	}
+	
+        if ( exit_status.exited() && ((exit_status.getExitStatus() == 1) || (exitimm && (exit_status.getExitStatus() != 0)))) {
             // deliver SIGTERM to remaining nodes in job
             Signal::create( job, SIGTERM );
         } else if ( exit_status.signaled() ) {

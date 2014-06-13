@@ -43,6 +43,12 @@ class virtFS;    // forward reference for virtFS pointers in prototypes
 extern virtFS*  File_GetFSPtr( int local_fd );
 extern virtFS*  File_GetFSPtrFromPath( const char* pathname);
 extern virtFS*  File_GetFSPtrFromType( int type );
+extern int FLM_Init();
+extern uint64_t FLM_TouchFD(int fd, int whence);
+extern int FLM_HasOverlap(int fd, uint64_t start, size_t length, int whence);
+extern int FLM_Acquire(int fd, uint64_t start, size_t length, int whence);
+extern int FLM_Release(int fd, uint64_t start, size_t length, int whence);
+extern int FLM_ReleaseFile(int fd);
 
 // List of pointers to file system objects.
 extern virtFS *virtFSPtr[];

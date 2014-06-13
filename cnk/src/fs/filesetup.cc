@@ -37,6 +37,8 @@ StoreFS_t storeFS[FD_TOTAL_FILESYS];
 
 void File_InitFS(void)
 {
+    FLM_Init();
+    
 #define FSDEFINE(id, ref_id) virtFSPtr[id] = virtFSPtr[ref_id];
 #define FSMAKE(id, type) if(virtFSPtr[id] == virtFSPtr[FD_ERROR]) { virtFSPtr[id] = (virtFS*)&storeFS[id]; new(virtFSPtr[id]) type; if(virtFSPtr[id]->init() == -1) { virtFSPtr[id] = (virtFS*)&storeFS[FD_ERROR]; } }
     

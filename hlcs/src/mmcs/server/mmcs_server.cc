@@ -78,9 +78,9 @@ using namespace mmcs::server;
 
 using mmcs::common::Properties;
 
-DatabaseMonitorThread*          databaseMonitor = NULL;     // background thread for handling commands via database
-env::Monitor::Ptr               envMonitor;
-ConsoleListener*            consoleListener = NULL;     // background thread for handling commands from console processes
+DatabaseMonitorThread*   databaseMonitor = NULL;     // background thread for handling commands via database
+env::Monitor::Ptr        envMonitor;
+ConsoleListener*         consoleListener = NULL;     // background thread for handling commands from console processes
 
 namespace {
 
@@ -110,8 +110,13 @@ mmcs_signal_handler(int signum, siginfo_t* siginfo, void*)
 void
 mmcs_terminate()
 {
+    LOG_INFO_MSG("mmcs_server terminating RAS event handlers");
+    RasEventHandlerChain::clear();
+
+    LOG_INFO_MSG("mmcs_server terminating threads");
     // Terminate MMCS console port listener thread
     if (consoleListener != NULL) {
+        // Stop thread
         consoleListener->stop(SIGUSR1);
         delete consoleListener;
         consoleListener = NULL;
@@ -119,6 +124,7 @@ mmcs_terminate()
 
     // Terminate database monitor thread
     if (databaseMonitor != NULL) {
+        // Stop thread
         databaseMonitor->stop(SIGUSR1);
         delete databaseMonitor;
         databaseMonitor = NULL;
@@ -131,6 +137,7 @@ mmcs_terminate()
     }
 
     RunJobConnection::instance().stop();
+    LOG_INFO_MSG("mmcs_server thread termination completed");
 }
 
 int
@@ -154,7 +161,6 @@ main(int argc, char **argv)
             LOG_WARN_MSG("Could not seed random number generator. Security may be compromised.");
         }
     }
-
 
     // Initialize the RasEventHandlerChain
     RasEventHandlerChain::initChain();
@@ -190,7 +196,7 @@ main(int argc, char **argv)
         exit(1);
     }
 
-    // fetch machine description from the database
+    // Fetch machine description from the database
     std::vector<std::string> invalid_memory_locations;
     std::stringstream machineStream;
     int result = BGQDB::getMachineXML(machineStream, &invalid_memory_locations);
@@ -371,7 +377,14 @@ main(int argc, char **argv)
     int signal_descriptors[2];
     if ( pipe(signal_descriptors) != 0 ) {
         LOG_FATAL_MSG( "Could not create pipe for signal handler" );
-        exit( EXIT_FAILURE );
+        // End the various mmcs threads
+        mmcs_terminate();
+
+        // Use _exit to avoid calling destructors for objects with static storage duration.
+        // We need this because mmcs_server does not join all of its threads, so they can
+        // persist when the main thread falls below main here.
+        _exit(EXIT_FAILURE);
+
     }
     signal_fd = signal_descriptors[1];
 
@@ -399,7 +412,13 @@ main(int argc, char **argv)
                     continue;
                 }
                 LOG_FATAL_MSG( "Could not read: " << strerror(errno) );
-                exit(1);
+                // End the various mmcs threads
+                mmcs_terminate();
+
+                // Use _exit to avoid calling destructors for objects with static storage duration.
+                // We need this because mmcs_server does not join all of its threads, so they can
+                // persist when the main thread falls below main here.
+                _exit(EXIT_FAILURE);
             }
             if ( siginfo.si_signo == SIGUSR1 || siginfo.si_signo == SIGPIPE || siginfo.si_signo == SIGHUP) {
                 LOG_DEBUG_MSG( "Received signal " << siginfo.si_signo << " from " << siginfo.si_pid );
@@ -413,6 +432,8 @@ main(int argc, char **argv)
                 LOG_WARN_MSG( "mmcs_server halting due to signal " << siginfo.si_signo );
                 LOG_WARN_MSG( "Sent from pid " << siginfo.si_pid );
                 LOG_WARN_MSG( "Sent from uid " << siginfo.si_uid );
+                // End the various mmcs threads
+                mmcs_terminate();
                 raise( siginfo.si_signo );
             }
         } else if ( !rc ) {

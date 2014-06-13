@@ -61,7 +61,7 @@ Switch::getSwitchSettings() const
 
     Pimpl impl = boost::dynamic_pointer_cast<Impl>(_impl);
     vector<SwitchSettings::Pimpl> switchSettingsPimpls(impl->getSwitchSettings());
-    for (vector<SwitchSettings::Pimpl>::const_iterator iter = switchSettingsPimpls.begin(); iter != switchSettingsPimpls.end(); iter++) {
+    for (vector<SwitchSettings::Pimpl>::const_iterator iter = switchSettingsPimpls.begin(); iter != switchSettingsPimpls.end(); ++iter) {
         SwitchSettings::ConstPtr switchSettings(new SwitchSettings(*iter));
         switchSettingsContainer.push_back(switchSettings);
     }

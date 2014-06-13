@@ -195,7 +195,7 @@ main(int argc, const char** argv)
             if (lock_file->_fileExists ) {
                 LOG_FATAL_MSG( 
                         "Lock file for bgmaster_server found. End bgmaster_server process "
-                        << lock_file->_pid << " and remove " << lock_file->fname 
+                        << lock_file->_pid << " and remove " << lock_file->_fname 
                         );
                 exit(EXIT_FAILURE);
             }
@@ -222,7 +222,11 @@ main(int argc, const char** argv)
 
     // Create pipe for signal handler
     int signal_descriptors[2];
+#ifdef O_CLOEXEC
+    if ( pipe2(signal_descriptors, O_CLOEXEC) != 0 ) {
+#else
     if ( pipe(signal_descriptors) != 0 ) {
+#endif
         LOG_ERROR_MSG( "Could not create pipe for signal handler." );
         exit( EXIT_FAILURE );
     }

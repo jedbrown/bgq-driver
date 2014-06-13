@@ -38,26 +38,24 @@ uint64_t sc_getgroups(SYSCALL_FCN_ARGS)
 
    AppState_t *appState = GetMyAppState();
 
-   // Just return the number of secondary groups.
+   // Just return the total number of primary and secondary groups.
+   // \note Linux manpage is incorrect.  getgroups() returns the primary as well as secondary groups.
+   //       Linux testcase reveals that it includes primary.  
    if (gidsetsize == 0) {
-      return CNK_RC_SUCCESS(appState->NumSecondaryGroups);
+      return CNK_RC_SUCCESS(appState->NumSecondaryGroups + 1);
    }
 
    // Check for error conditions.
-   if (gidsetsize < (int)appState->NumSecondaryGroups) {
+   if (gidsetsize < (int)appState->NumSecondaryGroups + 1) {
       return CNK_RC_FAILURE(EINVAL);
    }
-
+   
    if (!VMM_IsAppAddress(grouplist, listsize)) {
       return CNK_RC_FAILURE(EFAULT);
    }
-
-#if 0
+   
    // Copy the list of secondary groups to the caller's buffer.
    memcpy(grouplist, appState->SecondaryGroups, sizeof(gid_t) * appState->NumSecondaryGroups);
-   return CNK_RC_SUCCESS(appState->NumSecondaryGroups);
-#endif
-
-   return CNK_RC_SUCCESS(0);
+   grouplist[appState->NumSecondaryGroups] = appState->GroupID;  // append the primary groupID to the list
+   return CNK_RC_SUCCESS(appState->NumSecondaryGroups + 1);
 }
-

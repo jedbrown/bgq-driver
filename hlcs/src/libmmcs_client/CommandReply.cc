@@ -336,8 +336,7 @@ CommandReply::send_buf()
 {
     int len = pptr() - pbase();	    // how much data is in the buffer?
     int replyStatus = getStatus();  // get the current reply status set by OK, FAIL, or ABORT
-    int i;			    // loop index
-    bool found_null = false;        // true if this buffer contains terminating null (note: this is not the same meaning as CommandReply::_done)
+
     if (len > 0) {
         assert(replyStatus != STATUS_NOT_SET);
         if (!_enableWrite) {         // don't write the data if _enableWrite is false
@@ -360,6 +359,8 @@ CommandReply::send_buf()
                 return -1;
             }
         } else {
+            int i;              // loop index
+            bool found_null = false;        // true if this buffer contains terminating null (note: this is not the same meaning as CommandReply::_done)
             // format output
             if (_replyFormat == 0) { // replace newlines with semicolons, '\0' with newline
                 for (i = 0; i < len; ++i) {
@@ -386,8 +387,7 @@ CommandReply::send_buf()
                     _outbuf[i++] = '\n'; // add a terminating newline
                     len = i;		 // set length for write
                 }
-            }
-            else  { // _replyFormat == 1:  replace semicolons with newlines, '\0' with newline
+            } else  { // _replyFormat == 1:  replace semicolons with newlines, '\0' with newline
                 for (i = 0; i < len; ++i) {
                     if (_outbuf[i] == ';')
                         _outbuf[i] = '\n';
@@ -405,7 +405,7 @@ CommandReply::send_buf()
                     --i;		// index to last character
                     assert(_outbuf[i] == DONE_TOKEN);
 
-                    if (_outbuf[i-1] == '\n') // don't send double newlines at end
+                    if (i > 0 && _outbuf[i-1] == '\n') // don't send double newlines at end
                         --i;
 
                     // send a terminating newline at the end of the last buffer
@@ -419,7 +419,7 @@ CommandReply::send_buf()
             }
 
             _replylen = len;		// save the replylen for str()
-            if (*(_outbuf+len-2) == DONE_TOKEN) {
+            if (len > 1 && *(_outbuf+len-2) == DONE_TOKEN) {
                 _replylen -= 2;		// don't include terminating null in str()
             }
             _totreplylen += _replylen;  // keep track of total reply length

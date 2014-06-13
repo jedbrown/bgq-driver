@@ -61,14 +61,20 @@ namespace job  {
 namespace class_route {
 
 Generate::Generate(
-        const Job::Ptr& job
+        const Job::Ptr& job,
+        const std::string& archiveMapFile,
+        bool isPermutationMappingType,
+        bool retainMappingFiles
         ) :
     _container(),
     _jobLeader(),
     _job( job ),
     _np(),
     _world(),
-    _mapping( new Mapping )
+    _mapping( new Mapping ),
+    _archiveMapFile(archiveMapFile),
+    _isPermutationMappingType(isPermutationMappingType),
+    _retainMappingFiles(retainMappingFiles)
 {
     const JobInfo& info = job->info();
     const SubBlock& subBlock = info.getSubBlock();
@@ -109,8 +115,8 @@ Generate::calculateJobShape()
     _world.reset( new Rectangle(&world) );
 
     _np.reset(
-            new Np( info, _world.get(), _mapping.get() )
-            );
+           new Np( info, _world.get(), _mapping.get(), _archiveMapFile, _isPermutationMappingType, _retainMappingFiles )
+           );
 }
 
 void

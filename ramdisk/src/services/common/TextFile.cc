@@ -43,7 +43,7 @@ TextFile::TextFile(std::string fileName)
    _fd = Closed;
 
    // Create the file.
-   _fd = ::open(_fileName.c_str(), O_CREAT|O_RDWR);
+   _fd = ::open(_fileName.c_str(), O_RDWR);
    if (_fd < 0) {
       int err = errno;
       LOG_ERROR_MSG("error creating file '" << _fileName << "': " << bgcios::errorString(err));

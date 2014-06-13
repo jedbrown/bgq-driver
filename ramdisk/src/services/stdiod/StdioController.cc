@@ -38,6 +38,7 @@ LOG_DECLARE_FILE("cios.stdiod");
 StdioController::~StdioController()
 {
    _dataChannel.reset();
+   _dataChanAuthWaiter.reset();
 }
 
 int

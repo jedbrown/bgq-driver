@@ -57,7 +57,7 @@ class Subnet;
 #define BLOCKGOVERNOR_INTERVAL          "interval"              // length of a measurement interval in seconds
 #define BLOCKGOVERNOR_MAX_TRAN_RATE     "max_tran_rate"         // number of block transactions that can be started in one interval
 #define BLOCKGOVERNOR_REPEAT_INTERVAL   "repeat_interval"       // minimum seconds between repeat of a transaction
-#define MMCS_BOOT_OPTIONS               "mmcs_boot_options"     // options to pass to mc on each boot request
+#define BOOT_OPTIONS                    "boot_options"          // options to pass to mc on each boot request
 #define MMCS_ENVS_SC_INTERVAL_SECONDS   "sc_interval_seconds"
 #define MMCS_ENVS_IO_INTERVAL_SECONDS   "io_interval_seconds"
 #define MMCS_ENVS_NC_INTERVAL_SECONDS   "nc_interval_seconds"

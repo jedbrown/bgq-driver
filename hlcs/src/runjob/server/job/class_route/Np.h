@@ -30,8 +30,13 @@
 
 #include <spi/include/mu/Classroute_inlines.h>
 
+#include <utility/include/BoolAlpha.h>
+#include <utility/include/Properties.h>
+
 #include <boost/shared_ptr.hpp>
 #include <boost/shared_array.hpp>
+
+#include <string>
 
 namespace runjob {
 namespace server {
@@ -43,6 +48,7 @@ namespace class_route {
  */
 class Np
 {
+
 public:
     /*!
      * \brief Pointer type.
@@ -59,9 +65,12 @@ public:
      * \brief ctor.
      */
     Np(
-            const JobInfo& job,     //!< [in]
-            Rectangle* world,       //!< [in]
-            Mapping* mapping        //!< [in]
+            const JobInfo& job,                 //!< [in]
+            Rectangle* world,                   //!< [in]
+            Mapping* mapping,                   //!< [in]
+            const std::string& mapArchiveFile,  //!< [in]
+            bool permutationMappingType,        //!< [in]
+            bool retainMappingFiles             //!< [in]
       );
 
     /*!
@@ -96,11 +105,15 @@ private:
             ) const;
 
 private:
-    Container _container;
-    int _size;
-    Rectangle _rectangle;
-    int _primaryDimension;
-    unsigned _includeCount;
+    Container        _container;
+    int              _size;
+    Rectangle        _rectangle;
+    int              _primaryDimension;
+    unsigned         _includeCount;
+    std::string      _mapArchiveFile;
+    bool             _permutationMappingType;
+    bool             _retainMappingFiles;
+
 };
 
 } // class_route

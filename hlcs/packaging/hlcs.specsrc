@@ -111,6 +111,7 @@ Release: 0
 %{_base_dir}/hlcs/etc/init/bgagent.v1r1m1
 %{_base_dir}/hlcs/etc/init/bgagent.v1r1m2
 %{_base_dir}/hlcs/etc/init/bgagent.v1r2m0
+%{_base_dir}/hlcs/etc/init/bgagent.v1r2m1
 %{_base_dir}/sbin/bgagentd
 
 

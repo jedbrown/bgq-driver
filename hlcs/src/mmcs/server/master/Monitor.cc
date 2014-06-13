@@ -230,7 +230,7 @@ Monitor::threadStart()
             // Wait for it to start back up.
             AliasWaiter* aw = new AliasWaiter(stopped_alias, true);
             aw->start();
-            aw->stop();
+            aw->wait();
             // This joins the thread so that we can be assured
             // that we have a started subnet before we try to wait for it to end.
             // Once it starts, we'll do a termination waiter again.

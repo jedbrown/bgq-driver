@@ -289,7 +289,13 @@ ClientMonitor::run(void)
       // Check for an event on the completion channel.
       if (_pollSet[CompChannel].revents & POLLIN) {
          LOG_CIOS_TRACE_MSG("event available on completion channel");
-         completionChannelHandler(0);
+         try{
+              completionChannelHandler(0); 
+          }
+          catch (const RdmaError& e) {
+              int rc = e.errcode();
+              LOG_INFO_MSG_FORCED("error on completion channel poll at __LINE__="<<__LINE__<<" rc="<<rc);
+         }
          _pollSet[CompChannel].revents = 0;
       }
 
@@ -451,9 +457,9 @@ ClientMonitor::completionChannelHandler(uint64_t requestId)
       
       // Check the status in the work completion.
       if (completion->status != IBV_WC_SUCCESS) {
-         LOG_ERROR_MSG("failed work completion, status '" << ibv_wc_status_str(completion->status) << "' for operation " <<
-                       completionQ->wc_opcode_str(completion->opcode) <<  " (" << completion->opcode << ")");
-         // Maybe throw a rdma error here?
+         // Throw a rdma error here
+         bgcios::RdmaError e(ENOSPC,"failed work completion, status ");
+         throw e;
          return false;
       }
       
@@ -1007,8 +1013,13 @@ ClientMonitor::close(const ClientMessagePtr& message)
       outMsg->header.errorCode = (uint32_t)errno; 
    }
 
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": CloseAck message is ready, fd=" << inMsg->fd <<
+   LOG_CIOS_DEBUG_MSG("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": CloseAck message is ready, fd=" << inMsg->fd <<
                  " rc=" << rc << " errno=" << outMsg->header.errorCode);
+
+#if 0
+   LOG_INFO_MSG_FORCED("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": CloseAck message is ready, fd=" << inMsg->fd <<
+                 " rc=" << rc << " errno=" << outMsg->header.errorCode);
+#endif
    return;
 }
 
@@ -1230,8 +1241,13 @@ ClientMonitor::ftruncate64(const ClientMessagePtr& message)
       outMsg->header.errorCode = (uint32_t)errno; 
    }
 
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Ftruncate64Ack message is ready fd=" << inMsg->fd <<
-                 "length=" << inMsg->length << " rc=" << rc << " errno=" << outMsg->header.errorCode);
+   LOG_CIOS_DEBUG_MSG("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": Ftruncate64Ack message is ready fd=" << inMsg->fd <<
+                 " length=" << inMsg->length << " hexlength=" << std::hex<<std::showbase<< inMsg->length << " rc=" << std::dec<<std::noshowbase<< rc << " errno=" << outMsg->header.errorCode);
+#if 0
+   LOG_INFO_MSG_FORCED("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": Ftruncate64Ack message is ready fd=" << inMsg->fd <<
+                 " length=" << inMsg->length << " hexlength=" << std::hex<<std::showbase<< inMsg->length << " rc=" << std::dec<<std::noshowbase<< rc << " errno=" << outMsg->header.errorCode);
+#endif
+
    return;
 }
 
@@ -1590,9 +1606,14 @@ ClientMonitor::open(const ClientMessagePtr& message)
    }
    if (job-> logJobStatistics() ) job->openTimer.stop();
 
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Open pathname='" << pathname << 
+   LOG_CIOS_DEBUG_MSG("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": Open pathname='" << pathname << 
 " inMsg->dirfd="<<inMsg->dirfd<<std::hex << std::showbase << "' flags=" << inMsg->flags << std::hex << std::showbase <<
-" mode=" << inMsg->mode << " fd=" << outMsg->fd << " errno=" << outMsg->header.errorCode);
+" mode=" << inMsg->mode << " fd="<< std::dec<<std::noshowbase << outMsg->fd << " errno=" << outMsg->header.errorCode);
+#if 0
+   LOG_INFO_MSG_FORCED("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": Open pathname='" << pathname << 
+" inMsg->dirfd="<<inMsg->dirfd<<std::hex << std::showbase << "' flags=" << inMsg->flags << std::hex << std::showbase <<
+" mode=" << inMsg->mode << " fd="<< std::dec<<std::noshowbase << outMsg->fd << " errno=" << outMsg->header.errorCode);
+#endif
    return;
 }
 
@@ -1687,31 +1708,26 @@ ClientMonitor::pread64(const ClientMessagePtr& message) //post pread to file sys
 
       // Send the data to the compute node when successful and there is data.
       if (rc > 0) {
+ 
+         error = putData( address, inMsg->rkey, (uint32_t)rc); //$$$
+         if (error != 0) {
+            outMsg->header.returnCode = bgcios::RequestFailed;
+            outMsg->header.errorCode = error;
+            outMsg->bytes = 0;
+            bytesLeft = 0; // Force exit from loop because there was an error
+            continue;
+         }
          outMsg->header.returnCode = bgcios::Success;
          outMsg->bytes += rc;
 
          // Adjust for next operation.
          if (job->posixMode()) {
             bytesLeft = 0; // Force exit from loop because only one operation per message
-            error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            if (error != 0) {
-              outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-              outMsg->header.errorCode = error;
-              bytesLeft = 0; // Force exit from loop because there was an error
-              continue;
-           }
          }
          else {
             bytesLeft -= (size_t)rc;
             inMsg->length -= (size_t)rc;
             inMsg->position += (off64_t)rc;
-            if (bytesLeft){
-              error = putData( address, inMsg->rkey, (uint32_t)rc); 
-            }
-            else {//not waiting for the RDMA completion and the ACK will be fenced
-              // error = putData( address, inMsg->rkey, (uint32_t)rc); 
-              error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            }
             address += (uint64_t)rc;
             inMsg->address = address; //Need this if a addBlockedMessage for EWOULDBLOCK
          }
@@ -1812,33 +1828,29 @@ ClientMonitor::read(const ClientMessagePtr& message) //post read to file system
 
       // Send the data to the compute node when successful and there is data.
       if (rc > 0) {
+
+          error = putData( address, inMsg->rkey, (uint32_t)rc); //$$$
+          if (error != 0) {
+            outMsg->header.returnCode = bgcios::RequestFailed;
+            outMsg->header.errorCode = error;
+            outMsg->bytes = 0;
+            bytesLeft = 0; // Force exit from loop because there was an error
+            continue;
+         }
          outMsg->header.returnCode = bgcios::Success;
          outMsg->bytes += rc;
 
          // Adjust for next operation.
          if (job->posixMode()) {
             bytesLeft = 0; // Force exit from loop because only one operation per message
-            error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            if (error != 0) {
-              outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-              outMsg->header.errorCode = error;
-              bytesLeft = 0; // Force exit from loop because there was an error
-              continue;
-           }
          }
          else {
             bytesLeft -= (size_t)rc;
             inMsg->length -= (size_t)rc;
-            if (bytesLeft){
-              error = putData( address, inMsg->rkey, (uint32_t)rc); 
-            }
-            else {//not waiting for the RDMA completion and the ACK will be fenced
-              // error = putData( address, inMsg->rkey, (uint32_t)rc); 
-              error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            }
             address += (uint64_t)rc;
             inMsg->address = address; //Need this if a addBlockedMessage for EWOULDBLOCK
          }
+
       }
 
       // There is no more data available from the descriptor.
@@ -1932,32 +1944,28 @@ ClientMonitor::recv(const ClientMessagePtr& message) //post read to file system
 
       // Send the data to the compute node when successful and there is data.
       if (rc > 0) {
+
+         error = putData( address, inMsg->rkey, (uint32_t)rc); //$$$
+         if (error != 0) {
+           outMsg->header.returnCode = bgcios::RequestFailed;
+           outMsg->header.errorCode = error;
+           outMsg->bytes = 0;
+           bytesLeft = 0; // Force exit from loop because there was an error
+           continue;
+         }
+
          outMsg->header.returnCode = bgcios::Success;
          outMsg->bytes += rc;
 
          // Adjust for next operation.
          if (job->posixMode()) {
             bytesLeft = 0; // Force exit from loop because only one operation per message
-            error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            if (error != 0) {
-              outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-              outMsg->header.errorCode = error;
-              bytesLeft = 0; // Force exit from loop because there was an error
-              continue;
-           }
          }
          else {
-            bytesLeft -= (size_t)rc;
-            inMsg->length -= (size_t)rc;
-            if (bytesLeft){
-              error = putData( address, inMsg->rkey, (uint32_t)rc); 
-            }
-            else {//not waiting for the RDMA completion and the ACK will be fenced
-              // error = putData( address, inMsg->rkey, (uint32_t)rc); 
-              error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            }
-            address += (uint64_t)rc;
-            inMsg->address = address; //Need this if a addBlockedMessage for EWOULDBLOCK
+           bytesLeft -= (size_t)rc;
+           inMsg->length -= (size_t)rc;            
+           address += (uint64_t)rc;
+           inMsg->address = address; //Need this if a addBlockedMessage for EWOULDBLOCK
          }
       }
 
@@ -2560,7 +2568,7 @@ ClientMonitor::write(const ClientMessagePtr& message)
         }
         err = getData( address, inMsg->rkey, (uint32_t)length);
         if (err != 0) {
-         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+         outMsg->header.returnCode = bgcios::RequestFailed;
          outMsg->header.errorCode = (uint32_t)err;
          bytesLeft = 0; // Force exit from loop
          continue;
@@ -2686,7 +2694,7 @@ ClientMonitor::send(const ClientMessagePtr& message)
         }
         err = getData( address, inMsg->rkey, (uint32_t)length);
         if (err != 0) {
-         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+         outMsg->header.returnCode = bgcios::RequestFailed;
          outMsg->header.errorCode = (uint32_t)err;
          bytesLeft = 0; // Force exit from loop
          continue;
@@ -2807,7 +2815,7 @@ ClientMonitor::pwrite64(const ClientMessagePtr& message)
         }
         err = getData( address, inMsg->rkey, (uint32_t)length);
         if (err != 0) {
-         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+         outMsg->header.returnCode = bgcios::RequestFailed;
          outMsg->header.errorCode = (uint32_t)err;
          bytesLeft = 0; // Force exit from loop
          continue;

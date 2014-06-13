@@ -28,7 +28,7 @@ ${MPICH2BUILD}-xl.ndebug/Makefile: ${MPICH2DIR}/Makefile.in ${INSTALL_DIR}/lib/l
 	  AR="${HOST_AR}"						\
 	  LD="${HOST_LD}"						\
 	  RANLIB="${HOST_RANLIB}"					\
-	  F77_OTHER_LIBS="-lmpichf90-$(lastword $(subst -, ,$(subst /, ,$(dir $@))))"				\
+	  F77_OTHER_LIBS="-lmpichf77-$(lastword $(subst -, ,$(subst /, ,$(dir $@))))"				\
 	  MPICH2LIB_CFLAGS="${FAST_CFLAGS}"				\
 	  MPICH2LIB_CXXFLAGS="${FAST_CXXFLAGS}"				\
 	  MPICH2LIB_FFLAGS="${FAST_FFLAGS}"				\

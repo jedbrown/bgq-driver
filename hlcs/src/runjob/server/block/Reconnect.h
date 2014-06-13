@@ -73,7 +73,7 @@ public:
      * \brief Factory.
      *
      * Callback will be invoked after loading the machine XML and querying
-     * for the highest squence ID in the bgqblock table.
+     * for the highest sequence ID in the bgqblock table.
      */
     static void create(
             const boost::shared_ptr<Server>& server,    //!< [in]

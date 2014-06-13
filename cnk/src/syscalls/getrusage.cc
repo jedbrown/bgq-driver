@@ -47,9 +47,8 @@ uint64_t sc_getrusage(SYSCALL_FCN_ARGS)
     AppProcess_t *pAppProc = GetMyProcess();
     uint64_t text_size = pAppProc->Data_VEnd - pAppProc->Data_VStart;
     uint64_t heap_vaddr = pAppProc->Heap_VStart;
-    uint64_t heap_size = pAppProc->Heap_End - pAppProc->Heap_Start;
-    uint64_t maxAlloc_vaddr = MAX(pAppProc->Heap_Break, pAppProc->MmapMgr.high_mark);
     uint64_t processLeader_r1 = pAppProc->ProcessLeader_KThread->Reg_State.gpr[1];
+    uint64_t highestAllocMax = MAX(pAppProc->MmapMgr.high_mark_max, pAppProc->Heap_Break);
     uint64_t now = GetCurrentTimeInMicroseconds() - GetMyAppState()->JobStartTime;
     /* Multi-core can't be completely precise when a non-process-leader thread
      * does a getrusage() and needs to get the *current* stack depth of the
@@ -66,9 +65,8 @@ uint64_t sc_getrusage(SYSCALL_FCN_ARGS)
     buf->ru_stime.tv_usec = 0;
     buf->ru_maxrss        = 0;
     buf->ru_maxrss       += (text_size+1023)/1024;
-    buf->ru_maxrss       += (maxAlloc_vaddr - heap_vaddr + 1023)/1024;
-    buf->ru_maxrss       += ((heap_vaddr+heap_size-1) - processLeader_r1 + 1023)/1024;
-
+    buf->ru_maxrss       += (highestAllocMax - heap_vaddr + 1023)/1024;
+    buf->ru_maxrss       += (pAppProc->Heap_VEnd - processLeader_r1 + 1023)/1024;
     buf->ru_ixrss         = 0;
     buf->ru_idrss         = 0;
     buf->ru_isrss         = 0;
@@ -82,6 +80,6 @@ uint64_t sc_getrusage(SYSCALL_FCN_ARGS)
     buf->ru_nsignals      = pAppProc->signalCount;
     buf->ru_nvcsw         = 0;
     buf->ru_nivcsw        = 0;
-
+    
     return CNK_RC_SUCCESS(0);
 }

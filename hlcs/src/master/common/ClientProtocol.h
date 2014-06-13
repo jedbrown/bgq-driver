@@ -150,7 +150,7 @@ public:
     /*!
      * Start a monitor of bgmaster_server for new events and errors.
      */
-    virtual void monitor(const BGMasterClientProtocolSpec::MonitorRequest& request, BGMasterClientProtocolSpec::MonitorReply& reply)
+    void monitor(const BGMasterClientProtocolSpec::MonitorRequest& request, BGMasterClientProtocolSpec::MonitorReply& reply)
     {
         sendReceive(BGMasterClientProtocolSpec::MonitorRequest::getClassName(), request, BGMasterClientProtocolSpec::MonitorReply::getClassName(), reply);
     }
@@ -158,7 +158,7 @@ public:
     /*!
      * Stop a monitor of bgmaster_server for new events and errors.
      */
-    virtual void endmonitor(const BGMasterClientProtocolSpec::EndmonitorRequest& request, BGMasterClientProtocolSpec::EndmonitorReply& reply)
+    void endmonitor(const BGMasterClientProtocolSpec::EndmonitorRequest& request, BGMasterClientProtocolSpec::EndmonitorReply& reply)
     {
         sendReceive(BGMasterClientProtocolSpec::EndmonitorRequest::getClassName(), request, BGMasterClientProtocolSpec::EndmonitorReply::getClassName(), reply);
     }
@@ -166,7 +166,7 @@ public:
     /*!
      * Change the logging levels of bgmaster_server.
      */
-    virtual void loglevel(const BGMasterClientProtocolSpec::LoglevelRequest& request, BGMasterClientProtocolSpec::LoglevelReply& reply)
+    void loglevel(const BGMasterClientProtocolSpec::LoglevelRequest& request, BGMasterClientProtocolSpec::LoglevelReply& reply)
     {
         sendReceive(BGMasterClientProtocolSpec::LoglevelRequest::getClassName(), request, BGMasterClientProtocolSpec::LoglevelReply::getClassName(), reply);
     }
@@ -174,7 +174,7 @@ public:
     /*!
      * Get the aliases that are configured but not running.
      */
-    virtual void getidle(const BGMasterClientProtocolSpec::GetidleRequest& request, BGMasterClientProtocolSpec::GetidleReply& reply) 
+    void getidle(const BGMasterClientProtocolSpec::GetidleRequest& request, BGMasterClientProtocolSpec::GetidleReply& reply) 
     {
         sendReceive(BGMasterClientProtocolSpec::GetidleRequest::getClassName(), request, BGMasterClientProtocolSpec::GetidleReply::getClassName(), reply);
     }

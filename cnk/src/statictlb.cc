@@ -95,10 +95,10 @@ const char typexlate[IS_SEGMENTTYPECOUNT][32] = {"NULL", "TEXT", "DATA", "HEAP",
 
 #if USE_EXCLUSION
 #define NUMTLBSIZES_EXCL               11
-const unsigned TLBsizes_excl[NUMTLBSIZES_EXCL] = {1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1};
+//const unsigned TLBsizes_excl[NUMTLBSIZES_EXCL] = {1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1};
 #else
 #define NUMTLBSIZES_EXCL   NUMTLBSIZES
-#define TLBsizes_excl      TLBsizes
+//#define TLBsizes_excl      TLBsizes
 #endif
 
 /******************************************************
@@ -2742,7 +2742,7 @@ int TLBMapper::partition_with_hole(uint32_t* totalheap)
         }
     } while(madeprogress);
     
-    for(x=startProc; x<endProc; x++)
+    for(x=0; x<orignumproc; x++)
     {
         if(createSpeculativeAliases(x))
             return -1;

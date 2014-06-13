@@ -71,6 +71,8 @@ int main(int argc, char *argv[])
    LOGGING_DECLARE_PID_MDC( getpid() );
    LOGGING_DECLARE_SERVICE_MDC( "iosd" );
 
+   setFlightLogSize(1024);
+
    uint16_t simId = config.getSimulationId();
    in_port_t port = config.getListenPort();
 

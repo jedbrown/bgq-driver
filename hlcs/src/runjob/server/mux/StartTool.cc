@@ -24,6 +24,7 @@
 
 #include "server/job/Container.h"
 #include "server/job/Debug.h"
+#include "server/job/Signal.h"
 #include "server/mux/Connection.h"
 
 #include "common/message/Result.h"
@@ -177,8 +178,17 @@ StartTool::findJobHandler(
         _response->setError( error_code::permission_denied );
         return;
     }
+    try {
+        job::Debug::create( job, _request, _mux );
+    } catch ( const std::exception & e ) {
+        _response->setMessage( "mapping file is invalid for job " + boost::lexical_cast<std::string>(_request->getJobId()));
+        _response->setError( error_code::mapping_file_invalid );
 
-    job::Debug::create( job, _request, _mux );
+        LOG_INFO_MSG( "Start tool request failed, terminating job." );
+        job::Signal::create( job, SIGKILL );
+
+        return;
+    }
 }
 
 } // mux

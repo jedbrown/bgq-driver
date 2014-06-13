@@ -53,92 +53,13 @@ use File::Basename;
 sub updateStatements
 {
 
-# the statements to execute, separate by commas    
-my @insertStmts = (
+    # the statements to execute, separate by commas    
+    # my @insertStmts = ();
 
-"ALTER TABLE tbgqdiagseventlog data capture none",
-"ALTER TABLE tbgqdiagseventlog alter column ctlaction set data type varchar(256) ",
-"ALTER TABLE tbgqdiagseventlog data capture changes",
-"DROP trigger midplane_history_u",
-"CREATE INDEX EventLogQ on  Tbgqeventlog (qualifier, recid desc)",
-"CREATE INDEX TEALTHRESHOLDEVENTLOG ON TBGQEVENTLOG (MSG_ID ASC, LOCATION ASC, SERIALNUMBER ASC, EVENT_TIME ASC)",
-"DROP VIEW X_BGQ_1_1",
-"CREATE VIEW X_BGQ_1_1 (
-    \"rec_id\",
-    \"category\",
-    \"severity\",
-    \"jobid\",
-    \"block\",
-    \"serialnumber\",
-    \"ecid\",
-    \"cpu\",
-    \"ctlaction\",
-    \"message\",
-    \"rawdata\",
-    \"diags\",
-    \"qualifier\") AS
-    SELECT BGQEVENTLOG.RECID AS \"rec_id\",
-           BGQEVENTLOG.CATEGORY AS \"category\",
-           BGQEVENTLOG.SEVERITY AS \"severity\",
-           BGQEVENTLOG.JOBID AS \"jobid\",
-           BGQEVENTLOG.BLOCK AS \"block\",
-           BGQEVENTLOG.SERIALNUMBER AS \"serialnumber\",
-           BGQEVENTLOG.ECID AS \"ecid\",
-           BGQEVENTLOG.CPU AS \"cpu\",
-           BGQEVENTLOG.CTLACTION AS \"ctlaction\",
-           BGQEVENTLOG.MESSAGE AS \"message\",
-           BGQEVENTLOG.RAWDATA AS \"rawdata\",
-           BGQEVENTLOG.DIAGS AS \"diags\",
-           BGQEVENTLOG.QUALIFIER AS \"qualifier\"
-   FROM TBGQEVENTLOG AS BGQEVENTLOG;",
-"
-create trigger midplane_history_u
-  after update on tbgqmidplane
-  referencing new as n old as o
-  for each row mode db2sql
-
-  begin atomic 
-
-    if (o.posinmachine = n.posinmachine) then
-
-    if ((n.status = 'F') or (o.status = 'F' and n.status = 'A') or (o.seqid <> n.seqid)) then
-      -- omit insertions for Software Failure transitions
-      -- or when sequence ID has changed from another trigger
-    else
-    insert into tbgqmidplane_history 
-      (serialNumber, productId, machineSerialNumber, posInMachine, status, ismaster, vpd)
-     values
-      (n.serialNumber, n.productId, n.machineSerialNumber, n.posInMachine, n.status, n.ismaster, n.vpd);
-
-     if (o.serialnumber <> n.serialnumber) then
-
-     insert into tbgqreplacement_history 
-      (type, location, oldserialnumber,newserialnumber, oldstatus, newstatus)
-     values
-      ('Midplane', n.posInMachine,o.serialnumber,n.serialNumber, o.status, n.status);
-        
-     end if;
-     end if;
-
-    else
-
-     SIGNAL SQLSTATE '70003' ('Updating positions not permitted');
-
-    end if;
-
-   end
-",
-"ALTER TABLE tbgqnetconfig data capture none",
-"ALTER TABLE tbgqnetconfig alter column itemname set data type varchar(128) ",
-"ALTER TABLE tbgqnetconfig data capture changes",
-"CREATE OR REPLACE ALIAS BGQBlockAction_history for TBGQBlockAction_history"
-);
-
-
-    foreach my $stmt (@insertStmts)
-    {
-        processSQL($stmt);
-    }
+    # foreach my $stmt (@insertStmts)
+    # {
+    #     processSQL($stmt);
+    # }
 
     # Update tbgqmsgtypes table
     my $exe_dir = dirname( $0 );

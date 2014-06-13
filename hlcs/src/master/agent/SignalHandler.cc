@@ -30,7 +30,7 @@ SignalHandler::create(
         boost::asio::io_service& io_service
         )
 {
-    const Ptr result( 
+    const Ptr result(
             new SignalHandler(
                 io_service
                 )
@@ -50,7 +50,7 @@ SignalHandler::create(
 
 SignalHandler::SignalHandler(
         boost::asio::io_service& io_service
-        ) : 
+        ) :
     Signals(io_service),
     _io_service( io_service ),
     _signal( 0 )
@@ -76,7 +76,7 @@ SignalHandler::handler(
             case SIGUSR1:
             case SIGPIPE:
             case SIGHUP:
-                LOG_DEBUG_MSG( "ignored signal " << siginfo.si_signo);
+                LOG_DEBUG_MSG( "Ignored signal " << siginfo.si_signo);
                 this->async_wait(
                         boost::bind(
                             &SignalHandler::handler,
@@ -87,12 +87,12 @@ SignalHandler::handler(
                         );
                 break;
             default:
-                LOG_INFO_MSG( "received signal " << siginfo.si_signo);
+                LOG_INFO_MSG( "Received signal " << siginfo.si_signo);
                 _signal = siginfo.si_signo;
                 _io_service.stop();
                 break;
         }
     } else {
-        LOG_INFO_MSG( "signal handler: " << boost::system::system_error(error).what());
+        LOG_INFO_MSG( "Signal handler: " << boost::system::system_error(error).what());
     }
 }

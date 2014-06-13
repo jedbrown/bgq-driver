@@ -44,7 +44,6 @@ uint64_t default_l2_first_init = 1;
 int Speculation_Init()
 {
     int slice;
-    uint64_t scrub_rate;
     L2C_SPECID_t specid;
     
     if(TI_isDD1() || ((GetPersonality()->Kernel_Config.NodeConfig & PERS_ENABLE_DD1_Workarounds) != 0))
@@ -71,8 +70,6 @@ int Speculation_Init()
     domainsConfigured = 0;
     
     // Reset the L2 scrub rate
-    scrub_rate = 64;
-    
     for(slice=0; slice<L2_DCR_num; slice++)
     {
         // Set the L2 scrub rate
@@ -114,6 +111,10 @@ int l1p_init()
         cs->default_l1p_init     = 1;
         ppc_msync();
     }
+    
+    // Direct L1p DCR violations to CNK
+    out64_sync((void*)L1P_ESR_GEA, in64((void*)L1P_ESR_GEA) & ~L1P_ESR_err_mmio_priv);  // Steal priv bit from firmware GEA
+    out64_sync((void*)L1P_ESR_BIC_CRITICAL, L1P_ESR_err_mmio_priv);                    // Set priv bit to core-critical
     return 0;
 }
 
@@ -380,6 +381,7 @@ int Speculation_SERollback(L2C_SPECID_t specid)
 int Speculation_EnterJailMode(bool longRunningSpec)
 {
     AppProcess_t* process = GetMyProcess();
+    assert(process != NULL);
     if (process != GetProcessByProcessorID(ProcessorID()))
     {
         Speculation_Restart(SPEC_GetSpeculationIDSelf_priv(), Kernel_SpecReturnCode_INVALID, &GetMyKThread()->Reg_State);
@@ -604,10 +606,21 @@ void IntHandler_L2Central(int intrp_sum_bitnum)
  * with an ici.  More surgical icbi's could stumble over HW Issue 874 and
  * cause machine checks.
  */
-void Speculation_EnableFastSpeculationPaths()
+int Speculation_EnableFastSpeculationPaths()
 {
     uint64_t ici_needed = 0;
 
+    if(GetMyHWThreadState()->PhysicalSpecPID == 0)
+    {
+        AppProcess_t *proc = GetMyProcess();
+        if(proc != NULL)
+        {
+            // Send signal to this process.                                                                            
+            Signal_Deliver(proc, 0, SIGNOSPECALIAS);
+        }
+        return ENOMEM;
+    }
+    
     // We use a lock to ensure that just one thread patches the exception
     // trampoline.  That thread then sends IPI's to all the other cores to
     // get the icaches flushed.
@@ -645,4 +658,5 @@ void Speculation_EnableFastSpeculationPaths()
 	}
 	Kernel_WriteFlightLog(FLIGHTLOG_high, FL_SPCFEPENA, 0,0,0,0);
     }
+    return 0;
 }

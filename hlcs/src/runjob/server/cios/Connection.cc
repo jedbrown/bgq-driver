@@ -76,7 +76,8 @@ Connection::Connection(
     _outbox(),
     _block( block ),
     _sequence( 0 ),
-    _pulse( boost::posix_time::microsec_clock::local_time() )
+    _pulse( boost::posix_time::microsec_clock::local_time() ),
+    _authenticateRetryCount(0)
 {
 
 }
@@ -197,7 +198,7 @@ void
 Connection::read()
 {
     // assume this handler is protected by _strand
-    
+
     if ( !_socket ) return;
 
     // start reading header
@@ -259,7 +260,7 @@ Connection::write()
 {
     // get first message from queue
     const Message::Ptr msg = _outbox[0];
-    
+
     // every outgoing message has a unique sequence ID
     msg->header()->sequenceId = _sequence++;
 
@@ -342,7 +343,7 @@ Connection::connectHandler(
     _interval.reset();
 
     // begin authentication
-    _authenticate = Authenticate::create( 
+    _authenticate = Authenticate::create(
             server,
             _service,
             _location
@@ -373,18 +374,42 @@ Connection::authenticateHandler(
 
     if ( !socket ) {
         const block::Io::Ptr block( _block.lock() );
+        if (block) {
+            boost::shared_ptr<const BGQBlockNodeConfig> config = block->config();
+            if (config) {
+                const unsigned char *key = config->securityKey();
+                std::ostringstream os;
+                for ( unsigned i = 0; i < 32; ++i ) {
+                    os << std::hex << static_cast<unsigned>( *(key + i) );
+                }
+                LOG_WARN_MSG( "Could not authenticate using I/O block security key: 0x" << os.str() );
+            } else {
+                LOG_WARN_MSG( "Could not authenticate." );
+            }
+        } else {
+            LOG_WARN_MSG( "Could not authenticate." );
+        }
 
-        LOG_WARN_MSG( "could not authenticate" );
-        Ras::create( Ras::CiosAuthenticationFailure ).
-            detail( RasEvent::LOCATION, _location ).
-            detail( "DAEMON", (_service == bgcios::JobctlService ? "jobctl" : "stdio") ).
-            block( block ? block->name() : std::string() )
-            ;
-
+        ++_authenticateRetryCount;
+        // Check if we exceeded our authenticate retry limit
+        if (_authenticateRetryCount > 5) {
+            LOG_WARN_MSG("Authentication retry limit reached for location " << _location << ", sending RAS event to mark I/O node in software failure state.");
+            // Send RAS event which will mark the
+            Ras::create( Ras::CiosAuthenticationFailure ).
+                detail( RasEvent::LOCATION, _location ).
+                detail( "DAEMON", (_service == bgcios::JobctlService ? "jobctl" : "stdio") ).
+                block( block ? block->name() : std::string() )
+                ;
+        } else {
+            LOG_WARN_MSG("Attempt " <<  _authenticateRetryCount << " authenticating to location " << _location << ", retrying authentication.");
+            // Retry the connection
+            this->start();
+        }
         return;
     }
 
-    LOG_INFO_MSG( "authenticated" );
+    _authenticateRetryCount = 0;
+    LOG_INFO_MSG( "Authenticated with location " << _location );
 
     _socket = socket;
     _authenticate.reset();
@@ -425,16 +450,16 @@ Connection::readHeaderHandler(
 {
     LOGGING_DECLARE_LOCATION_MDC( _location );
     LOGGING_DECLARE_BLOCK_MDC( _service == bgcios::JobctlService ? "jobctl" : "stdio" );
-    
+
     if ( error == boost::asio::error::operation_aborted ) {
         // do nothing, we were asked to terminate
         return;
     }
-    
+
     if ( error ) {
         LOG_ERROR_MSG( "read failed: " << boost::system::system_error(error).what());
         this->start( _endpoint );
-        
+
         // kill jobs using this I/O node
         _jobs->eof( _location );
 
@@ -466,7 +491,7 @@ Connection::readDataHandler(
     LOGGING_DECLARE_LOCATION_MDC( _location );
     LOGGING_DECLARE_BLOCK_MDC( _service == bgcios::JobctlService ? "jobctl" : "stdio" );
     LOG_TRACE_MSG( __FUNCTION__ );
-    
+
     if ( error == boost::asio::error::operation_aborted ) {
         // do nothing, we were asked to terminate
         return;
@@ -528,23 +553,23 @@ Connection::findJobHandler(
            )
         {
             if ( returnCode != bgcios::Success ) {
-                LOG_WARN_MSG( 
+                LOG_WARN_MSG(
                         (
-                        _service == bgcios::JobctlService ? 
+                        _service == bgcios::JobctlService ?
                         bgcios::jobctl::toString(type) : bgcios::stdio::toString(type)
-                        ) << 
+                        ) <<
                         " failed with rc " << returnCode << ": " <<
                         bgcios::returnCodeToString( returnCode )
                         );
             } else {
                 LOG_DEBUG_MSG(
                         (
-                        _service == bgcios::JobctlService ? 
+                        _service == bgcios::JobctlService ?
                         bgcios::jobctl::toString(type) : bgcios::stdio::toString(type)
                         ) << " success"
                         );
             }
-        } else if ( 
+        } else if (
                 _service == bgcios::StdioService &&
                 ( type == bgcios::stdio::WriteStdout || type == bgcios::stdio::WriteStderr )
                 )
@@ -590,9 +615,9 @@ Connection::handleJob(
         handle.data(
                 _location,
                 incoming,
-                _strand.wrap( 
+                _strand.wrap(
                     boost::bind(
-                        &Connection::read, 
+                        &Connection::read,
                         shared_from_this()
                         )
                     )
@@ -610,8 +635,9 @@ Connection::keepAlive(
         )
 {
     const std::string keep_alive_key( "tcp_keep_alive" );
-    bool enabled = true;
+
     try {
+        bool enabled = true;
         const std::string value = _options.getProperties()->getValue(
                 runjob::server::PropertiesSection,
                 keep_alive_key

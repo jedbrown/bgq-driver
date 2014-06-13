@@ -84,7 +84,6 @@ extract_compact_machine(
     int mem, maxmem, memmod;
     string sqlstr;
     SQLLEN ind[3];
-    char location[65];
     SQLRETURN sqlrc, status, queryresult;
     SQLHANDLE hstmt;
     BGQDB::TxObject tx(BGQDB::DBConnectionPool::Instance());
@@ -286,6 +285,7 @@ extract_compact_machine(
                 }
 
                 if (checkmem) {
+                    char location[65];
                     char memstr[4];
                     sprintf(memstr,"%i", mem);
                     SQLCloseCursor(hstmt);
@@ -490,6 +490,12 @@ extract_compact_machine(
             } else {
                 os << "enabled='false' ";
             }
+            // Special setting for I/O link status in BGAS environments
+            if (strcmp(cniolink._status,"M") == 0) {
+                os << "ioLinkMissing='true' ";
+            } else {
+                os << "ioLinkMissing='false' ";
+            }
             if (cniolink._badwires == 0)
                 os << " />" << endl;
             else {
@@ -537,7 +543,6 @@ extract_compact_block(
         return DB_COMM_ERR;
     }
 
-    char lastbp[17];
     string sqlstr;
     string condition("");
     string portCondition("");
@@ -681,6 +686,7 @@ extract_compact_block(
             portCondition = "where substr(fromlocation, 1,6) in (select bpid from bgqbpblockmap where blockid = '"
                 +block + string("' )  and substr(tolocation,5,1) = 'I' ");
 
+            char lastbp[17];
             strcpy(lastbp,"none");
 
             if (retrieve_table(tx2, swb, condition) == DB_OK) {

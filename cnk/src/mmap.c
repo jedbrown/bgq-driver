@@ -241,38 +241,6 @@ extern inline void MMap_showBusy( MmapMgr_t *mgr )
 // End Debug/Trace code
 //
 
-__INLINE__ int  MMapMgr_BusyAddrHash( uint64_t v )
-{
-   int a,b;
-
-   // Large allocations given equal weight as small allocations
-   a = ((v & 0x03FC0000) >> 18); // big ones
-   b = ((v & 0x00007F80) >>  7); // small ones
-
-   return( (a + b) & 0xFF );
-}
-
-
-__INLINE__ int  MMapMgr_GetBucket( uint64_t v )
-{
-   int b = cntlz64(v);
-
-   if ( b == 0 )
-      return( 31 );
-   else if ( b > 27 )
-      return( 5 );
-   else
-      return( 32 - b );
-}
-
-
-__INLINE__ void  MMapMgr_InitQByAddr( MMapChunk_t *chunk )
-{
-   chunk->byaddr_next = NULL;
-   chunk->byaddr_prev = NULL;
-}
-
-
 __INLINE__ void  MMapMgr_EnQByAddrAfter( MmapMgr_t *mgr,
                                               MMapChunk_t *n,
                                               MMapChunk_t *o )

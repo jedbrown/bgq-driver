@@ -40,6 +40,7 @@ install_parts += bg.properties.v1r1m0.tpl
 install_parts += bg.properties.v1r1m1.tpl
 install_parts += bg.properties.v1r1m2.tpl
 install_parts += bg.properties.v1r2m0.tpl
+install_parts += bg.properties.v1r2m1.tpl
 
 
 install_targets=${install_parts:%=$(BGQ_BIN_INSTALL_DIR)/%}

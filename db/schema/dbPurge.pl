@@ -37,18 +37,10 @@ use Config::IniFiles;
 use vars
     qw($dbHandle $dbPropHash $debug);
 
-
-
-
-
-
-#_____________________________________________________________
+#____________________________
 #
 #       MAIN
 #
-
-
-
 #____________________________
 # 
 #  Input Variables
@@ -59,7 +51,7 @@ my $dbprop=undef;
 my $qual=undef;
 #____________________________
 
-#_______________________
+#____________________________
 #
 #  Process Command Line Options
 #
@@ -129,9 +121,7 @@ if (defined $options{"diags"}) {
     purgeTables("DIAGRESULTS","ENDTIME");
     purgeTables("DIAGRUNS","ENDTIME");
 }
-#_____________________________________________________________
-
-
+#_______________________
 
 #_______________________
 #
@@ -140,22 +130,31 @@ if (defined $options{"diags"}) {
 #  Displays the usage of this script if -h is specified or if the wrong
 #  arguments are passed in
 #
-sub usage {
-
-system("perldoc $0");
-exit(0);
-
+sub usage 
+{
+  system("perldoc $0");
+  exit(0);
 }
 #_______________________
 
-
-
+##########################################
+# getTimestamp()
+# Returns a string in the following format:# MM-DD-YYYY HH:MM:SS
+##########################################
+sub getTimestamp {
+  my $now = time;
+  my @date = localtime $now;
+  $date[5] += 1900;
+  $date[4] += 1;
+  my $stamp = sprintf("%02d-%02d-%04d %02d:%02d:%02d", $date[4], $date[3], $date[5], $date[2], $date[1], $date[0]);
+  return $stamp;
+} # sub getTimestamp
 
 ##########################################
 # setupDb()
 # Make connection to the DB
 ##########################################
-sub setupDb
+sub setupDb 
 {
     my $dbPropertiesFile = shift();
     #make sure we have the DB2 driver
@@ -273,7 +272,10 @@ sub cleanupTealEvents
    } 
 }
 
-
+##########################################
+# purgeTables()
+# Purge the specified database tables.
+##########################################
 sub purgeTables {
 
   my ($class, $time) = @_;
@@ -312,34 +314,34 @@ sub purgeTables {
 
     	my $numrows = $rows->{1};
     	my $counter = 0;
-
+        my $timestamp = getTimestamp();
+        
         if (defined $options{"v"}) {
-
-        print "$tablename - \t$rows->{1} Rows over $months months old\n";
-
+            print "$timestamp $tablename - \t$rows->{1} rows over $months months old\n";
         } else {
-            print "\nDeleting from $tablename\n";
+            print "\n$timestamp Deleting from $tablename\n";
 
             my $xactSize = 100000;
             if ( $tablename eq "TBGQBLOCK_HISTORY" ) {
                 $xactSize = 1;
             }
 
-            $sql = qq( delete from \( select 1 from $db_schema.$tablename where date\($time\) <= CURRENT DATE - $months MONTHS FETCH FIRST $xactSize ROWS ONLY\) AS D);
+            $sql = qq( delete from \( select 1 from $db_schema.$tablename where date\($time\) < CURRENT DATE - $months MONTHS FETCH FIRST $xactSize ROWS ONLY\) AS D);
             my $sth_delete = getDbHandle()->prepare($sql);
 
             while ( $counter <= $numrows ) {
+                $timestamp = getTimestamp();
                 if ( $xactSize != 1 && $counter != 0 ) {
-                    print "$counter Rows Deleted out of $numrows for table - $tablename\n";
+                    print "$timestamp\t$counter rows deleted out of $numrows for table - $tablename\n";
                 } elsif ( $xactSize == 1 && ($counter % 100 == 0) ) {
-                    print "$counter Rows Deleted out of $numrows for table - $tablename\n";
+                    print "$timestamp\t$counter rows deleted out of $numrows for table - $tablename\n";
                 }
                 $sth_delete->execute();
 
                 $counter = $counter + $xactSize;
             }
-
-            print "COMPLETED Deleting $numrows rows for table - $tablename\n";
+            $timestamp = getTimestamp();
+            print "$timestamp COMPLETED deleting $numrows rows for table - $tablename\n";
         }
     }
   }
@@ -363,7 +365,7 @@ See below for more description of the switches.
 
 =head1 DESCRIPTION
 
-dbPurge.pl will connect to the BG/Q database and delete all rows beyond a certain number of months.  The default is to delete rows that are beyond 3 months old, but the -m flag can be passed to change this to any number of months
+dbPurge.pl will connect to the BG/Q database and delete all rows beyond a certain number of months. The default is to delete rows that are beyond 3 months old, but the -m flag can be passed to change this to any number of months
 
 =head1 OPTIONS
 
@@ -379,7 +381,7 @@ DB properties file, defaults to /bgsys/local/etc/bg.properties
 
 =item B<-months, -m> I<number_of_months>
 
-Number of months that determines which rows to delete.  Rows older then the number of months passed in from the current date are purged from the tables
+Number of months that determines which rows to delete. Rows older then the number of months passed in from the current date are purged from the tables
 
 =item B<-v>
 

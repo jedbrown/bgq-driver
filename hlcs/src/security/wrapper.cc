@@ -49,7 +49,7 @@ LOG_DECLARE_FILE("security");
 static bool
 hasJobAuthorityType(
         const bgq::utility::Properties::ConstPtr& properties,
-        const string authorityType,
+        const string& authorityType,
         const bgq::utility::UserId& user
         )
 {

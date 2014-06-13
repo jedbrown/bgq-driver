@@ -498,10 +498,14 @@ NodeBoard::insertData(
     const boost::posix_time::ptime start( boost::posix_time::microsec_clock::local_time() );
     LOG_DEBUG_MSG( __FUNCTION__ << " begin " << name );
 
-    cxxdb::Transaction tx( *_connection );
-    processNB(reply.get(), _nodeBoardInsert, _nodeInsert, _linkChipInsert);
-    _connection->commit();
-    _insertion_time += boost::posix_time::microsec_clock::local_time() - start;
+    try {
+        cxxdb::Transaction tx( *_connection );
+        processNB(reply.get(), _nodeBoardInsert, _nodeInsert, _linkChipInsert);
+        _connection->commit();
+        _insertion_time += boost::posix_time::microsec_clock::local_time() - start;
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( e.what() );
+    }
 
     LOG_DEBUG_MSG( __FUNCTION__ << " end " << name );
 }

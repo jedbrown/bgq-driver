@@ -20,6 +20,12 @@
 
 Summary: MPICH2 libraries
 Group: %{product_group}
+Release: 0
+# Any time that the previous line ('Release') is set to '0', as when a new
+# release is created, the 'Requires' line should be commented out.
+#
+# The following line ('Requires') is only needed for efixes
+#Requires: %{_bgq_name}-pami >= 1.2.2-0
 
 %description mpich2
 %{bgq_package_description}
@@ -157,6 +163,7 @@ This package provides the MPICH2 communications libraries
 %{_base_dir}/comm/lib/libmpichf77-xl.so.8.0.1
 %{_base_dir}/comm/lib/libmpichf90-xl.la
 %{_base_dir}/comm/lib/libmpichf90-xl.so
+%{_base_dir}/comm/lib/libmpichf90-xl.ndebug.a
 %{_base_dir}/comm/lib/libmpichf90-xl.ndebug.la
 %{_base_dir}/comm/lib/libmpichf90-xl.ndebug.so
 %{_base_dir}/comm/lib/libmpichf90-xl.legacy.so.8
@@ -235,6 +242,11 @@ This package provides the MPICH2 communications libraries
 %{_base_dir}/comm/lib/libmpichf77-xl.legacy.so
 %{_base_dir}/comm/lib/libmpichcxx-xl.legacy.ndebug.la
 %{_base_dir}/comm/lib/libmpichcxx-xl.legacy.ndebug.so
+%{_base_dir}/comm/lib/libtvmpich2.a
+%{_base_dir}/comm/lib/libtvmpich2.la
+%{_base_dir}/comm/lib/libtvmpich2.so
+%{_base_dir}/comm/lib/libtvmpich2.so.8
+%{_base_dir}/comm/lib/libtvmpich2.so.8.0.1
 
 
 
@@ -245,6 +257,12 @@ This package provides the MPICH2 communications libraries
 
 Summary: PAMI Libraries
 Group: %{product_group}
+Release: 0
+# Any time that the previous line ('Release') is set to '0', as when a new
+# release is created, the 'Requires' line should be commented out.
+#
+# The following line ('Requires') is only needed for efixes
+#Requires: %{_bgq_name}-mpich2 >= 1.2.2-0
 
 %description pami
 %{bgq_package_description}

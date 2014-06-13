@@ -691,7 +691,7 @@ BlockControllerBase::findNodeBoardInfo(
 void
 BlockControllerBase::processConsoleMessage(
         const MCServerMessageSpec::ConsoleMessage& consoleMessage
-        ) 
+        )
 {
     // Find the node target from the location
     const std::string jtag = BGQTopology::processorCardNameFromJtagPort(consoleMessage._jtagPort);
@@ -719,7 +719,7 @@ BlockControllerBase::printConsoleMessage(
         unsigned cpuNum,
         unsigned threadId,
         const string& message
-        ) 
+        )
 {
     if (message.empty()) {
         return;
@@ -727,17 +727,12 @@ BlockControllerBase::printConsoleMessage(
 
     bool consoleMessagePrinted = false;
     unsigned chars_written;
-    const char* format = "{%u}.%u.%u: %s\n";
 
     const size_t buffer_size = message.size() + 100; // overhead for format string
     boost::scoped_array<char> buf(new char[buffer_size]);
 
     char *source;
     char *source2;
-    const char* format2 = "{%u}.%u.%u: %s";
-    char convunit[3];
-    unsigned result;
-    int midlen;
 
     // The following code reverts the unprintable characters to their original hex value
     // Since unprintable characters (tab, line feeds, etc.) do not flow through XML properly,
@@ -750,14 +745,16 @@ BlockControllerBase::printConsoleMessage(
             (source[5] == '~') ) {
 
         source[0] = '\0';
+        const char* format2 = "{%u}.%u.%u: %s";
         chars_written = snprintf(buf.get(), buffer_size, format2, nodeIndex, cpuNum, threadId, message.c_str());
         char* buf_ptr = buf.get();
         buf_ptr += chars_written;
 
+        char convunit[3];
         convunit[0] = source[2];
         convunit[1] = source[3];
         convunit[2] = '\0';
-        result = strtoul(convunit, 0, 16);
+        unsigned result = strtoul(convunit, 0, 16);
 
         *(buf_ptr++) = (unsigned char) result;
         *(buf_ptr) = '\0';
@@ -777,7 +774,7 @@ BlockControllerBase::printConsoleMessage(
                 if (source != source2)
                     strcat(buf.get(),source);
 
-                midlen = strlen(source);
+                int midlen = strlen(source);
                 buf_ptr += midlen;
                 source += midlen;
 
@@ -799,6 +796,7 @@ BlockControllerBase::printConsoleMessage(
         }
     }  else {
         // format the output into a buffer
+        const char* format = "{%u}.%u.%u: %s\n";
         chars_written = snprintf(buf.get(), buffer_size, format, nodeIndex, cpuNum, threadId, message.c_str());
     }
 

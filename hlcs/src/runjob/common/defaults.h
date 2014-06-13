@@ -52,6 +52,7 @@ extern const unsigned       ServerKillJobTimeout;
 extern const uint16_t       ServerJobctlPort;
 extern const uint16_t       ServerStdioPort;
 extern const unsigned       ServerJobctlHeartbeat;
+extern const bool           ServerRetainMappingFiles;
 
 // command stuff
 extern const unsigned       CommandConnectTimeout;

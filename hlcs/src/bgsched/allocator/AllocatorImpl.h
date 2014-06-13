@@ -255,36 +255,36 @@ public:
 
 private:
 
-	/*!
-	 * \brief Builds a list of all the possible large block shapes for this machine.
-	 *
-	 * This uses the midplane dimensions of the machine to figure out the shapes.
-	 */
-    void buildShapesList();
+   /*!
+    * \brief Builds a list of all the possible large block shapes for this machine.
+    *
+    * This uses the midplane dimensions of the machine to figure out the shapes.
+    */
+   void buildShapesList();
 
-    /*!
-     * \brief Dumps a list of all the possible large block shapes for this machine.
-     */
-    void dumpShapesList(std::ostream& os);
+   /*!
+    * \brief Dumps a list of all the possible large block shapes for this machine.
+    */
+   void dumpShapesList(std::ostream& os);
 
-	/*!
-	 * \brief Add a shape of the specified midplane dimensions to the list of valid shapes for this machine.
-	 */
-    void addShape(
-            const uint32_t a,     //!< [in] Midplane size in A dimension
-            const uint32_t b,     //!< [in] Midplane size in B dimension
-            const uint32_t c,     //!< [in] Midplane size in C dimension
-            const uint32_t d      //!< [in] Midplane size in D dimension
-            );
+   /*!
+    * \brief Add a shape of the specified midplane dimensions to the list of valid shapes for this machine.
+    */
+   void addShape(
+           const uint32_t a,     //!< [in] Midplane size in A dimension
+           const uint32_t b,     //!< [in] Midplane size in B dimension
+           const uint32_t c,     //!< [in] Midplane size in C dimension
+           const uint32_t d      //!< [in] Midplane size in D dimension
+           );
 
-	/*!
-	 * \brief Validate that the given shape fits in this machine.
-	 *
-	 * This does not check whether there are resources available, just whether a block of the given shape
-	 * could exist on this machine.
-	 */
-    bool validateShape (
-            const Shape::Pimpl shape  //!< [in] Shape to validate
+   /*!
+    * \brief Validate that the given shape fits in this machine.
+    *
+    * This does not check whether there are resources available, just whether a block of the given shape
+    * could exist on this machine.
+    */
+   bool validateShape (
+           const Shape::Pimpl shape  //!< [in] Shape to validate
             );
 
 protected:

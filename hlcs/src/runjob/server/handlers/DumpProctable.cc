@@ -263,7 +263,7 @@ DumpProctable::addProctable(
     } catch ( const std::exception & e ) {
         LOG_WARN_MSG( e.what() );
         _message << 
-            "could not generate mapping from '" <<
+            "Could not generate mapping from " <<
             job->info().getMapping()
             ;
     }

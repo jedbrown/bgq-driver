@@ -23,6 +23,7 @@
 #include "Kernel.h"
 #include "network/cnverbs.h"
 #include "firmware/include/mailbox.h"
+#include <fcntl.h>
 #define MAX_FLIGHTRECORDERS 8
 
 uint64_t flightlogregistrycount = 0;
@@ -571,3 +572,51 @@ void Flight_SpeculationRestart(size_t bufsize, char* buffer, const BG_FlightReco
              arg1, arg2, arg3, arg4);
 }
 
+void Flight_FlockDecoder(size_t bufsize, char* buffer, const BG_FlightRecorderLog_t* log, void* ptr)
+{
+    uint64_t arg1 = log->data[0];
+    uint64_t arg2 = log->data[1];
+    uint64_t remote_fd  = log->data[2] >> 32;
+    uint64_t ltype      = log->data[2] & 0xffffffffull;
+    uint64_t cmd2       = (log->data[3] >> 48);
+    uint64_t cmd        = (log->data[3] >> 32) & 0xffff;
+    uint64_t whence     = log->data[3] & 0xffffffffull;
+    
+    const char* ltype_str;
+    const char* whence_str;
+    const char* cmd_str;
+    switch(ltype)
+    {
+        case F_RDLCK:
+            ltype_str = "RDLCK";
+            break;
+        case F_WRLCK:
+            ltype_str = "WRLCK";
+            break;
+        case F_UNLCK:
+            ltype_str = "UNLCK";
+            break;
+        default:
+            ltype_str = "?????";
+    }
+    switch(whence)
+    {
+        case SEEK_SET: whence_str = "SEEK_SET"; break;
+        case SEEK_CUR: whence_str = "SEEK_CUR"; break;
+        case SEEK_END: whence_str = "SEEK_END"; break;
+        default:       whence_str = "????????"; break;
+    }
+    switch(cmd)
+    {
+        case F_GETLK:              
+            cmd_str = "GETLOCK"; 
+            break;
+        case F_SETLK:  cmd_str = "SETLOCK"; break;
+        case F_SETLKW: cmd_str = "SETLOCK_WAIT"; break;
+        default:       cmd_str = "????????"; break;
+    }
+    if(cmd != cmd2)
+        cmd_str = "SETLOCK_WAIT->SETLOCK";
+    
+    snprintf(buffer, bufsize, "Advisory file %s  (cmd=%ld  cmd2=%ld).  type=%s  start=%ld len=%ld remoteFD=%ld  whence=%s", cmd_str, cmd,cmd2, ltype_str, arg1, arg2, remote_fd, whence_str);
+}

@@ -170,7 +170,7 @@ namespace boost {
 namespace serialization {
 
 // need to split bgq::utility::UserId into an explicit load and store so we can invoke placement new
-// using a customer constructor. The default ctor can throw if the getuid() result is not found, whic
+// using a customer constructor. The default ctor can throw if the getuid() result is not found, which
 // isn't something that can be handled (or should be) since the uid, name, and groups will be replaced
 // with whatever is deserialized anyhow
 

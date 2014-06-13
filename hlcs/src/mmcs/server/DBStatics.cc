@@ -66,7 +66,7 @@ setLocationStatus(
          )
  {
     if (locations.empty()) {
-        LOG_WARN_MSG("No locations to update.");
+        LOG_DEBUG_MSG("No (" << type << ") locations to update.");
         return false;
     }
 
@@ -147,9 +147,23 @@ setLocationStatus(
     }
 
     LOG_INFO_MSG(
-            "Updated " << locations.size() << " node" << (locations.size() == 1 ? "" : "s") <<
+            "Updated " << locations.size() << " row" << (locations.size() == 1 ? "" : "s") <<
             " to status " << hardwareStatusToString(status)
             );
+
+    // special case for I/O drawers since the status needs to cascade down to the I/O nodes
+    if ( type == bgq::util::Location::IoBoardOnComputeRack || type == bgq::util::Location::IoBoardOnIoRack ) {
+        std::vector<std::string> nodeLocations;
+        BOOST_FOREACH( const std::string& i, locations ) {
+            for ( unsigned j = 0; j < bgq::util::Location::ComputeCardsOnIoBoard; ++j ) {
+                std::ostringstream os;
+                os << i << "-J0" << j;
+                nodeLocations.push_back( os.str() );
+            }
+        }
+
+        setLocationStatus( nodeLocations, status, bgq::util::Location::ComputeCardOnIoBoard );
+    }
 
     return true;
 }

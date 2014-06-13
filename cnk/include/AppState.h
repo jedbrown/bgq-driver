@@ -37,7 +37,7 @@
 #define APP_MAX_ENVSTR    (512) // no single environment variable > this.
 #define APP_MAX_PATHNAME  (512) // max string length for executable path and name
 #define APP_MAX_MAPPATHNAME (512) // max string length for mapping file path and name
-#define APP_MAX_GROUPS     (64) // max number of secondary groups
+#define APP_MAX_GROUPS     (112) // max number of secondary groups
 
 #define APP_MAX_SEGS       (8)  // Max Application program header segments
 

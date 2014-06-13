@@ -47,11 +47,12 @@ namespace common {
 
 Thread::Thread() :
     thread_id(0),
+    endThread(0),
     arg(),
     _threadName(),
     deleteOnExit(false)
 {
-    pthread_attr_init(&attr);	// initialize pthread attributes
+    pthread_attr_init(&attr); // initialize pthread attributes
 
     // set default stack size from properties configuration
     const std::string keyName( "thread_stack_size" );
@@ -97,7 +98,7 @@ Thread::setStacksize(
         const size_t stacksize
         )
 {
-    if (thread_id == 0)	{
+    if (thread_id == 0) {
         // can't modify after thread is started
         pthread_attr_setstacksize(&attr, stacksize);
         LOG_DEBUG_MSG( "set stack size to " << stacksize / 1024.0 << " kbytes" );
@@ -109,18 +110,19 @@ Thread::threadExecute(
         void* this_p
         )
 {
-    void* returnVal;		// return value from thread
+    void* returnVal; // return value from thread
 
     Thread* const this_thread = static_cast<Thread*>(this_p);
 
-    this_thread->thread_id = pthread_self();	// mark thread as started
+    this_thread->thread_id = pthread_self(); // mark thread as started
     try {
         returnVal = this_thread->threadStart();
     } catch ( const std::exception& e ) {
         returnVal = 0;
         LOG_WARN_MSG( e.what() );
     }
-    this_thread->thread_id = 0;	// mark thread as ended
+
+    this_thread->thread_id = 0; // mark thread as ended
     if ( this_thread->getDeleteOnExit() )
         delete this_thread;
     return returnVal;
@@ -129,9 +131,10 @@ Thread::threadExecute(
 void
 Thread::start()
 {
-    int status;
+    LOG_TRACE_MSG("Thread::start - setting end thread to false");
     endThread = 0;
     if (thread_id == 0) {
+        int status;
         while (1) {
             status = pthread_create(&thread_id, &attr, &threadExecute, this);
             if (status == 0 || (errno != EINTR && errno != EAGAIN))
@@ -164,11 +167,13 @@ Thread::stop(
         const int signo
         )
 {
+    LOG_TRACE_MSG("Thread::stop");
     // Copy thread ID into local variable in case thread exits before we can signal it
     const pthread_t id = thread_id;
 
     if (id != 0) {
         // put mark on wall so thread knows it's time to stop
+        LOG_TRACE_MSG("Thread::stop - setting end thread to true");
         endThread = 1;
 
         // signal thread if asked

@@ -36,13 +36,10 @@
 #include <vector>
 
 
-//! One instance.  Manages all bgagents
 class AgentManager
 {
 public:
     AgentManager();
-
-    void startup() {}
 
     //! \brief set the number of agents we are allowed to have for each host
     //! \param count number of agents

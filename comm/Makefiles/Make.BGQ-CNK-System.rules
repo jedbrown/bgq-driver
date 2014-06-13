@@ -39,12 +39,12 @@ include ${ROOTDIR}/../Make.rules
     PAMI_CONFIG_XLFAST    = --with-target=${PLATFORMlc}xl   --with-installdir=${INSTALL_DIR}/sys-xlfast --with-bgfloor=${BGQ_INSTALL_DIR} --with-pami-extension=torus_network,async_progress,bgq_l2atomic,is_local_task --without-shared-lib --with-assert-level=0 --without-error-checks --with-optimization-level=3 --with-libname=pami --without-debug --without-silence
 
     # ---------------- default compilation targets -----------------------------
-    HOST_AR              =${BGQ_CROSS_AR}
-    HOST_LD              =${BGQ_CROSS_LD}
-    HOST_CC              =${BGQ_CROSS_CC}
-    HOST_CXX             =${BGQ_CROSS_CXX}
-    HOST_F77             =${BGQ_CROSS_FC} -fno-underscoring
-    HOST_F90             =${BGQ_CROSS_FC} -fno-underscoring
+    HOST_AR              =$(BGQ_INSTALL_DIR)/gnu-linux/bin/$(BGQ_CROSS_TARGET_ARCH)-ar
+    HOST_LD              =$(BGQ_INSTALL_DIR)/gnu-linux/bin/$(BGQ_CROSS_TARGET_ARCH)-ld
+    HOST_CC              =$(BGQ_INSTALL_DIR)/gnu-linux/bin/$(BGQ_CROSS_TARGET_ARCH)-gcc
+    HOST_CXX             =$(BGQ_INSTALL_DIR)/gnu-linux/bin/$(BGQ_CROSS_TARGET_ARCH)-g++
+    HOST_F77             =$(BGQ_INSTALL_DIR)/gnu-linux/bin/$(BGQ_CROSS_TARGET_ARCH)-gfortran -fno-underscoring
+    HOST_F90             =$(HOST_F77)
 
 ifneq (${XL_DEV},1)
     FAST_CC              =/opt/ibmcmp/vacpp/bg/12.1/bin/bgxlc_r

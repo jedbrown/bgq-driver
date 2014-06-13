@@ -51,7 +51,7 @@ ConnectionMonitor::threadStart()
         try {
             if (_controller->getConsolePort()) {
                 _controller->getConsolePort()->checkConnection();
-                sleep(1);
+                sleep(10);
             } else {
                 LOG_INFO_MSG("Connecting to mmcs_server");
                 mmcs_client::CommandReply rep;

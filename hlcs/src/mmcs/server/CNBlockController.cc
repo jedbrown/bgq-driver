@@ -314,7 +314,7 @@ CNBlockController::create_block(
     // Iterate over populated midplanes.
 
     BCNodeInfo *nodeInfo;
-    BCNodecardInfo *nodecardInfo;
+
     // Iterate over midplanes
     for (
             BGQBlockNodeConfig::midplane_iterator mpiter = _block->midplaneBegin();
@@ -342,7 +342,7 @@ CNBlockController::create_block(
     LOG_TRACE_MSG( ioBoards.size() << " I/O boards used for link training." );
     for (unsigned i = 0; i < ioBoards.size(); ++i) {
         BGQIOBoardNodeConfig* ioboard = ioBoards[i];
-        nodecardInfo = new BCNodecardInfo();
+        BCNodecardInfo *nodecardInfo = new BCNodecardInfo();
         for (
                 BGQNodeBoard::linkchip_iterator chipit = ioboard->linkChipBegin();
                 chipit != ioboard->linkChipEnd();
@@ -372,8 +372,6 @@ CNBlockController::create_block(
         nodecardInfo->_boardcoordD = ioboard->allIOBoardD();
         nodecardInfo->_linkio = true;
         nodecardInfo->init_location(ioboard);
-        std::string board = nodecardInfo->location().substr(0,3);
-
         getIcons().push_back(nodecardInfo);
         LOG_TRACE_MSG( "Added I/O board " << nodecardInfo->location());
 
@@ -437,7 +435,9 @@ CNBlockController::connect(
         const BlockControllerTarget* pTarget
         )
 {
-    // LOG_DEBUG_MSG(__FUNCTION__);
+    PthreadMutexHolder mutex;
+    mutex.Lock(&_mutex);
+
     BlockControllerBase::connect(args, reply, pTarget);
     if (reply.getStatus() != mmcs_client::CommandReply::STATUS_OK) {
         return;  // connecting to mcServer failed
@@ -926,7 +926,7 @@ CNBlockController::shutdown_block(
     MCServerMessageSpec::ShutdownBlockRequest mcShutdownBlockRequest(_blockName, _bootCookie, _block->blockId(), _diags, "");
     MCServerMessageSpec::ShutdownBlockReply mcShutdownBlockReply;
     build_shutdown_req(mcShutdownBlockRequest);
-   
+
     if ( !_diags ) {
         // skip kernel verification if abnormal was requested
         mcShutdownBlockRequest._skipKernel = (std::find(args.begin(), args.end(), "abnormal") != args.end());

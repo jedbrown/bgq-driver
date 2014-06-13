@@ -31,6 +31,9 @@
 uint64_t hasKernelCrashed K_ATOMIC;
 uint64_t hasKernelExitted K_ATOMIC;
 
+const char* bgq_driver_level = BGQ_INSTALL_DIR;
+uint64_t cnk_efix_level      = CNK_EFIX_LEVEL;
+
 //
 // NOTE: See util.h which contains #defines that work better!
 //

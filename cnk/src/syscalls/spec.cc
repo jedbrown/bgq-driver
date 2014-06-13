@@ -287,6 +287,7 @@ uint64_t sc_GETSPECCONFLICTINFO(SYSCALL_FCN_ARGS)
 
 uint64_t sc_ENABLEFASTSPECULATIONPATHS(SYSCALL_FCN_ARGS)
 {
+    int rc;
     if (IsSubNodeJob())
     {
 	// The exception paths are global for the whole node, so this system
@@ -300,8 +301,8 @@ uint64_t sc_ENABLEFASTSPECULATIONPATHS(SYSCALL_FCN_ARGS)
         // be valid on a thread running on a hardware thread that belongs to a different process.
         return CNK_RC_SPI(ENOSYS);
     }
-    Speculation_EnableFastSpeculationPaths();
-    return CNK_RC_SPI(0);
+    rc = Speculation_EnableFastSpeculationPaths();
+    return CNK_RC_SPI(rc);
 }
 
 uint64_t sc_GETSPECIDSELF(SYSCALL_FCN_ARGS)

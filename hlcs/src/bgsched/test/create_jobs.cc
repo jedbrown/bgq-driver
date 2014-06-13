@@ -271,7 +271,6 @@ void printHelp()
 
 int main(int argc, char *argv[])
 {
-    char* argKey;
     char* argVal;
 
     bool isDeleteActiveJobs = false;
@@ -353,7 +352,7 @@ int main(int argc, char *argv[])
 
     int argNbr = 1;
     while (argNbr < argc) {
-        argKey = argv[argNbr];
+        char* argKey = argv[argNbr];
         argNbr++;
         if (argNbr < argc) {
             argVal = argv[argNbr];

@@ -87,7 +87,7 @@ public:
 
     /*!
     ** /brief Break up command line into words.
-    ** /param rStr	      null terminated command line
+    ** /param rStr null terminated command line
     ** /returns std::deque<std::string> sequence of words
     */
     static std::deque<std::string> parseCommand(const std::string &rStr);
@@ -106,9 +106,11 @@ public:
     ** @returns           execution status, refer the MMCSCommandProcessor::status
     */
     virtual
-    procstat execute(std::deque<std::string> cmdStr,
-				       mmcs_client::CommandReply& reply,
-				       common::ConsoleController* pController);
+    procstat execute(
+            std::deque<std::string> cmdStr,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController
+            );
 
     /*!
     ** /brief Perform specific MMCS command
@@ -119,10 +121,12 @@ public:
     ** @returns           execution status, refer the MMCSCommandProcessor::status
     */
     virtual
-    procstat execute(std::string cmdName,
-				       std::deque<std::string> cmdArgs,
-				       mmcs_client::CommandReply& reply,
-				       common::ConsoleController* pController);
+    procstat execute(
+            std::string cmdName,
+            std::deque<std::string> cmdArgs,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController
+            );
 
 
     /*!
@@ -144,12 +148,15 @@ public:
     static EnforcerPtr     _command_enforcer;
 
 protected:
-    virtual procstat validate(std::deque<std::string>& cmdStr,
-					mmcs_client::CommandReply& reply,
-					common::ConsoleController* pController,
-					server::BlockControllerTarget** pTarget,
-					common::AbstractCommand** pCmd,
-                                        std::vector<std::string>* validnames);
+    virtual procstat validate(
+            std::deque<std::string>& cmdStr,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            server::BlockControllerTarget** pTarget,
+            common::AbstractCommand** pCmd,
+            std::vector<std::string>* validnames
+            );
+
     procstat validate_security(std::deque<std::string>& cmdStr,
                                                  mmcs_client::CommandReply& reply,
                                                  common::ConsoleController* pController,
@@ -167,14 +174,16 @@ protected:
     ** @param             validate status
     ** @returns           execution status, refer the MMCSCommandProcessor::status
     */
-    virtual
-    procstat invokeCommand(std::deque<std::string> cmdStr,
-					     mmcs_client::CommandReply& reply,
-					     common::ConsoleController* pController,
-					     server::BlockControllerTarget* pTarget,
-					     common::AbstractCommand* pCmd,
-					     procstat status,
-                                             std::vector<std::string>& validnames);
+    virtual procstat invokeCommand(
+            std::deque<std::string> cmdStr,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            server::BlockControllerTarget* pTarget,
+            common::AbstractCommand* pCmd,
+            procstat status,
+            std::vector<std::string>& validnames
+            );
+
     MMCSCommandMap* _mmcsCommands;
     bool            _logFailures;
     bool            _bg_console;

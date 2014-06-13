@@ -363,12 +363,15 @@ IoDrawer::closeTargetHandler(
     database_timer->dismiss();
 
     {
-        cxxdb::Transaction tx( *_connection );
-        processIO(reply.get(), _fanInsert, _ioCardInsert, _nodeInsert, _linkChipInsert);
-        _connection->commit();
+        try {
+            cxxdb::Transaction tx( *_connection );
+            processIO(reply.get(), _fanInsert, _ioCardInsert, _nodeInsert, _linkChipInsert);
+            _connection->commit();
+            database_timer->dismiss( false );
+        } catch ( const std::exception& e ) {
+            LOG_WARN_MSG( e.what() );
+        }
     }
-
-    database_timer->dismiss( false );
 
     _fanInsert.reset();
     _ioCardInsert.reset();

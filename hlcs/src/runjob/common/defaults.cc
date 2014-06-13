@@ -46,6 +46,7 @@ const unsigned      ServerKillJobTimeout        = 60;
 const uint16_t      ServerJobctlPort            = 7002;
 const uint16_t      ServerStdioPort             = 7003;
 const unsigned      ServerJobctlHeartbeat       = 60;
+const bool          ServerRetainMappingFiles    = true;
 
 // command stuff
 const unsigned      CommandConnectTimeout       = 0;

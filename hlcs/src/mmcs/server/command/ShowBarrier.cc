@@ -63,7 +63,7 @@ ShowBarrier::execute(
         BlockControllerTarget* pTarget
 )
 {
-    BlockPtr pBlock = pController->getBlockHelper()->getBase();	// get selected block
+    BlockPtr pBlock = pController->getBlockHelper()->getBase(); // get selected block
     pBlock->show_barrier(reply);
     if (reply.str() == "args?") {
         reply << mmcs_client::FAIL << "args? " << _usage << mmcs_client::DONE;

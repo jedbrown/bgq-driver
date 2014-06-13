@@ -132,7 +132,7 @@ Agent::start(
             // getting here means we received a signal, fall through
             break;
         } catch ( const std::exception& e ) {
-            LOG_WARN_MSG( "uncaught exception: " << e.what() );
+            LOG_WARN_MSG( "Uncaught exception: " << e.what() );
             io_service.reset();
             sleep(5);
         }
@@ -211,7 +211,7 @@ Agent::join(
     // routable IP address (not loopback) and the correct port to connect back to.
     const BGMasterAgentProtocolSpec::JoinRequest joinreq(
             build_join_request(
-                requestersockaddr.getHostAddr(), 
+                requestersockaddr.getHostAddr(),
                 listenersockaddr.getServicePort()
                 )
             );
@@ -288,7 +288,7 @@ Agent::sendBuffered()
         const boost::shared_ptr<BGMasterAgentProtocolSpec::FailedRequest> failed(
                 boost::dynamic_pointer_cast<BGMasterAgentProtocolSpec::FailedRequest>(curr_msg)
                 );
-        const boost::shared_ptr<BGMasterAgentProtocolSpec::CompleteRequest> complete( 
+        const boost::shared_ptr<BGMasterAgentProtocolSpec::CompleteRequest> complete(
                 boost::dynamic_pointer_cast<BGMasterAgentProtocolSpec::CompleteRequest>(curr_msg)
                 );
         if ( failed ) {
@@ -328,7 +328,7 @@ Agent::sendBuffered()
             }
             LOG_DEBUG_MSG("Sent buffered complete request for " << complete->_status._binary_id);
         } else {
-            LOG_WARN_MSG( "ignoring unknown message type" );
+            LOG_WARN_MSG( "Ignoring unknown message type" );
         }
     }
 }
@@ -345,8 +345,8 @@ Agent::processStartRequest(
     LOG_INFO_MSG("Received start request for alias " << startreq._alias << ".");
 
     const std::string log = startreq._logdir + "/" + _hostname.uhn() + "-" + startreq._alias + ".log";
-    LOG_DEBUG_MSG( 
-            "Start request path=" << startreq._path << 
+    LOG_DEBUG_MSG(
+            "Start request path=" << startreq._path <<
             (startreq._arguments.empty() ? " " : " " + startreq._arguments) <<
             "logdir=" << log << " user=" << startreq._user
             );
@@ -405,11 +405,11 @@ Agent::processStartRequest(
         LOG_DEBUG_MSG("Start reply sent for " << bid.str() << "|" << bin->get_binary_bin_path() << ": " << rep._rt);
     } catch (const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
-        LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
+        LOG_WARN_MSG("Connection to bgmaster_server interrupted while sending start reply in method " <<  __FUNCTION__);
         return;
     } catch (const CxxSockets::Error& err) {
         // Server aborted with an incomplete transmission
-        LOG_WARN_MSG("Connection to bgmaster_server ended.");
+        LOG_WARN_MSG("Connection to bgmaster_server ended while sending start reply in method " << __FUNCTION__);
         // FIXME fall through?
     }
 
@@ -443,11 +443,11 @@ Agent::processStartRequest(
             _prot->failed(failreq, failrep);
         } catch (const CxxSockets::SoftError& err) {
             // For soft errors, we just back out and let it try again
-            LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
+            LOG_WARN_MSG("Connection to bgmaster_server interrupted while sending ending request for alias " << bin->get_alias_name() << " in method " <<  __FUNCTION__);
             return;
         } catch (const CxxSockets::Error& err) {
             // Server aborted with an incomplete transmission
-            LOG_WARN_MSG("Connection to bgmaster_server ended.");
+            LOG_WARN_MSG("Connection to bgmaster_server ended while sending ending request for alias " << bin->get_alias_name() << " in method " <<  __FUNCTION__);
             const MsgBasePtr bp(new BGMasterAgentProtocolSpec::FailedRequest(binstat));
             boost::mutex::scoped_lock lock( _buffered_messages_mutex );
             _buffered_messages.push_back(bp);
@@ -468,11 +468,11 @@ Agent::processStartRequest(
                 _prot->complete(exereq, exerep);
             } catch (const CxxSockets::SoftError& err) {
                 // For soft errors, we just back out and let it try again
-                LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
+                LOG_WARN_MSG("Connection to bgmaster_server interrupted while sending complete request for alias in method " <<  __FUNCTION__);
                 return;
             } catch (const CxxSockets::Error& err) {
                 // Server aborted with an incomplete transmission
-                LOG_WARN_MSG("Connection to bgmaster_server ended.");
+                LOG_WARN_MSG("Connection to bgmaster_server ended while sending complete request for alias in method " <<  __FUNCTION__);
                 const MsgBasePtr bp(new BGMasterAgentProtocolSpec::CompleteRequest(binstat, exit_status));
                 boost::mutex::scoped_lock lock( _buffered_messages_mutex );
                 _buffered_messages.push_back(bp);
@@ -524,11 +524,11 @@ Agent::doStopRequest(
         LOG_DEBUG_MSG("Sent stop reply for binary id " << bid.str());
     } catch (const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
-        LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
+        LOG_WARN_MSG("Connection to bgmaster_server interrupted while sending stop reply for binary id " << bid.str()<< " in method " <<  __FUNCTION__);
         return;
     } catch (const CxxSockets::Error& err) {
         // Master aborted with an incomplete transmission
-        LOG_WARN_MSG("Connection to bgmaster_server ended.");
+        LOG_WARN_MSG("Connection to bgmaster_server ended while sending stop reply for binary id " << bid.str()<< " in method " <<  __FUNCTION__);
     }
 }
 
@@ -561,14 +561,15 @@ Agent::processRequest()
     std::string request_name;
 
     try {
+        // This will wait on a new request from bgmaster_server
         _prot->getName(request_name);
     } catch (const CxxSockets::SoftError& err) {
         // For soft errors, we just back out and let it try again
-        LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
+        LOG_WARN_MSG("Connection to bgmaster_server interrupted in method " <<  __FUNCTION__);
         return;
     } catch (const CxxSockets::Error& err) {
         // Server aborted with an incomplete transmission
-        LOG_WARN_MSG("Connection to bgmaster_server ended.");
+        LOG_WARN_MSG("Connection to bgmaster_server ended in method " <<  __FUNCTION__ << ". Error is: " << err.what());
         _prot->getResponder().reset();
         return;
     }
@@ -583,11 +584,11 @@ Agent::processRequest()
             _prot->getObject(&startreq);
         } catch (const CxxSockets::SoftError& err) {
             // For soft errors, we just back out and let it try again
-            LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
+            LOG_WARN_MSG("Connection to bgmaster_server interrupted while handling StartRequest in method " <<  __FUNCTION__);
             return;
         } catch (const CxxSockets::Error& err) {
             // Server aborted with an incomplete transmission
-            LOG_WARN_MSG("Connection to bgmaster_server ended.");
+            LOG_WARN_MSG("Connection to bgmaster_server ended while handling StartRequest in method " <<  __FUNCTION__);
             return;
         }
         boost::thread startthread(&Agent::processStartRequest, this, startreq);
@@ -597,11 +598,11 @@ Agent::processRequest()
             _prot->getObject(&stopreq);
         } catch (const CxxSockets::SoftError& err) {
             // For soft errors, we just back out and let it try again
-            LOG_WARN_MSG("Connection to bgmaster_server interrupted.");
+            LOG_WARN_MSG("Connection to bgmaster_server interrupted while handling StopRequest in method " <<  __FUNCTION__);
             return;
         } catch (const CxxSockets::Error& err) {
             // Server aborted with an incomplete transmission
-            LOG_WARN_MSG("Connection to bgmaster_server ended.");
+            LOG_WARN_MSG("Connection to bgmaster_server ended while handling StopRequest in method " <<  __FUNCTION__);
             return;
         }
 

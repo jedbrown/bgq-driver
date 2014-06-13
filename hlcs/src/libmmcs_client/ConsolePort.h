@@ -27,7 +27,6 @@
 #include <utility/include/cxxsockets/types.h>
 
 #include <utility/include/portConfiguration/ClientPortConfiguration.h>
-#include <utility/include/portConfiguration/PortConfiguration.h>
 
 #include <boost/utility.hpp>
 
@@ -41,19 +40,22 @@ namespace mmcs_client {
  */
 class ConsolePort : private boost::noncopyable
 {
+private:
     int procMessage(
             std::string& m,
             char* buf,
             bool& done,
             const int rcvsz
             );
+
 public:
     /*!
      * \brief exception class.
      */
-    class Error: public std::runtime_error {
+    class Error: public std::runtime_error 
+    {
     public:
-        int errcode;
+        const int errcode;
         Error(int err=0, const char* what="") : std::runtime_error(what), errcode(err) {}
     };
 
@@ -110,7 +112,9 @@ public:
  */
 class ConsolePortServer : public ConsolePort
 {
+private:
     CxxSockets::ListenerSetPtr _listener;
+
 public:
     ConsolePortServer(
             const bgq::utility::PortConfiguration::Pairs& portpairs

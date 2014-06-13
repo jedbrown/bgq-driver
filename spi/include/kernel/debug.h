@@ -183,6 +183,10 @@ __INLINE__
 int32_t Kernel_SetDebugReg(enum Kernel_Debug_Register debug_reg, uint64_t value);
 
 
+__INLINE__
+int32_t Kernel_GetVersion(uint64_t* version, uint64_t* release, uint64_t* mod, uint64_t* efix);
+
+
 /**
  * \brief Include implementations of the above functions.
  */

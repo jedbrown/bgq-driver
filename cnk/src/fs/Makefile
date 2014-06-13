@@ -41,13 +41,30 @@ K_INCLUDES  = -iquote $(BGQ_BUILD_DIR)/cnk/src \
 	      -I$(BGQ_INSTALL_DIR)/spi/include/kernel/firmware
 K_CPU_FLAGS = -m64 -g -O2
 
-K_CFLAGS = -Wall -Werror  -MMD -MF .dep.$<.d $(LISTING_OPTIONS) $(K_INCLUDES) -c -fno-rtti
+K_CFLAGS = -Wall -Werror -MMD -MF .dep.$<.d $(LISTING_OPTIONS) $(K_INCLUDES) -c -fno-rtti
 
 ifeq ($(BEAM), 1)
 OBJSUFFIX=beam
 else
 OBJSUFFIX = o
 endif
+
+ifeq ($(notdir $(BGQ_CROSS_CC)),bgclang)
+K_CFLAGS += -fno-builtin
+endif
+
+ifeq ($(USE_CLANG), 1)
+BGQ_CROSS_CC      = /bgsys/drivers/toolchain/llvm/bin/bgclang
+BGQ_CROSS_CXX     = /bgsys/drivers/toolchain/llvm/bin/bgclang++
+endif
+
+ifeq ($(CLANG_ANALYZER), 1)
+K_CFLAGS += --analyze -Qunused-arguments
+INSTALLCANFAIL = -
+endif
+
+CCSUFFIX=$(notdir $(BGQ_CROSS_CC))
+CXXSUFFIX=$(notdir $(BGQ_CROSS_CXX))
 
 ifeq ($(BGQ_HOST_OS),x86_64)
 MAMBOFLAGS=-I/bgsys/bgq/drivers/x86_64.mambo/include -DENABLE_MAMBOIO
@@ -56,15 +73,15 @@ MAMBOFLAGS=
 endif
 
 %.$(OBJSUFFIX): %.c
-	@echo "gcc: "`$(BASENAME) $$PWD`"/"`$(BASENAME) $<`
+	@echo "$(CCSUFFIX): "`$(BASENAME) $$PWD`"/"`$(BASENAME) $<`
 	$(SILENT)$(BGQ_CROSS_CC) $(K_CPU_FLAGS) $(K_KFLAGS) $(K_CFLAGS) $<
 
 %.$(OBJSUFFIX): %.cc
-	@echo "gcc: "`$(BASENAME) $$PWD`"/"`$(BASENAME) $<`
+	@echo "$(CXXSUFFIX): "`$(BASENAME) $$PWD`"/"`$(BASENAME) $<`
 	$(SILENT)$(BGQ_CROSS_CXX) $(K_CPU_FLAGS) $(K_KFLAGS) $(K_CFLAGS) $(MAMBOFLAGS) $<
 
 %.$(OBJSUFFIX):	%.S
-	@echo "gcc: "`$(BASENAME) $$PWD`"/"`$(BASENAME) $<`
+	@echo "$(CCSUFFIX): "`$(BASENAME) $$PWD`"/"`$(BASENAME) $<`
 	$(SILENT)$(BGQ_CROSS_CC) $(K_CPU_FLAGS) $(K_KFLAGS) $(K_CFLAGS) $(K_AFLAGS) -Os $< 
 
 S_SRC =	

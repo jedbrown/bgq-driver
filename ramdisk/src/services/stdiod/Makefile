@@ -52,6 +52,8 @@ LDFLAGS  += -L $(IOS_LIBRARY_DIR) -lbgcios
 LDFLAGS  += -llog4cxx
 LDFLAGS  += -libverbs
 LDFLAGS  += -lrdmacm
+LDFLAGS  += -lcrypto
+LDFLAGS  += -lssl
 
 all: $(STDIOD)
 

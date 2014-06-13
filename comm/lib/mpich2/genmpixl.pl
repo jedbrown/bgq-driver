@@ -23,6 +23,7 @@
 
 use warnings;
 use File::Copy;
+use File::Basename;
 
 $xlcomp_conf="mpixl.conf";
 
@@ -196,6 +197,9 @@ while(<MPIF90>)
         }
         elsif (/^MPI_FFLAGS=/ && defined($vars{'MPI_FFLAGS'})) {
             $_="MPI_FFLAGS=$vars{'MPI_FFLAGS'}\n";
+        }
+        elsif (/^modincdir=/) {
+            $_=dirname($_) . "/xl\n"
         }
         print MPIXLF90    $_;
         print MPIXLF95    $_;

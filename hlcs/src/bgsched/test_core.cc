@@ -211,7 +211,7 @@ int listHardware(const bool isVerbose)
                                 if (switchSettings.size() == 0) {
                                     LOG_INFO_MSG(" No switch settings in dimension  : " << string(dim));
                                 } else {
-                                    for (vector<SwitchSettings::ConstPtr>::const_iterator iter = switchSettings.begin(); iter != switchSettings.end(); iter++) {
+                                    for (vector<SwitchSettings::ConstPtr>::const_iterator iter = switchSettings.begin(); iter != switchSettings.end(); ++iter) {
                                         printSwitchSettingsInfo(*iter);
                                     }
                                 }
@@ -271,11 +271,11 @@ int listIOHardware(const bool isVerbose)
             LOG_INFO_MSG(" No I/O drawers");
         } else {
             LOG_INFO_MSG("Found " << iodrawers.size() << " I/O drawers");
-            for (vector<IODrawer::ConstPtr>::const_iterator iter = iodrawers.begin(); iter != iodrawers.end(); iter++) {
+            for (vector<IODrawer::ConstPtr>::const_iterator iter = iodrawers.begin(); iter != iodrawers.end(); ++iter) {
                 IODrawer::ConstPtr iodrawerPtr = *(iter);
                 printIODrawerInfo(iodrawerPtr, isVerbose);
                 IONode::ConstPtrs ionodes = iodrawerPtr->getIONodes();
-                for (vector<IONode::ConstPtr>::const_iterator nodeIter = ionodes.begin(); nodeIter != ionodes.end(); nodeIter++) {
+                for (vector<IONode::ConstPtr>::const_iterator nodeIter = ionodes.begin(); nodeIter != ionodes.end(); ++nodeIter) {
                     printIONodeInfo(*(nodeIter), isVerbose);
                 }
                 LOG_INFO_MSG("========================================");
@@ -443,7 +443,7 @@ int listIOLinks(const string& midplane)
         LOG_INFO_MSG("Number of I/O links returned for midplane " << midplane << ": " << IOLinkVector.size());
     }
 
-    for (vector<IOLink::ConstPtr>::iterator IOLinkVectorIter = IOLinkVector.begin(); IOLinkVectorIter != IOLinkVector.end(); IOLinkVectorIter++) {
+    for (vector<IOLink::ConstPtr>::iterator IOLinkVectorIter = IOLinkVector.begin(); IOLinkVectorIter != IOLinkVector.end(); ++IOLinkVectorIter) {
         printIOLinkInfo(*(IOLinkVectorIter));
     }
 
@@ -474,7 +474,7 @@ int listAvailableIOLinks(const string& midplane)
         LOG_INFO_MSG("Number of available I/O links returned for midplane " << midplane << ": " << IOLinkVector.size());
     }
 
-    for (vector<IOLink::ConstPtr>::iterator IOLinkVectorIter = IOLinkVector.begin(); IOLinkVectorIter != IOLinkVector.end(); IOLinkVectorIter++) {
+    for (vector<IOLink::ConstPtr>::iterator IOLinkVectorIter = IOLinkVector.begin(); IOLinkVectorIter != IOLinkVector.end(); ++IOLinkVectorIter) {
         printIOLinkInfo(*(IOLinkVectorIter));
     }
 
@@ -499,7 +499,7 @@ int listBlockIOLinks(const string& block)
         // Print the I/O link info
         LOG_INFO_MSG("Number of I/O links returned for block " << block << ": " << IOLinkVector.size());
 
-        for (vector<IOLink::ConstPtr>::iterator IOLinkVectorIter = IOLinkVector.begin(); IOLinkVectorIter != IOLinkVector.end(); IOLinkVectorIter++) {
+        for (vector<IOLink::ConstPtr>::iterator IOLinkVectorIter = IOLinkVector.begin(); IOLinkVectorIter != IOLinkVector.end(); ++IOLinkVectorIter) {
             printIOLinkInfo(*(IOLinkVectorIter));
         }
     }
@@ -525,7 +525,7 @@ int listBlockAvailableIOLinks(const string& block)
         // Print the I/O link info
         LOG_INFO_MSG("Number of available I/O links returned for block " << block << ": " << IOLinkVector.size());
 
-        for (vector<IOLink::ConstPtr>::iterator IOLinkVectorIter = IOLinkVector.begin(); IOLinkVectorIter != IOLinkVector.end(); IOLinkVectorIter++) {
+        for (vector<IOLink::ConstPtr>::iterator IOLinkVectorIter = IOLinkVector.begin(); IOLinkVectorIter != IOLinkVector.end(); ++IOLinkVectorIter) {
             printIOLinkInfo(*(IOLinkVectorIter));
         }
     }
@@ -668,7 +668,7 @@ int listBlocks(const BlockFilter& blockFilter, const core::BlockSort& blockSort,
     }
 
     // Print the block info
-    for (Block::Ptrs::iterator blockVectorIter = blockVector.begin(); blockVectorIter != blockVector.end(); blockVectorIter++) {
+    for (Block::Ptrs::iterator blockVectorIter = blockVector.begin(); blockVectorIter != blockVector.end(); ++blockVectorIter) {
         if (isVerboseBlock) {
             printBlockInfo(*(blockVectorIter));
         }
@@ -705,7 +705,7 @@ void printBlockInfo(const Block::Ptr blockPtr)
     if (jobIdVector.empty()) {
         LOG_INFO_MSG("    Job id  . . . . . . . . . . . : ");
     } else { // Print any job IDs
-        for (vector<Job::Id>::iterator jobIdVectorIter = jobIdVector.begin(); jobIdVectorIter != jobIdVector.end(); jobIdVectorIter++) {
+        for (vector<Job::Id>::iterator jobIdVectorIter = jobIdVector.begin(); jobIdVectorIter != jobIdVector.end(); ++jobIdVectorIter) {
             LOG_INFO_MSG("    Job id  . . . . . . . . . . . : " << *(jobIdVectorIter));
         }
     }
@@ -804,7 +804,7 @@ int listIOBlocks(const IOBlockFilter& IOBlockFilter, const core::IOBlockSort& IO
     }
 
     // Print the I/O block info
-    for (IOBlock::Ptrs::iterator IOBlockVectorIter = IOBlockVector.begin(); IOBlockVectorIter != IOBlockVector.end(); IOBlockVectorIter++) {
+    for (IOBlock::Ptrs::iterator IOBlockVectorIter = IOBlockVector.begin(); IOBlockVectorIter != IOBlockVector.end(); ++IOBlockVectorIter) {
         if (isVerboseIOBlock) {
             printIOBlockInfo(*(IOBlockVectorIter));
         }
@@ -883,7 +883,7 @@ int listJobs(const JobFilter& jobFilter, const core::JobSort& jobSort) {
     }
 
      // Print the job info
-    for (vector<Job::ConstPtr>::iterator jobVectorIter = jobVector.begin(); jobVectorIter != jobVector.end(); jobVectorIter++) {
+    for (vector<Job::ConstPtr>::iterator jobVectorIter = jobVector.begin(); jobVectorIter != jobVector.end(); ++jobVectorIter) {
         printJobInfo(*(jobVectorIter));
     }
 
@@ -948,7 +948,7 @@ int listNodeBoards(const string& midplane)
     LOG_INFO_MSG("Number of node boards returned: " << nodeBoardVector.size());
 
     // Print the node board info
-    for (vector<NodeBoard::ConstPtr>::iterator nodeBoardVectorIter = nodeBoardVector.begin(); nodeBoardVectorIter != nodeBoardVector.end(); nodeBoardVectorIter++) {
+    for (vector<NodeBoard::ConstPtr>::iterator nodeBoardVectorIter = nodeBoardVector.begin(); nodeBoardVectorIter != nodeBoardVector.end(); ++nodeBoardVectorIter) {
         printNodeBoardInfo(*(nodeBoardVectorIter));
     }
 
@@ -998,7 +998,7 @@ int listMidplaneNodes(const string& midplane)
     LOG_INFO_MSG("Number of nodes returned: " << nodeVector.size());
 
     // Print the node info
-    for (vector<Node::ConstPtr>::iterator nodeVectorIter = nodeVector.begin(); nodeVectorIter != nodeVector.end(); nodeVectorIter++) {
+    for (vector<Node::ConstPtr>::iterator nodeVectorIter = nodeVector.begin(); nodeVectorIter != nodeVector.end(); ++nodeVectorIter) {
         printNodeInfo(*(nodeVectorIter));
     }
 
@@ -1025,7 +1025,7 @@ int listNodes(const string& nodeBoard)
     LOG_INFO_MSG("Number of nodes returned: " << nodeVector.size());
 
     // Print the node info
-    for (vector<Node::ConstPtr>::iterator nodeVectorIter = nodeVector.begin(); nodeVectorIter != nodeVector.end(); nodeVectorIter++) {
+    for (vector<Node::ConstPtr>::iterator nodeVectorIter = nodeVector.begin(); nodeVectorIter != nodeVector.end(); ++nodeVectorIter) {
         printNodeInfo(*(nodeVectorIter));
     }
 
@@ -1164,7 +1164,6 @@ int main(int argc, char *argv[])
     //time_t mytime = time(0);
     //printf("Time: %s", ctime(&mytime));
 
-    char* argKey;
     char* argVal;
 
     JobFilter jobFilter;
@@ -1290,7 +1289,7 @@ int main(int argc, char *argv[])
 
     int argNbr = 1;
     while (argNbr < argc) {
-        argKey = argv[argNbr];
+        char* argKey = argv[argNbr];
         argNbr++;
         if (argNbr < argc) {
             argVal = argv[argNbr];

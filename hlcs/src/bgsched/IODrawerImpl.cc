@@ -67,7 +67,7 @@ IODrawer::Impl::Impl(
 
     // Set I/O nodes
     vector<IONode::Pimpl> IONodePimpls = fromIODrawer->getIONodes();
-    for (vector<IONode::Pimpl>::const_iterator iter = IONodePimpls.begin(); iter != IONodePimpls.end(); iter++) {
+    for (vector<IONode::Pimpl>::const_iterator iter = IONodePimpls.begin(); iter != IONodePimpls.end(); ++iter) {
         _IONodes.push_back(IONode::Pimpl(new IONode::Impl(*iter)));
     }
 }

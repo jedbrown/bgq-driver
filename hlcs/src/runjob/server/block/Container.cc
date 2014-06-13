@@ -79,7 +79,7 @@ Container::Container(
     _blocks(),
     _io()
 {
-    
+
 }
 
 void
@@ -115,15 +115,15 @@ Container::loadMachine(
     // ensure we got something
     if ( !machine ) {
         LOG_ERROR_MSG( "could not create machine  XML" );
-        
+
         callback( machine, error_code::database_error );
         return;
     }
 
     // get number of compute and I/O nodes
     const size_t compute(
-            machine->_midplanes.size() * 
-            bgq::util::Location::NodeBoardsOnMidplane * 
+            machine->_midplanes.size() *
+            bgq::util::Location::NodeBoardsOnMidplane *
             bgq::util::Location::ComputeCardsOnNodeBoard
             );
     const size_t io(
@@ -133,12 +133,12 @@ Container::loadMachine(
     // ensure we have something
     if ( compute == 0 ) {
         LOG_ERROR_MSG( "invalid number of compute nodes (" << compute << ") from machine XML" );
-        
+
         callback( machine, error_code::database_error );
         return;
     } else if ( io == 0 ) {
         LOG_ERROR_MSG( "invalid number of io nodes (" << io << ") from machine XML" );
-        
+
         callback( machine, error_code::database_error );
         return;
     }
@@ -395,7 +395,7 @@ Container::createImpl(
         } else {
             BOOST_ASSERT(!"both I/O boards and midplanes are empty");
         }
-        
+
         callback( error_code::success, "success" );
     } catch ( const XMLException& xml_exception ) {
         callback( error_code::block_invalid, xml_exception.what() );
@@ -422,7 +422,7 @@ Container::createIo(
                 server
                 )
             );
-    
+
     // ensure all of the I/O nodes do not already exist
     BOOST_FOREACH( IoNode::Ptr node, block->getNodes() ) {
         const Uci& location = node->getLocation();
@@ -543,7 +543,7 @@ Container::initializedImpl(
         try {
             io->initialized();
             callback( error_code::success, "success" );
-        } catch ( const Exception e ) {
+        } catch ( const Exception& e ) {
             callback( e.getError(), e.what() );
         }
     }
@@ -607,7 +607,7 @@ Container::removeImpl(
 
     const Server::Ptr server = _server.lock();
     if ( !server ) return;
-    
+
     // remove any jobs still left on compute blocks
     if ( Compute::Ptr compute = boost::dynamic_pointer_cast<Compute>(*result) ) {
         server->getJobs()->eof( compute );

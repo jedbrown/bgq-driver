@@ -655,10 +655,11 @@ BGQ_CROSS_TARGET_NAME
 BGQ_FLOOR_TAG
 BGQDDX_DIR
 BGQ_LINUX_KERNEL_VERSION
-BGQ_LINUX_KERNEL_MAJOR_VERSION
-BGQ_LINUX_KERNEL_RELEASE
-BGQ_LINUX_KERNEL_BUILDID
 BGQ_LINUX_KERNEL_ARCH
+BGQ_LINUX_KERNEL_BUILDID
+BGQ_LINUX_KERNEL_RELEASE
+BGQ_LINUX_KERNEL_MAJOR_VERSION
+BGQ_MCP_LIB
 BGQ_LINUX_HEADERS_PATH
 BGQ_DISTRO_REPO_PATH
 BGQ_DISTROFS_BASE_PATH
@@ -745,9 +746,12 @@ with_ctepath
 with_twinstarpath
 with_floor_symlinks
 with_floor
+with_distro
 with_linux_os
 with_base_distro
+with_distro_repo_path
 with_linux_headers
+with_mcp_lib
 with_linux_kernel_major_version
 with_linux_kernel_release
 with_linux_kernel_buildid
@@ -776,7 +780,6 @@ with_rpmsuffix
 with_packaging_gpg_name
 with_rpm_install_dir
 with_efix_install_dir
-with_security
 with_dojo
 with_jsdoc
 with_revision
@@ -1432,15 +1435,23 @@ Optional Packages:
   --with-twinstarpath     path to twinstar release
   --with-floor-symlinks   create symlinks to the floor directories
   --with-floor=<path>     path to floor release
+  --with-distro=<name>    RHEL6.4
   --with-linux-os=<path>  path to linux OS root directory
   --with-base-distro=<path>
                           path to base ION distribution
+  --with-distro-repo-path=<path>
+                          path to ION distribution package repository
   --with-linux-headers=<path>
                           path to linux headers to use with build
-  --with-linux-kernel-version=<version>
-                          Linux kernel version (e.g.
-                          2.6.32-279.14.1.bgq.el6.ppc64)
-  --with-linux-kernel-major-version=<major version>
+  --with-mcp-lib=<path>   path to where mcp is installed
+  --with-linux-kernel-major-version=<version>
+                          Linux kernel version (e.g. 2.6.32)
+  --with-linux-kernel-release=<release>
+                          Linux kernel release (e.g. 358.11.1.bgq.el6)
+  --with-linux-kernel-buildid=<buildid>
+                          Linux kernel buildid (e.g. _V1R2M1_DEV1)
+  --with-linux-kernel-arch=<arch>
+                          Linux kernel arch (e.g. ppc64)
   --with-ddx=<path>       path to floor directory containing prebuilt ddx
                           compilers
   --with-target=<target>  select machine architecture (default=A2)
@@ -2458,7 +2469,7 @@ fi
 if test "${with_gnu_install_dir+set}" = set; then :
   withval=$with_gnu_install_dir;  BGQ_GNU_INSTALL_DIR="$withval";
 else
-   BGQ_GNU_INSTALL_DIR="/bgsys/drivers/toolchain/V1R2M1-$bgq_gnu_date";
+   BGQ_GNU_INSTALL_DIR="/bgsys/drivers/toolchain/V1R2M2-$bgq_gnu_date";
 fi
 
 
@@ -2858,17 +2869,17 @@ fi
 # If we are we create a sandbox distro using the user's name and a date.  Otherwise we should be
 # in a driver build and we want to use the name of the driver for the distro.  If the user
 # doesn't like either of these options they can still override with --with-linux-os.
-bgq_distro_default=RHEL6.4
+bgq_distro_default=RHEL6.5
 
 # Check whether --with-distro was given.
-if test "${with_distro+set}" = set; then
+if test "${with_distro+set}" = set; then :
   withval=$with_distro;  BGQ_DISTRO="$withval";
 else
    BGQ_DISTRO="$bgq_distro_default"
 fi
 
 
-{ $as_echo "$as_me:$LINENO: result:   BGQ_DISTRO=$BGQ_DISTRO" >&5
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result:   BGQ_DISTRO=$BGQ_DISTRO" >&5
 $as_echo "  BGQ_DISTRO=$BGQ_DISTRO" >&6; }
 
 INSTALL_SUBDIR=`/bin/echo $BGQ_INSTALL_DIR | awk 'BEGIN{FS="/"} ; {print $NF}'`
@@ -2894,28 +2905,29 @@ $as_echo "  BGQ_LINUX_OS_PATH=$BGQ_LINUX_OS_PATH" >&6; }
 bgq_distrofs_base_path_default=/bgsys/linux/"$BGQ_DISTRO"_base
 
 # Check whether --with-base-distro was given.
-if test "${with_base_distro+set}" = set; then
+if test "${with_base_distro+set}" = set; then :
   withval=$with_base_distro;  BGQ_DISTROFS_BASE_PATH="$withval";
 else
    BGQ_DISTROFS_BASE_PATH="$bgq_distrofs_base_path_default"
 fi
 
 
-{ $as_echo "$as_me:$LINENO: result:   BGQ_DISTROFS_BASE_PATH=$BGQ_DISTROFS_BASE_PATH" >&5
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result:   BGQ_DISTROFS_BASE_PATH=$BGQ_DISTROFS_BASE_PATH" >&5
 $as_echo "  BGQ_DISTROFS_BASE_PATH=$BGQ_DISTROFS_BASE_PATH" >&6; }
 
 bgq_distro_repo_path_default=/install/redhat/"$BGQ_DISTRO"-ppc/Packages
 
 # Check whether --with-distro_repo_path was given.
-if test "${with_distro_repo_path+set}" = set; then
+if test "${with_distro_repo_path+set}" = set; then :
   withval=$with_distro_repo_path;  BGQ_DISTRO_REPO_PATH="$withval";
 else
    BGQ_DISTRO_REPO_PATH="$bgq_distro_repo_path_default"
 fi
 
 
-{ $as_echo "$as_me:$LINENO: result:   BGQ_DISTRO_REPO_PATH=$BGQ_DISTRO_REPO_PATH" >&5
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result:   BGQ_DISTRO_REPO_PATH=$BGQ_DISTRO_REPO_PATH" >&5
 $as_echo "  BGQ_DISTRO_REPO_PATH=$BGQ_DISTRO_REPO_PATH" >&6; }
+
 
 #
 # RB: if we are on a ppc system use the native headers
@@ -2940,8 +2952,18 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result:   BGQ_LINUX_HEADERS_PATH=$BGQ_LINUX_HEADERS_PATH" >&5
 $as_echo "  BGQ_LINUX_HEADERS_PATH=$BGQ_LINUX_HEADERS_PATH" >&6; }
 
-# The Linux kernel is specified in 2 or 3 parts: <version>-<release>[_<buildid>].  The buildid is optional.
-# For example Linux kernel 2.6.32-279.14.1.el6.ppc64 is version=2.6.32 , release=279.14.1.el6 for the ppc64 architecture.
+# BGQ_MCP_LIB set up
+
+# Check whether --with-mcp-lib was given.
+if test "${with_mcp_lib+set}" = set; then :
+  withval=$with_mcp_lib;  BGQ_MCP_LIB="$withval";
+else
+   BGQ_MCP_LIB="/usr/local"
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result:   BGQ_MCP_LIB=$BGQ_MCP_LIB" >&5
+$as_echo "  BGQ_MCP_LIB=$BGQ_MCP_LIB" >&6; }
 
 # BGQ_LINUX_KERNEL_MAJOR_VERSION set-up
 bgq_linux_kernel_major_version_default=2.6.32
@@ -2957,9 +2979,8 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result:   BGQ_LINUX_KERNEL_MAJOR_VERSION=$BGQ_LINUX_KERNEL_MAJOR_VERSION" >&5
 $as_echo "  BGQ_LINUX_KERNEL_MAJOR_VERSION=$BGQ_LINUX_KERNEL_MAJOR_VERSION" >&6; }
 
-
 # BGQ_LINUX_KERNEL_RELEASE set-up
-bgq_linux_kernel_release_default=358.11.1.bgq.el6
+bgq_linux_kernel_release_default=431.1.1.bgq.el6
 
 # Check whether --with-linux-kernel-release was given.
 if test "${with_linux_kernel_release+set}" = set; then :
@@ -2972,9 +2993,8 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result:   BGQ_LINUX_KERNEL_RELEASE=$BGQ_LINUX_KERNEL_RELEASE" >&5
 $as_echo "  BGQ_LINUX_KERNEL_RELEASE=$BGQ_LINUX_KERNEL_RELEASE" >&6; }
 
-
 # BGQ_LINUX_KERNEL_BUILDID set-up
-bgq_linux_kernel_buildid_default=
+bgq_linux_kernel_buildid_default=_V1R2M2_DEV0
 
 # Check whether --with-linux-kernel-buildid was given.
 if test "${with_linux_kernel_buildid+set}" = set; then :
@@ -3001,7 +3021,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result:   BGQ_LINUX_KERNEL_ARCH=$BGQ_LINUX_KERNEL_ARCH" >&5
 $as_echo "  BGQ_LINUX_KERNEL_ARCH=$BGQ_LINUX_KERNEL_ARCH" >&6; }
 
-BGQ_LINUX_KERNEL_VERSION=$BGQ_LINUX_KERNEL_MAJOR_VERSION-$BGQ_LINUX_KERNEL_RELEASE$BGQ_LINUX_KERNEL_BUILDID.$BGQ_LINUX_KERNEL_ARCH
+BGQ_LINUX_KERNEL_VERSION=$BGQ_LINUX_KERNEL_MAJOR_VERSION-$BGQ_LINUX_KERNEL_RELEASE.$BGQ_LINUX_KERNEL_ARCH
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result:   BGQ_LINUX_KERNEL_VERSION=$BGQ_LINUX_KERNEL_VERSION" >&5
 $as_echo "  BGQ_LINUX_KERNEL_VERSION=$BGQ_LINUX_KERNEL_VERSION" >&6; }
@@ -5317,7 +5337,6 @@ if test "${with_efix_install_dir+set}" = set; then :
 else
    EFIX_INSTALL_DIR="no";
 fi
-
 
 
 

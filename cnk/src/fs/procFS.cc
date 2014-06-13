@@ -108,6 +108,11 @@ uint64_t procFS::open(const char *pathname, int oflags, mode_t mode)
             return File_GetFSPtrFromPath(pathname)->open(pathname, oflags, mode);
             
         }
+        else if((strstr(pathname, "/environ") != NULL) && (strncmp(pathname, "/proc/environ", sizeof("/proc/environ")) != 0))
+        {
+            pathname = "/proc/environ";
+            return File_GetFSPtrFromPath(pathname)->open(pathname, oflags, mode);
+        }
     }
     
     return shmFS::open(pathname, oflags, mode);
@@ -157,7 +162,6 @@ bool procFS::isMatch(const char *pathname)
 
     char tmpname[64];
     // handle /proc/self symlink
-    
     
     const char* suffix = strstr(pathname, "/self/");
     if(suffix != NULL)

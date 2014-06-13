@@ -91,7 +91,7 @@ SchedUtil::iterate(
 {
     // Build origin
     vector<uint32_t> start;
-    for( vector<vector<uint32_t> >::const_iterator originValues = values.begin(); originValues != values.end(); originValues++ )
+    for( vector<vector<uint32_t> >::const_iterator originValues = values.begin(); originValues != values.end(); ++originValues )
         start.push_back( (*originValues)[0] );
     recurse( values, function, otherArgs, start, 0 );
 }
@@ -105,7 +105,7 @@ SchedUtil::recurse(
     uint32_t dimIndex )
 {
     // Iterate over the vector of values for this dimension
-    for( vector<uint32_t>::const_iterator value = values[dimIndex].begin(); value != values[dimIndex].end(); value++ )
+    for( vector<uint32_t>::const_iterator value = values[dimIndex].begin(); value != values[dimIndex].end(); ++value )
     {
         coordinates[dimIndex] = *value;
         if( dimIndex == values.size() - 1 ) // last dimension, execute the function

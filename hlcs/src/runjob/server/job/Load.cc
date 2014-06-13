@@ -33,6 +33,7 @@
 #include "common/JobInfo.h"
 
 #include "server/Job.h"
+#include "server/Ras.h"
 
 #include <boost/numeric/conversion/cast.hpp>
 
@@ -175,6 +176,8 @@ Load::addUserCredentials(
     message->userId = uid->getUid();
     LOG_TRACE_MSG( "uid " << uid->getUid() );
 
+    bool exceededGroupsLimit = false;
+
     message->numSecondaryGroups = 0;
     BOOST_FOREACH( const bgq::utility::UserId::Group& i, uid->getGroups() ) {
         const gid_t gid = i.first;
@@ -198,7 +201,29 @@ Load::addUserCredentials(
             LOG_WARN_MSG( 
                     "ignoring group " << name << " (" << gid << ") due to maximum group limit of " << bgcios::jobctl::MaxGroups 
                     );
+            exceededGroupsLimit = true;
+
         }
+    }
+
+    /*
+    <rasevent
+      id="00062006"
+      category="Job"
+      component="MMCS"
+      severity="WARN"
+      message="Maximum secondary group limit exceeded for user $(USER) running job $(JOB)."
+      description="The Control System detected that the number of secondary groups the user belongs to exceeds the maximum supported."
+      service_action="The job continues but the user may not have the expected authorities because some secondary groups are ignored."
+     />
+    */
+    if (exceededGroupsLimit) {
+        Ras::create( Ras::SecondaryGroupsExceeded ).
+                detail( "USER",  info.getUserId()->getUser() ).
+                detail( "JOB", _job->id() ).
+                block( info.getBlock() ).
+                job( _job->id() )
+                ;
     }
 
     if ( message->numSecondaryGroups > 0 ) {

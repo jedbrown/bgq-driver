@@ -367,15 +367,16 @@ int Process_SetupJob(struct SetupJobMessage *setupJobMsg)
         return bgcios::RanksInJobError;
     }
     // Initialize the rank mapping to a default value if no mapping information was provided
-    if (strlen(setupJobMsg->mapping) == 6)
+    if (setupJobMsg->mapping[0] != 0)
     {
         // Move the ABCDET coordinate values
-        strncpy(appState->mapOrder, setupJobMsg->mapping, 6); 
+        memcpy(appState->mapOrder, setupJobMsg->mapping, 6);  // setupJobMsg->mapping is not null-terminated.
+        appState->mapOrder[6] = 0;
     }
     else
     {
         // Setup a default mapping
-        strncpy(appState->mapOrder, "ABCDET", 6);
+        strncpy(appState->mapOrder, "ABCDET", sizeof(appState->mapOrder));
     }
     if (strlen(setupJobMsg->mapFilePath) != 0)
     {

@@ -108,8 +108,8 @@ PerfData::readHandler(
     MCServerMessageSpec::ReadPerfStatsReply perfReply;
     perfReply.read( response );
 
-    for(unsigned ss = 0; ss < perfReply._statSet.size(); ++ss) {
-        for(unsigned dp = 0; dp < perfReply._statSet[ss]._dataPoints.size(); ++dp) {
+    for (unsigned ss = 0; ss < perfReply._statSet.size(); ++ss) {
+        for (unsigned dp = 0; dp < perfReply._statSet[ss]._dataPoints.size(); ++dp) {
             bool truncated( false );
             insert->parameters()[ BGQDB::DBTComponentperf::ID_COL ].set( perfReply._statSet[ss]._dataPoints[dp]._id, &truncated );
             insert->parameters()[ BGQDB::DBTComponentperf::COMPONENT_COL ].set( perfReply._statSet[ss]._dataPoints[dp]._component, &truncated );

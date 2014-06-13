@@ -40,6 +40,8 @@ endif
 
 # Additional linker flags
 LDFLAGS  += -L $(IOS_LIBRARY_DIR) -lbgcios -lrdmacm
+LDFLAGS  += -lcrypto
+LDFLAGS  += -lssl
 
 all: $(TOOLCTLD)
 

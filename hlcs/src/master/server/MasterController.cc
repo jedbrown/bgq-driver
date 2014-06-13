@@ -84,8 +84,7 @@ Registrar MasterController::_client_registrar;
 
 MasterController::MasterController(
         const bgq::utility::Properties::Ptr& properties
-        ) :
-    _pid( getpid() )
+        )
 {
     _props = properties;
 }
@@ -167,20 +166,25 @@ MasterController::handleErrorMessage(
     boost::mutex::scoped_lock scoped_lock(_monitor_prots_mutex);
     BOOST_FOREACH(const ClientProtocolPtr& prot, _monitor_prots) {
         try {
-	  prot->sendOnly(error.getClassName(), error);
+            prot->sendOnly(error.getClassName(), error);
         } catch (const CxxSockets::Error& e) {
             // If we get an error we assume that the client has been killed and should be removed
-	    // otherwise we have a potential memory leak.
+            // otherwise we have a potential memory leak.
             LOG_WARN_MSG(e.what());
-	    deadClients.push_back(prot);
+            deadClients.push_back(prot);
         }
     }
     // Loop through the deadClients and remove them from _monitor_prots container.
     for (unsigned i = 0; i < deadClients.size(); ++i) {
         LOG_WARN_MSG("Removing master_monitor client instance after socket error ...");
-        MasterController::get_monitor_prots().erase(std::remove(MasterController::get_monitor_prots().begin(),
-							        MasterController::get_monitor_prots().end(),
-							        deadClients[i]), MasterController::get_monitor_prots().end());
+        MasterController::get_monitor_prots().erase(
+                std::remove(
+                    MasterController::get_monitor_prots().begin(),
+                    MasterController::get_monitor_prots().end(),
+                    deadClients[i]
+                    ),
+                MasterController::get_monitor_prots().end()
+                );
     }
     return;
 }
@@ -211,20 +215,25 @@ MasterController::addHistoryMessage(
     boost::mutex::scoped_lock scoped_lock(_monitor_prots_mutex);
     BOOST_FOREACH(const ClientProtocolPtr& prot, _monitor_prots) {
         try {
-	  prot->sendOnly(event.getClassName(), event);
+            prot->sendOnly(event.getClassName(), event);
         } catch (const CxxSockets::Error& e) {
             // If we get an error we assume that the client has been killed and should be removed
-	    // otherwise we have a potential memory leak.
+            // otherwise we have a potential memory leak.
             LOG_WARN_MSG(e.what());
-	    deadClients.push_back(prot);
+            deadClients.push_back(prot);
         }
     }
     // Loop through the deadClients and remove them from _monitor_prots container.
     for (unsigned i = 0; i < deadClients.size(); ++i) {
         LOG_WARN_MSG("Removing master_monitor client instance after socket error ...");
-        MasterController::get_monitor_prots().erase(std::remove(MasterController::get_monitor_prots().begin(),
-							        MasterController::get_monitor_prots().end(),
-							        deadClients[i]), MasterController::get_monitor_prots().end());
+        MasterController::get_monitor_prots().erase(
+                std::remove(
+                    MasterController::get_monitor_prots().begin(),
+                    MasterController::get_monitor_prots().end(),
+                    deadClients[i]
+                    ),
+                MasterController::get_monitor_prots().end()
+                );
     }
     return;
 }
@@ -294,8 +303,8 @@ MasterController::buildHostList(
 
         if (!found) {
             // Didn't find an alias.  Assume the [master.binmap] entry has been commented out.
-	    // Log a warning message in case something else is going on.
-	    LOG_WARN_MSG( "Alias " << keyval.first << " was not defined. Skipping [master.policy.host_list] entry ...");
+            // Log a warning message in case something else is going on.
+            LOG_WARN_MSG( "Alias " << keyval.first << " was not defined. Skipping [master.policy.host_list] entry ...");
         }
     }
 }
@@ -507,8 +516,8 @@ MasterController::buildInstances(
 
         if (!found) {
             // Didn't find an alias, Assume the [master.binmap] entry has been commented out.
-	    // Log a warning message in case something else is going on.
-	    LOG_WARN_MSG("Alias " << keyval.first << " not defined.  Skipping [master.policy.instances] entry ... ");
+            // Log a warning message in case something else is going on.
+            LOG_WARN_MSG("Alias " << keyval.first << " not defined.  Skipping [master.policy.instances] entry ... ");
         }
     }
     if (failmsg.str().length() != 0) {
@@ -534,8 +543,8 @@ MasterController::buildArgs(
         }
         if (!found) {
             // Didn't find an alias, Assume the [master.binmap] entry has been commented out.
-	    // Log a warning message in case something else is going on.
-	    LOG_WARN_MSG( "Alias " << keyval.first << " not defined in [master.binmap] section. Skipping [master.binargs] entry ...");
+            // Log a warning message in case something else is going on.
+            LOG_WARN_MSG( "Alias " << keyval.first << " not defined in [master.binmap] section. Skipping [master.binargs] entry ...");
         }
     }
 }
@@ -614,15 +623,15 @@ MasterController::addBehaviors(
             }
             if (!policy_found) {
                 // Didn't find a policy, Assume the [master.binmap] entry has been commented out. 
-	        // Log warning message in case something else is going on.
-	        LOG_WARN_MSG("Policy " << current_policy << " found for undefined alias: " << keyval.first << " Skipping [master.policy.map] entry ...");
+                // Log warning message in case something else is going on.
+                LOG_WARN_MSG("Policy " << current_policy << " found for undefined alias: " << keyval.first << " Skipping [master.policy.map] entry ...");
 
             }
         }
         if (!alias_found) {
             // Didn't find an alias.  Assume the [master.binmap] entry has been commented out.
-	    // Log a warning message in case something else is going on.
-	    LOG_WARN_MSG("Alias " << keyval.first << " not defined in section [master.binmap].  Skipping failover configuration for this alias ...");
+            // Log a warning message in case something else is going on.
+            LOG_WARN_MSG("Alias " << keyval.first << " not defined in section [master.binmap].  Skipping failover configuration for this alias ...");
         }
     }
 }
@@ -662,8 +671,8 @@ MasterController::buildUidList(
         }
         if (!found) {
             // Didn't find an alias.  Assume that the [master.binmap] entry has been commented out.
-	    // Log a warning message in case something else is going on.
-	    LOG_WARN_MSG("Alias " << keyval.first << " not defined in section [master.binmap].  Skipping [master.user] entry ...");
+            // Log a warning message in case something else is going on.
+            LOG_WARN_MSG("Alias " << keyval.first << " not defined in section [master.binmap].  Skipping [master.user] entry ...");
         }
     }
 }
@@ -686,8 +695,8 @@ MasterController::buildLogDirs(
         }
         if (!found) {
             // Didn't find an alias.  Assume that the [master.binmap] entry has been commented out.
-	    // Log a warning message in case something else is going on.
-	    LOG_WARN_MSG("Alias " << keyval.first << " not defined in section [master.binmap]. Skipping [master.logdirs] entry ...");
+            // Log a warning message in case something else is going on.
+            LOG_WARN_MSG("Alias " << keyval.first << " not defined in section [master.binmap]. Skipping [master.logdirs] entry ...");
         }
     }
 }
@@ -754,22 +763,22 @@ MasterController::buildPolicies(
     // Need to get preferred_host_wait time to send to the alias constructor.
     try {
         preferredHostWait = boost::lexical_cast<int>(_props->getValue("master.server", "preferred_host_wait"));
-	if (  preferredHostWait <= 0 ) {
-	    std::ostringstream msg;
-	    msg << "Invalid preferred_host_wait setting in [master.server] section: Value must be an integer greater than 0.";
-	    LOG_ERROR_MSG(msg.str());
-	    throw exceptions::ConfigError(exceptions::WARN, msg.str());
-	} else {
-	    std::ostringstream msg;
-	    msg << "Found user preferred_host_wait key with value: " << preferredHostWait << " in [master.server] section.";
-	    LOG_DEBUG_MSG(msg.str());
-	}
+        if (  preferredHostWait <= 0 ) {
+            std::ostringstream msg;
+            msg << "Invalid preferred_host_wait setting in [master.server] section: Value must be an integer greater than 0.";
+            LOG_ERROR_MSG(msg.str());
+            throw exceptions::ConfigError(exceptions::WARN, msg.str());
+        } else {
+            std::ostringstream msg;
+            msg << "Found user preferred_host_wait key with value: " << preferredHostWait << " in [master.server] section.";
+            LOG_DEBUG_MSG(msg.str());
+        }
     } catch (const std::invalid_argument& e) {
         // It is ok if it is not set.  We default it to 15 here.
         std::ostringstream msg;
         msg << "Did not find optional preferred_host_wait key in [master.server] section. Setting default of 15 seconds.";
         LOG_DEBUG_MSG(msg.str());
-	preferredHostWait=15;
+        preferredHostWait=15;
     } catch (const boost::bad_lexical_cast& e) {
         std::ostringstream msg;
         msg << "Invalid preferred_host_wait setting in [master.server] section: " << e.what();
@@ -988,7 +997,7 @@ MasterController::startup(
 
     // Update database with ras message
     std::map<std::string, std::string> details;
-    details["PID"] = boost::lexical_cast<std::string>(_pid);
+    details["PID"] = boost::lexical_cast<std::string>(getpid());
     putRAS(MASTER_STARTUP_RAS, details);
     std::ostringstream startmsg;
     startmsg << "bgmaster_server startup completed";

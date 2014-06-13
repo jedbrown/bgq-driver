@@ -97,12 +97,15 @@ public:
 
 public:
     common::Thread* getThread() const { return _mmcsThread; }
+    const std::string& getPeerName() const { return _peerName; }
     void setMMCSThread(common::Thread* mmcsThread) { _mmcsThread = mmcsThread; }
+    void setPeerName(const std::string& name) { _peerName = name; }
     static bool setAllocating(const std::string& blockName);
     static void doneAllocating(const std::string& blockName);
 
 private:
     common::Thread* _mmcsThread; // for debugging mmcs_server - thread using this DBConsoleController
+    std::string _peerName;
     boost::scoped_ptr<log4cxx::MDC> _blockMdc;
 
 private:

@@ -43,7 +43,7 @@ inline int MUSPI_PreCalculateMapOffsets(const char* mapFilename, const uint32_t*
     if((strlen(mapFilename) >= NUMDIMENSION) && (!isspace(mapFilename[NUMDIMENSION])) && (mapFilename[NUMDIMENSION] != 0))
     {
         // Not a pre-calculated mapping
-        return -1;
+        return -2;
     }
     
     for(x=0; x<NUMDIMENSION; x++)
@@ -57,12 +57,12 @@ inline int MUSPI_PreCalculateMapOffsets(const char* mapFilename, const uint32_t*
             hitcount[y]++;
             if(hitcount[y] > 1)
             {
-                return -1;
+                return -3;
             }
         }
         else
         {
-            return -1;
+            return -4;
         }
     }
     
@@ -99,10 +99,10 @@ inline int MUSPI_GenerateCoordinates(const char *mapFilename, const BG_JobCoords
     char line[256];
     
     if((myRank != NULL) && (mycoord == NULL))
-        return -1;
+        return -5;
     
     if((jobcoord == NULL) || (mapFilename == NULL))
-        return -1;
+        return -6;
     
     if(mpmdFound)
         *mpmdFound = 0;
@@ -122,7 +122,7 @@ inline int MUSPI_GenerateCoordinates(const char *mapFilename, const BG_JobCoords
     {
         fd = open(mapFilename, 0,0);
         if(fd<0)
-            return -1;
+            return -7;
         offset = 0;
         size = read(fd, buffer, buffersize);
     }
@@ -172,7 +172,7 @@ inline int MUSPI_GenerateCoordinates(const char *mapFilename, const BG_JobCoords
                                     close(fd);
                                     fd = -1;
                                 }
-                                return -1;
+                                return -8;
                             }
                             for(int yy=0; yy<NUMDIMENSION; yy++)
                                 coord[yy] = (x / dimoffset[yy]) % dimsize[yy];
@@ -191,7 +191,7 @@ inline int MUSPI_GenerateCoordinates(const char *mapFilename, const BG_JobCoords
                             close(fd);
                             fd = -1;
                         }
-                        return -1;
+                        return -9;
                     }
                     else if(value == '\n')
                     {
@@ -206,7 +206,7 @@ inline int MUSPI_GenerateCoordinates(const char *mapFilename, const BG_JobCoords
                             close(fd);
                             fd = -1;
                         }
-                        return -1;
+                        return -10;
                     }
                 }
             }
@@ -219,7 +219,7 @@ inline int MUSPI_GenerateCoordinates(const char *mapFilename, const BG_JobCoords
                     close(fd);
                     fd = -1;
                 }
-                return -1;
+                return -11;
             }
             
             if(!calculatedMap)
@@ -254,7 +254,7 @@ inline int MUSPI_GenerateCoordinates(const char *mapFilename, const BG_JobCoords
                 close(fd);
                 fd = -1;
             }
-            return -1;
+            return -12;
         }
         if (map != NULL) 
         {
@@ -320,11 +320,11 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
     int foundme = 0;
     
     if(mapFilename == NULL)
-        return -1;
+        return -13;
     
     fd = open(mapFilename, 0,0);
     if(fd<0)
-        return -1;
+        return -14;
     offset = 0;
     size = read(fd, buffer, buffersize);
     
@@ -365,7 +365,7 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
                     close(fd);
                     fd = -1;
                 }
-                return -1;
+                return -15;
             }
             
             if(offset > buffersize/2)
@@ -392,7 +392,7 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
                         close(fd);
                         fd = -1;
                     }
-                    return -1;
+                    return -16;
                 }
                 str2 = str;
                 while(*str2)
@@ -404,7 +404,7 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
                             close(fd);
                             fd = -1;
                         }
-                        return -1;
+                        return -17;
                     }
                     str2++;
                 }
@@ -417,7 +417,7 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
                         close(fd);
                         fd = -1;
                     }
-                    return -1;
+                    return -18;
                 }
                 if(*str == '-')
                 {
@@ -429,7 +429,7 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
                             close(fd);
                             fd = -1;
                         }
-                        return -1;
+                        return -19;
                     }
                     if((myRank >= rank0) && (myRank <= rank1))
                     {
@@ -466,7 +466,7 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
                     close(fd);
                     fd = -1;
                 }
-                return -1;
+                return -20;
             }
             str += strlen("#mpmdcmd");
             while(isspace(*str))
@@ -491,7 +491,7 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
                         close(fd);
                         fd = -1;
                     }
-                    return -1;
+                    return -21;
                 }
                 if(inBeginBlock == 0)
                 {
@@ -501,7 +501,7 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
                         close(fd);
                         fd = -1;
                     }
-                    return -1;
+                    return -22;
                 }
                 if(foundme)
                 {
@@ -527,7 +527,7 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
             close(fd);
             fd = -1;
         }
-        return -1;
+        return -23;
     }
     if(fd >= 0)
     {
@@ -535,7 +535,7 @@ inline int MUSPI_GetMPMDData(const char *mapFilename, uint32_t myRank,
         fd = -1;
     }
     if(foundme == 0)
-        return -1;
+        return -24;
     
     return 0;
 }

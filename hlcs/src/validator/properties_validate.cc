@@ -67,7 +67,6 @@ void
 doBGMaster()
 {
     std::cout << "Evaluating bgmaster properties...." << std::endl;
-    std::string logger("master");
     MasterController bgm( props );
 
     std::ostringstream failmsg;
@@ -86,7 +85,6 @@ void
 doMMCS()
 {
     std::cout << "Evaluating mmcs properties...." << std::endl;
-    std::string logger("mmcs");
     mmcs::common::Properties mmcsprops;
     mmcsprops.setProperties(props);
     mmcs::common::Properties::object server_object = mmcs::common::Properties::server;
@@ -107,8 +105,9 @@ doOthers()
     // First rule is that all subnets must match their bgmaster alias name to their
     // machinecontroller name.
     std::vector<std::string> subnet_names;
-    int i = 0;
+
     try {
+        int i = 0;
         while(true) {  // Exception will end this loop.
             std::string subnet = "machinecontroller.subnet.";
             subnet += boost::lexical_cast<std::string>(i);

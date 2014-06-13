@@ -34,6 +34,7 @@
 #include <sys/socket.h>
 #include <string>
 #include <errno.h>
+#include <stdio.h>
 
 namespace bgcios
 {
@@ -127,6 +128,13 @@ sendOnConnectedSocket(char *buffer, unsigned int length, unsigned int& error, in
    unsigned int numBytesSent = 0;
    
    while (bytesLeft > 0) {
+     socklen_t len = sizeof(error);
+     int retval = getsockopt(_sd, SOL_SOCKET, SO_ERROR, &error, &len );
+     if (error) {
+         //printf("sendOnConnectedSocket send on socket has error %d\n",error);
+         return numBytesSent;
+     }
+     if (retval) printf("sendOnConnectedSocket getsockopt had retval=%d",retval);
       nbytes = ::send(_sd, buffer, (size_t)bytesLeft, flags);
       if (nbytes > 0) {
         numBytesSent += nbytes;

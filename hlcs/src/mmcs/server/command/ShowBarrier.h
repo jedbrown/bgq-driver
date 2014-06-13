@@ -40,14 +40,17 @@ class ShowBarrier: public common::AbstractCommand
 public:
     ShowBarrier(const char* name, const char* description, const Attributes& attributes)
       : AbstractCommand(name,description,attributes) { _usage = "show_barrier";}
-    static ShowBarrier* build();	// factory method
-    virtual void execute(std::deque<std::string> args,
-			 mmcs_client::CommandReply& reply,
-			 common::ConsoleController* pController,
-			 BlockControllerTarget* pTarget=NULL);
-    //    bool checkArgs(std::deque<std::string>& args) { if (args.size() > 1) return false; else return true;}
-    virtual void help(std::deque<std::string> args,
-		      mmcs_client::CommandReply& reply);
+    static ShowBarrier* build(); // factory method
+    virtual void execute(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            BlockControllerTarget* pTarget=NULL
+            );
+    virtual void help(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply
+            );
 };
 
 } } } // namespace mmcs::server::command

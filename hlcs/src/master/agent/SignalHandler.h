@@ -65,9 +65,9 @@ private:
             );
 
     void handler(
-		 const boost::system::error_code& error,
-		 const siginfo_t& siginfo
-		 );
+            const boost::system::error_code& error,
+            const siginfo_t& siginfo
+            );
 
 private:
     boost::asio::io_service& _io_service;

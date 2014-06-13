@@ -214,7 +214,7 @@ Block::create(
 {
     GenBlockParams genBlockParams;
     BlockDatabaseInfo::Ptr blockDBInfoPtr(new BlockDatabaseInfo());
-    vector<IOLink::ConstPtr> IOLinks;
+    // vector<IOLink::ConstPtr> IOLinks;
 
     // Verify we got node boards passed in
     if (nodeBoardLocations.empty()) {
@@ -322,7 +322,7 @@ Block::create(
 {
     GenBlockParams genBlockParams;
     BlockDatabaseInfo::Ptr blockDBInfoPtr(new BlockDatabaseInfo());
-    vector<IOLink::ConstPtr> IOLinks;
+    // vector<IOLink::ConstPtr> IOLinks;
 
     // Verify we got valid starting node board passed in (form is Rxx-Mx-Nxx)
     if ((nodeBoardStartLocation.empty()) || (nodeBoardStartLocation.size() != NodeBoardLocationLength)) {

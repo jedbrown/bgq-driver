@@ -57,6 +57,7 @@ public:
         EpilogFailure,
         BlockNotReady,
         HeartbeatFailure,
+        SecondaryGroupsExceeded,
         AdministrativeAuthorityDenied = 0x00063001
     };
 

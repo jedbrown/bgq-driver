@@ -881,7 +881,6 @@ findLargeBlock(
 
                                         // Check availability of midplanes
                                         bool midplanesAvailable = true;
-                                        bool switchesCablesAvailable = true;
                                         for (uint32_t a = cornerA; a < (cornerA + midplanesA) && a < machineSize[Dimension::A] && midplanesAvailable; a++) {
                                             for (uint32_t b = cornerB; b < (cornerB + midplanesB) && b < machineSize[Dimension::B]  && midplanesAvailable; b++) {
                                                 for (uint32_t c = cornerC; c < (cornerC + midplanesC) && c < machineSize[Dimension::C] && midplanesAvailable; c++) {
@@ -915,6 +914,7 @@ findLargeBlock(
                                         }
                                         // Midplanes available?
                                         if (midplanesAvailable) {
+                                            bool switchesCablesAvailable = true;
                                             // The midplanes are available for large block usage but make sure
                                             // switches and required cables are available for requested connectivity
                                             for (uint32_t a = cornerA; a < (cornerA + midplanesA) && a < machineSize[Dimension::A] && switchesCablesAvailable; a++) {

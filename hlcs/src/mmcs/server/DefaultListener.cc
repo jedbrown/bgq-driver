@@ -90,7 +90,7 @@ DefaultListener::DefaultListener() :
     const BGQMachineXML* machine = base->_machineXML;
     BOOST_FOREACH( const BGQMachineIOBoard* i, machine->_ioBoards ) {
         BOOST_FOREACH( const BGQMachineNode* j, i->_nodes ) {
-            const std::string location( i->_board + "-" + j->_location );
+            // const std::string location( i->_board + "-" + j->_location );
             // LOG_TRACE_MSG( location );
 
             // Add BCNodeInfo so findNodeInfo( location ) will work

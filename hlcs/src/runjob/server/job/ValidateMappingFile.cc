@@ -44,10 +44,22 @@ ValidateMappingFile::ValidateMappingFile(
     _size( size )
 {
     LOGGING_DECLARE_JOB_MDC( id );
-   
+
+    /*
+    for (
+            std::vector<std::string>::const_iterator i = info.getMapping().fullMapFileContents().begin();
+            i != info.getMapping().fullMapFileContents().end();
+            ++i
+        )
+    {
+        LOG_INFO_MSG("Map file content " << *i);
+    }
+    */
+
     // calculate maximum size in every dimension
     typedef std::pair<uint8_t, uint32_t> Max; // size and line number
     std::vector<Max> mappingMax( 6, std::make_pair(0,0) );
+
     for ( 
             std::vector<uint32_t>::const_iterator i = info.getMapping().fileContents().begin();
             i != info.getMapping().fileContents().end();

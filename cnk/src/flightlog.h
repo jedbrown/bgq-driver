@@ -74,6 +74,7 @@ FLIGHTDECODER(Flight_IPIDecoder);
 FLIGHTDECODER(Flight_SyscallReturnDecoder);
 FLIGHTDECODER(Flight_SysioMsgDecoder);
 FLIGHTDECODER(Flight_SpeculationRestart);
+FLIGHTDECODER(Flight_FlockDecoder);
 
 
 /**********************************/
@@ -271,6 +272,12 @@ FLIGHTPRINT(FL_CLRTSNDUP, "Classroute generation: sending up injection to output
 FLIGHTPRINT(FL_MPMDSEQST, "ELF load iteration %ld.  My load iteration is %ld, max iteration is %ld")
 FLIGHTPRINT(FL_MPMDSEQMX, "ELF load max iterations is %ld.")
 FLIGHTPRINT(FL_MPMDSETUP, "MPMD configuration.  nodeCount=%ld  isLoadLeader=%ld  loadLeaderTorusCoord=%lx")
+FLIGHTPRINT(FL_UDECTIMER, "UDEC timer event.  IP=%lx  LR=%lx")
+
+FLIGHTFUNCT(FL_SYSCFLOCK, Flight_FlockDecoder)
+FLIGHTPRINT(FL_FLOCKRETY, "Advisory file lock deadlock (cmd=%ld  rc=%lx), retry attempt %ld.  backoffTime=%ld usec")
+FLIGHTPRINT(FL_FLOCKLOCL, "Advisory file lock owned by another process on this node.  Blocking locally  fd=%ld start=%ld len=%ld whence=%ld")
+FLIGHTPRINT(FL_FLOCKCOMP, "Advisory file lock complete rc=%lx")
 
 #undef FLIGHTPRINT
 #undef FLIGHTFUNCT

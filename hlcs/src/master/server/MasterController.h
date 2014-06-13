@@ -167,9 +167,6 @@ private:
     static LockingStringRingBuffer _history_buff;
     static boost::posix_time::ptime _start_time;
     static std::vector<ClientProtocolPtr> _monitor_prots;
-
-private:
-    const pid_t _pid;
 };
 
 #endif

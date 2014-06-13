@@ -106,7 +106,6 @@ IOHardware::Impl::Impl()
     string IOBlockId;
     Hardware::State state;
     SequenceId seqId;
-    bool IONodeInUse = false;
 
     ostringstream queryStatement;
     cxxdb::ParameterNames parameterNames;
@@ -177,6 +176,7 @@ IOHardware::Impl::Impl()
         // Get the I/O drawer location from the map
         mapIODrawerLocation = IODrawerIter->first;
 
+        bool IONodeInUse = false;
         while (resultSetPtr->fetch()) {
             // Get the I/O node info
             IONodeLocation = resultSetPtr->columns()["location"].getString();

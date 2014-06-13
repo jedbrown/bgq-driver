@@ -40,9 +40,9 @@ void doReceiveMessages(
     )
 {
     try {
-	bgsched::realtime::Client client2;
-	client2.connect();
-	client2.requestUpdates( NULL );
+        bgsched::realtime::Client client2;
+        client2.connect();
+        client2.requestUpdates( NULL );
 
         bool rt_ended;
 

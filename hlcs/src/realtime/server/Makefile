@@ -91,7 +91,8 @@ LDFLAGS += \
  -L../../bgsched -lbgsched \
  -L$(BGQ_INSTALL_DIR)/utility/lib -lbgutility \
  -L$(BGQ_INSTALL_DIR)/extlib/lib -lboost_program_options-mt -lboost_system-mt \
- -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib
+ -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib \
+ -llog4cxx -lboost_thread-mt
 
 ifneq ($(wildcard /opt/ibm/db2/V10.1),)
 	FOUND_DB2_10 = yes

@@ -949,6 +949,9 @@ HwJobController::discoverNodeStep2(void)
 
    outMsg->sysiod_port = cnode->getsysiodPort();
    outMsg->toolctld_port = cnode->gettoolctldPort();
+   if ( (outMsg->toolctld_port==0) or (outMsg->sysiod_port==0) ){
+      LOG_ERROR_MSG("Zero port not expected:  << outMsg->toolctld_port="<<outMsg->toolctld_port<<"outMsg->sysiod_port=" << outMsg->sysiod_port);
+   }
    LOG_CIOS_DEBUG_MSG("outMsg->sysiod_port ="<<outMsg->sysiod_port<<" outMsg->toolctld_port="<<outMsg->toolctld_port);
    outMsg->deviceAddress = _boundServer->getLocalIPv4Address();
    struct timeval now;
@@ -1085,6 +1088,17 @@ HwJobController::loadJob(void)
       LOG_ERROR_MSG("Job " << inMsg->header.jobId << ": error running I/O node setup: " << bgcios::errorString(result.errorCode()));
       return sendToDataChannel(outMsg);
    }
+
+
+   if (inMsg->numSecondaryGroups >= MaxGroups){
+      LOG_CIOS_WARN_MSG("Max 2ndary groups Job:"<<inMsg->header.jobId<<" inMsg->userId("<<inMsg->userId<<") inMsg->groupId("<<inMsg->groupId<<") number secondary groups="<<inMsg->numSecondaryGroups);
+#if 0
+      for (int i=0;i<inMsg->numSecondaryGroups;i++){
+        int gid = (int)inMsg->secondaryGroups[i];
+        LOG_INFO_MSG_FORCED("i="<<i<<" groupId="<< gid );
+      }
+#endif 
+   } 
 
    // Forward the LoadJob message to all of the compute nodes in the job.
 

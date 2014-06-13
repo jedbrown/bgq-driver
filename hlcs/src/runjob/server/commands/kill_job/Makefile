@@ -36,6 +36,7 @@ LDFLAGS += -lrunjob_common
 LDFLAGS += -lboost_program_options-mt
 LDFLAGS += -lboost_date_time-mt
 LDFLAGS += -llog4cxx
+LDFLAGS += -lboost_filesystem-mt
 
 INSTALL_LIST          += $(call INSTALL_BIN_TARGET, $(COMMAND))
 bg_bin_links          := $(COMMAND)

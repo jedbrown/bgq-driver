@@ -66,7 +66,7 @@ private:
     void findLocation(
             const boost::shared_ptr<Job>& job,
             unsigned rank,
-            BG_CoordinateMapping_t& coordaintes
+            BG_CoordinateMapping_t& coordinates
             );
 
 private:

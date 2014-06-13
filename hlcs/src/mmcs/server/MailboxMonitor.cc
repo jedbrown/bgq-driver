@@ -147,8 +147,7 @@ MailboxMonitor::stop()
 {
     _listener.stop(SIGUSR1); // Stop the mailbox listener
 
-    // Stop the mailbox listener from reading any more RAS before we send a
-    // close request.
+    // Stop the mailbox listener from reading any more RAS before we send a close request.
     if (_listener._mailbox) {
         _listener._mailbox->Shutdown(CxxSockets::Socket::RECEIVE);
     } else {
@@ -158,7 +157,6 @@ MailboxMonitor::stop()
     // Send a CloseEventListener request to the mcServer
     if (_mailboxRegistered) {
         try {
-            const std::string blockname = _block->getBlockName();
             CloseEventListenerRequest mcCloseEventListenerRequest;
             mcCloseEventListenerRequest._set = _block->getBlockName();
             CloseEventListenerReply mcCloseEventListenerReply;
@@ -269,8 +267,7 @@ MailboxListener::threadStart()
                     // Could not connect to mc_server, nothing else we can do
                 } else {
                     LOG_TRACE_MSG("Connected to mc_server.");
-                    const BlockPtr p = _block->shared_from_this();
-                    const BlockControllerTarget target(p, "{*}", reply);
+                    const BlockControllerTarget target(_block->shared_from_this(), "{*}", reply);
                     _block->makeAndOpenTargetSet(ref.get(), true, reply, &target);
 
                     const BarrierAckRequest ackreq(_block->_blockName);

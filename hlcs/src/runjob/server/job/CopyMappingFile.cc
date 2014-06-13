@@ -66,8 +66,18 @@ CopyMappingFile::CopyMappingFile(
         // fall through
     } catch ( const std::exception& e ) {
         // key not found, don't copy the mapping file
-        LOG_DEBUG_MSG( e.what() );
-        return;
+        LOG_ERROR_MSG( e.what() );
+        LOG_RUNJOB_EXCEPTION(
+                error_code::mapping_file_invalid,
+                "Key 'mapping_file_archive' in section [runjob.server] of properties file must be specified if using mapping files with runjob"
+                );
+    }
+
+    if (_copiedFilename.empty()) {
+        LOG_RUNJOB_EXCEPTION(
+                error_code::mapping_file_invalid,
+                "A value for key 'mapping_file_archive' in section [runjob.server] of properties file must be specified if using mapping files with runjob"
+                );
     }
 
     this->impl( mapping );
@@ -80,7 +90,7 @@ CopyMappingFile::impl(
 {
     _copiedFilename += "/";
     _copiedFilename += boost::lexical_cast<std::string>(_id);
-    LOG_DEBUG_MSG( "writing output file to " << _copiedFilename );
+    LOG_DEBUG_MSG( "Writing output file to " << _copiedFilename );
 
     std::ofstream file( _copiedFilename, std::ios_base::trunc );
     if ( !file ) {
@@ -105,20 +115,13 @@ CopyMappingFile::impl(
     }
 
     size_t lineCount = 1;
-    BOOST_FOREACH( const uint32_t i, mapping.fileContents() ) {
-        const uint32_t a = boost::numeric_cast<uint8_t>((i & (0x3F << 26)) >> 26);
-        const uint32_t b = boost::numeric_cast<uint8_t>((i & (0x3F << 20)) >> 20);
-        const uint32_t c = boost::numeric_cast<uint8_t>((i & (0x3F << 14)) >> 14);
-        const uint32_t d = boost::numeric_cast<uint8_t>((i & (0x3F << 8)) >> 8);
-        const uint32_t e = boost::numeric_cast<uint8_t>((i & (1 << 7)) >> 7);
-        const uint32_t t = boost::numeric_cast<uint8_t>(i & 0x3F);
-
-        file << a << " " << b << " " << c << " " << d << " " << e << " " << t << std::endl;
+    BOOST_FOREACH( const std::string i, mapping.fullMapFileContents() ) {
+        file << i << std::endl;
         if ( !file ) {
             char buf[256];
             LOG_RUNJOB_EXCEPTION(
                     error_code::mapping_file_invalid,
-                    "Could not write line " << lineCount << " of " << mapping.fileContents().size() <<
+                    "Could not write line " << lineCount << " of " << mapping.fullMapFileContents().size() <<
                     "to " << _copiedFilename << ": " << strerror_r(errno, buf, sizeof(buf))
                     );
         }
@@ -126,7 +129,7 @@ CopyMappingFile::impl(
         ++lineCount;
     }
 
-    LOG_DEBUG_MSG( "wrote " << lineCount << " lines successfully" );
+    LOG_DEBUG_MSG( "Wrote " << lineCount << " lines successfully" );
     removeGuard.dismiss();
 }
 

@@ -66,7 +66,8 @@ __INLINE__ int L1P_SetupPattern(uint64_t n, L1P_Pattern_t* ptr)
     ptr->WritePattern = malloc(ptr->size);
     if(ptr->WritePattern == NULL)
         return L1P_NOMEMORY;
-    memset(ptr->ReadPattern, 0xff, 256);  // Add end_of_list marker
+    memset(ptr->ReadPattern, 0xff, ptr->size);  // Add end_of_list marker
+    memset(ptr->WritePattern, 0xff, ptr->size);  // Add end_of_list marker
     return 0;
 }
 

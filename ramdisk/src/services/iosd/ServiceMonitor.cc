@@ -45,9 +45,6 @@ ServiceMonitor::run(void)
 {
    LOG_CIOS_DEBUG_MSG("monitoring " << _manager->listSize() << " services that are running on node");
 
-   // Set action for SIGUSR1 signal.
-   Sigusr1Handler sigusr1Handler;
-
    // Loop until told to stop.
    while (!_done) {
       int status;
@@ -91,29 +88,6 @@ ServiceMonitor::run(void)
 
    LOG_CIOS_INFO_MSG("stopped monitoring services");
    return NULL;
-}
-
-Sigusr1Handler::Sigusr1Handler()
-{
-   // Set data members.
-   _signalNumber = SIGUSR1;
-
-   // Enable a handler for the specified signal.
-   setHandler(myHandler);
-}
-
-void
-#ifdef LOG_CIOS_INFO_DISABLE
-Sigusr1Handler::myHandler(int, siginfo_t *, void *)
-#else
-Sigusr1Handler::myHandler(int signum, siginfo_t *siginfo, void *sigcontext)
-#endif
-{
-   LOG_CIOS_INFO_MSG("Received signal " << signum << ", code=" << siginfo->si_code << " errno=" << siginfo->si_errno <<
-                " address=" << siginfo->si_addr << " nip=" << (void *)(((ucontext_t *)sigcontext)->uc_mcontext.regs->nip) <<
-                " lr=" << (void *)(((ucontext_t *)sigcontext)->uc_mcontext.regs->link));
-
-   return;
 }
 
 

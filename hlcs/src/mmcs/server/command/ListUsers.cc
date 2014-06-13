@@ -61,12 +61,19 @@ ListUsers::execute(
         BlockControllerTarget* pTarget
 )
 {
-    PthreadMutexHolder mutex;
-    mutex.Lock(&pController->_consoleControllerListMutex);
     reply << mmcs_client::OK;
+
+    // copy console list info local buffer
+    ConsoleControllerList list;
+    {
+        PthreadMutexHolder mutex;
+        mutex.Lock(&pController->_consoleControllerListMutex);
+        list = pController->_consoleControllerList;
+    }
+
     for (
-            ConsoleControllerList::const_iterator it = pController->_consoleControllerList.begin();
-            it != pController->_consoleControllerList.end();
+            ConsoleControllerList::const_iterator it = list.begin();
+            it != list.end();
             ++it
         )
     {
@@ -83,30 +90,21 @@ ListUsers::execute(
         reply << " User: " << (*it)->getUser().getUser();
 
         // print host name
-        CxxSockets::SockAddr remote;
-        if ( (*it)->getConsolePort() ) {
-            const CxxSockets::TCPSocketPtr sock = (*it)->getConsolePort()->getSock();
-            sock->getPeerName( remote );
-            try {
-                std::string hostname( remote.getHostName() );
-                const std::string::size_type period = hostname.find_first_of('.');
-                if ( period != std::string::npos ) {
-                    hostname.erase( period );
-                }
-                reply << "@" << hostname;
-            } catch ( const std::exception& e ) {
-                LOG_DEBUG_MSG( e.what() );
-                reply << "@" << remote.getHostAddr();
+        if ( !(*it)->getPeerName().empty() ) {
+            std::string hostname( (*it)->getPeerName() );
+            const std::string::size_type period = hostname.find_first_of('.');
+            if ( period != std::string::npos ) {
+                hostname.erase( period );
             }
+            reply << "@" << hostname;
         }
 
         // print block info
         reply << " Block: " << setw(16) << left;
-        DBBlockPtr dbBlockController = boost::dynamic_pointer_cast<DBBlockController>((*it)->_blockController);
-        if (dbBlockController) {
-            reply << dbBlockController->getBase()->getBlockName();
-            if (dbBlockController->getBase()->peekDisconnecting()) {
-                reply << "\tdisconnecting - " << dbBlockController->getBase()->disconnectReason();
+        if ( DBBlockPtr db = boost::dynamic_pointer_cast<DBBlockController>((*it)->_blockController) ) {
+            reply << db->getBase()->getBlockName();
+            if (db->getBase()->peekDisconnecting()) {
+                reply << "\tdisconnecting - " << db->getBase()->disconnectReason();
             }
         } else {
             reply << "n/a";
@@ -120,7 +118,6 @@ ListUsers::execute(
         reply << "\n";
     }
     reply << mmcs_client::DONE;
-    mutex.Unlock();
     return;
 }
 

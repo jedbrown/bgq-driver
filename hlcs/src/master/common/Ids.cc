@@ -38,16 +38,18 @@ Id::Id()
 
 Id::Id(
         const Id& id
-        )
+        ) :
+    _id(id._id)
+
 {
-    _id = id._id;
+
 }
 
 Id::Id(
         const std::string& id_string
-        )
+        ) :
+    _id(id_string)
 {
-    _id = id_string;
 }
 
 Id&
@@ -87,9 +89,9 @@ CxxSockets::Host
 Id::get_host() const
 {
     size_t newindex = 0;
-    size_t index = 0;
     newindex = _id.find_last_of(':');
     try {
+        size_t index = 0;
         CxxSockets::Host h(_id.substr(index, newindex - index));
         return h;
     } catch ( CxxSockets::Error& e ) {

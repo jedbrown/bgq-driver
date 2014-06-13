@@ -48,6 +48,7 @@ BOOST_GLOBAL_FIXTURE( InitializeLoggingFixture );
 const std::string propertiesFileName( "mapping.properties" );
 const std::string mappingFileName( "copy_mapping_file.mapping" );
 
+/* Archive path must always be specified now 2/24/14
 BOOST_AUTO_TEST_CASE( disabled )
 {
     // with no mapping archive path configured, the file should not be copied
@@ -70,6 +71,7 @@ BOOST_AUTO_TEST_CASE( disabled )
     const job::CopyMappingFile copy(0, info, bgq::utility::Properties::create(propertiesFileName) );
     BOOST_CHECK_EQUAL( copy.result(), "" );
 }
+*/
 
 BOOST_AUTO_TEST_CASE( enabled_and_writable )
 {

@@ -31,7 +31,7 @@ CXXFLAGS += -DBOOST_TEST_DYN_LINK
 CXXFLAGS += -DBOOST_TEST_MAIN
 
 
-LDFLAGS += -L $(BGQ_BUILD_DIR)/utility/src -lbgutility
+LDFLAGS += -L $(BGQ_BUILD_DIR)/utility/src -lbgutility -llog4cxx
 LDFLAGS += -Wl,-rpath,$(BGQ_BUILD_DIR)/utility/src
 LDFLAGS += ../common/ArgParse.o
 LDFLAGS += -lboost_unit_test_framework-mt

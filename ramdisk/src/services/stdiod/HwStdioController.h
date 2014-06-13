@@ -129,9 +129,9 @@ private:
 
    //! \brief  Handle a WriteStdout or WriteStderr message received from completion channel.
    //! \param  client Client connection message was received from.
-   //! \return Nothing (void) after handling
+   //! \return error state of sending on connection
 
-   void writeStdio(const RdmaClientPtr& client);
+   uint64_t writeStdio(const RdmaClientPtr& client);
 
    //! \brief  Handle a CloseStdio message received from completion channel.
    //! \param  client Client connection message was received from.

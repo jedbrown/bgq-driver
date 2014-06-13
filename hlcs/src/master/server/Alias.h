@@ -51,7 +51,7 @@ public:
             const Policy& p, 
             const std::string& user = std::string(),
             const std::string& logdir = std::string(),
-	    const int preferredHostWait = int()
+            const int preferredHostWait = int()
          );
 
     void set_path(const std::string& path) {

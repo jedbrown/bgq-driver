@@ -249,10 +249,10 @@ HealthCheck::threadStart()
     if (!Properties::getProperty("MAXBPMTEMP").empty() ) {
         MAXBPMTEMP = strtod(Properties::getProperty("MAXBPMTEMP").c_str(), NULL);
     }
-    double BPMTEMPRANGE = 10;
-    if (!Properties::getProperty("BPMTEMPRANGE").empty() ) {
-        BPMTEMPRANGE = strtod(Properties::getProperty("BPMTEMPRANGE").c_str(), NULL);
-    }
+    //double BPMTEMPRANGE = 10;
+    //if (!Properties::getProperty("BPMTEMPRANGE").empty() ) {
+    //    BPMTEMPRANGE = strtod(Properties::getProperty("BPMTEMPRANGE").c_str(), NULL);
+    //}
 
     // these thresholds are in mV for voltage and mA for current - hence the large numbers
 
@@ -1366,7 +1366,7 @@ HealthCheck::threadStart()
 
             }
 
-            handle++;
+            ++handle;
 
         }
 
@@ -1399,6 +1399,7 @@ HealthCheck::threadStart()
                 if(isThreadStopping() == true) return 0;
                 if (mcCMReply._coolMons[cmon]._error == CARD_NOT_PRESENT) { } else  // do nothing if the card is not present
                 if (mcCMReply._coolMons[cmon]._error == CARD_NOT_UP) { } else  // do nothing if the card is not up
+                if (mcCMReply._coolMons[cmon]._error == UNEXPECTED_DEVICE) { } else  // do nothing if the coolant monitor is missing
                 if (mcCMReply._coolMons[cmon]._error != 0) {
                     LOG_ERROR_MSG("Error reading environmentals from: " << mcCMReply._coolMons[cmon]._lctn);
                     RasEventImpl ras(0x00061005);

@@ -35,6 +35,10 @@ CXXFLAGS += -isystem $(BGQ_INSTALL_DIR)
 LDFLAGS  += -lboost_date_time-mt
 LDFLAGS  += -lboost_thread-mt
 LDFLAGS  += -lboost_program_options-mt
+LDFLAGS  += -llog4cxx
+LDFLAGS  += -lboost_filesystem-mt
+LDFLAGS  += -lboost_system-mt
+LDFLAGS  += -lcxxsockets
 LDFLAGS  += -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility 
 LDFLAGS  += -Wl,-rpath,$(BGQ_INSTALL_DIR)/utility/lib
 LDFLAGS  += -L $(BGQ_INSTALL_DIR)/xml/lib -lXML
@@ -83,6 +87,7 @@ clean:
 	$(RM) *.o
 	$(RM) *.d
 	$(RM) $(EXECS)
+	$(RM) test
 
 distclean:	clean
 
@@ -91,5 +96,6 @@ properties_validate: properties_validate.o $(BGM_OBJS) $(MMCS_OBJS)
 
 test: properties_validate
 	./$^ $(BGQ_INSTALL_DIR)/utility/etc/bg.properties.ship.tpl
+	@touch $@
 
 -include *.d
