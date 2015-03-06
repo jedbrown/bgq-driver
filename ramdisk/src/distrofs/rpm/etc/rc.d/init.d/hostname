@@ -58,27 +58,17 @@ function start
 
 	# Set the hostname from /etc/hosts or create /etc/hosts.
 	if [ -e /etc/hosts ] && [ -r /etc/hosts ] ; then
-        	#If the files exists and is readable see if our IP is already in the file.
-		cat /etc/hosts | grep $BG_IP >> /dev/null
-		if [ $? -ne 0 ] ; then
-			#If not, add our IP wiht the location as the hostname
-			echo "$BG_IP $BG_LOCATION $BG_LOCATION" >> /etc/hosts
-			BG_HOSTNAME=$BG_LOCATION
-		else
-			#If our IP is there try to get the hostname from the 3rd or 2nd fields.
-			#otherwise there is something odd going on, set-up the default.
-			BG_HOSTNAME=`awk "/^$BG_IP[ |\t]+/"' {print $3}' /etc/hosts`
-			if [ -z $BG_HOSTNAME ] ; then
-				BG_HOSTNAME=`awk "/^$BG_IP[ |\t]+/"' {print $2}' /etc/hosts`
-				if [ -z $BG_HOSTNAME ] ; then
-					BG_HOSTNAME=$BG_LOCATION
-					echo "$BG_IP $BG_LOCATION $BG_LOCATION" >> /etc/hosts
-				fi
-			fi
-		fi
+		# If our IP is there try to get the hostname.  First, strip any 
+		# trailing comments.  Then the host name alias should be the last 
+		# field on the line.  This will use the last alias if multiple 
+		# are specified.
+		BG_HOSTENTRY=`awk "/^$BG_IP[ |\t]+/"' {print $0}' /etc/hosts`
+		BG_HOSTENTRY=${BG_HOSTENTRY%#*}
+		BG_HOSTNAME=`echo $BG_HOSTENTRY | awk ' { print $NF } '`
+	fi
 
-	else
-		#Else try to create a basic hosts file using the location.
+	if [ -z $BG_HOSTNAME ] ; then
+		# Create a basic hosts file entry using the location.
 		echo "$BG_IP $BG_LOCATION $BG_LOCATION" >> /etc/hosts
 		BG_HOSTNAME=$BG_LOCATION
 	fi

@@ -1,0 +1,48 @@
+#!/bin/sh
+
+TESTCASES=$*
+
+success=0
+fail=0
+timeout=300
+procs="1 2 3 4"
+#procs="1 2 3 4 5 6 7 8"
+#procs="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"
+#procs="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32"
+#procs="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64"
+
+echo "***************** TEST ENVIRONMENT ************************"
+env | grep MP
+env | grep PAMI
+env | grep TEST
+echo "***********************************************************"
+for tc in ${TESTCASES}
+do
+    for proc in ${procs}
+    do
+        basename=`basename $tc`
+        dirname=`dirname  $tc`
+        oldpwd=`pwd`
+        cd $dirname
+        mkdir -p run
+        poe    ./$basename -procs $proc > run/$basename.$proc.out 2>&1 & cmdpid=$!
+        (echo -n "TC: $tc(timeout=$timeout) procs=$proc:"
+         sleep $timeout
+         echo -n "KILLING -- "
+         killall -9 $basename >/dev/null 2>&1)& watchdogpid=$!
+        wait $cmdpid
+        if [ "$?" -ne "0" ]; then
+            fail=`expr $fail + 1`
+            echo "FAIL $fail"
+            cat run/$basename.$proc.out
+        else
+            success=`expr $success + 1`
+            echo "SUCCESS $success"
+        fi
+        kill -9 $watchdogpid > /dev/null 2>&1
+        wait $watchdogpid > /dev/null 2>&1
+        cd $oldpwd
+    done
+done
+
+echo "Total:" `expr $success + $fail` "Success:" $success "Fail:" $fail

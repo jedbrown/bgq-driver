@@ -58,7 +58,7 @@ public:
     //
     unsigned        _state;              // state of this node.
     bool            _initialized;        // is the kernel ready for job submission?
-    bool	        _haltComplete;	     // did we receive 'Shutdown complete'?
+    bool            _haltComplete;       // did we receive 'Shutdown complete'?
     FILE            *_mailboxOutput;     // mailbox output file for I/O node logs
     Personality_t   _iopersonality;      // Used only for a link IO node in a CN block
 
@@ -66,41 +66,41 @@ public:
     // Initialize a chip and connect to it.
     //
     BCNodeInfo()
-	: _pos(0,0),
-	  _state(NST_IN_RESET),
-	  _initialized(false),
-	  _haltComplete(false),
-	  _mailboxOutput(NULL)
-	{
-            _linkio = false;
-	}
+        : _pos(0,0),
+        _state(NST_IN_RESET),
+        _initialized(false),
+        _haltComplete(false),
+        _mailboxOutput(NULL)
+    {
+        _linkio = false;
+    }
 
     BCNodeInfo(const std::string& loc)
-	:  BCTargetInfo(loc),
-	  _pos(loc.substr(7,3).c_str(),loc.substr(11,3).c_str()),
-	  _state(NST_IN_RESET),
-	  _initialized(false),
-	  _haltComplete(false),
-	  _mailboxOutput(NULL)
-	{
-            _linkio = false;
-	}
+        :  BCTargetInfo(loc),
+        _pos(loc.substr(7,3).c_str(),loc.substr(11,3).c_str()),
+        _state(NST_IN_RESET),
+        _initialized(false),
+        _haltComplete(false),
+        _mailboxOutput(NULL)
+    {
+        _linkio = false;
+    }
 
     ~BCNodeInfo()
-	{
+    {
         if (_mailboxOutput)
             fclose(_mailboxOutput);
-	}
+    }
 
     bool isIOnode() const {
-        if (_linkio)
+        if (_linkio) {
             return true;
-        if (ioboardNodeConfig() != 0)
+        }
+        if (ioboardNodeConfig() != 0) {
             return true;
-        else if (midplaneNodeConfig() != 0)
+        } else {
             return false;
-        else
-            return false;
+        }
     }
 
     Personality_t& personality() {
@@ -140,11 +140,11 @@ public:
     }
 
     void reset_state()
-	{
-	    _state = NST_IN_RESET;
-	    _initialized = false;
-	    _haltComplete = false;
-	}
+    {
+        _state = NST_IN_RESET;
+        _initialized = false;
+        _haltComplete = false;
+    }
 
 private:
     static Personality_t default_personality;

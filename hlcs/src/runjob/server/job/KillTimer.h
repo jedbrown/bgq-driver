@@ -58,6 +58,7 @@ public:
      */
     void start(
             size_t seconds,                         //!< [in]
+            const bool allowTimeoutReduction,       //!< [in]
             const boost::shared_ptr<Job>& job       //!< [in]
             );
 

@@ -44,6 +44,7 @@
 
 #define FIOBGQATOMIC _IOWR(0xa5, 0, unsigned int)
 #define SIGDCRVIOLATION 38
+#define SIGNOSPECALIAS  39
 
 #define SYSCALL_START 1024      // Syscall number of first BG/Q SPI system call
 
@@ -157,6 +158,7 @@ __END_DECLS
     SYSCALL(GETMAPPING)                     // 1102
     SYSCALL(EXECENVMON2COMMAND)             // 1103
     SYSCALL(GPFSFCNTL)                      // 1104
+    SYSCALL(KERNELVERSION)                  // 1105
 
     // IMPORTANT!!!  Place new syscalls at the end of this list to avoid binary incompatibility breakage.  
 

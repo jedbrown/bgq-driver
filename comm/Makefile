@@ -106,6 +106,19 @@ compiler: ${INSTALL_DIR}
 	fi;						\
 	) >> ${INSTALL_DIR}/COMPILER; fi
 
+debug:
+	@echo
+	@echo
+	@echo "HOST_AR         = $(HOST_AR)"
+	@echo "HOST_LD         = $(HOST_LD)"
+	@echo "HOST_CC         = $(HOST_CC)"
+	@echo "HOST_CXX        = $(HOST_CXX)"
+	@echo "HOST_F77        = $(HOST_F77)"
+	@echo "HOST_F90        = $(HOST_F90)"
+	@echo
+	@echo
+
+
 print-xl:
 	echo ${XL}
 	ls -1 "${word 1, ${FAST_CC}}" 		\

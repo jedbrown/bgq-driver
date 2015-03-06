@@ -74,6 +74,7 @@ FLIGHTDECODER(Flight_IPIDecoder);
 FLIGHTDECODER(Flight_SyscallReturnDecoder);
 FLIGHTDECODER(Flight_SysioMsgDecoder);
 FLIGHTDECODER(Flight_SpeculationRestart);
+FLIGHTDECODER(Flight_FlockDecoder);
 
 
 /**********************************/
@@ -160,6 +161,7 @@ FLIGHTPRINT(FL_CNVBADMR_, "Memory region with rkey %lu was not found")
 FLIGHTPRINT(FL_CNVMRSIZE, "Memory region with rkey %lu and length %lu is too small for request of %lu bytes")
 FLIGHTPRINT(FL_CNVBADWCE, "Work completion %lu with state %lu does not have outstanding operation")
 FLIGHTPRINT(FL_CNVNULLCQ, "Work completion %lu has a null cq pointer, qp %lu, state %lu")
+FLIGHTPRINT(FL_CNVWORKCP, "Work completion opcode=%lu curRWC->len=%lu, curRWC->buf=%p, curRWC->status=%lu")
 FLIGHTPRINT(FL_PWREVNTA2, "Reactive power threshold exceeded for processor domain.  current=%ld mA.  Starting processor throttling every %ld usec for %ld usec.  IP=%016lx")
 FLIGHTPRINT(FL_PWREVNTMC, "Reactive power threshold exceeded for memory controller domain.  current=%ld mA.  Starting DDR throttling at %ld.  IP=%016lx")
 FLIGHTPRINT(FL_APPBCASTO, "Collective load broadcast elfimage object data. Addr %016lx, Len %ld, Load status:%016lx")
@@ -271,6 +273,12 @@ FLIGHTPRINT(FL_CLRTSNDUP, "Classroute generation: sending up injection to output
 FLIGHTPRINT(FL_MPMDSEQST, "ELF load iteration %ld.  My load iteration is %ld, max iteration is %ld")
 FLIGHTPRINT(FL_MPMDSEQMX, "ELF load max iterations is %ld.")
 FLIGHTPRINT(FL_MPMDSETUP, "MPMD configuration.  nodeCount=%ld  isLoadLeader=%ld  loadLeaderTorusCoord=%lx")
+FLIGHTPRINT(FL_UDECTIMER, "UDEC timer event.  IP=%lx  LR=%lx")
+
+FLIGHTFUNCT(FL_SYSCFLOCK, Flight_FlockDecoder)
+FLIGHTPRINT(FL_FLOCKRETY, "Advisory file lock deadlock (cmd=%ld  rc=%lx), retry attempt %ld.  backoffTime=%ld usec")
+FLIGHTPRINT(FL_FLOCKLOCL, "Advisory file lock owned by another process on this node.  Blocking locally  fd=%ld start=%ld len=%ld whence=%ld")
+FLIGHTPRINT(FL_FLOCKCOMP, "Advisory file lock complete rc=%lx")
 
 #undef FLIGHTPRINT
 #undef FLIGHTFUNCT

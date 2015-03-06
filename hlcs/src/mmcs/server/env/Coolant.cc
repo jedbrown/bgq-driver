@@ -211,65 +211,69 @@ Coolant::readHandler(
     database_timer->dismiss();
 
     cxxdb::Transaction tx( *connection );
-    for (
-            std::vector<MCServerMessageSpec::CoolMonEnv>::const_iterator cmon = reply._coolMons.begin();
-            cmon != reply._coolMons.end();
-            ++cmon
-        )
-    {
-        if (cmon->_error == CARD_NOT_PRESENT) continue;
-        if (cmon->_error == CARD_NOT_UP) continue;
-        if (cmon->_error) {
-            LOG_ERROR_MSG("Error reading environmentals from: " << cmon->_lctn);
-            RasEventImpl ras(0x00061005);
-            ras.setDetail(RasEvent::LOCATION, cmon->_lctn);
-            RasEventHandlerChain::handle(ras);
-            BGQDB::putRAS(ras);
-            continue;
+    try {
+        for (
+                std::vector<MCServerMessageSpec::CoolMonEnv>::const_iterator cmon = reply._coolMons.begin();
+                cmon != reply._coolMons.end();
+                ++cmon
+            )
+        {
+            if (cmon->_error == CARD_NOT_PRESENT) continue;
+            if (cmon->_error == CARD_NOT_UP) continue;
+            if (cmon->_error == UNEXPECTED_DEVICE) continue;
+            if (cmon->_error) {
+                LOG_ERROR_MSG("Error reading environmentals from: " << cmon->_lctn);
+                RasEventImpl ras(0x00061005);
+                ras.setDetail(RasEvent::LOCATION, cmon->_lctn);
+                RasEventHandlerChain::handle(ras);
+                BGQDB::putRAS(ras);
+                continue;
+            }
+
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::LOCATION_COL ].set(
+                    cmon->_lctn
+                    );
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::INLETFLOWRATE_COL ].cast(
+                    cmon->_supplyFlowRate
+                    );
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::OUTLETFLOWRATE_COL ].cast(
+                    cmon->_returnFlowRate
+                    );
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::COOLANTPRESSURE_COL ].cast(
+                    cmon->_supplyPressure
+                    );
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::DIFFPRESSURE_COL ].cast(
+                    cmon->_diffPressure
+                    );
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::INLETCOOLANTTEMP_COL ].cast(
+                    cmon->_supplyCoolantTemp
+                    );
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::OUTLETCOOLANTTEMP_COL ].cast(
+                    cmon->_returnCoolantTemp
+                    );
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::DEWPOINTTEMP_COL ].cast(
+                    cmon->_ambientDewPoint
+                    );
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::AMBIENTTEMP_COL ].cast(
+                    cmon->_ambientTemp
+                    );
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::AMBIENTHUMIDITY_COL ].cast(
+                    cmon->_ambientHumidity
+                    );
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::SYSTEMPOWER_COL ].cast(
+                    cmon->_systemPower
+                    );
+            insert->parameters()[ BGQDB::DBTCoolantenvironment::SHUTOFFCAUSE_COL ].cast(
+                    cmon->_shutoffCauseStatus
+                    );
+
+            insert->execute();
         }
-
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::LOCATION_COL ].set(
-                cmon->_lctn
-                );
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::INLETFLOWRATE_COL ].cast(
-                cmon->_supplyFlowRate
-                );
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::OUTLETFLOWRATE_COL ].cast(
-                cmon->_returnFlowRate
-                );
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::COOLANTPRESSURE_COL ].cast(
-                cmon->_supplyPressure
-                );
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::DIFFPRESSURE_COL ].cast(
-                cmon->_diffPressure
-                );
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::INLETCOOLANTTEMP_COL ].cast(
-                cmon->_supplyCoolantTemp
-                );
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::OUTLETCOOLANTTEMP_COL ].cast(
-                cmon->_returnCoolantTemp
-                );
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::DEWPOINTTEMP_COL ].cast(
-                cmon->_ambientDewPoint
-                );
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::AMBIENTTEMP_COL ].cast(
-                cmon->_ambientTemp
-                );
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::AMBIENTHUMIDITY_COL ].cast(
-                cmon->_ambientHumidity
-                );
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::SYSTEMPOWER_COL ].cast(
-                cmon->_systemPower
-                );
-        insert->parameters()[ BGQDB::DBTCoolantenvironment::SHUTOFFCAUSE_COL ].cast(
-                cmon->_shutoffCauseStatus
-                );
-
-        insert->execute();
+        connection->commit();
+        database_timer->dismiss( false );
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( e.what() );
     }
-    connection->commit();
-
-    database_timer->dismiss( false );
 
     this->closeTarget(
             mc_server,

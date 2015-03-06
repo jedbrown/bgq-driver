@@ -64,6 +64,6 @@ $(C_API_CC): $(C_API_H) $(XML_DEFS)
 	$(IDLC) --cimpl $<
 
 clean:
-	rm -rf *.o *.h *.cc
+	rm -rf *.o *.h *.cc *.d
 
 -include *.d

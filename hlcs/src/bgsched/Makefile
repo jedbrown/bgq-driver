@@ -146,7 +146,7 @@ $(lib_short): $(lib_vers)
 
 install: all docs $(INSTALL_LIST)
 	@for i in $(SUBDIRS); do $(MAKE) -C $$i $@; done
-	
+
 uninstall:
 	$(RM) $(INSTALL_LIST)	
 
@@ -167,25 +167,25 @@ test_allocator: test_allocator.o $(lib_short)
 	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^
 
 test_filter: test_filter.o $(lib_short)
-	$(CXX) $(exe_cxxflags) -Wl,-rpath,. -o $@ $^
+	$(CXX) $(exe_cxxflags) -Wl,-rpath,. -o $@ $^ -lboost_date_time-mt
 
 test_kill_job: test_kill_job.o $(lib_short)
 	$(CXX) $(exe_cxxflags) -Wl,-rpath,. -o $@ $^
 
 realtime_client: realtime_client.o $(lib_short)
-	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/extlib/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/db/lib -o $@ $^
+	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/extlib/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/db/lib -o $@ $^ -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -L $(BGQ_INSTALL_DIR)/db/lib -lbgdb  -L $(BGQ_INSTALL_DIR)/extlib/lib -llog4cxx -lboost_program_options-mt
 
 test_core: test_core.o $(lib_short)
-	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^
+	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^ -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -L $(BGQ_INSTALL_DIR)/extlib/lib -llog4cxx -lboost_date_time-mt
 
 test_query_block_action: test_query_block_action.o $(lib_short)
-	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^
+	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^ -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -L $(BGQ_INSTALL_DIR)/extlib/lib -llog4cxx -lboost_system-mt -lboost_program_options-mt
 
 test_deallocate: test_deallocate.o $(lib_short)
-	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^
+	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^ -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -L $(BGQ_INSTALL_DIR)/extlib/lib -llog4cxx -lboost_system-mt -lboost_program_options-mt
 
 reboot_io_node: reboot_io_node.o $(lib_short)
-	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^
+	$(CXX) $(exe_cxxflags) -Wl,-rpath,$(BGQ_INSTALL_DIR)/hlcs/lib:$(BGQ_INSTALL_DIR)/utility/lib:$(BGQ_INSTALL_DIR)/extlib/lib -o $@ $^ -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility -lboost_thread-mt -L $(BGQ_INSTALL_DIR)/extlib/lib -lboost_program_options-mt
 
 plugin_tester: plugin_tester.o install
 	$(CXX) -o $@ plugin_tester.o $(exe_cxxflags) -L. -lbgsched -Wl,-rpath,.

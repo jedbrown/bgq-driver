@@ -43,14 +43,12 @@ uint64_t sc_futex( SYSCALL_FCN_ARGS )
     int32_t ft_val3     = (int32_t)r8;
     uint64_t futex_timeout;
 
-#if 0
     int processor_id = ProcessorID();
     TRACESYSCALL(
-                ("(I) %s[%d]: op(%d)=%s, uaddr=0x%08x, val=%d timeout=0x%08x *uaddr=%d uaddr2=0x%08x val3=0x%08x.\n",
+                ("(I) %s[%d]: op(%d)=%s, uaddr=%p, val=%d timeout=%p *uaddr=%d uaddr2=0x%08x val3=0x%08x.\n",
                  __func__, processor_id, ft_op_and_flags,
                  (ft_op == FUTEX_WAIT ? "WAIT" : (ft_op == FUTEX_WAKE ? "WAKE" : "Other")),
-                 (uint32_t)ft_uaddr, ft_val, (uint32_t)ft_timeout, *ft_uaddr, ft_uaddr2, ft_val3 ));
-#endif
+                 ft_uaddr, ft_val, ft_timeout, *ft_uaddr, ft_uaddr2, ft_val3 ));
     if ( !VMM_IsAppAddress( (const void*)((Futex_t*)ft_uaddr), sizeof(Futex_t) ) )
     {
         return CNK_RC_FAILURE(EFAULT);

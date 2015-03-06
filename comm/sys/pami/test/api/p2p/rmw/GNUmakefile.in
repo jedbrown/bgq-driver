@@ -1,0 +1,53 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+VPATH		= @abs_srcdir@
+SUBDIRS         = 
+NOTBUILT        =
+APPS            = rmw_func.${EXTENSION}
+
+include @abs_top_builddir@/Build.rules
+
+ifeq (@BUILDENV@,ade)
+%.${EXTENSION}: %.c
+	cp ${CROSS_CRT1} .
+	cp ${CROSS_CRTI} .
+	cp ${CROSS_CRTN} .
+	${CROSS_CC} -I${INSTALL_DIR}/include ${CROSS_CFLAGS} $< -o $@ ${CROSS_LDFLAGS} -lm -L${CROSS_TOOLCHAIN_LDPATH} @POELIB@ @IBMMPILIB@
+	rm `basename ${CROSS_CRT1}`
+	rm `basename ${CROSS_CRTI}`
+	rm `basename ${CROSS_CRTN}`
+%.${EXTENSION}: %.cc
+	cp ${CROSS_CRT1} .
+	cp ${CROSS_CRTI} .
+	cp ${CROSS_CRTN} .
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -lm -L${CROSS_TOOLCHAIN_LDPATH} @POELIB@ @IBMMPILIB@
+	rm `basename ${CROSS_CRT1}`
+	rm `basename ${CROSS_CRTI}`
+	rm `basename ${CROSS_CRTN}`
+else
+
+%.${EXTENSION}: %.c
+	${CROSS_CC} -I${INSTALL_DIR}/include ${CROSS_CFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+%.${EXTENSION}: %.cc
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+%.${EXTENSION}: %.cpp
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+
+endif
+
+default: ${APPS}

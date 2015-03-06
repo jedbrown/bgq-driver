@@ -92,10 +92,8 @@ private:
 inline std::ostream &operator<<(std::ostream &os, const XMLException& ex)
 {
     os << "XML Exception! " << ex.what() << std::endl;
-    if (ex._obj)
-    {
-	os << "Current XML tag: " << ex._obj->name()
-	   << " in line " << ex._obj->lineno() << std::endl;
+    if (ex._obj) {
+        os << "Current XML tag: " << ex._obj->name() << " in line " << ex._obj->lineno() << std::endl;
     }
     return os;
 }

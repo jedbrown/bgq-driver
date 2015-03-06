@@ -1,0 +1,1 @@
+../../test/api/collectives/allgather.c

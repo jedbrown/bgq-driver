@@ -163,20 +163,11 @@ main(int argc, char** argv)
         std::cout << options << std::endl;
         exit(EXIT_SUCCESS);
     }
-    const bgq::utility::Properties::ConstPtr properties( 
+    const bgq::utility::Properties::ConstPtr properties(
             openProperties(propertiesOptions, lpo)
             );
     if ( !numSmallBlocks && !numMidplaneBlocks && !numFullSystemBlocks ) {
         std::cerr << "specify one of --small --midplane or --full" << std::endl;
-        exit( EXIT_FAILURE );
-    } else if ( numSmallBlocks < 0 ) {
-        std::cerr << "specify a positive number of small blocks to create" << std::endl;
-        exit( EXIT_FAILURE );
-    } else if ( numMidplaneBlocks < 0 ) {
-        std::cerr << "specify a positive number of midplane blocks to create" << std::endl;
-        exit( EXIT_FAILURE );
-    } else if ( numFullSystemBlocks < 0 ) {
-        std::cerr << "specify a positive number of full system blocks to create" << std::endl;
         exit( EXIT_FAILURE );
     }
 

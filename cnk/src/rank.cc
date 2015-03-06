@@ -430,6 +430,14 @@ int getMyRank(uint32_t* rank)
     rc = MUSPI_GenerateCoordinates(filename, &jobcoord, &mycoord, appState->ranksPerNode, appState->ranksActive,
                                    sizeof(mapping_storage[thread]), &mapping_storage[thread][0], NULL, rank, &mpmdFound);
     
+    if((rc == -7) &&
+       (*((uint32_t*)&mycoord) == 0))  // \warning assumption that mycoord fits in 32-bits.  This will always be true on BGQ.
+    {
+        char buffer[1024];
+        snprintf(buffer, sizeof(buffer), "Mapfile '%s' could not be opened", filename);
+        rc = NodeState.FW_Interface.writeRASString(RAS_MAPFILEOPENFAIL, buffer);
+    }
+    
     if((rc == 0) && (*rank != (~0u)) && (mpmdFound))
     {
         uint32_t sequence = (~0);

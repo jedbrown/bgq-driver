@@ -52,6 +52,8 @@ endif
 # Additional linker flags
 LDFLAGS  += -L $(IOS_LIBRARY_DIR) -lbgcios
 LDFLAGS  += -llog4cxx
+LDFLAGS  += -lcrypto
+LDFLAGS  += -lssl
 
 all: $(IOSD)
 

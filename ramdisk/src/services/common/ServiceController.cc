@@ -81,6 +81,9 @@ ServiceController::sendReady(uint32_t serviceId, in_port_t port, std::string cmd
    ready.header.version = bgcios::iosctl::ProtocolVersion;
    ready.header.type = bgcios::iosctl::Ready;
    ready.header.length = sizeof(ready);
+   ready.header.jobId = (uint64_t)getpid();
+   ready.header.sequenceId = serviceId;
+   ready.header.rank = serviceId;
    ready.serviceId = serviceId;
    ready.port = port;
 

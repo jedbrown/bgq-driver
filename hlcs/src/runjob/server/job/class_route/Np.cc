@@ -25,6 +25,9 @@
 #include "server/job/class_route/Coordinates.h"
 #include "server/job/class_route/Mapping.h"
 
+#include "server/Job.h"
+
+#include "common/defaults.h"
 #include "common/Environment.h"
 #include "common/JobInfo.h"
 #include "common/logging.h"
@@ -38,6 +41,8 @@
 #include <boost/foreach.hpp>
 
 #include <set>
+#include <string.h>
+#include <unistd.h>
 
 LOG_DECLARE_FILE( runjob::server::log );
 
@@ -49,13 +54,19 @@ namespace class_route {
 Np::Np(
         const JobInfo& info,
         Rectangle* world,
-        Mapping* mapping
+        Mapping* mapping,
+        const std::string& mapArchiveFile,
+        bool permutationMappingType,
+        bool retainMappingFiles
         ) :
     _container(),
     _size( 0 ),
     _rectangle(),
     _primaryDimension( 0 ),
-    _includeCount( 0 )
+    _includeCount( 0 ),
+    _mapArchiveFile(mapArchiveFile),
+    _permutationMappingType(permutationMappingType),
+    _retainMappingFiles(retainMappingFiles)
 {
     const unsigned size = world->size();
     LOG_TRACE_MSG( "size           : " << size << " node" << (size == 1 ? "" : "s") );
@@ -99,7 +110,7 @@ Np::Np(
     // log coordinates of nodes outside the rectangle
     for ( int i = 0; i < _size; ++i ) {
         LOG_TRACE_MSG(
-                "exclude " << i+1 << " of " << _size << 
+                "exclude " << i+1 << " of " << _size <<
                 " (" <<
                 _container[i].coords[0] << "," <<
                 _container[i].coords[1] << "," <<
@@ -118,20 +129,22 @@ Np::countIncludedNodes(
         ) const
 {
     const JobInfo::EnvironmentVector& envs = info.getEnvs();
-    bool enabled = false;
+    bool disabled = false;
     BOOST_FOREACH( const Environment& i, envs ) {
-        enabled = ( i.getKey() == "RUNJOB_USE_NEW_NP_INCLUDE_COUNT" );
-        if ( enabled ) break;
+        disabled = ( i.getKey() == "RUNJOB_USE_OLD_NP_INCLUDE_COUNT" );
+        if ( disabled ) break;
     }
 
-    if ( !enabled ) {
+    if ( disabled ) {
+        // this count will be incorrect for certain mappings, see issue 7342. That's why this is
+        // disabled by default.
+        LOG_DEBUG_MSG( "using old np include count" );
         const unsigned excludeCount = (world->size() * info.getRanksPerNode() - info.getNp()) / info.getRanksPerNode();
         return world->size() - excludeCount;
     }
-    LOG_DEBUG_MSG( "using new np include count" );
 
     // need to calculate how many nodes will be included in the np rectangle
-    // this requires calculating the coordinates for ranks 0 throug np, and 
+    // this requires calculating the coordinates for ranks 0 through np, and
     // counting the number of unique a,b,c,d,e coordinates in the resulting set
     std::set<Coordinates> result;
 
@@ -143,13 +156,24 @@ Np::countIncludedNodes(
     coordinates.shape.e = boost::numeric_cast<uint8_t>( world->size(Dimension::E) );
 
     unsigned buf[2048];
+    memset(buf,0,sizeof(buf));
 
     const unsigned np = info.getNp().get();
     boost::scoped_array<BG_CoordinateMapping_t> output(
             new BG_CoordinateMapping_t[np]
             );
 
-    const std::string& map = info.getMapping();
+    std::string map = info.getMapping();
+    if (map.empty()) {
+        LOG_INFO_MSG("No mapping permutation or file specified.");
+    } else {
+        if ( _permutationMappingType ) {
+            LOG_INFO_MSG("Mapping permutation specified is " << map);
+        } else {
+            map = _mapArchiveFile;
+            LOG_INFO_MSG("Mapping file specified is " << map);
+        }
+    }
 
     const int rc = MUSPI_GenerateCoordinates(
             map.c_str(),
@@ -164,10 +188,20 @@ Np::countIncludedNodes(
             NULL  // mpmd Found
             );
 
+    // Check if mapping file archive should be deleted
+    if ( (_permutationMappingType == false) && (_retainMappingFiles == false) ) {
+        int rc2  = unlink(map.c_str());
+        if ( rc2 == 0 ) {
+            LOG_DEBUG_MSG("Deleted temporary mapping file " << map);
+        } else {
+            LOG_WARN_MSG("Failed to delete temporary mapping file " << map);
+        }
+    }
+
     if ( rc ) {
         BOOST_THROW_EXCEPTION(
                 std::runtime_error(
-                    "could not generate mapping: rc=" +
+                    "Could not generate mapping: rc=" +
                     boost::lexical_cast<std::string>(rc)
                     )
                 );

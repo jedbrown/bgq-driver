@@ -33,11 +33,11 @@
  *
  * \section DESCRIPTION
  *
- * runjob is the interface to launch jobs.  It is conceptually the same as mpirun from previous
- * Blue Gene software releases because it acts as a shadow process for the job's lifetime.  It's
- * important to note that runjob has one significant difference compared to mpirun in that it's 
- * not a scheduler.  It does not provide any queuing support, nor any support for creating or
- * booting blocks.  If the block that is requested to run a job is not initialized, runjob immediately
+ * runjob is the interface to launch jobs. It is conceptually the same as mpirun from previous
+ * Blue Gene software releases because it acts as a shadow process for the job's lifetime. It's
+ * important to note that runjob has one significant difference compared to mpirun in that it's
+ * not a scheduler. It does not provide any queuing support, nor any support for creating or
+ * booting blocks. If the block that is requested to run a job is not initialized, runjob immediately
  * terminates with a descriptive error message.
  *
  * This documentation was generated for driver DRIVER_NAME with revision VERSION_NUMBER on DOCUMENTATION_DATE.
@@ -45,7 +45,7 @@
  * \section OPTIONS
  *
  * All arguments can also be specified by environment variables by prefixing RUNJOB_ to their
- * name.  For example, the --exe argument can be specified with RUNJOB_EXE.  Arguments will always
+ * name. For example, the --exe argument can be specified with RUNJOB_EXE. Arguments will always
  * take precedence over their environmental equivalent. For arguments containing a dash (-) character,
  * the corresponding environment variable should use an underscore. For example, the --ranks-per-node=8
  * argument can be specified with RUNJOB_RANKS_PER_NODE=8. Arguments with implicit boolean values like
@@ -54,8 +54,8 @@
  * \subsection exe --exe
  * path name for the executable to run. Your user id must have permission to read and execute
  * this executable. The path can be an absolute path or a relative path to --cwd. This value
- * can also be specified as the first positional parameter after the : token. Note the total 
- * length of all --args and --exe arguments must be less than LOAD_JOB_ARGS_SIZE characters. The 
+ * can also be specified as the first positional parameter after the : token. Note the total
+ * length of all --args and --exe arguments must be less than LOAD_JOB_ARGS_SIZE characters. The
  * executable must be less than EXE_SIZE characters.
  *
  * This parameter is required.
@@ -69,14 +69,14 @@
  * runjob --block R00-M0 --exe /home/user/exe
  *
  * \subsection args --args
- * arguments for the executable specified by --exe.  Multiple tokens to --args are split on spaces until
- * another argument is encountered.  To retain spaces in your tokens, enclose them in quotations. Note that
+ * arguments for the executable specified by --exe. Multiple tokens to --args are split on spaces until
+ * another argument is encountered. To retain spaces in your tokens, enclose them in quotations. Note that
  * multiple --args parameters must be used to disambiguate between runjob arguments and application arguments.
  * Arguments can also be specified after the first positional executable parameter, in which case
  * disambiguation between runjob arguments and application arguments is not necessary.
  *
- * Arguments are composing, their values are combined from both command line parameters and 
- * environments (RUNJOB_ARGS) to generate the final set. Note that all --exe and --args parameters 
+ * Arguments are composing, their values are combined from both command line parameters and
+ * environments (RUNJOB_ARGS) to generate the final set. Note that all --exe and --args parameters
  * must be less than LOAD_JOB_ARGS_SIZE characters.
  *
  * for example:
@@ -97,12 +97,12 @@
  *
  * \subsection envs --envs
  * environment variables to export. This value must contain an equals character that is not the first
- * character of the string. Multiple tokens are split on spaces until another argument is 
+ * character of the string. Multiple tokens are split on spaces until another argument is
  * encountered. The leading character of an environment variable name cannot be a digit or a space.
  * To retain spaces in your environment variables enclose them in double quotes.
  * Environment variables are composing, their values are combined from both
- * arguments and environments to generate the final set. Note the total length of all environment 
- * variables must be less than LOAD_JOB_ENVS_SIZE characters, this includes the environment variable 
+ * arguments and environments to generate the final set. Note the total length of all environment
+ * variables must be less than LOAD_JOB_ENVS_SIZE characters, this includes the environment variable
  * name and the equals character.
  *
  * \subsection exp-env --exp-env
@@ -122,7 +122,7 @@
  * When the job starts running, deliver a SIGKILL after the specified number of seconds.
  *
  * \subsection block --block
- * The compute block ID on which to run the job.  The block must be initialized prior to invoking
+ * The compute block ID on which to run the job. The block must be initialized prior to invoking
  * runjob. If the system administrator has configured a job scheduler, this parameter may be
  * changed before the job starts. This parameter must be less than BLOCK_SIZE characters.
  *
@@ -139,15 +139,15 @@
  *  - R00-M1-N12-J05-C00 (core 0 on node J05 on board N12 in midplane R00-M1)
  *
  * Core corner locations cannot use a shape or alternate ranks per node, therefore --shape and --ranks-per-node
- * are both ignored when specified with a core corner location. Node corner locations require a --shape argument. 
+ * are both ignored when specified with a core corner location. Node corner locations require a --shape argument.
  * Multiple sub-node jobs on a single node using core corner locations are limited to a single user.
  *
  * \subsection shape --shape
  *
- * 5 dimensional AxBxCxDxE torus shape of a sub-block job, starting from a corner given by --corner. 
+ * 5 dimensional AxBxCxDxE torus shape of a sub-block job, starting from a corner given by --corner.
  * Must be equal to or less than a midplane (4x4x4x4x2) in size and cannot span multiple midplanes.
  * Shapes also cannot wrap around torus dimensions. All dimensions must be a power of two: either 1,
- * 2, or 4 nodes in size. If the system administrator has configured a job scheduler, this parameter 
+ * 2, or 4 nodes in size. If the system administrator has configured a job scheduler, this parameter
  * may be changed before the job starts.
  *
  * Requires --corner and --block to be specified as well.
@@ -170,10 +170,10 @@
  *
  * \subsection mapping --mapping
  * Permutation of ABCDET or a path to a mapping file containing coordinates for each rank.
- * If the path is relative, the combination of --cwd and --mapping must be less than MAPPING_SIZE characters. 
- * If the path is absolute, --mapping must be less than MAPPING_SIZE characters.  The syntax of a mapping 
- * file is 6 columns separated by white space. The columns indicate the A,B,C,D,E,T coordinates, and the 
- * line number is the rank. Comments can be used anywhere in the line with the # character, any text after 
+ * If the path is relative, the combination of --cwd and --mapping must be less than MAPPING_SIZE characters.
+ * If the path is absolute, --mapping must be less than MAPPING_SIZE characters. The syntax of a mapping
+ * file is 6 columns separated by white space. The columns indicate the A,B,C,D,E,T coordinates, and the
+ * line number is the rank. Comments can be used anywhere in the line with the # character, any text after
  * the # is ignored. Blank lines are also ignored. An example
  *
 \verbatim
@@ -181,6 +181,48 @@
 0 0 0 0 1 0 # rank 1
 0 0 0 1 0 0 # rank 2
 0 0 0 1 1 0 # rank 3
+\endverbatim
+ *
+ * Multiple program, multiple data (MPMD) jobs are jobs for which a different executable and arguments can be
+ * supplied for a single job. All tasks of the job share the same MPICOMMWORLD communicator and can share data
+ * between different executables using the torus.
+ *
+ * To enable MPMD support, specify a mapping file with the runjob --mapping option. Within the mapping file,
+ * there are keywords that control MPMD behavior on the nodes.
+ *
+\verbatim
+#mpmdbegin {ranks}
+#mpmdcmd <executable> <arg0> <arg1> ... <argn>
+#mpmdend
+
+{ranks} specifies the MPI rank numbers. Multiple MPI ranks can be specified with a comma, for example:
+
+#mpmdbegin 3,6,9
+
+It is also possible to specify ranges of MPI ranks using a dash, for example:
+
+#mpmdbegin 0-15
+
+Additionally, ranges can be specified with a stride 'x' option, for example:
+
+#mpmdbegin 0-15x2
+
+Ranks 0, 2, 4, 6, 8, 10, 12, and 14 are included.
+
+Sets and ranges can also be mixed:
+
+#mpmdbegin 0,2,5-15
+
+Avoid oversubscribing a rank to multiple programs.
+
+There is also a shortcut option for specifying a calculated mapping without specifying each
+rank in the map file. To use that option:
+
+#mapping ABCDET
+
+All permutations of ABCDET are permitted.
+
+There is also a restriction on MPMD ranks. All ranks in the same node must have the same program.
 \endverbatim
  *
  * \subsection label --label
@@ -225,7 +267,7 @@ hello world
  * \subsection tool-args --tool-args
  *
  * Single token containing arguments to be passed to the tool daemons. This token is split
- * on spaces. The --start-tool option must be given with this option. The combination of this value and 
+ * on spaces. The --start-tool option must be given with this option. The combination of this value and
  * --start-tool must be less than TOOL_ARGS_SIZE characters.
  *
  * \subsection tool-subset --tool-subset
@@ -239,18 +281,18 @@ hello world
  *
  * A rank specification can either be a number or the special keywords $max or max. Both of them represent
  * the last rank participating in the job. The $ character is optional to prevent shell escaping. This subset
- * specification will restrict the I/O nodes used for launching the tool. Note each element in the 
- * specification must be in increasing order, and cannot have any overlapping ranks. The subset must specify 
- * at least one rank that is participating in the job. The --start-tool option must be given with this 
+ * specification will restrict the I/O nodes used for launching the tool. Note each element in the
+ * specification must be in increasing order, and cannot have any overlapping ranks. The subset must specify
+ * at least one rank that is participating in the job. The --start-tool option must be given with this
  * option. If not specified, the default value is 0-$max.
  *
  * \subsection stdinrank --stdinrank
  * The rank to deliver standard input to. Must be a valid rank in the job.
  *
  * \subsection raise --raise
- * 
+ *
  * If the job abnormally terminates by a signal, re-raise that signal when runjob terminates.
- * 
+ *
  * \subsection help --help | -h
  *
  * display help text and exit.
@@ -278,7 +320,7 @@ hello world
  *
  * by the rank specified using --stdinrank triggers a corresponding read system call by runjob. For
  * ranks other than --stdinrank, a read system call will always return 0. Note that when runjob's
- * standard input file descriptor is a tty, line buffering is enabled. Otherwise, block buffering 
+ * standard input file descriptor is a tty, line buffering is enabled. Otherwise, block buffering
  * is used.
  *
  * \section signals SIGNAL HANDLING
@@ -291,14 +333,14 @@ hello world
  * Signals other than SIGINT or SIGXPU are not handled by runjob, they can be delivered to the job using
  * kill_job. Similarly, the kill timeout can be changed when using kill_job instead of delivering a
  * signal to runjob. Successive signals sent to runjob will not cause additional SIGKILL signals to be
- * delivered to the job. Only the first one causes the kill timer to start. 
+ * delivered to the job. Only the first one causes the kill timer to start.
  *
  * \section termination JOB TERMINATION
  *
- * After a job starts, if any rank in the job terminates normally with exit(1), the remaining ranks will 
- * be delivered SIGTERM. If the any rank in the job abnormally terminates by a signal, the remaining ranks 
- * will be delivered a SIGKILL. 
- *  
+ * After a job starts, if any rank in the job terminates normally with exit(1), the remaining ranks will
+ * be delivered SIGTERM. If the any rank in the job abnormally terminates by a signal, the remaining ranks
+ * will be delivered a SIGKILL.
+ *
  * \section notes NOTES
  *
  * This command uses a local (AF_UNIX) socket to the runjob_mux process. If this connection is prematurely
@@ -307,11 +349,11 @@ hello world
  * \section exit EXIT STATUS
  *
  * If the job fails to start for whatever reason, the exit status will be EXIT_FAILURE and an informative
- * message will be logged indicating the failure. After a job starts, the exit status is the first non-zero 
- * exit status reported by any rank in the job. For non-zero exit status values, a message will be logged 
+ * message will be logged indicating the failure. After a job starts, the exit status is the first non-zero
+ * exit status reported by any rank in the job. For non-zero exit status values, a message will be logged
  * indicating which rank caused the termination. When a rank terminates with an unhandled signal, runjob can
- * optionally re-raise this signal using the --raise option. If --raise is not given, the exit status will 
- * be 128 + the signal number. An informative message is also logged indicating which rank generated the 
+ * optionally re-raise this signal using the --raise option. If --raise is not given, the exit status will
+ * be 128 + the signal number. An informative message is also logged indicating which rank generated the
  * signal.
  *
  * If delivering a SIGKILL times out (see kill_job) the exit status will be EXIT_FAILURE and an informative

@@ -1,0 +1,375 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2011, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */      
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+/**
+ * \file sys/extension/c/async_progress/extension.dox
+ * \brief PAMI "asynchronous progress" extension documentation
+ * \defgroup EXT_async_progress EXT_async_progress
+ * \ingroup extensions
+ *
+ * \par Name:
+ *      async_progress
+ *
+ * \version 1.0
+ *
+ * \par Number:
+ *      4000
+ *
+ * \par Dependencies:
+ *      None
+ *
+ * \par Platforms:
+ *      Blue Gene/Q, PERCS
+ *
+ * \par Overview:
+ * The asynchronous progress extension defines an interface which can
+ * be used by applications to cause asynchronous progress of a communication
+ * context to occur on a system execution resource without explicitly
+ * invoking PAMI_Context_advance() on the communication context from the
+ * application thread.
+ *
+ *
+ * \par Issues:
+ *      None
+ *
+ * \par Example:
+ * \code
+ * // ------------------------------------------------------------------
+ * // async progress extension typedefs and #defines
+ * // ------------------------------------------------------------------
+ *
+ * typedef enum
+ * {
+ *   PAMIX_ASYNC_ALL            =    0,
+ *   PAMIX_ASYNC_RECV_INTERRUPT =    1,
+ *   PAMIX_ASYNC_TIMER          =    2,
+ *   PAMIX_ASYNC_EXT            = 1000
+ * } pamix_async_t;
+ *
+ * #define PAMIX_CLIENT_ASYNC_GUARANTEE 1016
+ *
+ * typedef void (* pamix_async_function) (pami_context_t context, void *cookie);
+ *
+ * typedef pami_result_t (* async_progress_register_function) (pami_context_t         context,
+ *                                                             pamix_async_function   progress_fn,
+ *                                                             pamix_async_function   suspend_fn,
+ *                                                             pamix_async_function   resume_fn,
+ *                                                             void                 * cookie);
+ *
+ * typedef pami_result_t (* async_progress_enable_function) (pami_context_t context,
+ *                                                           pamix_async_t  event_type);
+ *
+ * typedef pami_result_t (* async_progress_disable_function) (pami_context_t context,
+ *                                                            pamix_async_t  event_type);
+ *
+ * // ------------------------------------------------------------------
+ * // global variables and async progress handler functions
+ * // ------------------------------------------------------------------
+ *
+ * void example_suspend_fn (pami_context_t context, void * cookie)
+ * {
+ *   fprintf (stderr, "Asynchronous progress is now suspended for context %d\n", (unsigned) cookie);
+ * }
+ *
+ * void example_resume_fn (pami_context_t context, void * cookie)
+ * {
+ *   fprintf (stderr, "Asynchronous progress will now resume for context %d\n", (unsigned) cookie);
+ * }
+ *
+ * pami_client_t    __client;
+ * pami_context_t   __context[2];
+ * pami_extension_t __async_progress_extension;
+ *
+ * async_progress_register_function PAMIX_Context_async_progress_register = NULL;
+ * async_progress_enable_function PAMIX_Context_async_progress_enable = NULL;
+ * async_progress_disable_function PAMIX_Context_async_progress_disable = NULL;
+ *
+ * // ------------------------------------------------------------------
+ * // Create client and contexts; open and initialize async
+ * // progress extension
+ * // ------------------------------------------------------------------
+ *
+ * PAMI_Client_create ("async progress extension test", &__client, NULL, 0);
+ * PAMI_Context_createv (__client, NULL, 0, __context, 2);
+ * PAMI_Extension_open (__client, "EXT_async_progress", &__async_progress_extension);
+ *
+ * PAMIX_Context_async_progress_register =
+ *   (async_progress_register_function) PAMI_Extension_symbol (__async_progress_extension,
+ *                                                             "register");
+ *
+ * PAMIX_Context_async_progress_enable =
+ *   (async_progress_enable_function) PAMI_Extension_symbol (__async_progress_extension,
+ *                                                           "enable");
+ *
+ * PAMIX_Context_async_progress_disable =
+ *   (async_progress_disable_function) PAMI_Extension_symbol (__async_progress_extension,
+ *                                                            "disable");
+ *
+ * // ------------------------------------------------------------------
+ * // enable and disable asynchronous progress
+ * // ------------------------------------------------------------------
+ *
+ * pami_configuration_t configuration;
+ * configuration.name = PAMIX_CLIENT_ASYNC_GUARANTEE;
+ * PAMI_Client_query (__client, &configuration, 1);
+ *
+ * if (configuration.value.intval == 0)
+ *   PAMIX_Context_async_progress_register (__context[1],
+ *                                          NULL,
+ *                                          example_suspend_fn,
+ *                                          example_resume_fn,
+ *                                          (void *) 1);
+ *
+ * PAMIX_Context_async_progress_enable (context, PAMIX_ASYNC_ALL);
+ *
+ * // Do work.
+ *
+ * PAMIX_Context_async_progress_disable (context, PAMIX_ASYNC_ALL);
+ *
+ * // ------------------------------------------------------------------
+ * // close asynchronous progress extension and cleanup
+ * // ------------------------------------------------------------------
+ *
+ * PAMI_Extension_close (__async_progress_extension);
+ * PAMI_Context_destroyv (__context, 2);
+ * PAMI_Client_destroy (&__client);
+ * \endcode
+ * \{
+ */
+
+/**
+ * \brief Asynchronous progress guarantee client attribute name identifier
+ *
+ * Asynchronous progress can not be \em guaranteed if zero; however asynchronous
+ * progress may still be available
+ *
+ * \note The value associated with this attribute name can not be updated.
+ *
+ * \see pami_attribute_name_t
+ * \see PAMI_Client_query
+ */
+#define PAMIX_CLIENT_ASYNC_GUARANTEE 1016
+
+
+/**
+ * \brief Asynchronous progress event handler
+ *
+ * This function is not a callback because it is not invoked as a result
+ * of PAMI_Context_advance() or PAMI_Context_advancev(). Consequently, the
+ * context parameter is not a context that invoked the progress event handler,
+ * but instead is the context associated with a particular asynchronous
+ * progress event.
+ *
+ * The context is \b not locked internally, via PAMI_Context_lock(), by the
+ * internal asynchronous progress execution resource when the asynchronous
+ * progress event handler is invoked. The application retains the responsibility
+ * of accessing communication contexts in a thread-safe manner.
+ *
+ * \param[in] context Communication context that requires progress
+ * \param[in] cookie  Asynchronous progress event handler application argument
+ */
+typedef void (*pamix_async_function) (pami_context_t   context,
+                                      void           * cookie);
+
+  /**
+   * \brief Asynchronous progress event types
+   * \note PAMIX_ASYNC_RECV_INTERRUPT and PAMIX_ASYNC_TIMER are for PERCS
+   *       platform only
+   */
+  typedef enum
+  {
+    PAMIX_ASYNC_ALL            =    0, /**< All asynchronous event types */
+    PAMIX_ASYNC_RECV_INTERRUPT =    1, /**< Receive interrupt asynchronous event */
+    PAMIX_ASYNC_TIMER          =    2, /**< Timer asynchronous event */
+    PAMIX_ASYNC_EXT            = 1000  /**< Begin extension-specific event types */
+  } pamix_async_t;
+
+/**
+ * \brief Register asynchronous progress event handlers for a context
+ *
+ * This function is used to register asynchronous progress handlers for a specific
+ * communication context. An execution resource will provide the asynchronous
+ * progress by invoking either the PAMI_Context_advance() function, if the
+ * \c progress_fn parameter is \c NULL, or by invoking the user-provided
+ * progress function.
+ *
+ * \note This function is optional in enabling/disabling asynchronous progress.
+ *       By default all asynchronous progress handlers are set to NULL.
+ *
+ * \note Because a \c NULL \c progress_fn will result in calls to the internal
+ *       implementation of the PAMI_Context_trylock(), PAMI_Context_advance(),
+ *       and PAMI_Context_unlock() functions, applications that wish to use
+ *       an alternative mechanism than PAMI_Context_lock() to ensure
+ *       thread-safe access to communication contexts \b must provide a non-
+ *       \c NULL asynchronous progress function.
+ *
+ * The \c progress_fn event handler is invoked when an event occurs on the context
+ * that requires processing with the PAMI_Context_advance() function. It does
+ * \b not imply that any application callbacks will be invoked when the context
+ * is advanced, nor that network traffic will, or will not, be processed by
+ * hardware or software, nor that the \c progress_fn will be invoked periodically.
+ * The application must not assume any particular reason for the invocation of
+ * the \c progress_fn other than the implementation requires PAMI_Context_advance()
+ * for a particular communication context.
+ *
+ * The application is not required to invoke PAMI_Context_advance() from within
+ * the \c progress_fn when it is invoked - only that the application must invoke
+ * PAMI_Context_advance() to make progress on communication associated with the
+ * context. For example, a different application thread may invoke
+ * PAMI_Context_advance() on behalf of the asynchronous progress execution
+ * resource that invoked the \c progress_fn.
+ *
+ * The \c suspend_fn event handler is invoked by an asynchronous progress
+ * execution resource when the implementation is unable to continue to provide
+ * asynchronous progress due to some resource constraint. This is a notification
+ * to the application that asynchronous progress for a communication context is
+ * about to be suspended, not that the communication context requires progress.
+ * The only asynchronous progress event handler that may be invoked after a
+ * suspend event is the corresponding \c resume_fn event handler.
+ *
+ * The \c resume_fn event handler is invoked by an asynchronous progress
+ * execution resource when the implementation is again able to provide
+ * asynchronous progress after previously suspending asynchronous progress
+ * due to some resource constraint. This is a notification to the application
+ * that asynchronous progress for a communication context is about to resume,
+ * not that the communication context requires progress.
+ *
+ * \note The asynchronous progress event functions will not be simultaneously
+ *       invoked by multiple asynchronous execution resources for the \b same
+ *       communication context. Only one of the three event functions for a
+ *       particular communication context will ever be invoked at any time.
+ *
+ * \note It is possible, due to resource constraints, that when asynchronous
+ *       progress is enabled the \c suspend_fn will be invoked before the
+ *       asynchronous progress enable function returns, or that the \c suspend_fn
+ *       will be immediately invoked by an asynchronous progress execution
+ *       resource.
+ *
+ * If the value of the ::PAMIX_CLIENT_ASYNC_GUARANTEE client
+ * configuration attribute is non-zero, then the application can assume that the
+ * \c suspend_fn and \c resume_fn will never be invoked because the
+ * implementation can guarantee asynchronous progress at all times. If the value
+ * is zero then the \c suspend_fn and \c resume_fn may be invoked due to
+ * resource constraints.
+ *
+ * \warning It is not recommended for an application to provide a non- \c NULL
+ *          \c suspend_fn and a \c NULL resume_fn, or a \c NULL suspend_fn and
+ *          a non- \c NULL resume_fn.
+ *
+ * \note It is \b not required that the communication context is locked, via
+ *       PAMI_Context_lock() or some other atomic mechanism, to register
+ *       asynchronous progress handlers. This function is thread-safe and the runtime
+ *       will internally perform any necessary atomic operations in order to
+ *       register asynchronous progress handlers on the context.
+ *
+ * \param [in] context     Communication context
+ * \param [in] progress_fn Event function invoked when the context must be
+ *                         advanced. May be \c NULL.
+ * \param [in] suspend_fn  Event function invoked when asynchronous progress
+ *                         on the context is suspended. A \c NULL callback
+ *                         will disable the suspend notification.
+ * \param [in] resume_fn   Event function invoked when asynchronous progress
+ *                         on the context is resumed after a previous
+ *                         suspension. A \c NULL callback will disable the
+ *                         resume notification.
+ * \param [in] cookie      Event cookie for all event callbacks
+ *
+ * \return ::PAMI_SUCCESS Asynchronous progress handlers are registered for the context
+ * \return ::PAMI_ERROR   Asynchronous progress handlers are not registered for
+ *                        the context
+ **/
+pami_result_t async_progress_register (pami_context_t         context,
+                                       pamix_async_function   progress_fn,
+                                       pamix_async_function   suspend_fn,
+                                       pamix_async_function   resume_fn,
+                                       void                 * cookie);
+
+/**
+ * \brief Enable asynchronous progress for a context for an event type
+ *
+ * This function is used to enable asynchronous progress for a specific
+ * communication context for a given event type. It can be called multiple
+ * times to add new event types on top of previously enabled event types.
+ * All asynchronous events may be enabled with a single function call if
+ * the asynchronous event ::PAMIX_ASYNC_ALL is specified.
+ *
+ * Refer to ::pamix_async_t for available event types.
+ *
+ * All asynchronous event types are disabled by default when a context is
+ * created. Asynchronous events will only be provided to the application
+ * after one or more asynchronous event types are explicitly enabled for
+ * a context.
+ *
+ * \note It is \b not required that the communication context is locked, via
+ *       PAMI_Context_lock() or some other atomic mechanism, to enable
+ *       asynchronous progress. This function is thread-safe and the runtime
+ *       will internally perform any necessary atomic operations in order to
+ *       enable asynchronous progress on the context.
+ *
+ * \param [in] context      Communication context
+ * \param [in] event_type   Asynchronous event type to enable
+ *
+ * \return ::PAMI_SUCCESS Asynchronous progress was enabled for the context
+ *                        for the event type.
+ * \return ::PAMI_ERROR   Asynchronous progress was not enabled for the context
+ *                        for the event type.
+ * \return ::PAMI_UNIMPL  The event type is not supported by the implementation.
+ **/
+pami_result_t async_progress_enable (pami_context_t context,
+                                     pamix_async_t  event_type);
+
+/**
+ * \brief Disable asynchronous progress for a context for an event type
+ *
+ * This function is used to disable asynchronous progress for a specific
+ * communication context for a given event type. It can be called multiple
+ * times to disable any previously enabled event type.
+ * All asynchronous events may be disabled with a single function call if
+ * the asynchronous event ::PAMIX_ASYNC_ALL is specified.
+ *
+ * Refer to ::pamix_async_t for available event types.
+ *
+ * If the application enabled asynchronous progress on the context with a
+ * \c NULL \c progress_fn event function then the asynchronous progress
+ * implementation will internally use the PAMI_Context_lock() to ensure
+ * thread-safe access to any internal implementation of PAMI_Context_advance().
+ * Consequently, the application must use an alternative to PAMI_Context_lock()
+ * to ensure that only a single thread invokes the PAMI_Context_destroyv()
+ * function.
+ *
+ * \note It is \b not required that the communication context is locked, via
+ *       PAMI_Context_lock() or some other atomic mechanism, to ensure thread
+ *       safety before invoking this function. The runtime will internally
+ *       perform any necessary atomic operations in order to disable
+ *       asynchronous progress on the context.
+ *
+ * \param [in] context      Communication context
+ * \param [in] event_type   Asynchronous event type to disable
+ *
+ * \return ::PAMI_SUCCESS Asynchronous progress was disabled for the context
+ *                        for the given event type.
+ * \return ::PAMI_ERROR   Asynchronous progress was not disabled for the context
+ *                        for the event type.
+ * \return ::PAMI_UNIMPL  The event type is not supported by the implementation.
+ **/
+pami_result_t async_progress_disable (pami_context_t context,
+                                      pamix_async_t  event_type);
+
+/** \} */ /* end of "EXT_async_progress" group */

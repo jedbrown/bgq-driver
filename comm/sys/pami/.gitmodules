@@ -1,0 +1,6 @@
+[submodule "components/lapi"]
+	path = components/lapi
+	url = /u/cptbld/projects/lapi_percs.git
+[submodule "ade"]
+	path = ade
+	url = /u/cptbld/projects/pami_ade.git

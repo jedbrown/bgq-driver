@@ -133,8 +133,8 @@ Dimension::operator!=(
 
 Dimension::operator string() const
 {
-    static const char* label[] = {"A","B","C","D","E"};
     if (_value <= Dimension::E) {
+        static const char* label[] = {"A","B","C","D","E"};
         return label[_value];
     } else {
         return "INVALID";

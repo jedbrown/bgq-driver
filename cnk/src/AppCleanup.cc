@@ -854,8 +854,10 @@ void App_ReportProcessExit(AppProcess_t *proc)
     {
         uint32_t exit_rc = EXITSTATUS_RCODE(proc->ExitStatus);
         uint32_t exit_signal = EXITSTATUS_SIGNAL(proc->ExitStatus);
+        uint32_t exit_imm = 0;
         // If exiting due to signal, bump the abnormal process exit counter in the job leader node
-        if (exit_signal || (exit_rc == 1))
+	App_GetEnvValue("BG_EXITIMMEDIATELYONRC", &exit_imm);
+        if (exit_signal || (exit_rc == 1) || ((exit_imm != 0) && (exit_rc != 0)))
         {
 
             AppState_t *app = GetParentAppState();

@@ -522,11 +522,12 @@ MMCSCommandProcessor::validate_security(deque<string>& cmdStr,
             // Note that the following will nuke anything stuffed in 'objnames'
             // in the if check above. It's supposed to do that. See rule #9 above.
             std::vector<std::string> t = (*pCmd)->getBlockObjects(cmdStr, (server::DBConsoleController*)(pController));
-            bool good = false;
+
             if (!t.empty() && (*pCmd)->attributes().requiresBlock() == false) {
                 // This means the command has at least one arg.
 
                 // Copy_block needs to do its own special authorization. This lets it happen.
+                bool good = false;
                 procstat stat;
                 const boost::shared_ptr<hlcs::security::Enforcer> e = MMCSCommandProcessor::_command_enforcer;
                 if ((*pCmd)->doSpecialAuths(t, e, stat, pController->getUser()) == true) {

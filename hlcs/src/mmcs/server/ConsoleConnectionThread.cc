@@ -92,14 +92,22 @@ ConsoleConnectionThread::threadStart()
 
     // Create a midplane controller object
     CommandProcessor commandProcessor(commandMap); // MMCS command processor
-    DBConsoleController midplaneController(&commandProcessor, uid, utype, connection);
+    DBConsoleController console(&commandProcessor, uid, utype, connection);
     setThreadName("console");
-    midplaneController.setMMCSThread(this);
+    console.setMMCSThread(this);
+    try {
+        console.setPeerName(remote.getHostName());
+    } catch ( const std::exception& e ) {
+        // assume resolution failed, use address
+        LOG_DEBUG_MSG( e.what() );
+        console.setPeerName(remote.getHostAddr());
+    }
+
 
     LOG_DEBUG_MSG("Started as " << (utype == CxxSockets::Administrator ? "administrator" : "command") );
 
     // Execute commands received on this connection
-    midplaneController.run();
+    console.run();
 
     return NULL;
 }

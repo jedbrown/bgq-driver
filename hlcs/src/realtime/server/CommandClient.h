@@ -64,11 +64,11 @@ private:
     boost::asio::strand _strand;
 
     bool _error;
+    bool _writing;
 
     boost::asio::streambuf _in_sb;
 
     _OutMsgs _out_msgs;
-    bool _writing;
 
 
     void _handleMsgStr(

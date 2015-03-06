@@ -77,7 +77,7 @@ Allocator::getShapesForSize(
     Shapes shapes;
 
     vector<Shape::Pimpl> shapePimpls = _impl->getShapesForSize(size);
-    for (vector<Shape::Pimpl>::const_iterator iter = shapePimpls.begin(); iter != shapePimpls.end(); iter++) {
+    for (vector<Shape::Pimpl>::const_iterator iter = shapePimpls.begin(); iter != shapePimpls.end(); ++iter) {
          shapes.push_back(Shape(*iter));
     }
 
@@ -90,7 +90,7 @@ Allocator::getShapes() const
     Shapes shapes;
 
     vector<Shape::Pimpl> shapePimpls = _impl->getShapes();
-    for (vector<Shape::Pimpl>::const_iterator iter = shapePimpls.begin(); iter != shapePimpls.end(); iter++) {
+    for (vector<Shape::Pimpl>::const_iterator iter = shapePimpls.begin(); iter != shapePimpls.end(); ++iter) {
          shapes.push_back(Shape(*iter));
     }
 
@@ -109,7 +109,7 @@ Allocator::getRotations(
         shapes.push_back(shape);
     } else {
         vector<Shape::Pimpl> shapePimpls = _impl->getRotations(shape.getPimpl());
-        for (vector<Shape::Pimpl>::iterator iter = shapePimpls.begin(); iter != shapePimpls.end(); iter++) {
+        for (vector<Shape::Pimpl>::iterator iter = shapePimpls.begin(); iter != shapePimpls.end(); ++iter) {
             Shape newShape = Shape(*iter);
             // Don't return shapes that match original shape
             if (newShape != shape) {
@@ -147,15 +147,15 @@ Allocator::findBlockResources(
         const string& pluginHandle
         ) const
 {
-	Block::Ptr block;
+    Block::Ptr block;
 
-	try {
-	    block = _impl->findBlockResources(*this, model, resourceSpec, pluginHandle);
-	} catch(...) {
+    try {
+        block = _impl->findBlockResources(*this, model, resourceSpec, pluginHandle);
+    } catch(...) {
         throw; // Rethrow the plug-in exception
-	}
+    }
 
-	// Note: Block pointer could be NULL which means no resources were found
+    // Note: Block pointer could be NULL which means no resources were found
     return block;
 }
 
@@ -166,11 +166,11 @@ Allocator::prepare(
         const string& pluginHandle
         )
 {
-	try {
-	    _impl->prepare(*this, model, blockName, pluginHandle);
-	} catch(...) {
-	    throw; // Rethrow the exception
-	}
+    try {
+        _impl->prepare(*this, model, blockName, pluginHandle);
+    } catch(...) {
+        throw; // Rethrow the exception
+    }
 }
 
 void
@@ -180,11 +180,11 @@ Allocator::release(
         const string& pluginHandle
         )
 {
-	try {
-	    _impl->release(*this, model, blockName, pluginHandle);
-	} catch(...) {
-	    throw; // Rethrow the exception
-	}
+    try {
+        _impl->release(*this, model, blockName, pluginHandle);
+    } catch(...) {
+        throw; // Rethrow the exception
+    }
 }
 
 void

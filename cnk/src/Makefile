@@ -33,12 +33,14 @@ RM_F = /bin/rm -f
 
 BEAM_RESULTS += --beam::ipa=all --beam::data=$(BGQ_INSTALL_DIR)/cnk/beam
 
-K_KFLAGS    = -D__KERNEL__
-K_AFLAGS    = -D__ASSEMBLY__
+EFIX_LEVEL  = $(shell grep Release ../packaging/cnk.specsrc | cut -f2 -d ' ')
+
+K_KFLAGS    = -D__KERNEL__  -DBGQ_INSTALL_DIR=\"$(BGQ_INSTALL_DIR)\" -DCNK_EFIX_LEVEL=$(EFIX_LEVEL)
+K_AFLAGS    = -D__ASSEMBLY__ -D_QPXINTRIN_H_INCLUDED
 K_INCLUDES  = -I$(BGQ_INSTALL_DIR) \
               -iquote $(BGQ_BUILD_DIR)/cnk/src \
 	          -I$(BGQ_INSTALL_DIR)/spi/include/kernel/firmware
-K_CPU_FLAGS = -m64 -g -O2 -Werror -MMD -MF .dep.$<.d
+K_CPU_FLAGS = -m64 -g -O2 -MMD -MF .dep.$<.d
 
 K_LDMAP     = -Map $(basename $@).map
 
@@ -47,7 +49,7 @@ K_LDS_NAME  = Kernel_DDR.lds
 K_LDFLAGS  = -Bstatic $(K_LDMAP)
 K_LDSCRIPT = --script $(K_LDS_NAME)
 
-K_CFLAGS = -Wall $(LISTING_OPTIONS) $(K_INCLUDES) -fno-strict-aliasing -c
+K_CFLAGS = -Wall -Werror $(LISTING_OPTIONS) $(K_INCLUDES) -fno-strict-aliasing -c
 
 K_LIBS =
 LOCAL_LIBS = network/network.a syscalls/syscalls.a fs/fs.a \
@@ -55,11 +57,27 @@ LOCAL_LIBS = network/network.a syscalls/syscalls.a fs/fs.a \
 			 $(BGQ_INSTALL_DIR)/spi/lib/libSPI_upci_fwcnk.a \
 			 $(BGQ_INSTALL_DIR)/spi/lib/libSPI.a
 
+ifeq ($(notdir $(BGQ_CROSS_CC)),bgclang)
+K_CFLAGS += -fno-builtin
+endif
+
+ifeq ($(USE_CLANG), 1)
+BGQ_CROSS_CC      = /bgsys/drivers/toolchain/llvm/bin/bgclang
+BGQ_CROSS_CXX     = /bgsys/drivers/toolchain/llvm/bin/bgclang++
+endif
+
+ifeq ($(CLANG_ANALYZER), 1)
+K_CFLAGS += --analyze -Qunused-arguments
+endif
+
 ifeq ($(BGQ_HOST_OS),x86_64)
 K_INCLUDES += -I/bgsys/bgq/drivers/x86_64.mambo/include
 else
 MAMBOFLAGS=
 endif
+
+CCSUFFIX=$(notdir $(BGQ_CROSS_CC))
+CXXSUFFIX=$(notdir $(BGQ_CROSS_CXX))
 
 ifeq ($(BEAM), 1)
 OBJSUFFIX=beam
@@ -68,15 +86,15 @@ OBJSUFFIX=o
 endif
 
 %.$(OBJSUFFIX): %.c
-	@echo "gcc: $<"
+	@echo "$(CCSUFFIX): $<"
 	$(SILENT)$(BGQ_CROSS_CC) $(K_CPU_FLAGS) $(K_KFLAGS) $(K_CFLAGS) $<
 
 %.$(OBJSUFFIX): %.cc
-	@echo "gcc: $<"
+	@echo "$(CXXSUFFIX): $<"
 	$(SILENT)$(BGQ_CROSS_CXX) $(K_CPU_FLAGS) $(K_KFLAGS) $(K_CFLAGS) $<
 
 %.$(OBJSUFFIX):	%.S
-	@echo "gcc: $<"
+	@echo "$(CCSUFFIX): $<"
 	$(SILENT)$(BGQ_CROSS_CC) $(K_CPU_FLAGS) $(K_KFLAGS) $(K_CFLAGS) $(K_AFLAGS) -Os $<
 
 %.elf:
@@ -119,7 +137,7 @@ C_SRC =	entry.c \
 		upc_kbridge.c \
 		CrcExchange.c
 
-CC_SRC = statictlb.cc elfimage.cc NodeController.cc AppSetup.cc AppCleanup.cc rank.cc ProcessSetup.cc guard.cc ToolControl.cc CoreDump.cc JobControl.cc mailbox.cc bgcios_parse.cc dumpthreadstate.cc 
+CC_SRC = statictlb.cc elfimage.cc NodeController.cc AppSetup.cc AppCleanup.cc rank.cc ProcessSetup.cc guard.cc ToolControl.cc CoreDump.cc JobControl.cc mailbox.cc bgcios_parse.cc dumpthreadstate.cc
 
 K_OBJ  = $(patsubst %.S,%.$(OBJSUFFIX),$(S_SRC)) $(patsubst %.c,%.$(OBJSUFFIX),$(C_SRC))  $(patsubst %.cc,%.$(OBJSUFFIX),$(CC_SRC)) 
 

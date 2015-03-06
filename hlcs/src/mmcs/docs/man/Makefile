@@ -52,5 +52,5 @@ install:
 
 endif
 
-clean:
+distclean clean:
 	$(RM) *.8 *~

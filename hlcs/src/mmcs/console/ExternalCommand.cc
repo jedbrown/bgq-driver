@@ -81,9 +81,9 @@ ExternalCommand::runcmd(
     // see if our executable exists in any of them.
     tokenizer pathtok(pathstring, boost::char_separator<char>(":"));
     bool found = false;
-    for (tokenizer::iterator dir = pathtok.begin(); dir != pathtok.end(); ++dir) {
+    for (tokenizer::const_iterator dir = pathtok.begin(); dir != pathtok.end(); ++dir) {
         const std::string filestring = *dir + "/" + executable;
-        if(boost::filesystem::exists(filestring)) {
+        if (boost::filesystem::exists(filestring)) {
             found = true;
             command << *dir << "/";
             break;

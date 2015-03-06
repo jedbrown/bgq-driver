@@ -39,6 +39,7 @@
 #include <queue>
 #include <ramdisk/include/services/common/Cioslog.h>
 #include <ramdisk/include/services/common/SignalHandler.h>
+#include <sys/socket.h>
 
 using namespace bgcios::stdio;
 
@@ -166,8 +167,13 @@ HwStdioController::eventMonitor(void)
    const int compChannel  = 2;
    const int eventChannel = 3;
    const int dataListener = 4;
-   const int pipeForSig   = 5;
+   const int dataChanAuthWaiter= 5;
    const int numFds       = 6;
+
+   int note_error = 0;
+   
+   FlightLogDumpWaiter flightLogDumpWait("stdiod");
+   flightLogDumpWait.start();  //call the thread wrapper which invokes run
 
    pollfd pollInfo[numFds];
    int timeout = -1; // 10000 == 10 sec
@@ -198,13 +204,10 @@ HwStdioController::eventMonitor(void)
    pollInfo[dataListener].revents = 0;
    LOG_CIOS_TRACE_MSG("added data channel listener using fd " << pollInfo[dataListener].fd << " to descriptor list");
 
-  
-   bgcios::SigWritePipe SigWritePipe(SIGUSR1);
-
-   pollInfo[pipeForSig].fd = SigWritePipe._pipe_descriptor[0];
-   pollInfo[pipeForSig].events = POLLIN;
-   pollInfo[pipeForSig].revents = 0;
-   LOG_CIOS_TRACE_MSG("added signal pipe listener using fd " << pollInfo[pipeForSig].fd << " to descriptor list");
+   pollInfo[dataChanAuthWaiter].fd = _dataChanAuthWaiter == NULL ? -1 : _dataChanAuthWaiter->getSd();
+   pollInfo[dataChanAuthWaiter].events = POLLIN;
+   pollInfo[dataChanAuthWaiter].revents = 0;
+   LOG_CIOS_TRACE_MSG("added _dataChanAuthWaiter using fd " << pollInfo[dataListener].fd << " to descriptor list");
 
    // Process events until told to stop.
    while (!_done) {
@@ -221,7 +224,7 @@ HwStdioController::eventMonitor(void)
       if (rc == -1) {
          int err = errno;
          if (err == EINTR) {
-            LOG_CIOS_TRACE_MSG("poll returned EINTR, continuing ...");
+            LOG_CIOS_WARN_MSG("poll returned errno=EINTR, continuing ...");
             continue;
          }
 
@@ -236,12 +239,32 @@ HwStdioController::eventMonitor(void)
          pollInfo[cmdChannel].revents = 0;
       }
 
-      // Check for an event on the data channel.
-      if (pollInfo[dataChannel].revents & POLLIN) {
-         LOG_CIOS_TRACE_MSG("input event available on data channel");
-         pollInfo[dataChannel].revents = 0;
-         if (dataChannelHandler() == EPIPE) {
-             pollInfo[dataChannel].fd = -1;
+      // Check for an event on the data channel listener.
+      if (pollInfo[dataListener].revents & POLLIN) {
+         LOG_INFO_MSG_FORCED("input event available on data channel listener");
+         pollInfo[dataListener].revents = 0;
+        
+         _dataChanAuthWaiter.reset();//drop any previous waiting connection
+         _dataChanAuthWaiter = makeDataChannel();
+         if (!_dataChanAuthWaiter) {
+            LOG_ERROR_MSG("error making new data channel");
+         }
+         else {
+            // Set the send buffer size for the data channel.
+            try {
+                  _dataChanAuthWaiter->setSendBufferSize(_config->getSendBufferSize());
+                 }
+             catch (SocketError& e) {
+                 LOG_ERROR_MSG("error setting send buffer size for data channel: " << e.what());
+                 _dataChanAuthWaiter.reset();
+             }
+         }
+         if (!_dataChanAuthWaiter) {
+            pollInfo[dataChanAuthWaiter].fd = -1;
+         }
+         else {
+           pollInfo[dataChanAuthWaiter].fd = _dataChanAuthWaiter->getSd();
+           LOG_INFO_MSG_FORCED("waiting data channel is connected to " << _dataChanAuthWaiter->getPeerName() << " using fd " << _dataChanAuthWaiter->getSd());
          }
       }
 
@@ -250,7 +273,50 @@ HwStdioController::eventMonitor(void)
          LOG_CIOS_TRACE_MSG("input event available on completion channel");
          completionChannelHandler();
          pollInfo[compChannel].revents = 0;
+         if (!_dequeStdioMsgInClient.empty() ){
+            pollInfo[dataChannel].events =  POLLOUT|POLLIN;
+            //f (pollInfo[dataChannel].fd != -1)pollInfo[dataChannel].revents |= POLLOUT;//poll on datachannel section forced to run for sending data on datachannel
+         }
       }
+
+      // Check for an event on the data channel.
+      if (pollInfo[dataChannel].revents)
+      {
+        
+        if (pollInfo[dataChannel].revents & (POLLERR|POLLHUP|POLLNVAL) ) {//error!
+          LOG_CIOS_WARN_MSG("data channel dropped, pollInfo[dataChannel].revents & (POLLERR|POLLHUP|POLLNVAL)");
+          _dataChannel.reset();
+          pollInfo[dataChannel].revents = 0; //no more received event processing
+          pollInfo[dataChannel].fd = -1;      
+        }
+        
+        if (pollInfo[dataChannel].revents & POLLIN) {
+          LOG_CIOS_TRACE_MSG("input event available on data channel");
+          if ( (note_error = dataChannelHandler()) ) {
+             _dataChannel.reset();
+             pollInfo[dataChannel].fd = -1;
+             pollInfo[dataChannel].revents = 0; //no more received event processing
+             LOG_CIOS_WARN_MSG("pollInfo[dataChannel].revents & POLLIN encountered recv error"<<strerror(note_error)<<"("<<note_error<<")" );
+          }
+        }
+        if (pollInfo[dataChannel].revents & POLLOUT){
+          if (!_dequeStdioMsgInClient.empty() ) {
+            RdmaClientPtr client = _dequeStdioMsgInClient.front();
+            //need to check if writing of stdio worked OK?
+            if ( (note_error = writeStdio(client)) ) {
+              _dataChannel.reset();
+              pollInfo[dataChannel].fd = -1;
+              pollInfo[dataChannel].revents = 0; //no more received event processing
+              LOG_CIOS_WARN_MSG("pollInfo[dataChannel].revents & POLLOUT encountered send error "<<strerror(note_error)<<"("<<note_error<<")" );
+            }
+          }
+          if (_dequeStdioMsgInClient.empty() ) {
+            pollInfo[dataChannel].events = POLLIN;  
+          }
+        }
+
+        pollInfo[dataChannel].revents = 0;
+      } //endif dataChannel received events
 
       // Check for an event on the event channel.
       if (pollInfo[eventChannel].revents & POLLIN) {
@@ -259,64 +325,25 @@ HwStdioController::eventMonitor(void)
          pollInfo[eventChannel].revents = 0;
       }
 
-      if (!_dequeStdioMsgInClient.empty() )
-      {
-        pollInfo[dataChannel].events = POLLIN | POLLOUT;
-        RdmaClientPtr client = _dequeStdioMsgInClient.front();
-        writeStdio(client);
-        _dequeStdioMsgInClient.pop_front();
-      }
-      else
-      {
-        pollInfo[dataChannel].events = POLLIN;
-      }
-
-
-      // Check for an event on the pipe for signal.
-      if (pollInfo[pipeForSig].revents & POLLIN) {
-         LOG_INFO_MSG_FORCED("input event available pipe from signal handler");
-         pollInfo[pipeForSig].revents = 0;
-         siginfo_t siginfo;
-         read(pollInfo[pipeForSig].fd,&siginfo,sizeof(siginfo_t));
-         const size_t BUFSIZE = 1024;
-         char buffer[BUFSIZE];
-         const size_t HOSTSIZE = 256;
-         char hostname[HOSTSIZE];
-         hostname[0]=0;
-         gethostname(hostname,HOSTSIZE);
-         snprintf(buffer,BUFSIZE,"/var/spool/abrt/fl_stdiod.%d.%s.log",getpid(),hostname);
-         LOG_INFO_MSG_FORCED("Attempting to write flight log "<<buffer);
-         printLogMsg(buffer); //print the log to stdout
-      }
-
-      // Check for an event on the data channel listener.
-      if (pollInfo[dataListener].revents & POLLIN) {
-         LOG_CIOS_TRACE_MSG("input event available on data channel listener");
-         pollInfo[dataListener].revents = 0;
+      // Check for an event on _dataChanAuthWaiter
+      if (pollInfo[dataChanAuthWaiter].revents & POLLIN) {
+         LOG_CIOS_TRACE_MSG("input event available on _dataChanAuthWaiter");
+         pollInfo[dataChanAuthWaiter].revents = 0;
         
-         // Make a new data channel connected to runjob.
-         const InetSocketPtr incoming = makeDataChannel();
-         if (!incoming) {
-            LOG_ERROR_MSG("error making new data channel");
-            continue;
-         }
-
-         // Set the send buffer size for the data channel.
-         try {
-            incoming->setSendBufferSize(_config->getSendBufferSize());
-         }
-         catch (SocketError& e) {
-            LOG_ERROR_MSG("error setting send buffer size for data channel: " << e.what())
-         }
-
-         // Continue monitoring the data channel listener for restarted connection Start monitoring the data channel.
-         LOG_INFO_MSG_FORCED("data channel is connected to " << incoming->getPeerName() << " using fd " << incoming->getSd());
-
          // Handle the Authenticate message which must be sent first.
-         if (!dataChannelHandler(incoming)) {
-             _dataChannel = incoming;
+         if (!dataChannelHandler(_dataChanAuthWaiter)) {
+             _dataChannel = _dataChanAuthWaiter;
              pollInfo[dataChannel].fd = _dataChannel->getSd();
-             LOG_INFO_MSG_FORCED("data channel is authenticated with " << _dataChannel->getPeerName() << " using fd " << _dataChannel->getSd());;
+             pollInfo[dataChannel].events =  POLLIN|POLLOUT;
+             _dataChanAuthWaiter.reset();
+             pollInfo[dataChanAuthWaiter].fd = -1;
+             LOG_INFO_MSG_FORCED("data channel is authenticated with " << _dataChannel->getPeerName() << " using fd " << _dataChannel->getSd());
+         }
+         else {
+             LOG_INFO_MSG_FORCED("data channel FAILED authenticating " << _dataChannel->getPeerName() << " using fd " << _dataChannel->getSd());
+             _dataChanAuthWaiter.reset();
+             pollInfo[dataChanAuthWaiter].fd = -1;
+             
          }
       }
    }
@@ -382,16 +409,12 @@ int
 HwStdioController::dataChannelHandler(InetSocketPtr authOnly)
 {
    InetSocketPtr& dataChannel( authOnly ? authOnly : _dataChannel );
+   if (!dataChannel){  
+      return ENOLINK;
+   }
 
    // Receive a message from the data channel.
    int err = recvFromDataChannel(_inboundMessage, dataChannel);
-
-   // When data channel closes, stop handling events.
-   if (err == EPIPE) {
-      LOG_ERROR_MSG("data channel connected to " << dataChannel->getPeerName() << " is closed");
-      dataChannel.reset();
-      return err;
-   }
 
    // An error occurred receiving a message.
    if (err != 0) {
@@ -685,7 +708,16 @@ HwStdioController::completionChannelHandler(void)
                    if ( (msgout->type != WriteStdout) && (msgout->type != WriteStdout) ){
                      CIOSLOGMSG_QP(BGV_SEND_MSG, client->getOutboundMessagePtr(),client->getQpNum());
                    }
-                  client->postSendMessage();
+                   try {//$NEW try-catch
+                       client->postSendMessage();
+                   }
+                   catch (const RdmaError& e) {
+                       msgout->errorCode = (uint32_t)e.errcode();
+                       CIOSLOGMSG_QP(BGV_SEND_MSG, client->getOutboundMessagePtr(),client->getQpNum());
+                       LOG_ERROR_MSG("Job " << msgout->jobId << "." << msgout->rank << ": error posting WriteStderrAck or WriteStdoutAck" <<
+                       client->getQpNum() << ": " << bgcios::errorString(e.errcode()));
+                       //invalidate connection to compute?  Drain all messages for job by marking job invalid?
+                   }
                }
 
                break;
@@ -965,12 +997,13 @@ HwStdioController::interrupt(const std::string source)
    return 0;;
 }
 
-void
+uint64_t
 HwStdioController::writeStdio(const RdmaClientPtr& client)
 {
    // Get pointer to inbound WriteStdio message.
    WriteStdioMessage *inMsg = (WriteStdioMessage *)client->getInboundMessagePtr();
    WriteStdioAckMessage *outMsg = (WriteStdioAckMessage *)client->getOutboundMessagePtr();
+   uint64_t ret_errorCode = 0;
 
    // Validate the job id.
    const JobPtr& job = _jobs.get(inMsg->header.jobId);
@@ -988,22 +1021,26 @@ HwStdioController::writeStdio(const RdmaClientPtr& client)
      if ( !socket ) {
         // when data channel is not connected (could be a failover event) drop
         // stdout and stderr instead of keeping it in a queue
-        outMsg->header.returnCode = bgcios::SendError;
-        outMsg->header.errorCode = ENOTCONN;     
-        job->dropStdioMessage(bgcios::dataLength(&(inMsg->header)));        
-        // fall through
+        //outMsg->header.returnCode = bgcios::SendError;
+        //outMsg->header.errorCode = ENOTCONN; 
+        //job->dropStdioMessage(bgcios::dataLength(&(inMsg->header))); 
+        //Keep message, send when data channel comes back
+        return ENOTCONN;       
      }
      else {
          outMsg->header.returnCode += socket->sendOnConnectedSocket( (char *)inMsg,length, outMsg->header.errorCode);
+         ret_errorCode = outMsg->header.errorCode;
 
          //if (job->logJobStatistics())job->writeTimer.stop();
 
          LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << "." << inMsg->header.rank << ": " << toString(inMsg->header.type) <<
                  " message sent on data channel (" << bgcios::dataLength(&(inMsg->header)) << " bytes)");
          if (outMsg->header.errorCode) {
-             LOG_CIOS_INFO_MSG("outMsg->header.errorCode="<<outMsg->header.errorCode<<" outMsg->header.jobId="<<outMsg->header.jobId);
-             outMsg->header.returnCode = bgcios::SendError;
-             job->dropStdioMessage(bgcios::dataLength(&(inMsg->header)));        
+             //LOG_CIOS_INFO_MSG("outMsg->header.errorCode="<<outMsg->header.errorCode<<" outMsg->header.jobId="<<outMsg->header.jobId);
+             //outMsg->header.returnCode = bgcios::SendError;
+             //job->dropStdioMessage(bgcios::dataLength(&(inMsg->header))); 
+             //Keep message, send when data channel comes back
+             return ret_errorCode;       
          }
          else {
              outMsg->header.returnCode = bgcios::Success;
@@ -1020,9 +1057,10 @@ HwStdioController::writeStdio(const RdmaClientPtr& client)
     // Drop output if job has been killed.
     else if (job->isKilled()) {
       outMsg->header.returnCode = bgcios::RequestFailed;
-      outMsg->header.errorCode = EINTR;     
+      outMsg->header.errorCode = EINTR;
+      job->dropStdioMessage(bgcios::dataLength(&(inMsg->header))); 
     }
-  }
+  }      
    // Post a receive to get next message.
    client->postRecvMessage();
 
@@ -1031,10 +1069,19 @@ HwStdioController::writeStdio(const RdmaClientPtr& client)
       if ( (outMsg->header.type != WriteStdoutAck) && (outMsg->header.type != WriteStderrAck) ){
         CIOSLOGMSG_QP(BGV_SEND_MSG, client->getOutboundMessagePtr(),client->getQpNum());
       }
-      client->postSendMessage();
+      try { //$NEW try-catch block
+           client->postSendMessage();
+      }
+      catch (const RdmaError& e) {
+           CIOSLOGMSG_QP(BGV_SEND_MSG, client->getOutboundMessagePtr(),client->getQpNum());
+           LOG_ERROR_MSG("Job " << inMsg->header.jobId << "." << inMsg->header.rank << ": error posting WriteStderrAck or WriteStdoutAck" <<
+                       client->getQpNum() << ": " << bgcios::errorString(e.errcode()));
+          //invalidate connection to compute?  Drain all messages for job by marking job invalid?
+      }
+      _dequeStdioMsgInClient.pop_front();  //remove from deque
    }
 
-   return;
+   return ret_errorCode;
 }
 
 bool 
@@ -1109,7 +1156,7 @@ HwStdioController::closeStdio(const RdmaClientPtr& client)
       if (err == 0) {
          if (job->getNumDroppedStdioMsgs() > 0) {
             LOG_CIOS_WARN_MSG("Job " << inMsg->header.jobId << ": " << job->getNumDroppedStdioMsgs() << " messages with " << job->getNumDroppedStdioBytes() <<
-                         " bytes of data were dropped while data channel was disconnected");
+                         " bytes of data were dropped when job was terminated/killed by signal or data channel was disconected");
          }
          job->closeStdioAccumulator.resetCount();
          if (job->writeTimer.getNumOperations() > 0) {

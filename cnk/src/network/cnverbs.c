@@ -149,6 +149,7 @@ int cnverbs_connect_reply(struct ionet_connect *msg)
    // Make sure connect request was successful.
    if (msg->status != 0) {
       //! \todo Send a FATAL RAS event?
+      fetch_and_add(&(qplist[handle].connected), ENOTCONN);
       Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVCONREJ, msg->ionet_hdr.dest_qpn, handle, msg->status, 0);
       printf("(E) cnverbs_connect_reply(): connect request from qpn %u (handle %u) was rejected with status %u\n", msg->ionet_hdr.dest_qpn, handle, msg->status);
       return -1;
@@ -519,12 +520,11 @@ int cnverbs_status(void *requestID[], uint32_t status[], void *callback_context,
          wce->wc.status = CNV_WC_GENERAL_ERR;
       }
       wce->state = CNVERBS_WC_READY;
-
       // Post to completion queue.
       struct cnv_cq *cq = wce->cq;
       if (cq == NULL) {
          Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVNULLCQ, (uint64_t)wce, (uint64_t)wce->qp, wce->state, 0);
-         printf("(E) cnverbs_status(): cq pointer is null in work completion %p, qp %p, state %u\n", wce, wce->qp, wce->state);
+         printf("(E) cnverbs_status(): cq pointer is null in work completion %p, qp %p, state %u\n", wce, wce->qp, wce->wc.status);
          error_return[index] = 1;
          rc = -1;
          continue;
@@ -1107,7 +1107,7 @@ int cnv_connect(struct cnv_qp *qp, struct sockaddr *remote_addr)
    }
    if(GetTimeBase() > endtime)
        rc = ETIMEDOUT;
-   
+   if ( fetch(&(qplist[qp->handle].connected)) == ENOTCONN) rc = ENOTCONN;
    TRACE( TRACE_Verbs, ("(I) cnv_connect(): queue pair %u (handle %u) is connected\n", qp->qp_num, qp->handle) );
    return rc;
 }
@@ -1330,10 +1330,17 @@ int cnv_get_completions_linked_list(struct cnv_qp *qp, unsigned long int num_ent
       struct cnv_wc * wc_user = &cur_wc->wc;
       curRWC->buf = (void *)wc_user->wr_id;
       curRWC->len = wc_user->byte_len;
-      curRWC->opcode = wc_user->opcode;
+
+      if (wc_user->opcode == CNV_WC_SEND) curRWC->opcode = 2;
+      else if (wc_user->opcode == CNV_WC_RECV) curRWC->opcode = 1;
+      else if (wc_user->opcode == CNV_WC_RDMA_WRITE)curRWC->opcode = 3;
+      else if (wc_user->opcode == CNV_WC_RDMA_READ)curRWC->opcode = 4;
+      else curRWC->opcode = -1;
+
       curRWC->status = wc_user->status;
       curRWC->flags  = wc_user->wc_flags;
       curRWC->reserved = 0;
+      Kernel_WriteFlightLog(FLIGHTLOG, FL_CNVWORKCP, curRWC->opcode,curRWC->len, (uint64_t)curRWC->buf, curRWC->status);
       cur_wc->state = CNVERBS_WC_INIT; //previous state was READY
       curRWC++;
       num_completions++;
@@ -1417,6 +1424,7 @@ int cnv_post_send_linked_list(struct cnv_qp *qp, struct cnv_send_wr *wr_list)
    wce->next = NULL;
 
    // Start filling out work completion.
+   wce->wc.wr_id = wr->wr_id;
    wce->wc.opcode = CNV_WC_SEND;
    wce->wc.vendor_err = 0;
    wce->wc.qp_num = qp->qp_num;

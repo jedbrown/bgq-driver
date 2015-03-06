@@ -58,7 +58,7 @@ IODrawer::getIONodes() const
 
     Pimpl impl = boost::dynamic_pointer_cast<Impl>(_impl);
     vector<IONode::Pimpl> IONodePimpls(impl->getIONodes());
-    for (vector<IONode::Pimpl>::const_iterator iter = IONodePimpls.begin(); iter != IONodePimpls.end(); iter++) {
+    for (vector<IONode::Pimpl>::const_iterator iter = IONodePimpls.begin(); iter != IONodePimpls.end(); ++iter) {
         IONode::ConstPtr ionode(new IONode(*iter));
         IONodesContainer.push_back(ionode);
     }

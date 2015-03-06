@@ -1,0 +1,78 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2011, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */      
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+/**
+ * \file sys/extension/c/hfi_extension/extension.dox
+ * \brief PAMI HFI extension documentation
+ * \defgroup EXT_hfi_extension EXT_hfi_extension
+ * \ingroup extensions
+ *
+ * The HFI extension is provided as a convienience to extension developers
+ * to quickly integrate a new extension into the PAMI extension framework.
+ *
+ * This extension is not usable by applications.
+ *
+ * \par Name:
+ *      hfi_extension
+ *
+ * \version 1.0
+ *
+ * \par Number:
+ *      ####
+ *
+ * \par Dependencies:
+ *      None
+ *
+ * \par Overview:
+ *      Provide thorough overview documentation here.
+ *
+ * \par Issues:
+ *      None
+ *
+ * \par Example:
+ * \code
+ *
+ * // Provide a sufficiently complete example such that an application developer
+ * // may be "cut-n-paste" and then complete with minor modifications.
+ *
+ * \endcode
+ * \{
+ */
+
+//
+// Provide standard doxygen-style documentation for all extension interfaces,
+// including functions, enums, structs, #defines, etc.
+//
+
+/**
+ * \brief HFI extension hfi_pkt_counters function
+ *
+ * This function retrieves HFI hardware related counters.
+ */
+void hfi_pkt_counters ();
+
+/**
+ * \brief HFI extension hfi_remote_update function
+ *
+ * This function conducts a set of remote update operations.
+ */
+void hfi_remote_update ();
+
+/** \} */ /* end of "EXT_HFI_extension" group */

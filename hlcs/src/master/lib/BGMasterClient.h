@@ -50,8 +50,7 @@ public:
     //! \brief Connect to bgmaster_server and initiate protocol
     //! \param props Properties
     //! \param portpairs host:port pairs to use to connect to bgmaster_server.
-    //! \returns Id assigned to this client
-    ClientId connectMaster(
+    void connectMaster(
             const bgq::utility::Properties::ConstPtr& props,
             const bgq::utility::PortConfiguration::Pairs& portpairs
             ) const;

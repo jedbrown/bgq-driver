@@ -88,6 +88,14 @@ sub new
   while($line = <SCANIN>)
   {
       print "line: $line\n";
+      if($line =~ /Job not found/i)
+      {
+	  die "Invalid PID or JobID was specified";
+      }
+      if($line =~ /Number of IO nodes.*\s+0/i)
+      {
+	  die "Job does not contain any ionodes";
+      }
       last if($line =~ /Command:/i);
   }
   

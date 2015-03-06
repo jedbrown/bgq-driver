@@ -54,5 +54,11 @@ int32_t Kernel_SetDebugReg(enum Kernel_Debug_Register debug_register, uint64_t v
    return (int) CNK_SPI_SYSCALL_2(SETDEBUGREG, debug_register, value);
 }
 
+__INLINE__
+int32_t Kernel_GetVersion(uint64_t* version, uint64_t* release,uint64_t* mod, uint64_t* efix)
+{
+    return (int) CNK_SPI_SYSCALL_4(KERNELVERSION, version, release, mod, efix);
+}
+
 
 #endif /* _KERNEL_CNK_THREAD_IMPL_H_ */

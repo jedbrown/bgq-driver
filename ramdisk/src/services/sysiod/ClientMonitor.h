@@ -80,6 +80,7 @@ public:
 , _dynamicLoadLibrary(config->getDynamicLoadLibrary() )
 , _dynamicLoadLibrary_flags(config->getFlags() )
 , _handle4PluginClass(new Plugin)
+
    {
       // Initialize private data.
       _ready = ready;
@@ -88,7 +89,8 @@ public:
       _logJobStatisticsDefault = config->getLogJobStatistics();
       _shortCircuitPathDefault = config->getShortCircuitPath();
       _posixModeDefault = config->getPosixMode();
-      _logFunctionShipErrors = _logFunctionShipErrorsDefault = config->getLogFunctionShipErrors();
+      _logFunctionShipErrorsDefault = config->getLogFunctionShipErrors();
+      _usingLogJobFunctionShipErrors = 0; //wait until job fires up
 
       _currentDirFd = -1;
       _freePollSetSlots.resize(MaxPollSetSize, true);
@@ -98,6 +100,8 @@ public:
        _syscallFileString1 = BLANK;
        _syscallFileString2 = BLANK;
        _syscallFd = -1;
+
+       _connectWaitTimeoutRDMAcm = config->getComputeInboundConnectTimeout();
    }
 
    //! \brief  Default destructor.
@@ -698,7 +702,7 @@ uint32_t putUserRdmaData( uint64_t address, uint32_t rkey, uint32_t length, uint
    bool _logFunctionShipErrorsDefault;
 
    //! Indicator to control logging function ship operation errors.
-   bool _logFunctionShipErrors;
+   int _usingLogJobFunctionShipErrors;
 
    void logFunctionShipError(bgcios::MessageHeader *msghdr);
 
@@ -841,6 +845,9 @@ uint32_t putUserRdmaData( uint64_t address, uint32_t rkey, uint32_t length, uint
    volatile int      _syscallFd;
    volatile size_t   _syscallAccessLength;
 
+   //! minimum time to wait for a connection request from RDMA CM
+   int _connectWaitTimeoutRDMAcm;
+
 public:
 
 uint64_t getSyscallStartTimeStamp(){
@@ -878,6 +885,41 @@ uint64_t setSyscallStart(MessageHeader * mh, int fd=-1, char * pathname1=BLANK,c
   return _syscallStartTimestamp;
 }
 
+size_t  logFileString(char * pathname,uint32_t fd_returned, uint32_t fd_input){
+  size_t len = strlen(pathname);
+  while (len>0) {
+    if (len > 32){
+      logStringWithFd(FDI_FILENAME,pathname+len-32, 32, fd_returned, fd_input);
+    }
+    else {
+       logStringWithFd(FDI_FILENAME,pathname, (size_t)len, fd_returned, fd_input);
+    }
+    len = 0; //one-pass for now
+  }
+  return len;
+}
+
+int  logSyscallStart(int fd_returned = -1){
+  char info[]="Return val";
+  int count = 0;
+  if (  (_syscallFileString1 !=NULL) && (_syscallFileString1 != BLANK) ){
+    logFileString((char *)_syscallFileString1,(uint32_t)fd_returned, (uint32_t) _syscallFd);
+    count++;
+  }
+  if (  (_syscallFileString2 !=NULL) && (_syscallFileString2 != BLANK) ){
+    logFileString((char *)_syscallFileString2,(uint32_t)fd_returned,  (uint32_t)_syscallFd); 
+    count++;
+  }
+  if (!count){
+     logStringWithFd(FDI_RETNVALU,info, strlen(info), (uint32_t)fd_returned, (uint32_t) _syscallFd);
+  }   
+  return count;  
+}
+
+void clearSyscallStart(int flag, int fd_returned=-1){
+  if (flag) logSyscallStart(fd_returned);
+  clearSyscallStart();
+}
 
 void clearSyscallStart(void){
   _syscall_mh=&NULL_MH;

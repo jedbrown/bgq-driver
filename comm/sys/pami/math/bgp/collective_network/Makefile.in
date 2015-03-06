@@ -1,0 +1,32 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+VPATH		= @abs_srcdir@ $(COREDIR)/math/$(MATH)
+SUBDIRS		= 
+SOURCES		= \
+			fp128_o.cc fp32_o.cc fp64_o.cc			\
+			int16_o.cc int32_o.cc int64_o.cc int8_o.cc	\
+			uint16_o.cc uint32_o.cc uint64_o.cc uint8_o.cc	\
+			fp128_t.cc fp32_t.cc fp64_t.cc                  \
+			int16_t.cc int32_t.cc int64_t.cc int8_t.cc      \
+			uint16_t.cc uint32_t.cc uint64_t.cc uint8_t.cc  \
+			fp32_ot.cc fp64_ot.cc				\
+			int16_ot.cc int32_ot.cc int64_ot.cc int8_ot.cc	\
+			uint16_ot.cc uint32_ot.cc uint64_ot.cc uint8_ot.cc
+
+DEVICENAME	= 
+include @abs_top_builddir@/Build.rules

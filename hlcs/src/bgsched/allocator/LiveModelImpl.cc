@@ -86,7 +86,7 @@ namespace allocator {
 void
 LiveModel::Impl::allocateBlockThread()
 {
-    boost::thread* threadPtr;
+    //boost::thread* threadPtr;
 
     while (!_shutdown) {
         // Use real-time events to handle block allocate (boot) notifications
@@ -115,7 +115,7 @@ LiveModel::Impl::allocateBlockThread()
     boost::unique_lock<boost::shared_mutex> thread_map_lock(_threadMapMutex);
     LOG_TRACE_MSG(__FUNCTION__ << " Obtained exclusive write lock on thread map");
     // Shutdown or fatal error occurred so get reference to boost:thread so it can be deleted
-    threadPtr = _threads.find(boost::this_thread::get_id())->second;
+    // threadPtr = _threads.find(boost::this_thread::get_id())->second;
     // Remove thread from active list
     _threads.erase(boost::this_thread::get_id());
     // delete threadPtr;   // Free thread memory
@@ -324,7 +324,7 @@ LiveModel::Impl::pollAllocateBlocks()
                 blockVector = bgsched::core::getBlocks(block_filter);
                 bool blockFound = false;
                 // Iterate thru the block vector and find match with block being allocated
-                for (Block::Ptrs::iterator it = blockVector.begin(); it != blockVector.end(); it++) {
+                for (Block::Ptrs::iterator it = blockVector.begin(); it != blockVector.end(); ++it) {
                     Block::Ptr blockPtr = *(it);
                     string name = blockPtr->getName();
                     SequenceId seqId = blockPtr->getSequenceId();
@@ -395,7 +395,7 @@ LiveModel::Impl::pollAllocateBlocks()
                 if (iteratorErased) {
                     iter =_bootBlocks.begin();
                 } else {
-                    iter++;
+                    ++iter;
                 }
             }
             // Unlock mutex
@@ -410,7 +410,7 @@ LiveModel::Impl::pollAllocateBlocks()
 void
 LiveModel::Impl::deallocateBlockThread()
 {
-    boost::thread* threadPtr;
+    // boost::thread* threadPtr;
 
     while (!_shutdown) {
         // Use real-time events to handle block deallocate (free) notifications
@@ -440,7 +440,7 @@ LiveModel::Impl::deallocateBlockThread()
     boost::unique_lock<boost::shared_mutex> thread_map_lock(_threadMapMutex);
     LOG_TRACE_MSG(__FUNCTION__ << " Obtained exclusive write lock on thread map");
     // Shutdown or fatal error occurred so get reference to boost:thread so it can be deleted
-    threadPtr = _threads.find(boost::this_thread::get_id())->second;
+    // threadPtr = _threads.find(boost::this_thread::get_id())->second;
     // Remove thread from active list
     _threads.erase(boost::this_thread::get_id());
     // delete threadPtr;   // Free thread memory
@@ -648,7 +648,7 @@ LiveModel::Impl::pollDeallocateBlocks()
                 blockVector = bgsched::core::getBlocks(block_filter);
                 bool blockFound = false;
                 // Iterate thru the block vector and find match with block being deallocated
-                for (Block::Ptrs::iterator it = blockVector.begin(); it != blockVector.end(); it++) {
+                for (Block::Ptrs::iterator it = blockVector.begin(); it != blockVector.end(); ++it) {
                     Block::Ptr blockPtr = *(it);
                     string name = blockPtr->getName();
                     SequenceId seqId = blockPtr->getSequenceId();
@@ -704,7 +704,7 @@ LiveModel::Impl::pollDeallocateBlocks()
                 if (iteratorErased) {
                     iter =_freeBlocks.begin();
                 } else {
-                    iter++;
+                    ++iter;
                 }
             }
             // Unlock mutex
@@ -868,7 +868,7 @@ LiveModel::Impl::dump(
         if (blocks.empty()) {
             os << "No blocks found in live model." << endl;
         } else {
-            for (Block::Ptrs::iterator iter = blocks.begin(); iter != blocks.end(); iter++) {
+            for (Block::Ptrs::iterator iter = blocks.begin(); iter != blocks.end(); ++iter) {
                 Block::Ptr blockPtr = *iter;
                 Block::Pimpl block = blockPtr->getPimpl();
                 block->toString(os, false);
@@ -886,7 +886,7 @@ LiveModel::Impl::dump(
         if (blocks.empty()) {
             os << "No blocks found in live model." << endl;
         } else {
-            for (Block::Ptrs::iterator iter = blocks.begin(); iter != blocks.end(); iter++) {
+            for (Block::Ptrs::iterator iter = blocks.begin(); iter != blocks.end(); ++iter) {
                 Block::Ptr blockPtr = *iter;
                 Block::Pimpl block = blockPtr->getPimpl();
                 block->toString(os, true);
@@ -899,7 +899,7 @@ LiveModel::Impl::dump(
             os << "No midplane locations found in live model drain list." << endl;
         } else {
             os << "List of midplane locations in live model drain list:" << endl;
-            for (Model::DrainedMidplanes::const_iterator iter = _drainedMidplanes.begin(); iter != _drainedMidplanes.end(); iter++) {
+            for (Model::DrainedMidplanes::const_iterator iter = _drainedMidplanes.begin(); iter != _drainedMidplanes.end(); ++iter) {
                 os << "Drained midplane location: " << *iter << endl;
             }
         }
@@ -1006,7 +1006,7 @@ LiveModel::Impl::allocate(
         if (unavailableResources.size() > 0) {
             // Print the unavailable compute resources
             LOG_ERROR_MSG("Compute block " << blockName << " has " << unavailableResources.size() << " unavailable resources:");
-            for (unsigned int it = 0; it < unavailableResources.size(); it++) {
+            for (unsigned int it = 0; it < unavailableResources.size(); ++it) {
                 LOG_ERROR_MSG(unavailableResources[it]);
             }
         } else {

@@ -28,6 +28,7 @@
 
 #include <fstream>
 #include <string>
+#include <stdexcept>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -37,43 +38,38 @@
 class LockFile
 {
 public:
-    std::ofstream *pout;
-    std::string fname;
+    const std::string _fname;
     char _pid[64];
     bool _fileExists;
 
-    LockFile(const char* server_name):pout(NULL), _fileExists(false) {
-        std::string sname(server_name);
-        init(sname);
-    }
+    LockFile(
+            const char* server_name
+            ) : 
+        _fname( std::string("/tmp/") + server_name + "-lock"),
+        _fileExists(false)
+    {
+        struct stat lstat;
+        if (!stat(_fname.c_str(), &lstat)) {
+            _fileExists=true;
+            std::ifstream in(_fname.c_str());
+            in.getline(_pid, 64);
+            return;
+        }
 
-    LockFile(std::string server_name):pout(NULL), _fileExists(false) {
-        init(server_name);
+        this->setpid();
     }
 
     void setpid() {
-        pout = new std::ofstream(fname.c_str());
-        *pout << getpid() << "\n";
-        pout->flush();
-        pout->close(); 
-    }
-
-    void init(std::string server_name) {
-        fname += "/tmp/" + server_name + "-lock";
-        struct stat lstat;
-        if (!stat(fname.c_str(), &lstat)){
-            _fileExists=true;
-            std::ifstream in(fname.c_str());
-            in.getline(_pid,64);
-            return;
+        std::ofstream out( _fname.c_str() );
+        out << getpid() << "\n";
+        if ( !out ) {
+            throw std::runtime_error( std::string("Could not write pid to ") + _fname );
         }
-        setpid();
     }
 
     ~LockFile() {
-        if (pout!=0) {
-            delete pout;
-            ::remove(fname.c_str());
+        if ( !_fileExists ) {
+            ::remove(_fname.c_str());
         }
     }
 };

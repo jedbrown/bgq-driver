@@ -54,7 +54,7 @@ public:
     /*!
      * \brief
      */
-    const std::string& result() const { return _copiedFilename; }
+    std::string result() const { return _copiedFilename; }
 
 private:
     void impl(

@@ -58,7 +58,7 @@ Connection::Connection(
     _options(options),
     _clients(clients)
 {
-    // zero headers 
+    // zero headers
     bzero( &_incomingHeader, sizeof(_incomingHeader) );
 }
 
@@ -199,10 +199,10 @@ Connection::readBodyHandler(
         return;
     }
 
-    LOG_TRACE_MSG( 
-            "converting " << 
-            runjob::Message::toString( 
-                static_cast<runjob::Message::Type>(_incomingHeader._type) 
+    LOG_TRACE_MSG(
+            "converting " <<
+            runjob::Message::toString(
+                static_cast<runjob::Message::Type>(_incomingHeader._type)
                 )
             << " message"
             );
@@ -325,7 +325,7 @@ Connection::writeImpl(
     }
 
     // add to queue
-    _outbox.push_back( 
+    _outbox.push_back(
             MessageQueue::value_type(msg, callback)
             );
 
@@ -416,7 +416,7 @@ Connection::handleEof()
         const WriteCallback& callback = pair.second;
 
         if ( !callback.empty() ) {
-            callback( 
+            callback(
                     boost::system::errc::make_error_code(
                         boost::system::errc::resource_unavailable_try_again
                         )
@@ -441,8 +441,9 @@ Connection::keepAlive(
         )
 {
     const std::string keep_alive_key( "tcp_keep_alive" );
-    bool enabled = true;
+
     try {
+        bool enabled = true;
         const std::string value = _options.getProperties()->getValue(
                 runjob::server::PropertiesSection,
                 keep_alive_key

@@ -52,8 +52,8 @@ namespace cios {
   component="MMCS"
   severity="FATAL"
   message="Failed to authenticate with the CIOS $(DAEMON) daemon running on I/O node $(BG_LOC)."
-  description="A challenge/response handshake failed between the control system and a daemon running on an I/O node."
-  service_action="Ensure the I/O node's IP address is correct in the database and the block security key has not been modified, then reboot the block."
+  description="A challenge/response handshake failed between the Control System and a daemon running on an I/O node."
+  service_action="Check I/O node log for possible causes of this failure. Verify the I/O node's IP address is correct in the database and the block security key has not been modified, then reboot the I/O block."
   control_action="SOFTWARE_IN_ERROR"
  />
 */

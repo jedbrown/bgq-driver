@@ -100,7 +100,7 @@ Socket::pBind(
     }
 }
 
-bool
+void
 Socket::internal_getSockName(
         SockAddr& sa
         ) const
@@ -112,10 +112,9 @@ Socket::internal_getSockName(
         LOG_DEBUG_MSG(msg.str());
         throw HardError(errno, msg.str());
     }
-    return true;
 }
 
-bool
+void
 Socket::getSockName(
         SockAddr& sa
         ) const
@@ -125,7 +124,7 @@ Socket::getSockName(
     return internal_getSockName(sa);
 }
 
-bool
+void
 Socket::internal_getPeerName(
         SockAddr& sa
         ) const
@@ -137,10 +136,9 @@ Socket::internal_getPeerName(
         LOG_DEBUG_MSG(msg.str());
         throw HardError(errno, msg.str());
     }
-    return true;
 }
 
-bool
+void
 Socket::getPeerName(
         SockAddr& sa
         ) const

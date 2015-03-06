@@ -53,12 +53,14 @@ size_t strlen( const char *s )
    return( p - s );
 }
 
-// Note: As per SUSV3, n is number of bytes to copy from src or zero,
-//       not a limiter on max len of dest.
+
 char *strncpy( char *dest, const char *src, size_t n )
 {
    char *p = dest;
 
+#if 0
+// Note: As per SUSV3, n is number of bytes to copy from src or zero,
+//       not a limiter on max len of dest.
    while ( n && (*p++ = *src++) )
       n--;
 
@@ -66,6 +68,20 @@ char *strncpy( char *dest, const char *src, size_t n )
       while ( --n )
          *p++ = 0;
    }
+#else
+// Note2: SUSV3 spec is brain-damaged and has the potential to result in not-a-valid-string.  Since this is kernel
+//        space and thus limited usage, we decided to ignore the strncpy spec to make something safe.  
+   if(n == 0)
+       return dest;
+   
+   while(n && (*p++ = *src++))
+       n--;
+   if(n == 0)
+   {
+       p--;
+       *p = 0;
+   }
+#endif
 
    return( dest );
 }

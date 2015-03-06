@@ -31,12 +31,9 @@
 
 #include "../lib/exceptions.h"
 
-
-
-
 LOG_DECLARE_FILE( "master" );
 
-AgentManager::AgentManager(): 
+AgentManager::AgentManager():
     _ending_agents(false),
     _agents_per_host( 1 )
 {
@@ -49,7 +46,7 @@ AgentManager::setCount(
         )
 {
     _agents_per_host = count;
-    LOG_DEBUG_MSG( "set maximum agents per host to " << _agents_per_host );
+    LOG_DEBUG_MSG( "Set maximum agents per host to " << _agents_per_host );
 }
 
 bool
@@ -110,9 +107,9 @@ AgentManager::removeAgent(
                         if (rep_p && !rep_p->runningAlias(al->get_name())) {
                             // Now we've got a new agent that isn't already running this alias.
                             const BGMasterAgentProtocolSpec::StartRequest agentreq(
-                                    al->get_path(), 
+                                    al->get_path(),
                                     al->get_args(),
-                                    al->get_logdir(), 
+                                    al->get_logdir(),
                                     al->get_name(),
                                     al->get_user()
                                     );

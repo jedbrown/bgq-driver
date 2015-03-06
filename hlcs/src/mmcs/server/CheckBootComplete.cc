@@ -114,8 +114,6 @@ CheckBootComplete::threadStart()
         }
     }
 
-    bool initialized = false;
-
     while (isThreadStopping() == false) {
         if (block_p->checkComplete(bad_node_locs, good_nodes, bootreq)) {
             // Check boot completion status
@@ -131,17 +129,9 @@ CheckBootComplete::threadStart()
                 counter->dismiss( false );
             }
 
-            if (_block->setBlockStatus(BGQDB::INITIALIZED) != BGQDB::OK) {
-                // If we can't set the state to INITIALIZED, it's because another thread
-                // has done something to it.  Usually, that means there's been a free.
-                LOG_WARN_MSG("Setting block status to INITIALIZED failed for block " << _block->getBlockName() << ". Reason: " << block_p->disconnectReason());
-                return returnp;
-            }
-
             // Success, stop and un-dismiss the counter
             counter->stop();
 
-            initialized = true;
             // Store counter and output all counters associated with this boot
             counter.reset();
             _block->counters().output( block_p->_bootCookie );
@@ -156,16 +146,13 @@ CheckBootComplete::threadStart()
     }
 
     if (block_p->isIoBlock() && common::Properties::getProperty(FREE_IO_TARGETS) == "true") {
-        bool redirecting = false;
-        if (block_p->_redirectSock != 0) {
-            redirecting = true;
-        }
+        const bool redirecting = block_p->_redirectSock;
         // Free the targets.
         const std::deque<std::string> args( 1, "no_shutdown");
         LOG_TRACE_MSG("Freeing I/O targets for I/O block " << _block->getBlockName());
         mmcs_client::CommandReply reply;
         block_p->disconnect(args, reply);
-        if (redirecting && initialized) {
+        if (redirecting) {
             // Redirecting?  Reopen the targets as RAAW.
             LOG_INFO_MSG("Reopening targets in monitor mode for RAAW locks for I/O block " << _block->getBlockName());
             const std::deque<std::string> args( 1, "mode=monitor" );
@@ -173,6 +160,14 @@ CheckBootComplete::threadStart()
             block_p->connect(args, reply, &target);
         }
     }
+
+    if ( _block->setBlockStatus(BGQDB::INITIALIZED) != BGQDB::OK) {
+        // If we can't set the state to INITIALIZED, it's because another thread
+        // has done something to it.  Usually, that means there's been a free.
+        LOG_WARN_MSG("Setting block status to INITIALIZED failed for block " << _block->getBlockName() << ". Reason: " << block_p->disconnectReason());
+        return returnp;
+    }
+
     return returnp;
 }
 

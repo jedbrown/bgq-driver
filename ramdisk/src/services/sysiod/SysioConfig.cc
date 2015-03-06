@@ -44,6 +44,7 @@ const std::string DefaultShortCircuitPath = "";
 
 const uint64_t DefaultSlowSyscallTimeout = 300ull; // 5 minutes
 const uint64_t DefaultHungSyscallTimeout = 900ull; // 15 minutes
+const int DefaultConnectWaitTimoutRDMAcm = 5*60*1000; //5 minutes
 
 SysioConfig::SysioConfig(int argc, char **argv) : bgcios::CiosConfig()
 {
@@ -58,7 +59,8 @@ SysioConfig::SysioConfig(int argc, char **argv) : bgcios::CiosConfig()
       ("posix_mode", po::bool_switch(), "run I/O operations using posix rules")
       ("log_function_ship_errors", po::bool_switch(), "log errors from function shipped operations")
       ("slow_syscall_timeout", po::value<uint64_t>()->default_value(DefaultSlowSyscallTimeout), "timeout in seconds that defines a slow system call")      
-      ("hung_syscall_timeout", po::value<uint64_t>()->default_value(DefaultHungSyscallTimeout), "timeout in seconds that defines a hung system call")      
+      ("hung_syscall_timeout", po::value<uint64_t>()->default_value(DefaultHungSyscallTimeout), "timeout in seconds that defines a hung system call")
+      ("compute_inbound_connect_timeout", po::value<int>()->default_value(DefaultConnectWaitTimoutRDMAcm), "timeout in milliseconds waiting for compute node connect request")       
       ("log_level", po::value<std::string>(), "logging level")
       ("properties", po::value<std::string>(), "path to properties file")
       ("CNtorus",po::value<std::string>(), "torus coordinates")
@@ -404,6 +406,32 @@ uint64_t SysioConfig::getHungSyscallTimeout(void) const
 }
 
 
+int SysioConfig::getComputeInboundConnectTimeout(void) const
+{
+   // First, check for command line argument.
+   int computeInboundConnectTimeout = _variableMap["compute_inbound_connect_timeout"].as<int>();
+   if (!_variableMap["compute_inbound_connect_timeout"].defaulted()) {
+      LOG_CIOS_WARN_MSG("compute_inbound_connect_timeout " << computeInboundConnectTimeout << "(ms) from command line argument");
+   }
 
+   // Second, check for key in properties file.
+   else {
+      try {
+         computeInboundConnectTimeout = boost::lexical_cast<int>( _properties->getValue("cios.sysiod", "compute_inbound_connect_timeout") );
+         LOG_CIOS_DEBUG_MSG("compute_inbound_connect_timeout " << computeInboundConnectTimeout << " from properties file " << _properties->getFilename());
+      }
+      catch (const std::invalid_argument& e) {
+         // This isn't fatal so we'll use the default value.
+         LOG_CIOS_DEBUG_MSG("compute_inbound_connect_timeout not found in properties file '" << _properties->getFilename() << "' so using default value " << DefaultConnectWaitTimoutRDMAcm);
+      } 
+      catch (const boost::bad_lexical_cast& e) {
+         // Value is invalid.
+         LOG_CIOS_WARN_MSG("compute_inbound_connect_timeout property from properties file '" << _properties->getFilename() << "' is invalid so using default value " <<
+                      DefaultConnectWaitTimoutRDMAcm << " (" << e.what() << ")");
+      }
+   }
+   
+   return computeInboundConnectTimeout;
+}
 
 

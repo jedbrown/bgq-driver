@@ -192,8 +192,7 @@ Handle::transition(
         LOG_INFO_MSG( "signal " << outstanding << " acknowledged" );
         _job->_outstandingSignal = 0;
 
-        // need to deliver KILL signal if it was requested while previous signal
-        // was oustanding
+        // need to deliver KILL signal if it was requested while previous signal was outstanding
         if (
                 outstanding != SIGKILL &&
                 outstanding != bgcios::jobctl::SIGHARDWAREFAILURE &&

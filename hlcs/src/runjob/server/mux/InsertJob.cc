@@ -39,6 +39,7 @@
 #include "common/Message.h"
 
 #include "server/Job.h"
+#include "server/Options.h"
 #include "server/Ras.h"
 #include "server/Security.h"
 
@@ -158,6 +159,106 @@ InsertJob::findBlockHandler(
 {
     const JobInfo& info = _message->getJobInfo();
 
+    if ( block ) {
+    	// Block was found, continue processing the block.
+    	this->findBlockHandler_4( block );
+    } else {
+    	// Block not found in block container. Check if block is in initialized state.
+        BGQDB::BLOCK_STATUS status;
+        const BGQDB::STATUS result = BGQDB::getBlockStatus( info.getBlock(), status );
+        if ( result == BGQDB::OK ) {
+        	if ( status != BGQDB::INITIALIZED ) {
+            	// Not in initialized state, call into error processing.
+                this->blockNotFound();
+                return;
+        	}
+        } else {
+        	// Could not get block status, call into error processing.
+            this->blockNotFound();
+            return;
+        }
+
+    	// Block not found in block container but is in initialized state. Sleep 2 seconds and try the find again.
+    	// The block container list should be updated as blocks are initialized.
+        LOG_WARN_MSG( "Could not find block '" << info.getBlock() <<
+        		"' in Initialized list, waiting 2 seconds and checking again." );
+        sleep(2);
+        _server->getBlocks()->find(
+                _message->getJobInfo().getBlock(),
+                boost::bind(
+                    &InsertJob::findBlockHandler_2,
+                    shared_from_this(),
+                    _1
+                    )
+                );
+    }
+    return;
+}
+
+void
+InsertJob::findBlockHandler_2(
+        const block::Compute::Ptr& block
+        )
+{
+    const JobInfo& info = _message->getJobInfo();
+
+    if ( block ) {
+    	// Block was found, continue processing the block.
+    	this->findBlockHandler_4( block );
+    } else {
+    	// Get the retry value from properties.
+    	setInitializedRetryDelay();
+    	// Block not found in block container. Previous attempt would have already checked if block is in
+    	// initialized state. Sleep X seconds and try the find again.
+        LOG_WARN_MSG( "Could not find block '" << info.getBlock() << "' in Initialized list, waiting "
+        		<< _initialized_retry_delay << " seconds and checking again." );
+        sleep(_initialized_retry_delay);
+        _server->getBlocks()->find(
+                _message->getJobInfo().getBlock(),
+                boost::bind(
+                    &InsertJob::findBlockHandler_3,
+                    shared_from_this(),
+                    _1
+                    )
+                );
+    }
+    return;
+}
+
+void
+InsertJob::findBlockHandler_3(
+        const block::Compute::Ptr& block
+        )
+{
+    const JobInfo& info = _message->getJobInfo();
+
+    if ( block ) {
+    	// Block was found, continue processing the block.
+    	this->findBlockHandler_4( block );
+    } else {
+    	// Block not found in block container. Previous attempt would have already checked if block is in
+    	// initialized state. Sleep X seconds and try the find again.
+        LOG_WARN_MSG( "Could not find block '" << info.getBlock() << "' in Initialized list, waiting "
+        		<< _initialized_retry_delay << " seconds and checking again." );
+        sleep(_initialized_retry_delay);
+        _server->getBlocks()->find(
+                _message->getJobInfo().getBlock(),
+                boost::bind(
+                    &InsertJob::findBlockHandler_4,
+                    shared_from_this(),
+                    _1
+                    )
+                );
+    }
+    return;
+}
+void
+InsertJob::findBlockHandler_4(
+        const block::Compute::Ptr& block
+        )
+{
+    const JobInfo& info = _message->getJobInfo();
+
     LOGGING_DECLARE_LOCATION_MDC( _shortHostname );
     LOGGING_DECLARE_JOB_MDC( _message->getClientId() );
 
@@ -257,6 +358,43 @@ InsertJob::getBlockStatusString(
     } else {
         return map.at( BGQDB::INVALID_STATE );
     }
+}
+
+
+void
+InsertJob::setInitializedRetryDelay()
+{
+	// Set default value.
+	_initialized_retry_delay = 5;
+	int result;
+    const std::string initialized_retry_delay_key( "initialized_retry_delay" );
+    const std::string runjob_server_section( "runjob.server");
+    const bgq::utility::Properties::ConstPtr& properties = _server->getOptions().getProperties();
+    // If couldn't get properties, use default value.
+    if ( !properties ) {
+    	return;
+    }
+    try {
+        result = boost::lexical_cast<int>(
+                properties->getValue(runjob_server_section, initialized_retry_delay_key)
+                );
+        // Make sure result is in range of 1 - 60.
+        if ( result < 1 || result > 60 ) {
+            LOG_INFO_MSG( "Value for key " << initialized_retry_delay_key << " out of range (1 - 60): "
+            		<< result << ".  Using default value: " << _initialized_retry_delay << ".");
+        } else {
+        	// Value is found, valid, and in range, use it.
+        	_initialized_retry_delay = result;
+            LOG_INFO_MSG(initialized_retry_delay_key << " key found in "
+            		<< runjob_server_section <<
+            		" section of properties.  Using specified value: " << _initialized_retry_delay << ".");
+        }
+    } catch ( const boost::bad_lexical_cast& e ) {
+    	LOG_INFO_MSG("Invalid " << initialized_retry_delay_key << " value: " << e.what()
+    			<< ".  Must be numeric.  Using default value: " << _initialized_retry_delay << "." );
+    } catch ( const std::invalid_argument& e ) {
+    }
+
 }
 
 } // mux

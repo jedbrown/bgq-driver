@@ -1,0 +1,112 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2011, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */      
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+/**
+ * \file sys/extension/c/pe_dyn_task/extension.dox
+ * \brief PAMI "PE dynamic tasking" extension documentation
+ * \defgroup PE_dyn_task PE_dyn_task
+ * \ingroup extensions
+ *
+ * \par Name:
+ *      PE_dyn_task
+ *
+ * \version 1.0
+ *
+ * \par Number:
+ *      6000
+ *
+ * \par Dependencies:
+ *      None
+ *
+ * \par Platforms:
+ *      PE
+ *
+ * \par Overview:
+ * The dynamic tasking extension defines an interface which can
+ * be used by applications to query for PE dynamic tasking information
+ * The query when called using this Dynamic Tasking extension will return 
+ * information that pertains to the dynamic tasking environment, although the 
+ * attributes names might be the same as those in non-dynamic-tasking environment.
+ *
+ * \par Issues:
+ *      None
+ *
+ * \par Example:
+ * \code
+ * // ------------------------------------------------------------------
+ * // dynamic tasking extension typedefs and #defines
+ * // ------------------------------------------------------------------
+ *
+ * #define PAMIX_CLIENT_DYNAMIC_TASKING 1032
+ * #define PAMIX_CLIENT_WORLD_TASKS     1033
+ *
+ *
+ * typedef pami_result_t (*dyn_task_query_fn) (
+ *            pami_client_t          client,
+ *            pami_configuration_t   config[],
+ *            size_t                 num_configs);
+ *
+ *
+ *
+ * pami_client_t    __client;
+ * pami_context_t   __context[2];
+ * pami_extension_t __dyn_task_extension;
+ *
+ *
+ * // ------------------------------------------------------------------
+ * // Create client and contexts; open and initialize dynamic tasking 
+ * // extension
+ * // ------------------------------------------------------------------
+ *
+ * PAMI_Client_create ("dynamic tasking extension test", &__client, NULL, 0);
+ * PAMI_Context_createv (__client, NULL, 0, __context, 2);
+ * PAMI_Extension_open (__client, "PE_dyn_task", &__dyn_task_extension);
+ * 
+ * dyn_task_query_fn  dyn_task_query = NULL;
+ *
+ * dyn_task_query (dyn_task_query_fn) PAMI_Extension_symbol(extension, "query");
+ * pami_configuration_t config[] =
+ *      {
+ *        {PAMI_CLIENT_TASK_ID, -1},
+ *        {PAMI_CLIENT_NUM_TASKS, -1},
+ *        {PAMIX_CLIENT_DYNAMIC_TASKING, 0},
+ *        {PAMIX_CLIENT_WORLD_TASKS, -1},
+ * };
+
+ *  
+ * dyn_task_query(client, config, 4);
+ *
+ *
+ *
+ * // ------------------------------------------------------------------
+ * // close dynamic tasking extension and cleanup
+ * // ------------------------------------------------------------------
+ *
+ * PAMI_Extension_close (__dyn_task_extension);
+ * PAMI_Context_destroyv (__context, 2);
+ * PAMI_Client_destroy (&__client);
+ * \endcode
+ * \{
+ */
+
+pami_result_t dyn_task_query ();
+
+
+/** \} */ /* end of "PE_dyn_task" group */

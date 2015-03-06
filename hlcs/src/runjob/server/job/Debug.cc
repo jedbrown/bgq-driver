@@ -62,16 +62,22 @@ Debug::create(
         )
 {
     LOG_INFO_MSG( __FUNCTION__ );
-    const Ptr result(
-            new Debug( job, request, mux )
-            );
 
-    job->strand().post(
-            boost::bind(
-                &Debug::impl,
-                result
-                )
-            );
+    try {
+        const Ptr result(
+                new Debug( job, request, mux )
+                );
+
+        job->strand().post(
+                boost::bind(
+                    &Debug::impl,
+                    result
+                    )
+                );
+    } catch ( const std::exception & e ) {
+        // Just rethrow the exception since message has been logged
+        throw;
+    }
 }
 
 Debug::Debug(
@@ -84,8 +90,14 @@ Debug::Debug(
     _response( new runjob::message::Proctable ),
     _mux( mux )
 {
-    const job::RankMapping mapping( job, _response->_proctable );
-    LOG_TRACE_MSG( "proctable has " << _response->_proctable.size() << " entries" );
+    try {
+        const job::RankMapping mapping( job, _response->_proctable );
+        LOG_TRACE_MSG( "proctable has " << _response->_proctable.size() << " entries" );
+    } catch ( const std::exception & e ) {
+        LOG_ERROR_MSG( e.what() );
+        // Rethrow the exception
+        throw;
+    }
 }
 
 void

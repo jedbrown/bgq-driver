@@ -307,6 +307,7 @@ Optical::openTargetHandler(
     if ( io ) {
         MCServerMessageSpec::ReadIoCardEnvRequest request;
         request._set = name;
+        request._shortForm = false;
         LOG_DEBUG_MSG( request.getClassName() << " begin " << name );
 
         mc_server->send(
@@ -326,6 +327,7 @@ Optical::openTargetHandler(
     } else {
         MCServerMessageSpec::ReadNodeCardEnvRequest request;
         request._set = name;
+        request._shortForm = false;
         LOG_DEBUG_MSG( request.getClassName() << " begin " << name );
 
         mc_server->send(
@@ -355,8 +357,6 @@ Optical::readHandler(
         const Token::Ptr& token
         )
 {
-    LOG_DEBUG_MSG( __FUNCTION__ << " end " << name );
-
     boost::shared_ptr<XML::Serializable> reply;
     if ( io ) {
         reply = boost::make_shared<MCServerMessageSpec::ReadIoCardEnvReply>();
@@ -410,7 +410,6 @@ Optical::closeTargetHandler(
                 token
                 )
             );
-
 }
 
 void
@@ -564,21 +563,25 @@ Optical::insertData(
 {
     // Assume this handler is protected by the database strand
     const boost::posix_time::ptime start( boost::posix_time::microsec_clock::local_time() );
-    LOG_TRACE_MSG( __FUNCTION__ << " begin " << name );
     BOOST_ASSERT( reply );
 
-    if ( io ) {
-        this->processIo(
-                *boost::dynamic_pointer_cast<MCServerMessageSpec::ReadIoCardEnvReply>( reply )
-                );
-    } else {
-        this->processNodeCard(
-                *boost::dynamic_pointer_cast<MCServerMessageSpec::ReadNodeCardEnvReply>( reply )
-                );
+    LOG_DEBUG_MSG("Start processing optical environmentals");
+    try {
+        if ( io ) {
+            this->processIo(
+                    *boost::dynamic_pointer_cast<MCServerMessageSpec::ReadIoCardEnvReply>( reply )
+                    );
+        } else {
+            this->processNodeCard(
+                    *boost::dynamic_pointer_cast<MCServerMessageSpec::ReadNodeCardEnvReply>( reply )
+                    );
+        }
+        _insertion_time += boost::posix_time::microsec_clock::local_time() - start;
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( e.what() );
     }
+    LOG_DEBUG_MSG("End processing optical environmentals");
 
-    LOG_TRACE_MSG( __FUNCTION__ << " end " << name );
-    _insertion_time += boost::posix_time::microsec_clock::local_time() - start;
 }
 
 void

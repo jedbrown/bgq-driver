@@ -1,0 +1,158 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2011, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */      
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+/**
+ * \file sys/extension/c/pe_extension/extension.dox
+ * \brief PAMI PE extension documentation
+ * \defgroup EXT_pe_extension EXT_pe_extension
+ * \ingroup extensions
+ *
+ * \par Name:
+ *      pe_extension
+ *
+ * \version 1.0
+ *
+ * \par Number:
+ *      ####
+ *
+ * \par Dependencies:
+ *      None
+ *
+ * \par Overview:
+ *      Provide thorough overview documentation here.
+ *
+ * \par Issues:
+ *      None
+ *
+ * \par Example:
+ * \code
+ *
+ * // Provide a sufficiently complete example such that an application developer
+ * // may be "cut-n-paste" and then complete with minor modifications.
+ *
+ * \endcode
+ * \{
+ */
+
+//
+// Provide standard doxygen-style documentation for all extension interfaces,
+// including functions, enums, structs, #defines, etc.
+//
+
+/**
+ * \brief Get the owner of the context lock
+ *
+ * \param[in]  context PAMI communication context
+ * \param[out] owner   Owner of the context lock, compatible to pthread_t
+ *
+ * \retval PAMI_SUCCESS  The mutex owner has been retrieved.
+ * \retval PAMI_INVAL    The \c context or the \c owner pointer is invalid.
+ */
+pami_result_t PAMI_Context_mutex_getowner (pami_context_t context, unsigned long *owner);
+
+/*
+ * The following functions are modelled after pthread_cond_* functions.
+ */
+/**
+ * \brief Create a condition
+ *
+ * \param[in]  context PAMI communication context
+ * \param[out] cond    The condition created
+ *
+ * \retval PAMI_SUCCESS  The condition has been created.
+ * \retval PAMI_INVAL    The \c context or the \c cond pointer is invalid.
+ */
+pami_result_t PAMI_Context_cond_create (pami_context_t context, pami_cond_t *cond);
+
+/**
+ * \brief Wait on a condition
+ * \note  The caller must have the context lock. Upon return, the caller
+ *        still has the lock.
+ *
+ * \param[in]  context PAMI communication context
+ * \param[in]  cond    The condition to wait
+ *
+ * \retval PAMI_SUCCESS  The condition has been met.
+ * \retval PAMI_INVAL    The \c context or the \c cond is invalid.
+ */
+pami_result_t PAMI_Context_cond_wait (pami_context_t context, pami_cond_t cond);
+
+/**
+ * \brief Wait on a condition with timeout
+ * \note  The caller must have the context lock. Upon return, the caller
+ *        still has the lock.
+ *
+ * \param[in]  context PAMI communication context
+ * \param[in]  cond    The condition to wait
+ * \param[in]  time    The time to wait
+ *
+ * \retval PAMI_SUCCESS  The condition has been met.
+ * \retval PAMI_EAGAIN   The wait time has expired.
+ * \retval PAMI_INVAL    The \c context, the \c cond or the \c time pointer
+ *                       is invalid.
+ */
+pami_result_t PAMI_Context_cond_timedwait (pami_context_t context, pami_cond_t cond,
+		struct timespec *time);
+
+/**
+ * \brief Signal to wake up a waiter on a condition
+ *
+ * \param[in]  context PAMI communication context
+ * \param[in]  cond    The condition to signal
+ *
+ * \retval PAMI_SUCCESS  The signal has been delivered.
+ * \retval PAMI_INVAL    The \c context or the \c cond is invalid.
+ */
+pami_result_t PAMI_Context_cond_signal (pami_context_t context, pami_cond_t cond);
+
+/**
+ * \brief Signal to wake up all waiters on a condition
+ *
+ * \param[in]  context PAMI communication context
+ * \param[in]  cond    The condition to sigal
+ *
+ * \retval PAMI_SUCCESS  The signal has been delivered.
+ * \retval PAMI_INVAL    The \c context or the \c cond is invalid.
+ */
+pami_result_t PAMI_Context_cond_broadcast (pami_context_t context, pami_cond_t cond);
+
+/**
+ * \brief Destroy a condition
+ *
+ * \param[in]  context PAMI communication context
+ * \param[in]  cond    The condition to destroy
+ *
+ * \retval PAMI_SUCCESS  The condition has been destroyed.
+ * \retval PAMI_INVAL    The \c context or the \c cond is invalid.
+ */
+pami_result_t PAMI_Context_cond_destroy (pami_context_t context, pami_cond_t cond);
+
+/**
+ * \brief Function pointers for the above functions
+ */
+typedef pami_result_t (*mutex_getowner_fn) (pami_context_t context, unsigned long *owner);
+typedef pami_result_t (*cond_create_fn) (pami_context_t context, pami_cond_t *cond);
+typedef pami_result_t (*cond_wait_fn) (pami_context_t context, pami_cond_t *cond);
+typedef pami_result_t (*cond_timedwait_fn) (pami_context_t context, pami_cond_t *cond);
+typedef pami_result_t (*cond_signal_fn) (pami_context_t context, pami_cond_t *cond);
+typedef pami_result_t (*cond_broadcast_fn) (pami_context_t context, pami_cond_t *cond);
+typedef pami_result_t (*cond_destroy_fn) (pami_context_t context, pami_cond_t *cond);
+
+/** \} */ /* end of "EXT_pe_extension" group */

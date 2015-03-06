@@ -31,6 +31,6 @@ void Speculation_CheckJailViolationDefer(Regs_t* context);
 int  Speculation_EnterJailMode(bool longRunningSpec);
 int  Speculation_ExitJailMode();
 void IntHandler_L2Central(int intrp_sum_bitnum);
-void Speculation_EnableFastSpeculationPaths();
+int  Speculation_EnableFastSpeculationPaths();
 int  Speculation_CheckPendingRestart();
 int  l1p_init();

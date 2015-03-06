@@ -1,0 +1,34 @@
+#!/bin/sh -e
+
+# $1 : Compiler
+# $2 : Archive tool
+# $3 : static lib
+# $4 : shared lib
+# $5 : option used to make shared library (optional)
+# $6 : extra libs
+
+#echo "DEBUG 1:  $1"
+#echo "DEBUG 2:  $2"
+#echo "DEBUG 3:  $3"
+#echo "DEBUG 4:  $4"
+#echo "DEBUG 5:  $5"
+#echo "DEBUG 6:  $6"
+
+COMPILER=$1
+AR=$2
+STATICLIB=$3
+SHAREDLIB=$4
+SHARED=$5
+EXTRALIBS=$6
+
+dirname=`mktemp -d /tmp/XXXXXXXXX`
+cd $dirname
+
+${AR} x $STATICLIB
+for f in `ls *.lo`; do mv $f ${f%.lo}.o; done
+
+cmd=`echo $COMPILER $SHARED *.o -o $SHAREDLIB $EXTRALIBS`
+eval $cmd
+
+cd /
+rm -rf $dirname

@@ -102,7 +102,7 @@ impl(
             std::string nodeOptionsString = arg.substr(13); // since the node options can contain blanks, group it together
 
             while(((*i).find_last_of("}")+1) != (*i).length() && (i+1) != args.end() ) {
-                i++;
+                ++i;
                 nodeOptionsString += " ";
                 nodeOptionsString += *i;
             }
@@ -126,7 +126,7 @@ impl(
             std::string domainString = arg.substr(7); // since the domain info can contain blanks, group it together
 
             while(((*i).find_last_of("}")+1) != (*i).length() && (i+1) != args.end() ) {
-                i++;
+                ++i;
                 domainString += " ";
                 domainString += *i;
             }
@@ -315,7 +315,7 @@ impl(
     return OK;
 }
 
-} // anonymous namespace 
+} // anonymous namespace
 
 CreateNodeConfig*
 CreateNodeConfig::build()

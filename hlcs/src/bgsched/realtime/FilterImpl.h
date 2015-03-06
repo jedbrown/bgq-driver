@@ -36,13 +36,13 @@
 #include <boost/serialization/set.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/string.hpp>
+#include <boost/serialization/split_member.hpp>
 
 #include <boost/xpressive/xpressive_fwd.hpp>
 
 #include <iosfwd>
 #include <set>
 #include <string>
-
 
 namespace bgsched {
 namespace realtime {
@@ -54,8 +54,8 @@ public:
 
     typedef boost::shared_ptr<Filter::BlockStatuses> BlockStatusesPtr;
     typedef boost::shared_ptr<Filter::JobStatuses> JobStatusesPtr;
-    typedef boost::shared_ptr<RasSeverities> RasSeveritiesPtr;
-    typedef boost::shared_ptr<JobIds> JobIdsPtr;
+    typedef boost::shared_ptr<Filter::RasSeverities> RasSeveritiesPtr;
+    typedef boost::shared_ptr<Filter::JobIds> JobIdsPtr;
 
     typedef boost::shared_ptr<boost::xpressive::sregex> RePtr;
 
@@ -189,17 +189,23 @@ private:
 
     friend class boost::serialization::access;
 
+    // Split serialize() method into save() and load() methods
     template<class Archive>
-    void serialize( Archive& ar, const unsigned int /*version*/ )
+    void save( Archive& ar, const unsigned int /*version*/ ) const
     {
+
         ar & _jobs;
         ar & _job_block_id_pattern;
-        ar & _job_statuses_ptr;
+        // Don't save the shared ptr.
+        const Filter::JobStatuses *jsp(_job_statuses_ptr.get());
+        ar & jsp;
         ar & _job_deleted;
 
         ar & _blocks;
         ar & _block_id_pattern;
-        ar & _block_statuses_ptr;
+        // Don't save the shared ptr.
+        const Filter::BlockStatuses *bsp(_block_statuses_ptr.get());
+        ar & bsp;
         ar & _block_deleted;
 
         ar & _midplanes;
@@ -213,10 +219,59 @@ private:
 
         ar & _ras_events;
         ar & _ras_message_id_pattern;
-        ar & _ras_severities_ptr;
-        ar & _ras_job_ids_ptr;
+        // Don't save the shared ptr.
+        const Filter::RasSeverities *rsp(_ras_severities_ptr.get());
+        ar & rsp;
+        // Don't save the shared ptr.
+        const Filter::JobIds *jip(_ras_job_ids_ptr.get());
+        ar & jip;
         ar & _ras_compute_block_id_pattern;
     }
+
+    template<class Archive>
+    void load( Archive& ar, const unsigned int /*version*/ )
+    {
+
+        ar & _jobs;
+        ar & _job_block_id_pattern;
+        // Don't load into the shared ptr.
+        Filter::JobStatuses *jsp(NULL);
+        ar & jsp;
+        _job_statuses_ptr.reset(jsp);
+        ar & _job_deleted;
+
+        ar & _blocks;
+        ar & _block_id_pattern;
+        // Don't load into the shared ptr.
+        Filter::BlockStatuses *bsp(NULL);
+        ar & bsp;
+        _block_statuses_ptr.reset(bsp);
+        ar & _block_deleted;
+
+        ar & _midplanes;
+        ar & _node_boards;
+        ar & _nodes;
+        ar & _switches;
+        ar & _torus_cables;
+        ar & _io_cables;
+        ar & _io_drawers;
+        ar & _io_nodes;
+
+        ar & _ras_events;
+        ar & _ras_message_id_pattern;
+        // Don't load into the shared ptr.
+        Filter::RasSeverities *rsp(NULL);
+        ar & rsp;
+        _ras_severities_ptr.reset(rsp);
+        // Don't load into the shared ptr.
+        Filter::JobIds *jip(NULL);
+        ar & jip;
+        _ras_job_ids_ptr.reset(jip);
+        ar & _ras_compute_block_id_pattern;
+    }
+
+    // Macro that generates a serialize method that splits into load/save methods.
+    BOOST_SERIALIZATION_SPLIT_MEMBER( )
 };
 
 

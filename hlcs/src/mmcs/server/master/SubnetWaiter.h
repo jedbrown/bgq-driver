@@ -39,7 +39,7 @@ namespace master {
 class SubnetWaiter : public common::Thread
 {
 public:
-    SubnetWaiter() : Thread() {}
+    SubnetWaiter() : Thread() {_alias = std::string(); }
     void* threadStart();
     void setBin(BinaryControllerPtr bin) { _bin_to_wait = bin; }
     void setAlias(const std::string& alias) { _alias = alias; }

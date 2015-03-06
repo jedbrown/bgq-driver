@@ -43,13 +43,17 @@ class Version : public common::AbstractCommand
 public:
     Version(const char* name, const char* description, const Attributes& attributes)
       : AbstractCommand(name,description,attributes) { _usage = "version";}
-    static Version* build();	// factory method
-    void execute(std::deque<std::string> args,
-			 mmcs_client::CommandReply& reply,
-			 common::ConsoleController* pController,
-			 BlockControllerTarget* pTarget=NULL);
-    void help(std::deque<std::string> args,
-		      mmcs_client::CommandReply& reply);
+    static Version* build(); // factory method
+    void execute(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            BlockControllerTarget* pTarget=NULL
+            );
+    void help(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply
+            );
 };
 
 } } } // namespace mmcs::server::command

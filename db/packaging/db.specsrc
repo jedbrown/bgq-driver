@@ -26,7 +26,7 @@
 
 Summary: Blue Gene database
 Group: %{product_group}
-Release: 0
+Release: 12
 
 %description database
 %{bgq_package_description}

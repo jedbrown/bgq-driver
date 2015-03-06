@@ -1,0 +1,304 @@
+ROOTDIR        ?= @ROOTDIR@
+include           @abs_top_builddir@/Make.rules.top
+MSGDIR          = @abs_top_srcdir@
+TARGET          = @TARGET@
+INSTALL_DIR     = @INSTALL_DIR@
+COMPILER        = @COMPILER@
+PM              = @PM@
+LIBNAME         = @LIBNAME@
+ALIBNAME        = @abs_top_builddir@/lib${LIBNAME}
+UNAME	       := $(shell uname)
+PLATFORM        = ${UNAME}
+PLATFORMINCLUDE = @abs_top_builddir@
+
+CROSS_INCLUDES_UNIX	= -I${PLATFORMINCLUDE}				\
+			  -I${MSGDIR}					\
+			  -I${MSGDIR}/pami				\
+			  -I${MSGDIR}/pami/sys				\
+			  -I${MSGDIR}/pami/sys/${TARGET}		\
+			  -I${MSGDIR}/pami/arch/${PAMI_ARCH}		\
+			  -I${MSGDIR}/pami/compiler/${PAMI_COMPILER}	\
+			  -I${MSGDIR}/pami/common/${TARGET}		\
+			  -I${MSGDIR}/pami/common/default		\
+			  -I${MSGDIR}/pami/math/${PAMI_ARCH}  		\
+			  -I${MSGDIR}/pami/math/common
+
+CROSS_INCLUDES_AIX	= -I${PLATFORMINCLUDE}				\
+			  -I${MSGDIR}					\
+			  -I${MSGDIR}/pami				\
+			  -I${MSGDIR}/pami/sys				\
+			  -I${MSGDIR}/pami/sys/${TARGET}		\
+			  -I${MSGDIR}/pami/arch/${PAMI_ARCH}		\
+			  -I${MSGDIR}/pami/compiler/${PAMI_COMPILER}	\
+			  -I${MSGDIR}/pami/common/${TARGET}		\
+			  -I${MSGDIR}/pami/common/default		\
+			  -I${MSGDIR}/pami/math/${PAMI_ARCH}		\
+			  -I${MSGDIR}/pami/math/common
+
+
+PUBLICHEADERS = ${MSGDIR}/pami/sys/pami.h ${MSGDIR}/pami/sys/${TARGET}/pami_sys.h
+
+ifeq (${TARGET},mpi)
+#   DEVICES              = None
+   PROTOCOLS            = None
+   MESSAGER             = None
+   MATH                 = None
+   TESTS                = pami/test
+   COLLALGORITHM        = allreduce barrier tspcoll
+   CROSS_DEFINES_UNIX   =
+   CROSS_DEFINES_AIX    = -DUSE_MEMALIGN
+   CROSS_INCLUDES_UNIX += ${CROSS_SYS_INCLUDES}
+   CROSS_INCLUDES_AIX  += ${CROSS_SYS_INCLUDES}
+endif
+
+ifeq (${TARGET},bgp)
+   DEVICES              = None
+   PROTOCOLS            = None
+   MESSAGER             = None
+   MATH                 = None
+   TESTS                = pami/test
+
+   COLLALGORITHM        = allreduce barrier tspcoll
+   #CROSS_DEFINES_UNIX   =
+   #CROSS_DEFINES_AIX    =
+   CROSS_INCLUDES_UNIX += ${CROSS_SYS_INCLUDES}
+endif
+
+ifeq (${TARGET},bgq)
+   DEVICES              = None
+   PROTOCOLS            = None
+   MESSAGER             = None
+   MATH                 = None
+   TESTS                = pami/test
+   COLLALGORITHM        = allreduce barrier tspcoll
+   #CROSS_DEFINES_UNIX   =
+   #CROSS_DEFINES_AIX    =
+   CROSS_INCLUDES_UNIX += ${CROSS_SYS_INCLUDES}
+endif
+
+ifeq (${TARGET},lapiunix)
+   DEVICES              = None
+   PROTOCOLS            = None
+   MESSAGER             = None
+   MATH                 = None
+   TESTS                = pami/test lapi/unittests
+   COLLALGORITHM        = allreduce barrier tspcoll
+   CROSS_DEFINES_UNIX   = -DDUMMY			\
+			  -DADAPTOR_LAPI		\
+			  -DLAPI_BSR			\
+			  -D_AIX51			\
+			  -D_91D_LAPI			\
+			  -DRC_RDMA			\
+			  -D_BVV_LAPI_UDP		\
+			  -D_BVV_HAL_LAPI		\
+			  -DSETCOPYRTN=_lapi_memcpy	\
+			  -DNOT_USE_CKPT_FILE		\
+			  -D_LAPI_FAILOVER		\
+			  -DLOOKAHEAD_RECEIVE		\
+			  -D_LAPI_LINUX			\
+			  -D_LAPI_KMUX			\
+			  -D_USE_POSIX_SEM		\
+			  -D_HEALTH_PING		\
+			  -D__64BIT__			\
+			  -DPOWER_ARCH
+   CROSS_DEFINES_AIX    = -DADAPTOR_LAPI		\
+			  -D_IBMR2			\
+			  -D_POWER			\
+			  -D_AIX			\
+			  -DNLS				\
+			  -D_NLS			\
+			  -DMSG				\
+			  -D__STR31__			\
+			  -Daiws			\
+			  -D_POWER_RS			\
+			  -D_POWER_PC			\
+			  -D_POWER_RS1			\
+			  -D_POWER_RS2			\
+			  -D_POWER_RSC			\
+			  -D_POWER_601			\
+			  -D_POWER_603			\
+			  -D_POWER_604			\
+			  -D_POWER_620			\
+			  -D_THREADS			\
+			  -D_POWER_64			\
+			  -DSPAIX411			\
+			  -DSPAIX41			\
+			  -DSPAIXLVL=610		\
+			  -DSPXLCLVL=80099		\
+			  -DPDE_MACHINE=power		\
+			  -DPDE_CONTEXT=power		\
+			  -DPDE_BLDNAME=rcf0911a	\
+			  -DPDE_RELNAME=cf		\
+			  -DPDE_CCOWNER=vac		\
+			  -DPDE_CCVER=80099		\
+			  -DPDE_OSNAME=AIX		\
+			  -DPDE_OSOWNER=IBM		\
+			  -DPDE_OSVER=610		\
+			  -DLAPI_BSR			\
+			  -D_CHECK_POINT		\
+			  -D_AIX51			\
+			  -DAIX52			\
+			  -D_91D_LAPI			\
+			  -D_BVV_LAPI_UDP		\
+			  -D_BVV_HAL_LAPI		\
+			  -D_LAPI_FAILOVER		\
+			  -DSETCOPYRTN=_lapi_memcpy	\
+			  -DNOT_USE_CKPT_FILE		\
+			  -D_PWR6			\
+			  -DLOOKAHEAD_RECEIVE		\
+			  -D_AIX53			\
+			  -DRDMA_WAIT_MASTER		\
+			  -DLAPI_USE_HALF_RDMA		\
+			  -D_HEALTH_PING		\
+			  -DRC_RDMA			\
+			  -DUSE_MEMALIGN
+   CROSS_INCLUDES_UNIX += ${CROSS_SYS_INCLUDES}
+   CROSS_INCLUDES_AIX  += ${CROSS_SYS_INCLUDES}
+
+endif
+
+ifeq (${TARGET},socklinux)
+   DEVICES              = None
+   PROTOCOLS            = None
+   MESSAGER             = None
+   MATH                 = None
+   TESTS                = pami/test
+
+#  COLLALGORITHM        = allreduce barrier tspcoll
+   COLLALGORITHM        = allreduce
+   CROSS_DEFINES_UNIX   =
+   CROSS_DEFINES_AIX    = -DUSE_MEMALIGN
+   CROSS_INCLUDES_UNIX += ${CROSS_SYS_INCLUDES}
+   CROSS_INCLUDES_AIX  += ${CROSS_SYS_INCLUDES}
+endif
+
+
+ifeq (${INSTALL_DIR}, )
+     INSTALL_DIR	= ${COMM_PATH}/sys
+endif
+
+CROSS_DEFINES   = ${CROSS_DEFINES_UNIX}
+CROSS_INCLUDES  = ${CROSS_INCLUDES_UNIX}
+EXTRA_LIBS      = "-ldl -lpthread -lstdc++ -lm -lc"
+FLAGS_GENERAL   = ${ARCH_BITS_FLAGS} -D_GNU_SOURCE ${CROSS_OPTFLAGS} ${CROSS_DEPENDENCY} $@.d
+CROSS_CFLAGS    = ${FLAGS_GENERAL} $(CROSS_EXTRA_CFLAGS) $(CROSS_INCLUDES) ${CROSS_DEFINES}
+CROSS_CXXFLAGS  = ${FLAGS_GENERAL} $(CROSS_EXTRA_CXXFLAGS) ${CROSS_INCLUDES} ${CROSS_DEFINES}
+PIC	        = ${CROSS_PIC}
+MK_SHARED	= "${CROSS_MK_SHARED}"
+CROSS_LDFLAGS   = -L$(INSTALL_DIR)/lib -l${LIBNAME} ${CROSS_LIBS}
+
+ifeq (${UNAME},AIX)
+     CROSS_DEFINES   = ${CROSS_DEFINES_AIX}
+     CROSS_INCLUDES  = ${CROSS_INCLUDES_AIX} -DASSERT_LEVEL=${ASSERT_LEVEL}
+     EXTRA_LIBS      = "-ldl -lpthread -lm -lc"
+     FLAGS_GENERAL   = ${ARCH_BITS_FLAGS} -D_GNU_SOURCE ${CROSS_OPTFLAGS} ${CROSS_DEPENDENCY} $@.d
+     CROSS_CFLAGS    = ${FLAGS_GENERAL} $(CROSS_EXTRA_CFLAGS) $(CROSS_INCLUDES) ${CROSS_DEFINES}
+     CROSS_CXXFLAGS  = ${FLAGS_GENERAL} $(CROSS_EXTRA_CXXFLAGS) ${CROSS_INCLUDES} ${CROSS_DEFINES}
+     CROSS_LDFLAGS  += -lpthread -lrt -ldl
+     PIC	     = ${CROSS_PIC}
+     MK_SHARED	     = "${CROSS_MK_SHARED}"
+endif
+
+ifeq (${UNAME},Linux)
+     CROSS_DEFINES   = ${CROSS_DEFINES_UNIX} -DASSERT_LEVEL=${ASSERT_LEVEL}
+     CROSS_INCLUDES  = ${CROSS_INCLUDES_UNIX}
+     EXTRA_LIBS      = "-ldl -lpthread -lstdc++ -lm -lc"
+     FLAGS_GENERAL   = ${ARCH_BITS_FLAGS} -D_GNU_SOURCE ${CROSS_OPTFLAGS} ${CROSS_DEPENDENCY} $@.d
+     CROSS_CFLAGS    = ${FLAGS_GENERAL} $(CROSS_EXTRA_CFLAGS) $(CROSS_INCLUDES) ${CROSS_DEFINES}
+     CROSS_CXXFLAGS  = ${FLAGS_GENERAL} $(CROSS_EXTRA_CXXFLAGS) ${CROSS_INCLUDES} ${CROSS_DEFINES} -DUSE_MEMALIGN
+     CROSS_LDFLAGS  += -lpthread -lrt -ldl
+     PIC	     = ${CROSS_PIC}
+     MK_SHARED	     = "${CROSS_MK_SHARED}"
+endif
+
+ifeq (${UNAME},Darwin)
+     CROSS_DEFINES   = ${CROSS_DEFINES_UNIX} -DASSERT_LEVEL=${ASSERT_LEVEL}
+     CROSS_INCLUDES  = ${CROSS_INCLUDES_UNIX}
+     EXTRA_LIBS      = "-ldl -lpthread -lstdc++ -lm -lc"
+     FLAGS_GENERAL   = ${ARCH_BITS_FLAGS} -D_GNU_SOURCE ${CROSS_OPTFLAGS} ${CROSS_DEPENDENCY} $@.d
+     CROSS_CFLAGS    = ${FLAGS_GENERAL} $(CROSS_EXTRA_CFLAGS) $(CROSS_INCLUDES) ${CROSS_DEFINES}
+     CROSS_CXXFLAGS  = ${FLAGS_GENERAL} $(CROSS_EXTRA_CXXFLAGS) ${CROSS_INCLUDES} ${CROSS_DEFINES}
+     CROSS_LDFLAGS  += -lpthread -ldl
+     PIC	     = ${CROSS_PIC}
+     MK_SHARED	     = "-dynamiclib ${ARCH_BITS_FLAGS}"
+endif
+
+ifeq (${ERROR_CHECKS},yes)
+    CROSS_DEFINES   += -DERROR_CHECKS
+endif
+
+ifeq (${TARGET},bgq)
+ifeq (${ENABLE_MAMBO_WORKAROUNDS},yes)
+    CROSS_DEFINES   += -DENABLE_MAMBO_WORKAROUNDS
+endif
+endif
+ifeq (${TARGET},bgqxl)
+ifeq (${ENABLE_MAMBO_WORKAROUNDS},yes)
+    CROSS_DEFINES   += -DENABLE_MAMBO_WORKAROUNDS
+endif
+endif
+
+CROSS_DEFINES += -D__pami_target_${TARGET}__
+
+# ########################################################################### #
+#                            Simple build rules                               #
+# ########################################################################### #
+IND=...
+.PHONY: default first clean ${SUBDIRS} ${TESTS} ${CADAPTOR}
+first : default
+${CADAPTOR}:
+	@SILENT_BUILD@ if [ -f $@/GNUmakefile ]; then	\
+		echo Compiling `pwd`/"$@";		\
+		${MAKE} @SILENT_DIR@ -C $@;		\
+	fi
+${SUBDIRS}:
+	@SILENT_BUILD@ if [ -f $@/GNUmakefile ]; then	\
+		echo Compiling `pwd`/"$@";		\
+		${MAKE} @SILENT_DIR@ -C $@;		\
+	fi
+${TESTS}:
+	@SILENT_BUILD@ if [ -f $@/GNUmakefile ]; then	\
+		echo Compiling `pwd`/"$@";		\
+		${MAKE} @SILENT_DIR@ -C $@;		\
+	fi
+
+
+clean::
+	@SILENT_BUILD@ -${RM} ${OBJ} *.${EXTENSION} ${DEPS} *.lo *.o *.d *~ core.*
+	@SILENT_BUILD@ -for i in ${SUBDIRS}; do			\
+	  if [ -f $$i/GNUmakefile ]; then			\
+	    echo "${IND} Cleaning $$i";				\
+	    ${MAKE} IND="...${IND}" @SILENT_DIR@ -C $$i clean;	\
+	  fi;							\
+	done
+	@SILENT_BUILD@ -for i in ${CADAPTOR}; do		\
+	  if [ -f $$i/GNUmakefile ]; then			\
+	    echo "${IND} Cleaning $$i";				\
+	    ${MAKE} IND="...${IND}" @SILENT_DIR@ -C $$i clean;	\
+	  fi;							\
+	done
+
+%.s.${EXTENSION}.o: %.s
+	${CROSS_CC} ${ARCH_BITS_FLAGS} -c $< -o $@
+%.s.${EXTENSION}.lo: %.s
+	${CROSS_CC} ${ARCH_BITS_FLAGS} ${PIC} -c $< -o $@
+%.c.${EXTENSION}.o: %.c
+	${CROSS_CC} ${CROSS_CFLAGS} -c $< -o $@
+%.c.${EXTENSION}.lo: %.c
+	${CROSS_CC} ${PIC} ${CROSS_CFLAGS} -c $< -o $@
+%.cc.${EXTENSION}.o: %.cc
+	${CROSS_CXX} ${CROSS_CXXFLAGS} -c $< -o $@
+%.cc.${EXTENSION}.lo: %.cc
+	${CROSS_CXX} ${PIC} ${CROSS_CXXFLAGS} -c $< -o $@
+%.cpp.${EXTENSION}.o: %.cpp
+	${CROSS_CXX} ${CROSS_CXXFLAGS} -c $< -o $@
+%.cpp.${EXTENSION}.lo: %.cpp
+	${CROSS_CXX} ${PIC} ${CROSS_CXXFLAGS} -c $< -o $@
+%.${EXTENSION}: %.c
+	${CROSS_CC} ${CROSS_CFLAGS} $< -o $@ ${CROSS_LDFLAGS}
+
+ifeq (@SHARED_LIB@,no)
+    BUILD_LIBS = ${ALIBNAME}.a
+else
+    BUILD_LIBS = ${ALIBNAME}.a ${ALIBNAME}.so
+endif

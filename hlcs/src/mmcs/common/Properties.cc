@@ -75,13 +75,11 @@ int
 Properties::buildSubnets()
 {
     LOG_TRACE_MSG(__FUNCTION__);
-    int i = 0;
     try {
+        int i = 0;
         while (true) {
             std::string subnet = "machinecontroller.subnet.";
-            std::string prop_key = "Name.";
             subnet += boost::lexical_cast<std::string>(i);
-            prop_key += boost::lexical_cast<std::string>(i);
             Subnet mmcs_subnet(_properties, subnet);
             _subnets.push_back(mmcs_subnet);
             mmcs_subnet.output();
@@ -140,8 +138,8 @@ Properties::getSubnetNames(
         std::vector<std::string>& subnet_names
         )
 {
-    int i = 0;
     try {
+        int i = 0;
         while (true) {  // Exception will end this loop.
             std::string subnet = "machinecontroller.subnet.";
             std::string prop_key = "Name.";

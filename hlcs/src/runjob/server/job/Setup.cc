@@ -82,10 +82,49 @@ Setup::Setup(
         const Job::Ptr& job
         ) :
     _job( job ),
-    _classRoute( job )
+    _classRoute(),
+    _copiedMapping(),
+    _retainMappingFiles(true)
 {
+
+    const JobInfo& info = _job->info();
+    bool isPermutationMappingType = false;
+
+    if ( info.getMapping().type() == Mapping::Type::Permutation ) {
+        isPermutationMappingType = true;
+    }
+
+    const Server::Ptr server( _job->_server.lock() );
+    if ( !server ) {
+        BOOST_THROW_EXCEPTION(std::runtime_error("Unexpected internal error retrieving properties settings."));
+    }
+
+    const std::string keyName("retain_mapping_files");
+    const std::string propertiesSection("runjob.server");
+    const bgq::utility::Properties::ConstPtr& properties = server->getOptions().getProperties();
+    try {
+        const std::string value(properties->getValue(propertiesSection, keyName));
+        std::istringstream is(value);
+        is >> std::boolalpha >> _retainMappingFiles;
+        if (!is) {
+             LOG_WARN_MSG( "Invalid " << keyName << " value from properties file, using default value of 'true'" );
+             _retainMappingFiles = defaults::ServerRetainMappingFiles;
+         } else {
+             LOG_DEBUG_MSG( "Using " << keyName <<  " properties value: " << std::boolalpha << _retainMappingFiles );
+         }
+    } catch ( const std::exception& e ) {
+        // Key not found, retain the mapping file by default
+        _retainMappingFiles = defaults::ServerRetainMappingFiles;
+        LOG_WARN_MSG( "Missing " << keyName << " key from " << propertiesSection << " section in properties file, using default value of 'true'" );
+    }
+
     this->validateMapping();
-    
+    LOG_INFO_MSG( "Successfully validated mapping for job " <<  _job->id() );
+
+    _classRoute.reset(
+            new class_route::Generate( job, _copiedMapping, isPermutationMappingType, _retainMappingFiles )
+           );
+
     // each I/O node gets a separate setup message due to the class route information
     BOOST_FOREACH( IoNode::Map::value_type& i, _job->io() ) {
         const auto location = i.first;
@@ -95,7 +134,7 @@ Setup::Setup(
 }
 
 void
-Setup::validateMapping() const
+Setup::validateMapping()
 {
     // short circuit if we are not validating a mapping file
     const Mapping& mapping = _job->info().getMapping();
@@ -125,13 +164,20 @@ Setup::validateMapping() const
     }
 
     ValidateMappingFile( _job->id(), _job->info(), jobSize );
-    
+
     const Server::Ptr server( _job->_server.lock() );
     if ( !server ) return;
 
-    const std::string copiedMapping = CopyMappingFile( _job->id(), _job->info(), server->getOptions().getProperties() ).result();
-    if ( !copiedMapping.empty() ) {
-        this->updateDatabaseMapping( copiedMapping );
+    // If a mapping file is specified for the job it will always be copied temporarily into the mapping archive directory.
+    // If the properties setting retain_mapping_files = false then the database should not be updated with the archive mapping name.
+    _copiedMapping = CopyMappingFile( _job->id(), _job->info(), server->getOptions().getProperties() ).result();
+    if ( !_copiedMapping.empty() ) {
+        if ( _retainMappingFiles ) {
+            LOG_INFO_MSG( "Job " <<  _job->id() << " mapping file copied to " << _copiedMapping );
+            this->updateDatabaseMapping( _copiedMapping );
+        } else {
+            LOG_DEBUG_MSG( "Job " <<  _job->id() << " mapping file was temporarily written to " << _copiedMapping << ". Will be deleted later." );
+        }
     }
 }
 
@@ -145,7 +191,7 @@ Setup::populate(
             bgcios::jobctl::SetupJob,
             _job->id()
             );
-    const boost::shared_ptr<bgcios::jobctl::SetupJobMessage> setup( 
+    const boost::shared_ptr<bgcios::jobctl::SetupJobMessage> setup(
             message->as<bgcios::jobctl::SetupJobMessage>()
             );
 
@@ -157,8 +203,10 @@ Setup::populate(
 
     if ( info.getMapping().type() == Mapping::Type::Permutation ) {
         (void)strncpy( setup->mapping, info.getMapping().value().c_str(), sizeof(setup->mapping) );
+        setup->mapFilePath[0] = 0;
     } else {
         (void)strncpy( setup->mapFilePath, info.getMapping().value().c_str(), sizeof(setup->mapFilePath) );
+        setup->mapping[0] = 0;
     }
 
     // add job corner
@@ -185,7 +233,7 @@ Setup::populate(
         setup->shape.core = 1;
     } else {
         // sub-block or full block jobs use all 16 cores
-        setup->shape.core = bgq::util::Location::ComputeCardCoresOnBoard - 1; 
+        setup->shape.core = bgq::util::Location::ComputeCardCoresOnBoard - 1;
     }
 
     // add job shape
@@ -208,7 +256,7 @@ Setup::populate(
     setup->numRanks = info.getNp().get();
 
     // get class route for this I/O node's compute nodes
-    _classRoute.add( location, setup );
+    _classRoute->add( location, setup );
 
     if ( _job->pacing() ) {
         _job->pacing()->add( message, _job );
@@ -230,7 +278,7 @@ Setup::updateDatabaseMapping(
     if ( !connection ) {
         LOG_RUNJOB_EXCEPTION(
                 error_code::mapping_file_invalid,
-                "Could not get databse connection"
+                "Could not get database connection"
                 );
     }
 
@@ -250,7 +298,7 @@ Setup::updateDatabaseMapping(
     }
 
     update->execute();
-    LOG_DEBUG_MSG( "updated mapping file path to " << mapping );
+    LOG_DEBUG_MSG( "Updated mapping file path to " << mapping );
     removeGuard.dismiss();
 
     this->updateModificationTime( mapping, connection );

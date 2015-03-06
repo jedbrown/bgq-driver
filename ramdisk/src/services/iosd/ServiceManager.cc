@@ -64,6 +64,7 @@ ServiceManager::start(std::string program, std::vector <std::string>& args, std:
    // Add the process to the list of services.
    _serviceList.add(service->getProcessId(), service);
    LOG_CIOS_DEBUG_MSG("started service '" << service->getName() << "' in process " << service->getProcessId());
+   log4values(PROC_ADD_PID, (uint64_t)service->getProcessId(), service->getNumStarts(),_maxServiceRestarts,__LINE__);
 
    return 0;
 }
@@ -85,6 +86,7 @@ ServiceManager::restart(pid_t child)
    // Remove the old process from the list of services.
    LOG_CIOS_WARN_MSG(service->getName() << " service in process " << child << " has ended");
    _serviceList.remove(child);
+   log4values(PROC_RMV_PID, (uint64_t)child,  service->getNumStarts() , _maxServiceRestarts,__LINE__);
 
    // See if the service has been restarted the maximum number of times.
    if (service->getNumStarts() > _maxServiceRestarts) {
@@ -104,6 +106,7 @@ ServiceManager::restart(pid_t child)
 
    // Add the new process to list of services.
    _serviceList.add(service->getProcessId(), service);
+   log4values(PROC_ADD_PID, (uint64_t)service->getProcessId(), service->getNumStarts(),_maxServiceRestarts,__LINE__);
    LOG_CIOS_WARN_MSG(service->getName() << " service in process " << service->getProcessId() << " has been restarted " << service->getNumStarts() - 1 << " times");
 
    // Send ras event.
@@ -128,7 +131,9 @@ ServiceManager::remove(pid_t child)
    }
 
    // Remove the process from the list of services.
+  log4values(PROC_RMV_PID, (uint64_t)child, 0 , _maxServiceRestarts,__LINE__);
    _serviceList.remove(child);
+   
 
    return 0;
 }

@@ -100,9 +100,7 @@ freeBlock(Allocator &my_alloc, Block::Ptr& block)
         // Free the block resources
         my_alloc.release(model, block->getName(), plugin[0]);
         LOG_INFO_MSG("Block " << block->getName() << " was freed");
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Block " << block->getName() << " was not freed");
     }
 }
@@ -114,9 +112,7 @@ removeBlock(string blockName)
         // Remove the block
         Block::remove(blockName);
         LOG_INFO_MSG("Block " << blockName << " was removed");
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Block " << blockName << " was not removed");
     }
 }
@@ -131,9 +127,7 @@ updateBlockDefaults(Block::Ptr& block)
     try {
         block->update();
         LOG_INFO_MSG("Block " << block->getName() << " was updated");
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Block " << block->getName() << " was not updated");
         return;
     }
@@ -158,9 +152,7 @@ updateBlock(Block::Ptr& block)
         printBlockInfo(block);
         block->update();
         LOG_INFO_MSG("Block " << block->getName() << " was updated");
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Block " << block->getName() << " was not updated");
         return;
     }
@@ -205,9 +197,7 @@ addBlock(Allocator &my_alloc, uint32_t computeNodes, Block::Ptr& block)
         string owner;
         model.addBlock(block, owner);
         LOG_INFO_MSG("Block " << block->getName() << " was added");
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Block " << block->getName() << " was not added");
         return;
     }
@@ -217,9 +207,7 @@ addBlock(Allocator &my_alloc, uint32_t computeNodes, Block::Ptr& block)
         // Reserve the block resources
         my_alloc.prepare(model, block->getName(), plugin[0]);
         LOG_INFO_MSG("Block " << block->getName() << " was allocated");
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Block " << block->getName() << " was not allocated");
         return;
     }
@@ -236,45 +224,35 @@ testBadValues(Block::Ptr& block)
     try {
         string desc;
         block->setDescription(desc); // Empty string
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Set description failed on block " << block->getName());
     }
 
     // Try setting bad options (max 16 chars)
     try {
         block->setOptions("1234567890ABCDEFGH");
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Set options failed on block " << block->getName());
     }
 
     // Try setting bad boot options (max 256 chars)
     try {
         block->setBootOptions("123456789012345678921234567893123456789412345678951234567896123456789712345678981234567899123456789012345678901234567892123456789312345678941234567895123456789612345678971234567898123456789912345678901234567890123456789212345678931234567894123456789512345678961234567897123456789812345678991234567890");
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Set boot options failed on block " << block->getName());
     }
 
     // Try setting bad micro-loader image (max 256 chars)
     try {
         block->setMicroLoaderImage("123456789012345678921234567893123456789412345678951234567896123456789712345678981234567899123456789012345678901234567892123456789312345678941234567895123456789612345678971234567898123456789912345678901234567890123456789212345678931234567894123456789512345678961234567897123456789812345678991234567890");
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Set micro-loader image failed on block " << block->getName());
     }
 
     // Try setting bad node configuration (max 32 chars)
     try {
         block->setNodeConfiguration("123456789012345678921234567893123");
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Set node configuration failed on block " << block->getName());
     }
 
@@ -283,9 +261,7 @@ testBadValues(Block::Ptr& block)
 
     try {
         block->update();
-    }
-    catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Block " << block->getName() << " was not updated");
         return;
     }
@@ -314,8 +290,7 @@ removeDupBlocks()
                 }
             }
         }
-    } catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Unexpected error deleting blocks");
         return;
     }
@@ -329,14 +304,13 @@ dupBlocks()
     string prefix("IBMTest");
 
     try {
-
         blockFilter.setExtendedInfo(true);
         Block::Ptrs blocksVector = bgsched::core::getBlocks(blockFilter);
 
-        int maxBlocks = 0;
         if (blocksVector.empty()) {
             LOG_WARN_MSG("Found no blocks to duplicate.");
         } else {
+            int maxBlocks = 0;
             for (Block::Ptrs::iterator iter = blocksVector.begin(); iter != blocksVector.end(); ++iter) {
                 Block::Ptr block = *iter;
                 if (block->isLarge()) {
@@ -351,8 +325,7 @@ dupBlocks()
                 }
             }
         }
-    } catch(...)
-    {
+    } catch(...)  {
         LOG_ERROR_MSG("Error duplicating blocks");
         return;
     }
@@ -498,8 +471,7 @@ createSmallBlocks()
         //block64Good->setDescription("Good 64 cnode block"); // Set the description
         block64Good->add(owner); // Add to db
         printBlockInfo(block64Good); // Print out the contents
-    } catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG("Unexpected error creating small blocks");
         return;
     }
@@ -889,8 +861,7 @@ main(int argc, const char** argv)
     init( properties );
     LOG_INFO_MSG( "test_block running testcases (Note: requires 4x4 configuration)" );
 
-    try
-    {
+    try {
 
         LOG_TRACE_MSG( "Creating allocator framework" );
         Allocator my_alloc;
@@ -1023,8 +994,7 @@ main(int argc, const char** argv)
         // Block::initiateBoot("NonexistingBlock");
         LOG_INFO_MSG( "=== Test_Block Completed ===" );
         return(0);
-    } catch(...)
-    {
+    } catch(...) {
         LOG_ERROR_MSG( "Exception caught" );
         print_trace();
         exit(-1);

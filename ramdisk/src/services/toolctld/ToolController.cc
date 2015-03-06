@@ -113,13 +113,14 @@ ToolController::~ToolController()
     _toolListener.reset();
 }
 
-int ToolController::startup(uint32_t serviceId)
+int ToolController::startup(uint32_t serviceId, int connectWaitTimeoutRDMAcm)
 {
     // Reset umask to known value.
     ::umask(0);
 
     // Build the path to the command channel.
     _serviceId = serviceId;
+    _connectWaitTimeoutRDMAcm = connectWaitTimeoutRDMAcm;
     std::ostringstream cmdChannelPath;
     cmdChannelPath << _workDirectory << bgcios::ToolctlCommandChannelName << "." << _serviceId;
 
@@ -300,20 +301,69 @@ int ToolController::cleanup(void)
     return 0;
 }
 
+void * ToolController::EventWaiter::run(void)
+{ 
+
+   
+   struct pollfd _pollSetEventChannel;
+
+   _pollSetEventChannel.fd = _toolController._rdmaListener->getEventChannelFd();
+   _pollSetEventChannel.events = POLLIN;
+   _pollSetEventChannel.revents = 0;
+   int connect_wait_timeout = _toolController._connectWaitTimeoutRDMAcm; //minimum number of milliseconds poll will block 
+   log4values(CONF_CON_TMO, _toolController._serviceId, (uint64_t)connect_wait_timeout, (uint64_t)getpid(),(uint64_t)getppid() );
+   for(;;)
+   {
+     int rc = poll(&_pollSetEventChannel, 1, connect_wait_timeout);
+     if (rc == -1) {
+         int err = errno;
+         if (err == EINTR) continue;
+         else {
+            LOG_FATAL_MSG("died on pollSetEventChannel " << bgcios::errorString(err));
+            _exit(EXIT_SUCCESS);
+         }
+     }
+     if (_pollSetEventChannel.revents & (POLLERR|POLLHUP|POLLNVAL) ) {//error!
+       LOG_FATAL_MSG("died on pollSetEventChannel with bits POLLERR|POLLHUP|POLLNVAL"); 
+        _exit(EXIT_SUCCESS);
+     }
+     if (_pollSetEventChannel.revents & POLLIN){
+        _toolController.eventChannelHandler(); 
+        _pollSetEventChannel.revents = 0;
+        if (_toolController._client) connect_wait_timeout = -1;
+     }
+     if (connect_wait_timeout > 0){
+       LOG_FATAL_MSG("died waiting for connection establishment for at least "<< connect_wait_timeout << " milliseconds"); 
+       _exit(EXIT_SUCCESS);
+     }
+     
+    
+   }
+
+   return NULL;
+}
 void ToolController::eventMonitor(void)
-{
+{   
+
+    ToolController::EventWaiter eventWaiter(*this);
+    eventWaiter.start();  //call the thread wrapper which invokes run
+
     const int cmdChannel   = 0;
     const int compChannel  = 1;
-    const int eventChannel = 2;
-    const int toolListener = 3;
-    const int toolChannel1 = 4;
-    const int toolChannel2 = 5;
-    const int toolChannel3 = 6;
-    const int toolChannel4 = 7;
-    const int numFds       = 8;
+    const int toolListener = 2;
+    const int toolChannel1 = 3;
+    const int toolChannel2 = 4;
+    const int toolChannel3 = 5;
+    const int toolChannel4 = 6;
+    const int numFds       = 7;
 
     pollfd pollInfo[numFds];
+
+   FlightLogDumpWaiter flightLogDumpWait("toolctld");
+   flightLogDumpWait.start();  //call the thread wrapper which invokes run
+
     int timeout = 2000; // 2 seconds. Give reasonable time for in-flight IO syscalls to complete before taking action.
+
     // Initialize the pollfd structure.
     pollInfo[cmdChannel].fd = _cmdChannel->getSd();
     pollInfo[cmdChannel].events = POLLIN;
@@ -324,11 +374,6 @@ void ToolController::eventMonitor(void)
     pollInfo[compChannel].events = POLLIN;
     pollInfo[compChannel].revents = 0;
     LOG_CIOS_TRACE_MSG("added completion channel using fd " << pollInfo[compChannel].fd << " to descriptor list");
-
-    pollInfo[eventChannel].fd = _rdmaListener->getEventChannelFd();
-    pollInfo[eventChannel].events = POLLIN;
-    pollInfo[eventChannel].revents = 0;
-    LOG_CIOS_TRACE_MSG("added event channel using fd " << pollInfo[eventChannel].fd << " to descriptor list");
 
     pollInfo[toolListener].fd = _toolListener->getSd();
     pollInfo[toolListener].events = POLLIN;
@@ -483,14 +528,6 @@ void ToolController::eventMonitor(void)
             pollInfo[cmdChannel].revents = 0;
         }
 
-        // Check for an event on the event channel.
-        if (pollInfo[eventChannel].revents & POLLIN)
-        {
-            LOG_CIOS_TRACE_MSG("input event available on event channel");
-            eventChannelHandler();
-            pollInfo[eventChannel].revents = 0;
-        }
-
         // Check for an event on the tool data channel listener.
         if (pollInfo[toolListener].revents & POLLIN)
         {
@@ -587,6 +624,7 @@ int ToolController::commandChannelHandler(void)
 
     // Make sure the service field is correct.
     bgcios::MessageHeader *msghdr = (bgcios::MessageHeader *)_inboundMessage;
+    //CIOSLOGMSG(CMD_RECV_MSG,msghdr);
     if ((msghdr->service != bgcios::ToolctlService) && (msghdr->service != bgcios::IosctlService))
     {
         LOG_ERROR_MSG("Job " << msghdr->jobId << ": message service " << msghdr->service << " is wrong, header: " << bgcios::printHeader(*msghdr));
@@ -744,6 +782,7 @@ void ToolController::completionChannelHandler(void)
 
                     // Make sure tool is attached.
                     ToolMessage *inMsg = (ToolMessage *)inMessageRegion->getAddress();
+                    //CIOSLOGMSG_RECV_WC(BGV_RECV_MSG, inMsg,completion);//from compute node
                     ToolPtr tool = _tools.get(inMsg->toolId);
                     if (tool != NULL)
                     {
@@ -836,6 +875,7 @@ void ToolController::completionChannelHandler(void)
                     if (_outMessageRegion2->isMessageReady())
                     {
                         _client->postSend(_outMessageRegion2); 
+                        //CIOSLOGMSG_QP(BGV_SEND_MSG, _outMessageRegion2->getAddress(),_client->getQpNum());
                     }
                     // If a queued message is available, start a new message exchange.
                     if ((!_waitingForAck) &&  (!_queuedMessages.empty()))
@@ -1213,6 +1253,7 @@ void ToolController::attach(ToolctlMessagePtr& message)
         _waitingForAck = true;
         _interruptMsgSent = false;
         _client->postSend(_outMessageRegion);
+        //CIOSLOGMSG_QP(BGV_SEND_MSG, _outMessageRegion->getAddress(),_client->getQpNum());
         LOG_CIOS_DEBUG_MSG(tool->getPrefix() << "Attach message forwarded to rank " << message->getRank());
     }
     catch (const RdmaError& e)
@@ -1274,6 +1315,7 @@ void ToolController::detach(ToolctlMessagePtr& message)
         _waitingForAck = true;
         _interruptMsgSent = false;
         _client->postSend(_outMessageRegion);
+        //CIOSLOGMSG_QP(BGV_SEND_MSG, _outMessageRegion->getAddress(),_client->getQpNum());
         LOG_CIOS_DEBUG_MSG(message->getTool()->getPrefix() << "Detach message forwarded to rank " << message->getRank());
     }
     catch (const RdmaError& e)
@@ -1344,6 +1386,7 @@ void ToolController::query(ToolctlMessagePtr& message)
         _queryTimer.start();
 #endif
         _client->postSend(_outMessageRegion);
+        //CIOSLOGMSG_QP(BGV_SEND_MSG, _outMessageRegion->getAddress(),_client->getQpNum());
         LOG_CIOS_DEBUG_MSG(message->getTool()->getPrefix() << "Query message forwarded to rank " << message->getRank());
     }
     catch (const RdmaError& e)
@@ -1409,6 +1452,7 @@ void ToolController::update(ToolctlMessagePtr& message)
         _waitingForAck = true;
         _interruptMsgSent = false;
         _client->postSend(_outMessageRegion);
+        //CIOSLOGMSG_QP(BGV_SEND_MSG, _outMessageRegion->getAddress(),_client->getQpNum());
         LOG_CIOS_DEBUG_MSG(message->getTool()->getPrefix() << "Update message forwarded to rank " << message->getRank());
     }
     catch (const RdmaError& e)
@@ -1493,6 +1537,7 @@ void ToolController::control(ToolctlMessagePtr& message)
         _waitingForAckRank = message->getRank();
         _waitingForAckJobID = message->getJobId();
         _client->postSend(_outMessageRegion);
+        //CIOSLOGMSG_QP(BGV_SEND_MSG, _outMessageRegion->getAddress(),_client->getQpNum());
         LOG_CIOS_DEBUG_MSG(message->getTool()->getPrefix() << "Control message forwarded to rank " << message->getRank());
     }
     catch (const RdmaError& e)

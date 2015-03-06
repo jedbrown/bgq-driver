@@ -432,8 +432,6 @@ getMachineBPSize(
     D = sizes[Dimension::D];
 
     return db_status;
-
-    return OK;
 }
 
 
@@ -697,6 +695,16 @@ checkIONodeConnection(
         return CONNECTION_ERROR;
     }
 
+    bool bgas = false;
+    try {
+        std::string bgasValue = DBConnectionPool::Instance().getProperties()->getValue(  "mmcs", "bgas" );
+        if ( bgasValue.compare("true") == 0 || bgasValue.compare("TRUE") == 0 ) {
+            bgas = true;
+        }
+    } catch ( const std::exception& e ) {
+        LOG_TRACE_MSG( "Could not find key bgas in [mmcs] section. Using default value of false" );
+    }
+
     SQLRETURN sqlrc;
     SQLHANDLE hstmt;
     SQLLEN ind1;
@@ -720,15 +728,26 @@ checkIONodeConnection(
         return INVALID_ID;
     }
 
-
     // The query allows for a location to be either an IO node or an IO board
     string sqlstr;
-    sqlstr = "select c.blockid  from  bgqcniolink b, bgqsmallblock c, bgqblock d  " +
+    if (bgas) {
+        // LOG_TRACE_MSG("Checking cable status on a BGAS system");
+        sqlstr = "select c.blockid from bgqiousage b, bgqsmallblock c, bgqblock d " +
+        string(" where ( b.ionode in ") + id + string(" OR  substr(b.ionode,1,6) in ") + id + string(" ) ") +
+        string("  and substr(b.computenode,1,10) = posinmachine || '-' || nodecardpos  and c.blockid = d.blockid and d.status in ( 'B','I','T') ") +
+        string("  and c.blockid = b.blockid") +
+        string("  union select c.blockid  from  bgqiousage b, bgqsmallblock c, bgqblock d ") +
+        string(" where  ( b.ionode in ") + id + string(" OR  substr(b.ionode,1,6) in ") + id + string(" ) ") +
+        string("  and substr(b.computenode,1,6) = posinmachine and c.blockid = d.blockid and d.status in ('B','I','T')") +
+        string("  and c.blockid = b.blockid");
+    } else {
+        sqlstr = "select c.blockid  from  bgqcniolink b, bgqsmallblock c, bgqblock d  " +
         string(" where ionstatus = 'A' and ( b.ion in ") + id + string(" OR  substr(b.ion,1,6) in ") + id + string(" ) ") +
         string("  and substr(source,1,10) = posinmachine || '-' || nodecardpos  and c.blockid = d.blockid and d.status in ( 'B','I','T') ") +
         string("  union select c.blockid  from  bgqcniolink b, bgqbpblockmap c, bgqblock d ") +
         string(" where  ionstatus = 'A' and ( b.ion in ") + id + string(" OR  substr(b.ion,1,6) in ") + id + string(" ) ") +
         string("  and substr(source,1,6) = bpid  and c.blockid = d.blockid and d.status in ('B','I','T')");
+    }
     sqlrc = tx.execQuery(sqlstr.c_str(), &hstmt);
     if (sqlrc != SQL_SUCCESS) {
         LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
@@ -753,7 +772,6 @@ checkIONodeConnection(
     SQLCloseCursor(hstmt);
     return OK;
 }
-
 
 
 //  The following accepts an IO block name and returns the connected compute blocks that are booted.
@@ -877,7 +895,7 @@ checkBlockConnection(
     string sqlstr;
     sqlstr = "select distinct a.ion from  (select ion from bgqbpblockmap a, bgqcniolink b where bpid = substr(source,1,6) and blockid = '" + id +
         string("' union all select ion from bgqsmallblock a, bgqcniolink b where posinmachine = substr(source,1,6) and nodecardpos = substr(source,8,3) and blockid = '") + id +
-        string("') as a left outer join (select location from bgqioblockmap b, bgqblock c where b.blockid = c.blockid and status = 'I' and action <> '") + BLOCK_DEALLOCATING + 
+        string("') as a left outer join (select location from bgqioblockmap b, bgqblock c where b.blockid = c.blockid and status = 'I' and action <> '") + BLOCK_DEALLOCATING +
         string("') as b  on  a.ion = b.location or substr(a.ion,1,6) = b.location ") +
         string(" left outer join bgqionode n on a.ion = n.location and status <> 'A' where (n.location is NOT NULL) or (b.location is NULL and n.location is NULL)  order by 1");
 
@@ -1085,7 +1103,7 @@ checkBlockIO(
     }
 
     // Iterate thru the midplane map and check I/O links for each midplane
-    for (mapIter = midplaneMap.begin(); mapIter != midplaneMap.end(); mapIter++) {
+    for (mapIter = midplaneMap.begin(); mapIter != midplaneMap.end(); ++mapIter) {
         //LOG_TRACE_MSG("Midplane " << mapIter->first << " has " << (mapIter->second).IOLinkCount << " connected I/O links");
         //for (std::vector<std::string>::iterator it = (mapIter->second).IONodes.begin(); it != (mapIter->second).IONodes.end(); ++it) {
         //    LOG_INFO_MSG("Midplane " << mapIter->first << " connected to I/O node " << *it);
@@ -1110,7 +1128,7 @@ checkBlockIO(
     }
 
     // Iterate thru the unconnected but 'Available' I/O node map and return locations in vector
-    for (IONIter = availableIONMap.begin(); IONIter != availableIONMap.end(); IONIter++) {
+    for (IONIter = availableIONMap.begin(); IONIter != availableIONMap.end(); ++IONIter) {
         //LOG_INFO_MSG("I/O node " << IONIter->first << " is 'Available' but is not booted");
         unconnectedAvailableIONodes->push_back(IONIter->first);
     }
@@ -1207,8 +1225,8 @@ getJtagID(
 
 
     // bind column
-    sqlrc = SQLBindCol(hstmt, 1, SQL_C_CHAR, loc, sizeof(loc), &ind1);
-    sqlrc = SQLBindCol(hstmt, 2, SQL_INTEGER, &ecidVersion, 4, &ind2);
+    SQLBindCol(hstmt, 1, SQL_C_CHAR, loc, sizeof(loc), &ind1);
+    SQLBindCol(hstmt, 2, SQL_INTEGER, &ecidVersion, 4, &ind2);
 
     sqlrc =  SQLFetch(hstmt);
     for(;sqlrc == SQL_SUCCESS;) {
@@ -1239,6 +1257,10 @@ getCustomization(
     SQLLEN ind1, ind2;
     SQLHANDLE hstmt;
     TxObject tx(DBConnectionPool::Instance());
+    if (!tx.getConnection()) {
+        LOG_ERROR_MSG(__FUNCTION__ << " Unable to obtain database connection");
+        return CONNECTION_ERROR;
+    }
 
     if (id.size() >= sizeof(dbo._blockid)) {
         LOG_ERROR_MSG(__FUNCTION__ << " block name too long");
@@ -1251,14 +1273,13 @@ getCustomization(
         + id + string("' and (a.location = b.location or substr(a.location,1,6) = b.location)  order by 1, 2");
 
     SQLRETURN sqlrc = tx.execQuery(sqlstr.c_str(), &hstmt);
-
     if (sqlrc != SQL_SUCCESS) {
         LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
         return DB_ERROR;
     }
 
-    sqlrc = SQLBindCol(hstmt, 1, SQL_C_CHAR, location,      sizeof(location),      &ind1);
-    sqlrc = SQLBindCol(hstmt, 2, SQL_C_CHAR, nameValuePair, sizeof(nameValuePair), &ind2);
+    SQLBindCol(hstmt, 1, SQL_C_CHAR, location,      sizeof(location),      &ind1);
+    SQLBindCol(hstmt, 2, SQL_C_CHAR, nameValuePair, sizeof(nameValuePair), &ind2);
     sqlrc = SQLFetch(hstmt);
 
     if (sqlrc != SQL_SUCCESS) {  // nothing to return
@@ -1565,7 +1586,7 @@ setBlockInfo(
         colBitmap.set(dbo.BOOTOPTIONS);
         sprintf(dbo._bootoptions, "%s", info.bootOptions);
     }
-    
+
     dbo._columns = colBitmap.to_ulong();
 
     TxObject tx(DBConnectionPool::Instance());
@@ -1862,8 +1883,12 @@ augmentRAS(RasEvent& rasEvent)
             string("' union select cast(null as char(32)), serialnumber from bgqnodecarddcaall where location = '") + loc + string("' ");
 
         SQLRETURN sqlrc = tx.execQuery(sqlstr.c_str(), &hstmt);
-        sqlrc = SQLBindCol(hstmt, 1, SQL_C_CHAR, ecid, sizeof(ecid), &ind1);
-        sqlrc = SQLBindCol(hstmt, 2, SQL_C_CHAR, sn,   sizeof(sn),   &ind2);
+        if (sqlrc != SQL_SUCCESS) {
+            LOG_ERROR_MSG( "Database query failed with error: " << sqlrc << " at " << __FUNCTION__ << ':' << __LINE__ );
+            return DB_ERROR;
+        }
+        SQLBindCol(hstmt, 1, SQL_C_CHAR, ecid, sizeof(ecid), &ind1);
+        SQLBindCol(hstmt, 2, SQL_C_CHAR, sn,   sizeof(sn),   &ind2);
         sqlrc = SQLFetch(hstmt);
         SQLCloseCursor(hstmt);
 
@@ -1900,7 +1925,7 @@ checkRack(
     StringTokenizer tokens;
     std::vector<std::string> IORack, CNRack;
 
-    for (size_t i=0; i < locations.size(); i++) {
+    for (size_t i=0; i < locations.size(); ++i) {
 
         tokens.tokenize(locations[i], ", ");  // split on comma or space
 
@@ -1922,7 +1947,7 @@ checkRack(
         sqlstr.clear();
         sqlstr.append("  select IO.loc  from (values  ");
 
-        for (size_t io=0; io < IORack.size(); io++) {
+        for (size_t io=0; io < IORack.size(); ++io) {
             sqlstr.append(" ('");
             sqlstr.append(IORack[io]);
             sqlstr.append("' ) ");
@@ -1937,7 +1962,7 @@ checkRack(
             return DB_ERROR;
         }
 
-        sqlrc = SQLBindCol(hstmt, 1, SQL_C_CHAR,    loc , sizeof(loc), &ind1);
+        SQLBindCol(hstmt, 1, SQL_C_CHAR,    loc , sizeof(loc), &ind1);
         sqlrc = SQLFetch(hstmt);
         while (sqlrc == 0) {
             invalid.push_back(loc);
@@ -1952,7 +1977,7 @@ checkRack(
         sqlstr.clear();
         sqlstr.append("  select CN.loc  from (values  ");
 
-        for (size_t cn=0; cn < CNRack.size() ;cn++) {
+        for (size_t cn=0; cn < CNRack.size(); ++cn) {
             sqlstr.append(" ('");
             sqlstr.append(CNRack[cn]);
             sqlstr.append("' ) ");
@@ -1968,7 +1993,7 @@ checkRack(
             return DB_ERROR;
         }
 
-        sqlrc = SQLBindCol(hstmt, 1, SQL_C_CHAR,    loc , sizeof(loc), &ind1);
+        SQLBindCol(hstmt, 1, SQL_C_CHAR, loc, sizeof(loc), &ind1);
         sqlrc = SQLFetch(hstmt);
         while (sqlrc == 0) {
             invalid.push_back(loc);

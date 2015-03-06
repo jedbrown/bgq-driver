@@ -43,7 +43,7 @@ namespace client {
 namespace options {
 
 /*!
- * \brief Main driver for program option parsing and valication.
+ * \brief Main driver for program option parsing and validation.
  * \ingroup argument_parsing
  *
  * This class is heavily based on the boost::program_options library.
@@ -69,7 +69,7 @@ public:
      * \brief dtor.
      */
     ~Parser();
-    
+
     /*!
      * \copydoc AbstractOptions::help
      */
@@ -92,7 +92,7 @@ private:
 private:
     typedef boost::shared_ptr<Description> DescriptionPtr;
     typedef std::vector<DescriptionPtr> Descriptions;
-    
+
 private:
     JobInfo _info;
     tool::Daemon _tool;

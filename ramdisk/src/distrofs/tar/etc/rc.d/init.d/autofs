@@ -123,6 +123,8 @@ function start() {
 		fi
 	fi
 
+	mknod -m 0666 /dev/bglog  c 10 114
+	
 	echo -n $"Starting $prog: "
 	$prog $OPTIONS 
 	RETVAL=$?

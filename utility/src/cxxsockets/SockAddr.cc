@@ -140,7 +140,7 @@ SockAddr::getHostAddr() const
         size = sizeof(sockaddr_in6);
     }
 
-    int error = getnameinfo((sockaddr*)(this), size, host_buf, sizeof(host_buf), 0, 0, NI_NUMERICHOST);
+    const int error = getnameinfo((sockaddr*)(this), size, host_buf, sizeof(host_buf), 0, 0, NI_NUMERICHOST);
     if (error != 0) {
         std::ostringstream msg;
         msg << "Unable to find host address: " << gai_strerror(error);

@@ -66,12 +66,12 @@ UserId::UserId(
         _name = mypwent_p->pw_name;
         LOG_DEBUG_MSG("username " << _name);
     } else {
-        char strbuf[1024];
         std::ostringstream errmsg;
         errmsg << "Failed to get user for uid " << uid << ": ";
         if (result == 0 || result == ENOENT || result == ESRCH || result == EBADF || result == EPERM) {
             errmsg << "user not found";
         } else {
+            char strbuf[1024];
             errmsg << "result=" << result << " (" << strerror_r(result, strbuf, sizeof(buf)) << ")";
         }
         LOG_WARN_MSG( errmsg.str() );
@@ -105,12 +105,12 @@ UserId::UserId(
         // If remote user indicator then only user field needs to be set
         return;
     } else {
-        char strbuf[1024];
         std::ostringstream errmsg;
         errmsg << "Failed to get uid for user '" << _name << "', ";
         if (result == 0 || result == ENOENT || result == ESRCH || result == EBADF || result == EPERM) {
             errmsg << "user not found";
         } else {
+            char strbuf[1024];
             errmsg << "result=" << result << " (" << strerror_r(result, strbuf, sizeof(buf)) << ")";
         }
         LOG_WARN_MSG( errmsg.str() );

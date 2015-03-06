@@ -22,12 +22,16 @@
 /* end_generated_IBM_copyright_prolog                               */
 #include "server/job/RankMapping.h"
 
+#include "server/job/CopyMappingFile.h"
+
 #include "server/block/Compute.h"
 #include "server/block/ComputeNode.h"
 #include "server/block/IoNode.h"
 #include "server/block/Midplane.h"
 
 #include "server/Job.h"
+#include "server/Options.h"
+#include "server/Server.h"
 
 #include "common/JobInfo.h"
 #include "common/logging.h"
@@ -36,6 +40,10 @@
 #include <spi/include/mu/RankMap.h>
 
 #include <ramdisk/include/services/JobctlMessages.h>
+
+#include <utility/include/Properties.h>
+
+#include <boost/filesystem.hpp>
 
 #include <boost/numeric/conversion/cast.hpp>
 
@@ -53,6 +61,62 @@ RankMapping::RankMapping(
         ) :
     _proctable( proctable )
 {
+    bool deleteArchiveFile = false;
+    std::string archiveFilename;
+    // Start with original mapping from runjob command as default (will be permutation like ABCDET or file name)
+    std::string map = job->info().getMapping();
+
+    // No need to find/copy mapping file if permutation
+    if (job->info().getMapping().type() == Mapping::Type::Permutation) {
+        LOG_INFO_MSG("Rank mapping permutation specified is " << map);
+    } else { // Using mapping file
+        // Need to get properties settings to find the archive directory
+        const Server::Ptr server( job->_server.lock() );
+        if ( !server ) {
+            BOOST_THROW_EXCEPTION(std::runtime_error("Unexpected internal error retrieving properties settings."));
+        }
+
+        const bgq::utility::Properties::ConstPtr& properties = server->getOptions().getProperties();
+
+        try {
+            archiveFilename = properties->getValue("runjob.server","mapping_file_archive");
+        } catch ( const std::exception& e ) {
+            // Key not found, don't copy the mapping file
+            LOG_ERROR_MSG( e.what() );
+            // Clear the string which will force usage of original mapping file
+            archiveFilename.clear();
+        }
+
+        // If properties file is mis-configured just use original mapping file and not one from archive directory
+        if (!archiveFilename.empty()) {
+            // Append job id to archive directory
+            archiveFilename += "/";
+            archiveFilename += boost::lexical_cast<std::string>(job->id());
+            // Check if file already exists in archive directory
+            if ( boost::filesystem::exists(archiveFilename) ) {
+                // Map file already exists so use it
+                map = archiveFilename;
+            } else { // Archive file doesn't exist, need to create it.
+                try {
+                    archiveFilename = CopyMappingFile( job->id(), job->info(), properties).result();
+                } catch ( const std::exception& e ) {
+                    // Error creating archive file, use original mapping file
+                    LOG_ERROR_MSG( e.what() );
+                    // Clear the string which will force usage of original mapping file
+                    archiveFilename.clear();
+                }
+
+                if ( !archiveFilename.empty() ) {
+                    map = archiveFilename;
+                    // Copied mapping file to archive so delete it later
+                    deleteArchiveFile = true;
+                }
+            }
+        }
+
+        LOG_INFO_MSG("Rank mapping file specified is " << map);
+    }
+
     _proctable.clear();
 
     const BG_JobCoords_t job_shape = this->getJobShape( job );
@@ -65,7 +129,7 @@ RankMapping::RankMapping(
             );
 
     const int rc = MUSPI_GenerateCoordinates(
-            job->info().getMapping().value().c_str(),
+            map.c_str(),
             &job_shape,
             NULL, // rank's coordinates
             job->info().getRanksPerNode(),
@@ -76,6 +140,16 @@ RankMapping::RankMapping(
             NULL, // rank
             NULL  // mpmdFound
             );
+
+    // Check if mapping file archive should be deleted
+    if ( deleteArchiveFile ) {
+        int rc2  = unlink(map.c_str());
+        if ( rc2 == 0 ) {
+            LOG_DEBUG_MSG("Deleted temporary mapping file " << map);
+        } else {
+            LOG_WARN_MSG("Failed to delete temporary mapping file " << map);
+        }
+    }
 
     if ( rc ) {
         BOOST_THROW_EXCEPTION(

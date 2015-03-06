@@ -84,15 +84,6 @@ ConsolePort::procMessage(
     // j is the counter of characters that are not \n
     // and not \r
     for ( i=0, j=0; i < rcvsz; ++i ) {
-        // See if it's a magic probe message
-        if (buf[i] == '*' && buf[i+1] == '~' && buf[i+2] == '@'
-            && buf[i+3] == '~' && buf[i+4] == '*') {
-            bzero(buf, sizeof(buf));
-            done = false;
-            nullTerm = false;
-            break;
-        }
-
         if (buf[i] == '\0') {
             done = true;        // end of buffer
             nullTerm = true;    // end of reply
@@ -155,7 +146,6 @@ ConsolePort::receiveMessage(
     bool nullTerm = false;
     bool done = false;
     char buf[RCVBUF_SIZE];      // initially allocate a 4K buffer for receiving messages
-
 
     while (!done) {
         bzero(buf, RCVBUF_SIZE);
@@ -269,10 +259,10 @@ ConsolePortClient::ConsolePortClient(
     BOOST_FOREACH(const bgq::utility::PortConfiguration::Pair& portpair, port_config.getPairs()) {
         const std::string &connected_host = portpair.first;
         const std::string &connected_port = portpair.second;
-        unsigned int attempts = 0;
 
         // Create a socket.
         try {
+            unsigned int attempts = 0;
             const CxxSockets::SockAddrList remote_list(AF_UNSPEC, connected_host, connected_port);
             BOOST_FOREACH(const CxxSockets::SockAddr& remote, remote_list) {
                 const CxxSockets::SecureTCPSocketPtr sock( new CxxSockets::SecureTCPSocket(remote.family(), 0) );
@@ -311,7 +301,8 @@ ConsolePortClient::ConsolePortClient(
 
 ConsolePortServer::ConsolePortServer(
         const bgq::utility::PortConfiguration::Pairs& portpairs
-        )
+        ) :
+    ConsolePort()
 {
     using namespace CxxSockets;
     SockAddrList masterlist; // One big list to rule them all!
@@ -334,7 +325,7 @@ ConsolePortServer::ConsolePortServer(
 ConsolePortClient::ConsolePortClient(
         const CxxSockets::TCPSocketPtr& sock
         ) :
-        ConsolePort(sock)
+    ConsolePort(sock)
 {
 
 }

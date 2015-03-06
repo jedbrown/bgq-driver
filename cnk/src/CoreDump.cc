@@ -32,6 +32,7 @@
 #include <hwi/include/bqc/wu_mmio.h>
 #include <elf.h>
 #include <sys/procfs.h>
+#include <ramdisk/include/services/JobctlMessages.h>
 
 // Binary core file support
 #define MILLION 1000000
@@ -212,44 +213,50 @@ static char* signal_to_label(int signal, char *buf, int length)
 {
     switch (signal)
     {
-    case SIGSEGV :
-        snprintf(buf, length, "SIGSEGV");
-        break;
-    case SIGILL  :
-        snprintf(buf, length, "SIGILL");
-        break;
-    case SIGTRAP :
-        snprintf(buf, length, "SIGTRAP");
-        break;
-    case SIGFPE  :
-        snprintf(buf, length, "SIGFPE");
-        break;
-    case SIGBUS  :
-        snprintf(buf, length, "SIGBUS");
-        break;
-    case SIGSTKFLT:
-        snprintf(buf, length, "SIGSTKFLT");
-        break;
-    case SIGABRT:
-        snprintf(buf, length, "SIGABRT");
-        break;
-    case SIGQUIT:
-        snprintf(buf, length, "SIGQUIT");
-        break;
-    case SIGMUNDFATAL:
-        snprintf(buf, length, "SIGMUNDFATAL");
-        break;
-    case SIGMUFIFOFULL:
-        snprintf(buf, length, "SIGMUFIFOFULL");
-        break;
-    case SIGDCRVIOLATION:
-        snprintf(buf, length, "SIGDCRVIOLATION");
-        break;
-    default      :
-        snprintf(buf, length, "???");
-        break;
+        case SIGSEGV :
+            snprintf(buf, length, "SIGSEGV");
+            break;
+        case SIGILL  :
+            snprintf(buf, length, "SIGILL");
+            break;
+        case SIGTRAP :
+            snprintf(buf, length, "SIGTRAP");
+            break;
+        case SIGFPE  :
+            snprintf(buf, length, "SIGFPE");
+            break;
+        case SIGBUS  :
+            snprintf(buf, length, "SIGBUS");
+            break;
+        case SIGSTKFLT:
+            snprintf(buf, length, "SIGSTKFLT");
+            break;
+        case SIGABRT:
+            snprintf(buf, length, "SIGABRT");
+            break;
+        case SIGQUIT:
+            snprintf(buf, length, "SIGQUIT");
+            break;
+        case bgcios::jobctl::SIGHARDWAREFAILURE: // 35
+            snprintf(buf, length, "SIGHARDWAREFAILURE");
+            break;
+        case SIGMUNDFATAL:        // 36
+            snprintf(buf, length, "SIGMUNDFATAL");
+            break;
+        case SIGMUFIFOFULL:       // 37
+            snprintf(buf, length, "SIGMUFIFOFULL");
+            break;
+        case SIGDCRVIOLATION:     // 38
+            snprintf(buf, length, "SIGDCRVIOLATION");
+            break;
+        case SIGNOSPECALIAS:      // 39
+            snprintf(buf, length, "SIGNOSPECALIAS");
+            break;
+        default      :
+            snprintf(buf, length, "???");
+            break;
     }
-
+    
     return buf;
 }
 
@@ -872,10 +879,10 @@ static uint64_t coredump_binary_write(CoreBuffer *buffer, void *data, uint64_t l
     return length;
 }
 
-static int coredump_binary_pad_zeroes(CoreBuffer *buffer, int length)
+static size_t coredump_binary_pad_zeroes(CoreBuffer *buffer, int length)
 {
-    int bytesWritten = length;
-    int bytesToWrite = 0;
+    size_t bytesWritten = length;
+    size_t bytesToWrite = 0;
     uint64_t rc;
 
     memset(buffer->buffer, 0, CONFIG_CORE_BUFFER_SIZE);
@@ -896,7 +903,7 @@ static int coredump_binary_pad_zeroes(CoreBuffer *buffer, int length)
         }
     }
 
-    TRACE(TRACE_CoreDump, ("(I) %s: wrote 0x%x bytes for zero pad\n", __func__, bytesWritten));
+    TRACE(TRACE_CoreDump, ("(I) %s: wrote %ld bytes for zero pad\n", __func__, bytesWritten));
     return bytesWritten;
 }
 
@@ -953,7 +960,7 @@ static int coredump_binary_num_threads(AppProcess_t *process)
     return numThreads;
 }
 
-static int coredump_binary_elf_phdr(CoreBuffer *buffer, Elf64_Word type, Elf64_Word flags, Elf64_Off offset, Elf64_Addr vaddr, Elf64_Xword filesz, Elf64_Xword align)
+static size_t coredump_binary_elf_phdr(CoreBuffer *buffer, Elf64_Word type, Elf64_Word flags, Elf64_Off offset, Elf64_Addr vaddr, Elf64_Xword filesz, Elf64_Xword align)
 {
     // Build the program header for the section.
     Elf64_Phdr *phdr = (Elf64_Phdr *)&buffer->buffer;
@@ -970,7 +977,7 @@ static int coredump_binary_elf_phdr(CoreBuffer *buffer, Elf64_Word type, Elf64_W
                            __func__, phdr->p_offset, phdr->p_vaddr, phdr->p_filesz, phdr->p_memsz));
 
     // Write the program header for the section to the core file.
-    int bytesWritten = 0;
+    size_t bytesWritten = 0;
     uint64_t rc = coredump_internal_write(buffer->fileFd, buffer->buffer, sizeof(Elf64_Phdr));
     if (CNK_RC_IS_SUCCESS(rc))
     {
@@ -981,7 +988,7 @@ static int coredump_binary_elf_phdr(CoreBuffer *buffer, Elf64_Word type, Elf64_W
     return bytesWritten;
 }
 
-static int coredump_binary_elf_headers(CoreBuffer *buffer, AppProcess_t *process)
+static size_t coredump_binary_elf_headers(CoreBuffer *buffer, AppProcess_t *process)
 {
     uint64_t rc;
     uint64_t vaddr;
@@ -991,8 +998,8 @@ static int coredump_binary_elf_headers(CoreBuffer *buffer, AppProcess_t *process
     uint64_t stackAddr;
     uint64_t stackSize;
 
-    int bytesWritten = 0;
-    int elfOffset = 0;
+    size_t     bytesWritten = 0;
+    Elf64_Off  elfOffset = 0;
     Elf64_Half numPhdr = 0;
 
     // Check if there is a shared segment.
@@ -1136,7 +1143,7 @@ static int coredump_binary_elf_headers(CoreBuffer *buffer, AppProcess_t *process
     return bytesWritten;
 }
 
-static int coredump_binary_prstatus(CoreBuffer *buffer, KThread_t *kthread, int tid)
+static size_t coredump_binary_prstatus(CoreBuffer *buffer, KThread_t *kthread, int tid)
 {
     uint64_t now = GetCurrentTimeInMicroseconds() - GetMyAppState()->JobStartTime;
 
@@ -1192,7 +1199,7 @@ static int coredump_binary_prstatus(CoreBuffer *buffer, KThread_t *kthread, int 
 
     // Write the PRSTATUS note to the core file.
     TRACE(TRACE_CoreDump, ("(I) %s: adding prstatus note for thread %d, signal %d\n", __func__, prstatus->pr_pid, prstatus->pr_cursig));
-    int bytesWritten = 0;
+    size_t bytesWritten = 0;
     uint64_t rc = coredump_internal_write(buffer->fileFd, buffer->buffer, (sizeof(Elf64_Nhdr) + sizeof(prstatus_t) + nameLength));
     if (CNK_RC_IS_SUCCESS(rc))
     {
@@ -1204,7 +1211,7 @@ static int coredump_binary_prstatus(CoreBuffer *buffer, KThread_t *kthread, int 
     return bytesWritten;
 }
 
-static int coredump_binary_prpsinfo(CoreBuffer *buffer, AppProcess_t *process)
+static size_t coredump_binary_prpsinfo(CoreBuffer *buffer, AppProcess_t *process)
 {
     // Clear the buffer.
     memset(buffer->buffer, 0, CONFIG_CORE_BUFFER_SIZE);
@@ -1237,17 +1244,9 @@ static int coredump_binary_prpsinfo(CoreBuffer *buffer, AppProcess_t *process)
     prpsinfo->pr_sid = process->Rank; // Communicate the rank using session id
 
     // Copy the arguments.
-    char *args;
-    if (process->DYN_VStart != 0)
-    {
-        // For a dynamically linked program, skip the first argument which is the path to the interpreter.
-        args = &(pAppState->App_Args[0]) + strlen(pAppState->App_Args) + 1;
-    } else
-    {
-        args = &(pAppState->App_Args[0]);
-    }
-    memcpy(prpsinfo->pr_psargs, args, sizeof(prpsinfo->pr_psargs));
-
+    char *args = &(pAppState->App_Args[0]);
+    strncpy(prpsinfo->pr_psargs, args, sizeof(prpsinfo->pr_psargs));
+    
     // Find the file name in the path to the executable.
     char *filename = args;
     char *p = filename;
@@ -1261,11 +1260,11 @@ static int coredump_binary_prpsinfo(CoreBuffer *buffer, AppProcess_t *process)
     {
         filenameLength = sizeof(prpsinfo->pr_fname);
     }
-    memcpy(prpsinfo->pr_fname, filename, filenameLength);
+    strncpy(prpsinfo->pr_fname, filename, filenameLength);
 
     // Write the PRPSINFO note to the core file.
     TRACE(TRACE_CoreDump, ("(I) %s: adding prpsinfo note for program %s\n", __func__, prpsinfo->pr_psargs));
-    int bytesWritten = 0;
+    size_t bytesWritten = 0;
     uint64_t rc = coredump_internal_write(buffer->fileFd, buffer->buffer, (sizeof(Elf64_Nhdr) + nameLength + nhdr->n_descsz));
     if (CNK_RC_IS_SUCCESS(rc))
     {
@@ -1276,7 +1275,7 @@ static int coredump_binary_prpsinfo(CoreBuffer *buffer, AppProcess_t *process)
     return bytesWritten;
 }
 
-static int coredump_binary_auxv(CoreBuffer *buffer, AppProcess_t *process)
+static size_t coredump_binary_auxv(CoreBuffer *buffer, AppProcess_t *process)
 {
     // Clear the buffer.
     memset(buffer->buffer, 0, CONFIG_CORE_BUFFER_SIZE);
@@ -1298,7 +1297,7 @@ static int coredump_binary_auxv(CoreBuffer *buffer, AppProcess_t *process)
 
     // Write the AUXV note to the core file.
     TRACE(TRACE_CoreDump, ("(I) %s: adding auxv note with %d bytes of auxv data\n", __func__, nhdr->n_descsz));
-    int bytesWritten = 0;
+    size_t bytesWritten = 0;
     uint64_t rc = coredump_internal_write(buffer->fileFd, buffer->buffer, (sizeof(Elf64_Nhdr) + nameLength + nhdr->n_descsz));
     if (CNK_RC_IS_SUCCESS(rc))
     {
@@ -1309,10 +1308,10 @@ static int coredump_binary_auxv(CoreBuffer *buffer, AppProcess_t *process)
     return bytesWritten;
 }
 
-static int coredump_binary_prfpregs(CoreBuffer *buffer, KThread_t *kthread, int tid)
+static size_t coredump_binary_prfpregs(CoreBuffer *buffer, KThread_t *kthread, int tid)
 {
     Regs_t *regs = &kthread->Reg_State;
-    int bytesWritten = 0;
+    size_t bytesWritten = 0;
     uint64_t *floatRegs;
     Elf64_Nhdr *nhdr;
     int bytesProcessed = 0;
@@ -1374,9 +1373,9 @@ static int coredump_binary_prfpregs(CoreBuffer *buffer, KThread_t *kthread, int 
     return (bytesWritten);
 }
 
-static int coredump_binary_threads(CoreBuffer *buffer, AppProcess_t *process)
+static size_t coredump_binary_threads(CoreBuffer *buffer, AppProcess_t *process)
 {
-    int bytesWritten = 0;
+    size_t bytesWritten = 0;
 
     // Add notes for the other threads.
     KThread_t *failedThread =  (process->coredump_kthread ? process->coredump_kthread : process->ProcessLeader_KThread);
@@ -1410,9 +1409,9 @@ static int coredump_binary_threads(CoreBuffer *buffer, AppProcess_t *process)
     return bytesWritten;
 }
 
-static int coredump_binary_notes(CoreBuffer *buffer, AppProcess_t *process)
+static size_t coredump_binary_notes(CoreBuffer *buffer, AppProcess_t *process)
 {
-    int bytesWritten = 0;
+    size_t bytesWritten = 0;
 
     // First, write the PRSTATUS note for the failed thread to the core file. If no failed thread,
     // then treat the process leader thread as the failed thread.
@@ -1434,9 +1433,9 @@ static int coredump_binary_notes(CoreBuffer *buffer, AppProcess_t *process)
     return bytesWritten;
 }
 
-static uint64_t coredump_binary_memory(CoreBuffer *buffer, AppProcess_t *process)
+static size_t coredump_binary_memory(CoreBuffer *buffer, AppProcess_t *process)
 {
-    uint64_t bytesWritten = 0;
+    size_t   bytesWritten = 0;
     uint64_t vaddr = 0;
     uint64_t paddr = 0;
     uint64_t vsize = 0;
@@ -1523,22 +1522,22 @@ static void coredump_binary(CoreBuffer *buffer)
     AppProcess_t *process = GetMyProcess();
 
     // Write the elf headers to the core file.
-    int bytesWritten = coredump_binary_elf_headers(buffer, process);
+    size_t bytesWritten = coredump_binary_elf_headers(buffer, process);
 
     // Write pad to the core file to get to 512 byte boundary.
     bytesWritten += coredump_binary_pad_zeroes(buffer, (ROUND_UP_512B(bytesWritten) - bytesWritten));
-    TRACE(TRACE_CoreDump, ("(I) %s: wrote elf headers, core file offset is 0x%x\n", __func__, bytesWritten));
+    TRACE(TRACE_CoreDump, ("(I) %s: wrote elf headers, core file offset is 0x%lx\n", __func__, bytesWritten));
 
     // Write the various notes in the PT_NOTE section.
     bytesWritten += coredump_binary_notes(buffer, process);
 
     // Write pad to the core file to get to 4K byte boundary.
     bytesWritten += coredump_binary_pad_zeroes(buffer, (ROUND_UP_4K(bytesWritten) - bytesWritten));
-    TRACE(TRACE_CoreDump, ("(I) %s: wrote PT_NOTE section, core file offset is 0x%x\n", __func__, bytesWritten));
+    TRACE(TRACE_CoreDump, ("(I) %s: wrote PT_NOTE section, core file offset is 0x%lx\n", __func__, bytesWritten));
 
     // Write the PT_LOAD sections.
     bytesWritten += coredump_binary_memory(buffer, process);
-    TRACE(TRACE_CoreDump, ("(I) %s: wrote PT_LOAD sections, core file offset is 0x%x\n", __func__, bytesWritten));
+    TRACE(TRACE_CoreDump, ("(I) %s: wrote PT_LOAD sections, core file offset is 0x%lx\n", __func__, bytesWritten));
 
     return;
 }
@@ -1550,9 +1549,12 @@ void DumpCore(void)
     KThread_t *kthread;
 
 
-    if (!AppAgentIdentifier(process) && (process->Rank >= GetMyAppState()->ranksActive))   // Cannot use ProcessState_RankInactive since this may be called during ExitPending
+    if (!AppAgentIdentifier(process) && (process->Rank >= GetMyAppState()->ranksActive))
+    {
+        // Cannot use ProcessState_RankInactive since this may be called during ExitPending
+        Kernel_Unlock(&NodeState.coredumpLock);
         return;
-
+    }
     const char *programname = &(GetMyAppState()->App_Args[0]);
     if (programname[0] == 0) programname = "<Unknown>";
 

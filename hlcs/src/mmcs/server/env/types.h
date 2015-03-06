@@ -37,8 +37,11 @@ typedef std::vector<std::string> IoDrawers;
 
 const unsigned NORMAL_POLLING_PERIOD = 10;  // 10 seconds to check for threads being killed
 const unsigned ENVS_POLLING_PERIOD   = 300; // 5 minutes to check cards for new environmental data
+
+// these come from mc.h
 const int CARD_NOT_PRESENT           = 52;  // special value returned in the _error field
 const int CARD_NOT_UP                = 11;  // special value returned in the _error field
+const int UNEXPECTED_DEVICE          = 19;  // special value returned in the _error field
 
 } } } // namespace mmcs::server::env
 

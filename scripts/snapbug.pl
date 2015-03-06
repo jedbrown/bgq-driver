@@ -225,14 +225,14 @@ sub logError
 sub parseProperties
 {
     my($fileName, $db) = @_;
-    my $prop = new Config::IniFiles( -file => $fileName );
-    my @section = $prop->Parameters("database");
+    $BGPROPERTIES = new Config::IniFiles( -file => $fileName );
+    my @section = $BGPROPERTIES->Parameters("database");
     foreach my $key (@section)
     {
-        $db->{$key} = $prop->val("database", $key);
+        $db->{$key} = $BGPROPERTIES->val("database", $key);
     }
     
-    my $adminCertFile = $prop->val("security.admin", "key_file");
+    my $adminCertFile = $BGPROPERTIES->val("security.admin", "key_file");
     my $data = `/bin/cat $adminCertFile`;
     if($data !~ /\S/)
     {
@@ -287,7 +287,7 @@ sub addBlock
 	    message("Block '$blockid' is not allocated.  Attempting allocate\n");
 	    
 	    open(TMP, ">$outputdir/bgconsole.script");
-	    print TMP "allocate_block $blockid diags\n";
+	    print TMP "allocate_block $blockid diags no_check\n";
 	    print TMP "boot_block uloader=/bogus domain={id=CNK} steps=monitorMailbox\n";
 	    close(TMP);
 	    $cmd = logCommand("/bin/cat $outputdir/bgconsole.script | $driver/bin/bg_console 2>&1");
@@ -871,6 +871,10 @@ sub copyLogFiles
     $cmd = logCommand("$driver/hlcs/bin/log_merge --start '$mintimestamp' $files  > $outputdir/hlcs.log");
     system($cmd);
     
+    $ionode_log_path = $BGPROPERTIES->val("mmcs", "log_dir");
+    $ionode_log_path = "/bgsys/logs/BGQ/" if(!defined $ionode_log_path);
+    message "ionode log path: $ionode_log_path\n";
+    
     foreach $blockid (@blocks)
     {
 	next if($BLOCK{$blockid}{"NUMIONODES"} == 0);
@@ -885,7 +889,7 @@ sub copyLogFiles
 	    $location =~ s/\s+$//;
 	    print captureLog "Block $blockid contains ionode $location\n";
 #	    $cmd = logCommand("$driver/bin/log_merge --start '$mintimestamp' /bgsys/logs/BGQ/$location*.log > $outputdir/$location.log");
-	    $cmd = logCommand("/bin/cp /bgsys/logs/BGQ/$location*.log $outputdir/.");
+	    $cmd = logCommand("/bin/cp $ionode_log_path/$location*.log $outputdir/.");
 	    system($cmd);
 	}
 	$sth->finish();

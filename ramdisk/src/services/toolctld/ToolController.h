@@ -65,9 +65,10 @@ public:
 
    //! \brief  Open all connections needed by the service daemon.
    //! \param  serviceId Unique identifier for this instance of the daemon.
+   //! \param  connectWaitTimeoutRDMAcm minimum time to wait for a connection request from RDMA CM
    //! \return 0 when successful, errno when unsuccessful.
 
-   int startup(uint32_t serviceId);
+   int startup(uint32_t serviceId, int connectWaitTimeoutRDMAcm);
 
    //! \brief  Close all connections needed by the service daemon.
    //! \return 0 when successful, errno when unsuccessful.
@@ -347,7 +348,19 @@ private:
 
    //! Path to stdiod command channel socket.
    std::string _stdiodCmdChannelPath;
+   
+   //! minimum time to wait for a connection request from RDMA CM
+   int _connectWaitTimeoutRDMAcm;
 
+//internal class to monitor for disconnect from compute node
+class EventWaiter : public Thread
+{ 
+  friend class ToolController;
+  EventWaiter(ToolController& tc):_toolController(tc){}
+  void * run(void);
+  ToolController& _toolController;
+};
+friend class ToolController::EventWaiter;
 };
 
 //! Smart pointer for ToolController object.

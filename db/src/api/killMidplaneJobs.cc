@@ -49,6 +49,16 @@ killMidplaneJobs(
         return CONNECTION_ERROR;
     }
 
+    bool bgas = false;
+    try {
+        std::string bgasValue = DBConnectionPool::Instance().getProperties()->getValue(  "mmcs", "bgas" );
+        if ( bgasValue.compare("true") == 0 || bgasValue.compare("TRUE") == 0 ) {
+            bgas = true;
+        }
+    } catch ( const std::exception& e ) {
+        LOG_TRACE_MSG( "Could not find key bgas in [mmcs] section. Using default value of false" );
+    }
+
     bool ioDrawer = false;
 
     // Build the query for the blocks
@@ -57,25 +67,40 @@ killMidplaneJobs(
         ioDrawer = true;
 
         block.clear();
-        block.append(" ( select blockid from bgqsmallblock where posinmachine || '-' || nodecardpos in ");
-        block.append("    (select substr(source,1,10) from bgqcniolink where substr(destination,1,6) = '");
-        block.append(location.substr(0,6));
-        block.append("' )  union   select blockid from bgqbpblockmap where bpid in ");
-        block.append("    (select substr(source,1,6) from bgqcniolink where substr(destination,1,6) = '");
-        block.append(location.substr(0,6));
-        block.append("' )  union   select a.blockid from bgqblock a, bgqioblockmap b where numionodes <= 8 and ");
-        block.append("     a.blockid = b.blockid and substr(location,1,6)  = '");
-        block.append(location.substr(0,6));
-        block.append("'  )");
+        // Special checks for BGAS systems
+        if (bgas) {
+            block.append(" ( select distinct blockid from bgqiousage where substr(ionode,1,6) = '");
+            block.append(location.substr(0,6));
+            block.append("' ) ");
+        } else {
+            block.append(" ( select blockid from bgqsmallblock where posinmachine || '-' || nodecardpos in ");
+            block.append("    (select substr(source,1,10) from bgqcniolink where substr(destination,1,6) = '");
+            block.append(location.substr(0,6));
+            block.append("' )  union   select blockid from bgqbpblockmap where bpid in ");
+            block.append("    (select substr(source,1,6) from bgqcniolink where substr(destination,1,6) = '");
+            block.append(location.substr(0,6));
+            block.append("' )  union   select a.blockid from bgqblock a, bgqioblockmap b where numionodes <= 8 and ");
+            block.append("     a.blockid = b.blockid and substr(location,1,6)  = '");
+            block.append(location.substr(0,6));
+            block.append("'  )");
+        }
     } else if (location.length() == 10  && location.substr(4,1) == "I")  {
         //  this is an IO drawer port  i.e.  R00-IC-T19
         block.clear();
-        block.append(" ( select blockid from bgqsmallblock a, bgqcniolink b  where destination = '");
-        block.append(location.substr(0,10));
-        block.append("' and   nodecardpos = substr(source,8,3) and posinmachine = substr(source,1,6) ");
-        block.append("  union   select blockid from bgqbpblockmap a, bgqcniolink b  where destination  = '");
-        block.append(location.substr(0,10));
-        block.append("' and   bpid  = substr(source,1,6) ) ");
+        // Special checks for BGAS systems
+        if (bgas) {
+            block.append(" ( select distinct blockid from bgqiousage where ionode in " );
+            block.append("    (select distinct ion from bgqcniolink where substr(destination,1,10) = '");
+            block.append(location.substr(0,10));
+            block.append("' ) ) ");
+        } else {
+            block.append(" ( select blockid from bgqsmallblock a, bgqcniolink b  where destination = '");
+            block.append(location.substr(0,10));
+            block.append("' and   nodecardpos = substr(source,8,3) and posinmachine = substr(source,1,6) ");
+            block.append("  union   select blockid from bgqbpblockmap a, bgqcniolink b  where destination  = '");
+            block.append(location.substr(0,10));
+            block.append("' and   bpid  = substr(source,1,6) ) ");
+        }
     } else if (location.length() == 6)  {
         //  this is a midplane i.e.  R00-M0  include passthrough
         block.clear();
@@ -103,12 +128,19 @@ killMidplaneJobs(
         //  this is an I/O rack  i.e.  Q04
         ioDrawer = true;
         block.clear();
-        block.append(" ( select blockid from bgqioblockmap where location like '" + location + "%' ");
-        block.append(" union " );
-        block.append(" select distinct cnblock from bgqcnioblockmap where ioblock in (");
-        block.append(" select blockid from bgqioblockmap where location like '" + location + "%') AND ");
-        block.append(" cnblockstatus = 'I'" );
-        block.append(") ");
+        // Special checks for BGAS systems
+        if (bgas) {
+            block.append(" ( select distinct blockid from bgqiousage where substr(ionode,1,3) = '");
+            block.append(location.substr(0,3));
+            block.append("' ) ");
+        } else {
+            block.append(" ( select blockid from bgqioblockmap where location like '" + location + "%' ");
+            block.append(" union " );
+            block.append(" select distinct cnblock from bgqcnioblockmap where ioblock in (");
+            block.append(" select blockid from bgqioblockmap where location like '" + location + "%') AND ");
+            block.append(" cnblockstatus = 'I'" );
+            block.append(") ");
+        }
     } else if (location.length() == 5)  {
         ioDrawer = true;
         //  this is a clock card R00-K
@@ -192,11 +224,13 @@ killMidplaneJobs(
     sqlstr.append("where blockid in ");
     sqlstr.append(block);
 
+    // Temporary message for debugging
+    // LOG_DEBUG_MSG(sqlstr);
+
     // Add running jobs to the output vector.
     ColumnsBitmap colBitmap;
     colBitmap.set(dbo.ID);
     dbo._columns = colBitmap.to_ulong();
-
 
     sqlrc = tx.query(&dbo, sqlstr.c_str());
 
@@ -292,7 +326,8 @@ killMidplaneJobs(
             }
         } while (count > 0 && --timeout > 0);
 
-        if ( ( count = tx.count("BGQBlock", sqlstr.c_str()) ) > 0) {
+        count = tx.count("BGQBlock", sqlstr.c_str());
+        if ( count > 0) {
             return FAILED;
         }
     }

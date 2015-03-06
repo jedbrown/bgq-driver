@@ -88,26 +88,26 @@ BlockControllerTarget::parseSpec(mmcs_client::CommandReply& reply)
                 }
             }
         }
-        else if (_spec == "{l}") {	// link chips
+        else if (_spec == "{l}") { // link chips
             for (unsigned i = 0; i < _blockController->getLinkchips().size(); ++i) {
                 _linkchips.push_back(_blockController->getLinkchips()[i]);
             }
         }
-        else if (_spec == "{nc}") {	// node_card icon chips
+        else if (_spec == "{nc}") { // node_card icon chips
             for (unsigned i = 0; i < _blockController->getIcons().size(); ++i) {
                 if (typeid(*(_blockController->getIcons()[i])) == typeid(BCNodecardInfo)) {
                     _icons.push_back(_blockController->getIcons()[i]);
                 }
             }
         }
-        else if (_spec == "{sc}") {	// service_card icon chips
+        else if (_spec == "{sc}") { // service_card icon chips
             for (unsigned i = 0; i < _blockController->getIcons().size(); ++i) {
                 if (typeid(*(_blockController->getIcons()[i])) == typeid(BCServicecardInfo)) {
                     _icons.push_back(_blockController->getIcons()[i]);
                 }
             }
         }
-        else if (_spec == "{cc}") {	// clock_card icon chips
+        else if (_spec == "{cc}") { // clock_card icon chips
             for (unsigned i = 0; i < _blockController->getIcons().size(); ++i) {
                 if (typeid(*(_blockController->getIcons()[i])) == typeid(BCClockcardInfo)) {
                     _icons.push_back(_blockController->getIcons()[i]);
@@ -119,7 +119,7 @@ BlockControllerTarget::parseSpec(mmcs_client::CommandReply& reply)
         else {
             ++_cur;
             for (;;) {
-                if (*_cur == 'R' || *_cur == 'Q') {	// regular expression
+                if (*_cur == 'R' || *_cur == 'Q') { // regular expression
                     if (!parseRegexp(reply)) {
                         return false;
                     }
@@ -128,11 +128,11 @@ BlockControllerTarget::parseSpec(mmcs_client::CommandReply& reply)
                     if (!parseGroup(reply))
                         return false;
                 }
-                else {		// invalid
+                else { // invalid
                     break;
                 }
 
-                if (*_cur == ',') {	// separator
+                if (*_cur == ',') { // separator
                     ++_cur;
                     continue;
                 }
@@ -179,7 +179,7 @@ BlockControllerTarget::parseRegexp(mmcs_client::CommandReply& reply)
         }
     }
 
-    _cur = delim;			// skip to the character following the regexp
+    _cur = delim; // skip to the character following the regexp
 
     return true;
 }

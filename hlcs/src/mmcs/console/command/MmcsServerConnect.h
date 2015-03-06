@@ -37,7 +37,7 @@ namespace command {
 /*!
 ** mmcs_server_connect [<retry>]
 ** Establish a TCP connection to the mmcs server.
-** @param retry		retry until the connection is established or a SIGINT is received
+** @param retry retry until the connection is established or a SIGINT is received
 ** Once established, the username and replyformat are sent to the server
 ** A pointer to the MMCSConsolePort object is saved in the common::ConsoleController object
 ** The server ip address and port are taken from the Properties object
@@ -48,16 +48,20 @@ class MmcsServerConnect : public common::AbstractCommand
 public:
     MmcsServerConnect(const char* name, const char* description, const Attributes& attributes)
       : AbstractCommand(name,description,attributes) { _usage = "mmcs_server_connect [<retry>]";}
-    static  MmcsServerConnect* build();	// factory method
-    void execute(std::deque<std::string> args,
-			 mmcs_client::CommandReply& reply,
-			 common::ConsoleController* pController,
-			 server::BlockControllerTarget* pTarget=NULL);
+    static  MmcsServerConnect* build(); // factory method
+    void execute(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            server::BlockControllerTarget* pTarget=NULL
+            );
     bool checkArgs(std::deque<std::string>& args) {
         if (args.size() > 1) return false; else return true;
     }
-    void help(std::deque<std::string> args,
-		      mmcs_client::CommandReply& reply);
+    void help(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply
+            );
 
 private:
     void raiseUid() const;

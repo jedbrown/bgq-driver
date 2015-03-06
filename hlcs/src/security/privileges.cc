@@ -62,7 +62,7 @@ revoke(
 void
 addAllAuthority(
         Authorities& authorities,
-        const std::string value
+        const std::string& value
         )
 {
     LOG_TRACE_MSG( "adding all authority for: '" << value << "'" );

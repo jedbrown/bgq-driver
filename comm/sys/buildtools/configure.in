@@ -1,0 +1,763 @@
+AC_INIT([libPAMI],[0.0.9],[COLLECTIVES_CONVERGENCE])
+AC_CONFIG_HEADERS(config.h)
+AH_TOP([/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* ---------------------------------------------------------------- */
+/* (C)Copyright IBM Corp.  2007, 2008                               */
+/* IBM CPL License                                                  */
+/* ---------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+/**
+ * \file config.h
+ * \brief Generated header file
+ */
+])
+
+# This must be processor FAMILY, not processor type!
+PAMI_ARCH=`uname -p 2>/dev/null || echo unknown`
+
+AC_ARG_WITH(arch,
+  AS_HELP_STRING([--with-arch={arch}],[provide architecture, as with uname -p]),
+  [ PAMI_ARCH=$withval ])
+
+case $PAMI_ARCH in
+     powerpc) PAMI_ARCH=ppc64 ;;
+     i*86) PAMI_ARCH=i386 ;;
+esac
+
+
+ENABLE_MAMBO_WORKAROUNDS=no
+AC_ARG_WITH(mambo-workarounds,
+  AS_HELP_STRING([--with-mambo-workarounds],[enable bgq mambo workarounds]),
+  [ ENABLE_MAMBO_WORKAROUNDS=$withval ] )
+AC_SUBST(ENABLE_MAMBO_WORKAROUNDS)
+
+arch_bits=64
+arch_bits_blank=64
+TARGET=lapiunix
+CHECK_HAL=no
+AC_ARG_WITH(target,
+  AS_HELP_STRING([--with-target={lapiunix|mpi|mpixl|bgp|bgq|socklinux}],[set build target (default: lapiunix)]),
+  [ TARGET=$withval ])
+case $TARGET in
+    lapiunix)
+        TARGET=lapiunix
+        TARGET_RESULT="Lapi Unix ($TARGET)"
+        COMPONENTS="pami/components/lapi pami"
+        DEVICES="generic workqueue"
+        XTRA_TEST_SUBDIRS=""
+        BUILDENV=native
+        LIBNAME=pami
+        LIBRARY_EXTENSION=lapiunix
+        CHECK_HAL=yes
+        ENABLE_MAMBO_WORKAROUNDS=no
+        ;;
+    lapiunix-xl)
+        TARGET=lapiunix
+        TARGET_RESULT="Lapi Unix ($TARGET)"
+        COMPONENTS="pami/components/lapi pami"
+        DEVICES="generic workqueue"
+        XTRA_TEST_SUBDIRS=""
+        BUILDENV=native-lapixl
+        LIBNAME=pami
+        LIBRARY_EXTENSION=lapiunix
+        CHECK_HAL=yes
+        ENABLE_MAMBO_WORKAROUNDS=no
+        ;;
+    mpi)
+        TARGET_RESULT="MPI ($TARGET)"
+        COMPONENTS="pami"
+        DEVICES="generic workqueue"
+        XTRA_TEST_SUBDIRS="internals"
+        BUILDENV=native-mpi
+        LIBNAME=pami
+        CROSS_MPICXX=mpicxx
+        CROSS_MPICC=mpicc
+        LIBRARY_EXTENSION=mpi
+        ENABLE_MAMBO_WORKAROUNDS=no
+        ;;
+    mpixl)
+        TARGET=mpi
+        TARGET_RESULT="MPI-XL ($TARGET)"
+        COMPONENTS="pami"
+        DEVICES="generic workqueue"
+        XTRA_TEST_SUBDIRS="internals"
+        BUILDENV=native-mpixl
+        LIBNAME=pami
+        CROSS_MPICXX=mpCC
+        CROSS_MPICC=mpcc
+        LIBRARY_EXTENSION=mpxl
+        ENABLE_MAMBO_WORKAROUNDS=no
+        ;;
+    bgp)
+        TARGET=bgp
+        TARGET_RESULT="Blue Gene/P ($TARGET)"
+        PAMI_ARCH=ppc450d
+        COMPONENTS="pami"
+        DEVICES="generic workqueue"
+        XTRA_TEST_SUBDIRS="internals internals/BG"
+        BUILDENV=bgp
+        LIBNAME=pami
+        arch_bits=32
+        LIBRARY_EXTENSION=cnk
+        BGFLOOR=/bgsys/drivers/ppcfloor
+        ENABLE_MAMBO_WORKAROUNDS=no
+        ;;
+    bgq)
+        TARGET=bgq
+        TARGET_RESULT="Blue Gene/Q ($TARGET)"
+        PAMI_ARCH=a2qpx
+        COMPONENTS="pami"
+        DEVICES="generic workqueue"
+        XTRA_TEST_SUBDIRS="internals internals/BG"
+        BUILDENV=bgq
+        LIBNAME=pami
+        arch_bits=64
+        LIBRARY_EXTENSION=cnk
+        BGFLOOR=/bgsys/drivers/ppcfloor
+        ;;
+    bgqxl)
+        TARGET=bgq
+        TARGET_RESULT="Blue Gene/Q ($TARGET)"
+        PAMI_ARCH=a2qpx
+        COMPONENTS="pami"
+        DEVICES="generic workqueue"
+        XTRA_TEST_SUBDIRS="internals internals/BG"
+        BUILDENV=bgqxl
+        LIBNAME=pamifast
+        arch_bits=64
+        LIBRARY_EXTENSION=cnk
+        BGFLOOR=/bgsys/drivers/ppcfloor
+        ;;
+    socklinux)
+        TARGET_RESULT="Sockets on Linux ($TARGET)"
+        COMPONENTS="pami"
+        DEVICES="generic workqueue udp"
+        XTRA_TEST_SUBDIRS="internals"
+        BUILDENV=native
+        LIBNAME=pami
+        LIBRARY_EXTENSION=elf
+        ENABLE_MAMBO_WORKAROUNDS=no
+        ;;
+    *)
+        AC_MSG_RESULT([Invalid target selected. Exiting.])
+        AC_MSG_RESULT([Allowed targets: lapiunix|mpi|mpixl|bgp|bgq])
+        exit 1
+        ;;
+esac
+AC_SUBST(TARGET)
+AC_SUBST(DEVICES)
+AC_SUBST(XTRA_TEST_SUBDIRS)
+AC_SUBST(COMPONENTS)
+AC_SUBST(PAMI_ARCH)
+AC_DEFINE_UNQUOTED([TARGET], "$TARGET", [Which messager is being used])
+
+AC_DEFUN([AC_PROG_AR], [AC_CHECK_TOOL(AR, ar, :)])
+
+AC_DEFUN([AC_PROG_LD], [AC_CHECK_TOOL(LD, ld, :)])
+
+AC_ARG_WITH(mpicxx,
+  AS_HELP_STRING([--with-mpicxx={path}],[provide path to MPI C++ compiler]),
+  [ CROSS_MPICXX=$withval ])
+
+AC_ARG_WITH(mpicc,
+  AS_HELP_STRING([--with-mpicc={path}],[provide path to MPI C compiler]),
+  [ CROSS_MPICC=$withval ])
+
+AC_ARG_WITH(bgfloor,
+  AS_HELP_STRING([--with-bgfloor=DIR],[set build floor for bg buildenv]),
+  [ BGFLOOR=$(readlink -f $withval) ])
+
+PAMI_ARG_WITH_PATH(TOOLCHAIN, toolchain, $BGFLOOR, set toolchain for bg buildenv)
+
+PAMI_ARG_WITH_PATH(ARCH_INCLUDE, arch-include, $BGFLOOR/arch/include, set path to BG/P arch include files)
+PAMI_ARG_WITH_PATH(RUNTIME, runtime, $BGFLOOR/runtime/SPI, set path to BG/P runtime lib files)
+PAMI_ARG_WITH_PATH(SPI, spi, $BGFLOOR/spi, set path to BG/Q spi files)
+PAMI_ARG_WITH_PATH(XLPATH, xlpath, /opt/ibmcmp/vacpp/bg/9.0/, set path to XL compiler binaries)
+
+CROSS_OLEVEL=3
+AC_ARG_WITH(o,
+  ,
+  [ CROSS_OLEVEL=$withval ])
+AC_ARG_WITH(optimization-level,
+  AS_HELP_STRING([--with-optimization-level=level or --with-o=level],[set optimization level (default: 3)]),
+  [ CROSS_OLEVEL=$withval ])
+AC_SUBST(CROSS_OLEVEL)
+
+AC_CHECK_SIZEOF(size_t)
+AC_CHECK_SIZEOF(unsigned int)
+AC_CHECK_SIZEOF(long)
+
+debug=yes
+CROSS_OPTFLAGS="-g -O$CROSS_OLEVEL"
+DEBUG_RESULT="no:  ($CROSS_OPTFLAGS)"
+AC_ARG_WITH(debug,
+  AS_HELP_STRING([--with-debug={yes|no}],[enable debug (default: yes)]),
+  [ debug=$withval ])
+case $debug in
+    yes)
+        CROSS_OPTFLAGS="-g -O$CROSS_OLEVEL"
+        DEBUG_RESULT="yes:  ($CROSS_OPTFLAGS)"
+        ;;
+    no)
+        CROSS_OPTFLAGS="-O$CROSS_OLEVEL"
+        DEBUG_RESULT="no:  ($CROSS_OPTFLAGS)"
+        ;;
+    *)
+        AC_MSG_RESULT([Invalid debug selected Exiting.])
+        AC_MSG_RESULT([Allowed debug: yes|no])
+        exit 1
+        ;;
+esac
+AC_SUBST(CROSS_OPTFLAGS)
+
+
+
+AC_ARG_WITH(word-size,
+  AS_HELP_STRING([--with-word-size={64|32}],[build a 64 bit or 32 bit messaging library]),
+  [ arch_bits=$withval ] )
+case "$arch_bits" in
+    32|64)
+        ;;
+    "")
+        arch_bits=32
+        arch_bits_blank=
+        ;;
+    *)
+        AC_MSG_RESULT([Invalid arch bits selected. Exiting.])
+        exit 1
+        ;;
+esac
+ARCH_BITS=${arch_bits}
+AC_SUBST(ARCH_BITS)
+
+CROSS_CRT1=
+CROSS_CRTBEGIN=
+CROSS_CRTEND=
+CROSS_CRTI=
+CROSS_CRTN=
+CROSS_SYS_INCLUDES=
+CROSS_TOOLCHAIN_USR_LIB=
+PREFIX_CROSS_GNU=
+
+AC_ARG_WITH(buildenv,
+  AS_HELP_STRING([--with-buildenv={native|ade|bgp|bgq}],[set build environment (default: native)]),
+  [ BUILDENV=$withval ])
+case $BUILDENV in
+    ade)
+        CHECK_HAL=yes
+        PAMI_COMPILER=gnu
+        BUILDENV_RESULT="ADE"
+        COMPILER=GCC
+        COMPILER_RESULT="GNU GCC compiler family ($COMPILER)"
+        CROSS_CRT1=$(dirname $(find $(dirname $(dirname ${_CRT1_}))/ -name crt1.o | grep -v '64/crt1.o'))$arch_bits_blank/crt1.o
+        CROSS_CRTI=$(dirname $(find $(dirname $(dirname ${_CRTI_}))/ -name crti.o | grep -v '64/crti.o'))$arch_bits_blank/crti.o
+        CROSS_CRTBEGIN=$(dirname $(find $(dirname $(dirname ${_CRTBEGIN_}))/ -name crtbegin.o | grep -v '64/crtbegin.o'))/$arch_bits_blank/crtbegin.o
+        CROSS_CRTEND=$(dirname $(find $(dirname $(dirname ${_CRTEND_}))/ -name crtend.o | grep -v '64/crtend.o'))/$arch_bits_blank/crtend.o
+        CROSS_CRTN=$(dirname $(find $(dirname $(dirname ${_CRTN_}))/ -name crtn.o | grep -v '64/crtn.o'))$arch_bits_blank/crtn.o
+        CROSS_SYS_INCLUDES='-I${_BOSDEPS_USR_INC_} -idirafter${_BOSDEPS_USR_INC_}'
+        CROSS_TOOLCHAIN_USR_LIB='${_BOSDEPS_USR_LIB_}'$arch_bits_blank
+        CROSS_GEN_SHARED=gen_shared
+        PREFIX_CROSS_GNU='${_GCC_BIN_}'
+        CROSS_AR='${PREFIX_CROSS_GNU}/ar'
+        CROSS_CXX='${PREFIX_CROSS_GNU}/g++'
+        CROSS_COMPONENT='${PREFIX_CROSS_GNU}/g++'
+        CROSS_COMPONENT_FLAGS='${ARCH_BITS_FLAGS} -nostdlib -r'
+        CROSS_CC='${PREFIX_CROSS_GNU}/gcc'
+        CROSS_RANLIB='${PREFIX_CROSS_GNU}/ranlib'
+        CROSS_EXTRA_CXXFLAGS="-Wall -Wno-unused -fno-strict-aliasing -fno-rtti"
+        CROSS_EXTRA_CFLAGS="-Wall -Wno-unused -fno-strict-aliasing"
+        CROSS_BITS_FLAGS=-m
+        CROSS_DEPENDENCY="-MMD -MP -MF"
+        CROSS_MK_SHARED='-shared ${ARCH_BITS_FLAGS}'
+        CROSS_TESTCASE_FLAGS=''
+        CROSS_PIC='-fPIC'
+        POELIB=/project/sprelden/build/currentden/obj/'${CONTEXT_ODE}'/ppe/poe/lib/linux/libmpi${arch_bits}/libpoe.so
+        IBMMPILIB=/project/sprelden/build/currentden/obj/'${CONTEXT_ODE}'/ppe/poe/lib/linux/libmpi${arch_bits}/libmpi_ibm.so
+        ;;
+    ade-xl)
+        CHECK_HAL=yes
+        PAMI_COMPILER=xl
+        BUILDENV_RESULT="ADE-XL"
+        COMPILER=XL
+        COMPILER_RESULT="IBM XL compiler family ($COMPILER)"
+        CROSS_CRT1='${_CRT1_}'
+        CROSS_CRTI='${_CRTI_}'
+        CROSS_CRTBEGIN='${_CRTBEGIN_}'
+        CROSS_CRTEND='${_CRTEND_}'
+        CROSS_CRTN='${_CRTN_}'
+        CROSS_SYS_INCLUDES='-I${_VAC_USR_VACPP_INC_} -I${_BOSDEPS_BASE_} -I${_BOSDEPS_USR_INC_} -qcincl=${_BOSDEPS_USR_INC_}'
+        CROSS_TOOLCHAIN_USR_LIB='${_BOSDEPS_USR_LIB_}'
+        CROSS_GEN_SHARED=gen_shared
+        PREFIX_CROSS_GNU='${_GCC_BIN_}'
+        CROSS_AR='ar'
+        CROSS_CXX='${_VAC_USR_VACPP_BIN_}/xlC_r'
+        CROSS_COMPONENT='${_VAC_USR_VACPP_BIN_}/xlC_r'
+        CROSS_COMPONENT_FLAGS='${ARCH_BITS_FLAGS} -nostdlib -r'
+        CROSS_CC='${_VAC_USR_VACPP_BIN_}/xlC_r'
+        CROSS_RANLIB=''
+        CROSS_EXTRA_CFLAGS="-F${_BT_RULES_BASE_}/config.vac.8.0.0.99_6.1.0c -qinlglue -qlistopt -qproto -qhalt=e -qlanglvl=extc99 -qalias=addr -qcpluscmt -qnoupconv -qlist -qsource -qstaticinline -qinfo=pro:gen:noeff -qsuppress=1540-1408:1500-029"
+        CROSS_EXTRA_CXXFLAGS="-F${_BT_RULES_BASE_}/config.vac.8.0.0.99_6.1.0c -qsourcetype=c++ -qinlglue -qlistopt -qproto -qhalt=e  -qlanglvl=extended -qalias=addr -qcpluscmt -qnoupconv -qlist -qsource -qstaticinline -qinfo=pro:gen:noeff -qsuppress=1540-1408:1500-029"
+        CROSS_MK_SHARED='-qmkshrobj ${ARCH_BITS_FLAGS}'
+        CROSS_TESTCASE_FLAGS=''
+        CROSS_PIC='-qpic'
+        CROSS_BITS_FLAGS=-q
+        CROSS_DEPENDENCY="-qmakedep -MF"
+        ;;
+    native)
+        PAMI_COMPILER=gnu
+        COMPILER=GCC
+        COMPILER_RESULT="GNU GCC compiler family ($COMPILER)"
+        AC_PROG_CC
+        AC_PROG_CXX
+        AC_PROG_AR
+        AC_PROG_LD
+        AC_PROG_RANLIB
+        CROSS_GEN_SHARED=gen_shared_cxx
+        CROSS_AR=$ac_cv_prog_ac_ct_AR
+        CROSS_CXX=$ac_cv_prog_ac_ct_CXX
+        CROSS_COMPONENT=$ac_cv_prog_ac_ct_CXX
+        CROSS_COMPONENT_FLAGS='${ARCH_BITS_FLAGS} -nostdlib -r'
+        CROSS_CC=$ac_cv_prog_ac_ct_CC
+        CROSS_RANLIB=$ac_cv_prog_ac_ct_RANLIB
+        CROSS_BITS_FLAGS=-m
+        CROSS_EXTRA_CXXFLAGS="-Wall -Wno-unused -fno-strict-aliasing -fno-rtti"
+        CROSS_EXTRA_CFLAGS="-Wall -Wno-unused -fno-strict-aliasing"
+        CROSS_DEPENDENCY="-MMD -MP -MF"
+        CROSS_MK_SHARED='-shared ${ARCH_BITS_FLAGS}'
+        CROSS_TESTCASE_FLAGS=''
+        CROSS_PIC='-fPIC'
+        BUILDENV_RESULT="Native"
+        ;;
+    native-lapi)
+        PAMI_COMPILER=gnu
+        COMPILER=GCC
+        COMPILER_RESULT="GNU GCC compiler family ($COMPILER)"
+        AC_PROG_CC
+        AC_PROG_CXX
+        AC_PROG_AR
+        AC_PROG_LD
+        AC_PROG_RANLIB
+        CROSS_GEN_SHARED=gen_shared_cxx
+        CROSS_AR=$ac_cv_prog_ac_ct_AR
+        CROSS_CXX=$ac_cv_prog_ac_ct_CXX
+        CROSS_COMPONENT=$ac_cv_prog_ac_ct_CXX
+        CROSS_COMPONENT_FLAGS='${ARCH_BITS_FLAGS} -nostdlib -r'
+        CROSS_CC=$ac_cv_prog_ac_ct_CC
+        CROSS_RANLIB=$ac_cv_prog_ac_ct_RANLIB
+        CROSS_BITS_FLAGS=-m
+        CROSS_EXTRA_CXXFLAGS="-Wall -Wno-unused -fno-strict-aliasing -fno-rtti"
+        CROSS_EXTRA_CFLAGS="-Wall -Wno-unused -fno-strict-aliasing"
+        CROSS_DEPENDENCY="-MMD -MP -MF"
+        CROSS_MK_SHARED='-shared ${ARCH_BITS_FLAGS}'
+        CROSS_TESTCASE_FLAGS=''
+        CROSS_PIC='-fPIC'
+        if test "z$arch_bits" = "z64"; then
+        CROSS_LIBS="-L/opt/ibmhpc/ppe.poe/lib/libmpi64 -lpoe ${EXTERNAL_LAPI}"
+        else
+        CROSS_LIBS="-L/opt/ibmhpc/ppe.poe/lib/libmpi -lpoe ${EXTERNAL_LAPI}"
+        fi
+        BUILDENV_RESULT="Native"
+        ;;
+    native-lapixl)
+        PAMI_COMPILER=xl
+        COMPILER=XL
+        COMPILER_RESULT="IBM XL compiler family ($COMPILER)"
+        AC_PROG_CC
+        AC_PROG_CXX
+        AC_PROG_AR
+        AC_PROG_LD
+        AC_PROG_RANLIB
+        CROSS_GEN_SHARED=gen_shared_cxx
+        UNAME=`uname 2>/dev/null`
+        if test "x${UNAME}" = "xAIX"; then
+            ARFLAG="-X${ARCH_BITS}"
+        fi
+        CROSS_AR="$ac_cv_prog_ac_ct_AR ${ARFLAG}"
+        CROSS_CXX=xlC
+        CROSS_COMPONENT=xlC
+        CROSS_COMPONENT_FLAGS='-q${ARCH_BITS} -r'
+        CROSS_CC=xlc
+        CROSS_RANLIB=$ac_cv_prog_ac_ct_RANLIB
+        CROSS_EXTRA_CFLAGS="-qinlglue -qlistopt -qproto -qhalt=e -qlanglvl=extc99 -qalias=addr -qcpluscmt -qnoupconv -qlist -qsource -qstaticinline -qinfo=pro:gen:noeff -qsuppress=1540-1408:1500-029"
+        CROSS_EXTRA_CXXFLAGS="-qsourcetype=c++ -qinlglue -qlistopt -qproto -qhalt=e  -qlanglvl=extended -qalias=addr -qcpluscmt -qnoupconv -qlist -qsource -qstaticinline -qinfo=pro:gen:noeff -qsuppress=1540-1408:1500-029"
+        CROSS_BITS_FLAGS=-q
+        CROSS_DEPENDENCY="-qmakedep -MF"
+        CROSS_MK_SHARED='-G -qmkshrobj ${ARCH_BITS_FLAGS} ${EXTERNAL_LAPI}'
+        CROSS_TESTCASE_FLAGS='-brtl'
+        CROSS_PIC='-qpic'
+        CROSS_FORCE_CXX="-qsourcetype=c++"
+        BUILDENV_RESULT="Native XL"
+        CROSS_LIBS="${EXTERNAL_LAPI} -L/usr/lpp/ppe.poe/lib/ -lvtd_r -binitfini:poe_remote_main"
+        ;;
+    native-mpi)
+        PAMI_COMPILER=gnu
+        COMPILER=GCC
+        COMPILER_RESULT="GNU GCC compiler family ($COMPILER)"
+        AC_PROG_CC
+        AC_PROG_CXX
+        AC_PROG_AR
+        AC_PROG_LD
+        AC_PROG_RANLIB
+        CROSS_GEN_SHARED=gen_shared_cxx
+        CROSS_AR=$ac_cv_prog_ac_ct_AR
+        CROSS_CXX=$CROSS_MPICXX
+# mpicxx is broken on some platforms, for this purpose.
+# if user specified CROSS_COMPONENT=xxx on command, honor it.
+if test -z "$CROSS_COMPONENT"; then
+#       CROSS_COMPONENT=$ac_cv_prog_ac_ct_CXX
+        CROSS_COMPONENT=$CROSS_MPICXX
+fi
+        CROSS_COMPONENT_FLAGS='${ARCH_BITS_FLAGS} -nostdlib -r'
+        CROSS_CC=$CROSS_MPICC
+        CROSS_RANLIB=$ac_cv_prog_ac_ct_RANLIB
+        CROSS_BITS_FLAGS=-m
+        CROSS_EXTRA_CXXFLAGS="-Wall -Wno-unused -fno-strict-aliasing -fno-rtti -DMPICH_IGNORE_CXX_SEEK -U__bgp__ -U__bgq__ -U__bg__"
+        CROSS_EXTRA_CFLAGS="-Wall -Wno-unused -fno-strict-aliasing -U__bgp__ -U__bgq__ -U__bg__"
+        CROSS_DEPENDENCY="-MMD -MP -MF"
+        CROSS_MK_SHARED='-shared ${ARCH_BITS_FLAGS}'
+        CROSS_TESTCASE_FLAGS='-lstdc++'
+        CROSS_PIC='-fPIC'
+        BUILDENV_RESULT="Native MPI"
+        ;;
+    native-mpixl)
+        PAMI_COMPILER=xl
+        COMPILER=XL
+        COMPILER_RESULT="IBM XL compiler family ($COMPILER)"
+        AC_PROG_CC
+        AC_PROG_CXX
+        AC_PROG_AR
+        AC_PROG_LD
+        AC_PROG_RANLIB
+        CROSS_GEN_SHARED=gen_shared_cxx
+        CROSS_AR=$ac_cv_prog_ac_ct_AR
+        CROSS_CXX=$CROSS_MPICXX
+        CROSS_COMPONENT=$CROSS_MPICXX
+        CROSS_COMPONENT_FLAGS='-q${ARCH_BITS} -r'
+        CROSS_CC=$CROSS_MPICC
+        CROSS_RANLIB=$ac_cv_prog_ac_ct_RANLIB
+        CROSS_EXTRA_CFLAGS="-qproto -qhalt=e -qlanglvl=extc99 -qalias=addr -qcpluscmt -qnoupconv -qstaticinline -qinfo=pro:gen:noeff -qsuppress=1540-1408:1500-029 -U__bgp__ -U__bgq__ -U__bg__"
+        CROSS_EXTRA_CXXFLAGS="-qsourcetype=c++ -qproto -qhalt=e  -qlanglvl=extended -qalias=addr -qcpluscmt -qnoupconv -qstaticinline -qinfo=pro:gen:noeff -qsuppress=1540-1408:1500-029 -DMPICH_IGNORE_CXX_SEEK -U__bgp__ -U__bgq__ -U__bg__"
+        CROSS_BITS_FLAGS=-q
+        CROSS_DEPENDENCY="-qmakedep -MF"
+        CROSS_MK_SHARED='-G -qmkshrobj ${ARCH_BITS_FLAGS}'
+        CROSS_TESTCASE_FLAGS='-libmc++ -lstdc++' #'-brtl'
+        CROSS_PIC='-qpic'
+        BUILDENV_RESULT="Native MPI XL"
+        ;;
+    bgp)
+        if test "z$BGFLOOR" = z; then
+                AC_MSG_RESULT([--with-buildenv=bg* requires --with-bgfloor=<dir>. Exiting.])
+                exit 1
+        fi
+        if test "z$ARCH_INCLUDE" = z; then
+                AC_MSG_RESULT([--with-buildenv=bg* requires --with-arch-include=<dir>. Exiting.])
+                exit 1
+        fi
+        if test "z$RUNTIME" = z; then
+                AC_MSG_RESULT([--with-buildenv=bgp requires --with-runtime=<dir>. Exiting.])
+                exit 1
+        fi
+        BUILDENV_RESULT="BG/P"
+        PAMI_COMPILER=gnu
+        COMPILER=GCC
+        COMPILER_RESULT="GNU GCC compiler family ($COMPILER)"
+        CROSS_SYS_INCLUDES=-I${ARCH_INCLUDE}
+        CROSS_GEN_SHARED=gen_shared_cxx
+        PREFIX_CROSS_GNU=$TOOLCHAIN/gnu-linux/bin
+        CROSS_CC=$TOOLCHAIN/gnu-linux/bin/powerpc-bgp-linux-gcc
+        CROSS_CXX=$TOOLCHAIN/gnu-linux/bin/powerpc-bgp-linux-g++
+        CROSS_RANLIB=$TOOLCHAIN/gnu-linux/bin/powerpc-bgp-linux-ranlib
+        CROSS_AR=$TOOLCHAIN/gnu-linux/bin/powerpc-bgp-linux-ar
+        CROSS_EXTRA_CXXFLAGS="-Wall -Werror -fno-strict-aliasing -fno-rtti -fno-exceptions"
+        CROSS_EXTRA_CFLAGS="-Wall -Werror -fno-strict-aliasing"
+        CROSS_BITS_FLAGS=-m
+        CROSS_DEPENDENCY="-MMD -MP -MF"
+        CROSS_MK_SHARED='-shared'
+        CROSS_TESTCASE_FLAGS=''
+        CROSS_PIC='-fPIC'
+        CROSS_COMPONENT=$TOOLCHAIN/gnu-linux/bin/powerpc-bgp-linux-gcc
+        CROSS_COMPONENT_FLAGS='-nostdlib -r'
+        CROSS_LIBS="-L${RUNTIME} -lSPI.cna -lbgpspi.cnk"
+        ;;
+    bgp-xl)
+        if test "z$BGFLOOR" = z; then
+                AC_MSG_RESULT([--with-buildenv=bg* requires --with-bgfloor=<dir>. Exiting.])
+                exit 1
+        fi
+        if test "z$ARCH_INCLUDE" = z; then
+                AC_MSG_RESULT([--with-buildenv=bg* requires --with-arch-include=<dir>. Exiting.])
+                exit 1
+        fi
+        if test "z$RUNTIME" = z; then
+                AC_MSG_RESULT([--with-buildenv=bgp requires --with-runtime=<dir>. Exiting.])
+                exit 1
+        fi
+        PAMI_COMPILER=xl
+        COMPILER=XL
+        COMPILER_RESULT="IBM XL compiler family ($COMPILER)"
+        BUILDENV_RESULT="BG/P XL"
+        CROSS_SYS_INCLUDES=-I${ARCH_INCLUDE}
+        CROSS_GEN_SHARED=gen_shared_cxx
+        PREFIX_CROSS_GNU=$TOOLCHAIN/gnu-linux/bin
+        CROSS_CC=$XLPATH/bin/bgxlc
+        CROSS_CXX=$XLPATH/bin/bgxlC
+        CROSS_RANLIB=$TOOLCHAIN/gnu-linux/bin/powerpc-bgp-linux-ranlib
+        CROSS_AR=$TOOLCHAIN/gnu-linux/bin/powerpc-bgp-linux-ar
+        CROSS_COMPONENT=$XLPATH/bin/bgxlC
+        CROSS_COMPONENT_FLAGS='-nostdlib -r'
+        CROSS_LIBS="-L${RUNTIME} -lSPI.cna"
+        CROSS_EXTRA_CFLAGS="-qlistopt -qproto -qhalt=e -qlanglvl=extc99 -qalias=addr -qcpluscmt -qnoupconv -qlist -qsource -qstaticinline -qinfo=pro:gen:noeff -qsuppress=1540-1408:1500-029"
+        CROSS_EXTRA_CXXFLAGS="-qsourcetype=c++ -qlistopt -qproto -qhalt=e  -qlanglvl=extended -qalias=addr -qcpluscmt -qnoupconv -qlist -qsource -qstaticinline -qinfo=pro:gen:noeff -qsuppress=1540-1408:1500-029 -qnortti -qnoeh"
+        CROSS_BITS_FLAGS=-q
+        CROSS_DEPENDENCY="-qmakedep -MF"
+        CROSS_MK_SHARED='-qmkshrobj ${ARCH_BITS_FLAGS}'
+        CROSS_TESTCASE_FLAGS='-lstdc++'
+        CROSS_PIC='-qpic'
+        ;;
+    bgq)
+        if test "z$BGFLOOR" = z; then
+                AC_MSG_RESULT([--with-buildenv=bg* requires --with-bgfloor=<dir>. Exiting.])
+                exit 1
+        fi
+        if test "z$SPI" = z; then
+                AC_MSG_RESULT([--with-buildenv=bgq requires --with-spi=<dir>. Exiting.])
+                exit 1
+        fi
+        BUILDENV_RESULT="BG/Q"
+        PAMI_COMPILER=gnu
+        COMPILER=GCC
+        COMPILER_RESULT="GNU GCC compiler family ($COMPILER)"
+        CROSS_SYS_INCLUDES="-I${SPI}/include -I${SPI}/include/kernel/cnk -I${SPI}/include/mu/pami -I${BGFLOOR}"
+        CROSS_GEN_SHARED=gen_shared_cxx
+        PREFIX_CROSS_GNU=$TOOLCHAIN/gnu-linux/bin
+        CROSS_CC=$TOOLCHAIN/gnu-linux/bin/powerpc64-bgq-linux-gcc
+        CROSS_CXX=$TOOLCHAIN/gnu-linux/bin/powerpc64-bgq-linux-g++
+        CROSS_RANLIB=$TOOLCHAIN/gnu-linux/bin/powerpc64-bgq-linux-ranlib
+        CROSS_AR=$TOOLCHAIN/gnu-linux/bin/powerpc64-bgq-linux-ar
+        CROSS_EXTRA_CXXFLAGS="-Wall -Werror -fno-strict-aliasing -D__64BIT__ -D__CNK__ -mstrict-align -fno-exceptions -fno-rtti -fno-threadsafe-statics -finline-limit=32768"
+        CROSS_EXTRA_CFLAGS="  -Wall -Werror -fno-strict-aliasing -D__64BIT__ -D__CNK__ -mstrict-align -fno-exceptions -finline-limit=32768"
+        CROSS_BITS_FLAGS=-m
+        CROSS_DEPENDENCY="-MMD -MP -MF"
+        CROSS_MK_SHARED='-shared'
+        CROSS_TESTCASE_FLAGS='-lstdc++'
+        CROSS_PIC='-fPIC'
+        CROSS_COMPONENT=$TOOLCHAIN/gnu-linux/bin/powerpc64-bgq-linux-gcc
+        CROSS_COMPONENT_FLAGS='-nostdlib -r'
+        CROSS_LIBS="-L${SPI}/lib -lSPI -lSPI_cnk"
+        ;;
+    bgqxl)
+        if test "z$BGFLOOR" = z; then
+                AC_MSG_RESULT([--with-buildenv=bg* requires --with-bgfloor=<dir>. Exiting.])
+                exit 1
+        fi
+        if test "z$SPI" = z; then
+                AC_MSG_RESULT([--with-buildenv=bgq requires --with-spi=<dir>. Exiting.])
+                exit 1
+        fi
+        BUILDENV_RESULT="BG/Q XL"
+        PAMI_COMPILER=xl
+        COMPILER=XL
+        COMPILER_RESULT="IBM XL compiler family ($COMPILER)"
+        CROSS_SYS_INCLUDES="-I${SPI}/include -I${SPI}/include/kernel/cnk -I${SPI}/include/mu/pami -I${BGFLOOR}"
+        CROSS_GEN_SHARED=gen_shared_cxx
+        PREFIX_CROSS_GNU=$TOOLCHAIN/gnu-linux/bin
+        CROSS_CC=/opt/ibmcmp/vacpp/bg/12.1/bin/bgxlc_r
+#        CROSS_CC=/gsa/rchgsa/projects/x/xlcmpbld/run/vacpp/121_com/bgq/daily/latest/bin/bgxlc_r
+        CROSS_CXX=/opt/ibmcmp/vacpp/bg/12.1/bin/bgxlC_r
+#        CROSS_CXX=/gsa/rchgsa/projects/x/xlcmpbld/run/vacpp/121_com/bgq/daily/latest/bin/bgxlC_r
+        CROSS_RANLIB=$TOOLCHAIN/gnu-linux/bin/powerpc64-bgq-linux-ranlib
+        CROSS_AR=$TOOLCHAIN/gnu-linux/bin/powerpc64-bgq-linux-ar
+# Supress warning 1540-1088 for Q issue 1742
+# Supress warning 1540-0567 for Q issue 1747
+        CROSS_EXTRA_CXXFLAGS="-D__64BIT__ -D__CNK__ -D__bgq__ -qhalt=e -qnortti -qnoeh -qsuppress=1540-1088:1540-0567:1540-1090 -qstaticinline"
+        CROSS_EXTRA_CFLAGS="  -D__64BIT__ -D__CNK__ -D__bgq__ -qhalt=e -qnortti -qnoeh -qsuppress=1540-1088:1540-0567:1540-1090"
+        CROSS_BITS_FLAGS=-q
+        CROSS_DEPENDENCY="-qmakedep -MF"
+        CROSS_MK_SHARED='-qmkshrobj ${ARCH_BITS_FLAGS}'
+        CROSS_TESTCASE_FLAGS=''
+        CROSS_PIC='-qpic'
+        CROSS_COMPONENT=/opt/ibmcmp/vacpp/bg/12.1/bin/bgxlc_r
+#        CROSS_COMPONENT=/gsa/rchgsa/projects/x/xlcmpbld/run/vacpp/121_com/bgq/daily/latest/bin/bgxlc_r
+        CROSS_COMPONENT_FLAGS='-q${ARCH_BITS} -r'
+        CROSS_LIBS="-L${SPI}/lib -lSPI -lSPI_cnk -lstdc++ -lsupc++"
+        ;;
+    *)
+        AC_MSG_RESULT([Invalid build env selected. Exiting.])
+        AC_MSG_RESULT([Allowed buildenv: native ade bgp bgq])
+        exit 1
+        ;;
+esac
+
+AC_ARG_WITH(hal-include,
+  AS_HELP_STRING([--with-hal-include=DIR],[set build hal-include]),
+    [ CROSS_HAL=$withval; CROSS_HAL_STR=$withval ])
+    AC_DEFINE_UNQUOTED([CROSS_HAL], $CROSS_HAL, [Build hal-include])
+
+if test "$CHECK_HAL" = "yes"; then
+   CROSS_SYS_INCLUDES="${CROSS_SYS_INCLUDES} -I${CROSS_HAL}"
+   AC_MSG_NOTICE([Checking for HAL and its requirements])
+   if test -f ${CROSS_HAL_STR}/hal.h
+       then
+           AC_MSG_NOTICE([found HAL])
+   else
+      AC_MSG_ERROR([HAL is missing:  specify path to hal include dir with --with-hal-include])
+   fi
+fi
+
+
+
+CROSS_BUILD_ALIAS=$build_alias
+CROSS_TARGET_ALIAS=$target_alias
+CROSS_HOST_ALIAS=$host_alias
+AC_SUBST(BGFLOOR)
+AC_SUBST(BUILDENV)
+AC_SUBST(CROSS_AR)
+AC_SUBST(CROSS_BITS_FLAGS)
+AC_SUBST(CROSS_BUILD_ALIAS)
+AC_SUBST(CROSS_CC)
+AC_SUBST(CROSS_COMPONENT)
+AC_SUBST(CROSS_COMPONENT_FLAGS)
+AC_SUBST(CROSS_CRT1)
+AC_SUBST(CROSS_CRTBEGIN)
+AC_SUBST(CROSS_CRTEND)
+AC_SUBST(CROSS_CRTI)
+AC_SUBST(CROSS_CRTN)
+AC_SUBST(CROSS_CXX)
+AC_SUBST(CROSS_DEPENDENCY)
+AC_SUBST(CROSS_EXTRA_CFLAGS)
+AC_SUBST(CROSS_EXTRA_CXXFLAGS)
+AC_SUBST(CROSS_FORCE_CXX)
+AC_SUBST(CROSS_GEN_SHARED)
+AC_SUBST(CROSS_HOST_ALIAS)
+AC_SUBST(CROSS_LIBS)
+AC_SUBST(CROSS_MK_SHARED)
+AC_SUBST(CROSS_PIC)
+AC_SUBST(CROSS_RANLIB)
+AC_SUBST(CROSS_SYS_INCLUDES)
+AC_SUBST(CROSS_TARGET_ALIAS)
+AC_SUBST(CROSS_TESTCASE_FLAGS)
+AC_SUBST(CROSS_TOOLCHAIN_USR_LIB)
+AC_SUBST(IBMMPILIB)
+AC_SUBST(PAMI_COMPILER)
+AC_SUBST(POELIB)
+AC_SUBST(PREFIX_CROSS_GNU)
+
+AC_DEFINE_UNQUOTED([BUILDENV], "$BUILDENV", [Build Environment])
+
+PAMI_ARG_WITH_DEFINE(ASSERT_LEVEL, assert-level, 2, set build assert-level)
+
+#WITH_COMPILER=gcc
+#AC_ARG_WITH(compiler,
+#  AS_HELP_STRING([--with-compiler={gcc|xl}],[set build compiler (default: gcc)]),
+#  [ WITH_COMPILER=$withval ])
+#case $WITH_COMPILER in
+#    GCC*|GNU*|gcc*|gnu*)
+#        COMPILER=GCC
+#        COMPILER_RESULT="GNU GCC compiler family ($COMPILER)"
+#        ;;
+#    XL*|xl*)
+#        COMPILER=XL
+#        COMPILER_RESULT="IBM XL compiler family ($COMPILER)"
+#        ;;
+#    *)
+#        AC_MSG_RESULT([Invalid compiler selected. Exiting.])
+#        AC_MSG_RESULT([Allowed compilers: gcc|xl])
+#        exit 1
+#        ;;
+#esac
+AC_SUBST(COMPILER)
+
+PAMI_ARG_WITH(SHARED_LIB, shared-lib, yes, build (or not) a shared version of the library)
+
+PAMI_ARG_WITH(LIBNAME, libname, $LIBNAME, Base name of the library)
+
+
+SILENT=yes
+AC_ARG_WITH(silence,
+  AS_HELP_STRING([--with-silence], [with/without silent build (default: yes)]),
+  [ SILENT=$withval ] )
+if test "x$SILENT" = "xno"; then
+SILENT_DIR=
+SILENT_BUILD=
+else
+SILENT_DIR=-s
+SILENT_BUILD=@
+fi
+AC_SUBST(SILENT_DIR)
+AC_SUBST(SILENT_BUILD)
+
+AC_ARG_WITH(rootdir,
+  AS_HELP_STRING([--with-rootdir={path}],[provide path to Make.rules]),
+  [ ROOTDIR=$withval ],
+  [ ROOTDIR=$srcdir ] )
+AC_SUBST(ROOTDIR)
+
+
+PAMI_ARG_WITH_PATH(INSTALL_DIR, installdir, ${ROOTDIR}/../work, provide path to install dir)
+
+AC_ARG_WITH(extension,
+  AS_HELP_STRING([--with-extension=extension],[provide extension for library]),
+  [ LIBRARY_EXTENSION=$withval ] )
+AC_SUBST(LIBRARY_EXTENSION)
+
+AC_ARG_WITH(pm,
+  AS_HELP_STRING([--with-pm={mpd}],[process manager for sockets device]),
+  [ PM=$withval ] )
+AC_SUBST(PM)
+
+ERROR_CHECKS=yes
+AC_ARG_WITH(error-checks,
+  AS_HELP_STRING([--with-error-checks],[enable runtime error checks]),
+  [ ERROR_CHECKS=$withval ] )
+AC_SUBST(ERROR_CHECKS)
+
+AC_ARG_WITH(pami-extension,
+  AS_HELP_STRING([--with-pami-extension={name...}],[enable one or more pami extension(s)]),
+  [ PAMI_EXTENSIONS=$(echo $withval | perl -pe 's/,/\ /g;') ] )
+AC_SUBST(PAMI_EXTENSIONS)
+
+for i in $PAMI_EXTENSIONS; do
+  CROSS_EXTRA_CFLAGS="${CROSS_EXTRA_CFLAGS} -D__pami_extension_${i}__=1"
+  CROSS_EXTRA_CXXFLAGS="${CROSS_EXTRA_CXXFLAGS} -D__pami_extension_${i}__=1"
+done
+
+
+
+FILE=$(cd $srcdir && find pami -follow -name '*\.in'  | perl -pe 's,^\./,,;s/\.in$//;s/\n/ /g;')
+dnl FILE=
+AC_CONFIG_FILES([
+Build.rules
+Make.rules
+Make.rules.top
+Makefile
+$FILE
+])
+AC_OUTPUT
+
+
+define(default_var, if test "x$$1" = x; then
+$1=*Default*
+fi)
+default_var(INSTALL_DIR)
+default_var(LIBNAME)
+
+AC_MSG_RESULT([-------------------------------------])
+AC_MSG_RESULT([Messager target   = $TARGET_RESULT   ])
+AC_MSG_RESULT([Devices           = $DEVICES         ])
+AC_MSG_RESULT([COMPILER          = $COMPILER_RESULT ])
+AC_MSG_RESULT([debug             = $DEBUG_RESULT    ])
+AC_MSG_RESULT([Root directory    = $ROOTDIR         ])
+AC_MSG_RESULT([Install directory = $INSTALL_DIR     ])
+AC_MSG_RESULT([ASSERT_LEVEL      = $ASSERT_LEVEL    ])
+AC_MSG_RESULT([LIBNAME           = $LIBNAME         ])
+AC_MSG_RESULT([SHARED_LIB        = $SHARED_LIB      ])
+AC_MSG_RESULT([SILENT            = $SILENT          ])
+AC_MSG_RESULT([ARCH_BITS         = $ARCH_BITS       ])
+AC_MSG_RESULT([BUILDENV          = $BUILDENV_RESULT ])
+#AC_MSG_RESULT([CROSS_EXTRA_CFLAGS= $CROSS_EXTRA_CFLAGS])
+#AC_MSG_RESULT([CROSS_EXTRA_CXXFLAGS= $CROSS_EXTRA_CXXFLAGS])
+dnl AC_MSG_RESULT([SILENT_DIR    = $SILENT_DIR      ])
+dnl AC_MSG_RESULT([SILENT_BUILD  = $SILENT_BUILD    ])
+AC_MSG_RESULT([-------------------------------------])

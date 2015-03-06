@@ -247,6 +247,9 @@ protected:
    //! Connected data channel socket.
    InetSocketPtr _dataChannel;
 
+   //! Connected data channel socket waiting for Authentication.
+   InetSocketPtr _dataChanAuthWaiter;
+
    //! Path to work directory.
    std::string _workDirectory;
 

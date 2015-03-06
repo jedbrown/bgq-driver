@@ -49,14 +49,18 @@ class MmcsServerCmd : public common::AbstractCommand
 public:
     MmcsServerCmd(const char* name, const char* description, const Attributes& attributes)
         : common::AbstractCommand(name,description,attributes) { _usage = "mmcs_server_cmd [<anything>]";}
-    static  MmcsServerCmd* build();	// factory method
-    void execute(std::deque<std::string> args,
-			 mmcs_client::CommandReply& reply,
-			 common::ConsoleController* pController,
-			 server::BlockControllerTarget* pTarget=NULL);
+    static  MmcsServerCmd* build(); // factory method
+    void execute(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            server::BlockControllerTarget* pTarget=NULL
+            );
     bool checkArgs(std::deque<std::string>& args);
-    void help(std::deque<std::string> args,
-		      mmcs_client::CommandReply& reply);
+    void help(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply
+            );
     static void reconnect_to_server(mmcs_client::CommandReply& reply,
             common::ConsoleController* pController);
     static bool ending(bool ending) { _ending = ending; return _ending; }

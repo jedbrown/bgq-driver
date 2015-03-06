@@ -80,7 +80,7 @@ const uint16_t Completed          = 2099; // Always last since there is not a co
 const uint16_t BaseRdmaPort = 7100;
 
 //! Current version of protocol.
-const uint8_t ProtocolVersion = 10;
+const uint8_t ProtocolVersion = 11;
 
 //! Size of unencrypted (plain text) data in Authenticate message.
 const size_t PlainDataSize = 32;
@@ -98,10 +98,10 @@ const int MaxVariableSize = 8192;
 const int MaxPathSize = 512;
 
 //! Maximum number of secondary groups.
-const int MaxGroups = 64;
+const int MaxGroups = 112;
 
 //! Maximum number of compute nodes that can be serviced by one I/O node.
-const size_t MaxComputeNodes = 512;
+const size_t MaxComputeNodes = 256;
 
 //! Maximum number of bytes for fields in struct utsname used by uname system call.
 const size_t MaxUtsnameSize = 65;

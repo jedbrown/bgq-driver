@@ -132,6 +132,8 @@ public:
 
     /*!
      * \brief Verify this job was started from the scheduler.
+     *
+     * \note the job will not start until the plugin returns from this method
      */
     virtual void execute(
             Verify& data   //!< [in,out]
@@ -146,6 +148,8 @@ public:
 
     /*!
      * \brief Invoked when the job terminates.
+     *
+     * \note the runjob shadow process will not terminate until the plugin returns from this method
      */
     virtual void execute(
             const Terminated& data  //!< [in]

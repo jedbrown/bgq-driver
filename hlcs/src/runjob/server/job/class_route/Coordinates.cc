@@ -99,13 +99,19 @@ operator<(
         const Coordinates& lhs
         )
 {
-    return
-        rhs.get( Dimension::A ) < lhs.get( Dimension::A ) ||
-        rhs.get( Dimension::B ) < lhs.get( Dimension::B ) ||
-        rhs.get( Dimension::C ) < lhs.get( Dimension::C ) ||
-        rhs.get( Dimension::D ) < lhs.get( Dimension::D ) ||
-        rhs.get( Dimension::E ) < lhs.get( Dimension::E )
-        ;
+    if ( rhs.get(Dimension::A) != lhs.get(Dimension::A) ) {
+        return lhs.get(Dimension::A) < rhs.get(Dimension::A);
+    }
+    if ( rhs.get(Dimension::B) != lhs.get(Dimension::B) ) {
+        return lhs.get(Dimension::B) < rhs.get(Dimension::B);
+    }
+    if ( rhs.get(Dimension::C) != lhs.get(Dimension::C) ) {
+        return lhs.get(Dimension::C) < rhs.get(Dimension::C);
+    }
+    if ( rhs.get(Dimension::D) != lhs.get(Dimension::D) ) {
+        return lhs.get(Dimension::D) < rhs.get(Dimension::D);
+    }
+    return lhs.get(Dimension::E) < rhs.get(Dimension::E);
 }
 
 std::ostream&

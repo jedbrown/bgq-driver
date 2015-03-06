@@ -46,6 +46,8 @@
 
 #include <infiniband/verbs.h>
 
+#include <ramdisk/include/services/common/SignalHandler.h>
+
 using namespace bgcios;
 
 static unsigned int FlightLogSize=16;
@@ -54,10 +56,12 @@ static BG_FlightRecorderLog_t dummy[16];
 
 static BG_FlightRecorderLog_t * FlightLog = dummy;
 
+static BG_FlightRecorderLog_t * BGV_RECV_MSG_entry = dummy;
+
 void setFlightLogSize(unsigned int size){
   if (size==0) size=16;
   FlightLogSize=size;
-  FlightLog = new BG_FlightRecorderLog_t[size];
+  FlightLog = new BG_FlightRecorderLog_t[size];//overflow guard
 }
 
 const char * CIOS_FLIGHTLOG_FMT[] =
@@ -70,7 +74,7 @@ const char * CIOS_FLIGHTLOG_FMT[] =
   "FL_INLAST"
 };
 static volatile uint32_t total_entries = 0;
-static uint32_t fl_index=0;
+static volatile uint32_t fl_index=0;
 static uint32_t wrapped=0;
 static int log_fd= 2;  //stdout default
 
@@ -93,6 +97,11 @@ static uint64_t GetTimeBase() { return 0; }
 
 uint32_t logPostSend(uint32_t ID, struct ibv_send_wr& send_wr,int err){
    uint32_t index = fl_index++;
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   if (index >= FlightLogSize) index = fl_index++;
    BG_FlightRecorderLog_t * entry = &FlightLog[index];
    entry->entry_num = total_entries++;
    entry->id = ID;
@@ -112,15 +121,16 @@ uint32_t logPostSend(uint32_t ID, struct ibv_send_wr& send_wr,int err){
       entry->ci.BGV_recv[1]=(uint32_t)err;
    }
 
-   if (fl_index >= FlightLogSize){
-     fl_index=0;
-     wrapped=1;
-   }
    return index;
 }
 
 uint32_t log4values(uint32_t ID, uint64_t val0, uint64_t val1, uint64_t val2, uint64_t val3){
    uint32_t index = fl_index++;
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   if (index >= FlightLogSize) index = fl_index++;
    BG_FlightRecorderLog_t * entry = &FlightLog[index];
    entry->entry_num = total_entries++;
    entry->id = ID;
@@ -132,17 +142,17 @@ uint32_t log4values(uint32_t ID, uint64_t val0, uint64_t val1, uint64_t val2, ui
 
    //grab some other helpful data
    entry->ci.other = (uint64_t)getpid();
-
-   if (fl_index >= FlightLogSize){
-     fl_index=0;
-     wrapped=1;
-   }
    return index;
 }
 
 
 uint32_t logMsg(uint32_t ID,bgcios::MessageHeader *mh){
    uint32_t index = fl_index++;
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   if (index >= FlightLogSize) index = fl_index++;
    BG_FlightRecorderLog_t * entry = &FlightLog[index];
    entry->entry_num = total_entries++;
    entry->id = ID;
@@ -153,15 +163,16 @@ uint32_t logMsg(uint32_t ID,bgcios::MessageHeader *mh){
    entry->data[2] = msg[2];
    entry->data[3] = msg[3];
    entry->ci.other = 0;  //not using other...
-   if (fl_index >= FlightLogSize){
-     fl_index=0;
-     wrapped=1;
-   }
    return index;
 }
 
 uint32_t logMsgWC(uint32_t ID,bgcios::MessageHeader *mh,struct ibv_wc *wc){
    uint32_t index = fl_index++;
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   if (index >= FlightLogSize) index = fl_index++;
    BG_FlightRecorderLog_t * entry = &FlightLog[index];
    entry->entry_num = total_entries++;
    entry->id = ID;
@@ -173,15 +184,16 @@ uint32_t logMsgWC(uint32_t ID,bgcios::MessageHeader *mh,struct ibv_wc *wc){
    entry->data[3] = msg[3];
    entry->ci.BGV_recv[0] = //remote QP number unknown...
    entry->ci.BGV_recv[1] = wc->qp_num; //local QP number
-   if (fl_index >= FlightLogSize){
-     fl_index=0;
-     wrapped=1;
-   }
    return index;
 }
 
 uint32_t logMsgQpNum(uint32_t ID,bgcios::MessageHeader *mh,uint32_t qp_num){
    uint32_t index = fl_index++;
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   if (index >= FlightLogSize) index = fl_index++;
    BG_FlightRecorderLog_t * entry = &FlightLog[index];
    entry->entry_num = total_entries++;
    entry->id = ID;
@@ -193,15 +205,61 @@ uint32_t logMsgQpNum(uint32_t ID,bgcios::MessageHeader *mh,uint32_t qp_num){
    entry->data[3] = msg[3];
    entry->ci.BGV_recv[0] = 0; //remote QP number unknown...
    entry->ci.BGV_recv[1] = qp_num; //local QP number
+   return index;
+}
+
+uint32_t logStringWithFd(uint32_t ID,char *strinfo, size_t len, uint32_t retval, uint32_t input_fd){
+   uint32_t index = fl_index++;
    if (fl_index >= FlightLogSize){
      fl_index=0;
      wrapped=1;
    }
+   if (index >= FlightLogSize) index = fl_index++;
+   BG_FlightRecorderLog_t * entry = &FlightLog[index];
+   entry->entry_num = total_entries++;
+   entry->id = ID;
+   entry->timeStamp = GetTimeBase();
+   if (len > 32){
+     memcpy(entry->data,strinfo,32); //need to compute length or have parm
+   }
+   else {
+      memcpy(entry->data,strinfo,len); //need to compute length or have parm
+   }
+   
+   entry->ci.fd.returned = retval; 
+   entry->ci.fd.input = input_fd; 
+
+   return index;
+}
+
+uint32_t logWorkCompletion(uint32_t ID,struct ibv_wc *wc){
+   uint32_t index = fl_index++;
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   if (index >= FlightLogSize) index = fl_index++;
+   BG_FlightRecorderLog_t * entry = &FlightLog[index];
+   entry->entry_num = total_entries++;
+   entry->id = ID;
+   entry->timeStamp = GetTimeBase();
+   uint64_t * msg = (uint64_t *)wc;
+   entry->data[0] = msg[0];
+   entry->data[1] = msg[1];
+   entry->data[2] = msg[2];
+   entry->data[3] = msg[3];
+   entry->ci.BGV_recv[0] = wc->src_qp; //remote QP number unknown...
+   entry->ci.BGV_recv[1] = wc->qp_num; //local QP number
    return index;
 }
 
 uint32_t logMsgSig(uint32_t ID,siginfo_t * siginfo_ptr){
    uint32_t index = fl_index++;
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   if (index >= FlightLogSize) index = fl_index++;
    BG_FlightRecorderLog_t * entry = &FlightLog[index];
    entry->entry_num = total_entries++;
    entry->id = ID;
@@ -212,15 +270,17 @@ uint32_t logMsgSig(uint32_t ID,siginfo_t * siginfo_ptr){
    entry->data[2] = msg[2];
    entry->data[3] = msg[3];
    entry->ci.other = (uint64_t)getpid();
-   if (fl_index >= FlightLogSize){
-     fl_index=0;
-     wrapped=1;
-   }
+
    return index;
 }
 
 uint32_t logIntString(uint32_t ID,int int_val, const char * info){
    uint32_t index = fl_index++;
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   if (index >= FlightLogSize) index = fl_index++;
    BG_FlightRecorderLog_t * entry = &FlightLog[index];
    entry->entry_num = total_entries++;
    entry->id = ID;
@@ -242,6 +302,11 @@ struct chanEventLog{
 
 uint32_t logChanEvent(uint32_t ID,struct rdma_cm_event * event){
    uint32_t index = fl_index++;
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   if (index >= FlightLogSize) index = fl_index++;
    BG_FlightRecorderLog_t * entry = &FlightLog[index];
    entry->entry_num = total_entries++;
    entry->id = ID;
@@ -271,15 +336,16 @@ uint32_t logChanEvent(uint32_t ID,struct rdma_cm_event * event){
      break;
      default: break;
    }
-   if (fl_index >= FlightLogSize){
-     fl_index=0;
-     wrapped=1;
-   }
    return index;
 }
 
 uint32_t logCRdmaReg(uint32_t ID, void* address, uint64_t length, uint32_t lkey, int frags, int filedescriptor ){
    uint32_t index = fl_index++;
+   if (fl_index >= FlightLogSize){
+     fl_index=0;
+     wrapped=1;
+   }
+   if (index >= FlightLogSize) index = fl_index++;
    BG_FlightRecorderLog_t * entry = &FlightLog[index];
    entry->entry_num = total_entries++;
    entry->id = ID;
@@ -291,10 +357,6 @@ uint32_t logCRdmaReg(uint32_t ID, void* address, uint64_t length, uint32_t lkey,
    entry->data[2] = uint64_t(lkey);
    entry->data[3] = uint64_t(frags);
 
-   if (fl_index >= FlightLogSize){
-     fl_index=0;
-     wrapped=1;
-   }
    return index;
 }
 
@@ -514,7 +576,27 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
         Flight_CIOS_EvtDecoder(bufsize, buffer, log);
         return (size_t)strlen(buffer_start);
         break;
+#ifdef __PPC64__
+#define LLUS long long unsigned int
+      case SYS_RSLT_RED:
+      case SYS_RSLT_WRT:
+      case SYS_RSLT_SND:
+      case SYS_RSLT_RCV:
+        length = (size_t)snprintf(buffer, bufsize, "rc=%lld=0x%0llx fd=%lld reqLen=%lld \n",(LLUS)log->data[0],(LLUS)log->data[0],(LLUS)log->data[1],(LLUS)log->data[2]);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+        break;
 
+      case SYS_RSLT_PRD:
+      case SYS_RSLT_PWR:
+        length = (size_t)snprintf(buffer, bufsize, "rc=%lld=0x%0llx fd=%lld reqLen=%lld position@=%p\n",(LLUS)log->data[0],(LLUS)log->data[0],(LLUS)log->data[1],(LLUS)log->data[2],(void*)log->data[3]);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+        break;
+#undef LLUS
+#endif
       case SYS_CALL_PWR:
       case SYS_CALL_WRT:
       case SYS_CALL_SND:
@@ -526,17 +608,61 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
         bufsize -= length;
         return (size_t)strlen(buffer_start);
         break;
-      case SYS_RSLT_PWR:
-      case SYS_RSLT_WRT:
-      case SYS_RSLT_SND:
-      case SYS_RSLT_PRD:
-      case SYS_RSLT_RED:
-      case SYS_RSLT_RCV:
-        length = (size_t)snprintf(buffer, bufsize, "region@=%p length=%p,offset=%p,xtra=%p\n",(void*)log->data[0],(void*)log->data[1],(void*)log->data[2],(void*)log->data[3]);
+      case PROC_RMV_PID:
+      case PROC_ADD_PID:
+        length = (size_t)snprintf(buffer, bufsize, "pid=%llu \n",(long long unsigned int)log->data[0]);
         buffer += length;
         bufsize -= length;
         return (size_t)strlen(buffer_start);
         break;
+      case PROC_BGN_SVC:
+      {
+        long long unsigned int torus = (long long unsigned int)log->data[1];
+        length = (size_t)snprintf(buffer, bufsize, "service=%llu --CNtorus=(%llu %llu %llu %llu %llu)\n",(long long unsigned int)log->data[0],((torus>>24) & 0x3F),((torus>>18) & 0x3F),((torus>>12) & 0x3F),((torus>>6) & 0x3F),(torus & 0x3F));
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+      }
+        break;
+      case CONF_CON_TMO:  
+#ifdef __PPC64__
+#define LLUS long long unsigned int
+        length = (size_t)snprintf(buffer, bufsize, "_serviceId=%llu connect_wait_timeout=%llu pid=%llu ppid=%llu\n",(LLUS)log->data[0],(LLUS)log->data[1],(LLUS)log->data[2],(LLUS)log->data[3]);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+
+        break;
+      case FID_FTRUNC64: 
+        length = (size_t)snprintf(buffer, bufsize,  "rc=%llu fd=%llu requested_length=%llu rank=%llu\n",(LLUS)log->data[0],(LLUS)log->data[1],(LLUS)log->data[2],(LLUS)log->data[3]);
+        buffer += length;
+        bufsize -= length;
+       return (size_t)strlen(buffer_start);
+       break;
+      case FDI_LSEEK64_: 
+        length = (size_t)snprintf(buffer, bufsize,  "result_offset=%llu fd=%llu request_offset=%llu whence=%llu\n",(LLUS)log->data[0],(LLUS)log->data[1],(LLUS)log->data[2],(LLUS)log->data[3]);
+#undef LLUS
+#endif
+        buffer += length;
+        bufsize -= length;
+       return (size_t)strlen(buffer_start);
+       break;
+      case FDI_FILENAME:
+      case FDI_RETNVALU:
+         length = (size_t)snprintf(buffer, bufsize, "%32.32s fd/retval=%d input_fd=%d \n",(char*)log->data, log->ci.fd.returned, log->ci.fd.input);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+        break;
+      
+      case BGV_WORK_CMP:
+        {
+        struct ibv_wc * wce = (struct ibv_wc *)log->data;
+        length = (size_t)snprintf(buffer, bufsize, "wr_id=%p status=%d opcode=%d vendor_err=%d, byte_len=%d,imm_data=%d, qp_num=%d\n",(void *)wce->wr_id,wce->status, wce->opcode, wce->vendor_err, wce->byte_len, wce->imm_data,wce->qp_num);
+        buffer += length;
+        bufsize -= length;
+        return (size_t)strlen(buffer_start);
+        } break;
       default: break;
     }
 
@@ -641,6 +767,11 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
  
         case jobctl::Completed: text=(char *)"jobctl::Completed"; break;
 
+#define JOBCTL(type) case jobctl::type: text=(char *)"jobctl::"#type;break; 
+        JOBCTL(Heartbeat);
+        JOBCTL(HeartbeatAck);
+
+
         case sysio::ErrorAck: text=(char *)"sysio::ErrorAck";break;
 
         case sysio::WriteKernelInternal: text=(char *)"sysio::WriteKernelInternal";break;
@@ -723,6 +854,13 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
          SYSIO(GpfsFcntl);
          SYSIO(GpfsFcntlAck);
 
+         SYSIO(Ftruncate64);
+         SYSIO(Ftruncate64Ack);
+         SYSIO(Truncate64);
+         SYSIO(Truncate64Ack);
+         SYSIO(Statfs64);
+         SYSIO(Statfs64Ack);        
+
         default:   break;
     }
     if (text){  
@@ -734,12 +872,21 @@ size_t Flight_CIOS_MsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecor
     if (log->id ==BGV_SEND_MSG){
         length = (size_t)snprintf(buffer, bufsize, " lQP=%d ",log->ci.BGV_recv[1] );
         buffer += length;
-        bufsize -= length;    
+        bufsize -= length;  
+        bgcios::MessageHeader * mh2 = (bgcios::MessageHeader *)BGV_RECV_MSG_entry->data;
+        if (mh->sequenceId == mh2->sequenceId){
+           long long unsigned int cycles = 
+               (long long unsigned int)(log->timeStamp - BGV_RECV_MSG_entry->timeStamp);
+           length = (size_t)snprintf(buffer,bufsize," CYC=%llu",cycles);
+           buffer += length;
+           bufsize -= length; 
+        }  
    }
    else if (log->id ==BGV_RECV_MSG){
         length = (size_t)snprintf(buffer, bufsize, " lQP=%d ",log->ci.BGV_recv[1] );
         buffer += length;
-        bufsize -= length;    
+        bufsize -= length;   
+        BGV_RECV_MSG_entry = (BG_FlightRecorderLog_t *)log; //save reference for BGV_SEND_MSG calcluation
    }
    else if (log->id ==BGV_BLOK_MSG){
         length = (size_t)snprintf(buffer, bufsize, " BLOCKED " );
@@ -833,4 +980,47 @@ void printlastLogEntries(uint32_t quantity){
    if (index==0)index = FlightLogSize - 1;
    else index--;
    printprevLogEntries(index, quantity);
+}
+
+void * FlightLogDumpWaiter::run(void)
+{ 
+   int done = 0;
+   const int pipeForSig   = 0;
+   const int numFds       = 1;
+
+   pollfd pollInfo[numFds];
+   int timeout = -1; // 10000 == 10 sec
+   bgcios::SigWritePipe SigWritePipe(SIGUSR1);
+
+   pollInfo[pipeForSig].fd = SigWritePipe._pipe_descriptor[0];
+   pollInfo[pipeForSig].events = POLLIN;
+   pollInfo[pipeForSig].revents = 0;
+   // Process events until told to stop.
+   while (!done) {
+
+      // Wait for an event on one of the descriptors.
+      int rc = poll(pollInfo, numFds, timeout);
+
+     // There was no data so try again.
+      if (rc == 0) {
+         continue;
+      } 
+            // Check for an event on the pipe for signal.
+      if (pollInfo[pipeForSig].revents & POLLIN) {
+         pollInfo[pipeForSig].revents = 0;
+         siginfo_t siginfo;
+         read(pollInfo[pipeForSig].fd,&siginfo,sizeof(siginfo_t));
+         const size_t BUFSIZE = 1024;
+         char buffer[BUFSIZE];
+         const size_t HOSTSIZE = 256;
+         char hostname[HOSTSIZE];
+         hostname[0]=0;
+         gethostname(hostname,HOSTSIZE);
+         snprintf(buffer,BUFSIZE,"/var/spool/abrt/fl_%s.%d.%s.log",_daemon_name,getpid(),hostname);
+         printf("Attempting to write flight log %s\n",buffer);
+         printLogMsg(buffer); //print the log to stdout
+      }
+   }
+
+   return NULL;
 }

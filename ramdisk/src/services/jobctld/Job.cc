@@ -470,9 +470,13 @@ Job::checkAllToolsStatus(uint32_t seconds)
    for (tool_list_iterator iter = _tools.begin(); iter != _tools.end(); ++iter) {
       std::ostringstream toolStatusPath;
       toolStatusPath << bgcios::JobsDirectory << _jobId << bgcios::ToolsStatusDirectory << iter->first;
-      bgcios::TextFile statusFile(toolStatusPath.str());
-      if (statusFile.getModificationTime() > now - seconds) {
-         ++activeTools;
+      try {
+         bgcios::TextFile statusFile(toolStatusPath.str());
+         if (statusFile.getModificationTime() > now - seconds) {
+            ++activeTools;
+         }
+      } catch (const std::exception& e) {
+         // assume error was already logged
       }
    }
    return activeTools;

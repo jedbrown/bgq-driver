@@ -192,9 +192,10 @@ typedef struct Kernel_RecFifoInterrupts
  * \retval  errno Unsuccessful. 
  *
  */
+__INLINE__ 
 int32_t Kernel_QueryInjFifos (uint32_t   subgrpid,
-			      uint32_t * nfifos,
-			      uint32_t * fifoids);
+                              uint32_t * nfifos,
+                              uint32_t * fifoids);
 
 
 /**
@@ -225,9 +226,10 @@ int32_t Kernel_QueryInjFifos (uint32_t   subgrpid,
  * \retval  errno Unsuccessful.
  *
  */
+__INLINE__ 
 int32_t Kernel_QueryRecFifos (uint32_t   subgrpid,
-			      uint32_t * nfifos,
-			      uint32_t * fifoids);
+                              uint32_t * nfifos,
+                              uint32_t * fifoids);
 
 
 /**
@@ -262,9 +264,10 @@ int32_t Kernel_QueryRecFifos (uint32_t   subgrpid,
  * \see Kernel_DeallocateBaseAddressTable
  *                          
  */
+__INLINE__ 
 int32_t Kernel_QueryBaseAddressTable (uint32_t   subgrpid,
-				      uint32_t * nbatids,
-				      uint32_t * batids);
+                                      uint32_t * nbatids,
+                                      uint32_t * batids);
 
 
 /**
@@ -310,11 +313,12 @@ int32_t Kernel_QueryBaseAddressTable (uint32_t   subgrpid,
  * \retval  0  Successful.    fifoids are allocated.
  * \retval  errno Unsuccessful.  A specified ID is already allocated.
  */
+__INLINE__ 
 int32_t Kernel_AllocateInjFifos (uint32_t                     subgrpid,
-				 MUSPI_InjFifoSubGroup_t    * sg_ptr,
-				 uint32_t                     nfifos,
-				 uint32_t                   * fifoids,
-				 Kernel_InjFifoAttributes_t * fifoAttrs);
+                                 MUSPI_InjFifoSubGroup_t    * sg_ptr,
+                                 uint32_t                     nfifos,
+                                 uint32_t                   * fifoids,
+                                 Kernel_InjFifoAttributes_t * fifoAttrs);
 
 
 /**
@@ -361,11 +365,12 @@ int32_t Kernel_AllocateInjFifos (uint32_t                     subgrpid,
  * \retval  errno Unsuccessful.  A specified ID is already allocated.
  */
 
+__INLINE__ 
 int32_t Kernel_AllocateRecFifos (uint32_t                     subgrpid,
-				 MUSPI_RecFifoSubGroup_t    * sg_ptr,
-				 uint32_t                     nfifos,
-				 uint32_t                   * fifoids,
-				 Kernel_RecFifoAttributes_t * fifoAttrs);
+                                 MUSPI_RecFifoSubGroup_t    * sg_ptr,
+                                 uint32_t                     nfifos,
+                                 uint32_t                   * fifoids,
+                                 Kernel_RecFifoAttributes_t * fifoAttrs);
 
 
 /**
@@ -407,11 +412,12 @@ int32_t Kernel_AllocateRecFifos (uint32_t                     subgrpid,
  * \see Kernel_DeallocateBaseAddressTable
  *                          
  */
+__INLINE__ 
 int32_t Kernel_AllocateBaseAddressTable (uint32_t                           subgrpid,
-					 MUSPI_BaseAddressTableSubGroup_t * sg_ptr,
-					 uint32_t                           nbatids,
-					 uint32_t                         * batids,
-					 uint32_t                           system);
+                                         MUSPI_BaseAddressTableSubGroup_t * sg_ptr,
+                                         uint32_t                           nbatids,
+                                         uint32_t                         * batids,
+                                         uint32_t                           system);
 
 
 /**
@@ -448,11 +454,12 @@ int32_t Kernel_AllocateBaseAddressTable (uint32_t                           subg
  *                     requirements documented in the size_1 parameter.
  *
  */
+__INLINE__ 
 int32_t Kernel_InjFifoInit (MUSPI_InjFifoSubGroup_t * sg_ptr,
-			    uint32_t                  fifoid,
-			    Kernel_MemoryRegion_t   * memregion, 
-			    uint64_t                  startoffset, 
-			    uint64_t                  size_1);
+                            uint32_t                  fifoid,
+                            Kernel_MemoryRegion_t   * memregion, 
+                            uint64_t                  startoffset, 
+                            uint64_t                  size_1);
 
 
 /**
@@ -482,11 +489,12 @@ int32_t Kernel_InjFifoInit (MUSPI_InjFifoSubGroup_t * sg_ptr,
  *                bytes.
  */
 
+__INLINE__ 
 int32_t Kernel_RecFifoInit (MUSPI_RecFifoSubGroup_t * sg_ptr,
-			    uint32_t                  fifoid,
-			    Kernel_MemoryRegion_t   * memregion,
-			    uint64_t                  startoffset, 
-			    uint64_t                  size_1);
+                            uint32_t                  fifoid,
+                            Kernel_MemoryRegion_t   * memregion,
+                            uint64_t                  startoffset, 
+                            uint64_t                  size_1);
 
 
 /**
@@ -513,10 +521,11 @@ int32_t Kernel_RecFifoInit (MUSPI_RecFifoSubGroup_t * sg_ptr,
  *
  *
  */
+__INLINE__ 
 int32_t Kernel_InjFifoActivate (MUSPI_InjFifoSubGroup_t  *  sg_ptr,
-				uint32_t                    nfifos,
-				uint32_t                 *  fifoids,
-				uint32_t                    activate);
+                                uint32_t                    nfifos,
+                                uint32_t                 *  fifoids,
+                                uint32_t                    activate);
 
 
 /**
@@ -612,6 +621,7 @@ int32_t Kernel_RecFifoDisable (  uint32_t groupid,
  *
  * \see Kernel_ConfigureInjFifoThresholds
  */
+__INLINE__ 
 int32_t Kernel_ConfigureInjFifoInterrupts (MUSPI_InjFifoSubGroup_t    * sg_ptr,
 					   uint32_t                     nfifos,
 					   uint32_t                   * fifoids,
@@ -645,6 +655,7 @@ int32_t Kernel_ConfigureInjFifoInterrupts (MUSPI_InjFifoSubGroup_t    * sg_ptr,
  *
  * \see Kernel_ConfigureRecFifoThreshold
  */
+__INLINE__ 
 int32_t Kernel_ConfigureRecFifoInterrupts (MUSPI_RecFifoSubGroup_t    * sg_ptr,
 					   uint32_t                     nfifos,
 					   uint32_t                   * fifoids,
@@ -672,6 +683,7 @@ int32_t Kernel_ConfigureRecFifoInterrupts (MUSPI_RecFifoSubGroup_t    * sg_ptr,
  * \retval  0  Successful.
  * \retval  errno Unsuccessful.
  */
+__INLINE__ 
 int32_t Kernel_Configure_MU_GEA(uint32_t subgrpid,
 				uint64_t gea_flag);
 
@@ -707,6 +719,7 @@ int32_t Kernel_Configure_MU_GEA(uint32_t subgrpid,
  * \see Kernel_ConfigureInjFifoInterrupts
  * \see Kernel_ConfigureInjFifoThresholds
  */
+__INLINE__ 
 int32_t Kernel_GetInjFifoThresholds( uint64_t * normalThreshold,
 				     uint64_t * remoteGetThreshold );
 
@@ -739,6 +752,7 @@ int32_t Kernel_GetInjFifoThresholds( uint64_t * normalThreshold,
  *
  * \see Kernel_ConfigureInjFifoInterrupts
  */
+__INLINE__ 
 int32_t Kernel_ConfigureInjFifoThresholds( uint64_t * normalThreshold,
 					   uint64_t * remoteGetThreshold );
 
@@ -768,7 +782,7 @@ int32_t Kernel_ConfigureInjFifoThresholds( uint64_t * normalThreshold,
  * \see Kernel_ConfigureRecFifoInterrupts
  * \see Kernel_ConfigureRecFifoThreshold
  */
-int32_t Kernel_GetRecFifoThreshold( uint64_t * threshold );
+__INLINE__ int32_t Kernel_GetRecFifoThreshold( uint64_t * threshold );
 
 
 /**
@@ -794,7 +808,7 @@ int32_t Kernel_GetRecFifoThreshold( uint64_t * threshold );
  *
  * \see Kernel_ConfigureRecFifoInterrupts
  */
-int32_t Kernel_ConfigureRecFifoThreshold( uint64_t threshold );
+__INLINE__ int32_t Kernel_ConfigureRecFifoThreshold( uint64_t threshold );
 
 
 /**
@@ -819,6 +833,7 @@ int32_t Kernel_ConfigureRecFifoThreshold( uint64_t threshold );
  *
  *
  */
+__INLINE__ 
 int32_t Kernel_DeallocateInjFifos (MUSPI_InjFifoSubGroup_t * sg_ptr,
 				   uint32_t                  nfifos,
 				   uint32_t                * fifoids);
@@ -846,6 +861,7 @@ int32_t Kernel_DeallocateInjFifos (MUSPI_InjFifoSubGroup_t * sg_ptr,
  *
  *
  */
+__INLINE__ 
 int32_t Kernel_DeallocateRecFifos (MUSPI_RecFifoSubGroup_t * sg_ptr,
 				   uint32_t                  nfifos,
 				   uint32_t                * fifoids);
@@ -877,6 +893,7 @@ int32_t Kernel_DeallocateRecFifos (MUSPI_RecFifoSubGroup_t * sg_ptr,
  * \see Kernel_AllocateBaseAddressTable
  *                          
  */
+__INLINE__ 
 int32_t Kernel_DeallocateBaseAddressTable (MUSPI_BaseAddressTableSubGroup_t *sg_ptr,
 					   uint32_t                          nbatids,
 					   uint32_t                         *batids);

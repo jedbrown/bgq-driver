@@ -55,10 +55,14 @@ enum {
 
 typedef struct CNK_Descriptor_Info
 {
-    void *FileSysPtr;    // use void because we can't use C++ class in C code
-    int Remote_FD;
-    int Type;
-    off_t CurrOffset;     // current offset into file for this descriptor
+    uint64_t  FileSysPtr : 24;    // \warning encoding fileSystem pointer, cannot be smaller than 24-bits 
+                                 //         (since CNK consumes lower 16MB of memory)
+    uint64_t  Type       : 8;     // \warning limit of 256 file system types
+    uint64_t  Remote_FD  : 16;    // \warning limiting remote file descriptors to 16 bits.  
+    uint64_t  deviceID   : 16;    // dev_t
+    __ino64_t inode;
+    off_t     CurrOffset;     // current offset into file for this descriptor
+    size_t    size;
 } CNK_Descriptor_Info_t;
 
 typedef struct CNK_Descriptors_t
@@ -140,6 +144,14 @@ extern long File_GetCurrentOffset( int fd );
 
 extern int File_SetCurrentOffset( int fd, long offset);
 
+//! \brief  Set the current file offset of an allocated file descriptor.
+//! \note   The file offset is only maintained for local file systems.
+//! \param  fd File descriptor.
+//! \param  offset New value for file offset.
+//! \return 0 when successful, -1 when file descriptor is invalid.
+
+extern int File_AdjustCurrentOffset( int fd, long offset);
+
 //! \brief  Get the file descriptor of the current working directory for the process.
 //! \return File descriptor.
 
@@ -156,5 +168,10 @@ extern void *File_GetCurrentDirFSPtr( void );
 //! \return Length of output string.
 
 extern int printstrc(const char *fmt, ...);
+
+
+extern int File_AdjustCurrentOffset( int fd, long curOffset );
+extern int File_SetDeviceINode(int fd, dev_t deviceID, __ino64_t inode, size_t filesize);
+extern int File_GetDeviceINode(int fd, dev_t* deviceID, __ino64_t* inode, size_t* size);
 
 #endif // Add nothing below this line

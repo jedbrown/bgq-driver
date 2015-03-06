@@ -174,12 +174,15 @@ class bgqBqlEventAnalyzer(bgqBaseAnalyzer):
                 else:
                     raise Exception('Error: bgq_BqlEventAnalyzer could not connect to the database')
 
+
         if msgCount < threshold:
             if msg_id == '00090200':
                 registry.get_logger().info("The optical lane will be spared since only " + str(msgCount) + " BQL event(s) were logged during the window.")
                 # perform the BQL sparing action
                 self.perform_sparing(rec_id, location, rawdata)
-                return
+            if msg_id == '00090210' or msg_id == '00090211':
+                registry.get_logger().info("The failing optical lane is spared automatically by the control system for message id " + msg_id + ".  No administrator action is required.  Retry booting the block.")
+            return
 
         aquery = self.alert_query.replace('PERIOD',self.alert_period)
         aquery = aquery.replace('MYTIME', str(event_time))

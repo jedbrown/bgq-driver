@@ -41,6 +41,8 @@
 #include <boost/foreach.hpp>
 #include <boost/throw_exception.hpp>
 
+#include <string>
+
 LOG_DECLARE_FILE( runjob::server::log );
 
 namespace runjob {
@@ -164,7 +166,20 @@ Ras::handleControlActions(
         const cxxdb::ConnectionPtr& connection
         )
 {
+    bool bgas = false;
+    try {
+        std::string bgasValue = BGQDB::DBConnectionPool::Instance().getProperties()->getValue(  "mmcs", "bgas" );
+        if ( bgasValue.compare("true") == 0 || bgasValue.compare("TRUE") == 0 ) {
+            bgas = true;
+        }
+    } catch ( const std::exception& e ) {
+        LOG_TRACE_MSG( "Could not find key bgas in [mmcs] section. Using default value of false" );
+    }
+
     if ( _impl.getDetail(RasEvent::CONTROL_ACTION).empty() ) return;
+
+    //LOG_DEBUG_MSG("RB: Ras::handleControlActions " << "bgas = " << (int)bgas << " location = " << _impl.getDetail(RasEvent::LOCATION)
+    //        << "CONTROL_ACTION = " << _impl.getDetail(RasEvent::CONTROL_ACTION) );
 
     typedef std::vector<std::string> Tokens;
     Tokens tokens;
@@ -202,18 +217,34 @@ Ras::handleControlActions(
     
     const Tokens::const_iterator freeComputeBlock = std::find(tokens.begin(), tokens.end(), "FREE_COMPUTE_BLOCK");
     if ( freeComputeBlock != tokens.end() ) {
-        LOG_DEBUG_MSG( "handling " << *freeComputeBlock << " control action" );
         uint64_t rows = 0;
-        connection->executeUpdate(
-                std::string("UPDATE ") + BGQDB::DBTBlock().getTableName() + " SET " +
-                BGQDB::DBTBlock::ACTION_COL + " = '" + BGQDB::BLOCK_DEALLOCATING + "' WHERE " +
-                BGQDB::DBTBlock::BLOCKID_COL + " in (" +
-                "SELECT a.blockid from bgqblock a, bgqcnioblockmap b " +
-                "WHERE b.cnblock = a.blockid " +
-                "AND b.ion = '" + _impl.getDetail(RasEvent::LOCATION) + "' " +
-                "AND a.status <> 'F'" +
-                ")"
-                );
+        if ( bgas ) {
+            LOG_DEBUG_MSG( "BGAS handling " << *freeComputeBlock << " control action" );
+            connection->executeUpdate(
+                    std::string("UPDATE ") + BGQDB::DBTBlock().getTableName() + " SET " +
+                    BGQDB::DBTBlock::ACTION_COL + " = '" + BGQDB::BLOCK_DEALLOCATING + "' WHERE " +
+                    BGQDB::DBTBlock::BLOCKID_COL + " in (" +
+                    "SELECT a.blockid from bgqblock a, bgqiousage b " +
+                    "WHERE b.blockid = a.blockid " +
+                    "AND b.ionode = '" + _impl.getDetail(RasEvent::LOCATION) + "' " +
+                    "AND a.status <> 'F'" +
+                    ")",
+                    &rows
+                    );
+        } else {
+            LOG_DEBUG_MSG( "handling " << *freeComputeBlock << " control action" );
+            connection->executeUpdate(
+                    std::string("UPDATE ") + BGQDB::DBTBlock().getTableName() + " SET " +
+                    BGQDB::DBTBlock::ACTION_COL + " = '" + BGQDB::BLOCK_DEALLOCATING + "' WHERE " +
+                    BGQDB::DBTBlock::BLOCKID_COL + " in (" +
+                    "SELECT a.blockid from bgqblock a, bgqcnioblockmap b " +
+                    "WHERE b.cnblock = a.blockid " +
+                    "AND b.ion = '" + _impl.getDetail(RasEvent::LOCATION) + "' " +
+                    "AND a.status <> 'F'" +
+                    ")",
+                    &rows
+                    );
+        }
         LOG_TRACE_MSG( "updated " << rows << " rows" );
     }
 

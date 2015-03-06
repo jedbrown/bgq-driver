@@ -135,6 +135,11 @@ MasterConnection::handleRead(
     _agent->processRequest();
     if ( !_agent->_prot->getResponder() ) {
         _master.close();
+        // After the connection is closed, delay the specified number of seconds before
+        // reconnecting to provide bgmaster_server time to cleanup agent
+        LOG_INFO_MSG( "Connection to bgmaster_server ended. Waiting " << _agent->_reconnect_delay
+        		<< " seconds before attempting to reconnect.");
+        sleep(_agent->_reconnect_delay);
         this->impl( _ports.begin(), 0 );
     } else {
         this->read();

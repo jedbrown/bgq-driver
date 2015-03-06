@@ -79,6 +79,8 @@ ConsoleListener::threadStart()
         }
     }
 
+    LOG_INFO_MSG("Console listener thread is ending.");
+
     // Close the interactive console port
     delete consolePort;
     consolePort = NULL;

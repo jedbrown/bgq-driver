@@ -2068,7 +2068,11 @@ LC_FastSpecEnter:
 	// touch regular PID location, to bring it back into L1 after the dci
 	// we will need it when switching back later
 	li	%r12,HWTHR_PhysicalPID
+#ifdef __llvm__
+	dcbt    %r11,%r12    // \todo clang doesn't assemble dcbtct
+#else
 	dcbtct	%r11,%r12,0
+#endif
 	// success, return from system call
 	li	%r3,0
 	rfi
@@ -2174,7 +2178,11 @@ Vector_FastSpec_EI:
 	std	%r0,HWTHR_SpecSaveR0(%r3)
 	std	%r6,HWTHR_SpecSaveR6(%r3)
 	std	%r7,HWTHR_SpecSaveR7(%r3)
+#ifdef __llvm__
+	dcbt    0,%r3    // \todo clang doesn't assemble dcbtct
+#else
 	dcbtct	0,%r3,0
+#endif
 
 	// get conflict reg
 	IMM32(%r7, (L2_CENTRAL_PRIV_BASE_TLS_ADDRESS + L2C_id) >> 15)

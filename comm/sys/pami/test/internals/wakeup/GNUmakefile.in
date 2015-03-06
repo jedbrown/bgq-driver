@@ -1,0 +1,52 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+VPATH		= @abs_srcdir@
+SUBDIRS         = $(TARGET)
+NOTBUILT        =
+APPS            = simple.$(EXTENSION)
+
+include @abs_top_builddir@/Build.rules
+
+ifeq (@BUILDENV@,ade)
+%.${EXTENSION}: %.c
+	cp ${CRT1} .
+	cp ${CRTI} .
+	cp ${CRTN} .
+	${CROSS_CXX} -I${INSTALL_DIR}/include -I@abs_srcdir@/../common/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${_BOSDEPS_USR_LIB_} @POELIB@ @IBMMPILIB@
+#	${CROSS_CXX} -I${INSTALL_DIR}/include -I@abs_srcdir@/../common/include ${CROSS_CXXFLAGS} -c $< -o $@.o
+	rm `basename ${CRT1}`
+	rm `basename ${CRTI}`
+	rm `basename ${CRTN}`
+else
+
+%.${EXTENSION}: %.c
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+%.${EXTENSION}: %.cc
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+%.${EXTENSION}: %.cpp
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+
+gendev_perf.NOITER.${EXTENSION}: gendev_perf.cc
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS} -DQUEUE_NO_ITER=1
+
+gendev_perf.%.${EXTENSION}: gendev_perf.cc
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS} -D$(subst .,,$(suffix $(basename $@)))=1
+
+endif
+
+default: ${APPS}

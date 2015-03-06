@@ -37,18 +37,10 @@ use Config::IniFiles;
 use vars
     qw($dbHandle $dbPropHash $debug);
 
-
-
-
-
-
-#_____________________________________________________________
+#____________________________
 #
 #       MAIN
 #
-
-
-
 #____________________________
 # 
 #  Input Variables
@@ -59,13 +51,13 @@ my $dbprop=undef;
 my $qual=undef;
 #____________________________
 
-#_______________________
+#____________________________
 #
 #  Process Command Line Options
 #
 #
 GetOptions(
-	\%options,'help','h','v','r','hist','env','event','diags','perf','security','teal','all','properties=s' => \$dbprop, 'q=s' => \$qual,
+	\%options,'help','h','v','r','nocount','hist','env','event','diags','perf','security','teal','all','properties=s' => \$dbprop, 'q=s' => \$qual,
 	"months|m=i" => \$months) or usage();
 
 if (defined $options{"h"} || defined $options{"help"}) {
@@ -129,9 +121,7 @@ if (defined $options{"diags"}) {
     purgeTables("DIAGRESULTS","ENDTIME");
     purgeTables("DIAGRUNS","ENDTIME");
 }
-#_____________________________________________________________
-
-
+#_______________________
 
 #_______________________
 #
@@ -140,22 +130,31 @@ if (defined $options{"diags"}) {
 #  Displays the usage of this script if -h is specified or if the wrong
 #  arguments are passed in
 #
-sub usage {
-
-system("perldoc $0");
-exit(0);
-
+sub usage 
+{
+  system("perldoc $0");
+  exit(0);
 }
 #_______________________
 
-
-
+##########################################
+# getTimestamp()
+# Returns a string in the following format:# MM-DD-YYYY HH:MM:SS
+##########################################
+sub getTimestamp {
+  my $now = time;
+  my @date = localtime $now;
+  $date[5] += 1900;
+  $date[4] += 1;
+  my $stamp = sprintf("%02d-%02d-%04d %02d:%02d:%02d", $date[4], $date[3], $date[5], $date[2], $date[1], $date[0]);
+  return $stamp;
+} # sub getTimestamp
 
 ##########################################
 # setupDb()
 # Make connection to the DB
 ##########################################
-sub setupDb
+sub setupDb 
 {
     my $dbPropertiesFile = shift();
     #make sure we have the DB2 driver
@@ -273,7 +272,10 @@ sub cleanupTealEvents
    } 
 }
 
-
+##########################################
+# purgeTables()
+# Purge the specified database tables.
+##########################################
 sub purgeTables {
 
   my ($class, $time) = @_;
@@ -293,59 +295,110 @@ sub purgeTables {
 
   #  print $sql;
   my $tables;
+  my $timestamp;
 
   while ($tables = $sth_tables->fetchrow_hashref) {
 
     my $tablename = $tables->{TABNAME};
-
-    $sql = qq(select count\(\*\) from $db_schema.$tablename where date\($time\) < CURRENT DATE - $months MONTHS);
-     #    print "  $sql \n";
-    my $sth_purge = getDbHandle()->prepare($sql);
-
-    # Run the SQL against the db engine
-    $sth_purge->execute();
-
     my $rows;
+    
+    #######################
+    # If the -v option is specified, or the -nocount option is not specified, then get the count of
+    # rows that will be deleted.
+    #######################
+    if ( defined $options{"v"} || !defined $options{"nocount"} ) {
 
+      $sql = qq(select count\(\*\) from $db_schema.$tablename where date\($time\) < CURRENT DATE - $months MONTHS with UR);
+       #    print "  $sql \n";
+      my $sth_purge = getDbHandle()->prepare($sql);
 
-      while ($rows = $sth_purge->fetchrow_hashref) {
+      # Run the SQL against the db engine
+      $sth_purge->execute();
+      
+      #######################
+      # If -v option specified, then just need to print out the number of rows that would be deleted.
+      #######################
+      if ( defined $options{"v"} ) {
+          $timestamp = getTimestamp();
+          $rows = $sth_purge->fetchrow;
+          print "$timestamp $tablename - \t$rows rows over $months months old\n";
+      } else {
+          #######################
+          # Actually need to delete the rows.
+          #######################
+          while ($rows = $sth_purge->fetchrow_hashref) {
 
-    	my $numrows = $rows->{1};
-    	my $counter = 0;
+              my $numrows = $rows->{1};
+              my $counter = 0;
+              $timestamp = getTimestamp();
+ 
+              print "\n$timestamp Deleting $numrows rows from $tablename\n";
 
-        if (defined $options{"v"}) {
+              # Only process the delete if there are rows to delete.
+              if ($numrows > 0 ) {
+                  my $xactSize = 25000;
+                  if ( $tablename eq "TBGQBLOCK_HISTORY" ) {
+                      $xactSize = 1;
+                  }
 
-        print "$tablename - \t$rows->{1} Rows over $months months old\n";
+                  my $sql = qq( delete from \( select 1 from $db_schema.$tablename where date\($time\) < CURRENT DATE - $months MONTHS FETCH FIRST $xactSize ROWS ONLY\) AS D);
+                  my $sth_delete = getDbHandle()->prepare($sql);
 
-        } else {
-            print "\nDeleting from $tablename\n";
+                  while ( $counter <= $numrows ) {
+                      $timestamp = getTimestamp();
+                      if ( $xactSize != 1 && $counter != 0 ) {
+                          print "$timestamp\t$counter rows deleted out of $numrows for table - $tablename\n";
+                      } elsif ( $xactSize == 1 && $counter != 0 && ($counter % 100 == 0) ) {
+                          print "$timestamp\t$counter rows deleted out of $numrows for table - $tablename\n";
+                      }
+                      $sth_delete->execute();
+                      $counter = $counter + $xactSize;
+                  }
+              }
+              $timestamp = getTimestamp();
+              print "$timestamp COMPLETED deleting $numrows rows for table - $tablename\n";
+          } # end processing rows
+      } 
+    } else {
+        #######################
+        # nocount option specified (and -v option not specified), delete rows until done.
+        #######################
+        $timestamp = getTimestamp();
+ 
+        print "\n$timestamp Deleting from $tablename\n";
 
-            my $xactSize = 100000;
-            if ( $tablename eq "TBGQBLOCK_HISTORY" ) {
-                $xactSize = 1;
-            }
-
-            $sql = qq( delete from \( select 1 from $db_schema.$tablename where date\($time\) <= CURRENT DATE - $months MONTHS FETCH FIRST $xactSize ROWS ONLY\) AS D);
-            my $sth_delete = getDbHandle()->prepare($sql);
-
-            while ( $counter <= $numrows ) {
-                if ( $xactSize != 1 && $counter != 0 ) {
-                    print "$counter Rows Deleted out of $numrows for table - $tablename\n";
-                } elsif ( $xactSize == 1 && ($counter % 100 == 0) ) {
-                    print "$counter Rows Deleted out of $numrows for table - $tablename\n";
-                }
-                $sth_delete->execute();
-
-                $counter = $counter + $xactSize;
-            }
-
-            print "COMPLETED Deleting $numrows rows for table - $tablename\n";
+        my $counter = 0;
+        my $xactSize = 25000;
+        my $rowsDeleted = 25000;
+        if ( $tablename eq "TBGQBLOCK_HISTORY" ) {
+            $xactSize = 1;
+            $rowsDeleted = 1;
         }
+
+        my $sql = qq( delete from \( select 1 from $db_schema.$tablename where date\($time\) < CURRENT DATE - $months MONTHS FETCH FIRST $xactSize ROWS ONLY\) AS D);
+        my $sth_delete = getDbHandle()->prepare($sql);
+
+        # Keep deleting X number of rows until the rows that were deleted is not equal to the number of rows to 
+        # to be deleted each time. If less rows were deleted, then deleted the last rows that meet the criteria.
+        while ( $rowsDeleted == $xactSize ) {
+            $timestamp = getTimestamp();
+            $sth_delete->execute();
+            $rowsDeleted = $sth_delete->rows;
+            if ( $rowsDeleted > 0 ) {
+                $counter = $counter + $rowsDeleted;
+                if ( $xactSize != 1 ) {
+                    print "$timestamp\t$counter rows deleted for table - $tablename\n";
+                } elsif ( $xactSize == 1  && ($counter % 100 == 0) ) {
+                    print "$timestamp\t$counter rows deleted for table - $tablename\n";
+                }
+            }
+        }
+        $timestamp = getTimestamp();
+        print "$timestamp COMPLETED deleting $counter rows for table - $tablename\n";
     }
   }
 
 }
-
 __END__
 
 
@@ -357,13 +410,13 @@ dbPurge.pl  (Purges the BG/Q database tables of rows beyond a certain timeframe)
 
 =head1 SYNOPSIS
 
-B<dbPurge.pl> [B<-help|-h>] [B<-months|-m> I<months>] [B<-v>] [B<-env>] [B<-hist>] [B<-event>] [B<-diags>] [B<-perf>] [B<-all>]
+B<dbPurge.pl> [B<-help|-h>] [B<-months|-m> I<months>] [B<-v>] [B<-nocount>] [B<-env>] [B<-hist>] [B<-event>] [B<-diags>] [B<-perf>] [B<-all>]
 
 See below for more description of the switches.
 
 =head1 DESCRIPTION
 
-dbPurge.pl will connect to the BG/Q database and delete all rows beyond a certain number of months.  The default is to delete rows that are beyond 3 months old, but the -m flag can be passed to change this to any number of months
+dbPurge.pl will connect to the BG/Q database and delete all rows beyond a certain number of months. The default is to delete rows that are beyond 3 months old, but the -m flag can be passed to change this to any number of months
 
 =head1 OPTIONS
 
@@ -379,11 +432,18 @@ DB properties file, defaults to /bgsys/local/etc/bg.properties
 
 =item B<-months, -m> I<number_of_months>
 
-Number of months that determines which rows to delete.  Rows older then the number of months passed in from the current date are purged from the tables
+Number of months that determines which rows to delete. Rows older then the number of months passed in from the current date are purged from the tables
 
 =item B<-v>
 
-Will not actually purge anything. Instead it just reports on which tables it would purge, and how many rows it would purge in each
+Will not actually purge anything. Instead it just reports on which tables it would purge, and how many rows it would purge in each.
+If this option is specified, the '-nocount' option will be ignored
+
+=item B<-nocount>
+
+Will not determine the number of rows to be purged before purging the rows. Not determing the count of rows to purge 
+will improve the performance of the purge.
+If the '-v' option is specified, this option will be ignored
 
 =item B<-env>
 

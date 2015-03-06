@@ -137,7 +137,7 @@ HwIosController::startNodeServices(std::string dest)
    // Get pointer to StartNodeServices message available from inbound buffer.
    StartNodeServicesMessage *inMsg = (StartNodeServicesMessage *)_inboundMessage;
    LOG_CIOS_DEBUG_MSG("StartNodeServices message received from service at '" << dest << "' with service id " << inMsg->serviceId);
-
+   log4values(PROC_BGN_SVC, inMsg->serviceId, inMsg->CNtorus, 0, __LINE__);
    // Set the serviceId configuration variable.
    std::ostringstream serviceIdArg;
    serviceIdArg << "--service_id=" << inMsg->serviceId;
@@ -155,6 +155,7 @@ HwIosController::startNodeServices(std::string dest)
    _sysiodArguments.pop_back();
    _sysiodArguments.pop_back();
    LOG_CIOS_TRACE_MSG("started '" << _sysiodPath << "' with service id " << inMsg->serviceId);
+   //LOG_INFO_MSG_FORCED("started '" << _sysiodPath << "' with service id " << inMsg->serviceId << CNtorusArg << " pid=" <<  _serviceManager-> getProcessId());
 
       // Start a toolctld.
    std::ostringstream toolctldCmdChannelPath;

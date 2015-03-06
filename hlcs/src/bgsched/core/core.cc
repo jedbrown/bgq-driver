@@ -854,11 +854,9 @@ getBlocks(
             rs_ptr = BGQDB::filtering::getBlocks(dbBlockFilter, BGQDB::filtering::BlockSort::AnyOrder, *conn_ptr);
         }
 
-        bool includeBlock = true;
-
         while (rs_ptr->fetch()) {
             // Assume compute block should be included
-            includeBlock = true;
+            bool includeBlock = true;
 
             // See if security check for read authority is needed
             if (checkUserAuthority) {
@@ -988,11 +986,9 @@ getIOBlocks(
             rs_ptr = BGQDB::filtering::getBlocks(dbIOBlockFilter, BGQDB::filtering::BlockSort::AnyOrder, *conn_ptr);
         }
 
-        bool includeBlock = true;
-
         while (rs_ptr->fetch()) {
             // Assume I/O block should be included
-            includeBlock = true;
+            bool includeBlock = true;
 
             // See if security check for read authority is needed
             if (checkUserAuthority) {

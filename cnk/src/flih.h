@@ -118,6 +118,7 @@ void IntHandler_DCRUserViolation(int status_Reg, int bitnum); // Handler for DCR
 void IntHandler_MemoryScrub(int status_Reg, int bitnum);
 void IntHandler_GEATimerEvent(int status_Reg, int bitnum);
 void IntHandler_GEA_UPC(int status_reg, int bitnum);          // Second level default handler for UPC parity error
+void IntHandler_L1DCRV(int bitnum);
 
 
 #ifdef __cplusplus

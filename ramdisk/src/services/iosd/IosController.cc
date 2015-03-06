@@ -62,7 +62,8 @@ IosController::eventMonitor(bgcios::SigtermHandler& sigtermHandler)
    const int cmdChannel   = 0;
    const int dataChannel  = 1;
    const int dataListener = 2;
-   const int numFds       = 3;
+   const int pipeForSig   = 3;
+   const int numFds       = 4;
 
    pollfd pollInfo[numFds];
    int timeout = 1000; // Wakeup every second to check for termination.
@@ -82,6 +83,13 @@ IosController::eventMonitor(bgcios::SigtermHandler& sigtermHandler)
    pollInfo[dataListener].events = POLLIN;
    pollInfo[dataListener].revents = 0;
    LOG_CIOS_TRACE_MSG("added data channel listener using fd " << pollInfo[dataListener].fd << " to descriptor list");
+
+   bgcios::SigWritePipe SigWritePipe(SIGUSR1);
+   pollInfo[pipeForSig].fd = SigWritePipe._pipe_descriptor[0];
+   pollInfo[pipeForSig].events = POLLIN;
+   pollInfo[pipeForSig].revents = 0;
+   
+   
 
    // Process events until told to stop.
    while ((!_done) && (!sigtermHandler.isCaught())) {
@@ -137,6 +145,26 @@ IosController::eventMonitor(bgcios::SigtermHandler& sigtermHandler)
          pollInfo[dataChannel].fd = _dataChannel->getSd();
       }
 
+      // Check for an event on the pipe for signal.
+      if (pollInfo[pipeForSig].revents & POLLIN) {
+         LOG_CIOS_DEBUG_MSG("input event available pipe from signal handler");
+         pollInfo[pipeForSig].revents = 0;
+         siginfo_t siginfo;
+         ssize_t rc = ::read(pollInfo[pipeForSig].fd,&siginfo,sizeof(siginfo_t));
+         CIOSLOGMSG_SG(BGV_RECV_SIG, &siginfo); 
+         if (rc > 0){
+           const size_t BUFSIZE = 1024;
+           char buffer[BUFSIZE];
+           const size_t HOSTSIZE = 256;
+           char hostname[HOSTSIZE];
+           hostname[0]=0;
+           gethostname(hostname,HOSTSIZE);
+           snprintf(buffer,BUFSIZE,"/var/spool/abrt/fl_iosd.%d.%s.log",getpid(),hostname);
+           printLogMsg(buffer); 
+           LOG_INFO_MSG_FORCED("Flight log: "<<buffer);
+         }
+      }
+
    }
 
    // Reset for next time.
@@ -167,6 +195,7 @@ IosController::dataChannelHandler(void)
 
    // Make sure the service field is correct.
    bgcios::MessageHeader *msghdr = (bgcios::MessageHeader *)_inboundMessage;
+   CIOSLOGMSG(DTA_RECV_MSG,msghdr);
    if (msghdr->service != bgcios::IosctlService) {
       LOG_ERROR_MSG("Job " << msghdr->jobId << ": message service " << msghdr->service << " is wrong for " << bgcios::toString(msghdr) <<
                     " message received from data channel, header: " << bgcios::printHeader(*msghdr));
@@ -218,6 +247,7 @@ IosController::commandChannelHandler(void)
 
    // Make sure the service field is correct.
    bgcios::MessageHeader *msghdr = (bgcios::MessageHeader *)_inboundMessage;
+   CIOSLOGMSG(CMD_RECV_MSG,msghdr);
    if (msghdr->service != bgcios::IosctlService) {
       LOG_ERROR_MSG("Job " << msghdr->jobId << ": message service " << msghdr->service << " is wrong for " << bgcios::toString(msghdr) <<
                     " message received from command channel, header: " << bgcios::printHeader(*msghdr));

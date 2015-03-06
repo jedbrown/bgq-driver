@@ -49,25 +49,24 @@
 
 namespace XML {
 
-  /* ********************************************************************* */
-  /*         Expat parsing error                                           */
-  /* ********************************************************************** */
+/* ********************************************************************* */
+/*         Expat parsing error                                           */
+/* ********************************************************************** */
 
-  class Exception {
-  public:
+class Exception {
+public:
     Exception (const char *text): _comment(text) { }
-    friend std::ostream & operator<<(std::ostream &os,
-				     const Exception &e) {
-      os << e._comment;
-      return os;
+    friend std::ostream & operator<<(std::ostream &os, const Exception &e) {
+        os << e._comment;
+        return os;
     }
-  private:
+private:
     std::string _comment;
-  };
+};
 
 
-  // throw an XML exception with a comman separated list (first element
-  // should be format string
+// throw an XML exception with a comman separated list (first element
+// should be format string
 #define XMLLIB_THROW(...)                                \
 {                                                 \
     char buf[256];                                \
@@ -75,29 +74,26 @@ namespace XML {
     throw XML::Exception(buf);                    \
 }
 
+/* ********************************************************************** */
+/*        Common interface of all XML-serializable objects                */
+/* ********************************************************************** */
 
-
-
-  /* ********************************************************************** */
-  /*        Common interface of all XML-serializable objects                */
-  /* ********************************************************************** */
-
-  class Serializable {
-  public:
+class Serializable {
+public:
     Serializable () {}
     virtual ~Serializable() {}
 
-      virtual Serializable *addSubEntity (const char *name, const char **attrs) {
-          throw Exception("XML: object does not allow subentities\n");
-          
-          return this;
-      }
+    virtual Serializable *addSubEntity (const char *name, const char **attrs) {
+        throw Exception("XML: object does not allow subentities\n");
+
+        return this;
+    }
 
     virtual unsigned setAttributes (const char **attrs) {
-      if (attrs[0] != 0) {
-	throw Exception("XML: object does not allow attributes\n");
-      }
-      return 0;
+        if (attrs[0] != 0) {
+            throw Exception("XML: object does not allow attributes\n");
+        }
+        return 0;
     }
 
     // read a serialized xml object from a stream
@@ -123,16 +119,14 @@ namespace XML {
      */
     virtual void readXML(std::istream &is);
 
+protected:
 
+};
 
-
-  protected:
-
-  };
-
-inline std::ostream &operator<<(std::ostream& o, const Serializable& s) {
-  s.write(o);
-  return o;
+inline std::ostream &operator<<(std::ostream& o, const Serializable& s)
+{
+    s.write(o);
+    return o;
 }
 
 
@@ -140,19 +134,19 @@ inline std::ostream &operator<<(std::ostream& o, const Serializable& s) {
 /*       Encapsulating the Expat parser into a C++ object                 */
 /* ********************************************************************** */
 
-  class Parser {
-  public:
-      Parser(bool multiline);
-      virtual ~Parser();
+class Parser {
+public:
+    Parser(bool multiline);
+    virtual ~Parser();
 
-      int getLine();
-      int getCol();
-      void parse(std::istream &is, Serializable *root);
-  private:
+    int getLine();
+    int getCol();
+    void parse(std::istream &is, Serializable *root);
+private:
     static void _startXML(void *ud, const XML_Char *name, const XML_Char **atts);
     static void _endXML  (void *ud, const XML_Char *name);
 
-  private:
+private:
     bool                        _multiline; // allow multiline input
 
     Serializable               *_root;
@@ -162,32 +156,26 @@ inline std::ostream &operator<<(std::ostream& o, const Serializable& s) {
     char                        _buffer[XML_BUFFER_SIZE];
     bool                        _rootInitialized;
 
-
-  };
-
-
-
-
+};
 
  /* ********************************************************************** */
  /*        Common interface of all XML-serializable root objects           */
  /* ********************************************************************** */
 
-    inline bool Serializable::read(std::istream &is, bool multiline) {
-        Parser theParser(multiline);
-        bool result;
+inline bool Serializable::read(std::istream &is, bool multiline) {
+    Parser theParser(multiline);
+    bool result;
 
-        try {
-            theParser.parse(is, this);
-            result = true; // successful parsing
-        } catch (Exception &e) {
-            std::cerr << e << std::endl;
-            result = false;
-        }
-
-        return result;
+    try {
+        theParser.parse(is, this);
+        result = true; // successful parsing
+    } catch (const Exception &e) {
+        std::cerr << e << std::endl;
+        result = false;
     }
 
+    return result;
+}
 
 
 // auxiliary function to read and write "simple" data types
@@ -222,7 +210,7 @@ inline std::ostream &operator<<(std::ostream& o, const Serializable& s) {
   unsigned long long read_uint64  (const char *className, const char *attrName, const char *attr0, const char *attr1, unsigned* index, bool isOptional);
   unsigned           read_uint32h (const char *className, const char *attrName, const char *attr0, const char *attr1, unsigned* index, bool isOptional);
   unsigned short     read_uint16h (const char *className, const char *attrName, const char *attr0, const char *attr1, unsigned* index, bool isOptional);
-  unsigned char     read_uint8h   (const char *className, const char *attrName, const char *attr0, const char *attr1, unsigned* index, bool isOptional);
+  unsigned char      read_uint8h  (const char *className, const char *attrName, const char *attr0, const char *attr1, unsigned* index, bool isOptional);
   int                read_int32   (const char *className, const char *attrName, const char *attr0, const char *attr1, unsigned* index, bool isOptional);
   unsigned long long read_uint64h (const char *className, const char *attrName, const char *attr0, const char *attr1, unsigned* index, bool isOptional);
   unsigned char      read_uchar   (const char *className, const char *attrName, const char *attr0, const char *attr1, unsigned* index, bool isOptional);
@@ -230,9 +218,7 @@ inline std::ostream &operator<<(std::ostream& o, const Serializable& s) {
   unsigned char      read_ucharh  (const char *className, const char *attrName, const char *attr0, const char *attr1, unsigned* index, bool isOptional);
   bool               read_bool    (const char *className, const char *attrName, const char *attr0, const char *attr1, unsigned* index, bool isOptional);
 
-
 }; /* namespace */
-
 
 
 #endif

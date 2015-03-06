@@ -211,6 +211,17 @@ putRAS(
     SQLLEN ind1, ind2;
     std::string sqlstr;
     std::string rasMessage("select recid from NEW TABLE (insert into tbgqeventlog (msg_id,category,component,severity,message,location,ctlaction,block");
+
+    bool bgas = false;
+    try {
+        std::string bgasValue = DBConnectionPool::Instance().getProperties()->getValue(  "mmcs", "bgas" );
+        if ( bgasValue.compare("true") == 0 || bgasValue.compare("TRUE") == 0 ) {
+            bgas = true;
+        }
+    } catch ( const std::exception& e ) {
+        LOG_TRACE_MSG( "Could not find key bgas in [mmcs] section. Using default value of false" );
+    }
+
     if ( job != 0 ) rasMessage.append(",jobid");
     if ( qualifier != 0 ) rasMessage.append(",qualifier");
     rasMessage.append(") values(");
@@ -276,7 +287,7 @@ putRAS(
         return DB_ERROR;
     }
     if ( recid_out ) {
-        sqlrc = SQLBindCol(hstmt, 1, SQL_INTEGER, recid_out, 4, &ind1);
+        SQLBindCol(hstmt, 1, SQL_INTEGER, recid_out, 4, &ind1);
         sqlrc = SQLFetch(hstmt);
     }
 
@@ -320,17 +331,25 @@ putRAS(
                   location.getType() == bgq::util::Location::IoBoardOnComputeRack )
                 )
         {
-            sqlstr = "select unique b.id from bgqcnioblockmap a, bgqjob b where cnblock = b.blockid and substr(ion,1,6) = '" +
-                rasEvent.getDetail(RasEvent::LOCATION) + std::string("' ");
+            if (bgas) {
+                sqlstr = "select unique b.id from bgqiousage a, bgqjob b" + 
+                    std::string(" where a.blockid = b.blockid and substr(a.ionode,1,6) = '") +  
+					rasEvent.getDetail(RasEvent::LOCATION) + std::string("' ");
+            } else {
+                sqlstr = "select unique b.id from bgqcnioblockmap a, bgqjob b where cnblock = b.blockid and substr(ion,1,6) = '" +
+                    rasEvent.getDetail(RasEvent::LOCATION) + std::string("' ");
+            }
         } else if ( jobs_list_out ) {
             LOG_ERROR_MSG( rasEvent.getDetail(RasEvent::LOCATION) << " is not a valid node board or I/O board location" );
             return INVALID_ARG;
         }
 
         BGQDB::job::Id id = 0;
-        sqlrc = tx.execQuery(sqlstr.c_str(), &hstmt);
-        sqlrc = SQLBindCol(hstmt, 1, SQL_C_SBIGINT, &id, 8,           &ind1);
+        tx.execQuery(sqlstr.c_str(), &hstmt);
+        SQLBindCol(hstmt, 1, SQL_C_SBIGINT, &id, 8,           &ind1);
         sqlrc = SQLFetch(hstmt);
+
+	// LOG_DEBUG_MSG("END_JOB sqlstr = " << sqlstr << ", id = " << id);
 
         for (;sqlrc == SQL_SUCCESS;) {
             jobs_list_out->push_back(id);
@@ -356,17 +375,24 @@ putRAS(
                 location.getType() == bgq::util::Location::IoBoardOnComputeRack
                 )
         {
-            sqlstr = "select a.blockid from bgqblock a, bgqcnioblockmap b where b.cnblock = a.blockid and substr(b.ion,1,6) = '" +
-                rasEvent.getDetail(RasEvent::LOCATION) + std::string("' and a.status <> 'F'");
+            if (bgas) {
+                sqlstr = "select a.blockid from bgqblock a, bgiousage b where b.blockid = a.blockid and substr(b.ion,1,6) = '" +
+                    rasEvent.getDetail(RasEvent::LOCATION) + std::string("' and a.status <> 'F'");
+            } else {
+                sqlstr = "select a.blockid from bgqblock a, bgqcnioblockmap b where b.cnblock = a.blockid and substr(b.ion,1,6) = '" +
+                    rasEvent.getDetail(RasEvent::LOCATION) + std::string("' and a.status <> 'F'");
+            }
         } else {
             LOG_ERROR_MSG( rasEvent.getDetail(RasEvent::LOCATION) << " is not a valid node board or I/O board location" );
             return INVALID_ARG;
         }
 
-        sqlrc = tx.execQuery(sqlstr.c_str(), &hstmt);
+        tx.execQuery(sqlstr.c_str(), &hstmt);
         char blockID[33];
-        sqlrc = SQLBindCol(hstmt, 1, SQL_C_CHAR,   blockID, sizeof(blockID), &ind1);
+        SQLBindCol(hstmt, 1, SQL_C_CHAR,   blockID, sizeof(blockID), &ind1);
         sqlrc = SQLFetch(hstmt);
+
+	// LOG_DEBUG_MSG("FREE_COMPUTE_BLOCK sqlstr = " << sqlstr << ", blockID = " << blockID);
 
         for (;sqlrc == SQL_SUCCESS;) {
             const std::string errmsg("errmsg=block freed due to RAS event control action");

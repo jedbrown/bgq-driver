@@ -125,8 +125,6 @@ Options::Options(
             bgq::utility::Revision
             );
 
-    const std::string p = _propertiesOptions.getFilename();
-
     Properties::init(_propertiesOptions.getFilename(), Properties::console);
 
     // check for eofexit

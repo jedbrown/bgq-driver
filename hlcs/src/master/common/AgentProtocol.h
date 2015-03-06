@@ -70,7 +70,7 @@ public:
     /*!
      * Tell bgmaster that binary(ies) completed.
      */
-    virtual void complete(const BGMasterAgentProtocolSpec::CompleteRequest& request, BGMasterAgentProtocolSpec::CompleteReply& reply)
+    void complete(const BGMasterAgentProtocolSpec::CompleteRequest& request, BGMasterAgentProtocolSpec::CompleteReply& reply)
     {
         sendReceive(BGMasterAgentProtocolSpec::CompleteRequest::getClassName(), request, BGMasterAgentProtocolSpec::CompleteReply::getClassName(), reply);
     }
@@ -78,7 +78,7 @@ public:
     /*!
      * Tell bgmaster that binary(ies) failed.
      */
-    virtual void failed(const BGMasterAgentProtocolSpec::FailedRequest& request, BGMasterAgentProtocolSpec::FailedReply& reply)
+    void failed(const BGMasterAgentProtocolSpec::FailedRequest& request, BGMasterAgentProtocolSpec::FailedReply& reply)
     {
         sendReceive(BGMasterAgentProtocolSpec::FailedRequest::getClassName(), request, BGMasterAgentProtocolSpec::FailedReply::getClassName(), reply);
     }

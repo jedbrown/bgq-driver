@@ -203,19 +203,34 @@ void * ClientMonitor::EventWaiter::run(void)
    _pollSetEventChannel.fd = _clientMonitor._rdmaListener->getEventChannelFd();
    _pollSetEventChannel.events = POLLIN;
    _pollSetEventChannel.revents = 0;
+   int connect_wait_timeout = _clientMonitor._connectWaitTimeoutRDMAcm; //minimum number of milliseconds poll will block 
+   log4values(CONF_CON_TMO, _clientMonitor._serviceId, (uint64_t)connect_wait_timeout, (uint64_t)getpid(),(uint64_t)getppid() );
    for(;;)
    {
-     int rc = poll(&_pollSetEventChannel, 1, -1);
+     int rc = poll(&_pollSetEventChannel, 1, connect_wait_timeout);
      if (rc == -1) {
          int err = errno;
          if (err == EINTR) continue;
          else {
-            printf("died on pollSetEventChannel errno=%d\n",err);
+            LOG_FATAL_MSG("died on pollSetEventChannel " << bgcios::errorString(err));
             _exit(EXIT_SUCCESS);
          }
      }
-     _clientMonitor.eventChannelHandler(); 
-     _pollSetEventChannel.revents = 0;
+     if (_pollSetEventChannel.revents & (POLLERR|POLLHUP|POLLNVAL) ) {//error!
+       LOG_FATAL_MSG("died on pollSetEventChannel with bits POLLERR|POLLHUP|POLLNVAL"); 
+        _exit(EXIT_SUCCESS);
+     }
+     if (_pollSetEventChannel.revents & POLLIN){
+        _clientMonitor.eventChannelHandler(); 
+        _pollSetEventChannel.revents = 0;
+        if (_clientMonitor._client) connect_wait_timeout = -1;
+     }
+     if (connect_wait_timeout > 0){
+       LOG_FATAL_MSG("died waiting for connection establishment for at least "<< connect_wait_timeout << " milliseconds"); 
+       _exit(EXIT_SUCCESS);
+     }
+     
+    
    }
 
    return NULL;
@@ -289,7 +304,13 @@ ClientMonitor::run(void)
       // Check for an event on the completion channel.
       if (_pollSet[CompChannel].revents & POLLIN) {
          LOG_CIOS_TRACE_MSG("event available on completion channel");
-         completionChannelHandler(0);
+         try{
+              completionChannelHandler(0); 
+          }
+          catch (const RdmaError& e) {
+              int rc = e.errcode();
+              LOG_INFO_MSG_FORCED("error on completion channel poll at __LINE__="<<__LINE__<<" rc="<<rc);
+         }
          _pollSet[CompChannel].revents = 0;
       }
 
@@ -451,9 +472,9 @@ ClientMonitor::completionChannelHandler(uint64_t requestId)
       
       // Check the status in the work completion.
       if (completion->status != IBV_WC_SUCCESS) {
-         LOG_ERROR_MSG("failed work completion, status '" << ibv_wc_status_str(completion->status) << "' for operation " <<
-                       completionQ->wc_opcode_str(completion->opcode) <<  " (" << completion->opcode << ")");
-         // Maybe throw a rdma error here?
+         // Throw a rdma error here
+         bgcios::RdmaError e(ENOSPC,"failed work completion, status ");
+         throw e;
          return false;
       }
       
@@ -773,7 +794,6 @@ ClientMonitor::routeMessage(const ClientMessagePtr& message)
              writeImmediate(message);break;
          case SetupJob: setupJob(message); break;
          case CleanupJob: cleanupJob(message); break;
-//NEW!
          case FsetXattr: fxattr_setOrRemove(message); break;
          case FgetXattr: ffxattr_retrieve(message); break;
          case FremoveXattr: fxattr_setOrRemove(message); break;
@@ -801,7 +821,7 @@ ClientMonitor::routeMessage(const ClientMessagePtr& message)
      // Just return if there is no ack message ready.
    if (_ackMessage) {
 
-      if (_logFunctionShipErrors) logFunctionShipError(_ackMessage);
+      if (_logFunctionShipErrorsDefault) logFunctionShipError(_ackMessage);
 
       CIOSLOGMSG_QP(BGV_SEND_MSG, _ackMessage, _client->getQpNum()); 
       try {        
@@ -834,7 +854,7 @@ ClientMonitor::sendAckMessage(void)
       return 0;
    }
 
-   if (_logFunctionShipErrors) logFunctionShipError(_ackMessage);
+   //if (_logFunctionShipErrorsDefault ) logFunctionShipError(_ackMessage);
 
    CIOSLOGMSG_QP(BGV_SEND_MSG, _ackMessage, _client->getQpNum()); 
    try {        
@@ -997,7 +1017,8 @@ ClientMonitor::close(const ClientMessagePtr& message)
    // Run the operation.
    setSyscallStart( (struct  MessageHeader * )inMsg,inMsg->fd);
    int rc = ::close(inMsg->fd);
-   clearSyscallStart();
+
+   clearSyscallStart(_usingLogJobFunctionShipErrors,rc);
 
    if (rc == 0) {
       outMsg->header.returnCode = bgcios::Success;
@@ -1007,8 +1028,13 @@ ClientMonitor::close(const ClientMessagePtr& message)
       outMsg->header.errorCode = (uint32_t)errno; 
    }
 
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": CloseAck message is ready, fd=" << inMsg->fd <<
+   LOG_CIOS_DEBUG_MSG("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": CloseAck message is ready, fd=" << inMsg->fd <<
                  " rc=" << rc << " errno=" << outMsg->header.errorCode);
+
+#if 0
+   LOG_INFO_MSG_FORCED("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": CloseAck message is ready, fd=" << inMsg->fd <<
+                 " rc=" << rc << " errno=" << outMsg->header.errorCode);
+#endif
    return;
 }
 
@@ -1164,7 +1190,7 @@ ClientMonitor::fstat64(const ClientMessagePtr& message)
    // Run the operation.
    setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    int rc = ::fstat64(inMsg->fd, &(outMsg->buf));
-   clearSyscallStart(); 
+   clearSyscallStart(_usingLogJobFunctionShipErrors,rc);
 
    if (rc == 0) {
       outMsg->header.returnCode = bgcios::Success;
@@ -1192,7 +1218,7 @@ ClientMonitor::fstatfs64(const ClientMessagePtr& message)
    // Run the operation.
    setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    int rc = ::fstatfs64(inMsg->fd, &(outMsg->buf));
-   clearSyscallStart();
+   clearSyscallStart(_usingLogJobFunctionShipErrors,rc);
 
    if (rc == 0) {
       outMsg->header.returnCode = bgcios::Success;
@@ -1220,6 +1246,7 @@ ClientMonitor::ftruncate64(const ClientMessagePtr& message)
    // Run the operation.
    setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    int rc = ::ftruncate64(inMsg->fd, inMsg->length);
+   if (_usingLogJobFunctionShipErrors>0) CIOSLOG4(FID_FTRUNC64,rc,inMsg->fd,inMsg->length,inMsg->header.rank);
    clearSyscallStart();
 
    if (rc == 0) {
@@ -1230,8 +1257,13 @@ ClientMonitor::ftruncate64(const ClientMessagePtr& message)
       outMsg->header.errorCode = (uint32_t)errno; 
    }
 
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Ftruncate64Ack message is ready fd=" << inMsg->fd <<
-                 "length=" << inMsg->length << " rc=" << rc << " errno=" << outMsg->header.errorCode);
+   LOG_CIOS_DEBUG_MSG("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": Ftruncate64Ack message is ready fd=" << inMsg->fd <<
+                 " length=" << inMsg->length << " hexlength=" << std::hex<<std::showbase<< inMsg->length << " rc=" << std::dec<<std::noshowbase<< rc << " errno=" << outMsg->header.errorCode);
+#if 0
+   LOG_INFO_MSG_FORCED("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": Ftruncate64Ack message is ready fd=" << inMsg->fd <<
+                 " length=" << inMsg->length << " hexlength=" << std::hex<<std::showbase<< inMsg->length << " rc=" << std::dec<<std::noshowbase<< rc << " errno=" << outMsg->header.errorCode);
+#endif
+
    return;
 }
 
@@ -1515,6 +1547,7 @@ ClientMonitor::lseek64(const ClientMessagePtr& message)
    // Run the operation.
    setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd);
    outMsg->result = ::lseek64(inMsg->fd, inMsg->offset, inMsg->whence);
+   if (_usingLogJobFunctionShipErrors>0) CIOSLOG4(FDI_LSEEK64_,  outMsg->result,inMsg->fd, inMsg->offset, inMsg->whence);
    clearSyscallStart();
 
    if (outMsg->result != (off64_t)-1) {
@@ -1577,7 +1610,8 @@ ClientMonitor::open(const ClientMessagePtr& message)
    // Run the operation.
    setSyscallStart((struct  MessageHeader * )inMsg, inMsg->dirfd, pathname);
    outMsg->fd = ::openat(inMsg->dirfd, pathname, inMsg->flags, inMsg->mode);
-   clearSyscallStart();
+   clearSyscallStart(job->logJobFunctionShipErrors(),outMsg->fd);
+
 
    if (outMsg->fd >= 0) {
       outMsg->header.returnCode = bgcios::Success;
@@ -1590,9 +1624,14 @@ ClientMonitor::open(const ClientMessagePtr& message)
    }
    if (job-> logJobStatistics() ) job->openTimer.stop();
 
-   LOG_CIOS_DEBUG_MSG("Job " << inMsg->header.jobId << ":" << inMsg->header.rank << ": Open pathname='" << pathname << 
+   LOG_CIOS_DEBUG_MSG("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": Open pathname='" << pathname << 
 " inMsg->dirfd="<<inMsg->dirfd<<std::hex << std::showbase << "' flags=" << inMsg->flags << std::hex << std::showbase <<
-" mode=" << inMsg->mode << " fd=" << outMsg->fd << " errno=" << outMsg->header.errorCode);
+" mode=" << inMsg->mode << " fd="<< std::dec<<std::noshowbase << outMsg->fd << " errno=" << outMsg->header.errorCode);
+#if 0
+   LOG_INFO_MSG_FORCED("Job:rank=" << inMsg->header.jobId << ":" << inMsg->header.rank << ": Open pathname='" << pathname << 
+" inMsg->dirfd="<<inMsg->dirfd<<std::hex << std::showbase << "' flags=" << inMsg->flags << std::hex << std::showbase <<
+" mode=" << inMsg->mode << " fd="<< std::dec<<std::noshowbase << outMsg->fd << " errno=" << outMsg->header.errorCode);
+#endif
    return;
 }
 
@@ -1608,7 +1647,7 @@ ClientMonitor::pollForCN(const ClientMessagePtr& message)
 
    memcpy(&outMsg->pollBasic,&inMsg->pollBasic,sizeof(struct PollBasic) );
 
-   outMsg->header.returnCode = (uint32_t)::poll(outMsg->pollBasic.fds, outMsg->pollBasic.nfd,10);
+   outMsg->header.returnCode = (uint32_t)poll(outMsg->pollBasic.fds, outMsg->pollBasic.nfd,10);
 
   if (outMsg->header.returnCode==uint32_t(-1)) {
      outMsg->header.errorCode = (uint32_t)errno;
@@ -1671,12 +1710,12 @@ ClientMonitor::pread64(const ClientMessagePtr& message) //post pread to file sys
       ssize_t rc;
       uint32_t error = 0;
       if (inMsg->fd != job->getShortCircuitFd()) {
-         CIOSLOG4(SYS_CALL_PRD,_largeRegion->getAddress(),length,0,inMsg->position);
+         //CIOSLOG4(SYS_CALL_PRD,_largeRegion->getAddress(),length,0,inMsg->position);
          setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length);
          rc = ::pread64(inMsg->fd, _largeRegion->getAddress(), length, inMsg->position);
          error = (uint32_t)errno;
          clearSyscallStart();
-         CIOSLOG4(SYS_RSLT_PRD,rc,errno,outMsg->bytes,bytesLeft);
+         CIOSLOG4(SYS_RSLT_PRD,rc,inMsg->fd,length,inMsg->position);
       }
       else {
          rc = (ssize_t)length;
@@ -1687,31 +1726,26 @@ ClientMonitor::pread64(const ClientMessagePtr& message) //post pread to file sys
 
       // Send the data to the compute node when successful and there is data.
       if (rc > 0) {
+ 
+         error = putData( address, inMsg->rkey, (uint32_t)rc); //$$$
+         if (error != 0) {
+            outMsg->header.returnCode = bgcios::RequestFailed;
+            outMsg->header.errorCode = error;
+            outMsg->bytes = 0;
+            bytesLeft = 0; // Force exit from loop because there was an error
+            continue;
+         }
          outMsg->header.returnCode = bgcios::Success;
          outMsg->bytes += rc;
 
          // Adjust for next operation.
          if (job->posixMode()) {
             bytesLeft = 0; // Force exit from loop because only one operation per message
-            error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            if (error != 0) {
-              outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-              outMsg->header.errorCode = error;
-              bytesLeft = 0; // Force exit from loop because there was an error
-              continue;
-           }
          }
          else {
             bytesLeft -= (size_t)rc;
             inMsg->length -= (size_t)rc;
             inMsg->position += (off64_t)rc;
-            if (bytesLeft){
-              error = putData( address, inMsg->rkey, (uint32_t)rc); 
-            }
-            else {//not waiting for the RDMA completion and the ACK will be fenced
-              // error = putData( address, inMsg->rkey, (uint32_t)rc); 
-              error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            }
             address += (uint64_t)rc;
             inMsg->address = address; //Need this if a addBlockedMessage for EWOULDBLOCK
          }
@@ -1796,12 +1830,12 @@ ClientMonitor::read(const ClientMessagePtr& message) //post read to file system
       ssize_t rc;
       uint32_t error = 0;
       if (inMsg->fd != job->getShortCircuitFd()) {
-         CIOSLOG4(SYS_CALL_RED,_largeRegion->getAddress(),length,0,inMsg->fd);
+         //CIOSLOG4(SYS_CALL_RED,_largeRegion->getAddress(),length,0,inMsg->fd);
          setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length);
          rc = ::read(inMsg->fd, _largeRegion->getAddress(), length);
          error = (uint32_t)errno;
          clearSyscallStart();
-         CIOSLOG4(SYS_RSLT_RED,rc,errno,outMsg->bytes,bytesLeft);
+         CIOSLOG4(SYS_RSLT_RED,rc,inMsg->fd,length,_largeRegion->getAddress());
       }
       else {
          rc = (ssize_t)length;
@@ -1812,33 +1846,29 @@ ClientMonitor::read(const ClientMessagePtr& message) //post read to file system
 
       // Send the data to the compute node when successful and there is data.
       if (rc > 0) {
+
+          error = putData( address, inMsg->rkey, (uint32_t)rc); //$$$
+          if (error != 0) {
+            outMsg->header.returnCode = bgcios::RequestFailed;
+            outMsg->header.errorCode = error;
+            outMsg->bytes = 0;
+            bytesLeft = 0; // Force exit from loop because there was an error
+            continue;
+         }
          outMsg->header.returnCode = bgcios::Success;
          outMsg->bytes += rc;
 
          // Adjust for next operation.
          if (job->posixMode()) {
             bytesLeft = 0; // Force exit from loop because only one operation per message
-            error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            if (error != 0) {
-              outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-              outMsg->header.errorCode = error;
-              bytesLeft = 0; // Force exit from loop because there was an error
-              continue;
-           }
          }
          else {
             bytesLeft -= (size_t)rc;
             inMsg->length -= (size_t)rc;
-            if (bytesLeft){
-              error = putData( address, inMsg->rkey, (uint32_t)rc); 
-            }
-            else {//not waiting for the RDMA completion and the ACK will be fenced
-              // error = putData( address, inMsg->rkey, (uint32_t)rc); 
-              error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            }
             address += (uint64_t)rc;
             inMsg->address = address; //Need this if a addBlockedMessage for EWOULDBLOCK
          }
+
       }
 
       // There is no more data available from the descriptor.
@@ -1918,12 +1948,12 @@ ClientMonitor::recv(const ClientMessagePtr& message) //post read to file system
       ssize_t rc;
       uint32_t error = 0;
       if (inMsg->sockfd != job->getShortCircuitFd()) {
-         CIOSLOG4(SYS_CALL_RCV,_largeRegion->getAddress(),length,0,inMsg->flags);
+         //CIOSLOG4(SYS_CALL_RCV,_largeRegion->getAddress(),length,0,inMsg->flags);
          setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->sockfd, BLANK, BLANK, length);
          rc = ::recv(inMsg->sockfd, _largeRegion->getAddress(), length, inMsg->flags);
          error = (uint32_t)errno;
          clearSyscallStart();
-         CIOSLOG4(SYS_RSLT_RCV,rc,errno,outMsg->bytes,bytesLeft);
+         CIOSLOG4(SYS_RSLT_RCV,rc,inMsg->sockfd,length,_largeRegion->getAddress());
       }
       else {
          rc = (ssize_t)length;
@@ -1932,32 +1962,28 @@ ClientMonitor::recv(const ClientMessagePtr& message) //post read to file system
 
       // Send the data to the compute node when successful and there is data.
       if (rc > 0) {
+
+         error = putData( address, inMsg->rkey, (uint32_t)rc); //$$$
+         if (error != 0) {
+           outMsg->header.returnCode = bgcios::RequestFailed;
+           outMsg->header.errorCode = error;
+           outMsg->bytes = 0;
+           bytesLeft = 0; // Force exit from loop because there was an error
+           continue;
+         }
+
          outMsg->header.returnCode = bgcios::Success;
          outMsg->bytes += rc;
 
          // Adjust for next operation.
          if (job->posixMode()) {
             bytesLeft = 0; // Force exit from loop because only one operation per message
-            error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            if (error != 0) {
-              outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
-              outMsg->header.errorCode = error;
-              bytesLeft = 0; // Force exit from loop because there was an error
-              continue;
-           }
          }
          else {
-            bytesLeft -= (size_t)rc;
-            inMsg->length -= (size_t)rc;
-            if (bytesLeft){
-              error = putData( address, inMsg->rkey, (uint32_t)rc); 
-            }
-            else {//not waiting for the RDMA completion and the ACK will be fenced
-              // error = putData( address, inMsg->rkey, (uint32_t)rc); 
-              error = putDataNoCompletion( address, inMsg->rkey, (uint32_t)rc); 
-            }
-            address += (uint64_t)rc;
-            inMsg->address = address; //Need this if a addBlockedMessage for EWOULDBLOCK
+           bytesLeft -= (size_t)rc;
+           inMsg->length -= (size_t)rc;            
+           address += (uint64_t)rc;
+           inMsg->address = address; //Need this if a addBlockedMessage for EWOULDBLOCK
          }
       }
 
@@ -2298,7 +2324,7 @@ ClientMonitor::stat64(const ClientMessagePtr& message)
    // Run the operation.
    setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->dirfd, pathname);
    int rc = ::fstatat64(inMsg->dirfd, pathname, &(outMsg->buf), inMsg->flags);
-   clearSyscallStart();
+   clearSyscallStart(_usingLogJobFunctionShipErrors,rc);
 
    if (rc == 0) {
       outMsg->header.returnCode = bgcios::Success;
@@ -2324,7 +2350,7 @@ ClientMonitor::statfs64(const ClientMessagePtr& message)
    _ackMessage =   allocateClientAckMessage(message,   Statfs64Ack, sizeof(Statfs64AckMessage));
    Statfs64AckMessage *outMsg = (Statfs64AckMessage *)_ackMessage;
 
-   //! \note Swapping the current directory is not protected by a lock since sysiod is single threaded.
+   //! \note Swapping the current directory is not protected by a lock since sysiod function-shipping is single-threaded
 
    // Swap the current working directory for a relative path name (would be nice if there was a fstatfsat() function).
    if (pathname[0] != '/') {
@@ -2340,7 +2366,7 @@ ClientMonitor::statfs64(const ClientMessagePtr& message)
    // Run the operation.
    setSyscallStart( (struct  MessageHeader * )inMsg,(-1), pathname);//no file descriptor
    int rc = ::statfs64(pathname, &(outMsg->buf));
-   clearSyscallStart();
+   clearSyscallStart(_usingLogJobFunctionShipErrors,rc);
 
    if (rc == 0) {
       outMsg->header.returnCode = bgcios::Success;
@@ -2560,7 +2586,7 @@ ClientMonitor::write(const ClientMessagePtr& message)
         }
         err = getData( address, inMsg->rkey, (uint32_t)length);
         if (err != 0) {
-         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+         outMsg->header.returnCode = bgcios::RequestFailed;
          outMsg->header.errorCode = (uint32_t)err;
          bytesLeft = 0; // Force exit from loop
          continue;
@@ -2576,11 +2602,11 @@ ClientMonitor::write(const ClientMessagePtr& message)
          rc = -1;
          err = EINTR;
       }else if (inMsg->fd != job->getShortCircuitFd()) {
-           CIOSLOG4(SYS_CALL_WRT,_largeRegion->getAddress()+rdma_buffer_offset,length-rdma_buffer_offset,rdma_buffer_offset,inMsg->fd);
+           //CIOSLOG4(SYS_CALL_WRT,_largeRegion->getAddress()+rdma_buffer_offset,length-rdma_buffer_offset,rdma_buffer_offset,inMsg->fd);
 	   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length-rdma_buffer_offset);
            rc = ::write(inMsg->fd, (char *)_largeRegion->getAddress()+rdma_buffer_offset, length-rdma_buffer_offset);
            clearSyscallStart();
-           CIOSLOG4(SYS_RSLT_WRT,rc,errno,outMsg->bytes,bytesLeft);
+           CIOSLOG4(SYS_RSLT_WRT,rc,inMsg->fd,length,_largeRegion->getAddress());
 
            if ( (size_t)rc == (length - rdma_buffer_offset) ){
              rdma_buffer_offset = 0;
@@ -2686,7 +2712,7 @@ ClientMonitor::send(const ClientMessagePtr& message)
         }
         err = getData( address, inMsg->rkey, (uint32_t)length);
         if (err != 0) {
-         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+         outMsg->header.returnCode = bgcios::RequestFailed;
          outMsg->header.errorCode = (uint32_t)err;
          bytesLeft = 0; // Force exit from loop
          continue;
@@ -2700,11 +2726,11 @@ ClientMonitor::send(const ClientMessagePtr& message)
          rc = -1;
          err = EINTR;
       }else if (inMsg->sockfd != job->getShortCircuitFd()) {
-           CIOSLOG4(SYS_CALL_SND,_largeRegion->getAddress()+rdma_buffer_offset,length-rdma_buffer_offset,rdma_buffer_offset,inMsg->flags);
+           //CIOSLOG4(SYS_CALL_SND,_largeRegion->getAddress()+rdma_buffer_offset,length-rdma_buffer_offset,rdma_buffer_offset,inMsg->flags);
 	   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->sockfd, BLANK, BLANK, length-rdma_buffer_offset);
            rc = ::send(inMsg->sockfd, (char *)_largeRegion->getAddress()+rdma_buffer_offset, length-rdma_buffer_offset, inMsg->flags);
            clearSyscallStart();
-           CIOSLOG4(SYS_RSLT_SND,rc,errno,outMsg->bytes,bytesLeft);
+           CIOSLOG4(SYS_RSLT_PWR,rc,inMsg->sockfd,length,_largeRegion->getAddress());
 
            if ( (size_t)rc == (length - rdma_buffer_offset) ){
              rdma_buffer_offset = 0;
@@ -2807,7 +2833,7 @@ ClientMonitor::pwrite64(const ClientMessagePtr& message)
         }
         err = getData( address, inMsg->rkey, (uint32_t)length);
         if (err != 0) {
-         outMsg->header.returnCode = outMsg->bytes == 0 ? bgcios::RequestFailed : bgcios::RequestIncomplete;
+         outMsg->header.returnCode = bgcios::RequestFailed;
          outMsg->header.errorCode = (uint32_t)err;
          bytesLeft = 0; // Force exit from loop
          continue;
@@ -2820,11 +2846,11 @@ ClientMonitor::pwrite64(const ClientMessagePtr& message)
          rc = -1;
          err = EINTR;
       }else if (inMsg->fd != job->getShortCircuitFd()) {
-           CIOSLOG4(SYS_CALL_PWR,_largeRegion->getAddress()+rdma_buffer_offset,length-rdma_buffer_offset,rdma_buffer_offset,inMsg->position);
+           //CIOSLOG4(SYS_CALL_PWR,_largeRegion->getAddress()+rdma_buffer_offset,length-rdma_buffer_offset,rdma_buffer_offset,inMsg->position);
 	   setSyscallStart( (struct  MessageHeader * )inMsg, inMsg->fd, BLANK, BLANK, length-rdma_buffer_offset);           
            rc = ::pwrite64(inMsg->fd, (char *)_largeRegion->getAddress()+rdma_buffer_offset, length-rdma_buffer_offset,inMsg->position);       
            clearSyscallStart();
-           CIOSLOG4(SYS_RSLT_PWR,rc,errno,outMsg->bytes,bytesLeft);
+           CIOSLOG4(SYS_RSLT_PWR,rc,inMsg->fd,length-rdma_buffer_offset,inMsg->position);
 
            if ( (size_t)rc == (length - rdma_buffer_offset) ){
              rdma_buffer_offset = 0;
@@ -3067,8 +3093,8 @@ ClientMonitor::setupJob(const ClientMessagePtr& message)
    // so we only need to swap when there is not a job already running on the compute node.
    if (_jobs.empty()) {
 #if 0
-      LOG_INFO_MSG_FORCED("Swapto info in SetupJob: inMsg->userId="<<inMsg->userId<<" inMsg->groupId="<<inMsg->groupId<<" inMsg->numGroups="<<inMsg->numGroups);
-      for (int i=0;i<inMsg->numGroups;i++){
+      LOG_INFO_MSG_FORCED("Swapto info in SetupJob: inMsg->userId="<<inMsg->userId<<" inMsg->groupId="<<inMsg->groupId<<" inMsg->num2ndGroups="<<inMsg->num2ndGroups);
+      for (int i=0;i<inMsg->num2ndGroups;i++){
         int gid = (int)inMsg->secondaryGroups[i];
         LOG_INFO_MSG_FORCED("i="<<i<<" groupId="<< gid );
       }
@@ -3077,17 +3103,8 @@ ClientMonitor::setupJob(const ClientMessagePtr& message)
       result.setHeader(outMsg->header);
       _operationTimer.resetTotals();
       _waitEventTimer.resetTotals();
-
-      // Set attributes for daemon.
-      bool value = false;
-      switch (inMsg->logFunctionShipErrors) {
-         case -1: value = _logFunctionShipErrorsDefault; break;
-         case 0:  value = false; break;
-         default: value = true;  break;
-      }
-      _logFunctionShipErrors = value;
-      outMsg->logFunctionShipErrors = value; 
    }
+   //! \TODO Do a safety check that user for subnode job is the same as other subnode job?????
 
    // Create a Job object for managing this job and add it to the map of active jobs.
    JobPtr job = JobPtr(new Job(inMsg->header.jobId));
@@ -3099,6 +3116,16 @@ ClientMonitor::setupJob(const ClientMessagePtr& message)
 
 
    // Set attributes for job.
+   
+   if (inMsg->logFunctionShipErrors < 0) {
+        job->setLogJobFunctionShipErrors( _logFunctionShipErrorsDefault);
+   }
+   else {
+     job->setLogJobFunctionShipErrors(inMsg->logFunctionShipErrors);
+   }
+   outMsg->logFunctionShipErrors = job->logJobFunctionShipErrors(); 
+   _usingLogJobFunctionShipErrors = job->logJobFunctionShipErrors(); 
+
    bool value = false;
    switch (inMsg->posixMode) {
       case -1: value = _posixModeDefault; break;

@@ -1,0 +1,52 @@
+#!/bin/sh -e
+
+# $1 : Compiler
+# $2 : Archive Tool
+# $3 : static lib
+# $4 : shared lib
+# $5 : option used to make shared library (optional)
+# $6 : EXTRA_LIBS
+# $7 : CRTI
+# $8 : CRTBEGIN
+# $9 : CRTEND
+# $10 : CRTN
+# $11: EXTRA_LIBS
+#echo "DEBUG: 1=$1"
+#echo "DEBUG: 2=$2"
+#echo "DEBUG: 3=$3"
+#echo "DEBUG: 4=$4"
+#echo "DEBUG: 5=$5"
+#echo "DEBUG: 6=$6"
+#echo "DEBUG: 7=$7"
+#echo "DEBUG: 8=$8"
+#echo "DEBUG: 9=${9}"
+#echo "DEBUG: 10=${10}"
+#echo "DEBUG: 11=${11}"
+
+COMPILER=$1
+AR=$2
+STATICLIB=$3
+SHAREDLIB=$4
+EXTRA_LIBS=${6}
+CRTI=$7
+CRTBEGIN=$8
+CRTEND=$9
+CRTN=${10}
+LDPATH=-L${11}
+SHARED=-shared
+LD="${LDPATH} ${EXTRA_LIBS}"
+
+dirname=`mktemp -d /tmp/XXXXXXXXX`
+cd $dirname
+
+${AR} x $STATICLIB
+for f in `ls *.lo`; do mv $f ${f%.lo}.o; done
+
+echo "Base {global:*;local:*;};" > lapi.ver
+
+cmd=`echo "$COMPILER $SHARED --version-script lapi.ver --eh-frame-hdr $CRTI $CRTBEGIN *.o $LD $CRTEND $CRTN -o $SHAREDLIB"`
+echo $cmd
+eval $cmd
+
+cd /
+/bin/rm -rf $dirname

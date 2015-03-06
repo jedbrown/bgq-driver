@@ -1,0 +1,146 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+VPATH		= @abs_srcdir@
+SUBDIRS         = 
+NOTBUILT        = 
+APPS             = allgather.${EXTENSION}
+APPS            += allgather_contig.${EXTENSION}
+APPS            += allgather_noncontig.${EXTENSION}
+APPS            += allgather_multiep.${EXTENSION}
+APPS            += allgather_subcomm.${EXTENSION}
+APPS            += allgatherv.${EXTENSION}
+APPS            += allgatherv_contig.${EXTENSION}
+APPS            += allgatherv_noncontig.${EXTENSION}
+APPS            += allgatherv_int.${EXTENSION}
+APPS            += allgatherv_int_contig.${EXTENSION}
+APPS            += allgatherv_multiep.${EXTENSION}
+APPS            += allreduce.${EXTENSION}
+APPS            += allreduce_commthr.${EXTENSION}
+APPS            += allreduce_contig.${EXTENSION}
+APPS            += allreduce_noncontig.${EXTENSION}
+APPS            += allreduce_multiep.${EXTENSION}
+APPS            += allreduce_multiep_slice.${EXTENSION}
+APPS            += allreduce_query.${EXTENSION}
+APPS            += allreduce_query_multiep.${EXTENSION}
+APPS            += allreduce_subcomm.${EXTENSION}
+APPS            += allreduce_subcomm_query.${EXTENSION}
+APPS            += alltoall.${EXTENSION}
+APPS            += alltoall_contig.${EXTENSION}
+APPS            += alltoall_noncontig.${EXTENSION}
+APPS            += alltoall_multiep.${EXTENSION}
+APPS            += alltoall_multiep_slice.${EXTENSION}
+APPS            += alltoallv.${EXTENSION}
+APPS            += alltoallv_contig.${EXTENSION}
+APPS            += alltoallv_noncontig.${EXTENSION}
+APPS            += alltoallv_int.${EXTENSION}
+APPS            += alltoallv_int_contig.${EXTENSION}
+APPS            += alltoallv_int_subcomm.${EXTENSION}
+APPS            += alltoallv_multiep.${EXTENSION}
+APPS            += alltoallv_subcomm.${EXTENSION}
+APPS            += ambcast.${EXTENSION}
+APPS            += ambcast_contig.${EXTENSION}
+APPS            += amgather.${EXTENSION}
+APPS            += amgather_multiep.${EXTENSION}
+APPS            += amreduce.${EXTENSION}
+APPS            += amscatter.${EXTENSION}
+APPS            += barrier.${EXTENSION}
+APPS            += barrier_multiep.${EXTENSION}
+APPS            += barrier_multiep_advanced.${EXTENSION}
+APPS            += barrier_multiep_advanced_slice.${EXTENSION}
+APPS            += barrier_query.${EXTENSION}
+APPS            += barrier_subcomm.${EXTENSION}
+APPS            += barrier_subcomm_query.${EXTENSION}
+APPS            += bcast.${EXTENSION}
+APPS            += bcast_contig.${EXTENSION}
+APPS            += bcast_noncontig.${EXTENSION}
+APPS            += bcast_multiep.${EXTENSION}
+APPS            += bcast_query.${EXTENSION}
+APPS            += bcast_subcomm.${EXTENSION}
+APPS            += bcast_subcomm_query.${EXTENSION}
+APPS            += gather.${EXTENSION}
+APPS            += gather_contig.${EXTENSION}
+APPS            += gather_noncontig.${EXTENSION}
+APPS            += gather_subcomm.${EXTENSION}
+APPS            += gather_multiep.${EXTENSION}
+APPS            += gatherv.${EXTENSION}
+APPS            += gatherv_contig.${EXTENSION}
+APPS            += gatherv_noncontig.${EXTENSION}
+APPS            += gatherv_int.${EXTENSION}
+APPS            += gatherv_int_contig.${EXTENSION}
+APPS            += gatherv_multiep.${EXTENSION}
+APPS            += geometry.${EXTENSION}
+APPS            += geom_bomb.${EXTENSION}
+APPS            += reduce.${EXTENSION}
+APPS            += reduce_contig.${EXTENSION}
+APPS            += reduce_noncontig.${EXTENSION}
+APPS            += reduce_multiep.${EXTENSION}
+APPS            += reduce_multiep_slice.${EXTENSION}
+APPS            += reduce_query.${EXTENSION}
+APPS            += reduce_query_multiep.${EXTENSION}
+APPS            += reduce_scatter.${EXTENSION}
+APPS            += reduce_scatter_contig.${EXTENSION}
+APPS            += reduce_scatter_noncontig.${EXTENSION}
+APPS            += reduce_scatter_multiep.${EXTENSION}
+APPS            += reduce_scatter_subcomm.${EXTENSION}
+APPS            += reduce_subcomm.${EXTENSION}
+APPS            += scan.${EXTENSION}
+APPS            += exscan_contig.${EXTENSION}
+APPS            += scan_contig.${EXTENSION}
+APPS            += scan_noncontig.${EXTENSION}
+APPS            += scan_multiep.${EXTENSION}
+APPS            += scan_subcomm.${EXTENSION}
+APPS            += scatter.${EXTENSION}
+APPS            += scatter_contig.${EXTENSION}
+APPS            += scatter_noncontig.${EXTENSION}
+APPS            += scatter_multiep.${EXTENSION}
+APPS            += scatter_subcomm.${EXTENSION}
+APPS            += scatterv.${EXTENSION}
+APPS            += scatterv_int.${EXTENSION}
+APPS            += scatterv_int_contig.${EXTENSION}
+APPS            += scatterv_multiep.${EXTENSION}
+
+include @abs_top_builddir@/Build.rules
+
+ifeq (@BUILDENV@,ade)
+%.${EXTENSION}: %.c
+	cp ${CROSS_CRT1} .
+	cp ${CROSS_CRTI} .
+	cp ${CROSS_CRTN} .
+	${CROSS_CC} -I${INSTALL_DIR}/include  ${CROSS_CFLAGS} $< -o $@ ${CROSS_LDFLAGS} -lm -L${CROSS_TOOLCHAIN_LDPATH} @POELIB@ @IBMMPILIB@ 
+	rm `basename ${CROSS_CRT1}`
+	rm `basename ${CROSS_CRTI}`
+	rm `basename ${CROSS_CRTN}`
+%.${EXTENSION}: %.cc
+	cp ${CROSS_CRT1} .
+	cp ${CROSS_CRTI} .
+	cp ${CROSS_CRTN} .
+	${CROSS_CXX} -I${INSTALL_DIR}/include  ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -lm -L${CROSS_TOOLCHAIN_LDPATH} @POELIB@ @IBMMPILIB@ 
+	rm `basename ${CROSS_CRT1}`
+	rm `basename ${CROSS_CRTI}`
+	rm `basename ${CROSS_CRTN}`
+else
+
+%.${EXTENSION}: %.c
+	${CROSS_CC} -I${INSTALL_DIR}/include ${CROSS_CFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+%.${EXTENSION}: %.cc
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+%.${EXTENSION}: %.cpp
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+endif
+
+default: ${APPS}

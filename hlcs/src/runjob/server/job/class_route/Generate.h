@@ -36,10 +36,13 @@
 
 #include <ramdisk/include/services/JobctlMessages.h>
 
+#include <utility/include/Properties.h>
+
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
 
 #include <map>
+#include <string>
 
 #include <stdint.h>
 
@@ -68,7 +71,10 @@ public:
      * \brief ctor.
      */
     Generate(
-            const boost::shared_ptr<Job>& job   //!< [in]
+            const boost::shared_ptr<Job>& job,      //!< [in]
+            const std::string& archiveMapFile,      //!< [in]
+            bool isPermutationMappingType,          //!< [in]
+            bool retainMappingFiles                 //!< [in]
             );
 
     /*!
@@ -103,12 +109,15 @@ private:
     void pickJobLeader();
 
 private:
-    Container _container;
-    boost::scoped_ptr<Coordinates> _jobLeader;
-    const boost::shared_ptr<Job> _job;
-    boost::scoped_ptr<Np> _np;
-    boost::scoped_ptr<Rectangle> _world;
-    boost::scoped_ptr<Mapping> _mapping;
+    Container                           _container;
+    boost::scoped_ptr<Coordinates>      _jobLeader;
+    const boost::shared_ptr<Job>        _job;
+    boost::scoped_ptr<Np>               _np;
+    boost::scoped_ptr<Rectangle>        _world;
+    boost::scoped_ptr<Mapping>          _mapping;
+    const std::string                   _archiveMapFile;
+    bool                                _isPermutationMappingType;
+    bool                                _retainMappingFiles;
 };
 
 } // class_route

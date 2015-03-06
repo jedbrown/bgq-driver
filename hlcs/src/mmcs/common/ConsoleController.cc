@@ -93,9 +93,9 @@ ConsoleController::pushInput(FILE* f)
 void
 ConsoleController::serviceCommands()
 {
-    bool eof = false;
-    char buf[4096];
     try {
+        bool eof = false;
+        char buf[4096];
         if (_inputs.size() == 0) { // no input streams
             if (!freopen("/dev/tty", "a+", stdin)) {
                 quit(EXIT_SUCCESS);

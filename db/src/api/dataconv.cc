@@ -45,7 +45,7 @@ hexchar2bitdata(
         )
 {
     BOOST_ASSERT( dest );
-    memset( dest, length, 0 );
+    memset( dest, 0, length );
 
     LOG_DEBUG_MSG( __FUNCTION__ << "() converting source " << source << " with " << source.size() << " characters" );
     char convunit[3] = {0};  // a string of length 2 to give only 2 digits to strtol

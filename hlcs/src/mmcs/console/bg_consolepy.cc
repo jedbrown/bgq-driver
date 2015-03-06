@@ -126,10 +126,10 @@ protected:
 class BgConsole
 {
 public:
-    BgConsole(const string args = "");
+    BgConsole(const string& args = "");
     ~BgConsole() {};
 
-    string cmd(const string args);
+    string cmd(const string& args);
 
 protected:
     void connect();
@@ -237,7 +237,7 @@ void raiseeuid()
     }
 }
 
-BgConsole::BgConsole(const string args)
+BgConsole::BgConsole(const string& args)
 {
     raiseeuid();
 
@@ -256,7 +256,6 @@ BgConsole::BgConsole(const string args)
     }
 
     // fill in a standard argv, argc list, so we can use the console parameter class
-    string appname = "pybg_console";
     unsigned argc = 0;
     char argv_buffer[args.size()+1+arg_v[0].size()];
     vector<char *>argv;
@@ -321,13 +320,12 @@ void BgConsole::connect()
         // we are running disconnected from the server
         LOG_ERROR_MSG(reply.str());
         LOG_ERROR_MSG("The mmcs_server is down or still initializing, try again in a few minutes. If the problem persists, contact the system administrator.");
-        ostringstream err;
         cerr << "The mmcs_server is down or still initializing, try again in a few minutes. If the problem persists, contact the system administrator." << endl;
         throw runtime_error(reply.str());
     }
 }
 
-string BgConsole::cmd(const string args)
+string BgConsole::cmd(const string& args)
 {
     deque<string> mmcs_connect = MMCSCommandProcessor::parseCommand(args);
     PyConsoleCommandReply reply;

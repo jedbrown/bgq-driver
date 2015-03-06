@@ -59,7 +59,7 @@ IOHardware::getIODrawers() const
 
     Pimpl impl = boost::dynamic_pointer_cast<Impl>(_impl);
     vector<IODrawer::Pimpl> IODrawerPimpls(impl->getIODrawers());
-    for (vector<IODrawer::Pimpl>::const_iterator iter = IODrawerPimpls.begin(); iter != IODrawerPimpls.end(); iter++) {
+    for (vector<IODrawer::Pimpl>::const_iterator iter = IODrawerPimpls.begin(); iter != IODrawerPimpls.end(); ++iter) {
         IODrawer::ConstPtr IOdrawer(new IODrawer(*iter));
         IODrawersContainer.push_back(IOdrawer);
     }

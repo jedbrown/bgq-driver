@@ -57,13 +57,23 @@ postProcessRAS(
     //  Post processing is for looking up a jobid when the RAS event didn't have it already, and handling control actions.
     //  Diags RAS does not go through this path, it goes through the putRAS path.
 
+    bool bgas = false;
+    try {
+        std::string bgasValue = DBConnectionPool::Instance().getProperties()->getValue(  "mmcs", "bgas" );
+        if ( bgasValue.compare("true") == 0 || bgasValue.compare("TRUE") == 0 ) {
+            bgas = true;
+        }
+    } catch ( const std::exception& e ) {
+        LOG_TRACE_MSG( "Could not find key bgas in [mmcs] section. Using default value of false" );
+    }
+
     TxObject tx(DBConnectionPool::Instance());
     if (!tx.getConnection()) {
         LOG_ERROR_MSG("Unable to obtain database connection");
         return CONNECTION_ERROR;
     }
     DBTEventlog dbe;
-    char rec[17], job[33];
+    char rec[17];
     string whereClause(" where recid=");
     string sqlstr;
     BGQDB::job::Id id = 0;
@@ -112,6 +122,7 @@ postProcessRAS(
         // full-block jobs
 
         subBlockJobsToKill = BGQDB::job::subBlockRas( string(dbe._block), location );
+        char job[33];
         if ( !subBlockJobsToKill.empty() ) {
             // ras can only be associated with one job, so pick the first one
             snprintf( job, sizeof(job), "%lld", subBlockJobsToKill[0] );
@@ -170,10 +181,22 @@ postProcessRAS(
                 // Note: this logic results in all full block and sub-block jobs being killed, for blocks attached
                 // to the IO node
 
-                if (location.getType() == bgq::util::Location::ComputeCardOnIoBoard) {
-                    sqlstr = "select b.id from bgqcnioblockmap a, bgqjob b where cnblock = b.blockid and ion = '" +  string(dbe._location) + string("' ");
+                if (bgas) {
+                    // LOG_TRACE_MSG( "END_JOB Checking cable status on a BGAS system" );
+
+                    if (location.getType() == bgq::util::Location::ComputeCardOnIoBoard) {
+                        sqlstr = "select b.id from bgqiousage a, bgqjob b" +
+                        string(" where a.blockid = b.blockid and a.ionode = '") +  string(dbe._location) + string("' ");
+                    } else {
+                        sqlstr = "select unique b.id from bgqiousage a, bgqjob b " +
+                        string(" where a.blockid = b.blockid and substr(a.ionode,1,6) = '") +  string(dbe._location) + string("' ");
+                    }
                 } else {
-                    sqlstr = "select unique b.id from bgqcnioblockmap a, bgqjob b where cnblock = b.blockid and substr(ion,1,6) = '" +  string(dbe._location) + string("' ");
+                    if (location.getType() == bgq::util::Location::ComputeCardOnIoBoard) {
+                        sqlstr = "select b.id from bgqcnioblockmap a, bgqjob b where cnblock = b.blockid and ion = '" +  string(dbe._location) + string("' ");
+                    } else {
+                        sqlstr = "select unique b.id from bgqcnioblockmap a, bgqjob b where cnblock = b.blockid and substr(ion,1,6) = '" +  string(dbe._location) + string("' ");
+                    }
                 }
 
                 tx.execQuery(sqlstr.c_str(), &hstmt);
@@ -184,6 +207,10 @@ postProcessRAS(
                     jobsToKill.push_back(id);
                     sqlrc = SQLFetch(hstmt);
                 }
+
+                //if (bgas) {
+                //	LOG_DEBUG_MSG( "END_JOB bgas = " << (int)bgas << ", sqlstr = " << sqlstr << "jobid = " << id);
+                //}
 
                 SQLCloseCursor(hstmt);
             } else {
@@ -255,9 +282,15 @@ postProcessRAS(
             if (location.getType() == bgq::util::Location::ComputeCardOnIoBoard) {
                 sqlstr = "update bgqionode set status = 'E' where location = '" + string(dbe._location) + string("' ");
                 ctl_rc = tx.execStmt(sqlstr.c_str());
+                if (ctl_rc != SQL_SUCCESS) {
+                    LOG_ERROR_MSG("RAS event post-processing failed to update database.");
+                }
             } else {
                 sqlstr = "update bgqnode set status = 'E' where location = '" + string(dbe._location) + string("' ");
                 ctl_rc = tx.execStmt(sqlstr.c_str());
+                if (ctl_rc != SQL_SUCCESS) {
+                    LOG_ERROR_MSG("RAS event post-processing failed to update database.");
+                }
             }
         }
 
@@ -267,11 +300,17 @@ postProcessRAS(
                 sqlstr += SOFTWARE_FAILURE;
                 sqlstr += "' where status in ('A','F') and location = '" + string(dbe._location) + string("' ");
                 ctl_rc = tx.execStmt(sqlstr.c_str());
+                if (ctl_rc != SQL_SUCCESS) {
+                    LOG_ERROR_MSG("RAS event post-processing failed to update database.");
+                }
             } else {
                 sqlstr = "update bgqnode set status = '";
                 sqlstr += SOFTWARE_FAILURE;
                 sqlstr += "' where status in ('A','F') and location = '" + string(dbe._location) + string("' ");
                 ctl_rc = tx.execStmt(sqlstr.c_str());
+                if (ctl_rc != SQL_SUCCESS) {
+                    LOG_ERROR_MSG("RAS event post-processing failed to update database.");
+                }
             }
         }
 
@@ -279,24 +318,37 @@ postProcessRAS(
             if (string(dbe._location).substr(4,1) != "I") {
                 sqlstr = "update bgqnodecard set status = 'E' where location = '" + string(dbe._location).substr(0,10) + string("' ");
                 ctl_rc = tx.execStmt(sqlstr.c_str());
+                if (ctl_rc != SQL_SUCCESS) {
+                    LOG_ERROR_MSG("RAS event post-processing failed to update database.");
+                }
             } else {
                 sqlstr = "update bgqiodrawer set status = 'E' where location = '" + string(dbe._location).substr(0,6) + string("' ");
                 ctl_rc = tx.execStmt(sqlstr.c_str());
+                if (ctl_rc != SQL_SUCCESS) {
+                    LOG_ERROR_MSG("RAS event post-processing failed to update database.");
+                }
                 sqlstr = "update bgqionode set status = 'E' where substr(location,1,6) = '" + string(dbe._location).substr(0,6) + string("' ");
                 ctl_rc = tx.execStmt(sqlstr.c_str());
+                if (ctl_rc != SQL_SUCCESS) {
+                    LOG_ERROR_MSG("RAS event post-processing failed to update database.");
+                }
             }
         }
 
          if (strstr(dbe._ctlaction, "DCA_IN_ERROR")) {
-
              sqlstr = "update bgqnodecarddca set status = 'E' where location = '" + string(dbe._location).substr(0,13) + string("' ");
-
              ctl_rc = tx.execStmt(sqlstr.c_str());
+             if (ctl_rc != SQL_SUCCESS) {
+                 LOG_ERROR_MSG("RAS event post-processing failed to update database.");
+             }
         }
 
         if (strstr(dbe._ctlaction, "RACK_IN_ERROR")) {
             sqlstr = "update bgqnodecard set status = 'E' where substr(location,1,3) = '" + string(dbe._location).substr(0,3) + string("' ");
             ctl_rc = tx.execStmt(sqlstr.c_str());
+            if (ctl_rc != SQL_SUCCESS) {
+                LOG_ERROR_MSG("RAS event post-processing failed to update database.");
+            }
             sqlstr = "update bgqiodrawer set status = 'E' where substr(location,1,3) = '" + string(dbe._location).substr(0,3) + string("' ");
             (void)tx.execStmt(sqlstr.c_str()); // rack may not have top hat drawers, so ignore the return code
         }
@@ -304,7 +356,6 @@ postProcessRAS(
         if (strstr(dbe._ctlaction, "CABLE_IN_ERROR")) {
             // pull the register and the mask from the RAWDATA
             // call a function to get back the locations and the mask
-            char regFromEvent[33];
             int maskInt;
 
             char* matchMask = strstr(dbe._rawdata, "Mask=");
@@ -312,6 +363,7 @@ postProcessRAS(
             if (matchMask == NULL || matchReg == NULL)
                 ctl_rc = SQL_ERROR;
             else {
+                char regFromEvent[33];
                 sscanf(matchMask, "Mask=%x", &maskInt);
                 sscanf(matchReg, "Register=%32s", regFromEvent);
 
@@ -335,7 +387,6 @@ postProcessRAS(
         if (strstr(dbe._ctlaction, "BQL_SPARE")) {
             // pull the register and the mask from the RAWDATA
             // call a function to get back the locations and the mask
-            char regFromEvent[33];
             int maskInt;
 
             char* matchMask = strstr(dbe._rawdata, "Mask=");
@@ -343,6 +394,7 @@ postProcessRAS(
             if (matchMask == NULL || matchReg == NULL)
                 ctl_rc = SQL_ERROR;
             else {
+                char regFromEvent[33];
                 sscanf(matchMask, "Mask=%x", &maskInt);
                 sscanf(matchReg, "Register=%32s", regFromEvent);
 

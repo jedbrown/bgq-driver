@@ -248,9 +248,9 @@ bgq_default_twinstar_dir=/gsa/yktgsa/projects/t/twinstar
 bgq_default_twinstar_dd1_dir=/gsa/yktgsa/projects/t/twinstar_dd1
 bgq_default_twinstar_dd2_dir=/gsa/yktgsa/projects/t/twinstar_dd2
 bgq_default_mambo=/auto/BGQ/releases/floor-mambo
-bgq_default_rpmversion=0
-bgq_default_rpmrelease=0
-bgq_default_rpmmodification=0
+bgq_default_rpmversion=1
+bgq_default_rpmrelease=2
+bgq_default_rpmmodification=2
 bgq_default_rpmdriver=0
 bgq_default_rpmsuffix=
 
@@ -344,7 +344,7 @@ AC_SUBST(BGQ_DATE)
 AC_ARG_WITH(gnu-install-dir,
           AS_HELP_STRING([--with-gnu-install-dir=<path for toolchain install>],[for toolchain build path ]),
          [ BGQ_GNU_INSTALL_DIR="$withval"; ],
-         [ BGQ_GNU_INSTALL_DIR="/bgsys/drivers/toolchain/V1R2M1-$bgq_gnu_date"; ])
+         [ BGQ_GNU_INSTALL_DIR="/bgsys/drivers/toolchain/V1R2M2-$bgq_gnu_date"; ])
 AC_SUBST(BGQ_GNU_INSTALL_DIR)
 
 
@@ -684,7 +684,7 @@ fi
 # If we are we create a sandbox distro using the user's name and a date.  Otherwise we should be
 # in a driver build and we want to use the name of the driver for the distro.  If the user
 # doesn't like either of these options they can still override with --with-linux-os.
-bgq_distro_default=RHEL6.4
+bgq_distro_default=RHEL6.5
 AC_ARG_WITH(distro,
         AS_HELP_STRING([--with-distro=<name>], [RHEL6.4]),
         [ BGQ_DISTRO="$withval"; ],
@@ -695,10 +695,10 @@ AC_MSG_RESULT([  BGQ_DISTRO=$BGQ_DISTRO])
 INSTALL_SUBDIR=`/bin/echo $BGQ_INSTALL_DIR | awk 'BEGIN{FS="/"} ; {print $NF}'`
 if [[[ $INSTALL_SUBDIR == "work" ]]] ; then
 	USER_DISTRO=`whoami`_`date +%y%m%d`
-	bgq_linux_os_default=/bgsys/linux/"$BGQ_DISTRO"_$USER_DISTRO
+	bgq_linux_os_default=/bgsys/linux/RHEL6.5__$USER_DISTRO
 else
 	DRIVER=`/bin/echo $BGQ_INSTALL_DIR | awk 'BEGIN{FS="/"} ; {print $(NF-1)}'`
-	bgq_linux_os_default=/bgsys/linux/"$BGQ_DISTRO"_$DRIVER
+	bgq_linux_os_default=/bgsys/linux//bgsys/linux/RHEL6.5_V1R2M2-8
 fi
 AC_ARG_WITH(linux-os,
   AS_HELP_STRING([--with-linux-os=<path>], [path to linux OS root directory]),
@@ -742,6 +742,14 @@ AC_ARG_WITH(linux-headers,
 AC_SUBST(BGQ_LINUX_HEADERS_PATH)
 AC_MSG_RESULT([  BGQ_LINUX_HEADERS_PATH=$BGQ_LINUX_HEADERS_PATH])
 
+# BGQ_MCP_LIB set up
+AC_ARG_WITH(mcp-lib,
+  AS_HELP_STRING([--with-mcp-lib=<path>], [path to where mcp is installed]),
+  [ BGQ_MCP_LIB="$withval"; ],
+  [ BGQ_MCP_LIB="/usr/local"])
+AC_SUBST(BGQ_MCP_LIB)
+AC_MSG_RESULT([  BGQ_MCP_LIB=$BGQ_MCP_LIB])
+
 # BGQ_LINUX_KERNEL_MAJOR_VERSION set-up
 bgq_linux_kernel_major_version_default=2.6.32
 AC_ARG_WITH(linux-kernel-major-version,
@@ -752,7 +760,7 @@ AC_SUBST(BGQ_LINUX_KERNEL_MAJOR_VERSION)
 AC_MSG_RESULT([  BGQ_LINUX_KERNEL_MAJOR_VERSION=$BGQ_LINUX_KERNEL_MAJOR_VERSION])
 
 # BGQ_LINUX_KERNEL_RELEASE set-up
-bgq_linux_kernel_release_default=358.11.1.bgq.el6
+bgq_linux_kernel_release_default=431.1.1.bgq.el6
 AC_ARG_WITH(linux-kernel-release,
   AS_HELP_STRING([--with-linux-kernel-release=<release>], [Linux kernel release (e.g. 358.11.1.bgq.el6)]),
   [ BGQ_LINUX_KERNEL_RELEASE="$withval"; ],
@@ -761,7 +769,7 @@ AC_SUBST(BGQ_LINUX_KERNEL_RELEASE)
 AC_MSG_RESULT([  BGQ_LINUX_KERNEL_RELEASE=$BGQ_LINUX_KERNEL_RELEASE])
 
 # BGQ_LINUX_KERNEL_BUILDID set-up
-bgq_linux_kernel_buildid_default=
+bgq_linux_kernel_buildid_default=_V1R2M2_DEV0
 AC_ARG_WITH(linux-kernel-buildid,
   AS_HELP_STRING([--with-linux-kernel-buildid=<buildid>], [Linux kernel buildid (e.g. _V1R2M1_DEV1)]),
   [ BGQ_LINUX_KERNEL_BUILDID="$withval"; ],
@@ -778,7 +786,8 @@ AC_ARG_WITH(linux-kernel-arch,
 AC_SUBST(BGQ_LINUX_KERNEL_ARCH)
 AC_MSG_RESULT([  BGQ_LINUX_KERNEL_ARCH=$BGQ_LINUX_KERNEL_ARCH])
 
-BGQ_LINUX_KERNEL_VERSION=$BGQ_LINUX_KERNEL_MAJOR_VERSION-$BGQ_LINUX_KERNEL_RELEASE$BGQ_LINUX_KERNEL_BUILDID.$BGQ_LINUX_KERNEL_ARCH
+BGQ_LINUX_KERNEL_VERSION=$BGQ_LINUX_KERNEL_MAJOR_VERSION-$BGQ_LINUX_KERNEL_RELEASE.$BGQ_LINUX_KERNEL_ARCH
+AC_SUBST(BGQ_LINUX_KERNEL_VERSION)
 AC_MSG_RESULT([  BGQ_LINUX_KERNEL_VERSION=$BGQ_LINUX_KERNEL_VERSION])
 
 #-----------------------------------------------

@@ -255,9 +255,12 @@ BulkPower::readHandler(
     const Timer::Ptr database_timer = this->time()->subFunction("database insertion");
     database_timer->dismiss();
 
-    processBulks(&reply, connection, bulkInsert);
-
-    database_timer->dismiss( false );
+    try {
+        processBulks(&reply, connection, bulkInsert);
+        database_timer->dismiss( false );
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( e.what() );
+    }
 
     this->closeTarget(
             mc_server,

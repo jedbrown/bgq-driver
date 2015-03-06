@@ -338,9 +338,10 @@ int File_AllocateFD( int remote_fd, int type )
    if ( fd != -1 )
    {
        // Set the IO node fd accounting for the bit set number from 1
+       memset(&pFD->cnk_local_fd[ fd ], 0, sizeof(CNK_Descriptor_Info));
        pFD->cnk_local_fd[ fd ].Remote_FD = remote_fd;
        pFD->cnk_local_fd[ fd ].Type = type;
-       pFD->cnk_local_fd[ fd ].FileSysPtr = virtFSPtr[type];
+       pFD->cnk_local_fd[ fd ].FileSysPtr = (uint64_t)virtFSPtr[type];
        File_SetBit( fd, pFD->cnk_fd_bits);
    }
 
@@ -386,9 +387,9 @@ int File_SetFD(int fd, int remote_fd, int type)
    {
       Kernel_Lock(&app->DescriptorTableLock);
       
-      pFD->cnk_local_fd[ fd ].Remote_FD = remote_fd;
+      pFD->cnk_local_fd[ fd ].Remote_FD = ((unsigned int)remote_fd) & 0xffff;
       pFD->cnk_local_fd[ fd ].Type = type;
-      pFD->cnk_local_fd[ fd ].FileSysPtr = virtFSPtr[type];
+      pFD->cnk_local_fd[ fd ].FileSysPtr = (uint64_t)virtFSPtr[type];
       
       Kernel_Unlock(&app->DescriptorTableLock);
 
@@ -411,9 +412,10 @@ int File_FreeFD(int fd)
    {
       Kernel_Lock(&app->DescriptorTableLock);
       
-      pFD->cnk_local_fd[ fd ].Remote_FD = -1;
+      memset(&pFD->cnk_local_fd[ fd ], 0, sizeof(CNK_Descriptor_Info));
+      pFD->cnk_local_fd[ fd ].Remote_FD = 0xffff; // -1
       pFD->cnk_local_fd[ fd ].Type = FD_ERROR;
-      pFD->cnk_local_fd[ fd ].FileSysPtr = virtFSPtr[FD_ERROR];
+      pFD->cnk_local_fd[ fd ].FileSysPtr = (uint64_t)virtFSPtr[FD_ERROR];
       
       // Bits start at number 1 so need to increment to get correct bit in bit set.
       File_clear_bit( fd, pFD->cnk_fd_bits );
@@ -458,6 +460,8 @@ int File_GetRemoteFD(int fd)
       Kernel_Lock(&app->DescriptorTableLock);
       
       remote_fd = pFD->cnk_local_fd[ fd ].Remote_FD;
+      if(remote_fd >= 0xf000)
+          remote_fd |= 0xffff0000;  // sign-extend
       
       Kernel_Unlock(&app->DescriptorTableLock);
 
@@ -477,7 +481,7 @@ virtFS* File_GetFSPtr( int fd )
     {
         Kernel_Lock(&app->DescriptorTableLock);
 
-        fsPtr = (virtFS* ) (pFD->cnk_local_fd[ fd ].FileSysPtr);
+        fsPtr = (virtFS* ) ((uint64_t)pFD->cnk_local_fd[ fd ].FileSysPtr);
 
         Kernel_Unlock(&app->DescriptorTableLock);
 
@@ -522,6 +526,76 @@ int File_SetCurrentOffset( int fd, long curOffset )
       Kernel_Lock(&app->DescriptorTableLock);
       
       pFD->cnk_local_fd[ fd ].CurrOffset = curOffset;
+      
+      Kernel_Unlock(&app->DescriptorTableLock);
+      
+      rc = 0;  
+      
+   }  // End valid descriptor passed in
+   
+   return( rc );
+}
+
+int File_AdjustCurrentOffset( int fd, long curOffset )
+{
+   int rc  = -1;
+   AppProcess_t *app = GetMyProcess();
+   CNK_Descriptors_t *pFD = &(app->App_Descriptors);
+   
+   // Is this a valid descriptor passed in?
+   if ( (fd >= 0) && (fd < pFD->maxfds) )
+   {
+      Kernel_Lock(&app->DescriptorTableLock);
+      
+      pFD->cnk_local_fd[ fd ].CurrOffset += curOffset;
+      
+      Kernel_Unlock(&app->DescriptorTableLock);
+      
+      rc = 0;  
+      
+   }  // End valid descriptor passed in
+   
+   return( rc );
+}
+
+int File_SetDeviceINode(int fd, dev_t deviceID, ino64_t inode, size_t filesize)
+{
+   int rc  = -1;
+   AppProcess_t *app = GetMyProcess();
+   CNK_Descriptors_t *pFD = &(app->App_Descriptors);
+   
+   // Is this a valid descriptor passed in?
+   if ( (fd >= 0) && (fd < pFD->maxfds) )
+   {
+      Kernel_Lock(&app->DescriptorTableLock);
+      
+      pFD->cnk_local_fd[ fd ].deviceID = deviceID;
+      pFD->cnk_local_fd[ fd ].inode    = inode;
+      pFD->cnk_local_fd[ fd ].size     = filesize;
+      
+      Kernel_Unlock(&app->DescriptorTableLock);
+      
+      rc = 0;  
+      
+   }  // End valid descriptor passed in
+   
+   return( rc );
+}
+
+int File_GetDeviceINode(int fd, dev_t* deviceID, ino64_t* inode, size_t* filesize)
+{
+   int rc  = -1;
+   AppProcess_t *app = GetMyProcess();
+   CNK_Descriptors_t *pFD = &(app->App_Descriptors);
+   
+   // Is this a valid descriptor passed in?
+   if ( (fd >= 0) && (fd < pFD->maxfds) )
+   {
+      Kernel_Lock(&app->DescriptorTableLock);
+      
+      *deviceID = pFD->cnk_local_fd[ fd ].deviceID;
+      *inode    = pFD->cnk_local_fd[ fd ].inode;
+      *filesize = pFD->cnk_local_fd[ fd ].size;
       
       Kernel_Unlock(&app->DescriptorTableLock);
       

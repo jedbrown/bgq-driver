@@ -76,7 +76,7 @@ private:
             IoNode& node
             );
 
-    void validateMapping() const;
+    void validateMapping();
 
     void updateDatabaseMapping(
             const std::string& mapping
@@ -88,8 +88,11 @@ private:
             ) const;
 
 private:
-    const boost::shared_ptr<Job> _job;
-    const class_route::Generate _classRoute;
+    const boost::shared_ptr<Job>             _job;
+    boost::scoped_ptr<class_route::Generate> _classRoute;
+    std::string                              _copiedMapping;
+    bool                                     _retainMappingFiles;
+
 };
 
 } // job

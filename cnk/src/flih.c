@@ -124,7 +124,7 @@ PUEA_Table puea_table[ FLIH_PUEA_TABLE_SIZE ] =
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_GEA,  BIC_INT56_MAPOFFSET, IntHandler_GEA_FLIH  },// 56: GEA 15 (also goes to wakeup unit)
 //------------L1P BIC -----------------------------------------------------------------------                                                                 
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_BIC,  BIC_INT57_MAPOFFSET, IntHandler_Default   },// 57: L1P BIC 0
-{  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_BIC,  BIC_INT58_MAPOFFSET, IntHandler_Default   },// 58: L1P BIC 1
+{  CORES_ALL,  THDS_ALL,  BIC_EXTERNAL_INTERRUPT, FLIH_GRP_BIC,  BIC_INT58_MAPOFFSET, IntHandler_L1DCRV    },// 58: L1P BIC 1
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_BIC,  BIC_INT59_MAPOFFSET, IntHandler_Default   },// 59: L1P BIC 2
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_BIC,  BIC_INT60_MAPOFFSET, IntHandler_Default   },// 60: L1P BIC 3
 {  COREMSK(0), THDMSK(0), BIC_NO_INTERRUPT,       FLIH_GRP_BIC,  BIC_INT61_MAPOFFSET, IntHandler_Default   },// 61: L1P BIC 4
@@ -1049,3 +1049,14 @@ void IntHandler_GEA_UPC(int status_reg, int bitnum)
 
 }
 
+void IntHandler_L1DCRV(int bitnum)
+{
+    AppProcess_t *proc = GetMyProcess();
+    assert(proc != NULL);
+    
+    // Acknowledge the interrupt
+    out64_sync((void*)L1P_ESR, L1P_ESR_err_mmio_priv);
+    
+    // Deliver signal to the interrupted thread.  
+    Signal_Deliver(proc, GetTID(GetMyKThread()), SIGDCRVIOLATION);
+}

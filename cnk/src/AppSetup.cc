@@ -1187,19 +1187,26 @@ int ProcFS_ProcessInit(AppProcess_t* proc)
     }
     internal_close(fd);
     
+    // create master environ file for the job.
+    fd = internal_open("/proc/environ", O_CREAT | O_EXCL | O_WRONLY | O_LARGEFILE, 0666);
+    if(fd > 0)
+    {
+        ptr = &proc->app->App_Env[0];
+        while(*ptr)
+        {
+            internal_write(fd, ptr, strlen(ptr));
+            ptr += strlen(ptr)+1;
+            if(*ptr != 0)
+                internal_write(fd, " ", 1);
+        }
+        internal_close(fd);
+    }
+    
+    // Create empty placeholder files for environ, maps, exe, cwd.  
     snprintf(fn, sizeof(fn), "/proc/%d/environ", proc->PID);
     fd = internal_open(fn, O_CREAT | O_TRUNC | O_WRONLY | O_LARGEFILE, 0666);
-    ptr = &proc->app->App_Env[0];
-    while(*ptr)
-    {
-        internal_write(fd, ptr, strlen(ptr));
-        ptr += strlen(ptr)+1;
-        if(*ptr != 0)
-            internal_write(fd, " ", 1);
-    }
     internal_close(fd);
     
-    // Create empty placeholder files for maps, exe, cwd.  
     snprintf(fn, sizeof(fn), "/proc/%d/maps", proc->PID);
     fd = internal_open(fn, O_CREAT | O_TRUNC | O_WRONLY | O_LARGEFILE, 0666);
     internal_close(fd);

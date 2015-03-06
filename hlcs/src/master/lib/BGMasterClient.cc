@@ -39,7 +39,7 @@ BGMasterClient::BGMasterClient() :
 
 }
 
-ClientId
+void
 BGMasterClient::connectMaster(
         const bgq::utility::Properties::ConstPtr& props,
         const bgq::utility::PortConfiguration::Pairs& portpairs
@@ -95,10 +95,6 @@ BGMasterClient::connectMaster(
     }
 
     LOG_DEBUG_MSG("Group joined");
-    CxxSockets::SockAddr sa;
-    _prot->getRequester()->getSockName(sa);
-    const ClientId id(sa.getServicePort(), sa.getHostName());
-    return id;
 }
 
 BinaryId
@@ -604,6 +600,7 @@ BGMasterClient::event_monitor() const
         using namespace boost::posix_time;
         const ptime curr_msg_time(time_from_string(curr_msg.substr(7,20)));
         bool inserted = false;
+        // NOTE - the insert into the vector being searched seems like it will cause problems here
         BOOST_FOREACH(const std::string& inner_msg, sorted_msgs) {
             const ptime inner_msg_time(time_from_string(inner_msg.substr(7,20)));
             if (curr_msg_time > inner_msg_time) {

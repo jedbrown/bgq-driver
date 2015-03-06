@@ -48,14 +48,24 @@ processSC(
         const cxxdb::UpdateStatementPtr& serviceInsert
         )
 {
+    int serviceCardCount = 0;
+    LOG_DEBUG_MSG("Start processing service card environmentals.");
     for (
             std::vector<MCServerMessageSpec::ServiceCardEnv>::const_iterator sc = mcSCReply->_serviceCards.begin();
             sc != mcSCReply->_serviceCards.end();
             ++sc
         )
     {
-        if (static_cast<int>(sc->_error) == CARD_NOT_PRESENT) continue;
-        if (static_cast<int>(sc->_error) == CARD_NOT_UP) continue;
+        ++serviceCardCount;
+        if (static_cast<int>(sc->_error) == CARD_NOT_PRESENT) {
+            LOG_INFO_MSG("Service card " << sc->_location << " not present.");
+            continue;
+        }
+        if (static_cast<int>(sc->_error) == CARD_NOT_UP) {
+            LOG_INFO_MSG("Service card " << sc->_location << " not up.");
+            continue;
+        }
+
         if (sc->_error) {
             LOG_ERROR_MSG("Error reading environmentals from: " << sc->_location);
             RasEventImpl noContact(0x00061002);
@@ -87,6 +97,7 @@ processSC(
 
         serviceInsert->execute();
     }
+    LOG_DEBUG_MSG("End processing environmentals for " << serviceCardCount << " service cards.");
 }
 
 ServiceCard::ServiceCard(
@@ -218,6 +229,7 @@ ServiceCard::openTargetHandler(
 
     MCServerMessageSpec::ReadServiceCardEnvRequest request;
     request._set = "EnvMonSC";
+    request._shortForm = false;
 
     mc_server->send(
             request.getClassName(),
@@ -253,11 +265,14 @@ ServiceCard::readHandler(
     const Timer::Ptr database_timer = this->time()->subFunction("database insertion");
     database_timer->dismiss();
 
-    cxxdb::Transaction tx( *connection );
-    processSC(&reply, insert);
-    connection->commit();
-
-    database_timer->dismiss( false );
+    try {
+        cxxdb::Transaction tx( *connection );
+        processSC(&reply, insert);
+        connection->commit();
+        database_timer->dismiss( false );
+    } catch ( const std::exception& e ) {
+        LOG_WARN_MSG( e.what() );
+    }
 
     this->closeTarget(
             mc_server,

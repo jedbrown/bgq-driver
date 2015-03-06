@@ -202,6 +202,14 @@ void Flight_SysioMsgDecoder(size_t bufsize, char* buffer, const BG_FlightRecorde
          SYSIO(PremoveXattrAck);
          SYSIO(PlistXattr);
          SYSIO(PlistXattrAck);
+       
+         SYSIO(GpfsFcntl);
+         SYSIO(GpfsFcntlAck);
+
+         SYSIO(Ftruncate64);
+         SYSIO(Ftruncate64Ack);
+         SYSIO(Truncate64);
+         SYSIO(Truncate64Ack);
 
 
         default:   break;

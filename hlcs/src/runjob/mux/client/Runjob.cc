@@ -52,7 +52,7 @@
 
 LOG_DECLARE_FILE( runjob::mux::log );
 
-namespace runjob { 
+namespace runjob {
 namespace mux {
 namespace client {
 
@@ -102,7 +102,7 @@ Runjob::start()
 
     // obtain credentials
     _credentials.reset(
-            new Credentials( 
+            new Credentials(
                 _id,
                 _connection->getSocket().native()
                 )
@@ -130,10 +130,10 @@ Runjob::handlePlugin(
     LOGGING_DECLARE_USER_MDC( _credentials->getUid()->getUser() );
     LOG_TRACE_MSG( __FUNCTION__ );
 
-    _plugin.reset( 
+    _plugin.reset(
             new Plugin( _id, _timers, plugin )
             );
-    
+
     const Multiplexer::Ptr mux( _mux.lock() );
     if ( !mux ) return;
 
@@ -145,7 +145,7 @@ Runjob::handlePlugin(
                 &Connection::start,
                 _connection,
                 // protect used here to prevent outer binder
-                // from evaluating innner bind
+                // from evaluating inner bind
                 boost::protect(
                     boost::bind(
                         &Runjob::handleRequest,
@@ -162,12 +162,12 @@ Runjob::handlePlugin(
     const std::string key( "client_timeout" );
     std::string value;
     try {
-        value = mux->getOptions().getProperties()->getValue( 
+        value = mux->getOptions().getProperties()->getValue(
                 PropertiesSection,
                 key
                 );
         timeout = boost::lexical_cast<size_t>( value );
-        if ( timeout <= 0 ) {
+        if ( timeout == 0 ) {
             timeout = defaults::MuxClientTimeout;
         }
     } catch ( const boost::bad_lexical_cast& e ) {
@@ -176,7 +176,7 @@ Runjob::handlePlugin(
                 "using default value: " << timeout
                 );
     } catch ( const std::exception& e ) {
-        LOG_TRACE_MSG( 
+        LOG_TRACE_MSG(
                 "missing " << key << " from [" << PropertiesSection << "] section, " <<
                 "using default value: " << timeout
                 );
@@ -204,12 +204,12 @@ Runjob::handleRequest(
     LOGGING_DECLARE_LOCATION_MDC( _id );
     LOGGING_DECLARE_USER_MDC( _credentials->getUid()->getUser() );
     LOG_TRACE_MSG( __FUNCTION__ );
-    
+
     if ( !message ) {
         if ( error ) {
-            LOG_WARN_MSG( "Could not read: " << error.message() );
+            LOG_DEBUG_MSG( "Could not read: " << error.message() << "(" << Status::toString(_status.get()) << ")" );
         }
-        if ( _status == Status::Terminated || _status == Status::Error ) { 
+        if ( _status == Status::Terminated || _status == Status::Error ) {
             // this is ok
         } else if ( _startTool && _status == Status::Debug ) {
             // also ok
@@ -300,8 +300,8 @@ Runjob::handleRequest(
 
             // fall through
         } else {
-            LOG_ERROR_MSG( 
-                    "invalid message type (" << 
+            LOG_ERROR_MSG(
+                    "invalid message type (" <<
                     runjob::Message::toString( static_cast<runjob::Message::Type>(message->getType()) ) <<
                     ") for status (" << _status << ")"
                     );
@@ -333,8 +333,8 @@ Runjob::handleRequest(
             stm->_uid = _credentials->getUid();
             // fall through
         } else {
-            LOG_ERROR_MSG( 
-                    "invalid message type (" << 
+            LOG_ERROR_MSG(
+                    "invalid message type (" <<
                     runjob::Message::toString( static_cast<runjob::Message::Type>(message->getType()) ) <<
                     ") for status (" << _status << ")"
                     );
@@ -355,8 +355,8 @@ Runjob::handleRequest(
         } else if ( message->getType() == runjob::Message::KillJob ) {
             // fall through
         } else {
-            LOG_ERROR_MSG( 
-                    "invalid message type (" << 
+            LOG_ERROR_MSG(
+                    "invalid message type (" <<
                     runjob::Message::toString( static_cast<runjob::Message::Type>(message->getType()) ) <<
                     ") for status (" << _status << ")"
                     );
@@ -370,8 +370,8 @@ Runjob::handleRequest(
         } else if ( message->getType() == runjob::Message::KillJob ) {
             // fall through
         } else {
-            LOG_ERROR_MSG( 
-                    "invalid message type (" << 
+            LOG_ERROR_MSG(
+                    "invalid message type (" <<
                     runjob::Message::toString( static_cast<runjob::Message::Type>(message->getType()) ) <<
                     ") for status (" << _status << ")"
                     );
@@ -382,8 +382,8 @@ Runjob::handleRequest(
         if ( message->getType() == runjob::Message::KillJob ) {
             // fall through
         } else {
-            LOG_ERROR_MSG( 
-                    "invalid message type (" << 
+            LOG_ERROR_MSG(
+                    "invalid message type (" <<
                     runjob::Message::toString( static_cast<runjob::Message::Type>(message->getType()) ) <<
                     ") for status (" << _status << ")"
                     );
@@ -391,8 +391,8 @@ Runjob::handleRequest(
             return;
         }
     } else {
-        LOG_ERROR_MSG( 
-                "invalid message type (" << 
+        LOG_ERROR_MSG(
+                "invalid message type (" <<
                 runjob::Message::toString( static_cast<runjob::Message::Type>(message->getType()) ) <<
                 ") for status (" << _status << ")"
                 );
@@ -454,8 +454,8 @@ Runjob::handleImpl(
         case Status::Error:
         case Status::Terminated:
             LOG_WARN_MSG(
-                    "unsupported message type " << 
-                    runjob::Message::toString( msg->getType() ) << 
+                    "unsupported message type " <<
+                    runjob::Message::toString( msg->getType() ) <<
                     " for status " << _status
                     );
             break;
@@ -502,8 +502,8 @@ Runjob::handleDebug(
         }
     } else {
         LOG_WARN_MSG(
-                "unsupported message type " << 
-                runjob::Message::toString( msg->getType() ) << 
+                "unsupported message type " <<
+                runjob::Message::toString( msg->getType() ) <<
                 " for status " << _status
                 );
 
@@ -518,8 +518,8 @@ Runjob::handleInserting(
 {
     if ( msg->getType() != runjob::Message::Result ) {
         LOG_WARN_MSG(
-                "unsupported message type " << 
-                runjob::Message::toString( msg->getType() ) << 
+                "unsupported message type " <<
+                runjob::Message::toString( msg->getType() ) <<
                 " for status " << _status
                 );
 
@@ -555,8 +555,8 @@ Runjob::handleStarting(
 {
     if ( msg->getType() != runjob::Message::Result ) {
         LOG_WARN_MSG(
-                "unsupported message type " << 
-                runjob::Message::toString( msg->getType() ) << 
+                "unsupported message type " <<
+                runjob::Message::toString( msg->getType() ) <<
                 " for status " << _status
                 );
 
@@ -622,13 +622,14 @@ Runjob::handleRunning(
     if ( msg->getType() == runjob::Message::ExitJob ) {
         const message::ExitJob::ConstPtr exit_job_msg = runjob::Message::get<message::ExitJob>( msg );
         _status.set( Status::Terminated );
-        _connection->write( msg, _status );
 
         _plugin->terminated(
                 _credentials->getPid(),
                 _jobId,
                 exit_job_msg
                 );
+
+        _connection->write( msg, _status );
 
         boost::system::error_code ec;
         _timer.cancel( ec );
@@ -640,8 +641,8 @@ Runjob::handleRunning(
     }
 
     LOG_WARN_MSG(
-            "unsupported message type " << 
-            runjob::Message::toString( msg->getType() ) << 
+            "unsupported message type " <<
+            runjob::Message::toString( msg->getType() ) <<
             " for status " << _status
             );
 }
@@ -750,7 +751,7 @@ Runjob::clientDisconnected(
         )
 {
     LOGGING_DECLARE_LOCATION_MDC( _id );
-    LOG_TRACE_MSG( 
+    LOG_TRACE_MSG(
             __FUNCTION__ << " " <<
             boost::system::system_error(error).what() << " " <<
             Status::toString( _status.get() )

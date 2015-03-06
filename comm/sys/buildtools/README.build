@@ -1,0 +1,83 @@
+Component Based Build System
+----------------------------
+
+This is a component based build system, designed to host a variety of libraries.
+The file heirarchy is as follows:
+
+|--   Build.rules.in:    Library Packaging Rules
+|--   Make.rules.in:     Platform Specfic Rules (like Linux, AIX, etc)
+|--   Make.rules.top.in: Compiler, linker, tools specification
+|--   Makefile.in:       Top level make file to define buildable components/docs
+|--   README.build:      This file
+|--   config.h.in:       An autoconf config.h for configurable includes(not used)
+|--   configure.in:      Autoconf specification file
+`--   tools
+    |--   Doxyfile:      Doxygen specification file
+    |--   doxy_clean.pl: script to clean doxygen
+    |--   doxygen.pl:    script to generate doxygen
+    |--   gen_shared:    tool to generate shared libraries using ld
+    `--   gen_shared_cxx:tool to generate shared libraries using cxx compiler
+
+Description
+-----------
+
+**Note**  In order to build LAPI, you need to have the GNUmakefile.in's
+installed.
+
+This build system is designed to host other libraries, for example, the LAPI
+message passing library.
+
+To host a new library, you must make a symbolic link in the directory heirarchy
+to the new library file.
+
+For example, if we'd like to build LAPI, and these build tools are in the
+"buildtools" directory, we would make a symbolic link to the lapi build directory.
+
+ :$USER/scratch > ls
+   lapi       buildtools
+ :$USER/scratch > cd buildtools
+ :$USER/scratch/buildtools > ln -s ../lapi lapi
+
+This creates a symbolic link to the ../lapi build directory.
+By default, the configure script is *not* checked, so next we need to generate that.
+Note, you'll probably want a newer version of autoconf for this to work.
+
+ :$USER/scratch/buildtools > autoconf
+
+This will generate the configure script.
+Now you should be ready to build.  Generally, we may have multiple builds we want
+to play around with, for example, a sles build and a redhat build.  You can build
+directly in the buildtools directory, but this is not recommended.  Instead,
+you'll want a staging directory.
+
+ :$USER/scratch/buildtools > cd ../
+ :$USER/scratch > mkdir slesbuild
+ :$USER/scratch > cd slesbuild
+
+Ok, we created a staging directory, now we can configure and build.
+If you want to build on a standalone (non-ade/pde environment), you
+need to specify a path to HAL in order to build LAPI:
+
+  :$USER/scratch/slesbuild > ../buildtools/configure --with-hal-include=<hal include path>
+  :$USER/scratch/slesbuild > make
+
+If you are in an ade/pde environment, you should first issue your workon command to set
+up your pde environment.
+
+  :$USER/scratch/slesbuild > ../buildtools/configure --with-buildenv=ade
+  :$USER/scratch/slesbuild > make
+
+you can do a ../buildtools/configure --help to see other options.
+
+
+How this works
+--------------
+
+The configure script searches for all GNUmakefile.in and Makefile.in files
+listed in the SUBDIRS stanza of toplevel generated Makefile.  These files
+are converted to the GNUmakefile and Makefile that are used in the build.
+Note that these files are staged in the build subdirectory (slesbuild in the
+example above).
+
+Each subdirectory GNUmakefile contains rules that specify which library
+the objects belong to.

@@ -841,10 +841,13 @@ sysioFS::close(int fd)
    // Exchange messages with sysiod.
    void *inRegion;
    uint64_t rc = exchange(requestMsg, &inRegion);
-
+   
+   
    // Free the descriptor now that it is closed.
-   if (CNK_RC_IS_SUCCESS(rc)) {
-      File_FreeFD(fd);
+   if (CNK_RC_IS_SUCCESS(rc)) 
+   {
+       FLM_ReleaseFile(fd);
+       File_FreeFD(fd);
    }
 
    // Release the lock.
@@ -956,94 +959,175 @@ sysioFS::fchown(int fd, uid_t uid, gid_t gid)
 uint64_t
 sysioFS::fcntl(int fd, int cmd, uint64_t parm3)
 {
-   // Make sure file descriptor is valid.
-   int remoteFD = File_GetRemoteFD(fd);
-   if (remoteFD < 0) {
-      return CNK_RC_FAILURE(EBADF);
-   }
-
-   // Obtain the lock to serialize message exchange with sysiod.
-   Kernel_Lock(&_lock);
-
-   // Build request message in outbound message buffer.
-   int procID=ProcessorID();
-   FcntlMessage *requestMsg = (FcntlMessage *)getSendBuffer(procID);
-   fillHeader(&(requestMsg->header), Fcntl, sizeof(FcntlMessage));
-   requestMsg->fd = remoteFD;
-   requestMsg->cmd = cmd;
-
-   uint64_t rc = CNK_RC_SUCCESS(0);
-   int newfd = -1;
-
-   switch (cmd) {
-      case F_GETFL:
-      case F_GETFD:
-         requestMsg->arg = 0;
-         break;
-
-      case F_SETFD:
-         requestMsg->arg = (int)parm3;
-         break;
-
-      case F_DUPFD:
-      {
-         // Make sure a descriptor is available.
-         requestMsg->arg = (int)parm3;
-         newfd = File_GetFD(requestMsg->arg);
-         if (newfd == -1) {
-            rc = CNK_RC_FAILURE(EBADF);
-            break;
-         }
-         break;
-      }
-
-      case F_GETLK:
-      case F_SETLK:
-      case F_SETLKW:
-      {
-         struct flock *lock = (struct flock *)parm3;
-         if (!VMM_IsAppAddress(lock, sizeof(struct flock))) {
-            rc = CNK_RC_FAILURE(EFAULT);
-            break;
-         }
-         memcpy(&(requestMsg->lock), lock, sizeof(struct flock));
-         break;
-      }
-
-      default:
-         rc = CNK_RC_FAILURE(EINVAL);
-         break;
-   }
-
-   // Exchange messages with sysiod if no errors found so far.
-   if (CNK_RC_IS_SUCCESS(rc)) {
-      void *inRegion;
-      rc = exchange(requestMsg, &inRegion);
-
-      if (CNK_RC_IS_SUCCESS(rc)) {
-         FcntlAckMessage *replyMsg = (FcntlAckMessage *)inRegion;
-         rc = CNK_RC_SUCCESS(replyMsg->retval);
-         switch (cmd) {
+    bool retry;
+    uint64_t rc = CNK_RC_SUCCESS(0);
+    int cmd2 = cmd;
+    uint64_t retrycount = 0;
+    uint32_t fcntl_lock_workaround = 1;
+    App_GetEnvValue("BG_SYSIODFCNTLWORKAROUND",  &fcntl_lock_workaround);
+    do
+    {
+        retry = false;
+        if(retrycount > 0)
+        {
+            uint64_t backoff_time = MIN(1000 * retrycount, 1000000);  // cap retry rate at 1/second
+            Kernel_WriteFlightLog(FLIGHTLOG, FL_FLOCKRETY, cmd2, rc, retrycount, backoff_time);
+            usleep(backoff_time);
+        }
+        retrycount++;
+        
+        // Make sure file descriptor is valid.
+        int remoteFD = File_GetRemoteFD(fd);
+        if (remoteFD < 0) {
+            return CNK_RC_FAILURE(EBADF);
+        }
+        
+        if((cmd == F_SETLKW) || (cmd == F_SETLK))
+        {
+            struct flock *lock = (struct flock *)parm3;
+            rc = FLM_TouchFD(fd, lock->l_whence);
+            if(rc)
+                return rc;
+        }
+        // Obtain the lock to serialize message exchange with sysiod.
+        Kernel_Lock(&_lock);
+        
+        if((cmd == F_SETLK) || (cmd == F_SETLKW))
+        {
+            dev_t     deviceID;
+            __ino64_t inode;
+            size_t    size;
+            File_GetDeviceINode(fd, &deviceID, &inode, &size);
+            if((deviceID == 0) && (inode == 0))
+            {
+                rc = CNK_RC_FAILURE(EBADF);
+                retry = false;
+                Kernel_Unlock(&_lock);
+                continue;
+            }
+            
+            struct flock *lock = (struct flock *)parm3;
+            if(FLM_HasOverlap(fd, lock->l_start, lock->l_len, lock->l_whence))
+            {
+                Kernel_WriteFlightLog(FLIGHTLOG, FL_FLOCKLOCL, fd, lock->l_start, lock->l_len, lock->l_whence);
+                retry = true;
+                Kernel_Unlock(&_lock);
+                continue;
+            }
+        }
+        
+        // Build request message in outbound message buffer.
+        int procID=ProcessorID();
+        FcntlMessage *requestMsg = (FcntlMessage *)getSendBuffer(procID);
+        fillHeader(&(requestMsg->header), Fcntl, sizeof(FcntlMessage));
+        requestMsg->fd = remoteFD;
+        requestMsg->cmd = cmd;
+        
+        rc = CNK_RC_SUCCESS(0);
+        int newfd = -1;
+        
+        switch (cmd) {
+            case F_GETFL:
+            case F_GETFD:
+                requestMsg->arg = 0;
+                break;
+                
+            case F_SETFD:
+                requestMsg->arg = (int)parm3;
+                break;
+                
             case F_DUPFD:
-               // Setup duplicated descriptor.
-               File_SetFD(newfd, replyMsg->retval, File_GetFDType(fd));
-               rc = CNK_RC_SUCCESS(newfd);
-               break;
-
+            {
+                // Make sure a descriptor is available.
+                requestMsg->arg = (int)parm3;
+                newfd = File_GetFD(requestMsg->arg);
+                if (newfd == -1) {
+                    rc = CNK_RC_FAILURE(EBADF);
+                    break;
+                }
+                break;
+            }
+            
             case F_GETLK:
-               memcpy((void *)parm3, &(replyMsg->lock), sizeof(struct flock));
-               break;
-         }
-      }
-      else {
-         if (cmd == F_DUPFD) {
-            File_FreeFD(newfd);
-         }
-      }
-   }
+            case F_SETLK:
+            case F_SETLKW:
+            {
+                struct flock *lock = (struct flock *)parm3;
+                if (!VMM_IsAppAddress(lock, sizeof(struct flock))) {
+                    rc = CNK_RC_FAILURE(EFAULT);
+                    break;
+                }
+                if((fcntl_lock_workaround == 1) && (GetMyAppState()->Active_Processes > 1) && (cmd == F_SETLKW)) // do not block in sysiod if ppn>1.
+                {
+                    cmd2 = requestMsg->cmd = F_SETLK;
+                }
+                
+                Kernel_WriteFlightLog(FLIGHTLOG, FL_SYSCFLOCK, lock->l_start, lock->l_len, (((uint64_t)remoteFD)<<32) | lock->l_type, (((uint64_t)cmd2<<48) | ((uint64_t)cmd)<<32) | lock->l_whence);
+                memcpy(&(requestMsg->lock), lock, sizeof(struct flock));
+                break;
+            }
+            
+            default:
+                rc = CNK_RC_FAILURE(EINVAL);
+                break;
+        }
+        
+        // Exchange messages with sysiod if no errors found so far.
+        if (CNK_RC_IS_SUCCESS(rc)) {
+            void *inRegion;
+            rc = exchange(requestMsg, &inRegion);
+            
+            if (CNK_RC_IS_SUCCESS(rc)) {
+                FcntlAckMessage *replyMsg = (FcntlAckMessage *)inRegion;
+                rc = CNK_RC_SUCCESS(replyMsg->retval);
+                switch (cmd) {
+                    case F_DUPFD:
+                        // Setup duplicated descriptor.
+                        File_SetFD(newfd, replyMsg->retval, File_GetFDType(fd));
+                        rc = CNK_RC_SUCCESS(newfd);
+                        break;
+                        
+                    case F_GETLK:
+                        memcpy((void *)parm3, &(replyMsg->lock), sizeof(struct flock));
+                        break;
+                        
+                    case F_SETLK:
+                    case F_SETLKW:
+                        struct flock *lock = (struct flock *)parm3;
+                        if(lock->l_type == F_UNLCK)
+                        {
+                            FLM_Release(fd, lock->l_start, lock->l_len, lock->l_whence);
+                        }
+                        else
+                        {
+                            FLM_Acquire(fd, lock->l_start, lock->l_len, lock->l_whence);
+                        }
 
-   // Release the lock.
-   Kernel_Unlock(&_lock);
+                        break;
+                }
+            }
+            else {
+                if (cmd == F_DUPFD) {
+                    File_FreeFD(newfd);
+                }
+            }
+        }
+        
+        // Release the lock.
+        Kernel_Unlock(&_lock);
+
+        if(fcntl_lock_workaround)
+        {
+            if((cmd == F_SETLKW) && ((rc == CNK_RC_FAILURE(EAGAIN)) || (rc == CNK_RC_FAILURE(EACCES))))
+                retry = true;
+            
+            if((cmd2 == F_SETLK) && (rc == CNK_RC_FAILURE(EDEADLK)))
+                retry = true;
+        }
+    }
+    while(retry);
+    
+    Kernel_WriteFlightLog(FLIGHTLOG, FL_FLOCKCOMP, rc,0,0,0);
 
    TRACE( TRACE_SysioFS, ("(I) sysioFS::fcntl%s: fd=%d cmd=%d parm3=%lu rc=%s\n", whoami(), fd, cmd, parm3, CNK_RC_STRING(rc)) );
    return rc;
@@ -1644,9 +1728,11 @@ sysioFS::llseek(int fd, off64_t offset, off64_t *result, int whence)
    uint64_t rc = exchange(requestMsg, &inRegion);
 
    // Set result argument.
-   if (CNK_RC_IS_SUCCESS(rc)) {
-      Lseek64AckMessage *replyMsg = (Lseek64AckMessage *)inRegion;
-      *result = replyMsg->result;
+   if (CNK_RC_IS_SUCCESS(rc)) 
+   {
+       File_SetCurrentOffset(fd, *result);
+       Lseek64AckMessage *replyMsg = (Lseek64AckMessage *)inRegion;
+       *result = replyMsg->result;
    }
 
    // Release the lock.
@@ -1866,6 +1952,7 @@ sysioFS::pread64(int fd, void *buffer, size_t length, off64_t position)
    // When successful, set return code to number of bytes returned.
    if (CNK_RC_IS_SUCCESS(rc)) {
       Pread64AckMessage *replyMsg = (Pread64AckMessage *)inRegion1;
+      File_AdjustCurrentOffset(fd, replyMsg->bytes);
       rc = CNK_RC_SUCCESS(replyMsg->bytes);
    }
 
@@ -1920,9 +2007,11 @@ sysioFS::pwrite64(int fd, const void *buffer, size_t length, off64_t position)
    uint64_t rc = exchange(requestMsg, &inRegion1);
 
    // When successful, set return code to number of bytes returned.
-   if (CNK_RC_IS_SUCCESS(rc)) {
-      Pwrite64AckMessage *replyMsg = (Pwrite64AckMessage *)inRegion1;
-      rc = CNK_RC_SUCCESS(replyMsg->bytes);
+   if (CNK_RC_IS_SUCCESS(rc)) 
+   {       
+       Pwrite64AckMessage *replyMsg = (Pwrite64AckMessage *)inRegion1;
+       File_AdjustCurrentOffset(fd, replyMsg->bytes);
+       rc = CNK_RC_SUCCESS(replyMsg->bytes);
    }
 
    // Release the lock.
@@ -1975,6 +2064,7 @@ sysioFS::read(int fd, void *buffer, size_t length)
 
    ReadAckMessage *replyMsg = (ReadAckMessage *)inRegion;
    if (replyMsg->header.returnCode == bgcios::Success) {
+         File_AdjustCurrentOffset(fd, replyMsg->bytes);
          rc = CNK_RC_SUCCESS(replyMsg->bytes);
    }
    else {
@@ -2713,6 +2803,7 @@ sysioFS::write(int fd, const void *buffer, size_t length)
 
    WriteAckMessage *replyMsg = (WriteAckMessage *)inRegion;
    if (__LIKELY  (replyMsg->header.returnCode == bgcios::Success) ){
+         File_AdjustCurrentOffset(fd, replyMsg->bytes);
          rc = CNK_RC_SUCCESS(replyMsg->bytes);
    }
    else {

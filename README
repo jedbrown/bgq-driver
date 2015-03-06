@@ -2,8 +2,8 @@
 To build the open source Blue Gene software, perform the following steps.
 
 The software is available in two tar files:
-o bgq-V1R2M1.tar.gz
-o bgq-V1R2M1-gpl.tar.gz
+o bgq-V1R2M2.tar.gz
+o bgq-V1R2M2-gpl.tar.gz
 
 Both of these must be downloaded.
 
@@ -76,18 +76,17 @@ $ db2 "create temporary tablespace userspace3scrtemp pagesize 16k managed by sys
 When the system has the required software and configuration, build the source code by by running the following steps:
 
 Un-tar the two tar files in the same directory, the second will add more files to the directories created by the first un-tar.
-$ tar -xzf bgq-V1R2M1.tar.gz
-$ tar -xzf bgq-V1R2M1-gpl.tar.gz
+$ tar -xzf bgq-V1R2M2.tar.gz
+$ tar -xzf bgq-V1R2M2-gpl.tar.gz
 
-$ cd bgq-V1R2M1
+$ cd bgq-V1R2M2
 
 $ scripts/configure \
  --with-floor=/bgsys/drivers/ppcfloor \
  --with-dojo=/bgsys/downloads/dojo.tgz \
  --with-jsdoc=/bgsys/downloads/jsdoc_toolkit-2.4.0.zip \
  --with-revision=1 \
- --with-db=yes \
- --with-security=yes
+ --with-db=yes 
 
 $ make
 

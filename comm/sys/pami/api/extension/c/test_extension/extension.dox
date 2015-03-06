@@ -1,0 +1,103 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2011, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */      
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+/**
+ * \file sys/extension/c/test_extension/extension.dox
+ * \brief PAMI "test" extension documentation
+ * \defgroup EXT_test_extension EXT_test_extension
+ * \ingroup extensions
+ *
+ *
+ * \par Name:
+ *      test_extension
+ *
+ * \version 1.0
+ *
+ * \par Number:
+ *      1
+ *
+ * \par Dependencies:
+ *      None
+ *
+ * \par Overview:
+ * The "test" extension is a simple example of a PAMI extension for purely
+ * illustrative purposes. The extension defines two functions and a structure
+ * which can be used by applications.
+ *
+ * \par Issues:
+ *      None
+ *
+ * \par Example:
+ * \code
+ * typedef struct
+ * {
+ *   size_t line;
+ *   char   func[128];
+ * } bar_info_t;
+ *
+ * typedef void (*EXT_test_extension_foo_fn) ();
+ * typedef void (*EXT_test_extension_bar_fn) (bar_info_t *);
+ *
+ * pami_extension_t extension;
+ * PAMI_Extension_open (client, "test", &extension);
+ *
+ * EXT_test_extension_foo_fn pamix_test_foo =
+ *   (EXT_test_extension_foo_fn) PAMI_Extension_symbol (extension, "foo");
+ *
+ * EXT_test_extension_bar_fn pamix_test_bar =
+ *   (EXT_test_extension_bar_fn) PAMI_Extension_symbol (extension, "bar");
+ *
+ * pamix_test_foo ();
+ *
+ * bar_info_t info;
+ * pamix_test_bar (&info);
+ *
+ * PAMI_Extension_close (extension);
+ * \endcode
+ * \{
+ */
+
+/**
+ * \brief Example test extension information structure
+ */
+typedef struct
+{
+  size_t line;       /**< Line number */
+  char   func[128];  /**< Function name */
+} bar_info_t;
+
+/**
+ * \brief Example test extension foo function
+ *
+ * Prints some source code information to \c stderr.
+ */
+void foo ();
+
+/**
+ * \brief Example test extension bar function
+ *
+ * Prints some source code information to \c stderr and sets the fields in the
+ * information structure.
+ *
+ * \param [in] info Information structure
+ */
+void bar (bar_info_t * info);
+
+/** \} */ /* end of "EXT_test_extension" group */

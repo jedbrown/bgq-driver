@@ -28,7 +28,7 @@ ${MPICH2BUILD}-gcc/Makefile: ${MPICH2DIR}/Makefile.in ${INSTALL_DIR}/lib/libopa-
 	  AR="${HOST_AR}"						\
 	  LD="${HOST_LD}"						\
 	  RANLIB="${HOST_RANLIB}"					\
-	  F77_OTHER_LIBS="-lmpichf90-$(lastword $(subst -, ,$(subst /, ,$(dir $@))))"				\
+	  F77_OTHER_LIBS="-lmpichf77-$(lastword $(subst -, ,$(subst /, ,$(dir $@))))"				\
 	  MPICH2LIB_CFLAGS="${HOST_CFLAGS}"				\
 	  MPICH2LIB_CXXFLAGS="${HOST_CXXFLAGS}"				\
 	  MPICH2LIB_FFLAGS="${HOST_FFLAGS}"				\

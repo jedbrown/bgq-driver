@@ -37,6 +37,7 @@
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/list.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/split_member.hpp>
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/vector.hpp>
 
@@ -114,38 +115,6 @@ public:
     mode_t getUmask() const { return _umask; } //!< Get umask.
 
 private:
-    void __attribute__ ((visibility("hidden"))) addEnvironment(
-            const Environment& env
-            );
-    void __attribute__ ((visibility("hidden"))) validateArgumentSize() const;
-    void __attribute__ ((visibility("hidden"))) validateMappingPath();
-
-    friend class boost::serialization::access;
-    template<class Archive>
-    void __attribute__ ((visibility("hidden"))) serialize(
-            Archive &ar,                //!< [in] archive
-            const unsigned int          //!< [in] version number
-            )
-    {
-        ar & _block;
-        ar & _subBlock;
-        ar & _exe;
-        ar & _args;
-        ar & _envs;
-        ar & _cwd;
-        ar & _hostname;
-        ar & _pid;
-        ar & _uid;
-        ar & _ranks;
-        ar & _np;
-        ar & _mapping;
-        ar & _schedulerData;
-        ar & _strace;
-        ar & _stdinRank;
-        ar & _umask;
-    }
-
-private:
     std::string _block;                 //!<
     SubBlock _subBlock;                 //!<
     std::string _exe;                   //!<
@@ -162,6 +131,73 @@ private:
     Strace _strace;                     //!< system call tracing
     uint32_t _stdinRank;                //!<
     mode_t _umask;                      //!<
+
+    void __attribute__ ((visibility("hidden"))) addEnvironment(
+            const Environment& env
+            );
+    void __attribute__ ((visibility("hidden"))) validateArgumentSize() const;
+    void __attribute__ ((visibility("hidden"))) validateMappingPath();
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void save(
+            Archive &ar,                //!< [in] archive
+            const unsigned int          //!< [in] version number
+            ) const
+    {
+        ar & _block;
+        ar & _subBlock;
+        ar & _exe;
+        ar & _args;
+        ar & _envs;
+        ar & _cwd;
+        ar & _hostname;
+        ar & _pid;
+
+        // Don't save the shared ptr.
+        const bgq::utility::UserId *uidp(_uid.get());
+        ar & uidp;
+
+        ar & _ranks;
+        ar & _np;
+        ar & _mapping;
+        ar & _schedulerData;
+        ar & _strace;
+        ar & _stdinRank;
+        ar & _umask;
+    }
+
+    template<class Archive>
+    void load(
+            Archive &ar,                //!< [in] archive
+            const unsigned int          //!< [in] version number
+            )
+    {
+        ar & _block;
+        ar & _subBlock;
+        ar & _exe;
+        ar & _args;
+        ar & _envs;
+        ar & _cwd;
+        ar & _hostname;
+        ar & _pid;
+
+        // Don't load into the shared ptr.
+        bgq::utility::UserId *uidp(NULL);
+        ar & uidp;
+        _uid.reset(uidp);
+
+        ar & _ranks;
+        ar & _np;
+        ar & _mapping;
+        ar & _schedulerData;
+        ar & _strace;
+        ar & _stdinRank;
+        ar & _umask;
+    }
+
+    // Macro that generates a serialize method that splits into load/save methods.
+    BOOST_SERIALIZATION_SPLIT_MEMBER( )
 };
 
 } // runjob
@@ -170,7 +206,7 @@ namespace boost {
 namespace serialization {
 
 // need to split bgq::utility::UserId into an explicit load and store so we can invoke placement new
-// using a customer constructor. The default ctor can throw if the getuid() result is not found, whic
+// using a customer constructor. The default ctor can throw if the getuid() result is not found, which
 // isn't something that can be handled (or should be) since the uid, name, and groups will be replaced
 // with whatever is deserialized anyhow
 
@@ -225,6 +261,5 @@ load_construct_data(
 
 } // serialization
 } // boost
-
 
 #endif

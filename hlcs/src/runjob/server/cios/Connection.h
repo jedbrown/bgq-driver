@@ -210,6 +210,7 @@ private:
     boost::weak_ptr<block::Io> _block;                      //!<
     uint32_t _sequence;                                     //!<
     boost::posix_time::ptime _pulse;                        //!<
+    uint32_t _authenticateRetryCount;                       //!<
 };
 
 } // cios

@@ -201,7 +201,7 @@ void ClientEventListener::BlockDeletedEventInfo::Impl::accept( AbstractDatabaseC
 
 ClientEventListener::JobAddedEventInfo::Impl::Impl(
         Job::Id job_id,
-        const std::string compute_block_id,
+        const std::string& compute_block_id,
         Job::Status status,
         SequenceId seq_id
     ) :

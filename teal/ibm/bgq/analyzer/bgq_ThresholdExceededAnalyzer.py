@@ -119,11 +119,11 @@ class bgqThresholdExceededEventAnalyzer(bgqBaseAnalyzer):
         # define query for count with no period specified
         eventTable = self.appendSchema('tbgqeventlog')
         self.count_query = "select count(*) from " + eventTable + " where msg_id = ? and location LOC and serialnumber SN and event_time <= ?"
-        self.count_query2 = "select sum(count) from " + eventTable + " where msg_id = ? and location LOC and serialnumber SN and event_time <= ?"
+        self.count_query2 = "select sum(bigint(count)) from " + eventTable + " where msg_id = ? and location LOC and serialnumber SN and event_time <= ?"
 
         # define query for count exceeded with period specified
         self.period_query = "select count(*) from " + eventTable + " where msg_id = ? and location LOC and serialnumber SN and event_time <= ? and event_time > (timestamp('MYTIME') - PERIOD)"
-        self.period_query2 = "select sum(count) from " + eventTable + " where msg_id = ? and location LOC and serialnumber SN and event_time <= ? and event_time > (timestamp('MYTIME') - PERIOD)"
+        self.period_query2 = "select sum(bigint(count)) from " + eventTable + " where msg_id = ? and location LOC and serialnumber SN and event_time <= ? and event_time > (timestamp('MYTIME') - PERIOD)"
 
         # the number of consecutive periods that the threshold has to exceed
         self.msgidConsecutivePeriods = dict()

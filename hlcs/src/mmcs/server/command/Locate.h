@@ -53,7 +53,7 @@ public:
     ** This is invoked at MMCS startup when MMCS builds its list of commands
     ** @return an MMCSCommand object for this specific command
     */
-    static Locate* build();	// factory method
+    static Locate* build(); // factory method
 
     /*!
     ** execute() - Perform specific MMCS command
@@ -61,10 +61,12 @@ public:
     ** @param reply       the command output stream. Refer to class mmcs_client::CommandReply
     ** @param pController the ConsoleController object that the command is to work on
     */
-    void execute(std::deque<std::string> args,
-			 mmcs_client::CommandReply& reply,
-			 common::ConsoleController* pController,
-			 BlockControllerTarget* pTarget=NULL);
+    void execute(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            common::ConsoleController* pController,
+            BlockControllerTarget* pTarget=NULL
+            );
 
     bool checkArgs(std::deque<std::string>& args) { return true; }
 
@@ -73,8 +75,10 @@ public:
     ** @param args the help command arguments
     ** @param reply the command output stream. Refer to class mmcs_client::CommandReply
     */
-    void help(std::deque<std::string> args,
-		      mmcs_client::CommandReply& reply);
+    void help(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply
+            );
 };
 
 } } } // namespace mmcs::server::command

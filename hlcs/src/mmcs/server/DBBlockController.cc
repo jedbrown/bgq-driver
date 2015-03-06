@@ -321,7 +321,7 @@ DBBlockController::allocateBlock(
         // Set owner name
         setBlockStatus_options.push_back(std::string("user=") + getBase()->_userName);
         if ((result = setBlockStatus(BGQDB::ALLOCATED, setBlockStatus_options)) != BGQDB::OK) {
-            mutex.Unlock();		// must unlock the mutex before setDisconnecting()
+            mutex.Unlock(); // must unlock the mutex before setDisconnecting()
             LOG_ERROR_MSG("Setting block status to ALLOCATED failed. Current block status is " << BGQDB::blockCodeToString(bInfo.status));
             reply << mmcs_client::FAIL << "Setting block status to ALLOCATED failed, hardware resources may be allocated to a different block." << mmcs_client::DONE;
             getBase()->setDisconnecting(true, reply.str());
@@ -379,7 +379,7 @@ DBBlockController::allocateBlock(
         // otherwise use a temporary target set.
 
         const BlockControllerTarget target(getBase(), "{*}", reply);
-        args.pop_front();	// remove blockname argument
+        args.pop_front(); // remove blockname argument
         args.push_back(Properties::getProperty(DFT_TGTSET_TYPE));
 
         if (getBase()->isIoBlock()) {
@@ -551,11 +551,11 @@ DBBlockController::boot_block(
 
     BGQDB::STATUS result;
     BGQDB::BlockInfo bInfo;
-    bool useDb = false;	// use boot images and options from the bgqblock table
+    bool useDb = false; // use boot images and options from the bgqblock table
     deque<string> arg_bootoptions, arg_domains;
     string arg_uloader, arg_steps;
     string db_uloader, db_domains;
-    deque<string> boot_args;	// options to pass to BlockController::boot_block
+    deque<string> boot_args; // options to pass to BlockController::boot_block
     bool booted = false;
     BOOST_SCOPE_EXIT( ( &_allocate_block_start ) ( &booted) ) {
         if (!booted) {
@@ -741,7 +741,7 @@ DBBlockController::boot_block(
 
     if (useDb) {
         // Merging boot_block images and options with those from the database
-        const string bootOptionsProps = Properties::getProperty(MMCS_BOOT_OPTIONS);
+        const string bootOptionsProps = Properties::getProperty(BOOT_OPTIONS);
 
         if (!arg_uloader.empty()) {
             boot_args.insert(boot_args.end(), arg_uloader);
@@ -1212,7 +1212,7 @@ DBBlockController::freeBlock(
 
     // Change the block status
     result = setBlockStatus(BGQDB::TERMINATING);
-    if (result != BGQDB::OK) {	// setBlockStatus failed
+    if (result != BGQDB::OK) { // setBlockStatus failed
         // Log an error
         LOG_ERROR_MSG("Unable to set block status to TERMINATING for block " << getBase()->getBlockName() << ", current block status is " << BGQDB::blockCodeToString(bInfo.status));
 
@@ -1263,7 +1263,7 @@ DBBlockController::freeBlock(
             ++iter
         )
     {
-        (*iter)->reset_state();	// reset the node state
+        (*iter)->reset_state(); // reset the node state
     }
 
     if ( !getBase()->isIoBlock() && std::find(args.begin(), args.end(), "abnormal") != args.end() ) {
@@ -1387,11 +1387,7 @@ DBBlockController::processRASMessage(
         )
 {
     LOG_TRACE_MSG(__FUNCTION__);
-    bool filtered;
     bitset<30> map;
-
-    SQLRETURN sqlrc;
-    char sqlstr[512];
 
     // Skip barrier RAS events since they are never inserted
     if (rasEvent.msgId() != 0x00040096) {
@@ -1403,7 +1399,9 @@ DBBlockController::processRASMessage(
     }
 
     // Let BlockController do its part
-    if ((filtered = getBase()->processRASMessage(rasEvent)) == false) {
+    bool filtered = getBase()->processRASMessage(rasEvent);
+    if (filtered == false) {
+        SQLRETURN sqlrc;
         const boost::posix_time::ptime start( boost::posix_time::microsec_clock::local_time() );
 
         // RAS "fast-path" for all except diagnostics-generated RAS events
@@ -1434,6 +1432,7 @@ DBBlockController::processRASMessage(
                 map.set(dbe.RAWDATA);
                 map.set(dbe.QUALIFIER);
                 dbe._columns = map.to_ulong();
+                char sqlstr[512];
                 strcpy(sqlstr, "select recid from NEW TABLE ( ");
                 strcat(sqlstr, dbe.getInsertStatement().c_str());
                 strcat(sqlstr, " ) ");
@@ -1650,7 +1649,7 @@ DBBlockController::processRASMessage(
 void
 DBBlockController::abnormalComputeShutdown()
 {
-    // abnormal compute block shut down leaves the linked I/O nodes in an uknonwn state, changing
+    // Abnormal compute block shut down leaves the linked I/O nodes in an unknown state, changing
     // their status to Software (F)ailure here will require a reboot of them before subsequent
     // compute blocks can be booted
     const cxxdb::ConnectionPtr connection( BGQDB::DBConnectionPool::instance().getConnection() );

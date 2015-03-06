@@ -84,14 +84,21 @@ KillTimer::KillTimer(
 void
 KillTimer::start(
         const size_t seconds,
+        const bool allowTimeoutReduction,
         const Job::Ptr& job
         )
 {
     const boost::posix_time::time_duration expires = _timer.expires_from_now();
     if ( !expires.is_not_a_date_time() ) {
         if ( expires.total_seconds() > static_cast<int32_t>(seconds) ) {
-            LOG_INFO_MSG( "reducing timeout to " << seconds << " seconds" );
-            // allow reducing kill timeout, fall through
+            if ( allowTimeoutReduction ) {
+                LOG_INFO_MSG( "reducing timeout to " << seconds << " seconds" );
+            } else {
+                LOG_DEBUG_MSG( "leaving timeout at " << expires.total_seconds() << " for system initiated signals" );
+                return;
+            }
+
+            // fall through
         } else {
             BOOST_THROW_EXCEPTION(
                 std::logic_error(

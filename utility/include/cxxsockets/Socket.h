@@ -54,8 +54,8 @@ protected:
     //! \brief Protected, non-locking bind.  Called from locking ops.
     void pBind(const SockAddr& addr);
 
-    bool internal_getSockName(SockAddr& sa) const;
-    bool internal_getPeerName(SockAddr& sa) const;
+    void internal_getSockName(SockAddr& sa) const;
+    void internal_getPeerName(SockAddr& sa) const;
 
 public:
     //! \brief Which side of the connection to shut down
@@ -68,10 +68,10 @@ public:
     void Bind(const SockAddr& addr);
 
     //! \brief Wraps get getsockname
-    bool getSockName(SockAddr& sa) const;
+    void getSockName(SockAddr& sa) const;
 
     //! \brief Wraps get getpeername
-    bool getPeerName(SockAddr& sa) const;
+    void getPeerName(SockAddr& sa) const;
 
     //! \brief Shutdown one side of the connection.
     bool Shutdown(ShutDownSide rw);

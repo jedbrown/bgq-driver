@@ -23,6 +23,7 @@
 
 // Includes
 #include <sys/utsname.h>
+#include <ctype.h>
 #include "Kernel.h"
 
 //! \brief  Implement the uname system call.
@@ -49,4 +50,42 @@ uint64_t sc_uname(SYSCALL_FCN_ARGS)
     strncpy(name->machine, "BGQ", sizeof(name->machine));
     
     return CNK_RC_SUCCESS(0);
+}
+
+    
+extern const char* bgq_driver_level;
+extern uint64_t cnk_efix_level;
+uint64_t sc_KERNELVERSION(SYSCALL_FCN_ARGS)
+{
+    int x;
+    uint64_t* verptr[4];
+    verptr[0] = (uint64_t*)r3;
+    verptr[1] = (uint64_t*)r4;
+    verptr[2] = (uint64_t*)r5;
+    verptr[3] = (uint64_t*)r6;
+    
+    char* parsestr = (char*)bgq_driver_level;
+    for(x=0; x<4; x++)
+    {
+        if (!VMM_IsAppAddress(verptr[x], sizeof(uint64_t)))
+        {
+            return CNK_RC_SPI(EFAULT);
+        }
+        *verptr[x] = 0;
+    }
+    
+    if(strncmp(bgq_driver_level, "/bgsys/drivers/", 14) != 0)
+        return CNK_RC_SPI(0);
+    
+    for(x=0; x<3; x++)
+    {
+        while(*parsestr)
+        {
+            if(isdigit(*parsestr)) break;
+            parsestr++;
+        }
+        *(verptr[x]) = strtoull_(parsestr, &parsestr, 10);
+    }
+    *(verptr[3]) = cnk_efix_level;
+    return CNK_RC_SPI(0);
 }

@@ -51,6 +51,15 @@ LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/db/lib
 LDFLAGS += -L $(BGQ_INSTALL_DIR)/ras/lib -lras
 LDFLAGS += -Wl,-rpath,$(BGQ_INSTALL_DIR)/ras/lib
 
+LD1FLAGS = ../../../server/job/class_route/Coordinates.o
+LD1FLAGS += ../../../server/job/class_route/Rectangle.o
+LD1FLAGS += -L -llog4cxx
+LD1FLAGS += -Wl,-rpath,/bgsys/drivers/ppcfloor/extlib/lib
+LD1FLAGS += -L ../../../common -lrunjob_common 
+LD1FLAGS += -Wl,-rpath,/bgsys/drivers/ppcfloor/hlcs/lib 
+LD1FLAGS += -L $(BGQ_INSTALL_DIR)/utility/lib -lbgutility
+LD1FLAGS += -Wl,-rpath,/bgsys/drivers/ppcfloor/utility/lib
+
 TESTERS   = $(patsubst %.cc,%,$(wildcard *.cc))
 
 
@@ -63,7 +72,7 @@ out_%: test_%
 	$(SILENT)BG_PROPERTIES_FILE=$(BGQ_INSTALL_DIR)/utility/etc/bg.properties.tpl ./$< 1> $(patsubst test_%, out_%, $<)
 
 
-test_rank: rank.o Makefile
+test_coordinates: coordinates.o Makefile
 	@echo "link $@"
 	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS)
 
@@ -71,8 +80,11 @@ test_rank: rank.o Makefile
 test_np: np.o Makefile
 	@echo "link $@"
 	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LDFLAGS)
-
-
+	
+test_mapping: mapping.o Makefile
+	@echo "link $@"
+	$(SILENT)$(CXX) -o $@ $(filter-out Makefile, $^) $(LD1FLAGS)
+	
 install: all 
 
 

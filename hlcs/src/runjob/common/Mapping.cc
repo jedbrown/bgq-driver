@@ -86,7 +86,7 @@ Mapping::validateFile()
     BOOST_ASSERT( _type == Mapping::Type::File );
     Rank ranks;
 
-    LOG_DEBUG_MSG( "opening " << _value );
+    LOG_DEBUG_MSG( "Opening " << _value );
     std::ifstream file( _value );
     if ( !file ) {
         boost::system::system_error error(
@@ -106,6 +106,7 @@ Mapping::validateFile()
     std::string line;
     size_t lineCount( 0 );
     while ( std::getline(file, line) ) {
+        _fullMapFileContents.push_back( line );
         try {
             this->analyzeLine( line, ranks, lineCount );
             ++lineCount;
@@ -115,7 +116,7 @@ Mapping::validateFile()
         }
     }
 
-    LOG_DEBUG_MSG( "read " << lineCount << " lines" );
+    LOG_DEBUG_MSG( "Read " << lineCount << " lines" );
 
     // remember encoded contents of mapping file
     std::vector<uint32_t> contents( ranks.begin(), ranks.end() );

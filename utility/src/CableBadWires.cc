@@ -316,7 +316,7 @@ CableBadWires::CableBadWires(const string& location, const string& reg, int badF
         LOG_DEBUG_MSG( _errormessage );
         throw invalid_argument(_errormessage);
     }
-    LOG_DEBUG_MSG(  
+    LOG_DEBUG_MSG(
                 "boardLocation=" << boardLocation << " nodeBoard=" << _rxIsNodeBoard
                 << " ioDrawer=" << _rxIsIoDrawer << " torusCable=" << _isTorusCable
                 );
@@ -369,7 +369,7 @@ CableBadWires::CableBadWires(const string& location, const string& reg, int badF
         _errormessage = "More than one bad fiber per IO channel";
         LOG_DEBUG_MSG( _errormessage );
     }
-                                 
+
 } // End ctor
 
 
@@ -525,7 +525,7 @@ void CableBadWires::setTxPortAndBadWireMask(const string& location, uint64_t bad
         }
     }
 
-    LOG_DEBUG_MSG( 
+    LOG_DEBUG_MSG(
                 "setTxPortAndBadWireMask(): fromport=" << _fromport << "(" << dec << _txPortPos
                 << ") node/IO=" << _txIsNodeBoard << "/" << _txIsIoDrawer
                 << " TxLinkChip=" << _txlinkchip << "(" << _txregister << ")"
@@ -602,7 +602,7 @@ bool CableBadWires::processNodeBoardTorusCable(const string& location, int linkC
             _port = location + "-T" + PosToStr[NodeTorusPort[linkChipIndex][3]];
             break;
     }
-    LOG_DEBUG_MSG( 
+    LOG_DEBUG_MSG(
                 "processNodeBoardTorusCable: _port=" << _port << " _badwiremask=" << hex << _badwiremask
                 );
     return checkTorusCable(_badwiremask);
@@ -640,7 +640,7 @@ bool CableBadWires::processNodeBoardIoCable(const string& location, int linkChip
             d23_6_11 = _badfibers & 0x3f;
             break;
     }
-        LOG_DEBUG_MSG( 
+        LOG_DEBUG_MSG(
                 "c01_0_5=" << hex << c01_0_5 << " c01_6_11=" << hex << c01_6_11
                 << " c23_0_5=" << hex << c23_0_5 << " c23_6_11=" << hex << c23_6_11
                 << " d01_0_5=" << hex << d01_0_5 << " d01_6_11=" << hex << d01_6_11
@@ -773,8 +773,8 @@ int CableBadWires::getFibersFromWiresForTorusCable(int linkChipIndex, uint64_t b
             break;
     }
     int badFiberMask = badWireMask & 0xfff;    // Copy the lower 12 bits only.
-    LOG_DEBUG_MSG( 
-                __FUNCTION__ << ": linkChipIndex=" << linkChipIndex 
+    LOG_DEBUG_MSG(
+                __FUNCTION__ << ": linkChipIndex=" << linkChipIndex
                 << " wires=" << hex << badWireMask << " fibers=" << hex << badFiberMask
                 );
                 return badFiberMask;
@@ -948,9 +948,8 @@ int CableBadWires::getPortPosition(const string& portLocation)
 bool CableBadWires::isTorusSender(const string& portLocation)
 {
     bool sender = false;
-    int position = -1;
     if (isNodeBoardPortLocation(portLocation)) {
-        position = getPortPosition(portLocation);
+        int position = getPortPosition(portLocation);
         switch(position) {
             case 5:
             case 6:

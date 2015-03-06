@@ -43,14 +43,18 @@ class Help : public AbstractCommand
 public:
     Help(const char* name, const char* description, const Attributes& attributes)
       : AbstractCommand(name,description,attributes) { _usage = "help [<command-name>|<category>]";}
-    static  Help* build();	// factory method
-    void execute(std::deque<std::string> args,
-			 mmcs_client::CommandReply& reply,
-			 ConsoleController* pController,
-			 server::BlockControllerTarget* pTarget=NULL);
+    static  Help* build(); // factory method
+    void execute(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply,
+            ConsoleController* pController,
+            server::BlockControllerTarget* pTarget=NULL
+            );
     bool checkArgs(std::deque<std::string>& args) { if (args.size() > 2) return false; else return true;}
-    void help(std::deque<std::string> args,
-		      mmcs_client::CommandReply& reply);
+    void help(
+            std::deque<std::string> args,
+            mmcs_client::CommandReply& reply
+            );
 };
 
 } } } // namespace mmcs::common::command

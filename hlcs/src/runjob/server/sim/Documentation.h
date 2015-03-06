@@ -387,7 +387,7 @@ setrlimit( RLIMIT_NPROC, value )
  *  during job simulation when it starts up. You can tailor this value to whatever you like using the
  *  max_user_processes key in the [%runjob.server] section of your properties file. The default value is
  *  256. If you run a vnc, you will probably want to increase this value. Ensure you know what you're doing
- *  before increasing this to a large value.
+ *  before increasing this to a large value. This value can be set to 0 to inherit the ulimit configuration.
  *
  * \section cleanup Cleaning Up
  *

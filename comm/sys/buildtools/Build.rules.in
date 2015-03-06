@@ -1,0 +1,54 @@
+include @abs_top_builddir@/Make.rules
+
+default:  library $(SUBDIRS)
+
+S_O   = $$(patsubst %.s,  %.s.$(EXTENSION).o,    $$(filter %.s,  $$($$@_SOURCES)))
+S_LO  = $$(patsubst %.s,  %.s.$(EXTENSION).lo,   $$(filter %.s,  $$($$@_SOURCES)))
+C_O   = $$(patsubst %.c,  %.c.$(EXTENSION).o,    $$(filter %.c,  $$($$@_SOURCES)))
+C_LO  = $$(patsubst %.c,  %.c.$(EXTENSION).lo,   $$(filter %.c,  $$($$@_SOURCES)))
+CC_O  = $$(patsubst %.cc, %.cc.$(EXTENSION).o,   $$(filter %.cc, $$($$@_SOURCES)))
+CC_LO = $$(patsubst %.cc, %.cc.$(EXTENSION).lo,  $$(filter %.cc, $$($$@_SOURCES)))
+CPP_O = $$(patsubst %.cpp, %.cpp.$(EXTENSION).o, $$(filter %.cpp,$$($$@_SOURCES)))
+CPP_LO= $$(patsubst %.cpp, %.cpp.$(EXTENSION).lo,$$(filter %.cpp,$$($$@_SOURCES)))
+
+OBJ_O_RUN  = $(sort $(patsubst %.c, %.c.$(EXTENSION).o,	\
+	     $(filter %.c, $($@_SOURCES)))		\
+	     $(patsubst %.cc, %.cc.$(EXTENSION).o,	\
+	     $(filter %.cc, $($@_SOURCES)))		\
+             $(patsubst %.s, %.s.$(EXTENSION).o,	\
+             $(filter %.s, $($@_SOURCES)))		\
+	     $(patsubst %.cpp, %.cpp.$(EXTENSION).o,	\
+	     $(filter %.cpp, $($@_SOURCES))))
+
+OBJ_O = $$(sort $(strip $(S_O) $(C_O)  $(CC_O) $(CPP_O) $(CPP_O)))
+CMD0  = $(CROSS_COMPONENT) $(CROSS_COMPONENT_FLAGS) -o component-$@.$(EXTENSION).o   $(OBJ_O_RUN)
+ifeq (@SHARED_LIB@,no)
+    OBJ_LO     =
+    CMD1       =
+    OBJ_LO_RUN =
+else
+    OBJ_LO     = $$(sort $(strip $(S_LO) $(C_LO) $(CC_LO) $(CPP_LO) $(CPP_LO)))
+    CMD1       = $(CROSS_COMPONENT) $(CROSS_COMPONENT_FLAGS) -o component-$@.$(EXTENSION).lo  tmp/*.o
+    OBJ_LO_RUN = $(sort $(patsubst %.c, %.c.$(EXTENSION).lo,	\
+		 $(filter %.c, $($@_SOURCES)))			\
+		 $(patsubst %.cc, %.cc.$(EXTENSION).lo,		\
+		 $(filter %.cc, $($@_SOURCES)))			\
+		 $(patsubst %.s, %.s.$(EXTENSION).lo,		\
+		 $(filter %.s, $($@_SOURCES)))			\
+		 $(patsubst %.cpp, %.cpp.$(EXTENSION).lo,	\
+		 $(filter %.cpp, $($@_SOURCES))))
+endif
+
+.SECONDEXPANSION:
+.INTERMEDIATE: $(OBJ_O) $(OBJ_LO)
+
+$(DEVICENAME): $(OBJ_O) $(OBJ_LO) $(SUBDIRS)
+	$(CMD0)
+	mkdir -p tmp
+	for f in $(OBJ_LO_RUN); do cp $$f tmp/`basename $${f%.lo}.o`; done
+	$(CMD1)
+	${RM} -r tmp
+
+library: $(DEVICENAME)
+
+-include *.d

@@ -1,0 +1,34 @@
+#!/bin/sh -e
+
+# $1 : Compiler
+# $2 : static lib
+# $3 : shared lib
+# $4 : option used to make shared library (optional)
+# $5 : CRTI
+# $6 : CRTBEGIN
+# $7 : CRTEND
+# $8 : CRTN
+# $9 : LDPATH
+# $10: EXTRA_LIBS
+# echo "DEBUG: 1=$1 2=$2 3=$3 4=$4 5=$5 6=$6 7=$7 8=$8 9=$9 10=${10}"
+
+SHARED=-shared
+EXTRA_LIBS=${5}
+CRTI=$6
+CRTBEGIN=$7
+CRTEND=$8
+CRTN=$9
+LDPATH=-L${10}
+
+LD="${LDPATH} ${EXTRA_LIBS}"
+dirname=`mktemp -d /tmp/XXXXXXXXX`
+cd $dirname
+
+ar x $2
+for f in `ls *.lo`; do mv $f ${f%.lo}.o; done
+
+echo "Base {global:*;local:*;};" > lapi.ver
+$1 $SHARED --version-script lapi.ver --eh-frame-hdr $CRTI $CRTBEGIN *.o $LD $CRTEND $CRTN -o $3
+
+cd /
+rm -rf $dirname
