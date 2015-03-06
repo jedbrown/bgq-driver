@@ -63,6 +63,7 @@ private:
     void processStartRequest(const BGMasterAgentProtocolSpec::StartRequest& startreq);
 
     void doStopRequest(const BGMasterAgentProtocolSpec::StopRequest& stopreq);
+    void setReconnectDelay();
 
 public:
     //! \brief Constructor.
@@ -97,6 +98,8 @@ private:
     const bgq::utility::Properties::ConstPtr _properties;
     boost::mutex _buffered_messages_mutex;
     std::list<MsgBasePtr> _buffered_messages; //! \brief When the master goes down, buffer messages here
+public:
+    int _reconnect_delay;  //! \brief Delay value for reconnecting to the master.
 };
 
 #endif

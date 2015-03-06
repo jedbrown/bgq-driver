@@ -20,12 +20,12 @@
 
 Summary: MPICH2 libraries
 Group: %{product_group}
-Release: 0
+Release: 15 
 # Any time that the previous line ('Release') is set to '0', as when a new
 # release is created, the 'Requires' line should be commented out.
 #
 # The following line ('Requires') is only needed for efixes
-#Requires: %{_bgq_name}-pami >= 1.2.2-0
+Requires: %{_bgq_name}-pami >= 1.2.2-15
 
 %description mpich2
 %{bgq_package_description}
@@ -257,12 +257,12 @@ This package provides the MPICH2 communications libraries
 
 Summary: PAMI Libraries
 Group: %{product_group}
-Release: 0
+Release: 15 
 # Any time that the previous line ('Release') is set to '0', as when a new
 # release is created, the 'Requires' line should be commented out.
 #
 # The following line ('Requires') is only needed for efixes
-#Requires: %{_bgq_name}-mpich2 >= 1.2.2-0
+Requires: %{_bgq_name}-mpich2 >= 1.2.2-15
 
 %description pami
 %{bgq_package_description}

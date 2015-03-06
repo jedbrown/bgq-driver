@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# begin_generated_IBM_copyright_prolog                             #
+#                                                                  #
+# This is an automatically generated copyright prolog.             #
+# After initializing,  DO NOT MODIFY OR MOVE                       #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# (C) Copyright IBM Corp.  2009, 2010                              #
+# IBM CPL License                                                  #
+#                                                                  #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# end_generated_IBM_copyright_prolog
+
+rect="{0 0 0 0 4 4 2 1}"
+root="(0,0,0,0)"
+
+for t in m d; do
+	for a in reduce broadcast allreduce; do
+		for c in A B C D E F; do
+			./sched_test -V --rectangle --${a} "${rect}" "${root}" ${c} | \
+				./sched_verify -${t} ${*}
+			if [[ $? -ne 0 ]]; then exit 1; fi
+		done
+	done
+done

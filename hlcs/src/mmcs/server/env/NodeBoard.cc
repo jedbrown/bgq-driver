@@ -63,22 +63,29 @@ processNB(
         const cxxdb::UpdateStatementPtr& linkChipInsert
         )
 {
-    unsigned MAXNODETEMP = 90; // Celcius
+    unsigned MAXNODETEMP = 90; // Celsius
+    int nodeBoardCount = 0;
+    int computeCount = 0;
+    int linkChipCount = 0;
     if (!Properties::getProperty("MAXNODETEMP").empty() ) {
         MAXNODETEMP = boost::lexical_cast<int>(Properties::getProperty("MAXNODETEMP"));
     }
 
+    LOG_DEBUG_MSG("Start processing node board environmentals");
     for (
             std::vector<MCServerMessageSpec::NodeCardEnv>::const_iterator nodecard = mcNCReply->_nodeCards.begin();
             nodecard != mcNCReply->_nodeCards.end();
             ++nodecard
         )
     {
+        ++nodeBoardCount;
         if (nodecard->_error == CARD_NOT_PRESENT) {
+            LOG_INFO_MSG("Node board " << nodecard->_lctn << " not present.");
             continue;
         }
 
         if (nodecard->_error == CARD_NOT_UP) {
+            LOG_INFO_MSG("Node board " << nodecard->_lctn << " not up.");
             continue;
         }
 
@@ -110,14 +117,20 @@ processNB(
         nodeCardInsert->parameters()[ BGQDB::DBTNodecardenvironment::TEMPMONITOR0_COL ].cast( nodecard->_onboardTemp0 );
         nodeCardInsert->parameters()[ BGQDB::DBTNodecardenvironment::TEMPMONITOR1_COL ].cast( nodecard->_onboardTemp1 );
 
+        //LOG_INFO_MSG("Just before insert of environmentals for node board " << nodecard->_lctn );
         nodeCardInsert->execute();
+        //LOG_INFO_MSG("Just after insert of environmentals for node board " << nodecard->_lctn );
 
+        //LOG_INFO_MSG("Just before insertion of compute environmentals for node board " << nodecard->_lctn );
+
+        computeCount = 0;
         for (
                 std::vector<MCServerMessageSpec::ComputeEnv>::const_iterator compute = nodecard->_computes.begin();
                 compute != nodecard->_computes.end();
                 ++compute
             )
         {
+            ++computeCount;
             if (compute->_error) {
                 LOG_ERROR_MSG("Error reading environmentals from: " << compute->_lctn);
                 continue;
@@ -149,13 +162,18 @@ processNB(
             }
             nodeInsert->execute();
         }
+        //LOG_INFO_MSG("Just after insertion of compute environmentals for node board " << nodecard->_lctn << ". Processed " << computeCount << " computes.");
 
+        //LOG_INFO_MSG("Just before insertion of link chip environmentals for node board " << nodecard->_lctn );
+
+        linkChipCount = 0;
         for (
                 std::vector<MCServerMessageSpec::LinkChipEnv>::const_iterator link = nodecard->_blinks.begin();
                 link != nodecard->_blinks.end();
                 ++link
             )
         {
+            ++linkChipCount;
             if (link->_error) {
                 LOG_ERROR_MSG("Error reading environmentals from: " << link->_lctn);
                 continue;
@@ -170,7 +188,9 @@ processNB(
 
             linkChipInsert->execute();
         }
+        //LOG_INFO_MSG("Just after insertion of link chip environmentals for node board " << nodecard->_lctn << ". Processed " << linkChipCount << " link chips.");
     }
+    LOG_DEBUG_MSG("End processing environmentals for " << nodeBoardCount << " node boards.");
 }
 
 NodeBoard::NodeBoard(
@@ -293,7 +313,7 @@ NodeBoard::impl(
                     )
                 );
     }
-
+    //LOG_TRACE_MSG("Calling makeTargetset in strand from Nodeboard::impl");
     _strand.post(
             boost::bind(
                 &NodeBoard::makeTargetSet,
@@ -317,6 +337,7 @@ NodeBoard::connectHandler(
         return;
     }
 
+    //LOG_TRACE_MSG("Calling makeTargetset (not in strand) from Nodeboard::connecthandler");
     this->makeTargetSet( mc_server, token );
 }
 
@@ -326,11 +347,13 @@ NodeBoard::makeTargetSet(
         const Token::Ptr& token
         )
 {
-    // assume this handler is protected by _strand
+    // Assume this handler is protected by _strand
     LOG_DEBUG_MSG( _racks.size() << " racks remaining" );
-    if ( _racks.empty() ) return;
+    if ( _racks.empty() ) {
+        return;
+    }
 
-    // use rack location as part of name, ex: EnvMonNCxx where xx is rack row,column
+    // Use rack location as part of name, ex: EnvMonNCxx where xx is rack row,column
     const std::string name( "EnvMonNC" + _racks.begin()->substr(1,2) );
     MCServerMessageSpec::MakeTargetSetRequest request(name, "EnvMonNC", true);
     request._expression.push_back( _racks.begin()->substr(1,2) + "-M.-N..$" );
@@ -392,6 +415,7 @@ NodeBoard::openTargetHandler(
 
     if (reply._rc) {
         LOG_ERROR_MSG("Unable to open target set: " << reply._rt);
+        //LOG_TRACE_MSG("Calling makeTargetset in strand from Nodeboard::openTargetHandler");
         _strand.post(
                 boost::bind(
                     &NodeBoard::makeTargetSet,
@@ -407,6 +431,7 @@ NodeBoard::openTargetHandler(
 
     MCServerMessageSpec::ReadNodeCardEnvRequest request;
     request._set = name;
+    request._shortForm = false;
     LOG_DEBUG_MSG( request.getClassName() << " begin " << name );
 
     mc_server->send(
@@ -465,6 +490,7 @@ NodeBoard::closeTargetHandler(
 {
     LOG_DEBUG_MSG( __FUNCTION__ << " for " << name );
 
+    //LOG_TRACE_MSG("Calling insertData in database strand from Nodeboard::closeTargetHandler");
     _databaseStrand.post(
             boost::bind(
                 &NodeBoard::insertData,
@@ -475,7 +501,7 @@ NodeBoard::closeTargetHandler(
                 token
                 )
             );
-
+    //LOG_TRACE_MSG("Calling makeTargetset in strand from NodeBoard::closeTargetHandler");
     _strand.post(
             boost::bind(
                 &NodeBoard::makeTargetSet,
@@ -496,18 +522,16 @@ NodeBoard::insertData(
 {
     // assume this handler is protected by the database strand
     const boost::posix_time::ptime start( boost::posix_time::microsec_clock::local_time() );
-    LOG_DEBUG_MSG( __FUNCTION__ << " begin " << name );
 
     try {
         cxxdb::Transaction tx( *_connection );
         processNB(reply.get(), _nodeBoardInsert, _nodeInsert, _linkChipInsert);
         _connection->commit();
+        LOG_TRACE_MSG( "Committed node board environmental data.");
         _insertion_time += boost::posix_time::microsec_clock::local_time() - start;
     } catch ( const std::exception& e ) {
         LOG_WARN_MSG( e.what() );
     }
-
-    LOG_DEBUG_MSG( __FUNCTION__ << " end " << name );
 }
 
 void

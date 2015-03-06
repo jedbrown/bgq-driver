@@ -104,8 +104,8 @@ CopyMappingFile::impl(
     bgq::utility::ScopeGuard removeGuard(
             boost::bind( &unlink, _copiedFilename.c_str() )
             );
-
-    file << "# copied from " << mapping.value() << std::endl;
+    // See Issue: 9873 for details on why code was changed from file name to jobid
+    file << "# copied from job ID " << boost::lexical_cast<std::string>(_id) << std::endl;
     if ( !file ) {
         char buf[256];
         LOG_RUNJOB_EXCEPTION(

@@ -134,6 +134,7 @@ Location::openTargetHandler(
     if (_type == "service") {
         MCServerMessageSpec::ReadServiceCardEnvRequest request;
         request._set = _location;
+        request._shortForm = false;
 
         mc_server->send(
                 request.getClassName(),
@@ -149,6 +150,7 @@ Location::openTargetHandler(
     } else if (_type == "node") {
         MCServerMessageSpec::ReadNodeCardEnvRequest request;
         request._set = _location;
+        request._shortForm = false;
         mc_server->send(
                 request.getClassName(),
                 request,
@@ -163,6 +165,7 @@ Location::openTargetHandler(
     } else if (_type == "io") {
         MCServerMessageSpec::ReadIoCardEnvRequest request;
         request._set = _location;
+        request._shortForm = false;
         mc_server->send(
                 request.getClassName(),
                 request,

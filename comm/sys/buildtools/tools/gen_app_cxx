@@ -1,0 +1,16 @@
+#!/bin/sh -e
+
+# $1 : Compiler
+# $2 : static lib
+# $3 : shared lib
+# $4 : option used to make shared library (optional)
+# $5 : extra libs
+
+SHARED=$4
+dirname=`mktemp -d /tmp/XXXXXXXXX`
+cd $dirname
+ar x $2
+for f in `ls *.lo`; do mv $f ${f%.lo}.o; done
+$1 $SHARED *.o -o $3 $5
+cd /
+rm -rf $dirname

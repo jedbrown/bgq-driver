@@ -1,0 +1,264 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2011, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */      
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+/**
+ * \page pami_extension_framework PAMI Extension Framework
+ *
+ * Leading text.
+ *
+ * \li \subpage how_to_create_extensions
+ * \li \subpage how_to_use_extensions
+ *
+ * \section sec An example section
+ * This page contains the subsections \ref subsection1 and \ref subsection2.
+ * For more info see page \subpage how_to_create_extensions.
+ *
+ * \subsection subsection1 The first subsection
+ * Text.
+ * \subsection subsection2 The second subsection
+ * More text.
+ */
+
+/**
+ * \page how_to_create_extensions How To Create PAMI Extensions
+ *
+ * This page documents the steps involved in providing a new extension
+ * to the PAMI community.
+ *
+ * \li Define an extension \ref extension_specification "specification" prior to
+ *     implementation
+ *
+ * \li Create and register an extension \ref extension_implementation "implementation"
+ *
+ *
+ *
+ * \section extension_specification Extension Specification
+ *
+ * When initially creating an extension, take the following steps:
+ *
+ * \li Determine if an \ref extension_specification_existing "existing extension"
+ *     can be used, instead of writing a new one. This may involve reuse of an
+ *     existing specification, or promotion to multi-platform or
+ *     community-approved status. In either case, coordinate this use with the
+ *     platform(s) defining and shipping the existing extension.
+ *
+ * \li If no suitable extension already exists, determine if you can \ref
+ *     extension_specification_platform "agree on a multi-platform or community extension",
+ *     or if the extension must be specific to a single platform.
+ *
+ * \li Develop and write an \ref extension_specification_define "extension specification",
+ *     following the naming conventions.
+ *
+ * \li When you're ready to release the extension, freeze the specification and
+ *     add it to the registry maintained by the PAMI community. At this time
+ *     (but not before), you can obtain permanent token (enumerant) assignments.
+ *
+ * \li When shipping an extension, make sure that its interfaces are defined in
+ *     header files accessible to applications. If the extension is
+ *     community-approved, use the community-provided headers.
+ *
+ * \subsection extension_specification_existing Existing Extensions
+ *
+ * Specifications for extensions that have already been developed can be
+ * obtained from the Extension Registry maintained by the PAMI community.
+ *
+ * \subsection extension_specification_platform Community-Approved, Multi-Platform, or Platform Specific
+ *
+ * Applications do not want to deal with platform-specific extensions if it can
+ * possibly be avoided. If the functionality being exposed by an extension is
+ * going to be available on multiple platforms - as most will - it is a good
+ * idea to agree on a single extension with other platform(s) providing that
+ * functionality. This makes it easier for applications to justify using
+ * extensions.
+ *
+ * If the functionality is well-understood, it may be appropriate to define a
+ * community-approved extension. This is the most stable and supported category
+ * of extension; it goes through the entire community extension process, and is
+ * approved by the community, but remains optional functionality. It is expected
+ * that new core features will have been promoted directly from an existing
+ * community-approved extension.
+ *
+ * If the community as a whole is not ready to deal with the extension, but
+ * other platforms are, then it should be defined as a multi-platform extension.
+ * The interested parties can develop the specification entirely among
+ * themselves, outside the community extension process.
+ *
+ * In some cases, platforms may share a common core of functionality, with
+ * platform-specific additional features. Here, it may make sense to agree on a
+ * multi-platform extension to access the core, with additional platform-specific
+ * extensions layered on the core exposing unique features.
+ *
+ * Finally, some extensions will probably have to remain entirely platform-specific.
+ *
+ * \subsection extension_specification_define Extension Definition
+ *
+ * Start with the template for writing extension specifications. The following
+ * general comments apply:
+ *
+ * \li It is important to think about all the different areas of the core
+ *     interface specification that are affected. How are queries for state
+ *     handled? What attribute group does new state belong in? How are existing
+ *     calls modified or expanded in scope? How are existing objects affected by
+ *     use of the extension? The template helps with this by at least reminding
+ *     you to consider each part of the core interface specification.
+ *
+ * \li Extension specifications must be written against a specific version of
+ *     the core interface specification. If possible, it is highly preferable to
+ *     write against the most recent public version. "Written against" means
+ *     that new interface extensions must be written as well-defined
+ *     modifications to the specification being referenced.
+ *
+ * \li Extension specifications may also be specified as doxygen documents
+ *
+ * One complete, shipping example to refer to is the Torus extension specification.
+ *
+ * \subsection extension_specification_naming Naming Conventions
+ *
+ * All extensions must be named and the name included in the extension
+ * specification. The extension name is of the form "category_name" where
+ *
+ * \li "category" identifies the extension category. For a platform-specific
+ *     extension, the category is a 2-5 letter string identifying the platform:
+ *     "BG" for Blue Gene family extensions, "BGQ" for extensions specific to
+ *     Blue Gene/Q, "BGP" for extensions specific to Blue Gene/P, "PERCS" for
+ *     extensions specific to PERCS, etc. For a multi-platform extension the
+ *     category is "EXT" and for approved community extensions the category is
+ *     "PAMIX".
+ *
+ * \li "name" is one or more words separated by underscores, providing a short
+ *     label for the extension. Conventionally the name is entirely lower-case.
+ *
+ * For example, the extension name "EXT_torus_network" is used for a multi-platform
+ * extension adding support to query torus network information.
+ *
+ * Choose names that are short and meaningful. The goal is for names to be
+ * clear, but not at the cost of confusion or ambiguity.
+ *
+ * \subsection extension_specification_registry Extension Registry
+ *
+ * The PAMI community keeps a registry of extension specifications which
+ * specifies the unique extension name and identifier, including the assigned
+ * enumerated type values. Any platforms extensions using any of these values must
+ * obtain them from the PAMI community.
+ *
+ * If an extension defines new PAMI enumerant names, values for those names must
+ * be requested in one or more blocks of 16 values.
+ *
+ * All new extensions must have a number associated with them for documentation
+ * purposes. If an extension depends on another extension, the other extension
+ * must have a lower number. (Note that when an extension is deprecated, the
+ * number associated with it is not reassigned.) This number will also be
+ * assigned by the PAMI community when you register the extension.
+ *
+ * Include all new enumerated values and the extension number in the specification.
+ *
+ * Once you have completed the extension, please make it available to other
+ * PAMI community members and application developers, by submitting the extension
+ * specification to the PAMI extension registrar for inclusion in the public registry.
+ *
+ * All known extensions are defined in the \c registry.def and \c extension/registry.h
+ * files in the PAMI source.
+ *
+ *
+ * \section extension_implementation Extension Implementation and Registration
+ *
+ * Before implementing an extension, take the following steps:
+ *
+ * \li Determine the unique extension name. This name will be used by application
+ *     developers to open and obtain a handle to the extension, and it is also
+ *     used in the source code directory structure
+ *
+ * \li Determine the unique extension identifier. This identifier is used to
+ *     specialize the Extension template class and provide hooks into the
+ *     specific extension implementation
+ *
+ * \li Determine if the extension requires any unique enumerant values. These
+ *     values are used to extend the capabilities of core interfaces that make
+ *     use of enums
+ *
+ * The extension may now be implemented using the information above.
+ *
+ * Copy the directory <b>api/extension/c/template_extension/</b> to the named directory
+ * of the new extension, <b>api/extension/c/{name}/</b>. Edit the following files:
+ *
+ * \li <b>api/extension/c/{name}/Extension.h</b> - Most importantly, search and
+ *     replace the string "template_extension" with {name} and specify the unique
+ *     extension identifier in the template specialization for the \c openExtension(),
+ *     \c closeExtension(), and \c queryExtension() methods. Provide the implementation
+ *     for the \c openExtension(), \c closeExtension(), and \c queryExtension() methods.
+ *
+ * \li <b>api/extension/c/{name}/extension.dox</b> - Update this file with the proper
+ *     doxygen documentation for the new extension. Again, search and replace
+ *     the string "template_extension" with {name}
+ *
+ * Register the new extension by editing the extension registration files:
+ *
+ * \li <b>api/extension/registry.h</b> - Add the following line to the end of the file
+ *     \code
+ * #include "api/extension/c/{name}/Extension.h"
+ *     \endcode
+ *
+ * \li <b>api/extension/registry.def</b> - Add the following line to the end of the file
+ *     \code
+ * PAMI_EXTENSION_DEFINE({name},{id},{enumerant_start|0},{enumerant_count})
+ *     \endcode
+ *
+ * Reconfigure the PAMI source, appending the new extension name to the end of
+ * the comma-delimited list of any pre-existing \c --with-pami-extension option.
+ *
+ * Recompile.
+ *
+ * Run.
+ *
+ *
+ */
+
+
+/**
+ * \page how_to_use_extensions How To Use PAMI Extensions
+ *
+ * This page documents the steps involved in using a new extension in
+ * an application.
+ *
+ * Programmers that wish to use a particular PAMI extension should check both
+ * compile-time defines (to ensure that the extension is supported by the
+ * library they are compiling against) and the result of calling the
+ * PAMI_Extension_open() function to obtain a handle for the extension.
+ *
+ * Usually third-party extensions are not defined at link time, and function
+ * pointers to extension APIs should be obtained by calling the
+ * PAMI_Extension_query() function.
+ *
+ * For example, the following code could be used to open an extension called
+ * \b EXT_new_extension. This code would need to be executed after the client
+ * has been created.
+ *
+ * \code
+ * \endcode
+ *
+ * If the PAMI library supports the extension, then it is safe to use it at
+ * runtime. However, if an extension is not available then the application must
+ * provide an alternative implementation of the extension or otherwise execute
+ * an alternative code flow. For example,
+ *
+ * \code
+ * \endcode
+ *
+ */

@@ -33,6 +33,8 @@
 
 using namespace bgcios::toolctl;
 
+const int DefaultConnectWaitTimoutRDMAcm = 5*60*1000; //5 minutes
+
 LOG_DECLARE_FILE("cios.toolctld");
 
 //! Default service id.
@@ -49,6 +51,7 @@ ToolctlConfig::ToolctlConfig(int argc, char **argv) : bgcios::CiosConfig()
       ("log_level", po::value<std::string>(), "logging level")
       ("properties", po::value<std::string>(), "path to properties file")
       ("CNtorus",po::value<std::string>(), "torus coordinates")
+      ("compute_inbound_connect_timeout", po::value<int>()->default_value(DefaultConnectWaitTimoutRDMAcm), "timeout in milliseconds waiting for compute node connect request")    
       ;
    
    // Parse the command line options.
@@ -147,3 +150,30 @@ ToolctlConfig::getServiceId(void) const
    return serviceId;
 }
 
+int ToolctlConfig::getComputeInboundConnectTimeout(void) const
+{
+   // First, check for command line argument.
+   int computeInboundConnectTimeout = _variableMap["compute_inbound_connect_timeout"].as<int>();
+   if (!_variableMap["compute_inbound_connect_timeout"].defaulted()) {
+      LOG_CIOS_WARN_MSG("compute_inbound_connect_timeout " << computeInboundConnectTimeout << "(ms) from command line argument");
+   }
+
+   // Second, check for key in properties file.
+   else {
+      try {
+         computeInboundConnectTimeout = boost::lexical_cast<int>( _properties->getValue("cios.toolctld", "compute_inbound_connect_timeout") );
+         LOG_CIOS_DEBUG_MSG("compute_inbound_connect_timeout " << computeInboundConnectTimeout << " from properties file " << _properties->getFilename());
+      }
+      catch (const std::invalid_argument& e) {
+         // This isn't fatal so we'll use the default value.
+         LOG_CIOS_DEBUG_MSG("compute_inbound_connect_timeout not found in properties file '" << _properties->getFilename() << "' so using default value " << DefaultConnectWaitTimoutRDMAcm);
+      } 
+      catch (const boost::bad_lexical_cast& e) {
+         // Value is invalid.
+         LOG_CIOS_WARN_MSG("compute_inbound_connect_timeout property from properties file '" << _properties->getFilename() << "' is invalid so using default value " <<
+                      DefaultConnectWaitTimoutRDMAcm << " (" << e.what() << ")");
+      }
+   }
+   
+   return computeInboundConnectTimeout;
+}

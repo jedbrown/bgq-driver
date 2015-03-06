@@ -32,6 +32,7 @@
 #include <utility/include/ExitStatus.h>
 
 #include <boost/asio/io_service.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <grp.h>
 #include <stdlib.h>
@@ -123,6 +124,8 @@ Agent::start(
     const SignalHandler::Ptr signalHandler(
             SignalHandler::create( io_service )
             );
+    // Set reconnect delay value that will be used by Masterconnection
+    setReconnectDelay();
     MasterConnection::create( io_service, ports, this );
 
     while ( 1 ) {
@@ -272,6 +275,38 @@ Agent::join(
 
     return 0;
 }
+
+void
+Agent::setReconnectDelay()
+{
+	// Set default value.
+	_reconnect_delay = 15;
+	int result;
+    const std::string reconnect_delay_key( "reconnect_delay" );
+    const std::string master_agent_section( "master.agent");
+    try {
+        result = boost::lexical_cast<int>(
+                _properties->getValue(master_agent_section, reconnect_delay_key)
+                );
+        // Make sure result is in range of 5 - 120.
+        if ( result < 5 || result > 120 ) {
+            LOG_INFO_MSG( "Value for key " << reconnect_delay_key << " out of range (5 - 120): "
+            		<< result << ".  Using default value: " << _reconnect_delay << ".");
+        } else {
+        	// Value is found, valid, and in range, use it.
+        	_reconnect_delay = result;
+        }
+    } catch ( const boost::bad_lexical_cast& e ) {
+    	LOG_INFO_MSG("Invalid " << reconnect_delay_key << " value: " << e.what()
+    			<< ".  Must be numeric.  Using default value: " << _reconnect_delay << "." );
+    } catch ( const std::invalid_argument& e ) {
+        LOG_INFO_MSG("No " << reconnect_delay_key << " key found in "
+        		<< master_agent_section <<
+        		" section of properties.  Using default value: " << _reconnect_delay << ".");
+    }
+
+}
+
 
 void
 Agent::sendBuffered()

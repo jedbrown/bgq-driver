@@ -31,6 +31,7 @@
 
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/split_member.hpp>
 
 namespace runjob {
 namespace message {
@@ -78,16 +79,40 @@ public:
 private:
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(
+    void save(
+            Archive &ar,                //!< [in] archive
+            const unsigned int          //!< [in] version number
+            ) const
+    {
+        ar & boost::serialization::base_object<Message>(*this);
+        ar & _description;
+
+        // Don't save the shared ptr.
+        const bgq::utility::UserId *uidp(_uid.get());
+        ar & uidp;
+
+        ar & _pid;
+    }
+
+    template<class Archive>
+    void load(
             Archive &ar,                //!< [in] archive
             const unsigned int          //!< [in] version number
             )
     {
         ar & boost::serialization::base_object<Message>(*this);
         ar & _description;
-        ar & _uid;
+
+        // Don't load into the shared ptr.
+        bgq::utility::UserId *uidp(NULL);
+        ar & uidp;
+        _uid.reset(uidp);
+
         ar & _pid;
     }
+
+    // Macro that generates a serialize method that splits into load/save methods.
+    BOOST_SERIALIZATION_SPLIT_MEMBER( )
 };
 
 } // message

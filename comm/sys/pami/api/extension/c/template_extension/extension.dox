@@ -1,0 +1,78 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2011, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */      
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+/**
+ * \file sys/extension/c/template_extension/extension.dox
+ * \brief PAMI "template" extension documentation
+ * \defgroup EXT_template_extension EXT_template_extension
+ * \ingroup extensions
+ *
+ * The template extension is provided as a convienience to extension developers
+ * to quickly integrate a new extension into the PAMI extension framework.
+ *
+ * This extension is not usable by applications.
+ *
+ * \par Name:
+ *      template_extension
+ *
+ * \version 1.0
+ *
+ * \par Number:
+ *      ####
+ *
+ * \par Dependencies:
+ *      None
+ *
+ * \par Overview:
+ *      Provide thorough overview documentation here.
+ *
+ * \par Issues:
+ *      None
+ *
+ * \par Example:
+ * \code
+ *
+ * // Provide a sufficiently complete example such that an application developer
+ * // may be "cut-n-paste" and then complete with minor modifications.
+ *
+ * \endcode
+ * \{
+ */
+
+//
+// Provide standard doxygen-style documentation for all extension interfaces,
+// including functions, enums, structs, #defines, etc.
+//
+
+/**
+ * \brief Example template extension foo function
+ *
+ * This is an arbitrary function that does exactly nothing.
+ */
+void foo ();
+
+/**
+ * \brief Example template extension bar function
+ *
+ * This is yet another arbitrary function that does exactly nothing.
+ */
+void bar ();
+
+/** \} */ /* end of "EXT_template_extension" group */

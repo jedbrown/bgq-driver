@@ -1,0 +1,104 @@
+SUBDIRS = @COMPONENTS@
+include @abs_top_builddir@/Make.rules
+INSTALL = @abs_top_srcdir@/../buildtools/tools/install.pl
+TOP_SRCDIR = @abs_top_srcdir@/pami
+.PHONY: install docs ${ALIBNAME}.a ${ALIBNAME}.so ${CADAPTOR} ${SUBDIRS}
+
+${SUBDIRS}:
+${CADAPTOR}:
+${ALIBNAME}.a: ${SUBDIRS} ${CADAPTOR}
+	@SILENT_BUILD@ echo "Building Static Libraries"
+	@SILENT_BUILD@ for x in `find . -name "component-*.o" -exec echo {} \;`; do			\
+			    basename=`basename $$x`                    ;				\
+			    dirname=`dirname $$x`		       ;				\
+			    object=`echo  $$basename | awk 'BEGIN { FS = "-" } ; { print $$5 }'`    ;	\
+			    build=@abs_top_builddir@/lib$(LIBNAME).a	                    ;	\
+			    echo "   Adding Component $$object to lib$(LIBNAME).a"           ;	\
+			    ${CROSS_AR} cru $$build $$dirname/$$basename	                    ;	\
+		       done
+
+${ALIBNAME}.so: ${SUBDIRS} ${CADAPTOR}
+	@SILENT_BUILD@ echo "Building Shared Libraries"
+	@SILENT_BUILD@ for x in `find . -name "component-*.lo" -exec echo {} \;`; do			\
+			    basename=`basename $$x`                    ;				\
+			    dirname=`dirname $$x`		       ;				\
+                            object=`echo $$basename | awk 'BEGIN { FS = "-" } ; { print $$5 }'`     ;	\
+			    build_la=@abs_top_builddir@/lib$(LIBNAME).la                     ;	\
+			    build_so=@abs_top_builddir@/lib$(LIBNAME).so                     ;	\
+			    echo "   Adding Component $$object to lib$(LIBNAME).so"          ;	\
+                            ${CROSS_AR} cru $$build_la $$dirname/$$basename                         ;	\
+                       done
+	@SILENT_BUILD@ for x in `find . -name "*.la" -exec echo {} \;`; do						\
+			    basename=`basename $$x .la` 		         ;					\
+			    build_la=@abs_top_builddir@/$$basename.la            ;					\
+			    build_so=@abs_top_builddir@/$$basename.so            ;					\
+			    perl @abs_top_srcdir@/../buildtools/tools/${CROSS_GEN_SHARED} """${CROSS_COMPONENT}"""		\
+										 """${CROSS_AR}"""			\
+										 ""$$build_la""				\
+										 ""$$build_so""				\
+										 ""${MK_SHARED}""			\
+										 ""${EXTRA_LIBS}""			\
+										 ""${CROSS_CRTI}""			\
+										 ""${CROSS_CRTBEGIN}""			\
+										 ""${CROSS_CRTEND}""			\
+										 ""${CROSS_CRTN}""			\
+										 ""${CROSS_TOOLCHAIN_LDPATH}"" ;	\
+	               done
+
+install default: ${BUILD_LIBS}
+	@SILENT_BUILD@ echo "DONE Building"
+	@SILENT_BUILD@ mkdir -p ${INSTALL_DIR}/lib ${INSTALL_DIR}/include
+	@SILENT_BUILD@ ${INSTALL} -pm644 `ls *.a`         ${INSTALL_DIR}/lib
+ifeq (@SHARED_LIB@,yes)
+	@SILENT_BUILD@ ${INSTALL} -pm755 `ls *.so`        ${INSTALL_DIR}/lib
+endif
+	@SILENT_BUILD@ ${INSTALL} -pm644 ${PUBLICHEADERS} ${INSTALL_DIR}/include
+	@SILENT_BUILD@ echo "Installed into ${INSTALL_DIR}"
+#	@SILENT_BUILD@ ${MAKE} @SILENT_DIR@ tests
+#	 @SILENT_BUILD@ echo To Do list:
+#	 @SILENT_BUILD@ @abs_top_srcdir@/../buildtools/tools/find_deps . | xargs grep -e '@todo' -e '\\todo' | grep '#warning' || true
+
+tests: ${TESTS}
+
+stage-tests:
+	@ mkdir -p ${INSTALL_DIR}/apitest
+	@FILES=`find ${TOP_SRCDIR}/test/api -name "*.c" -o -name "*.cc" -o -name "*.h" -o -name makefile.standalone`  ; \
+	for i in $${FILES}; do                                                             \
+		installname=`echo $$i | sed 's!${TOP_SRCDIR}/test/api/!!g'`              ; \
+		dirname=`dirname $$installname`                                          ; \
+		mkdir -p ${INSTALL_DIR}/apitest/$$dirname                                ; \
+		${INSTALL} -pm644 $$i ${INSTALL_DIR}/apitest/$$dirname                   ; \
+        done
+
+print_tag:
+	@SILENT_BUILD@ echo "Building ${MESSAGER} on Platform ${PLATFORM}";
+
+
+clean::
+	@SILENT_BUILD@ -${RM} *~ core.* *.d *.a *.la *.so
+	@SILENT_BUILD@ -for i in ${TESTS}; do			\
+          if  [ -f $$i/GNUmakefile ]; then			\
+            echo "${IND} Cleaning $$i";				\
+            ${MAKE} IND="...${IND}" -s -C $$i clean;		\
+          fi;							\
+        done
+
+distclean:: clean
+	${RM} config.log config.h
+	${RM} Make.rules Build.rules `find . -name GNUmakefile`
+	${RM} -r include/
+	find -mindepth 1 -type d | sort -r | xargs rmdir
+
+DOCS="${COMM_PATH}/www/pami:${TARGET}"
+docs:
+	${RM} -r ${DOCS}
+	mkdir -p ${DOCS}
+	perl @abs_top_srcdir@/../buildtools/tools/doxygen.pl	\
+		--base=@abs_top_srcdir@				\
+		--deps=@abs_top_builddir@			\
+		--output=${DOCS}				\
+		EXAMPLE_PATH=@abs_top_srcdir@/pami/sys/examples	\
+		PROJECT_NAME='"Converged Messaging"'		\
+		HTML_OUTPUT=.					\
+		@abs_top_srcdir@/../buildtools/tools/Doxyfile	\
+		> ${DOCS}.out.txt 2> ${DOCS}.err.txt

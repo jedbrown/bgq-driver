@@ -1,0 +1,211 @@
+Directory Contents:
+
+sched_test.cc		Main source code for "sched_test". This compiles
+			in the schedules and calls them much the way an
+			executor would. It then dumps the schedule to
+			stdout, in various formats determined by command
+			options. "./sched_test" (no args) gives help.
+
+digraph.pl		"Filter" for "sched_test -V" that produces
+			output suitable for "dot" to make graphs.
+			Example:
+
+			./sched_test -V ... | digraph.pl | dot ...
+
+			digraph.pl takes the following options:
+
+			-A|--allreduce_digraph
+				Additional graphs created for
+				per-node communications.
+
+			-v|--recv
+				Use receives instead of sends
+				to build graph.
+
+fakeTorusMapping.h	Fake TorusCollectivesMapping class for use outside of
+			actual BlueGene hardware.
+
+sched.pm		Library of useful routines for processing the
+			output from "sched_test -V".
+
+test.pl			An example program to load the output from
+			"sched_test -V" and access it in a Perl program.
+
+sched_verify		"Wrapper" shell script to invoke various
+			verification scripts. Currently supports
+			the following mutually-exclusive options:
+
+			-m	Match sends/recvs (verify_sends.pl)
+			-d	Data verification (verify_data.pl)
+
+			The following options (anything else on the
+			commandline) are passed to the verify_*.pl
+			scripts:
+
+			-p	Positive feedback. Prints message
+				if successful.
+
+			-v	Verbose. Lots more output. Sets -p.
+
+verify_data.pl		Verification Perl program to trace data sent
+			and ensure a particular collective gets the
+			data where it needs to go.
+
+verify_sends.pl		Verification Perl program to check whether
+			each send has a matching receive, and vice
+			versa.
+
+bino_test		Sample shell script to test/verify various
+			sizes and types of Binomial Schedules.
+
+rect_test		Sample shell script to test/verify various
+			types of Rectangle Schedules.
+
+
+Using the output from "sched_test -V":
+
+See also "test.pl", "sched.pm", and "verify_*.pl" for Perl examples of
+how to access the data structures produced by "-V".
+
+The -V option of sched_test produces Perl variable assignments for all
+pertinent data related to the schedule. This output may be "evaled" in
+a Perl program in order to use the schedule.  It includes the following:
+
+NUM_RANKS	The number of ranks in the mapping
+
+OP		The collective operation, "Reduce", "Allreduce",
+		"Broadcast", or "Barrier".
+
+ALGORITHM	The algorithm selected, e.g. "Binomial" or "Rectangle".
+
+TITLE		A meaningful title string describing the schedule.
+
+ROOT		The root node rank.
+
+RECT		The rectangle structure. Note, a rectangle structure is
+		created internally for algorithms that don't use a rectangle.
+		In this case, the "rectangle" is one dimensional (i.e. a line)
+		along the X axis. In such cases, ys = zs = ts = 1 and xs is the
+		number of ranks. This variable is a Perl hash with the following
+		keys:
+
+		xs, ys, zs, ts	The size of each rectangle dimension.
+		x0, y0, z0, t0	The lowest coordinate used in the rectangle.
+
+		For example, the maximum valid X coordinate would be "x0 + xs - 1".
+
+		For some node sets, the rectangle is a bounding-box for the
+		(sparse) set of nodes.
+
+SCHED		This contains the schedule. It is a reference to a complex, nested,
+		Perl structure.  The outer layer is an array of hashes, one for
+		each rank. Each rank's hash contains that ranks schedule. For
+		example, to access the schedule hash for 'rank' you would use
+		"${$SCHED}[$rank]".  scalar(@{$SCHED}) should give the same number as
+		$NUM_RANKS.  In subsequent examples, "$node_ref = ${$SCHED}[$rank]".
+		The hash elements are:
+
+		x, y, z, t	The coordinates (mapping) of the rank.
+
+		rank		The rank number. This is provided in case
+				the hash reference is used in a context where the
+				rank may not otherwise be available.
+
+		startph		The rank's starting phase number.
+
+		nphases		The number of phases. Note: some phases
+				between 'startph' and 'startph + nphases -1'
+				may be empty.
+
+		phases		The phases of the schedule. This is a reference
+				to an array of arrays. In subsequent examples,
+				"$phases_ref = $node_ref->{phases}", and
+				"$phase_ref = ${$phases_ref}[$ph_num]".
+				Also note, "scalar(@{$phases_ref})" should be the
+				same number as:
+				"$node_ref->{startph} + $node_ref->{nphases}".
+
+			Each phase array is an array of hash references which
+			are the steps in the phase. Receive steps are listed
+			first. The number of steps is "scalar(@{$phase_ref})".
+			In subsequent examples, "$step_ref = ${$phase_ref}[$step]".
+
+			Each step hash contains the following:
+
+			dst	Destination rank. May be 'undef' (for receives).
+
+			src	Source rank. May be 'undef' (for sends).
+
+			op	Operation, e.g. COMBINE_SUBTASK, PT_TO_PT_SUBTASK,
+				etc.  May be 'RECV' for schedules that do not
+				provide a Source Operation code.
+
+For example, Perl code to traverse the entire schedule for all nodes might be:
+
+my $nranks = scalar(@{$SCHED});
+if ($nranks != $NUM_RANKS) { error? }
+for (my $rank = 0; $rank < $nranks; ++$rank) {
+	my $node_ref = ${$SCHED}[$rank];
+	my $nphases = $node_ref->{nphases};
+	my $startph = $node_ref->{startph};
+	if ($nphases != scalar(@{$node_ref->{phases}}) - $startph) { error? }
+	for (my $ph_num = $startph; $ph_num < $startph + $nphases; ++$ph_num) {
+		my $phase_ref = ${$node_ref->{phases}}[$ph_num];
+		my $nsteps = scalar(@{$phase_ref});
+		for (my $step = 0; $step < $nsteps; ++$step) {
+			my $step_ref = ${$phase_ref}[$step];
+			if (defined($step_ref->{dst})) {
+				SEND step...
+			}
+			if (defined($step_ref->{src})) {
+				RECV step...
+			}
+		}
+	}
+}
+
+Routines available from sched.pm:
+
+dump_sched(ref)		Displays a dump of the data structure(s) referenced by 'ref'.
+
+get_nranks()		Returns the number of ranks described in the schedule.
+
+get_rank(index)		Returns a reference to the nodes schedule.
+
+get_rank_rank(rank)	Locates the node's schedule by rank and returns reference.
+
+get_nphases(ref)	Returns number of phases in node's schedule 'ref'.
+
+get_phase(ref, phase)	Returns reference to 'phase' of schedule 'ref'.
+
+get_nsteps(ref)		Returns number of steps in phase 'ref'.
+
+get_step(ref, index)	Returns reference to step 'index' in phase 'ref'.
+
+rank2torus(rank, \x, \y, \z, \t)	Converts 'rank' to coords. Note, '\x' ...
+					are references.
+
+torus2rank(x, y, z, t)	Returns rank for converted coords.
+
+get_nodes_sent(ref)	Returns (ref to) array of ranks that are destinations
+			of phase step 'ref'.
+
+chk_recv(phase, ref)	Returns (ref to) array of receives that match send in step 'ref',
+			which is in 'phase' of the schedule.
+
+chk_send(phase, ref)	Returns (ref to) array of sends that match receive in step 'ref',
+			which is in 'phase' of the schedule.
+
+chk_node_data(rank, data)	Checks whether string 'data' contains all node indices
+				of the schedule (reduce).
+
+chk_all_data(ref)	Check all nodes in schedule for having correct values in
+			array of strings 'ref', per allreduce.
+
+chk_node_bcast(root, rank, data)	Check if string 'data' contains proper data
+					from a broadcast from node 'root'.
+
+chk_all_bcast(ref)	Check all nodes in schedule for having correct values in
+			array of strings 'ref', per broadcast.
+
+sched_load(file)	Load a schedule, optionally from 'file' (otherwise STDIN).

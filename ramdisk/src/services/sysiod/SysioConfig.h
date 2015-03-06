@@ -86,6 +86,10 @@ public:
    //! \return Number of seconds for a syscall to be deemed hung.
    uint64_t getHungSyscallTimeout(void) const;
 
+   //! \brief Get the value of the compute inbound connect request timeout
+   //! \return Number of milliseconds for the wait timeout
+   int getComputeInboundConnectTimeout(void) const;
+
 
 
 };

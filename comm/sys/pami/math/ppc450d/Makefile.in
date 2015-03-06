@@ -1,0 +1,26 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+VPATH		= @abs_srcdir@
+SUBDIRS		= 
+SOURCES		= Memcpy.cc \
+			uint8_o.cc uint16_o.cc uint32_o.cc uint64_o.cc \
+			int8_o.cc int16_o.cc int32_o.cc int64_o.cc \
+			fp32_o.cc fp64_o.cc fp128_o.cc
+
+DEVICENAME	= 
+include @abs_top_builddir@/Build.rules

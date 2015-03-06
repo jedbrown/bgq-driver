@@ -168,9 +168,26 @@ function start {
 		FIRMWARE="/bin/fw-ConnectX2-rel-2_7_8200-81Y140-EN_PXE-1.5.6_UAR_7.bin"
 		;;
 	    * )
-		failure
-		echo -en "\n\tERROR: Unknown adapter found!  $ADAPTER\n"
-		exit 1
+		# check for other supported card(s)
+		lspci -n -s "0000:01:00.0" | grep "1014:0023" &> /dev/null
+		if [ $? -eq 0 ] ; then
+		    echo -en "\nSupported card found.  Skipping firmware update. "
+		    skipped
+		    echo -en "\n"
+
+	            # When running in diagnostics mode we just want to immediately shutdown after the flash.
+		    if [ $BG_NODE_ENABLE_DIAGNOSTICSMODE -eq 1 ] ; then
+			lspci -vv -s 0000:01:00.0
+			/etc/rc.shutdown
+		    fi
+
+		    exit 0
+		
+		else
+		    failure
+		    echo -en "\n\tERROR: Unknown adapter found!  $ADAPTER\n"
+		    exit 1
+		fi
 		;;
 	    esac
 	    

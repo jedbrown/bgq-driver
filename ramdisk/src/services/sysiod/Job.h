@@ -52,6 +52,7 @@ public:
       _jobId = jobId;
       _posixMode = true;
       _logJobStatistics = false;
+      _logFunctionShipErrors = false;
       _shortCircuitPath.clear();
       _shortCircuitFd = -1;
       _killed = false;
@@ -85,6 +86,17 @@ inline
    //! \return Nothing.
 inline
    void setLogJobStatistics(bool value) { _logJobStatistics = value; }
+
+   //! \brief  Return indicator if log job _logFunctionShipErrors is enabled for job.
+   //! \return True if log job _logFunctionShipErrors is enabled, otherwise false.
+inline
+   int logJobFunctionShipErrors(void) const { return _logFunctionShipErrors; }
+
+   //! \brief  Set the log job _logFunctionShipErrors attribute.
+   //! \param  value New value for posix mode attribute.
+   //! \return Nothing.
+inline
+   void setLogJobFunctionShipErrors(int value) { _logFunctionShipErrors = value; }
 
    //! \brief  Get the short circuit descriptor (-1 means short circuit is not enabled).
    //! \return Short circuit file descriptor.
@@ -185,6 +197,9 @@ private:
 
    //! Attribute to control logging statistics when job ends.
    bool _logJobStatistics;
+
+   //! Indicator to control logging function ship operation errors.
+   int _logFunctionShipErrors;
 
    //! Path to short circuit file.
    std::string _shortCircuitPath;

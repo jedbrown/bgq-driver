@@ -1,0 +1,88 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2011, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */      
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+/**
+ * \file sys/extension/c/bgq_mapping/extension.dox
+ * \brief PAMI "bgq mapping" extension documentation
+ * \defgroup BGQ_bgq_mapping BGQ_bgq_mapping
+ * \ingroup extensions
+ *
+ * \par Name:
+ *      bgq_mapping
+ *
+ * \version 1.0
+ *
+ * \par Number:
+ *      9100
+ *
+ * \par Dependencies:
+ *      None
+ *
+ * \par Platforms:
+ *      Blue Gene/Q
+ *
+ * \par Overview:
+ * The Blue Gene/Q mapping extension defines a bitmask and provides a pointer
+ * to an array of \c uint32_t opaque objects, one for each global task. A
+ * bitwise-and of the mask and any value in the array will result in \c 0 if
+ * the task is located on another node than the calling task. The size of the
+ * opaque array is equal to the number of tasks in the system, as returned by
+ * PAMI_Client_query() using the configuration attribute ::PAMI_CLIENT_NUM_TASKS.
+ *
+ * \par Issues:
+ *      None
+ *
+ * \par Example:
+ * \code
+ * pami_extension_t extension;
+ * PAMI_Extension_open (client, "bgq_mapping", &extension);
+ *
+ * #define PAMI_EXTENSION_BGQ_MAPPING_IS_LOCAL_MASK 0x40000000
+ * uint32_t * mapcache = (uint32_t *) PAMI_Extension_symbol (extension, "mapcache");
+ *
+ * pami_task_t task = 1;
+ * if (mapcache[task] & PAMI_EXTENSION_BGQ_MAPPING_IS_LOCAL_MASK)
+ *   fprintf (stdout, "task %d is on the local node.\n", task);
+ * else
+ *   fprintf (stdout, "task %d is on a remtoe node.\n", task);
+ *
+ * PAMI_Extension_close (extension);
+ * \endcode
+ * \{
+ */
+
+/**
+ * \brief The bitmask value used to determine if a task is local.
+ *
+ * A bitwise-and of the mapping task value and this bitmask value will result in
+ * a value of 0 if the task is not local.
+ */
+#define PAMI_EXTENSION_BGQ_MAPPING_IS_LOCAL_MASK 0x40000000
+
+/**
+ * \brief The array of mapping information for each task in the system.
+ *
+ * Access to this symbol may be obtained by using the name "mapcache" with the
+ * PAMI_Extension_symbol() function.
+ */
+uint32_t * mapcache;
+
+
+/** \} */ /* end of "BGQ_bgq_mapping" group */

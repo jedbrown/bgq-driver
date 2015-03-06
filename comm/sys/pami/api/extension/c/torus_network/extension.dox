@@ -1,0 +1,131 @@
+/* begin_generated_IBM_copyright_prolog                             */
+/*                                                                  */
+/* This is an automatically generated copyright prolog.             */
+/* After initializing,  DO NOT MODIFY OR MOVE                       */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* Licensed Materials - Property of IBM                             */
+/* Blue Gene/Q                                                      */
+/* (C) Copyright IBM Corp.  2011, 2012                              */
+/* US Government Users Restricted Rights - Use, duplication or      */      
+/*   disclosure restricted by GSA ADP Schedule Contract with IBM    */
+/*   Corp.                                                          */
+/*                                                                  */
+/* This software is available to you under the Eclipse Public       */
+/* License (EPL).                                                   */
+/*                                                                  */
+/*  --------------------------------------------------------------- */
+/*                                                                  */
+/* end_generated_IBM_copyright_prolog                               */
+
+/**
+ * \file sys/extension/c/torus_network/extension.dox
+ * \brief PAMI "torus network" extension documentation
+ * \defgroup EXT_torus_network EXT_torus_network
+ * \ingroup extensions
+ *
+ * \par Name:
+ *      torus_network
+ *
+ * \version 1.0
+ *
+ * \par Number:
+ *      1000
+ *
+ * \par Dependencies:
+ *      None
+ *
+ * \par Platforms:
+ *      Blue Gene/Q, Blue Gene/P
+ *
+ * \par Overview:
+ * The torus network extension defines three functions and a structure which can
+ * be used by applications to determine certain attributes of the torus
+ * network, as well as translate between a \c pami_task_t value and the torus
+ * coordinate system.
+ *
+ * \par Issues:
+ *      None
+ *
+ * \par Example:
+ * \code
+ * typedef struct
+ * {
+ *   size_t   dims;
+ *   size_t * coord;
+ *   size_t * size;
+ *   size_t * torus;
+ * } torus_info_t;
+ *
+ * typedef const torus_info_t * (*torus_information_fn) ();
+ * typedef pami_result_t (*task2torus_fn) (pami_task_t, size_t[]);
+ * typedef pami_result_t (*torus2task_fn) (size_t[], pami_task_t *);
+ *
+ * pami_extension_t extension;
+ * PAMI_Extension_open (client, "torus_network", &extension);
+ *
+ * torus_information_fn pamix_torusinfo =
+ *   (torus_information_fn) PAMI_Extension_symbol (extension, "information");
+ * task2torus_fn pamix_task2torus =
+ *   (task2torus_fn) PAMI_Extension_symbol (extension, "task2torus");
+ * torus2task_fn pamix_torus2task =
+ *   (torus2task_fn) PAMI_Extension_symbol (extension, "torus2task");
+ *
+ * const torus_info_t * info = pamix_torusinfo ();
+ *
+ * pami_task_t task = 1;
+ * size_t * coord = (size_t *) malloc (sizeof(size_t) * info->dims);
+ * pamix_task2torus (task, coord);
+ *
+ * pamix_torus2task (coord, &task);
+ *
+ * PAMI_Extension_close (extension);
+ * \endcode
+ * \{
+ */
+
+/**
+ * \brief Information structure for static torus data
+ */
+typedef struct
+{
+  size_t   dims;  /**< Number of torus dimensions */
+  size_t * coord; /**< Torus coordinates of the calling process */
+  size_t * size;  /**< Length of each torus dimension */
+  size_t * torus; /**< Mesh (unset) or torus (set) */
+} torus_info_t;
+
+/**
+ * \brief Retrieve torus information
+ */
+static const torus_info_t * information ();
+
+/**
+ * \brief Translate a task to the associated torus coordinates
+ *
+ * The torus coordinates array length is specified in the
+ * torus_info_t::dims field.
+ *
+ * \see information
+ * \see PAMI::Interface::Mapping::Torus::task2torus
+ *
+ * \param [in]  task PAMI task to query
+ * \param [out] addr Array of torus coordinates
+ */
+static pami_result_t task2torus (pami_task_t task, size_t addr[]);
+
+/**
+ * \brief Translate torus coordinates to the associated task
+ *
+ * The torus coordinates array length is specified in the
+ * torus_info_t::dims field.
+ *
+ * \see information
+ * \see PAMI::Interface::Mapping::Torus::torus2task
+ *
+ * \param [in]  addr Array of torus coordinates
+ * \param [out] task PAMI task at the torus coordinates
+ */
+static pami_result_t torus2task (size_t addr[], pami_task_t * task);
+
+/** \} */ /* end of "EXT_torus_network" group */

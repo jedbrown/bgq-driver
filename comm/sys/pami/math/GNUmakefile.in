@@ -1,0 +1,26 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+VPATH		        = @abs_srcdir@
+SUBDIRS		        = common @PAMI_ARCH@
+@LIBNAME@-""-MATH_SOURCES	= FloatUtil.cc				\
+			  fp32.cc fp64.cc fp128.cc		\
+	  		  int8.cc int16.cc int32.cc int64.cc	\
+			  uint8.cc uint16.cc uint32.cc uint64.cc \
+			  pami_math.cc
+DEVICENAME	        = @LIBNAME@-""-MATH
+include @abs_top_builddir@/Build.rules

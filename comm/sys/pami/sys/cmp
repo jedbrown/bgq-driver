@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+
+use Fcntl;
+use warnings;
+$\="\n";
+
+die "Need CC\n"            unless ($CC   = shift);
+die "Need target\n"        unless ($file = shift);
+die "Cannot munge $file\n" unless ($file =~ s/\.o$/.c/);
+die "Need headers\n"       unless scalar (@headers = @ARGV);
+
+sysopen(FILE, $file, O_WRONLY | O_EXCL | O_CREAT) or
+    die "Cannot create $file\n";
+
+print FILE qq{#include "$_"} for (@headers);
+print FILE qq{void foo(){;}};
+close FILE;
+
+$rc = system($CC, qw"-Idefault -c", $file);
+
+unlink $file;
+die "FAILED\n" if $rc;

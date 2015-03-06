@@ -1,0 +1,272 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog
+#=== api SUBDIR ===
+api/init.cnk
+api/init_coll.cnk
+#
+#=== api/client SUBDIR ===
+api/client/configuration.cnk
+api/client/hello.cnk
+#
+#=== api/collectives SUBDIR ===
+api/collectives/allgather.cnk
+api/collectives/allgather_subcomm.cnk
+api/collectives/allgatherv.cnk
+api/collectives/allgatherv_int.cnk
+api/collectives/allreduce.cnk
+api/collectives/allreduce_query.cnk
+api/collectives/allreduce_subcomm.cnk
+api/collectives/allreduce_subcomm_query.cnk
+api/collectives/alltoall.cnk
+api/collectives/alltoallv.cnk
+api/collectives/alltoallv_int.cnk
+api/collectives/alltoallv_int_subcomm.cnk
+api/collectives/alltoallv_subcomm.cnk
+api/collectives/ambcast.cnk
+api/collectives/barrier.cnk
+api/collectives/barrier_query.cnk
+api/collectives/barrier_subcomm.cnk
+api/collectives/barrier_subcomm_query.cnk
+api/collectives/bcast.cnk --timelimit 270
+#api/collectives/bcast_advisor.cnk --timelimit 300          +++ REMOVED FROM MAKEFILE +++
+api/collectives/bcast_query.cnk
+api/collectives/bcast_subcomm.cnk
+# bcast_subcomm2 is currently an invalid test
+# api/collectives/bcast_subcomm2.cnk --timelimit 480 --compile-only +++ REMOVED FROM MAKEFILE +++
+# api/collectives/bcast_subcomm_noparent.cnk                +++ REMOVED FROM MAKEFILE +++
+api/collectives/bcast_subcomm_query.cnk
+api/collectives/gather.cnk
+api/collectives/gatherv.cnk
+api/collectives/gatherv_int.cnk
+api/collectives/geometry.cnk
+#api/collectives/multisync.cnk                              +++ REMOVED FROM MAKEFILE +++
+api/collectives/reduce.cnk
+api/collectives/reduce_query.cnk
+api/collectives/reduce_scatter.cnk
+api/collectives/reduce_scatter_subcomm.cnk
+api/collectives/reduce_subcomm.cnk
+api/collectives/scan.cnk
+api/collectives/scan_subcomm.cnk
+api/collectives/scatter.cnk
+api/collectives/scatter_subcomm.cnk
+api/collectives/scatterv.cnk
+api/collectives/scatterv_int.cnk
+#
+#=== api/context SUBDIR ===
+api/context/advance-perf.cnk
+api/context/advance.cnk
+api/context/create.cnk
+api/context/lock.cnk
+api/context/multi-advance.cnk
+api/context/multi-create.cnk
+#=========================================================================
+# mode for post-multithreaded-perf, post-multithreaded & post must be < 64
+#=========================================================================
+api/context/post-multithreaded-perf.cnk --args 1 --maxrpn 32
+api/context/post-multithreaded.cnk --maxrpn 32
+api/context/post-perf.cnk
+api/context/post-stress.cnk
+api/context/post.cnk --maxrpn 32
+#
+#=== api/endpoint SUBDIR ===
+api/endpoint/endpoint_table.cnk
+#
+#=== api/extensions/multisend SUBDIR ===                          +++ multisend SUBDIR COMMENTED OUT OF extensions MAKEFILE +++
+#api/extensions/multisend/multicast.cnk                           
+#api/extensions/multisend/multicast_as.cnk                        
+#api/extensions/multisend/multicast_global.cnk                    
+#api/extensions/multisend/multicast_local.cnk                     
+#api/extensions/multisend/multicast_local_as.cnk                   
+#api/extensions/multisend/multicast_pwq.cnk                       
+#api/extensions/multisend/multicast_pwq_as.cnk                    
+#api/extensions/multisend/multicombine_global.cnk --timelimit 360 
+#api/extensions/multisend/multisync_global.cnk --timelimit 360    
+#
+#=== api/extensions/test SUBDIR ===                               +++ test SUBDIR REMOVED FROM extensions MAKEFILE +++
+#api/extensions/test/extension_test.cnk                           
+#
+#=== api/extensions/topology SUBDIR ===
+api/extensions/topology/topology.cnk
+#
+#=== api/extensions/torus SUBDIR ===                              +++ torus SUBDIR REMOVED FROM extensions MAKEFILE +++
+#api/extensions/torus/extension_torus.cnk                         
+#
+#=== api/p2p SUBDIR ===
+# +++ adi.cnk is INTERACTIVE +++
+api/p2p/adi.cnk --compile-only                               
+api/p2p/default-send-nplus-minus1.cnk --numnodes 2 --ranks-per-node 1 --maxnp 2 
+api/p2p/default-send.cnk --numnodes 2 --ranks-per-node 1 --maxnp 2            
+#api/p2p/dispatch.cnk                                             +++ REMOVED FROM MAKEFILE +++
+api/p2p/immediate_send.cnk --numnodes 2 --ranks-per-node 1 --maxnp 2          
+api/p2p/immediate_send_overflow.cnk --numnodes 2 --ranks-per-node 1 --maxnp 2
+api/p2p/send_latency.cnk
+api/p2p/send_latency_typed.cnk
+api/p2p/sendimmediate_latency.cnk
+api/p2p/simple-send-immediate.cnk
+# +++ udp_simple_send.cnk is INTERACTIVE +++
+api/p2p/udp_simple_send.cnk --compile-only
+#
+#=== api/p2p/fence_all SUBDIR ===                                 +++ fence_all SUBDIR REMOVED FROM p2p MAKEFILE +++
+#api/p2p/fence_all/simple_fence_all_func.cnk                      
+#
+#=== api/p2p/get SUBDIR ===
+api/p2p/get/simple_get_func.cnk --numnodes 2 --ranks-per-node 1 --maxnp 2       
+#
+#=== api/p2p/put SUBDIR ===
+api/p2p/put/simple_put_func.cnk --numnodes 2 --ranks-per-node 1 --maxnp 2
+#
+#=== api/p2p/rget SUBDIR ===
+api/p2p/rget/rget_flood.cnk
+api/p2p/rget/rget_perf.cnk
+api/p2p/rget/simple_rget_func.cnk
+#
+#=== api/p2p/rmw SUBDIR ===
+api/p2p/rmw/rmw_func.cnk --maxnp 64
+#
+#=== api/p2p/rput SUBDIR ===
+api/p2p/rput/rput_flood.cnk
+api/p2p/rput/rput_perf.cnk --envs BG_SHAREDMEMSIZE=64 BG_APPAGENT1=/bgsys/drivers/ppcfloor/agents/bin/comm.elf
+api/p2p/rput/simple_rput_func.cnk
+#
+#=== api/p2p/send SUBDIR ===
+api/p2p/send/default-send-1.cnk
+api/p2p/send/dispatch_err.cnk
+api/p2p/send/long-header-matrix.cnk
+api/p2p/send/long-header.cnk --numnodes 2 --ranks-per-node 1 --maxnp 2       
+api/p2p/send/mmps.cnk --maxrpn 16
+api/p2p/send/rdma-matrix.cnk --timelimit 360
+api/p2p/send/send_flood_perf.cnk
+api/p2p/send/send_immediate_pingpong_ring.cnk
+api/p2p/send/send_to_self.cnk --ranks-per-node 2 --envs BG_SHAREDMEMSIZE=64
+api/p2p/send/send_unexpected_func.cnk
+api/p2p/send/shmem-matrix.cnk --timelimit 480 --numnodes 2 --ranks-per-node 2 --envs BG_SHAREDMEMSIZE=64
+#api/p2p/send/sqmr.cnk                                 +++ REMOVED (see PAMI TRAC #451) +++
+#
+#=== api/p2p/send/hint SUBDIR ===
+api/p2p/send/hint/dispatch.cnk
+#
+#=== api/p2p/send/hint/long_header SUBDIR ===
+api/p2p/send/hint/long_header/long_header_perf.cnk
+#
+#=== api/p2p/send/hint/recv_immediate SUBDIR ===
+api/p2p/send/hint/recv_immediate/recv_immediate_func.cnk
+api/p2p/send/hint/recv_immediate/recv_immediate_perf.cnk
+#
+#=== api/p2p/send/hint/use_shmem SUBDIR ===
+api/p2p/send/hint/use_shmem/use_shmem_perf.cnk
+#
+#=== api/p2p/send/immediate SUBDIR ===
+api/p2p/send/immediate/data_integrity.cnk
+api/p2p/send/immediate/inject_perf.cnk
+#
+#=== api/p2p/send/send_to_self_immed SUBDIR ===
+api/p2p/send/send_to_self_immed/send_to_self_immed.cnk
+#
+#=== api/p2p/send/send_to_self_perf SUBDIR ===
+api/p2p/send/send_to_self_perf/send_to_self_perf.cnk
+#
+#=== api/p2p/send/type SUBDIR ===
+api/p2p/send/type/send-typed-recv.cnk --numnodes 2 --ranks-per-node 1 --maxnp 2
+#
+#=== api/time SUBDIR ===
+api/time/tick.cnk
+api/time/time.cnk
+api/time/timebase.cnk
+#
+#=== internals SUBDIR ===
+#internals/pamihello.cnk                         +++ REMOVED FROM MAKEFILE +++
+#
+#=== internals/BG/bgq SUBDIR ===
+# internals/BG/bgq/mc-rect.cnk                   +++ REMOVED FROM MAKEFILE +++
+#
+#=== internals/BG/bgq/classroutes SUBDIR ===     +++ classroutes SUBDIR REMOVED FROM bgq MAKEFILE +++
+#internals/BG/bgq/classroutes/classroute_test.cnk 
+#
+#=== internals/BG/bgq/commthreads SUBDIR ===
+internals/BG/bgq/commthreads/multi-context.cnk --numnodes 1 --ranks-per-node 1 --maxnp 1
+internals/BG/bgq/commthreads/multi-proc.cnk --numnodes 2 --ranks-per-node 1 --maxnp 2
+internals/BG/bgq/commthreads/preempt-pthreads.cnk --numnodes 1 --ranks-per-node 1 --maxnp 1
+#
+#=== internals/atomics SUBDIR ===
+internals/atomics/compilation.cnk --compile-only
+#
+#=== internals/atomics/bgq SUBDIR ===
+internals/atomics/bgq/bgqcompilation.cnk --compile-only
+#
+#=== internals/bgq SUBDIR ===
+internals/bgq/personality.cnk
+#
+#=== internals/bgq/memtest SUBDIR ===
+internals/bgq/memtest/memtest-pami.cnk
+#
+#=== internals/bgq/mu2 SUBDIR ===
+#internals/bgq/mu2/ammulticast-pami.cnk --timelimit 120 +++ OBSOLETE SEE TRAC 488 +++
+#internals/bgq/mu2/collmulticast-pami.cnk               +++ OBSOLETE SEE TRAC 422 +++             
+internals/bgq/mu2/geom_classroutes-pami.cnk
+internals/bgq/mu2/manytomany-pami.cnk
+internals/bgq/mu2/messagerate-pami.cnk
+internals/bgq/mu2/mrate-pami.cnk
+internals/bgq/mu2/pingpong-pami.cnk
+internals/bgq/mu2/simple-pami.cnk
+#
+#=== internals/fifo/bgq SUBDIR ===
+#=========================================================================
+# fifo tests are shmem only
+#=========================================================================
+internals/fifo/bgq/fifo_func.cnk --numnodes 1 --ranks-per-node 32
+internals/fifo/bgq/fifo_pingpong.cnk --numnodes 1 --ranks-per-node 32
+#
+#=== internals/misc SUBDIR ===
+internals/misc/atomic_fairness.cnk --numnodes 1 --ranks-per-node 1 --maxnp 1
+#internals/misc/barrier_reset.cnk                  +++ REMOVED FROM MAKEFILE +++
+internals/misc/math.cnk
+#
+#=== internals/multisend SUBDIR ===
+#internals/multisend/multicast.cnk --numnodes 1 --ranks-per-node 2 --envs BG_SHAREDMEMSIZE=64 --timelimit 120  +++ SEE TRAC #454
+#internals/multisend/multicombine.cnk --numnodes 1 --ranks-per-node 2 --envs BG_SHAREDMEMSIZE=64 --timelimit 120  +++ SEE TRAC #454
+#internals/multisend/multisync.cnk --numnodes 1 --ranks-per-node 2 --envs BG_SHAREDMEMSIZE=64  +++ SEE TRAC #454
+#internals/multisend/multisync_perf.cnk --numnodes 1 --ranks-per-node 2 --envs BG_SHAREDMEMSIZE=64  +++ SEE TRAC #454
+#
+#=== internals/multisend/bgq SUBDIR ===
+#internals/multisend/bgq/NativeInterface.cnk              +++ COMMENTED OUT OF MAKEFILE +++
+#internals/multisend/bgq/bgqmultisync.cnk --numnodes 1 --ranks-per-node 2 --envs BG_SHAREDMEMSIZE=64  +++ SEE TRAC #454
+#internals/multisend/bgq/bgqmultisync_perf.cnk --numnodes 1 --ranks-per-node 2 --envs BG_SHAREDMEMSIZE=64    +++ SEE TRAC #454
+#internals/multisend/bgq/local_multicast.cnk              +++ REMOVED FROM MAKEFILE +++
+#internals/multisend/bgq/local_multicombine.cnk           +++ REMOVED FROM MAKEFILE +++
+#
+#=== internals/multisend/mpi SUBDIR ===                   +++ mpi SUBDIR REMOVED FROM multisend MAKEFILE +++
+#internals/multisend/mpi/MPIBcastMdl.cnk                  
+#internals/multisend/mpi/MPISyncMdl.cnk                   
+#internals/multisend/mpi/P2pDispatchMulticastProtocol.cnk 
+#
+#=== internals/progressfunc SUBDIR ===
+internals/progressfunc/multiprogressfunc.cnk
+internals/progressfunc/progressfunc.cnk
+#
+#=== internals/pwq SUBDIR ===
+internals/pwq/noncontig.cnk
+#
+#=== internals/queue SUBDIR ===
+#internals/queue/gendev_perf.cnk --ranks-per-node 1   +++ COMMENTED OUT OF MAKEFILE +++
+#internals/queue/gendev_stress.cnk --ranks-per-node 1 +++ REMOVED FROM MAKEFILE +++
+internals/queue/queue.cnk
+internals/queue/queue_stress1.cnk --ranks-per-node 1
+internals/queue/simple_queue.cnk
+#
+#=== internals/topology SUBDIR ===
+internals/topology/topology_index.cnk
+internals/topology/topology_test.cnk

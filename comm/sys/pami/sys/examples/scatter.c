@@ -1,0 +1,1 @@
+../../test/api/collectives/scatter.c

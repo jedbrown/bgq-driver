@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# begin_generated_IBM_copyright_prolog                             #
+#                                                                  #
+# This is an automatically generated copyright prolog.             #
+# After initializing,  DO NOT MODIFY OR MOVE                       #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# (C) Copyright IBM Corp.  2009, 2010                              #
+# IBM CPL License                                                  #
+#                                                                  #
+#  --------------------------------------------------------------- #
+#                                                                  #
+# end_generated_IBM_copyright_prolog
+
+# STDIN is the perl-dump from sched_test, so just choose a perl program
+# and invoke it...
+USAGE="\
+./sched_test -V <args>... | $0 [option] [verify-options...]
+Option (one of, must be first):
+	-d	Verify data results (simulate executor)
+	-m	Match sends to receives, report anomalies
+Verify-options are passed along unchanged.
+"
+
+# Need to make a better guess at where the scripts are located...
+# Should decompose $0 into path component...
+dir="."
+
+xxx=1
+unset prog
+while getopts ":dm" op; do
+	case ${op} in
+	d)
+		if [[ -n ${prog} ]]; then
+			echo "Only one verification program may be selected" >&2
+			echo "Usage: ${USAGE}" >&2
+			exit 1
+		fi
+		prog="${dir}/verify_data.pl"
+		;;
+	m)
+		if [[ -n ${prog} ]]; then
+			echo "Only one verification program may be selected" >&2
+			echo "Usage: ${USAGE}" >&2
+			exit 1
+		fi
+		prog="${dir}/verify_sends.pl"
+		;;
+	*)
+		# ugh. this allows long opts to get passed correctly.
+		if eval "[[ \${${OPTIND}} != \"-${OPTARG}\"* ]]"; then
+			xxx=2;
+		fi
+		break;;
+	esac
+done
+# Use -2 instead of -1 if we've already seen an option we want
+# to pass along and mustn't shift it away.
+shift $((OPTIND-xxx))
+
+if [[ -z ${prog} ]]; then
+	echo "Usage: ${USAGE}" >&2
+	exit 1
+fi
+
+exec ${prog} "${@}"

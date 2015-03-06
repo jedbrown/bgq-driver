@@ -58,14 +58,23 @@ processIO(
         const cxxdb::UpdateStatementPtr& linkChipInsert
         )
 {
+    int IODrawerCount = 0;
+    LOG_DEBUG_MSG("Start processing I/O drawer environmentals");
     for (
             std::vector<MCServerMessageSpec::IoCardEnv>::const_iterator io = mcIOReply->_ioCards.begin();
             io != mcIOReply->_ioCards.end();
             ++io
     )
     {
-        if (io->_error == CARD_NOT_PRESENT) continue;
-        if (io->_error == CARD_NOT_UP) continue;
+        ++IODrawerCount;
+        if (io->_error == CARD_NOT_PRESENT) {
+            LOG_INFO_MSG("I/O drawer " << io->_lctn << " not present.");
+            continue;
+        }
+        if (io->_error == CARD_NOT_UP) {
+            LOG_INFO_MSG("I/O drawer " << io->_lctn << " not up.");
+            continue;
+        }
         if (io->_error) {
             LOG_ERROR_MSG("Error reading environmentals from: " << io->_lctn);
             RasEventImpl noContact(0x00061004);
@@ -154,6 +163,7 @@ processIO(
             }
         }
     }  // for loop that goes thru all IO cards
+    LOG_DEBUG_MSG("End processing environmentals for " << IODrawerCount << " I/O drawers.");
 }
 
 IoDrawer::IoDrawer(
@@ -310,6 +320,7 @@ IoDrawer::openTargetHandler(
 
     MCServerMessageSpec::ReadIoCardEnvRequest request;
     request._set = "EnvMonIO";
+    request._shortForm = false;
 
     mc_server->send(
             request.getClassName(),
@@ -367,6 +378,7 @@ IoDrawer::closeTargetHandler(
             cxxdb::Transaction tx( *_connection );
             processIO(reply.get(), _fanInsert, _ioCardInsert, _nodeInsert, _linkChipInsert);
             _connection->commit();
+            LOG_DEBUG_MSG( "Committed I/O drawer environmental data.");
             database_timer->dismiss( false );
         } catch ( const std::exception& e ) {
             LOG_WARN_MSG( e.what() );

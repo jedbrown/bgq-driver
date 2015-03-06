@@ -137,11 +137,25 @@ private:
             const boost::shared_ptr<block::Compute>& block
             );
 
+    void findBlockHandler_2(
+            const boost::shared_ptr<block::Compute>& block
+            );
+
+    void findBlockHandler_3(
+            const boost::shared_ptr<block::Compute>& block
+            );
+
+    void findBlockHandler_4(
+            const boost::shared_ptr<block::Compute>& block
+            );
+
     void blockNotFound();
 
     const std::string& getBlockStatusString(
             BGQDB::BLOCK_STATUS status
             ) const;
+
+    void setInitializedRetryDelay();
 
 private:
     boost::shared_ptr<Server> _server;
@@ -150,6 +164,7 @@ private:
     boost::shared_ptr<ClientContainer> _clients;
     std::string _hostname;
     std::string _shortHostname;
+    int _initialized_retry_delay;
 };
 
 } // mux

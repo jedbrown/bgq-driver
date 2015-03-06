@@ -666,7 +666,7 @@ if [ -e $ADDPKGS_LOC ] ; then
 
 	if [ $? -eq 0 ] ; then
 		if [ -e $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/bin/new_install ] && 
-		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.4.gcc447 ] ; then
+		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.5.gcc447 ] ; then
 			echo -en "\n\tFound the full IBM XL C/C++ Compiler RPM set.  Configuring ...\n"
 			echo "1" > $DISTROFS_LOC/tempKeyFile
 			mount --bind /bgsys $DISTROFS_LOC/bgsys
@@ -675,9 +675,9 @@ if [ -e $ADDPKGS_LOC ] ; then
 				./new_install < /tempKeyFile ; \
 				exit " 2>&1 | tee -a $LOG_DIR/$LOGFILE
 			umount $DISTROFS_LOC/bgsys
-                        mv $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.4.gcc447 \
-			   $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.4.gcc447.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
-                        cat $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.4.gcc447.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.4.gcc447 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        mv $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.5.gcc447 \
+			   $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.5.gcc447.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        cat $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.5.gcc447.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/vac/bg/12.1/etc/vac.cfg.rhel6.5.gcc447 2>&1 | tee -a $LOG_DIR/$LOGFILE
 			rm $DISTROFS_LOC/tempKeyFile
 		fi
 	fi
@@ -686,7 +686,7 @@ if [ -e $ADDPKGS_LOC ] ; then
 
 	if [ $? -eq 0 ] ; then
 		if [ -e $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/bin/new_install ] &&
-		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.4.gcc447 ] ; then
+		   [ ! -e $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.5.gcc447 ] ; then
 			echo -en "\n\tFound the full IBM XL Fortran Compiler RPM set.  Configuring ...\n"
 			echo "1" > $DISTROFS_LOC/tempKeyFile
 			mount --bind /bgsys $DISTROFS_LOC/bgsys
@@ -694,9 +694,9 @@ if [ -e $ADDPKGS_LOC ] ; then
 			chroot $DISTROFS_LOC /bin/bash -c "cd opt/ibmcmp/xlf/bg/14.1/bin/ ; \
 				./new_install < /tempKeyFile ; \
 				exit " 2>&1 | tee -a $LOG_DIR/$LOGFILE
-                        mv $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.4.gcc447 \
-			   $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.4.gcc447.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
-                        cat $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.4.gcc447.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.4.gcc447 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        mv $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.5.gcc447 \
+			   $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.5.gcc447.save 2>&1 | tee -a $LOG_DIR/$LOGFILE
+                        cat $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.5.gcc447.save | sed 's#/bgsys/drivers/toolchain/[-a-zA-Z0-9_]\+/#/bgsys/drivers/ppcfloor/#g' | grep -v crtsavres > $DISTROFS_LOC/opt/ibmcmp/xlf/bg/14.1/etc/xlf.cfg.rhel6.5.gcc447 2>&1 | tee -a $LOG_DIR/$LOGFILE
 			rm $DISTROFS_LOC/tempKeyFile
 			umount $DISTROFS_LOC/bgsys
 		fi

@@ -3,7 +3,7 @@
 
 Summary: Scheduler 
 Group: %{product_group}
-Release: 0
+Release: 11
 
 %description bgsched
 %{bgq_package_description}
@@ -90,7 +90,7 @@ Master server.
 
 Summary: bgmaster agent daemon
 Group: %{product_group}
-Release: 0
+Release: 9
 
 %description bgagentd
 %{bgq_package_description}
@@ -175,7 +175,7 @@ Master commands
 
 Summary: MMCS server
 Group: %{product_group}
-Release: 0
+Release: 1
 
 %description mmcs_server
 %{bgq_package_description}
@@ -336,7 +336,11 @@ Real time commands.
 
 Summary: runjob server
 Group: %{product_group}
-Release: 0
+Release: 13
+Requires: %{_bgq_name}-runjob_mux >= 1.2.2-11
+Requires: %{_bgq_name}-runjob >= 1.2.2-11
+Requires: %{_bgq_name}-runjob_common >= 1.2.2-11
+Requires: %{_bgq_name}-runjob_command >= 1.2.2-11
 
 %description runjob_server
 %{bgq_package_description}
@@ -364,7 +368,11 @@ Job submission server.
 
 Summary: runjob multiplexer
 Group: %{product_group}
-Release: 0
+Release: 11
+Requires: %{_bgq_name}-runjob_server >= 1.2.2-11
+Requires: %{_bgq_name}-runjob >= 1.2.2-11
+Requires: %{_bgq_name}-runjob_common >= 1.2.2-11
+Requires: %{_bgq_name}-runjob_command >= 1.2.2-11
 
 %description runjob_mux
 %{bgq_package_description}
@@ -416,7 +424,11 @@ Job submission client library interface.
 
 Summary: runjob client
 Group: %{product_group}
-Release: 0
+Release: 11
+Requires: %{_bgq_name}-runjob_mux >= 1.2.2-11
+Requires: %{_bgq_name}-runjob_server >= 1.2.2-11
+Requires: %{_bgq_name}-runjob_common >= 1.2.2-11
+Requires: %{_bgq_name}-runjob_command >= 1.2.2-11
 
 %description runjob
 %{bgq_package_description}
@@ -444,7 +456,11 @@ Job submission interface.
 
 Summary: runjob common libraries
 Group: %{product_group}
-Release: 0
+Release: 11
+Requires: %{_bgq_name}-runjob_mux >= 1.2.2-11
+Requires: %{_bgq_name}-runjob_server >= 1.2.2-11
+Requires: %{_bgq_name}-runjob >= 1.2.2-11
+Requires: %{_bgq_name}-runjob_command >= 1.2.2-11
 
 %description runjob_common
 %{bgq_package_description}
@@ -468,7 +484,11 @@ Job submission common library.
 
 Summary: runjob commands
 Group: %{product_group}
-Release: 0
+Release: 11
+Requires: %{_bgq_name}-runjob_mux >= 1.2.2-11
+Requires: %{_bgq_name}-runjob_server >= 1.2.2-11
+Requires: %{_bgq_name}-runjob >= 1.2.2-11
+Requires: %{_bgq_name}-runjob_common >= 1.2.2-11
 
 %description runjob_command
 %{bgq_package_description}

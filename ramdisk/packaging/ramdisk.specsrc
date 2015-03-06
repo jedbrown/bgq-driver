@@ -3,8 +3,8 @@
 
 Summary: BG/Q Ramdisk 
 Group: %{product_group}
-Release: 0
-requires: %{_bgq_name}-linux
+Release: 8
+requires: %{_bgq_name}-linux >= 1.2.2-8
 
 %description ramdisk
 %{bgq_package_description}
@@ -57,7 +57,7 @@ Contains the initramfs tools and images required to build a ramdisk for booting 
 
 Summary: Common I/O Services
 Group: %{product_group}
-Release: 0
+Release: 8
 
 
 %description cio_services 
@@ -105,8 +105,8 @@ The binaries, libraries and scripts for Common I/O Services.
 
 Summary: BG/Q Linux Distribution Image and tooling.
 Group: %{product_group}
-Release: 0
-requires: %{_bgq_name}-linux,%{_bgq_name}-ramdisk,%{_bgq_name}-cio_services,yaci >= 12-7.4.ch4,redhat-lsb >= 4.0-3,mstflint,%{_bgq_name}-baremetal
+Release: 8
+requires: %{_bgq_name}-linux  >= 1.2.2-8,%{_bgq_name}-ramdisk >= 1.2.2-8,%{_bgq_name}-cio_services >= 1.2.2-8,yaci >= 12-7.4.ch4,redhat-lsb >= 4.0-3,mstflint,%{_bgq_name}-baremetal
 
 %description distrofs 
 %{bgq_package_description}

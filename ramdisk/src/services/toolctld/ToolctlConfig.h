@@ -53,6 +53,8 @@ public:
 
    uint32_t getServiceId(void) const;
 
+   int getComputeInboundConnectTimeout(void) const;
+
 };
 
 } // namespace toolctl

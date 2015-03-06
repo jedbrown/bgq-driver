@@ -1,0 +1,60 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+VPATH		= @abs_srcdir@
+SUBDIRS         = send get put rget rput rmw fence_all
+NOTBUILT        = 
+APPS            = adi.${EXTENSION} default-send.${EXTENSION} default-send-nplus-minus1.${EXTENSION} immediate_send.${EXTENSION} immediate_send_overflow.${EXTENSION} send_latency.${EXTENSION} sendimmediate_latency.${EXTENSION} udp_simple_send.${EXTENSION} simple-send-immediate.${EXTENSION} send_latency_typed.${EXTENSION}
+
+include @abs_top_builddir@/Build.rules
+
+ifeq (@BUILDENV@,ade)
+%.${EXTENSION}: %.c
+	cp ${CROSS_CRT1} .
+	cp ${CROSS_CRTI} .
+	cp ${CROSS_CRTN} .
+	${CROSS_CC} -I${INSTALL_DIR}/include ${CROSS_CFLAGS} $< -o $@ ${CROSS_LDFLAGS} -lm -L${CROSS_TOOLCHAIN_LDPATH} @POELIB@ @IBMMPILIB@ 
+	rm `basename ${CROSS_CRT1}`
+	rm `basename ${CROSS_CRTI}`
+	rm `basename ${CROSS_CRTN}`
+%.${EXTENSION}: %.cc
+	cp ${CROSS_CRT1} .
+	cp ${CROSS_CRTI} .
+	cp ${CROSS_CRTN} .
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -lm -L${CROSS_TOOLCHAIN_LDPATH} @POELIB@ @IBMMPILIB@ 
+	rm `basename ${CROSS_CRT1}`
+	rm `basename ${CROSS_CRTI}`
+	rm `basename ${CROSS_CRTN}`
+else
+
+%.${EXTENSION}: %.c
+	${CROSS_CC} -I${INSTALL_DIR}/include ${CROSS_CFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+%.${EXTENSION}: %.cc
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+%.${EXTENSION}: %.cpp
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+
+endif
+
+default: ${APPS}
+
+#hack to run multi-mambo.  First runmambo and runmulti-mambo will find/cp the elf and pers files
+runmulti-mambo:
+	find ./ -name "send_latency.cnk.t1.pers"  -exec cp {} ./send_latency.cnk.pers \;
+	find ./ -name "bgq_firmware.elf" -exec cp {} ./firmware.elf \;
+	cp $(VPATH)/mmambo.tcl .
+	mpirun -np 2 -x MAMBO_BGQ_MAPFILE=$(VPATH)/map.txt /bgsys/bgq/drivers/x86_64.multi-mambo/bin/systemsim-bgq -n -f mmambo.tcl

@@ -3,7 +3,7 @@
 
 Summary: Compute Node Kernel (CNK)
 Group: %{product_group}
-Release: 0
+Release: 10
 
 %description cnk
 %{bgq_package_description}

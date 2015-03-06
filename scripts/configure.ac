@@ -248,9 +248,9 @@ bgq_default_twinstar_dir=/gsa/yktgsa/projects/t/twinstar
 bgq_default_twinstar_dd1_dir=/gsa/yktgsa/projects/t/twinstar_dd1
 bgq_default_twinstar_dd2_dir=/gsa/yktgsa/projects/t/twinstar_dd2
 bgq_default_mambo=/auto/BGQ/releases/floor-mambo
-bgq_default_rpmversion=0
-bgq_default_rpmrelease=0
-bgq_default_rpmmodification=0
+bgq_default_rpmversion=1
+bgq_default_rpmrelease=2
+bgq_default_rpmmodification=2
 bgq_default_rpmdriver=0
 bgq_default_rpmsuffix=
 
@@ -695,10 +695,10 @@ AC_MSG_RESULT([  BGQ_DISTRO=$BGQ_DISTRO])
 INSTALL_SUBDIR=`/bin/echo $BGQ_INSTALL_DIR | awk 'BEGIN{FS="/"} ; {print $NF}'`
 if [[[ $INSTALL_SUBDIR == "work" ]]] ; then
 	USER_DISTRO=`whoami`_`date +%y%m%d`
-	bgq_linux_os_default=/bgsys/linux/"$BGQ_DISTRO"_$USER_DISTRO
+	bgq_linux_os_default=/bgsys/linux/RHEL6.5__$USER_DISTRO
 else
 	DRIVER=`/bin/echo $BGQ_INSTALL_DIR | awk 'BEGIN{FS="/"} ; {print $(NF-1)}'`
-	bgq_linux_os_default=/bgsys/linux/"$BGQ_DISTRO"_$DRIVER
+	bgq_linux_os_default=/bgsys/linux//bgsys/linux/RHEL6.5_V1R2M2-8
 fi
 AC_ARG_WITH(linux-os,
   AS_HELP_STRING([--with-linux-os=<path>], [path to linux OS root directory]),

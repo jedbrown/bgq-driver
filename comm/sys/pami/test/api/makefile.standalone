@@ -1,0 +1,262 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog
+
+# Change these parameters for your platform
+PAMI_INCLUDE   := 
+PAMI_LIB       := 
+PAMI_LIBNAME   := 
+C_COMPILER     := mpcc -q64 -pami
+CXX_COMPILER   := mpCC -q64 -pami
+LINKER         := mpcc -q64 -pami
+
+##### You shouldn't have to edit under this line ######
+CC        := ${C_COMPILER}  -Wall -O2 -g -I${PAMI_INCLUDE}  -I${PAMI_INCLUDE}/default
+CXX       := ${CXX_COMPILER} -Wall -O2 -g -I${PAMI_INCLUDE} -I${PAMI_INCLUDE}/default
+LD        := ${LINKER}    -L${PAMI_LIB} ${PAMI_LIBNAME} -lpthread -lrt
+ECHO      := echo
+
+MODULES   := p2p client collectives context endpoint extensions p2p/send p2p/get p2p/put p2p/rget p2p/rput \
+	     p2p/send/send_to_self_immed p2p/send/send_to_self_perf time extensions/test extensions/torus \
+             extensions/collsel
+SRC_DIR   := $(addprefix ./,$(MODULES))
+BUILD_DIR := $(addprefix build/,$(MODULES))
+
+SRC       := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
+SRC       += $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
+
+OBJ       += $(patsubst %.c,build/%.o,$(SRC))
+OBJ       += $(patsubst %.cc,build/%.o,$(SRC))
+
+EXE       := $(patsubst %.o,build/%.exe,$(OBJ))
+
+OUT       := $(patsubst %.exe,build/%.out,$(EXE))
+
+INCLUDES  := $(addprefix -I,$(SRC_DIR))
+
+vpath %.cc $(SRC_DIR)
+vpath %.c  $(SRC_DIR)
+
+define make-goal
+.SUFFIXES:
+
+.SUFFIXES: .o .c .cc 
+
+.SECONDARY:
+
+.c.o::
+	@ $(ECHO) "[CC]:  $$< -> $$@"
+	@ $(CC) $(INCLUDES) -c $$< -o build/$$@
+
+.cc.o::
+	@ $(ECHO) "[CXX]: $$< -> $$@"
+	@ $(CXX) $(INCLUDES) -c $$< -o build/$$@
+
+build/%.exe: %.o
+	@ $(ECHO) "  [LD]: $$< -> $$@"
+	@ $(LD) build/$$< -o $$@
+endef
+
+.PHONY: all checkdirs clean
+
+COLLECTIVES_MULTIEP_TESTS = build/collectives/allgather_multiep.exe \
+build/collectives/allgatherv_multiep.exe \
+build/collectives/allreduce_multiep.exe \
+build/collectives/allreduce_query_multiep.exe \
+build/collectives/alltoall_multiep.exe \
+build/collectives/alltoallv_multiep.exe \
+build/collectives/amgather_multiep.exe \
+build/collectives/barrier_multiep.exe \
+build/collectives/barrier_multiep_advanced.exe \
+build/collectives/bcast_multiep.exe \
+build/collectives/gather_multiep.exe \
+build/collectives/gatherv_multiep.exe \
+build/collectives/reduce_multiep.exe \
+build/collectives/reduce_query_multiep.exe \
+build/collectives/reduce_scatter_multiep.exe \
+build/collectives/scan_multiep.exe \
+build/collectives/scatter_multiep.exe \
+build/collectives/scatterv_multiep.exe
+
+COLLECTIVES_TESTS = ${COLLECTIVES_MULTIEP_TESTS} \
+build/collectives/allgather.exe \
+build/collectives/allgather_contig.exe \
+build/collectives/allgather_subcomm.exe \
+build/collectives/allgatherv.exe \
+build/collectives/allgatherv_contig.exe \
+build/collectives/allgatherv_int.exe \
+build/collectives/allgatherv_int_contig.exe \
+build/collectives/allreduce.exe \
+build/collectives/allreduce_contig.exe \
+build/collectives/allreduce_query.exe \
+build/collectives/allreduce_subcomm.exe \
+build/collectives/allreduce_subcomm_query.exe \
+build/collectives/alltoall.exe \
+build/collectives/alltoall_contig.exe \
+build/collectives/alltoallv.exe \
+build/collectives/alltoallv_contig.exe \
+build/collectives/alltoallv_int.exe \
+build/collectives/alltoallv_int_contig.exe \
+build/collectives/alltoallv_int_subcomm.exe \
+build/collectives/alltoallv_subcomm.exe \
+build/collectives/ambcast.exe \
+build/collectives/ambcast_contig.exe \
+build/collectives/amgather.exe \
+build/collectives/amreduce.exe \
+build/collectives/amscatter.exe \
+build/collectives/barrier.exe \
+build/collectives/barrier_query.exe \
+build/collectives/barrier_subcomm.exe \
+build/collectives/barrier_subcomm_query.exe \
+build/collectives/bcast.exe \
+build/collectives/bcast_contig.exe \
+build/collectives/bcast_query.exe \
+build/collectives/bcast_subcomm.exe \
+build/collectives/bcast_subcomm_query.exe \
+build/collectives/exscan_contig.exe \
+build/collectives/gather.exe \
+build/collectives/gather_contig.exe \
+build/collectives/gather_subcomm.exe \
+build/collectives/gatherv.exe \
+build/collectives/gatherv_contig.exe \
+build/collectives/gatherv_int.exe \
+build/collectives/gatherv_int_contig.exe \
+build/collectives/geometry.exe \
+build/collectives/geom_bomb.exe \
+build/collectives/reduce.exe \
+build/collectives/reduce_contig.exe \
+build/collectives/reduce_query.exe \
+build/collectives/reduce_scatter.exe \
+build/collectives/reduce_scatter_contig.exe \
+build/collectives/reduce_scatter_subcomm.exe \
+build/collectives/reduce_subcomm.exe \
+build/collectives/scan.exe \
+build/collectives/scan_contig.exe \
+build/collectives/scan_subcomm.exe \
+build/collectives/scatter.exe \
+build/collectives/scatter_contig.exe \
+build/collectives/scatter_subcomm.exe \
+build/collectives/scatterv.exe \
+build/collectives/scatterv_int.exe \
+build/collectives/scatterv_int_contig.exe \
+build/collectives/allgather_noncontig.exe \
+build/collectives/allreduce_noncontig.exe \
+build/collectives/alltoall_noncontig.exe \
+build/collectives/bcast_noncontig.exe \
+build/collectives/allgatherv_noncontig.exe \
+build/collectives/alltoallv_noncontig.exe \
+build/collectives/gather_noncontig.exe \
+build/collectives/gatherv_noncontig.exe \
+build/collectives/reduce_noncontig.exe \
+build/collectives/reduce_scatter_noncontig.exe \
+build/collectives/scan_noncontig.exe \
+build/collectives/scatter_noncontig.exe 
+
+
+BASE_TESTS = build/init.exe \
+build/init_coll.exe
+
+CLIENT_TESTS = build/client/configuration.exe \
+build/client/hello.exe \
+build/client/multi-client.exe
+
+CONTEXT_TESTS = build/context/advance.exe \
+build/context/create.exe \
+build/context/lock.exe \
+build/context/multi-advance.exe \
+build/context/multi-create.exe \
+build/context/multi-create2.exe \
+build/context/post-multithreaded-perf.exe \
+build/context/post-multithreaded.exe \
+build/context/post-perf.exe \
+build/context/post.exe \
+build/context/post-stress.exe \
+build/context/advance.exe
+
+ENDPOINT_TESTS = build/endpoint/endpoint_table.exe
+
+P2P_TESTS = build/p2p/send/send_immediate_pingpong_ring.exe \
+build/p2p/send_latency.exe \
+build/p2p/send_latency_typed.exe \
+build/p2p/sendimmediate_latency.exe \
+build/p2p/adi.exe \
+build/p2p/default-send-nplus-minus1.exe \
+build/p2p/default-send.exe \
+build/p2p/get/simple_get_func.exe \
+build/p2p/immediate_send.exe \
+build/p2p/immediate_send_overflow.exe \
+build/p2p/put/simple_put_func.exe \
+build/p2p/rget/simple_rget_func.exe \
+build/p2p/rput/simple_rput_func.exe \
+build/p2p/send/send_alltoall_perf.exe \
+build/p2p/send/default-send-1.exe \
+build/p2p/send/long-header-matrix.exe \
+build/p2p/send/long-header.exe \
+build/p2p/send/mmps.exe \
+build/p2p/send/rdma-matrix.exe \
+build/p2p/send/send_flood_perf.exe \
+build/p2p/send/send_to_self.exe \
+build/p2p/send/send_to_self_immed/send_to_self_immed.exe \
+build/p2p/send/send_to_self_perf/send_to_self_perf.exe \
+build/p2p/send/send_unexpected_func.exe \
+build/p2p/send/shmem-matrix.exe \
+build/p2p/send/sqmr.exe \
+build/p2p/simple-send-immediate.exe
+
+TIME_TESTS = build/time/tick.exe \
+build/time/time.exe \
+build/time/timebase.exe \
+
+EXTENSION_TESTS = build/extensions/test/extension_test.exe \
+build/extensions/torus/extension_torus.exe \
+build/extensions/collsel/pami_tune.exe \
+build/extensions/collsel/table_generate.exe 
+
+TESTS = ${COLLECTIVES_TESTS} ${BASE_TESTS} ${CLIENT_TESTS} ${CONTEXT_TESTS} \
+        ${ENDPOINT_TESTS} ${P2P_TESTS} ${TIME_TESTS} ${EXTENSION_TESTS}
+
+## These don't build
+# build/p2p/send/eager_concurrency.exe
+# build/p2p/send/long-header-hard-match.exe 
+# build/p2p/send/long-header-hard-opp.exe 
+# build/extensions/multisend/multicast.exe \
+# build/extensions/multisend/multicast_as.exe \
+# build/extensions/multisend/multicast_global.exe \
+# build/extensions/multisend/multicast_local.exe \
+# build/extensions/multisend/multicast_local_as.exe \
+# build/extensions/multisend/multicast_pwq.exe \
+# build/extensions/multisend/multicast_pwq_as.exe \
+# build/extensions/multisend/multicombine_global.exe \
+# build/extensions/multisend/multisync_global.exe \
+# build/extensions/topology/topology.exe
+
+
+all: checkdirs ${TESTS}
+checkdirs: $(BUILD_DIR)
+
+run: ${TESTS}
+	@runtests $^ 2>&1 | tee "run.`date +'%y.%m.%d.%H:%M:%S'`.out"
+
+runmultiep: ${COLLECTIVES_MULTIEP_TESTS}
+	@runtests $^ 2>&1 | tee "run.`date +'%y.%m.%d.%H:%M:%S'`.out"
+
+$(BUILD_DIR):
+	@mkdir -p $@
+
+clean:
+	@rm -rf $(BUILD_DIR)
+
+$(foreach bdir,$(BUILD_DIR),$(eval $(call make-goal,$(bdir))))

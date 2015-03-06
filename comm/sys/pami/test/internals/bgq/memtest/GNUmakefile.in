@@ -1,0 +1,62 @@
+# begin_generated_IBM_copyright_prolog                             
+#                                                                  
+# This is an automatically generated copyright prolog.             
+# After initializing,  DO NOT MODIFY OR MOVE                       
+#  --------------------------------------------------------------- 
+# Licensed Materials - Property of IBM                             
+# Blue Gene/Q 5765-PER 5765-PRP                                    
+#                                                                  
+# (C) Copyright IBM Corp. 2011, 2012 All Rights Reserved           
+# US Government Users Restricted Rights -                          
+# Use, duplication, or disclosure restricted                       
+# by GSA ADP Schedule Contract with IBM Corp.                      
+#                                                                  
+#  --------------------------------------------------------------- 
+#                                                                  
+# end_generated_IBM_copyright_prolog                               
+
+FRAMEWORK       = pami
+VPATH		= @abs_srcdir@
+SUBDIRS         =
+NOTBUILT        = 
+APPS            = memtest-${FRAMEWORK}.${EXTENSION} 
+
+include @abs_top_builddir@/Build.rules
+
+ifeq (@BUILDENV@,ade)
+%.${EXTENSION}: %.c
+	cp ${CRT1} .
+	cp ${CRTI} .
+	cp ${CRTN} .
+	${CROSS_CXX} -I${INSTALL_DIR}/include -I@abs_srcdir@/../../common/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L${_BOSDEPS_USR_LIB_} @POELIB@ @IBMMPILIB@ 
+#	${CROSS_CXX} -I${INSTALL_DIR}/include -I@abs_srcdir@/../common/include ${CROSS_CXXFLAGS} -c $< -o $@.o
+	rm `basename ${CRT1}`
+	rm `basename ${CRTI}`
+	rm `basename ${CRTN}`
+else
+
+%-pami.${EXTENSION}: %.c
+	${CROSS_CC} -I${INSTALL_DIR}/include ${CROSS_CFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L../../../../../${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+%-pami.${EXTENSION}: %.cc
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L../../../../../${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+%-pami.${EXTENSION}: %.cpp
+	${CROSS_CXX} -I${INSTALL_DIR}/include ${CROSS_CXXFLAGS} $< -o $@ ${CROSS_LDFLAGS} -L../../../../../${INSTALL_DIR}/lib ${CROSS_TESTCASE_FLAGS}
+
+%-standalone.${EXTENSION}: %.cc
+	${CROSS_CXX} \
+	-I @abs_top_srcdir@/pami \
+	-I @abs_top_srcdir@/pami/sys \
+	-I @abs_top_srcdir@/pami/arch/a2qpx \
+	-I @abs_top_srcdir@/pami/compiler/gnu \
+	-I @abs_top_srcdir@/pami/common/bgq \
+	-I @abs_top_srcdir@/pami/common/default \
+	-I @BGFLOOR@ \
+	-I @BGFLOOR@/spi \
+	-I @BGFLOOR@/spi/include \
+	-I @BGFLOOR@/spi/include/kernel/cnk \
+	$< -o $@ \
+	-L @BGFLOOR@/spi/lib -lSPI -lSPI_cnk -lpthread -lrt -ldl
+
+endif
+
+default: ${APPS}

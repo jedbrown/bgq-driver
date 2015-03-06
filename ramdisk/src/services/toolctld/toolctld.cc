@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
    LOG_CIOS_INFO_MSG("started " << controller->getVersionString(name.str(), (int)ProtocolVersion) << " in process " << pidFile->getPid());
 
    // Start channels for handling messages.
-   int err = controller->startup(config.getServiceId());
+   int err = controller->startup(config.getServiceId(),config.getComputeInboundConnectTimeout());
    if (err != 0) {
       LOG_FATAL_MSG("error starting channels for handling messages: " << bgcios::errorString(err));
       pidFile.reset();
